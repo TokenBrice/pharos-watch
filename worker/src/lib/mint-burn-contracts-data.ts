@@ -64,7 +64,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "usdaf-asymmetry", dustThreshold: 10_000 },
   { stablecoinId: "eurau-allunity", dustThreshold: 10_000 },
   { stablecoinId: "dusd-alto", dustThreshold: 10_000 },
-  { stablecoinId: "ebusd-ebisu", dustThreshold: 10_000 },
   { stablecoinId: "ftusd-flying-tulip", dustThreshold: 10_000 },
   { stablecoinId: "usdkg-gold-dollar", dustThreshold: 10_000 },
   { stablecoinId: "chfau-allunity", dustThreshold: 10_000 },

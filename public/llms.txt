@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 336 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 335 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 108 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 109 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -284,7 +284,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Ring USD (USDR)](https://pharos.watch/stablecoin/usdr-ring/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Asymmetry USDaf (USDaf)](https://pharos.watch/stablecoin/usdaf-asymmetry/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Quill USD (USDQ)](https://pharos.watch/stablecoin/usdq-quill/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Ebisu ebUSD (ebUSD)](https://pharos.watch/stablecoin/ebusd-ebisu/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Neutrl USD (NUSD)](https://pharos.watch/stablecoin/nusd-neutrl/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Hermetica USDh (USDh)](https://pharos.watch/stablecoin/usdh-hermetica/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Yuzu USD (YZUSD)](https://pharos.watch/stablecoin/yzusd-yuzu/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "ea369a77cc3d4f0fd927ecbaec892c927397236e3069568909c1595923d2cf7b"
+      "sha256": "35a18a50698cba6a7b7bc8f5b10f247e30817e0dc59a1577a432a86e6a544098"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -441,7 +441,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "a7177e8ede754619d98f56fe18b9d65dbfd29f4ac27701a6bbeb1f60fcb92949"
     }
   ],
-  "digest": "12ff1b6c0bf7ffb73424cc5e0c3d33b603b8f37e54df3bb81b50bceeb4e8a737"
+  "digest": "4f2fbe8207d03c1b059aa921bc5acdad85447ae32d8226f2ceed1b87d68ec352"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

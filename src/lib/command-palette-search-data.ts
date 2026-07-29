@@ -158,7 +158,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usnd-nerite", "Nerite USND", "USND", "frozen", "2026-05-10"],
   ["usdq-quill", "Quill USD", "USDQ"],
   ["usdk-orki", "Orki USD", "USDK", "frozen", "2026-06-30"],
-  ["ebusd-ebisu", "Ebisu ebUSD", "ebUSD"],
+  ["ebusd-ebisu", "Ebisu ebUSD", "ebUSD", "frozen", "2026-07-29"],
   ["nusd-neutrl", "Neutrl USD", "NUSD"],
   ["usdh-hermetica", "Hermetica USDh", "USDh"],
   ["yzusd-yuzu", "Yuzu USD", "YZUSD"],

@@ -1290,5 +1290,73 @@
         }
       ]
     }
+  },
+  {
+    "id": "ebusd-ebisu",
+    "capturedAt": "2026-07-29T17:03:57.750Z",
+    "peggedAssetRow": {
+      "id": "ebusd-ebisu",
+      "name": "EBUSD",
+      "symbol": "EBUSD",
+      "geckoId": "ebusd-stablecoin",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9135848119171354,
+      "priceSource": "defillama",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1785344465,
+      "priceObservedAt": 1785344465,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": 1785344465,
+      "consensusSources": [
+        "defillama"
+      ],
+      "agreeSources": [
+        "defillama"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 24173.88187828605
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 24173.88187828605
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 29255.778153284704
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 30000.039534166488
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": 23151.06703595414,
+          "circulatingPrevDay": 23151.06703595414,
+          "circulatingPrevWeek": 27945.44262840426,
+          "circulatingPrevMonth": 27782.23088213199
+        },
+        "Plasma": {
+          "current": 1022.8148423319079,
+          "circulatingPrevDay": 1022.8148423319079,
+          "circulatingPrevWeek": 1310.3355248804442,
+          "circulatingPrevMonth": 2217.808652034497
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Plasma"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+          "decimals": 18
+        },
+        {
+          "chain": "plasma",
+          "address": "0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

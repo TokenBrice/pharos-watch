@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:f5522c9cd16f596f8c317333a2df9e22bceaa79f3ab18f891aa41a4f1f97d815",
+  "sourceChecksum": "sha256:2f268f15b5c4ea542ccd16ec2839824d6b0a9da80b9321d34be379b199b78f73",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,12 +16,12 @@
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "checksum": "sha256:3db181270a587859fb6713f445defbefa86bfe569bf73dac375ecfa6cb2782d2",
+      "checksum": "sha256:bfe75cbfffc76c161e1a8b38bec721291e481e8ff26de20760308c2df3807bf4",
       "role": "Generated tracked-stablecoin aggregate used for frozen cemetery rows."
     }
   ],
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 108,
+  "rowCount": 109,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -138,6 +138,37 @@
         }
       ],
       "pharosUrl": "https://pharos.watch/stablecoin/mim-abracadabra/"
+    },
+    {
+      "id": "ebusd-ebisu",
+      "name": "Ebisu ebUSD",
+      "symbol": "ebUSD",
+      "llamaId": "288",
+      "logoUrl": "https://pharos.watch/logos/cg-ebusd.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 815495,
+      "epitaph": "Fixed-rate credit that never found its market",
+      "obituary": "Ebisu offered fixed-rate, open-term credit through ebUSD, a Liquity v2 fork minting against weETH, sUSDe, WBTC, LBTC, and stcUSD branches natively on Ethereum and Plasma. Launched in June 2025, it never found scale: supply peaked near $815K and sat below $25K by July 2026. The team explored just-in-time liquidations, multichain issuance, structured looping and leverage vaults, and acquisition options, but could not grow ebUSD liquidity enough to support meaningful borrowing activity. On July 29, 2026 Ebisu announced it would wind down: minting was paused, users were asked to close Troves and withdraw Stability Pool deposits and DEX liquidity, and the frontend will be deprecated on October 30. An orderly, solvent sunset — collateral redemption remained open throughout.",
+      "sourceUrl": "https://x.com/ebisu_finance/article/2082271723941159415",
+      "sourceLabel": "Ebisu sunset announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x09fd37d9aa613789c517e76df1c53aece2b60df4",
+          "decimals": 18
+        },
+        {
+          "chain": "plasma",
+          "address": "0xef7b1a03e0897c33b63159e38d779e3970c0e2fc",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/ebusd-ebisu/"
     },
     {
       "id": "susd-synthetix",

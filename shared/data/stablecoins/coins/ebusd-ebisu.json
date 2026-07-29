@@ -2,6 +2,17 @@
   "id": "ebusd-ebisu",
   "name": "Ebisu ebUSD",
   "symbol": "ebUSD",
+  "status": "frozen",
+  "frozenAt": "2026-07-29",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-07",
+    "epitaph": "Fixed-rate credit that never found its market",
+    "obituary": "Ebisu offered fixed-rate, open-term credit through ebUSD, a Liquity v2 fork minting against weETH, sUSDe, WBTC, LBTC, and stcUSD branches natively on Ethereum and Plasma. Launched in June 2025, it never found scale: supply peaked near $815K and sat below $25K by July 2026. The team explored just-in-time liquidations, multichain issuance, structured looping and leverage vaults, and acquisition options, but could not grow ebUSD liquidity enough to support meaningful borrowing activity. On July 29, 2026 Ebisu announced it would wind down: minting was paused, users were asked to close Troves and withdraw Stability Pool deposits and DEX liquidity, and the frontend will be deprecated on October 30. An orderly, solvent sunset — collateral redemption remained open throughout.",
+    "peakMcap": 815495,
+    "sourceUrl": "https://x.com/ebisu_finance/article/2082271723941159415",
+    "sourceLabel": "Ebisu sunset announcement"
+  },
   "oneLiner": "ebUSD is Ebisu's overcollateralized USD stablecoin minted from Liquity-v2 CDP branches backed by weETH, sUSDe, WBTC, LBTC, and stcUSD on Ethereum and Plasma.",
   "flags": {
     "backing": "crypto-backed",
@@ -1389,86 +1400,6 @@
         "rationale": "LBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       }
     ]
-  },
-  "liveReservesConfig": {
-    "adapter": "liquity-v2-branches",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "ebusd-ebisu",
-    "display": {
-      "url": "https://ebisu.money/",
-      "label": "Website"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "redemptionRateProbe": {
-        "contract": "0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7",
-        "selector": "0xc52861f2"
-      },
-      "branches": [
-        {
-          "name": "weETH",
-          "holder": "0x99a5a86d6e5a6f8b96d15cb71be5bace474f81a6",
-          "token": {
-            "chain": "ethereum",
-            "address": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
-            "decimals": 18
-          },
-          "risk": "low"
-        },
-        {
-          "name": "sUSDe (Ethena savings)",
-          "holder": "0x83a095a74839ad88c24e77f1e9a54baaa7ff5157",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
-            "decimals": 18
-          },
-          "risk": "medium",
-          "coinId": "susde-ethena",
-          "depType": "collateral"
-        },
-        {
-          "name": "WBTC",
-          "holder": "0x5c806d1f8ea290fe39642048e64b9f2ee031036f",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-            "decimals": 8
-          },
-          "risk": "medium"
-        },
-        {
-          "name": "LBTC",
-          "holder": "0x89fd2c36d0134ea7c8c069e2c641f3dec95d3d73",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x8236a87084f8b84306f72007f36f2618a5634494",
-            "decimals": 8
-          },
-          "risk": "medium"
-        },
-        {
-          "name": "stcUSD",
-          "holder": "0xff88be162e679517d9d3729be67495084fb98b69",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
-            "decimals": 18
-          },
-          "risk": "medium",
-          "coinId": "stcusd-cap",
-          "depType": "collateral"
-        }
-      ]
-    }
   },
   "launchDate": "2025-06-05"
 }
