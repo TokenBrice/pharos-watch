@@ -1031,25 +1031,6 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     }
   }
 
-  // RULED D-J (2026-07-19): a pooled row of unrecognized provider chain labels
-  // below the common-mode materiality floor is handled as a bounded condition
-  // (excluded from the common-mode unattributed add-on and tolerated by the
-  // completeness proof). Keep it visible as a diagnostic reason; at or above
-  // the floor the ordinary fail-closed paths above carry it instead. The path
-  // deliberately does not start with "bridge:": an asset whose bridge section
-  // contributes no component must not have this visibility-only diagnostic
-  // authorize the bounded-unknown bridge fallback below.
-  if (isKnownRequired(args.facts.supply.status)) {
-    for (const route of args.facts.supply.selectedBridgeRoutes) {
-      if (
-        isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) &&
-        route.supplyShare < policy.materiality.commonModeShareThreshold
-      ) {
-        addReason("immaterial-unrecognized-chain-pool", "deployment-control", "supply:unrecognized-chain-pool");
-      }
-    }
-  }
-
   // An unverified review leaves its section with reasons but no component.
   // When the policy treats those reasons as bounded (non-critical), the
   // section scores at the bounded-unknown control quality instead of nulling

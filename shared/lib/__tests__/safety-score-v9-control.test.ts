@@ -1045,15 +1045,13 @@ describe("Safety Score v9 economic control", () => {
     expect(absent.score).toBe(90);
 
     // Pool at 9.99% without any joined control: the proof tolerates it as an
-    // accepted bounded row and the condition stays visible as a diagnostic.
+    // accepted bounded row without surfacing an unresolved producer reason.
     const smooth = resultFor(0.0999, { withPoolControl: false });
-    expect(smooth.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
-    expect(smooth.reasons[0]).toMatchObject({ critical: false, path: "supply:unrecognized-chain-pool" });
+    expect(smooth.reasons).toEqual([]);
     expect(smooth.score).toBe(90);
 
     // Pool at exactly 10% without a joined control fails closed exactly as
-    // before: the ordinary per-row join is required and the diagnostic is not
-    // emitted.
+    // before: the ordinary per-row join is required.
     const floor = resultFor(0.1, { withPoolControl: false });
     expect(floor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
     expect(floor.reasons.map((reason) => reason.code)).not.toContain("immaterial-unrecognized-chain-pool");
@@ -1074,25 +1072,22 @@ describe("Safety Score v9 economic control", () => {
     expect(floorWithControl.score).toBe(90);
 
     // Named unmatched rows are unaffected by the pool tolerance: with their
-    // own joined subthreshold controls they pass, and the pool stays
-    // diagnostic.
+    // own joined subthreshold controls they pass.
     const named = resultFor(0.0999, {
       withPoolControl: false,
       namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02 }],
     });
-    expect(named.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
+    expect(named.reasons).toEqual([]);
 
     // A named unmatched row without a joined control still fails the proof.
     const namedOpen = resultFor(0.0999, {
       withPoolControl: false,
       namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02, withControl: false }],
     });
-    expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(
-      expect.arrayContaining(["material-bridge-supply-unmatched", "immaterial-unrecognized-chain-pool"]),
-    );
+    expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
 
-  it("keeps the pool diagnostic from authorizing the bounded bridge fallback", () => {
+  it("keeps the tolerated pool from authorizing the bounded bridge fallback", () => {
     // Shape of the major-issuer cohort: every reviewed deployment is native,
     // so the bridge section contributes no component; the only unresolved
     // supply is an immaterial pool plus joined subthreshold named rows.
@@ -1144,7 +1139,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(result.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
+    expect(result.reasons).toEqual([]);
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 
