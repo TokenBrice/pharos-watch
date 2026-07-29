@@ -51,6 +51,10 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
+  // apyUSD is issued through a CCIP burn/mint pair on Ethereum and Base.
+  // CoinGecko supplies the aggregate NAV market cap but no per-chain split, so
+  // read both reviewed deployments and conserve their combined live supply.
+  "apyusd-apyx": [{ chain: "ethereum" }, { chain: "base" }],
   // DUSD is a Makina Machine share issued canonically on Ethereum and mirrored
   // to Ink through Wormhole NTT locking. Ethereum totalSupply already includes
   // the tokens escrowed for Ink, so the aggregate path must reallocate rather
@@ -70,6 +74,108 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // runtime-bridge-materiality-unavailable.
   "susds-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }, { chain: "arbitrum" }],
   "sdai-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }],
+  // sUSDe has the same shape (llamaId null, CoinGecko detail provider), but its
+  // representations are LayerZero OFTs minted against the Ethereum OFT adapter
+  // 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2, which escrows canonical sUSDe.
+  // Ethereum totalSupply() is therefore the conserved global total and every
+  // reviewed representation is reallocated out of it. Legs outside
+  // buildChainRpcs() carry a verified public endpoint. The TON jetton and the
+  // Aptos fungible asset have no supported supply probe, so they stay
+  // unconfigured and their balances remain inside the Ethereum bucket rather
+  // than failing the whole aggregate closed.
+  "susde-ethena": [
+    { chain: "ethereum" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to" },
+    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm" },
+    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+    { chain: "zircuit", rpcUrl: "https://mainnet.zircuit.com" },
+    { chain: "metis", rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
+    // The X Layer OFT is deployed and reviewed but currently holds no supply.
+    { chain: "xlayer", rpcUrl: "https://rpc.xlayer.tech", allowZeroSupply: true },
+    { chain: "base" },
+    { chain: "bsc" },
+    { chain: "morph-l2", rpcUrl: "https://rpc.morphl2.io", fallbackRpcUrl: "https://morph.drpc.org" },
+    { chain: "scroll", rpcUrl: "https://rpc.scroll.io", fallbackRpcUrl: "https://scroll-rpc.publicnode.com" },
+    { chain: "kava", rpcUrl: "https://evm.kava.io", fallbackRpcUrl: "https://kava-evm-rpc.publicnode.com" },
+    { chain: "swellchain", rpcUrl: "https://rpc.ankr.com/swell", fallbackRpcUrl: "https://swell.drpc.org" },
+    { chain: "mode", rpcUrl: "https://mainnet.mode.network", fallbackRpcUrl: "https://mode.drpc.org" },
+    { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
+    { chain: "arbitrum" },
+    { chain: "manta", rpcUrl: "https://pacific-rpc.manta.network/http", fallbackRpcUrl: "https://manta-pacific.drpc.org" },
+    { chain: "blast", rpcUrl: "https://rpc.blast.io", fallbackRpcUrl: "https://blast-rpc.publicnode.com" },
+    { chain: "optimism" },
+    { chain: "zksync", rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
+    { chain: "avalanche" },
+    { chain: "solana" },
+  ],
+  // wsrUSD is an ERC-4626 NAV wrapper with no DefiLlama pegged-asset row
+  // (llamaId null), so the CoinGecko fiat-cg lane leaves chainCirculating empty
+  // and the V9 supply review caps on runtime-bridge-materiality-unavailable.
+  // Reservoir issues every remote deployment through a LayerZero OFT whose
+  // Ethereum peer is the OFT Adapter lockbox
+  // 0xbb431abd156b960e5b77cc45c75f107e3991258a, so Ethereum totalSupply already
+  // escrows them and the canonical reallocation below applies. Chains absent
+  // from the worker RPC registry carry an explicit public endpoint; any
+  // unreadable leg fails the whole probe closed.
+  "wsrusd-reservoir": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "berachain", rpcUrl: "https://rpc.berachain.com" },
+    { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com" },
+    { chain: "arbitrum" },
+    { chain: "bsc" },
+    { chain: "avalanche" },
+    { chain: "unichain", rpcUrl: "https://mainnet.unichain.org" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org" },
+    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com" },
+    { chain: "worldchain", rpcUrl: "https://worldchain-mainnet.g.alchemy.com/public" },
+    { chain: "katana", rpcUrl: "https://rpc.katana.network" },
+    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm" },
+    { chain: "linea", rpcUrl: "https://rpc.linea.build" },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz" },
+    { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet" },
+    { chain: "solana" },
+  ],
+  // yUSD is native on Ethereum with LayerZero OFT burn/mint representations on
+  // nine chains, so no leg escrows another and the reviewed deployments sum.
+  // Verified 2026-07-29: CoinGecko circulating 10,877,090.58638517 is the exact
+  // sum of the seven deployments it indexes, and the three it omits (BSC,
+  // Avalanche, Plasma) add 35,462.36 more. Sonic, Plume, Katana and Plasma have
+  // no chain-registry RPC, so pin reviewed public endpoints; any unreadable leg
+  // still fails the whole aggregate closed.
+  "yusd-yieldfi": [
+    { chain: "ethereum" },
+    { chain: "arbitrum" },
+    { chain: "base" },
+    { chain: "optimism" },
+    { chain: "sonic", rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org" },
+    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" },
+    { chain: "bsc" },
+    { chain: "avalanche" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+  ],
+  // savUSD is Avant's Avalanche-native staking vault mirrored by Chainlink CCIP
+  // BurnMint pools. Verified 2026-07-29: the Avalanche CCIP LockRelease pool
+  // 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D escrows 52,769,640.25 savUSD
+  // against 52,761,208.00 minted on the destination chains, so the canonical
+  // Avalanche totalSupply already contains them and is reallocated below rather
+  // than summed. Katana currently reads exactly zero and BSC/MegaETH hold
+  // reviewed dust, so those legs may contribute zero.
+  "savusd-avant": [
+    { chain: "avalanche" },
+    { chain: "ethereum" },
+    { chain: "linea", rpcUrl: "https://rpc.linea.build", fallbackRpcUrl: "https://linea-rpc.publicnode.com" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+    { chain: "bsc", allowZeroSupply: true },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://monad.drpc.org" },
+    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com", allowZeroSupply: true },
+    { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org", allowZeroSupply: true },
+    { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -79,6 +185,9 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "dusd-dialectic": "ethereum",
   "susds-sky": "ethereum",
   "sdai-sky": "ethereum",
+  "susde-ethena": "ethereum",
+  "wsrusd-reservoir": "ethereum",
+  "savusd-avant": "avalanche",
 };
 
 export function isZephyrScannerSupplyId(id: string): boolean {

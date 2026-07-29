@@ -144,8 +144,14 @@ function exactFixedInput(
     pegScore?: number | null;
     currentDeviationBps?: number | null;
     depegEventCoverageLimited?: boolean;
+    pegPct?: number;
+    severityScore?: number;
+    spreadPenalty?: number;
+    eventCount?: number;
+    worstDeviationBps?: number | null;
     pegObservedAtSec?: number;
     activeDepeg?: boolean;
+    lastEventAt?: number | null;
     activeDepegPeakBps?: number;
     routeChain?: string;
     omitLiveReserve?: boolean;
@@ -214,13 +220,13 @@ function exactFixedInput(
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
             priceObservedAt: args.pegObservedAtSec ?? observedAtSec,
-            pegPct: 99,
-            severityScore: 0,
-            spreadPenalty: 0,
-            eventCount: 0,
-            worstDeviationBps: 1,
+            pegPct: args.pegPct ?? 99,
+            severityScore: args.severityScore ?? 0,
+            spreadPenalty: args.spreadPenalty ?? 0,
+            eventCount: args.eventCount ?? 0,
+            worstDeviationBps: args.worstDeviationBps === undefined ? 1 : args.worstDeviationBps,
             activeDepeg: args.activeDepeg ?? false,
-            lastEventAt: null,
+            lastEventAt: args.lastEventAt === undefined ? null : args.lastEventAt,
             trackingSpanDays: 365,
             methodologyVersion: "peg:fixture-v1",
           },
@@ -3468,6 +3474,73 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(trace.preCapScore).toBeLessThan(missingPeakTrace.preCapScore!);
   });
 
+  it("treats XTUSD's quiet scored peg history as explicit zero current deviation", () => {
+    const fixed = exactFixedInput({
+      assetId: "xtusd-xt",
+      pegScore: 100,
+      currentDeviationBps: null,
+      activeDepeg: false,
+      eventCount: 0,
+      worstDeviationBps: null,
+      lastEventAt: null,
+      pegPct: 100,
+      severityScore: 100,
+      spreadPenalty: 0,
+    });
+
+    const reviewed = extension();
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "xtusd-xt";
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const peg = compiled.assets[0]!.peg;
+
+    expect(compiled.assets[0]!.assetId).toBe("xtusd-xt");
+    expect(peg).toMatchObject({
+      status: { observationState: "known" },
+      pegScore: 100,
+      currentDeviationBps: 0,
+      activeDepeg: false,
+      activeDepegBps: null,
+    });
+    expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-peg-input");
+  });
+
+  it("keeps NXUSD's event-bearing peg row a producer gap instead of quiet zero deviation", () => {
+    // NXUSD carries a resolved -376 bps incident inside its tracked window and
+    // has no usable current price, so its null deviation is unobserved rather
+    // than quiet. Coercing it to 0 bps would publish a peg reading that the
+    // live DEX check contradicts, so the quiet-observation rule must stop at
+    // rows with no recorded events.
+    const fixed = exactFixedInput({
+      assetId: "nxusd-nereus",
+      pegScore: 100,
+      currentDeviationBps: null,
+      depegEventCoverageLimited: false,
+      activeDepeg: false,
+      eventCount: 1,
+      worstDeviationBps: -376,
+      lastEventAt: AS_OF_SEC - 1,
+      pegPct: 99.67,
+      severityScore: 99.44,
+      spreadPenalty: 0,
+    });
+
+    const reviewed = extension();
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "nxusd-nereus";
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+
+    expect(compiled.assets[0]!.assetId).toBe("nxusd-nereus");
+    expect(compiled.assets[0]!.peg).toMatchObject({
+      status: { observationState: "bounded-unknown" },
+      pegScore: null,
+      currentDeviationBps: null,
+    });
+    expect(compiled.assets[0]!.gaps).toContainEqual(
+      expect.objectContaining({ reasonCode: "missing-peg-input", responsibility: "producer-failed" }),
+    );
+  });
+
   it("keeps an active peg row suppressed when its depeg peak is absent", () => {
     const fixed = exactFixedInput({ pegScore: 27, currentDeviationBps: null, activeDepeg: true });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
@@ -3968,7 +4041,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     // Shared exit-route capacity source changes rotate the historical V8
     // evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "465cfa3ed313dd4eddef548fd57ae87773b5579b4c2d740f4fc63cf30b563406",
+      "0d2475d38f8280b5ed985e648c6bff144c7a85b979fb3623c5e652408658c730",
     );
   });
 
@@ -4974,6 +5047,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       route("hyperevm:0x4444444444444444444444444444444444444444"),
     ]);
     expect(canonicalOrphan.asset.economicControlReview?.bridge.status.observationState).toBe("known");
+    expect(canonicalOrphan.asset.economicControlReview?.bridge.status.applicability.state).toBe("not-applicable");
     expect(
       canonicalOrphan.asset.controlReview?.state === "reviewed-controls"
         ? canonicalOrphan.asset.controlReview.controls.find((control) => control.deploymentKey.startsWith("hyperevm:"))

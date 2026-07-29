@@ -40,9 +40,10 @@ import {
   type BlacklistCurrentBalanceSnapshot,
 } from "@shared/lib/blacklist-active-records";
 import { loadBlacklistReconciliationStatus } from "../lib/blacklist-reconciliation-status";
-
-const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION = 1;
-const BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY = `blacklist:summary:producer:v${BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION}`;
+import {
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+} from "../lib/blacklist-cache-keys";
 
 type BlacklistSummaryPayload = Record<string, unknown>;
 

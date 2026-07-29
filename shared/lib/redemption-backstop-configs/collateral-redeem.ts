@@ -310,28 +310,6 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Live reserve sync reads the current XAUT vault balance and aUSDT total supply, but current redemption capacity is still modeled as documented eventual system redeemability until Alloy exposes per-account/current redeemable-capacity telemetry",
       ],
     },
-    "ebusd-ebisu": {
-      ...collateralRedeemBase,
-      capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
-      docs: [
-        sourceRef("Ebisu overview", "https://ebisu.gitbook.io/ebisu-money", ["route", "capacity"]),
-        sourceRef(
-          "Ebisu mainnet deployments",
-          "https://ebisu.gitbook.io/ebisu-money/developers/deployment-addresses-mainnet",
-          ["capacity"],
-        ),
-        sourceRef("Liquity V2 redemption fee docs", "https://docs.liquity.org/v2-faq/redemptions-and-delegation", [
-          "fees",
-        ]),
-      ],
-      notes: [
-        "Fresh live reserve metadata reads Ebisu's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
-        "Redemptions return the collateral of the lowest-rate loans, so the output depends on active collateral branches and position state. No complete fixed output basket is documented; outputAssets intentionally remains unset rather than publishing a tracked subset.",
-      ],
-    },
     "ussd-sonic-labs": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
@@ -799,7 +777,6 @@ applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
   "nect-beraborrow",
   "usdq-quill",
   "usdaf-asymmetry",
-  "ebusd-ebisu",
   "reusd-resupply",
   "satusd-river",
 ]);

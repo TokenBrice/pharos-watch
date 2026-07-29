@@ -24,7 +24,7 @@ describe("Safety Score v9 methodology policy", () => {
   it("loads the committed V9 policy with a frozen semantic digest", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.02");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.03");
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the

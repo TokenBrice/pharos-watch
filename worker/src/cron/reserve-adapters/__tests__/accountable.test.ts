@@ -227,7 +227,7 @@ describe("adaptAccountableDashboard", () => {
       }),
     ]);
     expect(result.slices).toContainEqual(expect.objectContaining({
-      name: "Unknown / unmapped Accountable buckets",
+      name: "Other / unmapped Accountable buckets",
       risk: "high",
     }));
     expect(result.slices).not.toContainEqual(expect.objectContaining({

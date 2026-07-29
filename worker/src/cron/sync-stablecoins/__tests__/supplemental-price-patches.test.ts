@@ -54,14 +54,13 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
-  it("includes audited dEURO, DLLR, and ebUSD production gaps in the relaxed fallback allowlist", async () => {
+  it("includes audited dEURO and DLLR production gaps in the relaxed fallback allowlist", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 6 * 3600;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
           "decentralized-euro": { usd: 1.14, last_updated_at: observedAt },
           "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
-          "ebusd-stablecoin": { usd: 1.001, last_updated_at: observedAt },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
@@ -72,16 +71,8 @@ describe("runCoingeckoLowVolumePass", () => {
       symbol: "DLLR",
       price: null,
       priceSource: "defillama",
-      supplySource: "defillama",
-      circulating: { peggedUSD: 100_000_000 },
-    });
-    const ebusd = asset({
-      id: "ebusd-ebisu",
-      symbol: "ebUSD",
-      price: null,
-      priceSource: "coingecko",
       supplySource: "defillama-history-gap-fill",
-      circulating: { peggedUSD: 3_200_000 },
+      circulating: { peggedUSD: 100_000_000 },
     });
     const deuro = asset({
       id: "deuro-deuro",
@@ -93,17 +84,11 @@ describe("runCoingeckoLowVolumePass", () => {
       circulating: { peggedEUR: 1_600_000 },
     });
 
-    const result = await runCoingeckoLowVolumePass([dllr, ebusd, deuro], null, { peggedEUR: 1.16 });
+    const result = await runCoingeckoLowVolumePass([dllr, deuro], null, { peggedEUR: 1.16 });
 
-    expect(result).toEqual({ resolved: 3, failures: [] });
+    expect(result).toEqual({ resolved: 2, failures: [] });
     expect(dllr).toMatchObject({
       price: 0.998,
-      priceSource: "coingecko-low-volume",
-      priceConfidence: "fallback",
-      supplySource: "defillama",
-    });
-    expect(ebusd).toMatchObject({
-      price: 1.001,
       priceSource: "coingecko-low-volume",
       priceConfidence: "fallback",
       supplySource: "defillama-history-gap-fill",
@@ -168,7 +153,6 @@ describe("runCoingeckoLowVolumePass", () => {
     const quotes = {
       "bitcoin-usd-btcfi": 0.9727,
       "sovryn-dollar": 1.0002,
-      "ebusd-stablecoin": 0.9863,
       "celo-british-pound": 1.34,
       "celo-australian-dollar": 0.695,
       ccop: 0.00029996,
@@ -184,7 +168,6 @@ describe("runCoingeckoLowVolumePass", () => {
     const assets = [
       asset({ id: "btcusd-btcfi", symbol: "BtcUSD", price: null, pegType: "peggedUSD" }),
       asset({ id: "dllr-sovryn", symbol: "DLLR", price: null, pegType: "peggedUSD" }),
-      asset({ id: "ebusd-ebisu", symbol: "ebUSD", price: null, pegType: "peggedUSD" }),
       asset({ id: "gbpm-mento", symbol: "GBPm", price: null, pegType: "peggedGBP" }),
       asset({ id: "audm-mento", symbol: "AUDm", price: null, pegType: "peggedAUD" }),
       asset({ id: "copm-mento", symbol: "COPm", price: null, pegType: "peggedCOP" }),
@@ -198,7 +181,7 @@ describe("runCoingeckoLowVolumePass", () => {
       peggedCHF: quotes.cchf,
     });
 
-    expect(result).toEqual({ resolved: 7, failures: [] });
+    expect(result).toEqual({ resolved: 6, failures: [] });
     expect(assets.map(({ price }) => price)).toEqual(Object.values(quotes));
     expect(assets.every(({ priceSource }) => priceSource === "coingecko-low-volume")).toBe(true);
   });

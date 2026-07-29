@@ -17,6 +17,7 @@ import type { BlacklistRow } from "../cron/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runAdminRoute } from "../lib/route-wrappers";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 2000;
@@ -244,6 +245,9 @@ export async function handleBackfillBlacklistCurrentBalances(
         skippedDueBudget,
         budgetUsed: budget.count,
         budgetLimit: budget.limit,
+        cacheInvalidation: !dryRun
+          ? await invalidateBlacklistDerivedCaches(db)
+          : { attempted: 0, deleted: 0, failed: 0 },
       });
     },
   );

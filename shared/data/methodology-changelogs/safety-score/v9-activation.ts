@@ -58,3 +58,19 @@ export const SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY: MethodologyChangelogEntry = 
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE: MethodologyChangelogEntry = {
+  version: "9.03",
+  title: "Subthreshold chain-label pool tolerance",
+  date: "2026-07-29",
+  effectiveAt: 1785341437,
+  summary:
+    "Subthreshold unrecognized chain-label supply pools remain tolerated by the bridge-materiality proof but no longer surface as public evidence-responsibility facts.",
+  impact: [
+    "Small raw provider chain-label pools below the common-mode materiality floor no longer create producer-failed remediation items",
+    "Material unmatched bridge supply still fails closed through the ordinary bridge-supply reason at or above the materiality floor",
+    "Backing, Exit, and Economic Control weights, score aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

@@ -441,7 +441,7 @@ This table reflects the shared adapter registry. `Configured coins` can be `0` f
 | `jupusd`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `liquity-v1`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
 | `liquity-native-active-pool` | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `liquity-v2-branches`        | `onchain-evm`                                    | `collateral-mix`                                      | 6                |
+| `liquity-v2-branches`        | `onchain-evm`                                    | `collateral-mix`                                      | 5                |
 | `lista`                      | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `m0`                         | `http-json`                                      | `protocol-reserve`                                    | 7                |
 | `m0-wrapper-underlying`      | `onchain-evm`                                    | `single-asset`                                        | 3                |

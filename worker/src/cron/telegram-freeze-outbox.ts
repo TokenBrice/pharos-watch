@@ -20,6 +20,39 @@ function isPrivateChat(chatId: string): boolean {
   return Number(chatId) > 0;
 }
 
+interface FreezeAudienceScope {
+  hasGlobalAudience: boolean;
+  stablecoinIds: Set<string>;
+}
+
+async function loadFreezeAudienceScope(db: D1Database, nowSec: number): Promise<FreezeAudienceScope> {
+  const [globalRow, stablecoinRows] = await Promise.all([
+    db.prepare(
+      `SELECT 1 AS present
+         FROM telegram_subscribers
+        WHERE global_alert_freeze = 1
+          AND (alert_snooze_until_ts IS NULL OR alert_snooze_until_ts <= ?)
+        LIMIT 1`,
+    ).bind(nowSec).first<{ present: number }>(),
+    db.prepare(
+      `SELECT DISTINCT sub.stablecoin_id
+         FROM telegram_subscriptions sub
+         JOIN telegram_subscribers s ON s.chat_id = sub.chat_id
+        WHERE sub.alert_freeze = 1
+          AND (s.alert_snooze_until_ts IS NULL OR s.alert_snooze_until_ts <= ?)
+          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+    ).bind(nowSec, nowSec).all<{ stablecoin_id: string }>(),
+  ]);
+  return {
+    hasGlobalAudience: globalRow != null,
+    stablecoinIds: new Set((stablecoinRows.results ?? []).map((row) => row.stablecoin_id)),
+  };
+}
+
+function freezeAlertHasPossibleAudience(event: FreezeAlert, audience: FreezeAudienceScope): boolean {
+  return audience.hasGlobalAudience || audience.stablecoinIds.has(event.stablecoinId);
+}
+
 function isFreezeAlert(value: unknown): value is FreezeAlert {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Partial<FreezeAlert>;
@@ -43,14 +76,15 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
   state: "stale" | "seeded" | "queued" | "idle";
   observed: number;
   queued: number;
+  skippedNoAudience: number;
 }> {
   const cached = await getCache(db, FREEZE_CURSOR_KEY);
   const cursor = cached && /^\d+$/.test(cached.value) ? Number(cached.value) : null;
   const loaded = await loadFreshFreezeAlerts(db, cursor, nowSec);
-  if (loaded.state === "stale") return { state: "stale", observed: 0, queued: 0 };
+  if (loaded.state === "stale") return { state: "stale", observed: 0, queued: 0, skippedNoAudience: 0 };
   if (loaded.state === "unseeded") {
     if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-    return { state: "seeded", observed: 0, queued: 0 };
+    return { state: "seeded", observed: 0, queued: 0, skippedNoAudience: 0 };
   }
 
   const resumable = await db.prepare(
@@ -66,14 +100,27 @@ export async function dispatchFreezeAlertOutbox(db: D1Database, nowSec: number):
       queuedByTapeId.set(event.tapeEventId, event);
     }
   }
-  for (const event of loaded.alerts) queuedByTapeId.set(event.tapeEventId, event);
+  const audience = await loadFreezeAudienceScope(db, nowSec);
+  let skippedNoAudience = 0;
+  for (const event of loaded.alerts) {
+    if (!freezeAlertHasPossibleAudience(event, audience)) {
+      skippedNoAudience += 1;
+      continue;
+    }
+    queuedByTapeId.set(event.tapeEventId, event);
+  }
   let queued = 0;
   for (const event of queuedByTapeId.values()) queued += await persistAndQueueFreezeEvent(db, event, nowSec);
-  // Advancing after every event is intentional: each event has its own durable
-  // source row and target handoff, so a later event failure resumes from that
-  // immutable tape identity rather than replaying a prior one.
+  // New no-audience events are intentionally cursor-advanced without durable
+  // outbox rows. A later subscriber should not receive historical freeze alerts
+  // whose recipient cohort was empty at observation time.
   if (loaded.cursor != null) await setCache(db, FREEZE_CURSOR_KEY, String(loaded.cursor));
-  return { state: loaded.alerts.length > 0 ? "queued" : "idle", observed: loaded.alerts.length, queued };
+  return {
+    state: queued > 0 ? "queued" : "idle",
+    observed: loaded.alerts.length,
+    queued,
+    skippedNoAudience,
+  };
 }
 
 async function persistAndQueueFreezeEvent(db: D1Database, event: FreezeAlert, nowSec: number): Promise<number> {

@@ -5,6 +5,7 @@ import {
   SAFETY_SCORE_V9_ACTIVATION,
   SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
   SAFETY_SCORE_V9_ROUTE_CAPACITY,
+  SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE,
 } from "@shared/data/methodology-changelogs/safety-score/v9-activation";
 import { scoringAnchorId, VersionCard } from "./content-shared";
 import { scoringChangelogV8Details } from "./content-v8";
@@ -20,6 +21,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.03": (
+    <>
+      <p>{SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.02": (
     <>
       <p>{SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY.summary}</p>

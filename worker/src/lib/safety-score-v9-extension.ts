@@ -1889,7 +1889,15 @@ function adaptBridgeReview(
       tier: group.tier,
     })),
   ].sort((left, right) => compareText(left.controlKey, right.controlKey));
-  if (controls.length === 0) {
+  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
+  const onlyZeroShareUnroutedControls =
+    routes.length === 0 &&
+    controls.length > 0 &&
+    controls.every((control) => control.materialSupplyShare === 0);
+  // An unresolved registry deployment can remain as a zero-share audit fact
+  // while every selected supply route is reviewed native issuance. It does not
+  // make the asset bridge-exposed or require a synthetic bridge route row.
+  if (controls.length === 0 || (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls)) {
     return {
       review: {
         status: notApplicableStatus(
@@ -1899,10 +1907,9 @@ function adaptBridgeReview(
         ),
         routes: [],
       },
-      controls: [],
+      controls,
     };
   }
-  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
   const state =
     allMaterialRoutesReviewed && reviewedObservationState(confidence) === "known" ? "known" : "bounded-unknown";
   return {

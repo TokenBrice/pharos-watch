@@ -184,6 +184,7 @@ async function dispatchTelegramAlertsImpl(
           freezeOutboxState: freezeOutbox.state,
           freezeObserved: freezeOutbox.observed,
           freezeQueued: freezeOutbox.queued,
+          freezeSkippedNoAudience: freezeOutbox.skippedNoAudience,
         },
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveAlertSourceState: snapshotState.reserveSourceAssessment.state,

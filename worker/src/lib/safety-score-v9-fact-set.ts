@@ -2707,10 +2707,17 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   const evidence = context.evidence.get(evidenceId)!;
   const activeDepegBps = context.fixedInput.activeDepegPeakBpsById[context.asset.assetId] ?? null;
   const pegScore = deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec);
+  const quietPegObservation =
+    reference !== null &&
+    pegScore !== null &&
+    peg.currentDeviationBps === null &&
+    peg.activeDepeg === false &&
+    peg.eventCount === 0 &&
+    peg.worstDeviationBps === null;
   const complete =
     reference !== null &&
     pegScore !== null &&
-    peg.currentDeviationBps !== null &&
+    (peg.currentDeviationBps !== null || quietPegObservation) &&
     (!peg.activeDepeg || activeDepegBps !== null);
   const hasPartialActiveDepegEvidence =
     reference !== null && pegScore !== null && peg.activeDepeg === true && activeDepegBps !== null;
@@ -2773,7 +2780,7 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     pegScore: complete || hasPartialActiveDepegEvidence ? pegScore : null,
     // The v8 peg summary reports signed deviation; the v9 peg fact carries the
     // magnitude per its nonnegative schema contract.
-    currentDeviationBps: complete && peg.currentDeviationBps !== null ? Math.abs(peg.currentDeviationBps) : null,
+    currentDeviationBps: complete ? Math.abs(peg.currentDeviationBps ?? 0) : null,
     activeDepeg: complete ? peg.activeDepeg : hasPartialActiveDepegEvidence ? true : null,
     activeDepegBps: (complete && peg.activeDepeg) || hasPartialActiveDepegEvidence ? activeDepegBps : null,
     trackingSpanDays: peg.trackingSpanDays,

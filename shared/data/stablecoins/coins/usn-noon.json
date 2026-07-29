@@ -468,7 +468,11 @@
         "CLOs (JAAA)": "high",
         "US Treasury Bills": "very-low",
         "Principal Tokens (PTs)": "high",
-        "Funding Rate (BTC)": "high"
+        "Funding Rate (BTC)": "high",
+        "Other": "high"
+      },
+      "renameMap": {
+        "Other": "Other / unmapped Accountable buckets"
       },
       "coinIdMap": {
         "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"

@@ -164,6 +164,125 @@ function args(overrides: Partial<EvaluateV9EconomicControlArgs> = {}): EvaluateV
   };
 }
 
+type ChainLabelPoolOptions = {
+  withPoolControl?: boolean;
+  namedUnmatched?: { key: string; share: number; withControl?: boolean }[];
+};
+
+// Shape of an asset whose provider supply carries one pooled row of
+// unrecognized chain labels (RULED D-J): a single reviewed native/controlled
+// route plus the pool, optionally joined by a bounded control and by named
+// unmatched chain rows.
+function chainLabelPoolResult(
+  assetId: string,
+  poolShare: number | null,
+  { withPoolControl = true, namedUnmatched = [] }: ChainLabelPoolOptions = {},
+) {
+  const poolKey = `unmatched-chain-label-pool:${assetId}`;
+  const namedShare = namedUnmatched.reduce((sum, row) => sum + row.share, 0);
+  const reviewedShare = 1 - (poolShare ?? 0) - namedShare;
+  const reviewedControl = control("bridge:reviewed-route", "bridge", {
+    deploymentKey: "ethereum:0xreviewed",
+    scope: "deployment",
+    economicLossScope: "deployment",
+    materialSupplyShare: reviewedShare,
+    status: requiredKnown("control.reviewed-route"),
+  });
+  const poolControl = control("bridge-supply:pool", "bridge", {
+    deploymentKey: poolKey,
+    scope: "deployment",
+    economicLossScope: "deployment",
+    capabilities: [],
+    capSemantics: { kind: "unknown", bound: null },
+    claimImpairment: "unknown",
+    authority: { authorityKey: `bridge-route:${poolKey}`, model: "unknown", threshold: null },
+    materialSupplyShare: poolShare,
+    incidentState: "unknown",
+    status: boundedUnknown("control.pool"),
+  });
+  const namedControls = namedUnmatched
+    .filter((row) => row.withControl !== false)
+    .map((row, index) =>
+      control(`bridge-supply:named-${index}`, "bridge", {
+        deploymentKey: row.key,
+        scope: "deployment",
+        economicLossScope: "deployment",
+        capabilities: [],
+        capSemantics: { kind: "unknown", bound: null },
+        claimImpairment: "unknown",
+        authority: { authorityKey: `bridge-route:${row.key}`, model: "unknown", threshold: null },
+        materialSupplyShare: row.share,
+        incidentState: "unknown",
+        status: boundedUnknown(`control.named-${index}`),
+      }),
+    );
+  const controls = [reviewedControl, ...(poolShare !== null && withPoolControl ? [poolControl] : []), ...namedControls];
+  return evaluateV9EconomicControl(
+    args({
+      facts: {
+        ...facts(controls),
+        assetId,
+        supply: {
+          status: requiredKnown("supply"),
+          selectedBridgeRoutes: [
+            {
+              deploymentRouteKey: reviewedControl.deploymentKey,
+              supplyUsd: reviewedShare * 100,
+              supplyShare: reviewedShare,
+              reviewState: "selected-reviewed",
+              reviewedRouteKind: "controlled",
+            },
+            ...(poolShare !== null
+              ? [
+                  {
+                    deploymentRouteKey: poolKey,
+                    supplyUsd: poolShare * 100,
+                    supplyShare: poolShare,
+                    reviewState: "unmatched" as const,
+                  },
+                ]
+              : []),
+            ...namedUnmatched.map((row) => ({
+              deploymentRouteKey: row.key,
+              supplyUsd: row.share * 100,
+              supplyShare: row.share,
+              reviewState: "unmatched" as const,
+            })),
+          ],
+          selectedRouteSupplyShare: reviewedShare,
+          unknownRouteSupplyShare: (poolShare ?? 0) + namedShare,
+          unreviewedRouteSupplyShare: 0,
+        },
+      },
+      bridge: {
+        status: requiredKnown("bridge"),
+        routes: [{ controlKey: reviewedControl.controlKey, tier: "issuer-native-burn-mint" as const }],
+      },
+    }),
+  );
+}
+
+// Every tracked asset that carried a producer-failed
+// immaterial-unrecognized-chain-pool fact in the 2026-07-29 baseline, with the
+// pool share measured for it in the publication-exact replay that cleared the
+// group under Safety Score v9.03.
+const MEASURED_CHAIN_LABEL_POOLS = [
+  { assetId: "eurc-circle", poolShare: 1.127575627983762e-7 },
+  { assetId: "eurs-stasis", poolShare: 0.00023167490433921285 },
+  { assetId: "frax-frax", poolShare: 0.00000247225321587023 },
+  { assetId: "fusd-finchain", poolShare: 2.9977780980856436e-7 },
+  { assetId: "pyusd-paypal", poolShare: 7.125766668483089e-10 },
+  { assetId: "sbc-brale", poolShare: 0.004350370441887976 },
+  { assetId: "tusd-trueusd", poolShare: 0.0000040954852087551855 },
+  { assetId: "usbd-bima", poolShare: 0.00007350583479734122 },
+  { assetId: "usdc-circle", poolShare: 0.0004388981967687535 },
+  { assetId: "usdglo-glo", poolShare: 0.00871673920808645 },
+  { assetId: "usdp-parallel", poolShare: 2.9347931689789586e-7 },
+  { assetId: "usdt-tether", poolShare: 0.0007689831247690548 },
+  { assetId: "usdy-ondo-finance", poolShare: 2.2530125252785815e-7 },
+  { assetId: "xsgd-straitsx", poolShare: 0.07916180659603161 },
+] as const;
+
 describe("Safety Score v9 economic control", () => {
   it("canonically projects normalized asset facts with an explicit review extension", () => {
     const mintControl = control("mint:z", "mint");
@@ -944,100 +1063,10 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
-  it("tolerates an immaterial unrecognized-chain-label pool in the bridge supply proof (RULED D-J)", () => {
-    const POOL_KEY = "unmatched-chain-label-pool:fixture-asset";
-    const resultFor = (
-      poolShare: number | null,
-      {
-        withPoolControl = true,
-        namedUnmatched = [],
-      }: { withPoolControl?: boolean; namedUnmatched?: { key: string; share: number; withControl?: boolean }[] } = {},
-    ) => {
-      const namedShare = namedUnmatched.reduce((sum, row) => sum + row.share, 0);
-      const reviewedShare = 1 - (poolShare ?? 0) - namedShare;
-      const reviewedControl = control("bridge:reviewed-route", "bridge", {
-        deploymentKey: "ethereum:0xreviewed",
-        scope: "deployment",
-        economicLossScope: "deployment",
-        materialSupplyShare: reviewedShare,
-        status: requiredKnown("control.reviewed-route"),
-      });
-      const poolControl = control("bridge-supply:pool", "bridge", {
-        deploymentKey: POOL_KEY,
-        scope: "deployment",
-        economicLossScope: "deployment",
-        capabilities: [],
-        capSemantics: { kind: "unknown", bound: null },
-        claimImpairment: "unknown",
-        authority: { authorityKey: `bridge-route:${POOL_KEY}`, model: "unknown", threshold: null },
-        materialSupplyShare: poolShare,
-        incidentState: "unknown",
-        status: boundedUnknown("control.pool"),
-      });
-      const namedControls = namedUnmatched
-        .filter((row) => row.withControl !== false)
-        .map((row, index) =>
-          control(`bridge-supply:named-${index}`, "bridge", {
-            deploymentKey: row.key,
-            scope: "deployment",
-            economicLossScope: "deployment",
-            capabilities: [],
-            capSemantics: { kind: "unknown", bound: null },
-            claimImpairment: "unknown",
-            authority: { authorityKey: `bridge-route:${row.key}`, model: "unknown", threshold: null },
-            materialSupplyShare: row.share,
-            incidentState: "unknown",
-            status: boundedUnknown(`control.named-${index}`),
-          }),
-        );
-      const controls = [
-        reviewedControl,
-        ...(poolShare !== null && withPoolControl ? [poolControl] : []),
-        ...namedControls,
-      ];
-      return evaluateV9EconomicControl(
-        args({
-          facts: {
-            ...facts(controls),
-            supply: {
-              status: requiredKnown("supply"),
-              selectedBridgeRoutes: [
-                {
-                  deploymentRouteKey: reviewedControl.deploymentKey,
-                  supplyUsd: reviewedShare * 100,
-                  supplyShare: reviewedShare,
-                  reviewState: "selected-reviewed",
-                  reviewedRouteKind: "controlled",
-                },
-                ...(poolShare !== null
-                  ? [
-                      {
-                        deploymentRouteKey: POOL_KEY,
-                        supplyUsd: poolShare * 100,
-                        supplyShare: poolShare,
-                        reviewState: "unmatched" as const,
-                      },
-                    ]
-                  : []),
-                ...namedUnmatched.map((row) => ({
-                  deploymentRouteKey: row.key,
-                  supplyUsd: row.share * 100,
-                  supplyShare: row.share,
-                  reviewState: "unmatched" as const,
-                })),
-              ],
-              selectedRouteSupplyShare: reviewedShare,
-              unknownRouteSupplyShare: (poolShare ?? 0) + namedShare,
-              unreviewedRouteSupplyShare: 0,
-            },
-          },
-          bridge: {
-            status: requiredKnown("bridge"),
-            routes: [{ controlKey: reviewedControl.controlKey, tier: "issuer-native-burn-mint" as const }],
-          },
-        }),
-      );
-    };
+  it("clears DAI's immaterial unrecognized-chain-label pool without weakening the RULED D-J floor", () => {
+    const ASSET_ID = "dai-makerdao";
+    const resultFor = (poolShare: number | null, options?: ChainLabelPoolOptions) =>
+      chainLabelPoolResult(ASSET_ID, poolShare, options);
 
     // Pool absent: no pool reason, reviewed route scores at its tier quality.
     const absent = resultFor(null);
@@ -1045,15 +1074,13 @@ describe("Safety Score v9 economic control", () => {
     expect(absent.score).toBe(90);
 
     // Pool at 9.99% without any joined control: the proof tolerates it as an
-    // accepted bounded row and the condition stays visible as a diagnostic.
+    // accepted bounded row without surfacing an unresolved producer reason.
     const smooth = resultFor(0.0999, { withPoolControl: false });
-    expect(smooth.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
-    expect(smooth.reasons[0]).toMatchObject({ critical: false, path: "supply:unrecognized-chain-pool" });
+    expect(smooth.reasons).toEqual([]);
     expect(smooth.score).toBe(90);
 
     // Pool at exactly 10% without a joined control fails closed exactly as
-    // before: the ordinary per-row join is required and the diagnostic is not
-    // emitted.
+    // before: the ordinary per-row join is required.
     const floor = resultFor(0.1, { withPoolControl: false });
     expect(floor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
     expect(floor.reasons.map((reason) => reason.code)).not.toContain("immaterial-unrecognized-chain-pool");
@@ -1074,25 +1101,43 @@ describe("Safety Score v9 economic control", () => {
     expect(floorWithControl.score).toBe(90);
 
     // Named unmatched rows are unaffected by the pool tolerance: with their
-    // own joined subthreshold controls they pass, and the pool stays
-    // diagnostic.
+    // own joined subthreshold controls they pass.
     const named = resultFor(0.0999, {
       withPoolControl: false,
-      namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02 }],
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02 }],
     });
-    expect(named.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
+    expect(named.reasons).toEqual([]);
 
     // A named unmatched row without a joined control still fails the proof.
     const namedOpen = resultFor(0.0999, {
       withPoolControl: false,
-      namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02, withControl: false }],
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02, withControl: false }],
     });
-    expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(
-      expect.arrayContaining(["material-bridge-supply-unmatched", "immaterial-unrecognized-chain-pool"]),
-    );
+    expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
 
-  it("keeps the pool diagnostic from authorizing the bounded bridge fallback", () => {
+  it.each(MEASURED_CHAIN_LABEL_POOLS)(
+    "clears the measured chain-label pool for $assetId while holding the RULED D-J floor",
+    ({ assetId, poolShare }) => {
+      // The tolerance only applies below the common-mode floor, so every
+      // measured share this group cleared with must stay strictly under it.
+      // XSGD is the binding case at ~7.9%.
+      expect(poolShare).toBeLessThan(V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold);
+
+      // At its measured share the pool is tolerated silently: no reason, and
+      // the reviewed route still scores at its tier quality.
+      const measured = chainLabelPoolResult(assetId, poolShare, { withPoolControl: false });
+      expect(measured.reasons).toEqual([]);
+      expect(measured.score).toBe(90);
+
+      // The same asset identity at the floor still fails closed, so the
+      // clearance is bounded by materiality rather than by asset.
+      const atFloor = chainLabelPoolResult(assetId, 0.1, { withPoolControl: false });
+      expect(atFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
+    },
+  );
+
+  it("keeps the tolerated pool from authorizing the bounded bridge fallback", () => {
     // Shape of the major-issuer cohort: every reviewed deployment is native,
     // so the bridge section contributes no component; the only unresolved
     // supply is an immaterial pool plus joined subthreshold named rows.
@@ -1144,7 +1189,7 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
-    expect(result.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
+    expect(result.reasons).toEqual([]);
     expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
   });
 

@@ -511,7 +511,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     expect(persistentMarketDepthContribution(factSet)).toBeUndefined();
   });
 
-  it("keeps diagnostic issuer opacity visible without suppressing resilience credit", () => {
+  it("keeps tolerated issuer opacity from suppressing resilience credit", () => {
     const base = compiledFactSet([
       measuredRoute({
         routeId: "deep-route",
@@ -578,12 +578,7 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     });
     const evaluated = evaluatedAsset(diagnostic);
 
-    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(
-      expect.objectContaining({
-        code: "immaterial-unrecognized-chain-pool",
-        responsibility: "issuer-undisclosed",
-      }),
-    );
+    expect(evaluated.scoreInput.pillars.control.reasons).toEqual([]);
     expect(evaluated.operationalResilience).toMatchObject({
       eligible: true,
       blockerCodes: [],

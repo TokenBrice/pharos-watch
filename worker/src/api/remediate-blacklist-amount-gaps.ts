@@ -25,6 +25,7 @@ import {
   type BlacklistRunBudget,
 } from "../cron/blacklist/run-budget";
 import { fetchBlacklistAssetPriceFromCache } from "../cron/blacklist/row-preparation";
+import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const RECOVERABLE_GAP_STATUSES = ["recoverable_pending", "provider_failed", "ambiguous"] as const;
@@ -326,6 +327,9 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
     if (updates.length > 0) {
       await db.batch(updates);
     }
+    const cacheInvalidation = updates.length > 0
+      ? await invalidateBlacklistDerivedCaches(db)
+      : { attempted: 0, deleted: 0, failed: 0 };
 
     return jsonResponse({
       ok: true,
@@ -351,6 +355,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
         budgetUsed: budget.count,
         budgetLimit: budget.limit,
       },
+      cacheInvalidation,
     });
   });
 }

@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.02`
+- **Current methodology version:** `v9.03`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -30,6 +30,8 @@ The weights allocate bounded headroom; they are not an unrestricted weighted ave
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
 Responsibility follows causal provenance rather than the nearest compiler or evaluator stage. Explicit reason-level ownership wins; inherited reserve gaps, unavailable upstream backing or role-pillar evidence, and missing parent scores carry every originating owner into downstream reasons instead of defaulting to an integration gap. Every attributed root receives a causal-root-qualified score path even when it is the only root, so adding another root cannot rename an existing public fact; only unattributed fallbacks retain aggregate base paths, and ownership never becomes part of fact identity. Applicable-but-unpublished mechanism metrics may retain their conservative structural signal, but remain issuer-undisclosed rather than becoming measured-adverse. A reviewed external exit output whose identity is known but cannot receive a same-notional valuation is producer-failed, while an issuer-undisclosed settlement asset remains issuer-undisclosed; neither becomes scoreable. Date-only mechanism and exit-output dispositions are admitted only after their reviewed UTC day, so current curation cannot leak into earlier replay clocks. Partial mint-control reviews retain controls that were actually reviewed while unresolved deployment surfaces remain bounded and fail closed. These changes do not alter pillar weights, score aggregation, caps, or grade thresholds.
+
+Subthreshold unrecognized chain-label supply pools are tolerated by the bridge-materiality completeness proof and no longer surface as public evidence-responsibility facts. At or above the common-mode materiality floor, unmatched bridge supply still fails closed through the ordinary material bridge-supply reason.
 
 Exit capacity is route-specific. A route below both the first positive 1% completion and $100K absolute-capacity breakpoints receives a zero route score; reaching $100K while still completing less than 1% caps the route at 50. Exchange-wide volume, aggregate DEX TVL, and issuer reserves do not substitute for executable capacity on the selected route.
 
