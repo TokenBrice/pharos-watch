@@ -75,6 +75,22 @@ function trackedStablecoinValuation(
       sourceId: "report-cards-peg-summary",
     };
   }
+  const quietPegObservation =
+    peg?.pegScore !== null &&
+    peg?.pegScore !== undefined &&
+    peg.activeDepeg === false &&
+    peg.eventCount === 0 &&
+    peg.worstDeviationBps === null;
+  if (quietPegObservation) {
+    return {
+      basis: "price",
+      unitValueUsd: 1,
+      expectedUnitValueUsd: 1,
+      confidence: "medium",
+      observedAtSec: Math.min(peg.priceObservedAt ?? observedAtSec, observedAtSec),
+      sourceId: "report-cards-peg-summary",
+    };
+  }
 
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
   if (!navPrice) return null;

@@ -496,6 +496,54 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     },
   );
 
+  it("values a quiet scored tracked-stablecoin output at par", () => {
+    const row = supplyFullRow({
+      stablecoinId: "zys-zephyr-protocol",
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      holderEligibility: "any-holder",
+      outputAssetType: "stable-single",
+    });
+    const fixedInput = fixedInputStub(row);
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
+      fixedInput,
+      row.stablecoinId,
+    )[0]!.observation;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...observation,
+          output: {
+            kind: "tracked-stablecoin",
+            trackedAssetIds: ["zsd-zephyr-protocol"],
+          },
+        },
+      ],
+    };
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "zsd-zephyr-protocol": {
+        currentDeviationBps: null,
+        pegScore: 100,
+        activeDepeg: false,
+        eventCount: 0,
+        worstDeviationBps: null,
+      },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]?.output).toMatchObject({
+      kind: "tracked-stablecoin",
+      assetKeys: ["zsd-zephyr-protocol"],
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "zsd-zephyr-protocol",
+        unitValueUsd: 1,
+        expectedUnitValueUsd: 1,
+        sourceId: "report-cards-peg-summary",
+      },
+    });
+  });
+
   it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
     const reviewedRow = supplyFullRow({
       stablecoinId: "cusd-cap",
