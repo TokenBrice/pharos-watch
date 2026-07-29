@@ -440,102 +440,7 @@ export function buildSafetyScoreV9Candidate(
 function buildSafetyScoreV9CandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
-  return deepFreeze(buildSafetyScoreV9CandidatePipeline(input));
-}
-
-function buildSafetyScoreV9CandidatePipeline(
-  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
-): SafetyScoreV9CandidatePipelineResult {
-  if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
-    throw new Error("Safety Score v9 publication time must be a non-negative integer");
-  }
-
-  const fixedInput = input.fixedInput;
-  if (fixedInput.captureKind !== "exact-publication-inputs") {
-    throw new Error("Safety Score v9 publication evaluation requires exact publication inputs");
-  }
-  if (input.publishedAtSec < fixedInput.clockSec) {
-    throw new Error("Safety Score v9 publication cannot predate its evidence clock");
-  }
-
-  const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
-  assertV9ValidatedPolicyEnvelope(policy);
-  const policyVersion = v9PolicyVersion(policy);
-  const extension = materializeSafetyScoreV9FactSetExtension(
-    fixedInput,
-    input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
-  );
-  const compilation =
-    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-      fixedInput,
-      extension,
-    );
-  const compiledFacts = compilation.factSet;
-  const affectedAssetIds = quarantineAffectedAssetIds(
-    compiledFacts,
-    compilation.quarantines,
-  );
-  const displayByAssetId = new Map(
-    compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
-  );
-  const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
-  const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
-  const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
-  const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
-  const producerCapabilityDigest = computeSafetyScoreV9ProducerCapabilityDigest(capabilityIdentity);
-  const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
-    schemaVersion: 1,
-    policyId: policy.policy.policyId,
-    policyDigest: policy.semanticDigest,
-    evaluationBuildDigest: evaluatedSet.evaluationBuildDigest,
-    compilerFactSchemaDigest,
-    producerCapabilityDigest,
-  });
-  const candidateId =
-    input.releaseCandidateId === undefined
-      ? computeSafetyScoreV9CandidateId(candidateIdentity)
-      : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
-    candidateId,
-    baseInputGenerationId: evaluatedSet.baseInputGenerationId,
-    factSetDigest: evaluatedSet.factSetDigest,
-    evaluatedSetDigest: evaluatedSet.evaluatedSetDigest,
-    resultDigest: evaluatedSet.scoreResultDigest,
-    publishedAtSec: input.publishedAtSec,
-  })}`;
-  const candidate = buildSafetyScoreV9Response({
-    candidateId,
-    policyVersion,
-    publicationGenerationId,
-    publishedAtSec: input.publishedAtSec,
-    results: evaluatedSet.assets.map((asset) => ({
-      trace: asset.trace,
-      scoreInput: asset.scoreInput,
-      access: asset.access,
-      dependencyInputs: asset.dependencyInputs,
-      stressState: asset.stressState,
-      policy,
-      backing: asset.backing,
-      exit: asset.exit,
-      control: asset.control,
-      display: displayByAssetId.get(asset.assetId),
-    })),
-  });
-
-  return {
-    fixedInput,
-    extension,
-    compiledFacts,
-    evaluatedSet,
-    candidate,
-    compilerFactSchemaIdentity: compilerIdentity,
-    compilerFactSchemaDigest,
-    producerCapabilityIdentity: capabilityIdentity,
-    producerCapabilityDigest,
-    candidateIdentity,
-    quarantines: compilation.quarantines,
-    quarantineAffectedAssetIds: affectedAssetIds,
-  };
+  return deepFreeze(buildSafetyScoreV9CandidatePipeline(input, true));
 }
 
 /**
@@ -545,9 +450,25 @@ function buildSafetyScoreV9CandidatePipeline(
 export function buildSafetyScoreV9PublicationFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9PublicationResult> {
+  return deepFreeze(buildSafetyScoreV9CandidatePipeline(input, false));
+}
+
+function buildSafetyScoreV9CandidatePipeline(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  retainIntermediates: true,
+): SafetyScoreV9CandidatePipelineResult;
+function buildSafetyScoreV9CandidatePipeline(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  retainIntermediates: false,
+): SafetyScoreV9PublicationResult;
+function buildSafetyScoreV9CandidatePipeline(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+  retainIntermediates: boolean,
+): SafetyScoreV9CandidatePipelineResult | SafetyScoreV9PublicationResult {
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
+
   const fixedInput = input.fixedInput;
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 publication evaluation requires exact publication inputs");
@@ -582,7 +503,9 @@ export function buildSafetyScoreV9PublicationFromNormalizedInput(
   );
 
   // The published response does not expose replay intermediates. Release each
-  // large graph as soon as its compact projection has been captured.
+  // large graph as soon as its compact projection has been captured; replay and
+  // verification callers keep the same graphs through `retained`.
+  const retained = retainIntermediates ? { extension, compiledFacts } : null;
   extension = null;
   const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
   compiledFacts = null;
@@ -625,11 +548,28 @@ export function buildSafetyScoreV9PublicationFromNormalizedInput(
     })),
   });
 
-  return deepFreeze({
+  if (retained === null) {
+    return {
+      candidate,
+      compilerFactSchemaDigest,
+      producerCapabilityDigest,
+      quarantines: compilation.quarantines,
+      quarantineAffectedAssetIds: affectedAssetIds,
+    };
+  }
+
+  return {
+    fixedInput,
+    extension: retained.extension,
+    compiledFacts: retained.compiledFacts,
+    evaluatedSet,
     candidate,
+    compilerFactSchemaIdentity: compilerIdentity,
     compilerFactSchemaDigest,
+    producerCapabilityIdentity: capabilityIdentity,
     producerCapabilityDigest,
+    candidateIdentity,
     quarantines: compilation.quarantines,
     quarantineAffectedAssetIds: affectedAssetIds,
-  });
+  };
 }
