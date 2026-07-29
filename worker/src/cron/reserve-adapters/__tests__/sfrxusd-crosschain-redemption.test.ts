@@ -6,6 +6,7 @@ import {
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { describe, expect, it, vi } from "vitest";
 import {
+  encodeFunctionData,
   encodeFunctionResult,
   keccak256,
   parseAbi,
@@ -14,6 +15,7 @@ import type {
   EvmMulticall3Call,
   EvmMulticall3Result,
 } from "../../../lib/evm-rpc";
+import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import {
   observeSfrxusdCrosschainRedemptionRoute,
   type SfrxusdCrosschainRouteReadClient,
@@ -691,4 +693,519 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       rejectionCode,
     });
   });
+
+  it("issues byte-identical calldata to the frozen pre-collapse call tables", async () => {
+    const issued: Record<string, EvmMulticall3Call[][]> = {
+      ethereum: [],
+      fraxtal: [],
+    };
+    const readClient = client();
+    const recording: SfrxusdCrosschainRouteReadClient = {
+      ...readClient,
+      multicall: (chain, calls, blockNumber, options) => {
+        issued[chain].push(calls as EvmMulticall3Call[]);
+        return readClient.multicall(chain, calls, blockNumber, options);
+      },
+    };
+    const attempt = await observe(recording);
+    expect(attempt.status).toBe("accepted");
+
+    const inputShares = [100_000n, 1_000_000n, 5_000_000n, 25_000_000n].map(
+      (request) => (request * E18 * E18 + PRICE - 1n) / PRICE,
+    );
+    const legacyQuotes = legacyQuoteCalls({
+      params,
+      recipient: asBytes32(SFRXUSD),
+      inputShares,
+      previewOutputs: inputShares.map((shares) => previewRedeem(shares)),
+      cappedShares: MAX_REDEEM_SHARES,
+    });
+
+    expect(issued.ethereum).toEqual([
+      legacyEthereumBaseCalls(params, SFRXUSD),
+      [
+        {
+          label: "ethereum-supply-assets",
+          target: SFRXUSD,
+          callData: encodeFunctionData({
+            abi: ABI,
+            functionName: "convertToAssets",
+            args: [ETHEREUM_SUPPLY],
+          }),
+          allowFailure: false,
+        },
+      ],
+      legacyQuotes.ethereum,
+    ]);
+    expect(issued.fraxtal).toEqual([
+      legacyFraxtalBaseCalls(params),
+      legacyQuotes.fraxtal,
+    ]);
+  });
 });
+
+// Golden call tables frozen from the pre-collapse adapter (worker/src/cron/
+// reserve-adapters/sfrxusd-crosschain-redemption.ts @ e85ae9ab0), where every
+// Multicall3 call was written out as its own object literal. The fixtures above
+// match results by label, so nothing else in this suite would notice if a label
+// were pointed at the wrong target or function selector. These builders pin the
+// encoded calldata itself, byte for byte, on both chains and both quote paths.
+function legacyEthereumBaseCalls(
+  params: Params,
+  sfrxUsdProxyAddress: string,
+): EvmMulticall3Call[] {
+  return [
+    {
+      label: "remote-paused",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "paused",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "remote-fraxtal-hop",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "fraxtalHop",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "remote-eid",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "EID" }),
+      allowFailure: false,
+    },
+    {
+      label: "remote-frx-oft",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "frxUsdOft",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "remote-sfrx-oft",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "sfrxUsdOft",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "remote-service-fee",
+      target: params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "quoteHop",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "frx-oft-token",
+      target: params.expectedEthereumFrxUsdOftAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "token" }),
+      allowFailure: false,
+    },
+    {
+      label: "frx-oft-conversion-rate",
+      target: params.expectedEthereumFrxUsdOftAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimalConversionRate",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "sfrx-oft-token",
+      target: params.expectedEthereumSfrxUsdOftAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "token" }),
+      allowFailure: false,
+    },
+    {
+      label: "sfrx-oft-conversion-rate",
+      target: params.expectedEthereumSfrxUsdOftAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimalConversionRate",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "ethereum-frx-decimals",
+      target: params.expectedEthereumFrxUsdAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "ethereum-sfrx-decimals",
+      target: sfrxUsdProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "ethereum-sfrx-asset",
+      target: sfrxUsdProxyAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "asset" }),
+      allowFailure: false,
+    },
+    {
+      label: "ethereum-sfrx-total-supply",
+      target: sfrxUsdProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "totalSupply",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "eth-usd-aggregator",
+      target: params.expectedEthUsdFeedAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "aggregator",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "eth-usd-decimals",
+      target: params.expectedEthUsdFeedAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "eth-usd-round",
+      target: params.expectedEthUsdFeedAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "latestRoundData",
+      }),
+      allowFailure: false,
+    },
+  ];
+}
+
+function legacyFraxtalBaseCalls(
+  params: Params,
+): EvmMulticall3Call[] {
+  return [
+    {
+      label: "fraxtal-hop-paused",
+      target: params.expectedFraxtalHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "paused",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-hop-redeemer",
+      target: params.expectedFraxtalHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "fraxtalERC4626MintRedeemer",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-hop-frx-lockbox",
+      target: params.expectedFraxtalHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "frxUsdLockbox",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-hop-sfrx-lockbox",
+      target: params.expectedFraxtalHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "sfrxUsdLockbox",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-hop-remote",
+      target: params.expectedFraxtalHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "remoteHop",
+        args: [params.expectedEthereumEid],
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-hop-native-balance",
+      target: MULTICALL3_ADDRESS,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "getEthBalance",
+        args: [params.expectedFraxtalHopAddress as Hex],
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-frx-lockbox-token",
+      target: params.expectedFrxUsdLockboxAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "token" }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-frx-lockbox-conversion-rate",
+      target: params.expectedFrxUsdLockboxAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimalConversionRate",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-sfrx-lockbox-token",
+      target: params.expectedSfrxUsdLockboxAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "token" }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-sfrx-lockbox-conversion-rate",
+      target: params.expectedSfrxUsdLockboxAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimalConversionRate",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-frx-decimals",
+      target: params.expectedFraxtalFrxUsdAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "fraxtal-sfrx-decimals",
+      target: params.expectedFraxtalSfrxUsdAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-underlying",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "underlyingTkn",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-vault",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "vaultTkn",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-underlying-oracle",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "priceFeedUnderlying",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-vault-oracle",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "priceFeedVault",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-fee",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({ abi: ABI, functionName: "fee" }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-oracle-tolerance",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "oracleTimeTolerance",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-stored-price",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "getVaultTknPriceStoredE18",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-latest-vault-price",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "getLatestVaultTknPriceE18",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-latest-underlying-price",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "getLatestUnderlyingPriceE18",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-last-oracle-read",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "lastVaultTknOracleRead",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-total-assets",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "totalAssets",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-mdwr",
+      target: params.mintRedeemerProxyAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "mdwrComboView",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "redeemer-underlying-balance",
+      target: params.expectedFraxtalFrxUsdAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "balanceOf",
+        args: [params.mintRedeemerProxyAddress as Hex],
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "vault-oracle-decimals",
+      target: params.expectedVaultOracleAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "decimals",
+      }),
+      allowFailure: false,
+    },
+    {
+      label: "vault-oracle-round",
+      target: params.expectedVaultOracleAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "latestRoundData",
+      }),
+      allowFailure: false,
+    },
+  ];
+}
+
+function legacyQuoteCalls(args: {
+  params: Params;
+  recipient: Hex;
+  inputShares: bigint[];
+  previewOutputs: bigint[];
+  cappedShares: bigint;
+}): {
+  ethereum: EvmMulticall3Call[];
+  fraxtal: EvmMulticall3Call[];
+} {
+  return {
+    ethereum: args.inputShares.map((shares, index) => ({
+      label: `ethereum-quote:${index}`,
+      target: args.params.remoteHopAddress,
+      callData: encodeFunctionData({
+        abi: ABI,
+        functionName: "quote",
+        args: [
+          args.params.expectedEthereumSfrxUsdOftAddress as Hex,
+          args.recipient,
+          shares,
+        ],
+      }),
+      allowFailure: false,
+    })),
+    fraxtal: [
+      {
+        label: "capacity-preview",
+        target: args.params.mintRedeemerProxyAddress,
+        callData: encodeFunctionData({
+          abi: ABI,
+          functionName: "previewRedeem",
+          args: [args.cappedShares],
+        }),
+        allowFailure: false,
+      },
+      ...args.inputShares.flatMap((shares, index) => [
+        {
+          label: `preview:${index}`,
+          target: args.params.mintRedeemerProxyAddress,
+          callData: encodeFunctionData({
+            abi: ABI,
+            functionName: "previewRedeem",
+            args: [shares],
+          }),
+          allowFailure: false,
+        },
+        {
+          label: `fraxtal-return-quote:${index}`,
+          target: args.params.expectedFraxtalHopAddress,
+          callData: encodeFunctionData({
+            abi: ABI,
+            functionName: "quote",
+            args: [
+              args.params.expectedFrxUsdLockboxAddress as Hex,
+              args.params.expectedEthereumEid,
+              args.recipient,
+              args.previewOutputs[index],
+            ],
+          }),
+          allowFailure: false,
+        },
+      ]),
+    ],
+  };
+}
