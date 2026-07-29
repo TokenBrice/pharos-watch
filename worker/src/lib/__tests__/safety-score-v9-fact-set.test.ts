@@ -144,8 +144,14 @@ function exactFixedInput(
     pegScore?: number | null;
     currentDeviationBps?: number | null;
     depegEventCoverageLimited?: boolean;
+    pegPct?: number;
+    severityScore?: number;
+    spreadPenalty?: number;
+    eventCount?: number;
+    worstDeviationBps?: number | null;
     pegObservedAtSec?: number;
     activeDepeg?: boolean;
+    lastEventAt?: number | null;
     activeDepegPeakBps?: number;
     routeChain?: string;
     omitLiveReserve?: boolean;
@@ -214,13 +220,13 @@ function exactFixedInput(
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
             priceObservedAt: args.pegObservedAtSec ?? observedAtSec,
-            pegPct: 99,
-            severityScore: 0,
-            spreadPenalty: 0,
-            eventCount: 0,
-            worstDeviationBps: 1,
+            pegPct: args.pegPct ?? 99,
+            severityScore: args.severityScore ?? 0,
+            spreadPenalty: args.spreadPenalty ?? 0,
+            eventCount: args.eventCount ?? 0,
+            worstDeviationBps: args.worstDeviationBps === undefined ? 1 : args.worstDeviationBps,
             activeDepeg: args.activeDepeg ?? false,
-            lastEventAt: null,
+            lastEventAt: args.lastEventAt === undefined ? null : args.lastEventAt,
             trackingSpanDays: 365,
             methodologyVersion: "peg:fixture-v1",
           },
@@ -3466,6 +3472,32 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(missingPeakTrace.finalGrade).not.toBe("NR");
     expect(missingPeakTrace.nrReasons).toEqual([]);
     expect(trace.preCapScore).toBeLessThan(missingPeakTrace.preCapScore!);
+  });
+
+  it("treats quiet scored peg history as explicit zero current deviation", () => {
+    const fixed = exactFixedInput({
+      pegScore: 100,
+      currentDeviationBps: null,
+      activeDepeg: false,
+      eventCount: 0,
+      worstDeviationBps: null,
+      lastEventAt: null,
+      pegPct: 100,
+      severityScore: 100,
+      spreadPenalty: 0,
+    });
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
+    const peg = compiled.assets[0]!.peg;
+
+    expect(peg).toMatchObject({
+      status: { observationState: "known" },
+      pegScore: 100,
+      currentDeviationBps: 0,
+      activeDepeg: false,
+      activeDepegBps: null,
+    });
+    expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-peg-input");
   });
 
   it("keeps an active peg row suppressed when its depeg peak is absent", () => {
