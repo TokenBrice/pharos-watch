@@ -302,6 +302,7 @@ The 2026-07-29 operated D1 cleanup removed stale migration-era tables from produ
 | `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` |
 | `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` |
 | `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; there is no durable submission persistence today |
+| `alert_broker_conditions`, `alert_broker_deliveries` | Direct-webhook compatibility canary transport was removed; scheduled incident detection continues through cron/status telemetry |
 
 Do not use a normal migration for destructive cleanup. Future stale-table removals still require production backup/Time Travel verification, fresh zero-use evidence, and a dedicated operated rollout after compatible Worker code has soaked.
 

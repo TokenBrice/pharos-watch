@@ -76,7 +76,7 @@ must not mask either condition.
 
 ## Direct Alert Acceptance
 
-Historical note: the direct webhook transport and its compatibility canary were removed on 2026-07-22. Scheduled incident detection remains visible through cron and status-dashboard telemetry; migration `0175_durable_alert_broker.sql` rows remain inert for forensic inspection until an explicit retention decision approves cleanup.
+Historical note: the direct webhook transport and its compatibility canary were removed on 2026-07-22. Scheduled incident detection remains visible through cron and status-dashboard telemetry. The remaining shadow-mode direct-webhook broker rows were approved for retention cleanup and dropped from production D1 on 2026-07-29 with a Time Travel bookmark recorded in `worker/migrations/MANIFEST.md`; migration `0175_durable_alert_broker.sql` remains only for historical lineage and fresh-database replay until the next accepted baseline squash.
 
 ## Data-Invariant Canaries
 
