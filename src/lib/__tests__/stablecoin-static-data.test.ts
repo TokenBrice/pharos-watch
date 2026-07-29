@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import {
-  ACTIVE_STABLECOINS,
-  FROZEN_STABLECOINS,
-  PRE_LAUNCH_STABLECOINS,
-  TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENTS,
   ACTIVE_VARIANT_STABLECOINS,
@@ -16,14 +11,12 @@ import {
   ACTIVE_PEG_CURRENCIES,
   ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_PEG_CURRENCY_COUNTS,
-  ACTIVE_STABLECOIN_IDS,
+  ACTIVE_STABLECOIN_ID_SET,
   ACTIVE_STABLECOIN_COUNT,
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
-  FROZEN_STABLECOIN_COUNT,
-  HOMEPAGE_TOP_ACTIVE_STABLECOINS,
   HOMEPAGE_TOP_CORE_STABLECOINS,
   PRE_LAUNCH_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_COUNT,
@@ -77,7 +70,6 @@ describe("static stablecoin projections", () => {
     expect(ACTIVE_VARIANT_STABLECOIN_COUNT).toBe(ACTIVE_VARIANT_STABLECOINS.length);
     expect(ACTIVE_STABLE_VALUE_INVESTMENT_COUNT).toBe(ACTIVE_STABLE_VALUE_INVESTMENTS.length);
     expect(PRE_LAUNCH_STABLECOIN_COUNT).toBe(PRE_LAUNCH_STABLECOINS.length);
-    expect(FROZEN_STABLECOIN_COUNT).toBe(FROZEN_STABLECOINS.length);
     expect(DEAD_STABLECOIN_COUNT).toBe(DEAD_STABLECOINS.length);
   });
 
@@ -95,14 +87,7 @@ describe("static stablecoin projections", () => {
 
   it("keeps homepage IDs and top active schema rows in canonical order", () => {
     expect(TRACKED_STABLECOIN_IDS).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id));
-    expect(ACTIVE_STABLECOIN_IDS).toEqual(ACTIVE_STABLECOINS.map((coin) => coin.id));
-    expect(HOMEPAGE_TOP_ACTIVE_STABLECOINS).toEqual(
-      ACTIVE_STABLECOINS.slice(0, 20).map((coin) => ({
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-      })),
-    );
+    expect([...ACTIVE_STABLECOIN_ID_SET]).toEqual(ACTIVE_STABLECOINS.map((coin) => coin.id));
     expect(HOMEPAGE_TOP_CORE_STABLECOINS).toEqual(
       CORE_AGGREGATE_ACTIVE_STABLECOINS.slice(0, 20).map((coin) => ({
         id: coin.id,

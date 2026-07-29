@@ -6,6 +6,7 @@ import type {
 } from "../../types/safety-score-v9-facts";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { assertV9ValidatedPolicyEnvelope } from "./policy";
+import { compareText, uniqueSorted } from "./primitives";
 
 export type V9TransferPosture = "permissionless" | "restrictable" | "permissioned" | "unknown";
 export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible" | "unknown";
@@ -47,14 +48,6 @@ export interface V9AccessPostureResult {
   governance: V9GovernancePosture;
   unknownFields: readonly ("transfer" | "freezeExposure" | "primaryExit" | "governance")[];
   signals: readonly string[];
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function uniqueSorted(values: readonly string[]): string[] {
-  return [...new Set(values)].sort(compareText);
 }
 
 function isKnown(status: V9FactStatusV2): boolean {

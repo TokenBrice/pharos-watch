@@ -27,6 +27,7 @@ import {
   type V9ScopedRiskAdjustment,
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
+import { clampScore } from "./primitives";
 
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 
@@ -155,7 +156,6 @@ export interface V9ScoreAdjustmentTrace {
   };
 }
 
-const SCORE_MIN = 0;
 const SCORE_MAX = 100;
 // Withhold band (Lever 1): a would-be final score at or above this does not need
 // an insufficient-evidence withhold even with >=2 limited pillars. Tunable.
@@ -172,10 +172,6 @@ const DANGER_ONLY_GRADES = new Set<V9Grade>(["F"]);
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function clampScore(value: number): number {
-  return Math.max(SCORE_MIN, Math.min(SCORE_MAX, value));
 }
 
 /**

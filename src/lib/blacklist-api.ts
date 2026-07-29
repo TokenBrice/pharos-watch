@@ -1,14 +1,10 @@
-import { apiFetch } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type {
   BlacklistEventType,
-  BlacklistResponse,
   BlacklistSortDirection,
   BlacklistSortKey,
   BlacklistStablecoin,
-  BlacklistSummaryResponse,
 } from "@shared/types";
-import { BlacklistResponseSchema, BlacklistSummaryResponseSchema } from "@shared/types/market";
 
 export interface FetchBlacklistEventsParams {
   stablecoin?: BlacklistStablecoin | "all";
@@ -36,12 +32,4 @@ export function buildBlacklistEventsPath(params: FetchBlacklistEventsParams): st
     cursor: params.cursor,
     includeTotal: params.includeTotal,
   });
-}
-
-export function fetchBlacklistEvents(params: FetchBlacklistEventsParams): Promise<BlacklistResponse> {
-  return apiFetch(buildBlacklistEventsPath(params), BlacklistResponseSchema);
-}
-
-export function fetchBlacklistSummary(): Promise<BlacklistSummaryResponse> {
-  return apiFetch(API_PATHS.blacklistSummary(), BlacklistSummaryResponseSchema);
 }

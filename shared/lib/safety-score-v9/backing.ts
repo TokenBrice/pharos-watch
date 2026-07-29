@@ -21,6 +21,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { decimalSnap } from "./formula";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { canonicalDomains, clampScore, compareText, domainKey, uniqueSorted } from "./primitives";
 
 type ReserveAssetClass = NonNullable<V9ReserveExposureFactV2["assetClass"]>;
 export interface V9ResolvedUpstreamExposure {
@@ -198,28 +199,6 @@ const AVAILABILITY_REASON_CODES: ReadonlySet<V9ReasonCode> = new Set<V9ReasonCod
   "material-dependency-unavailable",
   "nonmaterial-dependency-unavailable",
 ]);
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function clampScore(score: number): number {
-  return Math.max(0, Math.min(100, score));
-}
-
-function uniqueSorted<T extends string>(values: readonly T[]): T[] {
-  return [...new Set(values)].sort(compareText);
-}
-
-function domainKey(domain: V9FailureDomainRef): string {
-  return `${domain.kind}:${domain.key}`;
-}
-
-function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return [...new Map(domains.map((domain) => [domainKey(domain), domain])).values()].sort((left, right) =>
-    compareText(domainKey(left), domainKey(right)),
-  );
-}
 
 /**
  * Materiality-aggregation root keys for one exposure. An unavailable upstream

@@ -6,6 +6,7 @@ import type {
   V9OperationalResilienceClaimConfidence,
   V9OperationalResilienceFact,
 } from "../../types/safety-score-v9-operational-resilience";
+import { compareText } from "./primitives";
 
 export type V9OperationalResiliencePolicy = V9MethodologySemantic["operationalResilience"];
 
@@ -100,10 +101,6 @@ const PILLAR_ORDER: Readonly<Record<V9QualityPillar, number>> = {
   exit: 1,
   control: 2,
 };
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function canonicalEvidence(ids: readonly string[]): string[] {
   return [...new Set(ids)].sort(compareText);

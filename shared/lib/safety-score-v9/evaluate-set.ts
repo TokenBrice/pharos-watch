@@ -69,7 +69,7 @@ import {
   type V9OperationalResilienceResult,
 } from "./operational-resilience";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
-import { compareText, deepFreeze } from "./primitives";
+import { canonicalDomains, compareText, deepFreeze, domainKey, uniqueSorted } from "./primitives";
 import {
   resolveV9WrapperParentLimit,
   type V9WrapperForm,
@@ -159,20 +159,6 @@ function marketRankByAsset(
     result.set(asset.assetId, rank);
   });
   return result;
-}
-
-function uniqueSorted<T extends string>(values: readonly T[]): T[] {
-  return [...new Set(values)].sort(compareText);
-}
-
-function domainKey(domain: V9FailureDomainRef): string {
-  return `${domain.kind}:${domain.key}`;
-}
-
-function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return [...new Map(domains.map((domain) => [domainKey(domain), domain])).values()].sort((left, right) =>
-    compareText(domainKey(left), domainKey(right)),
-  );
 }
 
 function deploymentExposureKey(deploymentKeys: readonly string[]): string {

@@ -15,6 +15,7 @@ import {
   type V9ProductionScoreInput,
   type V9ProductionScoreTrace,
 } from "./score";
+import { compareText } from "./primitives";
 
 const V9_PUBLIC_STRESS_STATE_DIGEST_DOMAIN = "safety-score-v9.public-stress-state.v1";
 
@@ -35,10 +36,6 @@ export type V9SupportedStressShock =
   | { kind: "control-compromise"; compromisedScore: number; severity: V9Severity; failureDomainKey: string }
   | { kind: "upstream-result-loss"; upstreamAssetId: string }
   | { kind: "common-mode-failure"; failureDomainKey: string; severity: V9Severity; materialSharePct?: number };
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function normalizedStatePayload(state: Omit<V9PublicStressState, "stateDigest">) {
   return {
