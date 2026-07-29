@@ -245,8 +245,6 @@ const TelegramPulsePrivacySchema = z.object({
   lowCardinalityThreshold: z.number(),
   suppressedFields: z.array(z.string()),
 });
-type TelegramPulsePrivacy = z.infer<typeof TelegramPulsePrivacySchema>;
-
 const TelegramWatcherHistoryPointSchema = z.object({
   date: z.string(),
   timestamp: z.number(),
