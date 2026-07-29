@@ -16,8 +16,8 @@ const SLOT_EXECUTION_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const BLOCK_TIMESTAMP_CACHE_RETENTION_SEC = 14 * SECONDS.ONE_DAY;
 const SELECTOR_SNAPSHOT_DAILY_QUOTA_RETENTION_SEC = 2 * SECONDS.ONE_DAY;
 
-// Owner rulings for append-only archive/stale tables audited with this prune
-// job. They are intentionally absent from the DELETE statements below.
+// Owner rulings for append-only archive tables audited with this prune job.
+// They are intentionally absent from the DELETE statements below.
 export const ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE = [
   {
     table: "daily_digest",
@@ -43,11 +43,6 @@ export const ARCHIVE_TABLES_WITHOUT_RETENTION_PRUNE = [
     table: "status_transitions",
     policy: "operational incident archive - keep forever",
     reason: "Public/admin status history queries window reads rather than deleting the incident timeline.",
-  },
-  {
-    table: "feedback_submissions",
-    policy: "stale schema-retained - no active runtime prune",
-    reason: "The current feedback path writes GitHub issues directly and has no runtime writer for this table.",
   },
   {
     table: "depeg_backfill_runs",
