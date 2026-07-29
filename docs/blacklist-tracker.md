@@ -42,7 +42,7 @@ The snapshot total is not a live balance guarantee and is distinct from the loca
 - **Expression:** `3 */6 * * *`
 - **Slot:** `worker/src/handlers/scheduled/hourly-blacklist.ts`
 - **Producer:** `syncBlacklist()` in `worker/src/cron/sync-blacklist.ts`
-- **Runtime budget:** 10 minutes, with a 60-second minimum window before starting another config
+- **Runtime budget:** 10 minutes for scans, with a 60-second minimum window before starting another config; a separately capped maintenance tail ends at 10 minutes 45 seconds
 - **Subrequest budget:** 900 across scanning, enrichment, and maintenance
 - **Provider limiter:** Etherscan and TronGrid requests use the shared serial 3-requests-per-second limiter
 
@@ -145,14 +145,14 @@ EVM cursors advance only through the minimum contiguous block proven across ever
 
 ## Producer Flow
 
-Each run performs these phases under one deadline and subrequest budget:
+Each run performs these phases under one scan deadline, one separately capped maintenance tail, and one shared subrequest budget:
 
 1. **Fair admission:** load typed config states, order cohorts by oldest attempt, alternate equal-age EVM and Tron work, and claim the generation-fenced attempt.
 2. **Safe scan:** resolve the safe head using the 15-minute indexing margin, scan bounded windows, validate provider coverage, and parse rows.
 3. **Historical enrichment:** enrich only defensible event amounts before insertion. Duplicate event IDs skip unnecessary enrichment and cache work.
 4. **Persistence and cursor finalization:** insert event rows before advancing the claimed cursor; incomplete coverage never advances beyond its proven contiguous frontier.
 5. **Freeze-ledger refresh:** snapshot newly blocked addresses, preserve last-known values across provider failures, and apply the Tron ledger mirror in the same run.
-6. **Bounded maintenance:** retry durable amount repairs, migrate unambiguous legacy identities, and leave ambiguous same-symbol/same-chain identities explicit.
+6. **Bounded maintenance:** retry durable amount repairs before other maintenance, migrate unambiguous legacy identities, and leave ambiguous same-symbol/same-chain identities explicit. If scans consume their full 10-minute budget, amount repair may use the separately capped 45-second tail inside the 12-minute cron wrapper and admits at most 10 rows. Shorter runs retain the normal 100-row repair cap. Both paths reuse the scan's subrequest budget and serial provider limiter, so maintenance does not increase connection concurrency or consume scan time.
 7. **Publication and telemetry:** publish gap/summary snapshots only after every required config has a successful complete or quiet scan and enough tail budget remains. Freshness uses the oldest required config success, not cron completion time.
 
 Provider telemetry retains bounded config-level mode, coverage, frontier, count, call-depth, and failure-sample evidence. The operational response is documented in [Runbook: Blacklist Sync](./runbooks/blacklist-sync.md).
