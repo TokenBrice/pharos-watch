@@ -71,6 +71,40 @@ describe("freeze Telegram source gate", () => {
 });
 
 describe("freeze dedicated outbox", () => {
+  it("advances no-audience freeze events without durable outbox work", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    applyMigrations(sqlite);
+    try {
+      const now = 2_000_000_000;
+      sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);
+      sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+         VALUES ('freeze-baseline', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-baseline', 'opened', ?)`,
+      ).run(now * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-baseline' }), now);
+      const database = createSqliteD1(sqlite);
+      await dispatchFreezeAlertOutbox(database, now);
+
+      sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+         VALUES ('freeze-no-audience', 'freeze.blocked', 'warning', ?, 'x', 'x', ?, 'blacklist_events', 'blacklist-no-audience', 'opened', ?)`,
+      ).run((now + 1) * 1000, JSON.stringify({ stablecoin: 'USDC', stablecoinId: 'usdc-circle', chainName: 'Ethereum', sourceEventId: 'blacklist-no-audience' }), now + 1);
+
+      const result = await dispatchFreezeAlertOutbox(database, now + 2);
+      expect(result).toMatchObject({
+        state: "idle",
+        observed: 1,
+        queued: 0,
+        skippedNoAudience: 1,
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_freeze_alert_events").get()).toMatchObject({ n: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts WHERE alert_type = 'freeze'").get()).toMatchObject({ n: 0 });
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'alert:freeze-tape-cursor'").get())
+        .toMatchObject({ value: "2" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("captures only opted-in direct/global chats, queues canonical terminal lineage, and never inserts generic target plans", async () => {
     const sqlite = new DatabaseSync(":memory:");
     applyMigrations(sqlite);
