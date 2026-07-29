@@ -10,7 +10,8 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 ## Read First
 
 - Read the current entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
-- Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the per-coin JSON registry and must match `shared/lib/stablecoins/schema.ts`.
+- Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the JSON registry and must match `shared/lib/stablecoins/schema.ts`.
+- **Field routing:** check `shared/data/stablecoins/domains/<domain>/<id>.json` first — once a sidecar exists, its fields must stay out of the base file (`mintAuthority` → mint-authority domain; reserves and risk-review fields, `mica`/`genius` → their domains). See `docs/process/stablecoin-research-sidecars.md`.
 - If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow.
 - Read `shared/lib/chains/index.ts` if contracts may change.
 - Read `docs/classification.md` or `docs/data-pipeline.md` only when those rules are directly relevant.
@@ -26,6 +27,8 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `cmcSlug`
 - `contracts`
 - `proofOfReserves`
+- `oneLiner` (required on every active/pre-launch coin — CI-backstopped)
+- `mechanismArchetype` (use the mapping cheatsheet in `docs/process/adding-a-stablecoin.md`; `check:mechanism-archetype-coverage` backstops)
 - `mintAuthority` (reviewed-or-waived for high-value active additions and pre-launch promotions; descriptive only)
 
 ## Workflow
@@ -53,7 +56,7 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - `geckoId`: confirm via search plus coin detail, not by guessing
 - `cmcSlug`: add only when genuinely needed for price fallback
 - `contracts`: verify name, symbol, and decimals before adding
-- `proofOfReserves`: store `{ type, url, provider? }`
+- `proofOfReserves`: store `{ type, url, provider?, attestorTier?, cadence?, attestorJurisdiction?, attestorLicense? }` (`shared/types/stablecoin-meta-schemas.ts` wins on shape). `attestorTier` is required-or-waived when `type` is `independent-audit` — see the attestor-tier rules in `docs/process/adding-a-stablecoin.md`
 - `mintAuthority`: if high-value or explicitly requested, either author a sourced `mintAuthority` profile or record an intentional gap. The profile must include `mintPath`, `authorityPosture`, `confidence`, `summary`, and `review`; privileged paths require `controls[]` unless confidence is `unknown`.
 
 6. If DefiLlama reports meaningful supply on a chain that is missing from `contracts`, treat that as a gap signal and use `contract-populate` or `contract-enrich` style verification.
@@ -72,3 +75,4 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 - If sources conflict, keep the current value unless a stronger primary source clearly wins.
 - Mint Authority is descriptive and unscored. Missing reviewed data means the detail section is omitted; it must not be treated as safe.
 - Verified Safe or multisig Mint Authority controls need threshold, signer count, and modules/guards status. If modules or guards are unknown, cap verified or probable confidence at `manual-review`.
+- Adding a chain deployment to `contracts` on an active multi-chain asset creates a Safety Score V9 exit/control evidence gap unless matching `bridgeRouteRisk.routes` rows exist (risk-review sidecar) — author or flag them; do not silently expand the deployment footprint.

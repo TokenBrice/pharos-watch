@@ -9,13 +9,13 @@ Research a stablecoin's standing under the EU Markets in Crypto-Assets Regulatio
 
 ## Read First
 
-- Read `docs/mica-tracker.md` — the **source of truth** for the `mica` schema, the status criteria table, EMT/ART rules, sourcing requirements, and legal framing. Defer to it for classification; this skill is the workflow only.
-- Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view). Treat the runtime stablecoin re-export as import-only; `mica` edits belong in the per-coin JSON and must match `shared/lib/stablecoins/schema.ts`.
+- Read `docs/mica-tracker.md` — the **source of truth** for the `mica` schema, the status criteria table, EMT/ART rules, sourcing requirements, and legal framing. Defer to it for classification; this skill is the workflow only. `docs/compliance-page.md` covers the shared `/compliance/` page contract (the old `/mica/` route moved there).
+- Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view). Treat the runtime stablecoin re-export as import-only; `mica` edits must match `shared/lib/stablecoins/schema.ts`. **Routing:** if `shared/data/stablecoins/domains/compliance/<id>.json` exists, `mica`/`genius` belong in that sidecar and must stay out of the base file (`docs/process/stablecoin-research-sidecars.md`); otherwise edit the per-coin JSON.
 - Treat existing `jurisdiction` free text (`regulator`, `license` e.g. `"EMI (MiCA)"`, `"ACPR"`) as a starting hypothesis, not truth — verify against a register.
 
 ## Schema
 
-The `mica` object (exact field names): `status` (`authorized` | `pending` | `transitional` | `non-compliant` | `out-of-scope`), `tokenType` (`EMT` | `ART`), `authorizationType` (`emi` | `credit-institution`), `competentAuthority`, `authorizedEntity`, `significant` (boolean), `references` (`{ label, url }[]`). All but `status` are optional.
+The `mica` object (exact field names): `status`, `tokenType`, `authorizationType`, `competentAuthority`, `authorizedEntity`, `significant` (boolean), `references` (`{ label, url }[]`). All but `status` are optional. Enum values for `status`/`tokenType`/`authorizationType` live in `shared/types/core.ts` (`MicaProfile`) — the source file wins; the criteria table in `docs/mica-tracker.md` maps them to evidence.
 
 **HARD RULES (Zod-enforced — `check:stablecoin-data` fails otherwise):** every status except `out-of-scope` requires at least one `references` link; and `out-of-scope` rows must not carry `tokenType`, `authorizationType`, `competentAuthority`, or `authorizedEntity`.
 
@@ -34,7 +34,7 @@ The `mica` object (exact field names): `status` (`authorized` | `pending` | `tra
 
 4. Assign `status` per the criteria table in `docs/mica-tracker.md`. Set `tokenType`: **EMT** = single official currency (most EUR/USD fiat-backed coins); **ART** = basket/commodity/other value (rare). When uncertain between two statuses, pick the more conservative one and explain why.
 
-5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit the per-coin JSON — placing `mica` immediately after `jurisdiction` (after `genius` if both are present) — then regenerate and validate:
+5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit the routed file (compliance sidecar if present, else the per-coin JSON — in the base file place `mica` immediately after `jurisdiction`, after `genius` if both are present) — then regenerate and validate:
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"
@@ -63,4 +63,4 @@ For full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 
 ## Batch Mode
 
-When processing multiple coins, work one at a time and present findings for 3-5 coins per approval round, then apply and continue — mirror `reserve-research`. For a broad MiCA + GENIUS pass across many coins, use the saved `compliance-research` workflow (research → adversarial verify → reconcile), as in `genius-research`.
+When processing multiple coins, work one at a time and present findings for 3-5 coins per approval round, then apply and continue. For a broad MiCA + GENIUS pass across many coins, use the saved `compliance-research` workflow (research → adversarial verify → reconcile), as in `genius-research`.

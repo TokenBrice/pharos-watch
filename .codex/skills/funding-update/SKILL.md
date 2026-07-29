@@ -99,13 +99,13 @@ For each candidate, present to the user:
 
 - `chain`, short `tx_hash`, `asset_symbol`, `amount_decimal`, short `from_address`
 
-The user confirms which rows are real donations. Rows marked spam are discarded (not written anywhere — the skill is memoryless across runs). Real rows proceed to Step 4.
+The user confirms which rows are real donations. Rows marked spam are discarded (not written anywhere — the skill is memoryless across runs). If the user marks every candidate spam, report that and stop — no file edits. Real rows proceed to Step 4.
 
 #### Step 4 — Price each donation in USD at receipt
 
 For each approved row:
 
-- **Stablecoins** (USDC, USDT, DAI, xDAI, FRAX, LUSD): `usd_at_receipt = amount_decimal`, `price_note = "stablecoin-1-to-1"`.
+- **Stablecoins** (USDC, USDT, DAI, xDAI, FRAX, LUSD): `usd_at_receipt = amount_decimal`, `price_note = "stablecoin-1-to-1"`. **Contract check first:** for ERC-20 rows, the captured `asset_address` must match that stablecoin's canonical contract on that chain (compare against `contracts[]` in `shared/data/stablecoins/coins/<id>.json`). A familiar ticker at an unknown address is a spoofed token — send it back to Step 3 as spam, never price it 1:1.
 - **Native ETH / WETH:** CoinGecko `/coins/ethereum/history?date=DD-MM-YYYY` for the transfer's UTC date, read `market_data.current_price.usd`. `price_note = "coingecko-historical-YYYY-MM-DD"`.
 - **Native MATIC:** CoinGecko `/coins/matic-network/history?date=DD-MM-YYYY`. `price_note = "coingecko-historical-YYYY-MM-DD"`.
 - **WBTC:** CoinGecko `/coins/wrapped-bitcoin/history?date=DD-MM-YYYY`.
@@ -167,7 +167,8 @@ Expected: build completes, tests pass.
 
 ```bash
 git add shared/data/funding/donations.json
-git commit -m "data(funding): add {N} new donation(s) via funding-update"
+git commit -m "data(funding): add {N} new donation(s) via funding-update" \
+  -m "{chains covered, date range, donor mix (community/founder/pool), and anything priced manually}"
 ```
 
 ### Quality Standards

@@ -10,8 +10,9 @@ Research a stablecoin's standing under the U.S. GENIUS Act (Guiding and Establis
 ## Read First
 
 - Read `docs/genius-tracker.md` — the **source of truth** for the `genius` schema, applicability/status criteria, Zod cross-field rules, sourcing, and legal framing. Defer to it for classification; this skill is the workflow only. `docs/compliance-page.md` covers the page contract.
-- Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `coins.generated.json` for a runtime view; the re-export is import-only). `genius` edits belong in the per-coin JSON and must match `shared/lib/stablecoins/schema.ts`.
+- Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `coins.generated.json` for a runtime view; the re-export is import-only). `genius` edits must match `shared/lib/stablecoins/schema.ts`. **Routing:** if `shared/data/stablecoins/domains/compliance/<id>.json` exists, `genius`/`mica` belong in that sidecar and must stay out of the base file (`docs/process/stablecoin-research-sidecars.md`); otherwise edit the per-coin JSON.
 - Treat `jurisdiction` / peg / collateral as a starting hypothesis for applicability, not truth.
+- `shared/lib/compliance-regime-state.ts` is the source of truth for the current rulemaking phase and effective date — check it before assigning any official authorization status.
 
 ## Schema
 
@@ -22,10 +23,10 @@ Research a stablecoin's standing under the U.S. GENIUS Act (Guiding and Establis
 ## Workflow
 
 1. Read current state; decide if the asset is a GENIUS-scope **payment stablecoin** at all (DeFi CDPs, yield/savings wrappers, governance units, tokenized funds are usually out of scope — leave `genius` undefined unless prominent and confusable).
-2. Research with `WebSearch` / `WebFetch` (browser fallback on 403 — claude-in-chrome/Playwright in Claude Code, `agent-browser` in Codex), in descending authority: Federal Register → federal regulators (OCC/Fed/FDIC/NCUA/FinCEN/OFAC/Treasury) → state regulators → issuer filings/disclosures → auditor reports → news (never alone for an official status).
+2. Research with `WebSearch` / `WebFetch` (browser fallback on 403 — claude-in-chrome/Playwright in Claude Code, `agent-browser` in Codex), in descending authority: Federal Register → federal regulators (OCC/Fed/FDIC/NCUA/FinCEN/OFAC/Treasury) → state regulators → issuer filings/disclosures → auditor reports → news (never alone for an official status). This ordering is authority guidance, not the full `sourceKind` enum — `shared/types/core.ts` holds all values (statutes, foreign regulators, regulator directories included).
 3. Map token → legal issuer entity → public posture; confirm it is *this* token's issuer, not a same-name affiliate.
 4. Assign `applicability` first, then `authorizationStatus`, `issuerPathway`, qualifying fields, and the disclosure flags per `docs/genius-tracker.md`. Tie → more conservative status; explain in `notes`. During rulemaking, genuine `ppsi-approved`/`state-qualified` are exceedingly rare.
-5. Present the proposed `genius` object with sources, access dates, confidence. If research-only, stop. After approval, edit the per-coin JSON — placing `genius` immediately after `jurisdiction` (before `mica` if both present) — set `reviewer: "Pharos compliance research"` and today's `reviewedAt`, then regenerate and validate:
+5. Present the proposed `genius` object with sources, access dates, confidence. If research-only, stop. After approval, edit the routed file (compliance sidecar if present, else the per-coin JSON — in the base file place `genius` immediately after `jurisdiction`, before `mica` if both present) — set `reviewer: "Pharos compliance research"` and today's `reviewedAt`, then regenerate and validate:
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"

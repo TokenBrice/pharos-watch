@@ -46,6 +46,9 @@ Keep the default newest-first ordering for `commits[]` — existing entries foll
 
 Drop commits matching any of these patterns from **both** `commits[]` and cluster analysis:
 
+- `^(chore(\([^)]+\))?|docs): (refresh|regenerate) ` — the dominant noise class: generated-artifact and metadata refresh commits (docs metadata, agent code map, cemetery/release datasets, liquidity metadata, doc artifacts)
+- `^chore\(v9\): refresh CDP shock-coverage measurements` — the auto-merging scheduled refresh PR lands one of these roughly every other day
+- `^Refresh (audit task index|documentation|docs)\b`
 - `^chore(\([^)]+\))?: update hotspot ratchet baseline`
 - `^chore(\([^)]+\))?: refresh hotspot ratchet`
 - `^chore(\([^)]+\))?: satisfy hotspot ratchet`
@@ -58,6 +61,8 @@ Drop commits matching any of these patterns from **both** `commits[]` and cluste
 - `^Revert "Revert "` → treat as a no-op pair; drop both the revert-of-revert and its original revert if both appear
 
 The two `^Merge …` patterns are normally unreachable under `--no-merges` (step 2); they are kept only as a guard for commit lists collected without that flag.
+
+This pattern list drifts as repo automation changes. Before filtering, scan the raw range for high-frequency refresh/regenerate-shaped subjects (`git log --no-merges --since=… --until=… --format="%s" | sort | uniq -c | sort -rn | head`); treat any new dominant generated-artifact subject as noise even if unlisted, note it in the review output, and extend this list.
 
 If filtering removes >50% of the raw range, surface a note ("Filtered N noise commits — please sanity-check") in the review output.
 
@@ -182,7 +187,7 @@ The barrel's `.sort()` handles runtime ordering; the chronological layout exists
 Run the relevant gates locally:
 
 ```bash
-npx tsc --noEmit                           # Catches bad tag enum, missing fields
+npm run typecheck                          # Catches bad tag enum, missing fields
 npm run lint
 npm test -- src/data/changelogs/           # Type + barrel tests
 npm run check:stablecoin-data              # If the summary cites a coin count

@@ -26,10 +26,11 @@ curl -s "https://api.coingecko.com/api/v3/coins/${GECKO_ID}?localization=false&t
 
 4. Inspect `detail_platforms`:
 - map each CoinGecko platform name to the repo's chain ID via the reference file
+- if a platform key is absent from the reference file entirely, resolve it via CoinGecko `/api/v3/asset_platforms` and check `CHAIN_META` / `CHAIN_ALIASES` in `shared/lib/chains/index.ts` before treating it as a skip
 - skip empty addresses, skipped platforms, and chains already present
 - lowercase EVM addresses
 - preserve original casing for Tron and other non-EVM chains
-- require decimals; if `decimal_place` is null and you cannot verify it from official docs or explorer data, skip and flag it
+- require decimals (CoinGecko's `decimal_place` maps to our `decimals` field); if `decimal_place` is null and you cannot verify it from official docs or explorer data, skip and flag it
 
 5. Verify every new address before patching:
 - official docs or deployed-contract pages first

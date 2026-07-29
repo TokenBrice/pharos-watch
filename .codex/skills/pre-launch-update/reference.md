@@ -21,7 +21,7 @@ Material moved verbatim from `SKILL.md`: field-level scope table, promotion rati
 
 Listing existence alone is not enough — CoinGecko accepts issuer-submitted preview listings with zero supply before a token is deployed, and those produce false positives.
 
-#### Step 6 — Propose new candidates (optional)
+### Step 6 — Propose new candidates (optional)
 
 After updating existing coins, sweep for pre-launch stablecoins we don't yet track. Use all three lanes:
 

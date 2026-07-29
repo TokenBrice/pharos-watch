@@ -22,14 +22,17 @@ python3 .codex/skills/coingecko-id-verif/scripts/verify.py --all
 - `OUR_CORRECT`: keep the current `geckoId`
 - `DL_CORRECT`: update our `geckoId` to the contract-resolved slug
 - `NEITHER (...)`: set `geckoId` to the slug returned by the contract lookup
+- `MISSING (...)`: no `geckoId` configured yet; adopt the contract-resolved slug after an identity check
 - `NOT_ON_CG`: CoinGecko does not resolve the contract; do not guess a slug
-- `NO_ETH_ADDRESS`: no Ethereum contract exists to use as ground truth
+- `NO_ETH_ADDRESS`: has a `geckoId` but no Ethereum contract exists to use as ground truth
+- `NO_GECKO_ID`: neither a `geckoId` nor an Ethereum contract; discover the slug manually (`stablecoin-info-fetch`)
 
 4. If you change `geckoId`, patch the matching entry in `shared/data/stablecoins/coins/*.json`, regenerate `shared/data/stablecoins/coins.generated.json`, rerun the single-coin check, run `stablecoin-runtime-price-marketcap-gate` for active additions/promotions, and then follow the relevant validation gate.
 
 ## Notes
 
 - The script loads `COINGECKO_API_KEY` from `worker/.dev.vars` when present. Without it, the free CoinGecko API is used.
+- `--scan` iterates only coins that have a `llamaId`; coins without one are invisible to it — check those individually with `--coin`.
 - The script compares three views of the asset:
   - our configured `geckoId` from the JSON stablecoin registry
   - DefiLlama's `gecko_id`

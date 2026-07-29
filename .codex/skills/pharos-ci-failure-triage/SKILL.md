@@ -18,7 +18,7 @@ Use this skill from the Pharos repository root for:
 ## Core Rules
 
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
-- Classify the failing lane before editing: commit-derived artifact, other generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, or external transient.
+- Classify the failing lane before editing: commit-derived artifact, other generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, scheduled automation (bot PRs), or external transient.
 - Read the outer and reusable workflow graph together. A skipped child job can be expected classifier behavior; the aggregate gate, selected surface, head SHA, and exact failed step determine the result.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
 - Do not change test timeouts or retry policy merely because a local run was resource-starved. Reproduce the focused lane alone first.
@@ -127,7 +127,15 @@ gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main
 gh workflow run "Rebuild Pages" --repo TokenBrice/pharos-watch --ref main
 ```
 
+`pages-release` is `workflow_call`-only — it runs solely as a child of Deploy to Cloudflare; retrigger it via `-f surface=pages`, never directly.
+
 Then watch the new run with `gh run list` and `gh run watch`.
+
+### 6. Scheduled Automation Failures
+
+Most workflows in `.github/workflows/` are scheduled bots, several of which open PRs (shock-coverage refresh, protocol-API mechanism refresh, OG refresh, maintenance candidates, nightly validation, coverage ratchet, security scans). A failure there is not a push/merge-gate failure — triage the bot's own run and branch.
+
+The shock-coverage refresh is the urgent one: its PR arms auto-merge at creation (repo-level auto-merge is enabled but per-PR opt-in; this is the one automation that opts in), so it self-merges the moment its gate goes green — and the underlying measurements carry a hard 72h freshness bound past which the V9 engine fails closed to degraded backing scores. If that loop is broken, check `scripts/ci/check-shock-coverage-freshness.mjs` and follow `docs/process/shock-coverage-refresh.md`.
 
 ## Companion Subagents
 

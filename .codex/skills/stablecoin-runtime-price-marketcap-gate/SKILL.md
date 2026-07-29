@@ -32,37 +32,33 @@ Use for normal DefiLlama-tracked active stablecoins.
 
 Use for non-DefiLlama fiat assets.
 
-- Require `detailProvider: "coingecko"` and a verified `geckoId`.
-- Confirm `https://api.coingecko.com/api/v3/coins/{geckoId}` resolves to the intended asset.
-- Require a positive current USD price through DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price`.
-- Require either positive CoinGecko `usd_market_cap`, or exactly one supported verified `contracts[]` deployment that can support on-chain total-supply fallback.
+- Require `detailProvider: "coingecko"` — this is the hard gate. A verified `geckoId` is the primary route (confirm `https://api.coingecko.com/api/v3/coins/{geckoId}` resolves to the intended asset), but a coin without one can still be admitted via the on-chain supply route below.
+- With a `geckoId`: require a positive current USD price through the DefiLlama `coins.llama.fi` proxy or CoinGecko `/simple/price`, and either positive CoinGecko `usd_market_cap` or the on-chain supply route.
+- On-chain supply route: verified `contracts[]` deployments whose total supply is valued at the peg reference price. A single supported deployment works out of the box; multi-deployment assets are admissible too but need a curated entry in `CURATED_ONCHAIN_SUPPLY_CONTRACTS` / `CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS` (`shared/lib/onchain-supply-probe.ts` — the source file wins on what is supported).
 
 ### 3. Commodity supplemental path
 
 Use for gold/silver and similar commodity tokens.
 
 - Require verified `geckoId`.
-- Require commodity-specific metadata such as `commodityOunces` when fractionalized.
-- Require positive CoinGecko market cap, or for gold/protocol-backed assets a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap`.
+- Require commodity-specific metadata such as `commodityOunces` when fractionalized (it feeds peg-aware price-validation bounds, not market cap).
+- Require positive CoinGecko market cap, or for gold protocol-backed assets a `protocolSlug` whose DefiLlama protocol data exposes usable `mcap`. Silver has no `protocolSlug` path — it resolves via CoinGecko markets plus circulating supply.
 
 ### 4. Explicit runtime exception
 
-Use only for maintained source-specific integrations such as Zephyr Scanner or an audited low-volume allowlist.
+Use only for maintained source-specific integrations.
 
 - Name the source and repo code path.
 - Show how it returns price.
 - Show how it returns circulating supply or market cap.
 
-## Optional Corroboration
+Existing integrations of this kind include Zephyr Scanner, parent-derived pricing for inherited tracked assets (`worker/src/lib/authoritative-price-sources/`), reserve-NAV oracle pricing gated on `liveReservesConfig.adapter`, and supply-gap reconciliation for DefiLlama-listed coins — name the specific code path when invoking this route.
 
-These strengthen price reliability but do not by themselves prove market-cap admission:
+## How Price Is Actually Established
 
-- `pythFeedId`
-- `cmcSlug`
-- verified CEX ticker coverage
-- RedStone / Curve / protocol redeem path
-- DexScreener or Jupiter exact contract coverage
-- CoinGecko low-volume allowlist
+At runtime, price providers are fetched in parallel and cross-validated into a consensus (`worker/src/cron/sync-stablecoins/stages.ts`) — this gate proves the asset is *eligible* for that consensus set, not that one provider will be "the" price source. The single accepted-path framing applies to market-cap/supply admission, which genuinely is path-based.
+
+Additional providers strengthen price reliability but do not by themselves prove market-cap admission. The provider inventories are code-owned — never trust a hand-list: primary collection in `worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts`, ordered fallbacks in `enrich-prices-fallback.ts`, the CoinGecko low-volume allowlist in `enrich-prices-coingecko-low-volume-pass.ts`, and authoritative protocol overrides in `worker/src/lib/authoritative-price-sources/`.
 
 ## Output Format
 
