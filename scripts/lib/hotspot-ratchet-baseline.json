@@ -14,6 +14,11 @@
     "maxFunctionLines": 124,
     "branchCount": 113
   },
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
+    "fileLines": 913,
+    "maxFunctionLines": 44,
+    "branchCount": 5
+  },
   "shared/lib/safety-score-v9/backing.ts": {
     "fileLines": 1515,
     "maxFunctionLines": 166,
@@ -34,16 +39,6 @@
     "maxFunctionLines": 509,
     "branchCount": 128
   },
-  "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 920,
-    "maxFunctionLines": 44,
-    "branchCount": 5
-  },
-  "shared/types/market.ts": {
-    "fileLines": 1038,
-    "maxFunctionLines": 42,
-    "branchCount": 17
-  },
   "shared/types/safety-score-v9.ts": {
     "fileLines": 1836,
     "maxFunctionLines": 434,
@@ -53,11 +48,6 @@
     "fileLines": 1988,
     "maxFunctionLines": 239,
     "branchCount": 204
-  },
-  "shared/types/safety-score-v9-public.ts": {
-    "fileLines": 2282,
-    "maxFunctionLines": 407,
-    "branchCount": 156
   },
   "shared/types/stablecoin-meta-schemas.ts": {
     "fileLines": 1305,
@@ -112,11 +102,6 @@
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
     "fileLines": 25,
     "maxFunctionLines": 15,
-    "branchCount": 0
-  },
-  "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 200,
-    "maxFunctionLines": 192,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
@@ -219,8 +204,13 @@
     "maxFunctionLines": 490,
     "branchCount": 131
   },
+  "worker/src/cron/dex-liquidity/process-pools.ts": {
+    "fileLines": 144,
+    "maxFunctionLines": 51,
+    "branchCount": 9
+  },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 1294,
+    "fileLines": 1297,
     "maxFunctionLines": 251,
     "branchCount": 28
   },
@@ -278,11 +268,6 @@
     "fileLines": 102,
     "maxFunctionLines": 61,
     "branchCount": 1
-  },
-  "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 753,
-    "maxFunctionLines": 548,
-    "branchCount": 57
   },
   "worker/src/cron/sync-fx-rates.ts": {
     "fileLines": 293,

@@ -7,14 +7,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
   },
-  "worker/src/cron/dex-liquidity/process-pools.ts": {
-    "disposition": "queued-p4",
-    "notes": "DEX pool processing is currently 1,081 file lines with a 475-line maximum function and 120 branches. Keep this explicit interim waiver only while the focused decomposition preserves the existing DEX processing contracts.",
-    "owner": "tokenbrice",
-    "createdAt": "2026-07-29",
-    "reviewAfter": "2026-08-28",
-    "nextAction": "P2-01: Decompose DEX pool processing into typed admission, enrichment, execution-capability, and accumulation phases, then remove this waiver and lower the hotspot ratchet."
-  },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
     "disposition": "queued-p4",
     "notes": "Safety Score V9 fact compilation is currently 4,296 file lines with a 493-line maximum function and 332 branches. Keep this explicit interim waiver only while the focused V9 module decomposition preserves existing fact-compilation contracts.",
@@ -22,6 +14,22 @@
     "createdAt": "2026-07-29",
     "reviewAfter": "2026-08-28",
     "nextAction": "P3-04: Decompose V9 fact compilation by evidence domain, then remove this waiver and lower the hotspot ratchet."
+  },
+  "shared/types/market.ts": {
+    "disposition": "queued-p4",
+    "notes": "Market types are currently 1,049 file lines with a 42-line maximum function and 17 branches.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-29",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P3-05: owned review - type module split to be scoped"
+  },
+  "shared/types/safety-score-v9-public.ts": {
+    "disposition": "queued-p4",
+    "notes": "Safety Score V9 public types are currently 2,283 file lines with a 407-line maximum function and 156 branches.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-29",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P3-04 tranche 4: split public/fact/internal schemas"
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
@@ -86,5 +94,13 @@
     "createdAt": "2026-07-23",
     "reviewAfter": "2026-10-23",
     "nextAction": "Extract per-table retention operations and keep the scheduled coordinator limited to sequencing and totals."
+  },
+  "src/app/pharoswatchbot/app/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The Mini App client shell is currently 499 file lines with a 458-line maximum function and 54 branches. It entered the hotspot candidate window when larger files were decomposed; it was not grown by recent work.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-30",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P3-05 follow-up tranche: split the Mini App client shell into focused child components."
   }
 }

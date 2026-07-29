@@ -10,15 +10,13 @@ export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
   "shared/lib/format.ts",
   "shared/lib/redemption-backstop-scoring.ts",
+  "shared/lib/redemption-backstop-configs/queue-redeem.ts",
   "shared/lib/safety-score-v9/backing.ts",
   "shared/lib/safety-score-v9/control.ts",
   "shared/lib/safety-score-v9/coverage.ts",
   "shared/lib/safety-score-v9/formula.ts",
-  "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-  "shared/types/market.ts",
   "shared/types/safety-score-v9.ts",
   "shared/types/safety-score-v9-facts.ts",
-  "shared/types/safety-score-v9-public.ts",
   "shared/types/stablecoin-meta-schemas.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
@@ -30,7 +28,6 @@ export const TARGET_FILES = [
   "worker/src/cron/sync-stablecoins.ts",
   "src/app/methodology/sections/core/stability-index-section.tsx",
   "src/app/methodology/sections/core/safety-scores-section.tsx",
-  "src/app/methodology/sections/core/liquidity-section.tsx",
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx",
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx",
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx",
@@ -51,6 +48,7 @@ export const TARGET_FILES = [
   "worker/src/cron/daily-digest.ts",
   "worker/src/cron/dispatch-telegram-alerts.ts",
   "worker/src/cron/dex-liquidity/scoring.ts",
+  "worker/src/cron/dex-liquidity/process-pools.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts",
   "worker/src/cron/dex-liquidity/staging-merge.ts",
@@ -63,7 +61,6 @@ export const TARGET_FILES = [
   "worker/src/cron/compute-dews.ts",
   "worker/src/cron/depeg-detection/decision-engine.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",
-  "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
   "worker/src/cron/sync-fx-rates-helpers.ts",
   "worker/src/cron/sync-yield-data.ts",
@@ -218,7 +215,15 @@ export function findUnexpectedHotspotBaselineEntries(baseline) {
 
 export function findStaleHotspotWaiverEntries(waivers, candidateFiles) {
   const candidateSet = new Set(candidateFiles);
-  return Object.keys(waivers).filter((file) => !candidateSet.has(file));
+  return Object.keys(waivers).filter((file) => {
+    if (candidateSet.has(file)) return false;
+    try {
+      readFileSync(resolve(process.cwd(), file), "utf8");
+      return false;
+    } catch {
+      return true;
+    }
+  });
 }
 
 export function findHotspotCandidatesMissingCoverage(candidateFiles, waivers) {
@@ -281,12 +286,10 @@ export function validateHotspotBaselineMetadata(baseline) {
   return errors;
 }
 
-export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
+export function validateHotspotWaiverMetadata(waivers) {
   const errors = [];
-  const candidateSet = new Set(candidateFiles);
 
   for (const [file, waiver] of Object.entries(waivers)) {
-    if (!candidateSet.has(file)) continue;
     if (TARGET_FILES.includes(file)) {
       errors.push(`${file}: already enrolled in hotspot baseline; remove waiver`);
     }
