@@ -944,8 +944,9 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
-  it("tolerates an immaterial unrecognized-chain-label pool in the bridge supply proof (RULED D-J)", () => {
-    const POOL_KEY = "unmatched-chain-label-pool:fixture-asset";
+  it("clears DAI's immaterial unrecognized-chain-label pool without weakening the RULED D-J floor", () => {
+    const ASSET_ID = "dai-makerdao";
+    const POOL_KEY = `unmatched-chain-label-pool:${ASSET_ID}`;
     const resultFor = (
       poolShare: number | null,
       {
@@ -999,6 +1000,7 @@ describe("Safety Score v9 economic control", () => {
         args({
           facts: {
             ...facts(controls),
+            assetId: ASSET_ID,
             supply: {
               status: requiredKnown("supply"),
               selectedBridgeRoutes: [
@@ -1075,14 +1077,14 @@ describe("Safety Score v9 economic control", () => {
     // own joined subthreshold controls they pass.
     const named = resultFor(0.0999, {
       withPoolControl: false,
-      namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02 }],
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02 }],
     });
     expect(named.reasons).toEqual([]);
 
     // A named unmatched row without a joined control still fails the proof.
     const namedOpen = resultFor(0.0999, {
       withPoolControl: false,
-      namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02, withControl: false }],
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02, withControl: false }],
     });
     expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
