@@ -4041,7 +4041,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     // Shared exit-route capacity source changes rotate the historical V8
     // evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "465cfa3ed313dd4eddef548fd57ae87773b5579b4c2d740f4fc63cf30b563406",
+      "0d2475d38f8280b5ed985e648c6bff144c7a85b979fb3623c5e652408658c730",
     );
   });
 
