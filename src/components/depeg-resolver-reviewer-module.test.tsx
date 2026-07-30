@@ -179,6 +179,62 @@ describe("DepegResolverReviewerModule", () => {
     // Reviewed readout row renders with its verdict.
     expect(screen.getByText("LUSD")).toBeTruthy();
     expect(screen.getByText("Correct recoverable")).toBeTruthy();
+    // With fewer than two scored majors, the version strip stays hidden.
+    expect(screen.queryByText("Accuracy by version")).toBeNull();
+  });
+
+  it("consolidates per-version accuracy into methodology majors", () => {
+    const template = summarizeDdrrRows([]).byPredictionPolicy.find(
+      (candidate) => candidate.segmentKind === "all",
+    )!.metrics;
+    const segment = (
+      version: string,
+      scored: number,
+      correct: number,
+      durationScored = 0,
+      meanSignedDurationErrorSec: number | null = null,
+      meanAbsoluteDurationErrorSec: number | null = null,
+    ) => ({
+      segmentKind: "prediction_policy" as const,
+      predictionMethodologyVersion: version,
+      predictionPolicyVersion: "sticky-24h-v1",
+      metrics: {
+        ...template,
+        recoveryLikelihoodScoredCount: scored,
+        recoveryLikelihoodCorrectCount: correct,
+        durationScoredCount: durationScored,
+        meanSignedDurationErrorSec,
+        meanAbsoluteDurationErrorSec,
+      },
+    });
+    render(
+      <DepegResolverReviewerModule
+        data={response({
+          summary: {
+            ...summary,
+            byPredictionPolicy: [
+              segment("2.0", 6, 5, 5, 3600, 5400),
+              segment("3.02", 13, 11, 10, 7200, 10800),
+              segment("3.04", 21, 20, 20, -3600, 7200),
+              ...summary.byPredictionPolicy,
+            ],
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Accuracy by version")).toBeTruthy();
+    expect(screen.getByText("v2")).toBeTruthy();
+    expect(screen.getByText("83.3% · 6 scored")).toBeTruthy();
+    expect(screen.getByText("+1h ±1h 30m miss")).toBeTruthy();
+    // 3.02 and 3.04 consolidate into the v3 major: 31/34 correct; duration
+    // means recombine weighted by scored counts: (10·2h + 20·(−1h)) / 30 = 0s.
+    expect(screen.getByText("91.2% · 34 scored")).toBeTruthy();
+    expect(screen.getByText("0s ±2h 20m miss")).toBeTruthy();
+    // The current major always renders, as maturing until its first rows score.
+    expect(screen.getByText("v4")).toBeTruthy();
+    expect(screen.getByText("maturing · 0 scored")).toBeTruthy();
+    expect(screen.getByText("— miss")).toBeTruthy();
   });
 
   it("promotes the percentage once enough verdicts are scored", () => {

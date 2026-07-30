@@ -97,6 +97,17 @@ function hasCoherentPancakeSpotPrice(
   return Number.isFinite(outputValueRatio) && outputValueRatio <= DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO;
 }
 
+function hasCoherentClSpotPrice(
+  candidate: Pick<UniV3ExecutionCandidate | SlipstreamExecutionCandidate, "token0Price" | "token1Price">,
+  inputIndex: number,
+  inputReferencePriceUsd: number,
+  outputReferencePriceUsd: number,
+): boolean {
+  const spotInputPerOutput = inputIndex === 0 ? candidate.token0Price : candidate.token1Price;
+  const outputValueRatio = outputReferencePriceUsd / (inputReferencePriceUsd * spotInputPerOutput);
+  return Number.isFinite(outputValueRatio) && outputValueRatio <= DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO;
+}
+
 export function buildPancakeMeasuredExecutionTargets(input: {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
@@ -399,6 +410,9 @@ function buildClMeasuredExecutionTarget(
     }
   }
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
+  if (!hasCoherentClSpotPrice(candidate, inputIndex, inputPrice, outputPrice)) {
+    return null;
+  }
   const chain = canonicalExitRouteChain(candidate.chain);
   const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
   const targetId = buildDexMeasuredExecutionTargetId({
@@ -652,6 +666,7 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
     const token1Address = canonicalEvmAddress(token1.address);
     const token0PriceUsd = token0.priceUsd;
     const token1PriceUsd = token1.priceUsd;
+    const spotToken1PerToken0 = pool.price;
     if (
       !poolAddress ||
       !token0Address ||
@@ -670,7 +685,10 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
       token0PriceUsd <= 0 ||
       token1PriceUsd == null ||
       !Number.isFinite(token1PriceUsd) ||
-      token1PriceUsd <= 0
+      token1PriceUsd <= 0 ||
+      spotToken1PerToken0 == null ||
+      !Number.isFinite(spotToken1PerToken0) ||
+      spotToken1PerToken0 <= 0
     ) continue;
 
     const candidate: SlipstreamExecutionCandidate = {
@@ -678,8 +696,8 @@ export function buildSlipstreamMeasuredExecutionTargets(input: {
       poolAddress,
       tickSpacing: pool.tickSpacing,
       tvlUsd: pool.tvlUsd,
-      token0Price: token1PriceUsd / token0PriceUsd,
-      token1Price: token0PriceUsd / token1PriceUsd,
+      token0Price: 1 / spotToken1PerToken0,
+      token1Price: spotToken1PerToken0,
       tokens: [
         { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
         { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },

@@ -36,13 +36,14 @@ import {
   applySafetyScoreV9SupplyAttributionGeneration,
   computeSafetyScoreV9SupplyAttributionGenerationId,
   createSafetyScoreV9SupplyAttributionGeneration,
+  isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
   nextSafetyScoreV9SupplyAttributionDueAtSec,
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
 } from "../safety-score-v9-supply-attribution-generation";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
-const SOURCE_CLOCK_SEC = 1_785_283_200;
+const SOURCE_CLOCK_SEC = 1_785_456_000;
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 
@@ -567,6 +568,38 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(
       applied.fixedInput.safetyScoreV9SupplyAttributionById,
     ).toEqual({});
+  });
+
+  it("classifies only same-input complete future generations as cadence deferred", () => {
+    const generation = fixtures.acceptedGeneration;
+
+    expect(
+      applySafetyScoreV9SupplyAttributionGeneration(
+        fixtures.acceptedFixture.fixedInput,
+        generation,
+      ),
+    ).toMatchObject({
+      status: "incompatible",
+      reason: "generation-identity-or-freshness-mismatch",
+    });
+    expect(
+      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
+        fixtures.acceptedFixture.fixedInput,
+        generation,
+      ),
+    ).toBe(true);
+    expect(
+      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
+        fixtures.target,
+        generation,
+      ),
+    ).toBe(false);
+    expect(
+      isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
+        fixtures.staleTarget,
+        generation,
+      ),
+    ).toBe(false);
   });
 
   it("uses the shorter retry cadence for complete rejected generations", () => {

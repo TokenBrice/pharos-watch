@@ -46,6 +46,7 @@ import {
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
 import {
   getDexMeasuredExecutionDeployment,
+  isDexMeasuredExecutionDeploymentScoreEligible,
   verifyDexMeasuredExecutionDeployment,
   type DexMeasuredExecutionDeployment,
 } from "./registry";
@@ -210,6 +211,23 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
   }
   const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
+}
+
+export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExecutionTarget): boolean {
+  const deployment = deploymentForTarget(target);
+  if (isDexMeasuredExecutionDeploymentScoreEligible(target.adapterProfileId, target.chain)) return true;
+  switch (deployment?.kind) {
+    case "curve-cryptoswap":
+    case "curve-stableswap":
+    case "curve-stableswap-ng":
+      return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
+    case "quoter-v2":
+    case "fluid-resolver":
+    case "uniswap-v4":
+    case "curve-composite":
+    case undefined:
+      return false;
+  }
 }
 
 function countAdmissionBatches<T>(
@@ -1468,7 +1486,17 @@ export async function syncDexMeasuredExecution(
   const attemptedFailureCount = outcomes.filter(
     (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
   ).length;
-  const quoteFailureCount = Math.max(0, attemptedFailureCount - oversized.size);
+  const scoreEligibleAttemptedFailureCount = outcomes.filter(
+    (outcome) =>
+      outcome.status === "failed" &&
+      outcome.failureReason !== "budget-deferred" &&
+      !oversized.has(outcome.target.targetId) &&
+      isDexMeasuredExecutionTargetScoreEligible(outcome.target),
+  ).length;
+  const diagnosticAttemptedFailureCount = Math.max(
+    0,
+    attemptedFailureCount - scoreEligibleAttemptedFailureCount - oversized.size,
+  );
   const metadata = {
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
@@ -1476,6 +1504,8 @@ export async function syncDexMeasuredExecution(
     measuredCount: publication.measuredCount,
     failedCount: publication.failedCount,
     attemptedFailureCount,
+    scoreEligibleAttemptedFailureCount,
+    diagnosticAttemptedFailureCount,
     deferredCount: deferred.size,
     budgetDeferredCount,
     admissionEstimatedRpcRequests: estimatedRpcRequests,
@@ -1495,7 +1525,7 @@ export async function syncDexMeasuredExecution(
     cursorWriteStatus,
     oversizedCoinIds,
     degradedReasons: [
-      ...(quoteFailureCount > 0 ? ["quote-failures"] : []),
+      ...(scoreEligibleAttemptedFailureCount > 0 ? ["quote-failures"] : []),
       ...(oversizedCoinIds.length > 0 ? ["admission-coin-group-oversized"] : []),
       ...(cursorWriteStatus === "write-failed" ? ["admission-cursor-write-failed"] : []),
       ...(budgetDeferredCount > 0 && cursorWriteStatus !== "written"
@@ -1523,7 +1553,7 @@ export async function syncDexMeasuredExecution(
     status: retention.error
       ? "degraded"
       : resolveMeasuredExecutionCronStatus({
-          attemptedFailureCount,
+          attemptedFailureCount: scoreEligibleAttemptedFailureCount,
           deferredCount: budgetDeferredCount,
           admissionRotationCycles,
           cursorWriteStatus,

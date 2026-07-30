@@ -16,6 +16,7 @@ import { fetchJsonPostWithRetry } from "./request";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 type EvmCallInput = Pick<EvmInput, "chain"> & { rpcMode?: EvmInput["rpcMode"] };
+type EvmBlockNumberOrTag = number | "latest";
 
 interface EvmCallOptions {
   contract: string;
@@ -27,6 +28,7 @@ interface EvmCallOptions {
   rpcMode?: EvmInput["rpcMode"];
   chain?: string;
   timeoutMs?: number;
+  blockNumberOrTag?: EvmBlockNumberOrTag;
 }
 
 interface BoundOnchainCallOptions {
@@ -67,6 +69,7 @@ interface EvmMulticall3Options {
   chain?: string;
   timeoutMs?: number;
   multicallBatchSize?: number;
+  blockNumberOrTag?: EvmBlockNumberOrTag;
 }
 
 async function runWithRpcFallback<T>(
@@ -122,18 +125,19 @@ export function makeOnchainCallers(input: EvmCallInput, options: BoundOnchainCal
 }
 
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {
+  const blockNumberOrTag = options.blockNumberOrTag ?? "latest";
   return runWithRpcFallback<bigint>(
     options,
     "evm-uint256",
     (extraRpcUrls) =>
-      fetchEvmUint256AtBlock(options.chain, options.contract, options.data, "latest", {
+      fetchEvmUint256AtBlock(options.chain, options.contract, options.data, blockNumberOrTag, {
         extraRpcUrls,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,
         chainRpcs: options.ctx?.chainRpcs,
       }),
     () =>
-      fetchEtherscanUint256AtBlock(1, options.contract, options.data, "latest", {
+      fetchEtherscanUint256AtBlock(1, options.contract, options.data, blockNumberOrTag, {
         apiKey: options.ctx?.etherscanApiKey,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,
@@ -155,7 +159,7 @@ export async function fetchOnchainMulticall3(options: EvmMulticall3Options): Pro
         callData: call.data,
         allowFailure: call.allowFailure,
       })),
-      "latest",
+      options.blockNumberOrTag ?? "latest",
       {
         extraRpcUrls,
         signal: options.signal,
@@ -194,11 +198,12 @@ export async function fetchOnchainRateBps(
 }
 
 export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<string | null> {
+  const blockNumberOrTag = options.blockNumberOrTag ?? "latest";
   return runWithRpcFallback<string>(
     options,
     "evm-call",
     (extraRpcUrls) =>
-      fetchEvmCallHexAtBlock(options.chain, options.contract, options.data, "latest", {
+      fetchEvmCallHexAtBlock(options.chain, options.contract, options.data, blockNumberOrTag, {
         extraRpcUrls,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,
@@ -210,7 +215,7 @@ export async function fetchOnchainRawCall(options: EvmCallOptions): Promise<stri
         action: "eth_call",
         to: options.contract,
         data: options.data,
-        blockNumberOrTag: "latest",
+        blockNumberOrTag,
         apiKey: options.ctx?.etherscanApiKey,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? 10_000,

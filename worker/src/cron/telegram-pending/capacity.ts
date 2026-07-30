@@ -82,14 +82,20 @@ export async function readPendingCapacity(
                ,SUM(CASE
                       WHEN (delivery_state = 'sending'
                         AND COALESCE(delivery_started_at, created_at) <= ?)
-                        OR delivery_state = 'execution_unknown'
+                        OR (
+                          delivery_state = 'execution_unknown'
+                          AND COALESCE(expires_at, created_at + ?) > ?
+                        )
                       THEN 1 ELSE 0
                     END) AS pending_execution_unknown
                ,SUM(CASE WHEN delivery_state = 'sent' THEN 1 ELSE 0 END) AS sent_cleanup
                ,MIN(CASE
                       WHEN (delivery_state = 'sending'
                         AND COALESCE(delivery_started_at, created_at) <= ?)
-                        OR delivery_state = 'execution_unknown'
+                        OR (
+                          delivery_state = 'execution_unknown'
+                          AND COALESCE(expires_at, created_at + ?) > ?
+                        )
                       THEN COALESCE(delivery_started_at, created_at)
                     END) AS oldest_pending_execution_unknown_at
                ,(SELECT SUM(CASE
@@ -144,8 +150,8 @@ export async function readPendingCapacity(
         PENDING_TTL_SEC, nowSec,
         PENDING_TTL_SEC, nowSec, nowSec,
         nowSec - PENDING_OLD_AGE_ALERT_SEC,
-        nowSec - PENDING_OLD_AGE_ALERT_SEC,
-        nowSec - PENDING_OLD_AGE_ALERT_SEC,
+        nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC, nowSec,
+        nowSec - PENDING_OLD_AGE_ALERT_SEC, PENDING_TTL_SEC, nowSec,
         nowSec - PENDING_OLD_AGE_ALERT_SEC,
         EXECUTION_UNKNOWN_SAMPLE_LIMIT,
         nowSec - PENDING_OLD_AGE_ALERT_SEC,

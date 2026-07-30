@@ -166,6 +166,8 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       error_class TEXT,
       created_at INTEGER,
       effect_state TEXT NOT NULL DEFAULT 'unstarted',
+      effect_started_at INTEGER,
+      effect_completed_at INTEGER,
       cancelled_at INTEGER,
       cancellation_reason TEXT,
       final_delivery_state TEXT,
@@ -3483,6 +3485,42 @@ describe("readPendingCapacitySnapshot", () => {
     expect(snapshot.estimatedDrainTimeSec).toBe(
       estimateTelegramDrainTimeSec(75, TELEGRAM_PENDING_DRAIN_BUDGET),
     );
+  });
+
+  it("excludes expired execution-unknown rows from active delivery-risk capacity", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      insertPendingSqlite(sqlite, {
+        id: 9101,
+        chatId: "expired-unknown",
+        html: "<b>Expired unknown</b>",
+        createdAt: now - PENDING_TTL_SEC - 120,
+        expiresAt: now - 60,
+      });
+      insertPendingSqlite(sqlite, {
+        id: 9102,
+        chatId: "active-unknown",
+        html: "<b>Active unknown</b>",
+        createdAt: now - 1200,
+        expiresAt: now + 60,
+      });
+      sqlite.prepare(`
+        UPDATE telegram_pending_alerts
+           SET delivery_state = 'execution_unknown',
+               delivery_started_at = created_at,
+               delivery_completed_at = created_at
+         WHERE id IN (9101, 9102)
+      `).run();
+
+      const snapshot = await readPendingCapacitySnapshot(db, now);
+
+      expect(snapshot.pendingExecutionUnknown).toBe(1);
+      expect(snapshot.executionUnknown).toBe(1);
+      expect(snapshot.oldestExecutionUnknownAgeSec).toBe(1200);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

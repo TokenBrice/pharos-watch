@@ -4315,7 +4315,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     // Shared exit-route capacity source changes rotate the historical V8
     // evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "df79342d181d41d1e0549f789f76fc8c7640991aef2b01bd4d3f1d0d045de9e6",
+      "ed448a6fc3584be3b2c6129a709a045476178be90fc8501a38e67dac2812495a",
     );
   });
 
@@ -4670,6 +4670,76 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       incidentState: "unknown",
     });
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
+  });
+
+  it("reviews strategy-vault local holder-loss controls from a partial control inventory", () => {
+    const fixed = exactFixedInput();
+    const mixed = extension();
+    const asset = mixed.assets[0]!;
+    asset.variantKind = "strategy-vault";
+    asset.controlReview = {
+      state: "partially-reviewed-controls",
+      rationale: "The local custody control is reviewed, while bridge route authority remains unresolved.",
+      controls: [
+        {
+          controlKey: "bridge:unresolved",
+          deploymentKey: "ethereum:0x3333333333333333333333333333333333333333",
+          controlKind: "bridge",
+          scope: "deployment",
+          capabilities: ["bridge-mint"],
+          capSemantics: { kind: "unknown", bound: null },
+          claimImpairment: "unknown",
+          economicLossScope: "unknown",
+          authority: null,
+          delaySec: null,
+          materialSupplyShare: 1,
+          incidentState: "unknown",
+          failureDomains: [{ kind: "bridge-route", key: "ethereum:0x3333333333333333333333333333333333333333" }],
+        },
+        {
+          controlKey: "custody:reviewed",
+          deploymentKey: "asset:alpha",
+          controlKind: "custody",
+          scope: "global",
+          capabilities: ["custody-transfer"],
+          capSemantics: { kind: "bounded", bound: { amount: 0.25, unit: "supply-fraction" } },
+          claimImpairment: "bounded",
+          economicLossScope: "reserve-claim",
+          authority: {
+            authorityKey: "ethereum:0x4444444444444444444444444444444444444444",
+            model: "multisig",
+            threshold: { required: 3, total: 6 },
+          },
+          delaySec: 86_400,
+          materialSupplyShare: null,
+          incidentState: "none",
+          failureDomains: [{ kind: "reserve-custodian", key: "issuer:alpha" }],
+        },
+      ],
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, mixed).assets[0]!;
+    expect(compiled.controlStatus).toMatchObject({ observationState: "bounded-unknown" });
+    expect(compiled.controls.find((control) => control.controlKey === "custody:reviewed")?.status).toMatchObject({
+      observationState: "known",
+    });
+    expect(compiled.wrapperLocalFacts).toMatchObject({
+      applicability: "wrapper",
+      form: "strategy-vault",
+      facts: {
+        lossAbsorptionEmergencyControls: {
+          disposition: "reviewed",
+          assessment: "moderate",
+          signals: expect.arrayContaining([
+            "claim-affecting-control:custody:reviewed",
+            "wrapper-local-controls-partial-review",
+            "strategy-vault-holder-loss-controls-reviewed",
+          ]),
+        },
+      },
+    });
+    if (compiled.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    expect(compiled.wrapperLocalFacts.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
   });
 
   it("keeps a reviewed upgrade control known inside a partial control inventory", () => {

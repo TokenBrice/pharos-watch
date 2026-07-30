@@ -17066,8 +17066,12 @@
     {
       "assetId": "dusd-dialectic",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-29",
+      "reviewedAt": "2026-07-30",
       "sources": [
+        {
+          "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; SHA-256 beb0e92828a923048b19f78837b3482f7c3f4075052df81e8a34f2bbbcc7637c; expected publication URL)",
+          "url": "https://makina.finance/MeccanicoToS.pdf"
+        },
         {
           "label": "Makina Machine share price and AUM documentation — USDC accounting token, NAV-based share price, AUM updates, and share-supply relationship",
           "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
@@ -17089,15 +17093,19 @@
           "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721"
         },
         {
-          "label": "Ethereum PublicNode RPC — fixed-block eth_call reads of the DUSD Machine, share token, fee manager, and governance controls at block 25636769",
+          "label": "Makina DUSD strategy API — operator attribution reviewed 2026-07-30",
+          "url": "https://api.makina.finance/v1/strategies/dusd"
+        },
+        {
+          "label": "Ethereum PublicNode RPC — fixed-block and latest eth_call reads of the DUSD Machine, share token, fee manager, and governance controls",
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "DUSD is a Dialectic-curated Makina Machine share over USDC, not a par-redeemable issuer dollar. The holder claim is the code-mediated share claim against Machine AUM: deposits mint shares through DirectDepositor at the current share price, redemptions enter the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and operator-liquidity dependency, and the share price is AUM divided by share supply in USDC terms. On-chain reads at Ethereum block 25636769 verified the share token 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, accountingToken() = Circle USDC, shareToken() = the DUSD share token, shareLimit() = 75,000,000e18, totalSupply() = 5,618,599.537452822458574240 shares, and recoveryMode() = false. CLAIM AND SEGREGATION is limited: the claim is documented and on-chain-enforced through the Makina contracts, but no legal trust, statutory segregation, or bankruptcy-remoteness claim for DUSD holders was located; the economic claim remains exposed to upstream USDC and deployed strategy positions. CUSTODY CONTINUITY is limited: Makina documentation and the reviewed allocation API identify strategy deployment through approved Calibers into protocol positions, and the Machine/fee/governance graph was verified on-chain, but assets are actively deployed into Morpho, Aave, Pareto/FalconX, Re, and Royco exposures and no independent custodian-continuity or operator-replacement framework was established. ASSURANCE AND RECONCILIATION is limited: Makina publishes structured current strategy/AUM/allocation data and the share-supply/accounting-token relationship is verifiable on-chain, but the reviewed evidence is issuer-operated plus on-chain contract state rather than an independent reserve attestation, audit, or third-party reconciliation of strategy positions to DUSD liabilities.",
+      "notes": "DUSD is the Dialectic-curated Makina Machine share over USDC, not a par-redeemable issuer dollar. The Makina strategy API names Dialectic as the DUSD operator, and latest Ethereum PublicNode reads at block 25647044 returned operator() = mechanic() = 0x425BbC2cfF0c7E7960baA9BaC2f0Cb67B41d3beF for Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721. The official team-supplied Dialectic Meccanico Machine Terms v1.2 (SHA-256 beb0e92828a923048b19f78837b3482f7c3f4075052df81e8a34f2bbbcc7637c; expected publication URL pending during the 2026-07-30 review) identify Dialectic Meccanico Ltd as Operator and apply to Machines identified by on-chain operator attribution and/or an Operator Agreement. The holder's on-chain claim remains a code-mediated share claim against Machine AUM: deposits mint shares through DirectDepositor at the current share price, redemptions enter the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and operator-liquidity dependency, and the share price is AUM divided by share supply in USDC terms. On-chain reads at Ethereum block 25636769 verified the share token 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, accountingToken() = Circle USDC, shareToken() = the DUSD share token, shareLimit() = 75,000,000e18, totalSupply() = 5,618,599.537452822458574240 shares, and recoveryMode() = false. CLAIM AND SEGREGATION is weak from affirmative legal evidence: the Machine Terms establish that acquisitions are sales by the Operator as principal, settlement assets and Machine assets become or remain the Operator's property, Users have no legal/equitable/proprietary/custody/trust/underlying/yield/governance/priority/bankruptcy-remote rights, buybacks are discretionary rather than contractual redemption rights, and Machine cessation or Operator insolvency creates no holder asset-return process or Makina Party claim. The code-mediated share accounting and technical Machine/Caliber controls remain relevant implementation facts, but they do not cure the legal claim and segregation deficiency. CUSTODY CONTINUITY is limited: Makina documentation and the reviewed allocation API identify strategy deployment through approved Calibers into protocol positions, and the Machine/fee/governance graph was verified on-chain, but assets are actively deployed into Morpho, Aave, Pareto/FalconX, Re, and Royco exposures and no independent custodian-continuity, trustee-custody, legal segregation, or bankruptcy-remote operator-replacement framework was established. ASSURANCE AND RECONCILIATION is limited: Makina publishes structured current strategy/AUM/allocation data and the share-supply/accounting-token relationship is verifiable on-chain, but the reviewed evidence is issuer-operated plus on-chain contract state rather than an independent reserve attestation, audit, or third-party reconciliation of strategy positions to DUSD liabilities.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
-          "quality": "limited"
+          "quality": "weak"
         },
         "custodyContinuity": {
           "quality": "limited"

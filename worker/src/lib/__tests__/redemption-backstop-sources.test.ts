@@ -559,6 +559,106 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.liveHolderEligibility).toBe("whitelisted-primary");
   });
 
+  it("uses DUSD live queue capacity without treating whitelist access as route impairment", async () => {
+    const config = getRedemptionBackstopConfig("dusd-dialectic");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "dusd-dialectic",
+      config!,
+      5_800_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "dusd-dialectic",
+          fetchedAt: now - 120,
+          source: "makina-strategy",
+          metadata: {
+            freshnessMode: "verified",
+            sourceTimestamp: now - 120,
+            redemption: {
+              capacityUsd: 0,
+              capacityKind: "live-queue",
+              freshnessKind: "same-run-onchain",
+              queueDepthUsd: 3_104.889979,
+              holderEligibility: "issuer-discretionary",
+              routeStatus: "open",
+              routeStatusSource: "onchain",
+            },
+            redemptionQueue: {
+              minimumFinalizationDelaySec: 43_200,
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.sourceMode).toBe("dynamic");
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.routeStatus).toBe("open");
+    expect(entry.routeStatusSource).toBe("onchain");
+    expect(entry.liveHolderEligibility).toBe("issuer-discretionary");
+    expect(entry.capacityConfidence).toBe("documented-bound");
+    expect(entry.capacityBasis).toBe("live-proxy-buffer");
+    expect(entry.capacityKind).toBe("live-queue");
+    expect(entry.immediateCapacityUsd).toBe(0);
+    expect(entry.queueDepthUsd).toBe(3_104.889979);
+    expect(entry.settlementDelaySec).toBeUndefined();
+    expect(entry.effectiveExitScore ?? 0).toBe(0);
+    expect(entry.capsApplied).not.toContain("live-route-status-impairment");
+  });
+
+  it("fails DUSD closed when the live queue proof omits usable capacity", async () => {
+    const config = getRedemptionBackstopConfig("dusd-dialectic");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "dusd-dialectic",
+      config!,
+      5_800_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "dusd-dialectic",
+          fetchedAt: now - 120,
+          source: "makina-strategy",
+          metadata: {
+            freshnessMode: "verified",
+            sourceTimestamp: now - 120,
+            redemption: {
+              capacityKind: "live-queue",
+              freshnessKind: "same-run-onchain",
+              routeStatus: "open",
+              routeStatusSource: "onchain",
+            },
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.score).toBeNull();
+    expect(entry.effectiveExitScore).toBeNull();
+    expect(entry.notes).toContain("Live reserve metadata lacks redeemable-capacity amount");
+  });
+
   it("propagates live route status from reserve metadata", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),

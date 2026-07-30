@@ -41,6 +41,7 @@ import {
   simulateTelegramRecapLoadScenarios,
   type TelegramRecapLoadScenarioResult,
 } from "../lib/telegram-recap-load-scenarios";
+import { TELEGRAM_RECAP_TAPE_PAGE_LIMIT } from "../../shared/lib/telegram-recap-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export {
@@ -461,7 +462,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
          AND type IN (?, ?, ?, ?, ?, ?)
        ORDER BY ts ASC, id ASC
        LIMIT ?`,
-      binds: [1_799_870_400_000, 1_800_000_000_000, "depeg.opened", "dews.escalated", "score.downgraded", "freeze.blocked", "mint_burn.large_mint", "yield.warning_emitted", 501],
+      binds: [1_799_870_400_000, 1_800_000_000_000, "depeg.opened", "dews.escalated", "score.downgraded", "freeze.blocked", "mint_burn.large_mint", "yield.warning_emitted", TELEGRAM_RECAP_TAPE_PAGE_LIMIT + 1],
       requiredDetails: ["idx_tape_type_ts"],
       note: "Reviews the Tape type/time index and cap-plus-one bounded scan used by recap planning.",
     },

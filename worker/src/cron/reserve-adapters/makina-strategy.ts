@@ -3,6 +3,13 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { rethrowIfAborted } from "../../lib/abort";
+import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
+import {
+  fetchEvmBlockNumber,
+  fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
+  fetchEvmStorageAtBlock,
+} from "../../lib/evm-rpc";
 import {
   buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
@@ -12,7 +19,11 @@ import {
   reserveInfoWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
-import { fetchOnchainUint256 } from "./onchain";
+import { decodeAddressWord, decodeBoolWord, decodeUint256Word } from "./abi-decode";
+import { runAdapterIo } from "./concurrency";
+import { normalizeEvmAddress, resolveCoinContractAddress } from "./evm";
+import { fetchOnchainMulticall3, fetchOnchainUint256 } from "./onchain";
+import { EIP1967_BEACON_SLOT, multicallResultByLabel, runtimeCodeHash } from "./onchain-identity";
 
 interface MakinaStrategyEnvelope {
   data?: MakinaStrategyData;
@@ -107,18 +118,45 @@ interface MakinaStrategyParams {
 
 export interface MakinaRedemptionState {
   whitelistEnabled: boolean;
-  finalizationDelaySec: number;
+  minimumFinalizationDelaySec: number;
   nextRequestId: number;
   lastFinalizedRequestId: number;
+  pendingRequestCount: number;
+  lockedShares: number;
+  grossIdleCapacityUsd: number;
+  queueDepthUsd: number;
+  reservedUnclaimedUsdc: number;
+  minimumRedeemShares: number;
+  capacityUsd: number;
+  blockNumber: number;
+  asyncRedeemerAddress: string;
+  implementationAddress: string;
+  implementationRuntimeCodeHash: string;
+}
+
+interface MakinaRedemptionRead {
+  state: MakinaRedemptionState | null;
+  warning?: LiveReserveWarning;
 }
 
 const DEFAULT_ACCOUNTING_DECIMALS = 6;
 const DEFAULT_OTHER_THRESHOLD_PCT = 2;
 const DEFAULT_RECONCILIATION_TOLERANCE_PCT = 0.5;
+const ETHEREUM_CHAIN = "ethereum";
+const CANONICAL_ETHEREUM_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION = "0xd53dc14e0f268494c7540153126d78e4f54cc01c";
+const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH =
+  "0xeed090b1c06e966eebca301a1fed3f0c152044c04912d8b5d7e7c934fa3a192a";
+const REDEEMER_MACHINE_SELECTOR = "0x75c60225";
+const MACHINE_ACCOUNTING_TOKEN_SELECTOR = "0xda68cf8b";
+const MACHINE_SHARE_TOKEN_SELECTOR = "0x6c9fa59e";
 const IS_WHITELIST_ENABLED_SELECTOR = "0x184d69ab";
 const FINALIZATION_DELAY_SELECTOR = "0xf9823a5c";
 const NEXT_REQUEST_ID_SELECTOR = "0x6a84a985";
 const LAST_FINALIZED_REQUEST_ID_SELECTOR = "0x667a739e";
+const MIN_REDEEM_AMOUNT_SELECTOR = "0x0912ae6d";
+const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const BEACON_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
 
 function readParams(config: LiveReservesConfig): MakinaStrategyParams {
   return parseLiveReserveAdapterParams("makina-strategy", config.params);
@@ -129,82 +167,250 @@ function readSafeOnchainNumber(value: bigint | null): number | null {
   return Number(value);
 }
 
-export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
-  const unfinalizedRequestSpan = Math.max(
-    0,
-    state.nextRequestId - state.lastFinalizedRequestId - 1,
-  );
+function decimalNumberFromRaw(value: bigint, decimals: number): number | null {
+  if (!Number.isSafeInteger(decimals) || decimals < 0 || decimals > 36 || value < 0n) return null;
+  const raw = value.toString();
+  const integerDigits = decimals === 0 ? raw : raw.slice(0, -decimals) || "0";
+  const fractionalDigits = decimals === 0 ? "" : raw.slice(-decimals).padStart(decimals, "0").replace(/0+$/, "");
+  const parsed = Number(fractionalDigits ? `${integerDigits}.${fractionalDigits}` : integerDigits);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
 
+function redemptionTelemetryUnavailable(message: string): MakinaRedemptionRead {
+  return {
+    state: null,
+    warning: reserveInfoWarning("makina-redemption-telemetry-unavailable", message),
+  };
+}
+
+export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
   return {
     ...buildRedemptionSnapshotMetadata({
+      capacityUsd: state.capacityUsd,
+      capacityKind: "live-queue",
       freshnessKind: "same-run-onchain",
-      holderEligibility: state.whitelistEnabled ? "whitelisted-primary" : "any-holder",
-      settlementDelaySec: state.finalizationDelaySec,
-      routeStatus: state.whitelistEnabled ? "cohort-limited" : "open",
+      blockNumber: state.blockNumber,
+      holderEligibility: "issuer-discretionary",
+      queueDepthUsd: state.queueDepthUsd,
+      routeStatus: "open",
       routeStatusSource: "onchain",
       routeStatusReason: state.whitelistEnabled
-        ? "AsyncRedeemer whitelist is enabled; requests and claims are limited to approved holders"
+        ? "AsyncRedeemer whitelist is enabled; Pharos models the route as issuer-discretionary access rather than impaired"
         : "AsyncRedeemer whitelist is disabled",
       sourceUrls: [
-        "https://eth.blockscout.com/address/0x1303c26cfe06bac5bfee29907f37919643def75c?tab=contract",
+        "https://docs.makina.finance/concepts/architecture/machine/redemptions",
+        `https://eth.blockscout.com/address/${state.asyncRedeemerAddress}?tab=contract`,
+        `https://eth.blockscout.com/address/${state.implementationAddress}?tab=contract`,
       ],
     }),
     redemptionQueue: {
       nextRequestId: state.nextRequestId,
       lastFinalizedRequestId: state.lastFinalizedRequestId,
-      unfinalizedRequestSpan,
+      unfinalizedRequestSpan: state.pendingRequestCount,
+      pendingRequestCount: state.pendingRequestCount,
+      minimumFinalizationDelaySec: state.minimumFinalizationDelaySec,
+      minimumRedeemShares: state.minimumRedeemShares,
+      lockedShares: state.lockedShares,
+      grossIdleCapacityUsd: state.grossIdleCapacityUsd,
+      queueDepthUsd: state.queueDepthUsd,
+      reservedUnclaimedUsdc: state.reservedUnclaimedUsdc,
+      usableCapacityFormula: "max(0, Machine idle Ethereum USDC - convertToAssets(DUSD locked in AsyncRedeemer))",
+      capacityBasis: "live-proxy-buffer",
+      implementationAddress: state.implementationAddress,
+      implementationRuntimeCodeHash: state.implementationRuntimeCodeHash,
     },
   };
 }
 
 async function fetchMakinaRedemptionState(
-  asyncRedeemerAddress: string | undefined,
+  coin: StablecoinMeta,
+  params: MakinaStrategyParams,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<MakinaRedemptionState | null> {
-  if (!asyncRedeemerAddress) return null;
+): Promise<MakinaRedemptionRead> {
+  if (!params.asyncRedeemerAddress) return { state: null };
 
-  const call = (data: string) =>
-    fetchOnchainUint256({
-      contract: asyncRedeemerAddress,
-      data,
+  try {
+    const machineAddress = normalizeEvmAddress(params.machineAddress);
+    const asyncRedeemerAddress = normalizeEvmAddress(params.asyncRedeemerAddress);
+    const shareTokenAddress = normalizeEvmAddress(resolveCoinContractAddress(coin, ETHEREUM_CHAIN) ?? undefined);
+    if (!machineAddress || !asyncRedeemerAddress || !shareTokenAddress) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry skipped: missing reviewed Ethereum addresses");
+    }
+
+    const rpcOptions = {
+      signal,
+      timeoutMs: 10_000,
+      chainRpcs: ctx?.chainRpcs,
+    };
+    const blockNumber = await runAdapterIo(
+      ctx,
+      "makina-redemption-block:ethereum",
+      () => fetchEvmBlockNumber(ETHEREUM_CHAIN, rpcOptions),
+      { signal },
+    );
+    if (blockNumber == null) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: Ethereum block pin failed");
+    }
+
+    const [reads, beaconSlot] = await Promise.all([
+      fetchOnchainMulticall3({
+        chain: ETHEREUM_CHAIN,
+        signal,
+        ctx,
+        blockNumberOrTag: blockNumber,
+        calls: [
+          { label: "redeemer-machine", contract: asyncRedeemerAddress, data: REDEEMER_MACHINE_SELECTOR },
+          { label: "machine-accounting-token", contract: machineAddress, data: MACHINE_ACCOUNTING_TOKEN_SELECTOR },
+          { label: "machine-share-token", contract: machineAddress, data: MACHINE_SHARE_TOKEN_SELECTOR },
+          { label: "machine-idle-usdc", contract: CANONICAL_ETHEREUM_USDC, data: encodeBalanceOfCallData(machineAddress) },
+          { label: "redeemer-locked-shares", contract: shareTokenAddress, data: encodeBalanceOfCallData(asyncRedeemerAddress) },
+          { label: "redeemer-reserved-usdc", contract: CANONICAL_ETHEREUM_USDC, data: encodeBalanceOfCallData(asyncRedeemerAddress) },
+          { label: "redeemer-whitelist", contract: asyncRedeemerAddress, data: IS_WHITELIST_ENABLED_SELECTOR },
+          { label: "redeemer-finalization-delay", contract: asyncRedeemerAddress, data: FINALIZATION_DELAY_SELECTOR },
+          { label: "redeemer-next-request-id", contract: asyncRedeemerAddress, data: NEXT_REQUEST_ID_SELECTOR },
+          { label: "redeemer-last-finalized-request-id", contract: asyncRedeemerAddress, data: LAST_FINALIZED_REQUEST_ID_SELECTOR },
+          { label: "redeemer-min-redeem-amount", contract: asyncRedeemerAddress, data: MIN_REDEEM_AMOUNT_SELECTOR },
+        ],
+      }),
+      runAdapterIo(
+        ctx,
+        `makina-redemption-beacon-slot:${asyncRedeemerAddress}`,
+        () => fetchEvmStorageAtBlock(ETHEREUM_CHAIN, asyncRedeemerAddress, EIP1967_BEACON_SLOT, blockNumber, rpcOptions),
+        { signal },
+      ),
+    ]);
+    if (!reads) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: same-block route state read failed");
+    }
+
+    const redeemerMachine = decodeAddressWord(multicallResultByLabel(reads, "redeemer-machine"));
+    if (redeemerMachine !== machineAddress) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: redeemer machine() does not match the configured Machine");
+    }
+    const accountingToken = decodeAddressWord(multicallResultByLabel(reads, "machine-accounting-token"));
+    if (accountingToken !== CANONICAL_ETHEREUM_USDC) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: Machine accounting token is not canonical Ethereum USDC");
+    }
+    const shareToken = decodeAddressWord(multicallResultByLabel(reads, "machine-share-token"));
+    if (shareToken !== shareTokenAddress) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: Machine share token does not match the tracked DUSD contract");
+    }
+
+    const beaconAddress = decodeAddressWord(beaconSlot);
+    if (!beaconAddress) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: AsyncRedeemer proxy beacon was not resolved");
+    }
+    const implementationRaw = await runAdapterIo(
+      ctx,
+      `makina-redemption-beacon-implementation:${beaconAddress}`,
+      () => fetchEvmCallHexAtBlock(
+        ETHEREUM_CHAIN,
+        beaconAddress,
+        BEACON_IMPLEMENTATION_SELECTOR,
+        blockNumber,
+        rpcOptions,
+      ),
+      { signal },
+    );
+    const implementationAddress = decodeAddressWord(implementationRaw);
+    if (implementationAddress !== REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: proxy implementation changed from the reviewed standard AsyncRedeemer");
+    }
+    const implementationCode = await runAdapterIo(
+      ctx,
+      `makina-redemption-implementation-code:${implementationAddress}`,
+      () => fetchEvmCodeAtBlock(ETHEREUM_CHAIN, implementationAddress, blockNumber, rpcOptions),
+      { signal },
+    );
+    const implementationRuntimeCodeHash = runtimeCodeHash(implementationCode);
+    if (implementationRuntimeCodeHash !== REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: reviewed AsyncRedeemer runtime code hash did not match");
+    }
+
+    const lockedSharesRaw = decodeUint256Word(multicallResultByLabel(reads, "redeemer-locked-shares"));
+    if (lockedSharesRaw == null) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: locked DUSD share balance read failed");
+    }
+    const queueDepthRaw = await fetchOnchainUint256({
+      contract: machineAddress,
+      data: `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(lockedSharesRaw)}`,
       signal,
       ctx,
-      chain: "ethereum",
-      rpcMode: "etherscan-proxy",
+      chain: ETHEREUM_CHAIN,
+      blockNumberOrTag: blockNumber,
     });
-  let reads: Awaited<ReturnType<typeof call>>[];
-  try {
-    reads = await Promise.all([
-      call(IS_WHITELIST_ENABLED_SELECTOR),
-      call(FINALIZATION_DELAY_SELECTOR),
-      call(NEXT_REQUEST_ID_SELECTOR),
-      call(LAST_FINALIZED_REQUEST_ID_SELECTOR),
-    ]);
+    if (queueDepthRaw == null) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: queued-share liability conversion failed");
+    }
+
+    const whitelistEnabled = decodeBoolWord(multicallResultByLabel(reads, "redeemer-whitelist"));
+    const minimumFinalizationDelaySec = readSafeOnchainNumber(decodeUint256Word(
+      multicallResultByLabel(reads, "redeemer-finalization-delay"),
+    ));
+    const nextRequestId = readSafeOnchainNumber(decodeUint256Word(
+      multicallResultByLabel(reads, "redeemer-next-request-id"),
+    ));
+    const lastFinalizedRequestId = readSafeOnchainNumber(decodeUint256Word(
+      multicallResultByLabel(reads, "redeemer-last-finalized-request-id"),
+    ));
+    const minimumRedeemRaw = decodeUint256Word(multicallResultByLabel(reads, "redeemer-min-redeem-amount"));
+    const machineIdleRaw = decodeUint256Word(multicallResultByLabel(reads, "machine-idle-usdc"));
+    const reservedUnclaimedRaw = decodeUint256Word(multicallResultByLabel(reads, "redeemer-reserved-usdc"));
+    if (
+      whitelistEnabled == null ||
+      minimumFinalizationDelaySec == null ||
+      nextRequestId == null ||
+      lastFinalizedRequestId == null ||
+      minimumRedeemRaw == null ||
+      machineIdleRaw == null ||
+      reservedUnclaimedRaw == null ||
+      lastFinalizedRequestId >= nextRequestId
+    ) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: route counters or balances failed validation");
+    }
+
+    const accountingDecimals = params.accountingTokenDecimals ?? DEFAULT_ACCOUNTING_DECIMALS;
+    const grossIdleCapacityUsd = decimalNumberFromRaw(machineIdleRaw, accountingDecimals);
+    const queueDepthUsd = decimalNumberFromRaw(queueDepthRaw, accountingDecimals);
+    const reservedUnclaimedUsdc = decimalNumberFromRaw(reservedUnclaimedRaw, accountingDecimals);
+    const lockedShares = decimalNumberFromRaw(lockedSharesRaw, 18);
+    const minimumRedeemShares = decimalNumberFromRaw(minimumRedeemRaw, 18);
+    if (
+      grossIdleCapacityUsd == null ||
+      queueDepthUsd == null ||
+      reservedUnclaimedUsdc == null ||
+      lockedShares == null ||
+      minimumRedeemShares == null
+    ) {
+      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: route amounts failed decimal normalization");
+    }
+
+    return {
+      state: {
+        whitelistEnabled,
+        minimumFinalizationDelaySec,
+        nextRequestId,
+        lastFinalizedRequestId,
+        pendingRequestCount: nextRequestId - lastFinalizedRequestId - 1,
+        lockedShares,
+        grossIdleCapacityUsd,
+        queueDepthUsd,
+        reservedUnclaimedUsdc,
+        minimumRedeemShares,
+        capacityUsd: Math.max(0, grossIdleCapacityUsd - queueDepthUsd),
+        blockNumber,
+        asyncRedeemerAddress,
+        implementationAddress,
+        implementationRuntimeCodeHash,
+      },
+    };
   } catch (error) {
     rethrowIfAborted(error, signal);
-    return null;
+    return redemptionTelemetryUnavailable(
+      `Makina AsyncRedeemer telemetry unavailable: ${error instanceof Error ? error.message : "unknown error"}`,
+    );
   }
-  const [whitelistRaw, delayRaw, nextRaw, finalizedRaw] = reads;
-  const finalizationDelaySec = readSafeOnchainNumber(delayRaw);
-  const nextRequestId = readSafeOnchainNumber(nextRaw);
-  const lastFinalizedRequestId = readSafeOnchainNumber(finalizedRaw);
-  if (
-    whitelistRaw == null ||
-    (whitelistRaw !== 0n && whitelistRaw !== 1n) ||
-    finalizationDelaySec == null ||
-    nextRequestId == null ||
-    lastFinalizedRequestId == null
-  ) {
-    return null;
-  }
-
-  return {
-    whitelistEnabled: whitelistRaw === 1n,
-    finalizationDelaySec,
-    nextRequestId,
-    lastFinalizedRequestId,
-  };
 }
 
 function asArray(value: unknown): unknown[] {
@@ -360,6 +566,7 @@ export function adaptMakinaStrategyReserves(
   allocations: MakinaAllocationsEnvelope,
   params: MakinaStrategyParams,
   redemptionState?: MakinaRedemptionState | null,
+  redemptionWarning?: LiveReserveWarning,
 ): AdapterResult {
   const strategyData = strategy.data;
   const allocationData = allocations.data;
@@ -515,6 +722,9 @@ export function adaptMakinaStrategyReserves(
       `Makina allocation includes ${unknownExposurePct.toFixed(2)}% unlabelled exposure`,
     ));
   }
+  if (redemptionWarning) {
+    warnings.push(redemptionWarning);
+  }
 
   for (const detail of positionDetails) {
     const valueUsd = typeof detail.valueUsd === "number" ? Math.abs(detail.valueUsd) : 0;
@@ -575,17 +785,17 @@ export function adaptMakinaStrategyReserves(
 }
 
 export async function fetchMakinaStrategyReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primary = requireJsonInputFromConfig(config, "makina-strategy");
   const params = readParams(config);
-  const [strategy, allocations, redemptionState] = await Promise.all([
+  const [strategy, allocations, redemptionRead] = await Promise.all([
     fetchJsonWithRetry<MakinaStrategyEnvelope>(primary.url, signal, 12_000, ctx),
     fetchJsonWithRetry<MakinaAllocationsEnvelope>(params.allocationsUrl, signal, 12_000, ctx),
-    fetchMakinaRedemptionState(params.asyncRedeemerAddress, signal, ctx),
+    fetchMakinaRedemptionState(coin, params, signal, ctx),
   ]);
-  return adaptMakinaStrategyReserves(strategy, allocations, params, redemptionState);
+  return adaptMakinaStrategyReserves(strategy, allocations, params, redemptionRead.state, redemptionRead.warning);
 }

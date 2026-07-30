@@ -14,6 +14,7 @@ import {
 import { isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
+import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   DDRR_PUBLIC_WARNING,
   type DdrrActualOutcome,
@@ -387,6 +388,122 @@ function BreakdownStat({
   );
 }
 
+interface VersionAccuracySegment {
+  major: string;
+  scored: number;
+  correct: number;
+  accuracy: number | null;
+  durationScored: number;
+  meanSignedDurationErrorSec: number | null;
+  meanAbsoluteDurationErrorSec: number | null;
+}
+
+/**
+ * Consolidates the summary's per-(methodology, policy) segments into
+ * methodology majors (v2, v3, …) for the version track-record strip. The
+ * current major always appears, even before any of its rows have matured.
+ * Duration means are recombined weighted by each segment's scored count.
+ */
+function summarizeAccuracyByMajor(summary: DdrrSummary): VersionAccuracySegment[] {
+  const majors = new Map<
+    string,
+    { scored: number; correct: number; durationScored: number; signedSum: number; absoluteSum: number }
+  >();
+  for (const segment of summary.byPredictionPolicy) {
+    if (segment.segmentKind !== "prediction_policy" || segment.predictionMethodologyVersion == null) {
+      continue;
+    }
+    const major = segment.predictionMethodologyVersion.split(".")[0];
+    const entry =
+      majors.get(major) ?? { scored: 0, correct: 0, durationScored: 0, signedSum: 0, absoluteSum: 0 };
+    entry.scored += segment.metrics.recoveryLikelihoodScoredCount;
+    entry.correct += segment.metrics.recoveryLikelihoodCorrectCount;
+    const durationScored = segment.metrics.durationScoredCount;
+    if (durationScored > 0 && segment.metrics.meanSignedDurationErrorSec != null) {
+      entry.durationScored += durationScored;
+      entry.signedSum += segment.metrics.meanSignedDurationErrorSec * durationScored;
+      entry.absoluteSum += (segment.metrics.meanAbsoluteDurationErrorSec ?? 0) * durationScored;
+    }
+    majors.set(major, entry);
+  }
+  const currentMajor = DDR_METHODOLOGY_VERSION.split(".")[0];
+  if (!majors.has(currentMajor)) {
+    majors.set(currentMajor, { scored: 0, correct: 0, durationScored: 0, signedSum: 0, absoluteSum: 0 });
+  }
+  return [...majors.entries()]
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([major, { scored, correct, durationScored, signedSum, absoluteSum }]) => ({
+      major: `v${major}`,
+      scored,
+      correct,
+      accuracy: scored > 0 ? correct / scored : null,
+      durationScored,
+      meanSignedDurationErrorSec: durationScored > 0 ? signedSum / durationScored : null,
+      meanAbsoluteDurationErrorSec: durationScored > 0 ? absoluteSum / durationScored : null,
+    }));
+}
+
+function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
+  const segments = summarizeAccuracyByMajor(summary);
+  if (segments.filter((segment) => segment.scored > 0).length < 2) {
+    return null;
+  }
+  return (
+    <div className="mt-4 border-t border-border/50 pt-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <Kicker>Accuracy by version</Kicker>
+        <span className="text-[10px] text-muted-foreground">
+          sub-versions consolidated into majors
+        </span>
+      </div>
+      <div className="mt-2 space-y-1.5">
+        {segments.map((segment) => (
+          <div key={segment.major} className="flex items-center gap-3">
+            <span className="w-7 shrink-0 font-mono text-[11px] font-semibold text-foreground">
+              {segment.major}
+            </span>
+            <div
+              className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+              role="img"
+              aria-label={
+                segment.accuracy != null
+                  ? `${segment.major}: ${segment.correct} of ${segment.scored} recovery calls correct`
+                  : `${segment.major}: no scored recovery calls yet`
+              }
+            >
+              {segment.accuracy != null ? (
+                <div
+                  className="h-full rounded-full bg-emerald-500/80"
+                  style={{ width: `${segment.accuracy * 100}%` }}
+                />
+              ) : null}
+            </div>
+            <span className="w-36 shrink-0 whitespace-nowrap text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+              {segment.accuracy != null
+                ? `${formatPercent(segment.accuracy)} · ${segment.scored} scored`
+                : "maturing · 0 scored"}
+            </span>
+            <span
+              className="hidden w-24 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground sm:inline"
+              aria-label={
+                segment.meanSignedDurationErrorSec != null
+                  ? `${segment.major}: mean duration miss ${formatSignedDuration(segment.meanSignedDurationErrorSec)}`
+                  : undefined
+              }
+            >
+              {segment.meanSignedDurationErrorSec != null
+                ? `${formatSignedDuration(segment.meanSignedDurationErrorSec)} ±${formatElapsedSeconds(
+                    Math.round(segment.meanAbsoluteDurationErrorSec ?? 0),
+                  )} miss`
+                : "— miss"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: readonly DdrrRow[] }) {
   const metrics = summary.headline;
   const rowBreakdown = summarizePredictionRows(rows);
@@ -443,6 +560,8 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
           <CalibrationBar scored={durationScored} maturing={pending} tone="cyan" />
         </div>
       </div>
+
+      <VersionAccuracyStrip summary={summary} />
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/50 pt-3">
         <BreakdownStat

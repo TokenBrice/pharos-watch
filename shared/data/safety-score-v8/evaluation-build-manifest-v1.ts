@@ -38,11 +38,11 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "be916106d85a1ebf477c9bd57f9f29d24569c4c7618c7b7ddac38f7c986361ae"
+      "sha256": "a1c6e38d6240f49ba57240f30a9d68579f15c3ace0edc50b10d2e38d595306b1"
     },
     {
       "path": "shared/lib/methodology-versions/safety-score.ts",
-      "sha256": "051f84e660d133ed7f69d4e91dfb9dc388829d9870f0c4f9ce82878d13836dc7"
+      "sha256": "c6693d4be46e7ac392bcbe03c214e3b0ca7c12ebd9259929d84ae971fde3b086"
     },
     {
       "path": "shared/lib/mint-authority-scoring.ts",
@@ -138,7 +138,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserves.ts",
-      "sha256": "1afeffc1c13d667564a3431ff297d0985404a82618ceb38785e4f0498eecae1b"
+      "sha256": "1d76f48cb63f1323a6764021fa5d20460a85c755ff5f0499a3998cc73df9ce9c"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "df79342d181d41d1e0549f789f76fc8c7640991aef2b01bd4d3f1d0d045de9e6"
+  "digest": "ed448a6fc3584be3b2c6129a709a045476178be90fc8501a38e67dac2812495a"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

@@ -29,8 +29,10 @@ export function SafetyScoresOverview() {
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
-        were actually reviewed while unresolved surfaces remain bounded and fail closed. Subthreshold unrecognized
-        chain-label supply pools are tolerated by the bridge-materiality proof and no longer surface as public
+        were actually reviewed while unresolved surfaces remain bounded and fail closed. Strategy-vault wrapper
+        loss-control facts can use those reviewed local controls as wrapper evidence, but risk-transfer credit remains
+        zero unless a separate enforceable parent-loss backstop is reviewed. Subthreshold unrecognized chain-label
+        supply pools are tolerated by the bridge-materiality proof and no longer surface as public
         evidence-responsibility facts; material unmatched bridge supply still fails closed. Coverage that no
         supported adapter can observe is unsupported methodology rather than producer failure: deployment census
         coverage is reported per chain instead of all or nothing, an exit surface whose census remainder is

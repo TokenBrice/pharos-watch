@@ -134,6 +134,36 @@ describe("measured execution target inventory", () => {
     });
   });
 
+  it("uses Sugar spot for Slipstream target coherence instead of token reference ratios", () => {
+    const pool = directPool("aerodrome-slipstream", [
+      { address: BASE_USDC, symbol: "USDC", decimals: 6, priceUsd: 1 },
+      { address: BASE_USDBC, symbol: "USDbC", decimals: 6, priceUsd: 1 },
+    ]);
+    pool.chain = "base";
+    pool.tickSpacing = 50;
+    pool.price = 1.1;
+
+    const targets = buildSlipstreamMeasuredExecutionTargets({
+      pools: [pool],
+      chainAddressToId: addressMap([
+        [BASE_USDC, "usdc-circle"],
+        [BASE_USDBC, "usdbc-bridged"],
+      ], "base"),
+      symbolToChainScopedIds: new Map(),
+      stablecoinPriceById: new Map([
+        ["usdc-circle", 1],
+        ["usdbc-bridged", 1],
+      ]),
+      capturedAt: 1_752_560_000,
+    });
+
+    expect(targets.get(`usdc-circle|base:${POOL}`)).toBeUndefined();
+    expect(targets.get(`usdbc-bridged|base:${POOL}`)).toMatchObject({
+      tokenIn: { address: BASE_USDBC },
+      tokenOut: { address: BASE_USDC },
+    });
+  });
+
   it("uses independent tracked references for a uniquely joined Uniswap v3 target", () => {
     const candidate: UniV3ExecutionCandidate = {
       chain: "ethereum",
@@ -172,6 +202,38 @@ describe("measured execution target inventory", () => {
     });
     expect(target?.tokenIn.referencePriceUsd).not.toBe(candidate.token0Price);
     expect(target?.tokenOut.referencePriceUsd).not.toBe(candidate.token1Price);
+  });
+
+  it("rejects CL targets whose independent output reference is too favorable for the source spot", () => {
+    const candidate: UniV3ExecutionCandidate = {
+      chain: "ethereum",
+      poolAddress: POOL,
+      feePips: 100,
+      tvlUsd: 4_000_000,
+      token0Price: 0.95,
+      token1Price: 1 / 0.95,
+      tokens: [
+        { address: USDC, symbol: "USDC", decimals: 6 },
+        { address: USDT, symbol: "USDT", decimals: 6 },
+      ],
+    };
+
+    expect(
+      buildUniV3MeasuredExecutionTarget({
+        stablecoinId: "usdc-circle",
+        candidate,
+        stablecoinPriceById: new Map([
+          ["usdc-circle", 1],
+          ["usdt-tether", 1],
+        ]),
+        chainAddressToId: addressMap([
+          [USDC, "usdc-circle"],
+          [USDT, "usdt-tether"],
+        ]),
+        retainedTvlUsd: 3_000_000,
+        capturedAt: 1_752_560_000,
+      }),
+    ).toBeNull();
   });
 
   it("repairs an untracked output reference from the candidate spot price", () => {

@@ -37,6 +37,7 @@ const RESERVE_RISK_FACTOR_VALUES = [
   "basis",
   "legal",
   "concentration",
+  "leverage",
 ] as const;
 export type ReserveRiskFactor = (typeof RESERVE_RISK_FACTOR_VALUES)[number];
 const ReserveRiskFactorSchema = z.enum(RESERVE_RISK_FACTOR_VALUES);

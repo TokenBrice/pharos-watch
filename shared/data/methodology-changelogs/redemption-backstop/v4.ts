@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.21",
+    title: "DUSD live queue capacity and issuer-discretionary route status",
+    date: "2026-07-30",
+    effectiveAt: 1785369600,
+    summary:
+      "DUSD now uses same-block Makina AsyncRedeemer telemetry to measure only the currently usable Ethereum USDC queue buffer. The route fails closed when the on-chain proxy, Machine token wiring, or queued-share liability proof cannot be validated, and an enabled redemption whitelist is represented as issuer-discretionary access rather than a route impairment.",
+    impact: [
+      "`dusd-dialectic` moves from a static $0 queue placeholder to reserve-sync live-queue capacity backed by the Machine's idle Ethereum USDC minus `convertToAssets(DUSD.balanceOf(AsyncRedeemer))`",
+      "The Makina strategy adapter validates the AsyncRedeemer beacon implementation, Machine `accountingToken()`/`shareToken()` values, and redeemer `machine()` binding at one pinned Ethereum block before publishing capacity",
+      "DUSD no longer publishes the AsyncRedeemer minimum finalization delay as score-bearing `settlementDelaySec`; the 12-hour floor remains visible in `redemptionQueue.minimumFinalizationDelaySec`",
+      "Whitelist-enabled DUSD redemption remains `routeStatus: \"open\"` with `holderEligibility: \"issuer-discretionary\"`; `cohort-limited` remains reserved for explicit current route impairment beyond the modeled eligible cohort",
+      "No fallback ratio, full-supply, AUM, deployed-position, or reserve-weight capacity is used when the live queue proof is unavailable",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.20",
     title: "sBOLD Stability Pool capacity and bounded opaque-fee evidence",
     date: "2026-07-23",

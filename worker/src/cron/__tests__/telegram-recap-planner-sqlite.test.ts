@@ -237,16 +237,16 @@ describe("telegram personalized recap planner", () => {
     const { sqlite, db } = setup();
     insertSubscriber(sqlite, "global", { globalDepeg: true });
     markTapeFresh(sqlite);
-    for (let index = 0; index < 600; index += 1) {
-      insertTape(sqlite, `recap-volume-${index}`, NOW - 1_000 + index);
+    for (let index = 0; index < 1_600; index += 1) {
+      insertTape(sqlite, `recap-volume-${index}`, NOW - 2_000 + index);
     }
 
     const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
 
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata)).toMatchObject({
-      factsLoaded: 600,
-      factsAdmitted: 600,
+      factsLoaded: 1_600,
+      factsAdmitted: 1_600,
       truncatedDeferred: 0,
       queued: 1,
     });

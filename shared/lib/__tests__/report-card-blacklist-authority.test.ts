@@ -159,6 +159,14 @@ describe("report-card blacklist authority", () => {
     // exposure, while AsyncRedeemer access gating is modeled separately as
     // redemption access rather than transfer blacklistability.
     expect(resolved.get("dusd-dialectic")).toBe("inherited");
+    const dusd = TRACKED_STABLECOINS.find((meta) => meta.id === "dusd-dialectic");
+    const dusdEvidence = dusd?.blacklistabilityReview?.evidence ?? "";
+    expect(dusdEvidence).toContain("Recovery Mode");
+    expect(dusdEvidence).toContain("cannot move Circle-frozen USDC");
+    expect(dusdEvidence).toContain("transferring DUSD before a request to a newly verified wallet");
+    expect(dusdEvidence).toContain("request-NFT transferability and post-transfer claim behavior");
+    expect(dusdEvidence).toContain("no observed contract-level expiry");
+    expect(dusdEvidence).toContain("no guaranteed remediation or alternate settlement asset");
     for (const meta of TRACKED_STABLECOINS) {
       expect(meta.canBeBlacklisted).not.toBe("dilutable");
       expect("canBeBlacklistedSource" in meta).toBe(false);

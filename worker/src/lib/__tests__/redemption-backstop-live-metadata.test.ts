@@ -111,6 +111,39 @@ describe("readRedemptionBackstopLiveMetadata", () => {
     expect(metadata.v9OutputValuation).toEqual(outputValuation);
   });
 
+  it("accepts DUSD live queue capacity without scoring the minimum finalization delay", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "dusd-dialectic",
+      snapshot("dusd-dialectic", {
+        freshnessMode: "verified",
+        sourceTimestamp: now - 60,
+        redemption: {
+          capacityUsd: 0,
+          capacityKind: "live-queue",
+          freshnessKind: "same-run-onchain",
+          queueDepthUsd: 3_104.889979,
+          holderEligibility: "issuer-discretionary",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+        },
+        redemptionQueue: {
+          minimumFinalizationDelaySec: 43_200,
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.capacityConfidence).toBe("live-proxy");
+    expect(metadata.immediateRedeemableUsd).toBe(0);
+    expect(metadata.capacityKind).toBe("live-queue");
+    expect(metadata.queueDepthUsd).toBe(3_104.889979);
+    expect(metadata.settlementDelaySec).toBeNull();
+    expect(metadata.liveHolderEligibility).toBe("issuer-discretionary");
+    expect(metadata.routeStatus).toBe("open");
+    expect(metadata.routeStatusSource).toBe("onchain");
+  });
+
   it("drops malformed Cap output weights without discarding valid capacity", () => {
     const metadata = readRedemptionBackstopLiveMetadata(
       "cusd-cap",

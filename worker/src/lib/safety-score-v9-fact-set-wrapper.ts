@@ -139,6 +139,9 @@ function worstWrapperRisk(values: readonly V9WrapperRiskAssessment[]): V9Wrapper
   return [...values].sort((left, right) => rank[right] - rank[left])[0] ?? "none";
 }
 
+function isReviewableLocalControlStatus(status: V9FactStatusV2): boolean {
+  return status.observationState === "known" || status.observationState === "bounded-unknown";
+}
 
 interface WrapperLocalBuildState {
   form: V9ApplicableWrapperLocalFacts["form"];
@@ -571,39 +574,48 @@ function buildWrapperLossAbsorptionFact(
       "wrapper-design-has-no-local-holder-loss-absorption-layer",
       reviewedFormEvidence,
     );
-  } else if (input.controlStatus.observationState === "known") {
+  } else {
     const localControls =
       context.asset.variantKind === "strategy-vault"
         ? input.controls.filter((control) => control.controlKind !== "bridge")
         : [];
-    const controlRisks = localControls.map(wrapperControlRisk);
-    lossAbsorptionEmergencyControls =
-      controlRisks.length > 0
-        ? reviewedWrapperFact(
-            context,
-            worstWrapperRisk([
-              ...controlRisks.map((risk) => risk.assessment),
-              ...(context.asset.variantKind === "risk-absorption" ? (["moderate"] as const) : []),
-            ]),
-            [
-              ...controlRisks.flatMap((risk) => risk.signals),
-              ...(context.asset.variantKind === "risk-absorption"
-                ? ["wrapper-holder-bears-protocol-loss-absorption"]
-                : ["strategy-vault-holder-loss-controls-reviewed"]),
-            ],
-            controlEvidenceRefIds,
-          )
-        : unavailableWrapperFact(
-            "integration-missing",
-            "wrapper-emergency-control-review-has-no-local-controls",
-            controlEvidenceRefIds,
-          );
-  } else {
-    lossAbsorptionEmergencyControls = unavailableWrapperFact(
-      wrapperFactDisposition(context, [input.controlStatus]),
-      "wrapper-loss-absorption-or-emergency-control-review-unavailable",
-      controlEvidenceRefIds,
+    const reviewableLocalControls = localControls.filter((control) =>
+      isReviewableLocalControlStatus(control.status),
     );
+    if (input.controlStatus.observationState === "known" || reviewableLocalControls.length > 0) {
+      const controlsForRisk =
+        input.controlStatus.observationState === "known" ? localControls : reviewableLocalControls;
+      const controlRisks = controlsForRisk.map(wrapperControlRisk);
+      const partialControlReview = input.controlStatus.observationState !== "known";
+      lossAbsorptionEmergencyControls =
+        controlRisks.length > 0
+          ? reviewedWrapperFact(
+              context,
+              worstWrapperRisk([
+                ...controlRisks.map((risk) => risk.assessment),
+                ...(context.asset.variantKind === "risk-absorption" ? (["moderate"] as const) : []),
+              ]),
+              [
+                ...controlRisks.flatMap((risk) => risk.signals),
+                ...(partialControlReview ? ["wrapper-local-controls-partial-review"] : []),
+                ...(context.asset.variantKind === "risk-absorption"
+                  ? ["wrapper-holder-bears-protocol-loss-absorption"]
+                  : ["strategy-vault-holder-loss-controls-reviewed"]),
+              ],
+              controlEvidenceRefIds,
+            )
+          : unavailableWrapperFact(
+              "integration-missing",
+              "wrapper-emergency-control-review-has-no-local-controls",
+              controlEvidenceRefIds,
+            );
+    } else {
+      lossAbsorptionEmergencyControls = unavailableWrapperFact(
+        wrapperFactDisposition(context, [input.controlStatus]),
+        "wrapper-loss-absorption-or-emergency-control-review-unavailable",
+        controlEvidenceRefIds,
+      );
+    }
   }
   return lossAbsorptionEmergencyControls;
 }
