@@ -25,7 +25,12 @@ import {
 } from "../lib/critical-coverage.mjs";
 import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mjs";
 
-function buildCriticalLcov({ branchCoverage = {}, lineCoverage = {} } = {}) {
+type CoverageFixture = {
+  branchCoverage?: Partial<Record<string, { brf?: number; brh?: number }>>;
+  lineCoverage?: Partial<Record<string, { lf?: number; lh?: number }>>;
+};
+
+function buildCriticalLcov({ branchCoverage = {}, lineCoverage = {} }: CoverageFixture = {}) {
   return CRITICAL_FILES.map((file) => {
     const { lf = 10, lh = 10 } = lineCoverage[file] ?? {};
     const { brf, brh } = branchCoverage[file] ?? {};

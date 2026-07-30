@@ -1,3 +1,5 @@
+import type { SpawnSyncReturns } from "node:child_process";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -98,7 +100,15 @@ describe("dependency-audit exceptions", () => {
   });
 
   it("processes npm audit's expected finding exit code before applying exceptions", () => {
-    const spawn = vi.fn(() => ({ status: 1, stdout: JSON.stringify(reviewedReport()) }));
+    const stdout = JSON.stringify(reviewedReport());
+    const spawn = vi.fn((): SpawnSyncReturns<string> => ({
+      pid: 0,
+      output: [null, stdout, ""],
+      stdout,
+      stderr: "",
+      status: 1,
+      signal: null,
+    }));
 
     expect(runFullLockfileDependencyAudit({ now: reviewedNow, spawn })).toEqual({
       acceptedExceptionIds: [exception.advisoryId],
