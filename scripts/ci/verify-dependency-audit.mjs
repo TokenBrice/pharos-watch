@@ -179,6 +179,13 @@ export function verifyDependencyAuditReport(
   };
 }
 
+/**
+ * @param {object} [options]
+ * @param {NodeJS.ProcessEnv} [options.env]
+ * @param {Date} [options.now]
+ * @param {typeof DEPENDENCY_AUDIT_EXCEPTION_REGISTRY} [options.registry]
+ * @param {(command: string, args: string[], options: import("node:child_process").SpawnSyncOptionsWithStringEncoding) => import("node:child_process").SpawnSyncReturns<string>} [options.spawn]
+ */
 export function runFullLockfileDependencyAudit({
   env = process.env,
   now = new Date(),

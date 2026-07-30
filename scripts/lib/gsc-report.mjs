@@ -1,5 +1,10 @@
 import { isDirectRun } from "./smoke-runtime.mjs";
 
+/**
+ * @param {string[]} lines
+ * @param {string} title
+ * @param {string[]} values
+ */
 function appendListSection(lines, title, values) {
   lines.push(`${title}:`);
   if (values.length === 0) {
@@ -10,6 +15,16 @@ function appendListSection(lines, title, values) {
   lines.push("");
 }
 
+/**
+ * @param {string[]} lines
+ * @param {{
+ *   title: string;
+ *   detailLines?: string[];
+ *   inputs: string[];
+ *   notes: string[];
+ *   parsedFileCounts: Array<[string, number]>;
+ * }} options
+ */
 export function appendGscReportPreamble(lines, {
   title,
   detailLines = [],
@@ -32,6 +47,12 @@ export function appendGscReportPreamble(lines, {
   lines.push("");
 }
 
+/**
+ * @param {string} importMetaUrl
+ * @param {string | undefined} argv1
+ * @param {() => Promise<number>} runCli
+ * @returns {boolean}
+ */
 export function runAsyncDirect(importMetaUrl, argv1, runCli) {
   if (!isDirectRun(importMetaUrl, argv1)) return false;
 

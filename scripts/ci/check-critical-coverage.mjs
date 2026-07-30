@@ -19,6 +19,7 @@ const LCOV_PATH = "coverage/lcov.info";
 
 // Explicit branch floors at external provider, authentication, scoring, and
 // publication boundaries. These cover the error paths that line coverage can miss.
+/** @type {Record<string, number>} */
 export const CRITICAL_COVERAGE_BRANCH_FLOORS = {
   "worker/src/lib/auth.ts": 40,
   "worker/src/lib/evm-rpc.ts": 40,

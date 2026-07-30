@@ -27,7 +27,7 @@ describe("worker HTTP probes", () => {
   });
 
   it("collects the requested public and admin probes with normalized JSON payloads", async () => {
-    const fetch = vi.fn(async (url: URL) => ({
+    const fetch = vi.fn(async (url: URL, _init?: RequestInit) => ({
       status: url.pathname === "/api/status-history" ? 206 : 200,
       ok: url.pathname !== "/api/status-history",
       text: async () => JSON.stringify({ path: url.pathname }),
