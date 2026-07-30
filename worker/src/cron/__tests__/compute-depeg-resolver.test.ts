@@ -236,6 +236,7 @@ describe("computeDepegResolver", () => {
       },
     };
     const stores: DdrV2StoreContracts = {
+      closeRecoveredPreLockIncidents: vi.fn(async () => 0),
       ensureCanonicalIncidents: vi.fn(async () => [
         {
           incidentKey,
@@ -318,6 +319,7 @@ describe("computeDepegResolver", () => {
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent();
     const { stores } = storesFor();
+    stores.closeRecoveredPreLockIncidents = vi.fn(async () => 30);
     const db = mockD1([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
@@ -335,6 +337,8 @@ describe("computeDepegResolver", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
 
     expect(metadata.ddrRunId).toMatch(/^ddr:quarter-hour:1779984600:[0-9a-f]{12}$/);
+    expect(metadata.v2PreLockIncidentsClosed).toBe(30);
+    expect(stores.closeRecoveredPreLockIncidents).toHaveBeenCalledWith(db, { nowSec: NOW_SEC });
     expect(stores.recordLockDeferral).toHaveBeenCalledWith(
       db,
       expect.objectContaining({

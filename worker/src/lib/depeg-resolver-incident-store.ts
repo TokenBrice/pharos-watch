@@ -19,7 +19,8 @@ import { sha256Hex } from "./hash";
 
 export type DdrIncidentDirection = "above" | "below";
 export type DdrIncidentRelation = "observed" | "superseded" | "merged" | "split_from" | "repair_replacement";
-export type DdrIncidentState = "active" | "merged" | "superseded" | "split_source";
+type DdrStoredIncidentState = "active" | "merged" | "superseded" | "split_source";
+export type DdrIncidentState = DdrStoredIncidentState | "closed_pre_lock";
 export type DdrPolicyUniverseReason =
   | "post_effective_public_tracked"
   | "rollout_active_public_tracked"
@@ -47,10 +48,16 @@ export type DdrLockAuditAction =
 
 // Unix ts for 2100-01-01T00:00:00Z; far-future sentinel = effectively non-expiring.
 const REPAIR_AUTHORIZATION_LONG_EXPIRY_AT = 4_102_444_800;
-const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
+export const DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC = 6 * 3600;
+export const DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1 = 20 * 60;
+export const DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 = 30;
+export const DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1 = 21 * 24 * 3600;
+export const DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1 = 1_000;
+export const DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1 = 4;
 const AUTOMATED_SEALED_TAIL_REPAIR_CREATED_BY = "ddr-worker:auto-sealed-tail";
 const AUTOMATED_SEALED_TAIL_LINK_NOTE = "sealed incident live tail linked through automated repair authorization";
 const AUTOMATED_SEALED_TAIL_CURRENT_REASON = "sealed incident live tail adopted as current source event";
+const AUTOMATED_REGIME_SPLIT_CREATED_BY = "ddr-worker:auto-regime-split";
 const DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION = `
                 m.incident_key AS membership_incident_key,
                 m.stablecoin_id AS membership_stablecoin_id,
@@ -129,6 +136,7 @@ export interface DdrCanonicalIncident {
   currentStartedAt: number;
   firstObservedPeakBucketBps: number;
   incidentState: DdrIncidentState;
+  closedPreLockAt: number | null;
   supersededByIncidentKey: string | null;
   sourceFingerprint: string;
   createdAt: number;
@@ -210,7 +218,10 @@ interface IncidentRow {
   first_started_at: number;
   current_started_at: number;
   first_observed_peak_bucket_bps: number;
-  incident_state: DdrIncidentState;
+  incident_state: DdrStoredIncidentState;
+  closed_pre_lock_at?: number | null;
+  current_event_ended_at?: number | null;
+  incident_link_count?: number;
   superseded_by_incident_key: string | null;
   source_fingerprint: string;
   created_at: number;
@@ -239,6 +250,15 @@ interface IncidentRow {
   backstop_delay_sec?: number | null;
 }
 
+interface SealedIncidentFingerprintRow {
+  outcome_kind: "prediction" | "no_call";
+  lock_time_peak_deviation_bps: unknown;
+}
+
+interface RegimeEscalationSplit {
+  splitFromIncidentKey: string;
+}
+
 function optionNowSec(options: EnsureCanonicalIncidentsOptions): number {
   const nowSec = options.nowSec ?? options.runAt;
   if (nowSec == null) throw new Error("nowSec or runAt is required");
@@ -257,6 +277,47 @@ function optionLimit(options?: { limit?: number }): number | null {
   if (options?.limit == null) return null;
   assertPositiveInteger(options.limit, "limit");
   return options.limit;
+}
+
+export async function closeRecoveredPreLockIncidents(
+  db: D1Database,
+  nowSec: number,
+): Promise<number> {
+  assertPositiveInteger(nowSec, "nowSec");
+  // Detector persistence only sets depeg_events.ended_at when closing an open
+  // event; a later depeg creates a new row and never clears that timestamp.
+  // Keep the ended_at check in this UPDATE so the close decision is still
+  // re-verified atomically with the derived-state transition.
+  const result = await db
+    .prepare(
+      `UPDATE depeg_resolver_incidents AS incident
+       SET closed_pre_lock_at = ?,
+           updated_at = ?
+       WHERE incident.incident_state = 'active'
+         AND incident.closed_pre_lock_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1
+           FROM depeg_resolver_public_predictions sealed
+           WHERE sealed.incident_key = incident.incident_key
+         )
+         AND EXISTS (
+           SELECT 1
+           FROM depeg_events current_event
+           WHERE current_event.id = incident.current_event_id
+             AND current_event.ended_at IS NOT NULL
+             AND current_event.recovery_price IS NOT NULL
+             AND current_event.ended_at + ? + ? <= ?
+         )`,
+    )
+    .bind(
+      nowSec,
+      nowSec,
+      DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
+      DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1,
+      nowSec,
+    )
+    .run();
+  return Number(result.meta?.changes ?? 0);
 }
 
 async function sourceFingerprintForEvent(event: DdrCanonicalIncidentEventInput): Promise<string> {
@@ -354,6 +415,7 @@ function buildFreshIncident(args: {
     currentStartedAt: event.startedAt,
     firstObservedPeakBucketBps: peakBucketBps(event.peakDeviationBps),
     incidentState: "active",
+    closedPreLockAt: null,
     supersededByIncidentKey: null,
     sourceFingerprint,
     createdAt: nowSec,
@@ -400,7 +462,8 @@ function mapIncidentRow(
     firstStartedAt: row.first_started_at,
     currentStartedAt: row.current_started_at,
     firstObservedPeakBucketBps: row.first_observed_peak_bucket_bps,
-    incidentState: row.incident_state,
+    incidentState: row.closed_pre_lock_at == null ? row.incident_state : "closed_pre_lock",
+    closedPreLockAt: row.closed_pre_lock_at ?? null,
     supersededByIncidentKey: row.superseded_by_incident_key,
     sourceFingerprint: row.source_fingerprint,
     createdAt: row.created_at,
@@ -508,18 +571,56 @@ async function insertNewIncident(
   sourceFingerprint: string,
   policyMembership: DdrIncidentPolicyMembership,
   options: EnsureCanonicalIncidentsOptions,
+  splitFromIncidentKey: string | null = null,
 ): Promise<void> {
   const nowSec = optionNowSec(options);
   const bucket = peakBucketBps(event.peakDeviationBps);
-  const createdBy = options.createdBy ?? "ddr-v2";
-  await db.batch([
+  const createdBy =
+    splitFromIncidentKey == null
+      ? options.createdBy ?? "ddr-v2"
+      : AUTOMATED_REGIME_SPLIT_CREATED_BY;
+  const splitAuthorization =
+    splitFromIncidentKey == null
+      ? null
+      : await authorizeEventRepair(db, {
+          eventId: event.eventId,
+          incidentKey,
+          operation: "incident_link",
+          columns: ["event_id", "incident_key", "relation"],
+          reason: `Regime-escalated live tail split from sealed incident ${splitFromIncidentKey}`,
+          createdAt: nowSec,
+          expiresAt: REPAIR_AUTHORIZATION_LONG_EXPIRY_AT,
+          createdBy,
+        });
+  if (splitAuthorization != null) {
+    await consumeEventRepairAuthorization(db, {
+      authorizationId: splitAuthorization.id,
+      eventId: event.eventId,
+      incidentKey,
+      operation: "incident_link",
+      consumedAt: nowSec,
+      consumer: createdBy,
+    });
+  }
+  const linkNote =
+    splitFromIncidentKey == null
+      ? "initial canonical incident link"
+      : `regime escalation split from sealed incident ${splitFromIncidentKey}`;
+  const statements = [
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_event_links
          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-         VALUES (?, ?, 'observed', NULL, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .bind(incidentKey, event.eventId, nowSec, "initial canonical incident link"),
+      .bind(
+        incidentKey,
+        event.eventId,
+        "observed",
+        splitAuthorization?.id ?? null,
+        nowSec,
+        linkNote,
+      ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_incidents
@@ -548,7 +649,15 @@ async function insertNewIncident(
          (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
          VALUES (?, NULL, ?, ?, NULL, NULL, ?, ?)`,
       )
-      .bind(incidentKey, event.eventId, "initial canonical incident", nowSec, createdBy),
+      .bind(
+        incidentKey,
+        event.eventId,
+        splitFromIncidentKey == null
+          ? "initial canonical incident"
+          : `initial canonical incident split from ${splitFromIncidentKey}`,
+        nowSec,
+        createdBy,
+      ),
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_policy_membership
@@ -569,7 +678,38 @@ async function insertNewIncident(
         policyMembership.registrySnapshotJson,
         policyMembership.createdAt,
       ),
-  ]);
+  ];
+  if (splitFromIncidentKey != null && splitAuthorization != null) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO depeg_resolver_incident_lineage
+           (from_incident_key, to_incident_key, relation, repair_authorization_id, erratum_id, created_at, created_by)
+           VALUES (?, ?, 'split_from', ?, NULL, ?, ?)`,
+        )
+        .bind(
+          incidentKey,
+          splitFromIncidentKey,
+          splitAuthorization.id,
+          nowSec,
+          createdBy,
+        ),
+      db
+        .prepare(
+          `INSERT INTO depeg_resolver_event_repair_authorization_uses
+           (authorization_id, event_id, incident_key, operation, used_at, target_table, target_key)
+           VALUES (?, ?, ?, 'incident_link', ?, 'depeg_resolver_incident_event_links', ?)`,
+        )
+        .bind(
+          splitAuthorization.id,
+          event.eventId,
+          incidentKey,
+          nowSec,
+          `${incidentKey}:${event.eventId}`,
+        ),
+    );
+  }
+  await db.batch(statements);
 }
 
 async function linkUnsealedNearbyIncident(
@@ -577,29 +717,37 @@ async function linkUnsealedNearbyIncident(
   event: DdrCanonicalIncidentEventInput,
   options: EnsureCanonicalIncidentsOptions,
   policyDelaySec: number,
-): Promise<DdrCanonicalIncident | null> {
+): Promise<DdrCanonicalIncident | RegimeEscalationSplit | null> {
   const nowSec = optionNowSec(options);
   const createdBy = options.createdBy ?? "ddr-v2";
   const row = await db
     .prepare(
       `SELECT i.*,
+              current_event.ended_at AS current_event_ended_at,
+              (
+                SELECT COUNT(*)
+                FROM depeg_resolver_incident_event_links incident_link
+                WHERE incident_link.incident_key = i.incident_key
+              ) AS incident_link_count,
 ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
        FROM depeg_resolver_incidents i
+       LEFT JOIN depeg_events current_event ON current_event.id = i.current_event_id
        LEFT JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
        LEFT JOIN depeg_resolver_prediction_lock_state ls ON ls.incident_key = i.incident_key
        WHERE i.stablecoin_id = ?
          AND i.peg_currency = ?
          AND i.direction = ?
          AND i.incident_state = 'active'
+         AND ? > i.current_started_at
          AND (
-           ABS(i.current_started_at - ?) <= ?
-           OR EXISTS (
-             SELECT 1
-             FROM depeg_events current_event
-             WHERE current_event.id = i.current_event_id
-               AND current_event.ended_at IS NOT NULL
-               AND ? >= current_event.ended_at
-               AND ? - current_event.ended_at <= ?
+           (
+             i.closed_pre_lock_at IS NULL
+             AND ? - i.current_started_at <= ?
+           )
+           OR (
+             current_event.ended_at IS NOT NULL
+             AND ? >= current_event.ended_at
+             AND ? - current_event.ended_at <= ?
            )
          )
          AND NOT EXISTS (
@@ -610,17 +758,15 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
          )
        ORDER BY
          CASE
-           WHEN EXISTS (
-             SELECT 1
-             FROM depeg_events current_event
-             WHERE current_event.id = i.current_event_id
-               AND current_event.ended_at IS NOT NULL
-               AND ? >= current_event.ended_at
-               AND ? - current_event.ended_at <= ?
-           )
+           WHEN i.closed_pre_lock_at IS NOT NULL THEN 0
+           WHEN current_event.ended_at IS NOT NULL
+             AND ? >= current_event.ended_at
+             AND ? - current_event.ended_at <= ?
              THEN 0
            ELSE 1
          END ASC,
+         CASE WHEN i.closed_pre_lock_at IS NOT NULL THEN current_event.ended_at END DESC,
+         CASE WHEN i.closed_pre_lock_at IS NOT NULL THEN i.current_started_at END DESC,
          ABS(i.current_started_at - ?) ASC,
          i.created_at ASC
        LIMIT 1`,
@@ -629,6 +775,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
       event.stablecoinId,
       event.pegCurrency,
       event.direction,
+      event.startedAt,
       event.startedAt,
       policyDelaySec,
       event.startedAt,
@@ -641,66 +788,112 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
       event.startedAt,
     )
     .first<IncidentRow>();
-  if (!row) return null;
+  if (!row) {
+    const outOfOrderOverlap = await db
+      .prepare(
+        `SELECT i.incident_key
+         FROM depeg_resolver_incidents i
+         WHERE i.stablecoin_id = ?
+           AND i.peg_currency = ?
+           AND i.direction = ?
+           AND i.incident_state = 'active'
+           AND i.closed_pre_lock_at IS NULL
+           AND ? <= i.current_started_at
+           AND i.current_started_at - ? <= ?
+           AND NOT EXISTS (
+             SELECT 1
+             FROM depeg_resolver_incident_event_links l
+             WHERE l.incident_key = i.incident_key
+               AND l.event_id = ?
+           )
+         ORDER BY i.current_started_at ASC, i.created_at ASC
+         LIMIT 1`,
+      )
+      .bind(
+        event.stablecoinId,
+        event.pegCurrency,
+        event.direction,
+        event.startedAt,
+        event.startedAt,
+        policyDelaySec,
+        event.eventId,
+      )
+      .first<{ incident_key: string }>();
+    if (outOfOrderOverlap) {
+      throw new DdrIncidentRepairRequiredError(
+        event.eventId,
+        `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${outOfOrderOverlap.incident_key} without strict successor ordering; explicit repair required`,
+      );
+    }
+    return null;
+  }
 
-  const sealed = await db
-    .prepare(
-      `SELECT 1 AS sealed
-       FROM depeg_resolver_public_predictions
-       WHERE incident_key = ?
-       LIMIT 1`,
-    )
-    .bind(row.incident_key)
-    .first<{ sealed: number }>();
-  if (sealed) {
+  if (await isIncidentSealed(db, row.incident_key)) {
     return linkSealedNearbyIncidentTail(db, event, row, options, policyDelaySec);
   }
 
-  if (!canAutoRepairUnsealedTail(event, row, nowSec, policyDelaySec)) {
+  const resurrecting = row.closed_pre_lock_at != null;
+  if (!canAutoRepairUnsealedTail(event, row, policyDelaySec)) {
     throw new DdrIncidentRepairRequiredError(
       event.eventId,
       `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
     );
   }
+  await assertCanonicalLiveEventProvenance(db, event);
 
-  await db.batch([
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_incident_event_links
-         (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
-         VALUES (?, ?, 'repair_replacement', NULL, ?, ?)`,
-      )
-      .bind(row.incident_key, event.eventId, nowSec, "pre-lock nearby event adopted as current incident source"),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_incident_revisions
-         (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
-         VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)`,
-      )
-      .bind(
-        row.incident_key,
-        row.current_event_id,
-        event.eventId,
-        "pre-lock nearby event adopted as current incident source",
-        nowSec,
-        createdBy,
-      ),
-    db
-      .prepare(
-        `UPDATE depeg_resolver_incidents
-         SET current_event_id = ?,
-             current_started_at = ?,
-             updated_at = ?
-         WHERE incident_key = ?`,
-      )
-      .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
-  ]);
+  const adoptionReason = resurrecting
+    ? "pre-lock closed incident resurrected with nearby event"
+    : "pre-lock nearby event adopted as current incident source";
+  try {
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO depeg_resolver_incident_event_links
+           (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+           VALUES (?, ?, 'repair_replacement', NULL, ?, ?)`,
+        )
+        .bind(row.incident_key, event.eventId, nowSec, adoptionReason),
+      db
+        .prepare(
+          `INSERT INTO depeg_resolver_incident_revisions
+           (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+           VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)`,
+        )
+        .bind(
+          row.incident_key,
+          row.current_event_id,
+          event.eventId,
+          adoptionReason,
+          nowSec,
+          createdBy,
+        ),
+      db
+        .prepare(
+          `UPDATE depeg_resolver_incidents
+           SET current_event_id = ?,
+               current_started_at = ?,
+               closed_pre_lock_at = NULL,
+               updated_at = ?
+           WHERE incident_key = ?`,
+        )
+        .bind(event.eventId, event.startedAt, nowSec, row.incident_key),
+    ]);
+  } catch (error) {
+    if (
+      !isSealedIncidentRepairGuardAbort(error) ||
+      !(await isIncidentSealed(db, row.incident_key))
+    ) {
+      throw error;
+    }
+    return linkSealedNearbyIncidentTail(db, event, row, options, policyDelaySec);
+  }
 
   return mapIncidentRow(
     {
       ...row,
       current_event_id: event.eventId,
       current_started_at: event.startedAt,
+      closed_pre_lock_at: null,
       updated_at: nowSec,
       event_id: event.eventId,
       relation: "repair_replacement",
@@ -709,34 +902,150 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
   );
 }
 
+async function assertCanonicalLiveEventProvenance(
+  db: D1Database,
+  event: DdrCanonicalIncidentEventInput,
+): Promise<void> {
+  const persisted = await db
+    .prepare(
+      `SELECT 1 AS matched
+       FROM depeg_events_with_provenance
+       WHERE id = ?
+         AND stablecoin_id = ?
+         AND CASE
+           WHEN peg_type LIKE 'pegged%' THEN substr(peg_type, 7)
+           ELSE 'USD'
+         END = ?
+         AND direction = ?
+         AND started_at = ?
+         AND source = 'live'
+         AND (
+           provenance_audit_verdict IS NULL
+           OR provenance_audit_verdict NOT IN ('false_positive', 'disputed', 'no_data')
+         )
+       LIMIT 1`,
+    )
+    .bind(
+      event.eventId,
+      event.stablecoinId,
+      event.pegCurrency,
+      event.direction,
+      event.startedAt,
+    )
+    .first<{ matched: number }>();
+  if (!persisted) {
+    throw new DdrIncidentRepairRequiredError(
+      event.eventId,
+      `Unlinked depeg event ${event.eventId} lacks matching canonical live provenance; explicit repair required`,
+    );
+  }
+}
+
+async function isIncidentSealed(db: D1Database, incidentKey: string): Promise<boolean> {
+  const sealed = await db
+    .prepare(
+      `SELECT 1 AS sealed
+       FROM depeg_resolver_public_predictions
+       WHERE incident_key = ?
+       LIMIT 1`,
+    )
+    .bind(incidentKey)
+    .first<{ sealed: number }>();
+  return sealed != null;
+}
+
+function isSealedIncidentRepairGuardAbort(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("sealed incident links require consumed repair authorization") ||
+    message.includes("sealed incident current pointers/state require authorized revision")
+  );
+}
+
 function canAutoRepairUnsealedTail(
   event: DdrCanonicalIncidentEventInput,
   row: IncidentRow,
-  nowSec: number,
   policyDelaySec: number,
 ): boolean {
-  const originalEligibleAt = row.first_started_at + policyDelaySec;
+  const currentEventEndedAt = row.current_event_ended_at;
+  const followsRecoveredCurrent =
+    currentEventEndedAt != null &&
+    event.startedAt >= currentEventEndedAt &&
+    event.startedAt - currentEventEndedAt <= DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC;
+  const withinCurrentRecency =
+    event.startedAt > row.current_started_at &&
+    event.startedAt - row.current_started_at <= policyDelaySec;
+  const incidentLinkCount = row.incident_link_count;
   return (
     row.incident_state === "active" &&
+    (row.closed_pre_lock_at == null || followsRecoveredCurrent) &&
     event.source === "live" &&
-    event.endedAt == null &&
     event.stablecoinId === row.stablecoin_id &&
     event.pegCurrency === row.peg_currency &&
     event.direction === row.direction &&
     event.startedAt > row.current_started_at &&
-    event.startedAt <= originalEligibleAt &&
-    nowSec < originalEligibleAt
+    (withinCurrentRecency || followsRecoveredCurrent) &&
+    Number.isInteger(incidentLinkCount) &&
+    incidentLinkCount != null &&
+    incidentLinkCount >= 1 &&
+    incidentLinkCount < DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 &&
+    event.startedAt - row.first_started_at <= DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1
   );
 }
 
 function canAutoRepairSealedTail(event: DdrCanonicalIncidentEventInput, row: IncidentRow): boolean {
   return (
     row.incident_state === "active" &&
+    row.closed_pre_lock_at == null &&
     event.source === "live" &&
     event.stablecoinId === row.stablecoin_id &&
     event.pegCurrency === row.peg_currency &&
     event.direction === row.direction &&
     event.startedAt > row.current_started_at
+  );
+}
+
+async function sealedTailEscalatesRegime(
+  db: D1Database,
+  event: DdrCanonicalIncidentEventInput,
+  incidentKey: string,
+): Promise<boolean> {
+  const fingerprint = await db
+    .prepare(
+      `SELECT outcome_kind,
+              json_extract(
+                sealed_payload_json,
+                '$.frozen.sourceRow.peakDeviationBps'
+              ) AS lock_time_peak_deviation_bps
+       FROM depeg_resolver_public_predictions
+       WHERE incident_key = ?
+       LIMIT 1`,
+    )
+    .bind(incidentKey)
+    .first<SealedIncidentFingerprintRow>();
+  if (fingerprint == null) {
+    throw new Error(`Sealed incident ${incidentKey} lost its immutable public prediction`);
+  }
+  if (fingerprint.outcome_kind === "no_call") return false;
+
+  const lockTimePeakDeviationBps = fingerprint.lock_time_peak_deviation_bps;
+  if (
+    typeof lockTimePeakDeviationBps !== "number" ||
+    !Number.isFinite(lockTimePeakDeviationBps)
+  ) {
+    throw new DdrIncidentRepairRequiredError(
+      event.eventId,
+      `Sealed incident ${incidentKey} prediction is missing numeric frozen.sourceRow.peakDeviationBps; explicit repair required`,
+    );
+  }
+
+  const newPeakBps = Math.abs(event.peakDeviationBps);
+  const sealedLockTimePeakBps = Math.abs(lockTimePeakDeviationBps);
+  return (
+    newPeakBps >= DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1 &&
+    newPeakBps >=
+      DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1 *
+        sealedLockTimePeakBps
   );
 }
 
@@ -746,12 +1055,16 @@ async function linkSealedNearbyIncidentTail(
   row: IncidentRow,
   options: EnsureCanonicalIncidentsOptions,
   policyDelaySec: number,
-): Promise<DdrCanonicalIncident> {
+): Promise<DdrCanonicalIncident | RegimeEscalationSplit> {
   if (!canAutoRepairSealedTail(event, row)) {
     throw new DdrIncidentRepairRequiredError(
       event.eventId,
       `Unlinked depeg event ${event.eventId} overlaps nearby canonical incident ${row.incident_key}; explicit repair required`,
     );
+  }
+  await assertCanonicalLiveEventProvenance(db, event);
+  if (await sealedTailEscalatesRegime(db, event, row.incident_key)) {
+    return { splitFromIncidentKey: row.incident_key };
   }
 
   const nowSec = optionNowSec(options);
@@ -903,11 +1216,16 @@ export async function ensureCanonicalIncidents(
       }
       throw keyConflict;
     }
+    let splitFromIncidentKey: string | null = null;
     try {
       const nearby = await linkUnsealedNearbyIncident(db, event, options, policyDelaySec);
       if (nearby) {
-        ensured.set(event.eventId, nearby);
-        continue;
+        if ("splitFromIncidentKey" in nearby) {
+          splitFromIncidentKey = nearby.splitFromIncidentKey;
+        } else {
+          ensured.set(event.eventId, nearby);
+          continue;
+        }
       }
     } catch (error) {
       if (error instanceof DdrIncidentRepairRequiredError && options.onRepairRequired) {
@@ -918,14 +1236,29 @@ export async function ensureCanonicalIncidents(
     }
 
     const policyMembership = policyMembershipForEvent(event, incidentKey, options);
-    await insertNewIncident(db, event, incidentKey, sourceFingerprint, policyMembership, options);
+    await insertNewIncident(
+      db,
+      event,
+      incidentKey,
+      sourceFingerprint,
+      policyMembership,
+      options,
+      splitFromIncidentKey,
+    );
     // Record the freshly inserted key so a within-batch duplicate is still
     // reported as a repair conflict (matching the prior per-event check that
     // re-queried after each insert). [audit S-142]
     collidingKeys.add(incidentKey);
     ensured.set(
       event.eventId,
-      buildFreshIncident({ incidentKey, event, sourceFingerprint, policyMembership, nowSec, policyDelaySec }),
+      buildFreshIncident({
+        incidentKey,
+        event,
+        sourceFingerprint,
+        policyMembership,
+        nowSec,
+        policyDelaySec,
+      }),
     );
   }
 
@@ -963,7 +1296,10 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     const conditions = filterCondition ? [filterCondition] : [];
     if (filters.policyUniverseIncluded != null) conditions.push("m.policy_universe_included = ?");
     if (filters.predictionPolicyVersion) conditions.push("m.prediction_policy_version = ?");
-    if (!filters.includeSuperseded) conditions.push("i.incident_state = 'active'");
+    if (!filters.includeSuperseded) {
+      conditions.push("i.incident_state = 'active'");
+      conditions.push("i.closed_pre_lock_at IS NULL");
+    }
     return conditions;
   };
   const scopedBinds = () => [

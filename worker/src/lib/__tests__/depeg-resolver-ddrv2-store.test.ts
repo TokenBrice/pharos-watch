@@ -5,6 +5,13 @@ import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types"
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  closeRecoveredPreLockIncidents,
+  DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
+  DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1,
+  DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC,
+  DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1,
+  DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1,
   ensureCanonicalIncidents,
   loadCanonicalIncidents,
   recordLockDeferral,
@@ -25,8 +32,9 @@ import {
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
 } from "@shared/lib/depeg-resolver-version";
+import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
+const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
 const FIXTURES_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
 interface SqliteD1 extends D1Database {
   close(): void;
@@ -34,7 +42,12 @@ interface SqliteD1 extends D1Database {
 }
 
 function migrationFiles(): string[] {
-  return readdirSync(MIGRATIONS_DIR).filter((entry) => entry.endsWith(".sql")).sort();
+  return [
+    ...new Set(
+      [...readdirSync(FIXTURES_DIR), ...readdirSync(MIGRATIONS_DIR)]
+        .filter((entry) => entry.endsWith(".sql")),
+    ),
+  ].sort();
 }
 
 function applyMigrationFile(db: DatabaseSync, file: string): void {
@@ -123,6 +136,39 @@ function insertOpenEvent(db: SqliteD1, eventId = 1): void {
     .run(eventId);
 }
 
+interface LiveEventFixture {
+  eventId: number;
+  stablecoinId?: string;
+  symbol?: string;
+  pegCurrency?: string;
+  direction?: "above" | "below";
+  peakDeviationBps?: number;
+  startedAt: number;
+  endedAt?: number | null;
+}
+
+function insertLiveEvent(db: SqliteD1, input: LiveEventFixture): void {
+  const endedAt = input.endedAt ?? null;
+  db.sqlite
+    .prepare(
+      `INSERT INTO depeg_events
+       (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+        started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.98, 0.97, ?, 1, 'live')`,
+    )
+    .run(
+      input.eventId,
+      input.stablecoinId ?? "lusd-liquity",
+      input.symbol ?? "LUSD",
+      `pegged${input.pegCurrency ?? "USD"}`,
+      input.direction ?? "below",
+      input.peakDeviationBps ?? -300,
+      input.startedAt,
+      endedAt,
+      endedAt == null ? null : 1,
+    );
+}
+
 async function ensureIncident(db: SqliteD1, eventId = 1, nowSec = 200000) {
   const [incident] = await ensureCanonicalIncidents(
     db,
@@ -155,6 +201,14 @@ function sealedPayload(
   kind: "prediction" | "no_call" = "prediction",
   options: {
     eventId?: number;
+    stablecoinId?: string;
+    symbol?: string;
+    name?: string;
+    pegCurrency?: string;
+    governance?: string;
+    direction?: "above" | "below";
+    startedAt?: number;
+    lockTimePeakDeviationBps?: number;
     eligibleAt?: number;
     lockedAt?: number;
     eventAgeAtLockSec?: number;
@@ -164,22 +218,29 @@ function sealedPayload(
   } = {},
 ) {
   const eventId = options.eventId ?? 1;
-  const eligibleAt = options.eligibleAt ?? 186400;
-  const lockedAt = options.lockedAt ?? 186400;
-  const eventAgeAtLockSec = options.eventAgeAtLockSec ?? 86400;
+  const stablecoinId = options.stablecoinId ?? "lusd-liquity";
+  const symbol = options.symbol ?? "LUSD";
+  const name = options.name ?? "Liquity USD";
+  const pegCurrency = options.pegCurrency ?? "USD";
+  const governance = options.governance ?? "decentralized";
+  const direction = options.direction ?? "below";
+  const startedAt = options.startedAt ?? 100000;
   const policyDelaySec = options.policyDelaySec ?? 86400;
+  const eligibleAt = options.eligibleAt ?? startedAt + policyDelaySec;
+  const lockedAt = options.lockedAt ?? eligibleAt;
+  const eventAgeAtLockSec = options.eventAgeAtLockSec ?? lockedAt - startedAt;
   const base = {
     kind,
     eventId,
     incidentKey,
-    stablecoinId: "lusd-liquity",
-    symbol: "LUSD",
-    name: "Liquity USD",
-    pegCurrency: "USD",
-    governance: "decentralized",
+    stablecoinId,
+    symbol,
+    name,
+    pegCurrency,
+    governance,
     status: "active",
-    direction: "below",
-    startedAt: 100000,
+    direction,
+    startedAt,
     prediction: {
       incidentKey,
       eligibleAt,
@@ -203,7 +264,11 @@ function sealedPayload(
           resolution: { tier: "at_risk", factors: [] },
           duration: { suppressed: false, horizons: [] },
           relatedContext: {},
-          sourceRow: { eventId, stablecoinId: "lusd-liquity" },
+          sourceRow: {
+            eventId,
+            stablecoinId,
+            peakDeviationBps: options.lockTimePeakDeviationBps ?? -300,
+          },
         },
       }
     : {
@@ -228,22 +293,50 @@ function sealedPayloadWithHash(
   return { payload: attachDdrPublicRowHash(payload, rowHash), rowHash };
 }
 
-async function sealPredictionFixture(db: SqliteD1) {
-  insertOpenEvent(db);
-  const incident = await ensureIncident(db);
-  const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey);
-  const prediction = await sealPublicPrediction(db, {
+async function sealExistingIncident(
+  db: SqliteD1,
+  incident: Awaited<ReturnType<typeof ensureIncident>>,
+  options: Parameters<typeof sealedPayload>[2] = {},
+) {
+  const eventId = options.eventId ?? 1;
+  const stablecoinId = options.stablecoinId ?? "lusd-liquity";
+  const symbol = options.symbol ?? "LUSD";
+  const name = options.name ?? "Liquity USD";
+  const pegCurrency = options.pegCurrency ?? "USD";
+  const governance = options.governance ?? "decentralized";
+  const direction = options.direction ?? "below";
+  const startedAt = options.startedAt ?? 100000;
+  const policyDelaySec = options.policyDelaySec ?? 86400;
+  const eligibleAt = options.eligibleAt ?? startedAt + policyDelaySec;
+  const lockedAt = options.lockedAt ?? eligibleAt;
+  const eventAgeAtLockSec = options.eventAgeAtLockSec ?? lockedAt - startedAt;
+  const { payload, rowHash } = sealedPayloadWithHash(incident.incidentKey, "prediction", {
+    ...options,
+    eventId,
+    stablecoinId,
+    symbol,
+    name,
+    pegCurrency,
+    governance,
+    direction,
+    startedAt,
+    policyDelaySec,
+    eligibleAt,
+    lockedAt,
+    eventAgeAtLockSec,
+  });
+  return sealPublicPrediction(db, {
     incidentKey: incident.incidentKey,
-    eventId: 1,
-    stablecoinId: "lusd-liquity",
-    symbol: "LUSD",
-    name: "Liquity USD",
-    pegCurrency: "USD",
-    governance: "decentralized",
-    direction: "below",
-    startedAt: 100000,
-    assessedAt: 186400,
-    eventAgeSec: 86400,
+    eventId,
+    stablecoinId,
+    symbol,
+    name,
+    pegCurrency,
+    governance,
+    direction,
+    startedAt,
+    assessedAt: lockedAt,
+    eventAgeSec: eventAgeAtLockSec,
     methodologyVersion: "2.0",
     methodologyVersionLabel: "v2.0",
     resolutionRubricVersion: "resolution-rubric-v2",
@@ -262,14 +355,20 @@ async function sealPredictionFixture(db: SqliteD1) {
     sealedPayload: payload,
     rowHash,
     predictionPolicyVersion: "sticky-24h-v1",
-    policyDelaySec: 86400,
-    eligibleAt: 186400,
-    lockedAt: 186400,
-    eventAgeAtLockSec: 86400,
-    lockTiming: "on_time",
-    createdAt: 186401,
+    policyDelaySec,
+    eligibleAt,
+    lockedAt,
+    eventAgeAtLockSec,
+    lockTiming: options.lockTiming ?? "on_time",
+    createdAt: lockedAt + 1,
     runId: "ddr:test",
   });
+}
+
+async function sealPredictionFixture(db: SqliteD1) {
+  insertOpenEvent(db);
+  const incident = await ensureIncident(db);
+  const prediction = await sealExistingIncident(db, incident);
   return { incident, prediction };
 }
 
@@ -310,6 +409,187 @@ function insertPredictionErratum(
       input.createdBy,
     );
   return Number(result.lastInsertRowid ?? 0);
+}
+
+interface FlapMigrationReplayScenario {
+  migration: string;
+  stablecoinId: string;
+  symbol: string;
+  pegCurrency: string;
+  firstEventId: number;
+  firstStartedAt: number;
+  current: {
+    eventId: number;
+    startedAt: number;
+    endedAt: number;
+    peakDeviationBps: number;
+  };
+  tails: Array<{
+    eventId: number;
+    startedAt: number;
+    endedAt: number | null;
+    peakDeviationBps: number;
+  }>;
+}
+
+const FLAP_MIGRATION_REPLAY_SCENARIOS: FlapMigrationReplayScenario[] = [
+  {
+    migration: "0203",
+    stablecoinId: "cngn-compliant-naira",
+    symbol: "cNGN",
+    pegCurrency: "NGN",
+    firstEventId: 90511,
+    firstStartedAt: 1783650896,
+    current: { eventId: 90526, startedAt: 1783791305, endedAt: 1783792143, peakDeviationBps: -172 },
+    tails: [
+      { eventId: 90548, startedAt: 1783946864, endedAt: 1783947766, peakDeviationBps: -172 },
+    ],
+  },
+  {
+    migration: "0206",
+    stablecoinId: "cngn-compliant-naira",
+    symbol: "cNGN",
+    pegCurrency: "NGN",
+    firstEventId: 90511,
+    firstStartedAt: 1783650896,
+    current: { eventId: 90548, startedAt: 1783946864, endedAt: 1783947766, peakDeviationBps: -172 },
+    tails: [
+      { eventId: 90573, startedAt: 1784085475, endedAt: 1784089078, peakDeviationBps: -151 },
+      { eventId: 90576, startedAt: 1784089988, endedAt: 1784098070, peakDeviationBps: -151 },
+      { eventId: 90584, startedAt: 1784108016, endedAt: 1784108885, peakDeviationBps: -150 },
+    ],
+  },
+  {
+    migration: "0208",
+    stablecoinId: "eurq-quantoz",
+    symbol: "EURQ",
+    pegCurrency: "EUR",
+    firstEventId: 90527,
+    firstStartedAt: 1783798508,
+    current: { eventId: 90560, startedAt: 1784033283, endedAt: 1784044075, peakDeviationBps: -166 },
+    tails: [
+      { eventId: 90589, startedAt: 1784126070, endedAt: 1784126921, peakDeviationBps: -156 },
+      { eventId: 90591, startedAt: 1784127861, endedAt: 1784128727, peakDeviationBps: -150 },
+      { eventId: 90594, startedAt: 1784133252, endedAt: 1784135051, peakDeviationBps: -170 },
+      { eventId: 90595, startedAt: 1784135928, endedAt: null, peakDeviationBps: -151 },
+    ],
+  },
+  {
+    migration: "0209",
+    stablecoinId: "cngn-compliant-naira",
+    symbol: "cNGN",
+    pegCurrency: "NGN",
+    firstEventId: 90511,
+    firstStartedAt: 1783650896,
+    current: { eventId: 90584, startedAt: 1784108016, endedAt: 1784108885, peakDeviationBps: -150 },
+    tails: [
+      { eventId: 90599, startedAt: 1784151172, endedAt: null, peakDeviationBps: -158 },
+    ],
+  },
+  {
+    migration: "0215",
+    stablecoinId: "cngn-compliant-naira",
+    symbol: "cNGN",
+    pegCurrency: "NGN",
+    firstEventId: 90511,
+    firstStartedAt: 1783650896,
+    current: { eventId: 90658, startedAt: 1784375257, endedAt: 1784379776, peakDeviationBps: -156 },
+    tails: [
+      { eventId: 90664, startedAt: 1784380665, endedAt: 1784381584, peakDeviationBps: -151 },
+      { eventId: 90666, startedAt: 1784383381, endedAt: 1784384266, peakDeviationBps: -150 },
+    ],
+  },
+  {
+    migration: "0227",
+    stablecoinId: "cngn-compliant-naira",
+    symbol: "cNGN",
+    pegCurrency: "NGN",
+    firstEventId: 90511,
+    firstStartedAt: 1783650896,
+    current: { eventId: 90666, startedAt: 1784383381, endedAt: 1784384266, peakDeviationBps: -150 },
+    tails: [
+      { eventId: 90718, startedAt: 1784486946, endedAt: 1784487834, peakDeviationBps: -153 },
+      { eventId: 90729, startedAt: 1784521129, endedAt: 1784522926, peakDeviationBps: -150 },
+      { eventId: 90738, startedAt: 1784641668, endedAt: null, peakDeviationBps: -170 },
+    ],
+  },
+];
+
+async function seedFlapMigrationIncident(
+  db: SqliteD1,
+  scenario: FlapMigrationReplayScenario,
+) {
+  insertLiveEvent(db, {
+    eventId: scenario.firstEventId,
+    stablecoinId: scenario.stablecoinId,
+    symbol: scenario.symbol,
+    pegCurrency: scenario.pegCurrency,
+    peakDeviationBps: -150,
+    startedAt: scenario.firstStartedAt,
+    endedAt: scenario.firstStartedAt + 900,
+  });
+  const [incident] = await ensureCanonicalIncidents(
+    db,
+    [
+      {
+        eventId: scenario.firstEventId,
+        stablecoinId: scenario.stablecoinId,
+        pegCurrency: scenario.pegCurrency,
+        direction: "below",
+        startedAt: scenario.firstStartedAt,
+        endedAt: scenario.firstStartedAt + 900,
+        peakDeviationBps: -150,
+        source: "live",
+      },
+    ],
+    {
+      nowSec: scenario.firstStartedAt + 60,
+      predictionPolicyVersion: "sticky-24h-v1",
+      ddrV2EffectiveAt: 90_000,
+      createdBy: "vitest",
+    },
+  );
+  if (!incident) throw new Error(`Failed to seed ${scenario.migration} incident`);
+
+  insertLiveEvent(db, {
+    ...scenario.current,
+    stablecoinId: scenario.stablecoinId,
+    symbol: scenario.symbol,
+    pegCurrency: scenario.pegCurrency,
+  });
+  db.sqlite
+    .prepare(
+      `INSERT INTO depeg_resolver_incident_event_links
+       (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+       VALUES (?, ?, 'repair_replacement', NULL, ?, 'migration replay predecessor')`,
+    )
+    .run(incident.incidentKey, scenario.current.eventId, scenario.current.startedAt);
+  db.sqlite
+    .prepare(
+      `INSERT INTO depeg_resolver_incident_revisions
+       (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id,
+        erratum_id, created_at, created_by)
+       VALUES (?, ?, ?, 'migration replay predecessor', NULL, NULL, ?, 'vitest')`,
+    )
+    .run(
+      incident.incidentKey,
+      scenario.firstEventId,
+      scenario.current.eventId,
+      scenario.current.startedAt,
+    );
+  db.sqlite
+    .prepare(
+      `UPDATE depeg_resolver_incidents
+       SET current_event_id = ?, current_started_at = ?, updated_at = ?
+       WHERE incident_key = ?`,
+    )
+    .run(
+      scenario.current.eventId,
+      scenario.current.startedAt,
+      scenario.current.startedAt,
+      incident.incidentKey,
+    );
+  return incident;
 }
 
 describe("DDRv2 storage migrations and stores", () => {
@@ -980,6 +1260,7 @@ describe("DDRv2 storage migrations and stores", () => {
     const db = makeSqliteD1();
     try {
       const incident = await ensureIncident(db, 1, 100500);
+      insertLiveEvent(db, { eventId: 2, startedAt: 100900, peakDeviationBps: -350 });
       const [nearby] = await ensureCanonicalIncidents(
         db,
         [
@@ -1023,10 +1304,62 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
-  it("requires explicit repair for closed nearby pre-lock events", async () => {
+  it("quarantines out-of-order nearby overlaps instead of minting a fresh incident", async () => {
     const db = makeSqliteD1();
     try {
-      const incident = await ensureIncident(db);
+      const incident = await ensureIncident(db, 1, 100500);
+      insertLiveEvent(db, { eventId: 2, startedAt: 99900, peakDeviationBps: -350 });
+      const quarantined: Array<{ eventId: number; reason: string }> = [];
+
+      const incidents = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 99900,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        {
+          nowSec: 101000,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90000,
+          createdBy: "vitest",
+          onRepairRequired: (eventId, reason) => quarantined.push({ eventId, reason }),
+        },
+      );
+
+      expect(incidents).toEqual([]);
+      expect(quarantined).toEqual([
+        {
+          eventId: 2,
+          reason:
+            `Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey} without strict successor ordering; explicit repair required`,
+        },
+      ]);
+      expect(
+        db.sqlite
+          .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_incidents WHERE stablecoin_id = 'lusd-liquity'")
+          .get(),
+      ).toEqual({ count: 1 });
+      expect(
+        db.sqlite
+          .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_incident_event_links WHERE event_id = 2")
+          .get(),
+      ).toEqual({ count: 0 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("requires persisted canonical live provenance before automatic adoption", async () => {
+    const db = makeSqliteD1();
+    try {
+      await ensureIncident(db, 1, 100500);
       await expect(
         ensureCanonicalIncidents(
           db,
@@ -1037,30 +1370,187 @@ describe("DDRv2 storage migrations and stores", () => {
               pegCurrency: "USD",
               direction: "below",
               startedAt: 100900,
-              endedAt: 101200,
               peakDeviationBps: -350,
               source: "live",
             },
           ],
           { nowSec: 101000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
         ),
-      ).rejects.toThrow(`Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey}; explicit repair required`);
-
-      const current = db.sqlite
-        .prepare("SELECT current_event_id, current_started_at FROM depeg_resolver_incidents WHERE incident_key = ?")
-        .get(incident.incidentKey) as { current_event_id: number; current_started_at: number };
-      expect(current).toEqual({ current_event_id: 1, current_started_at: 100000 });
+      ).rejects.toThrow("Unlinked depeg event 2 lacks matching canonical live provenance; explicit repair required");
     } finally {
       db.close();
     }
   });
 
-  it("requires explicit repair instead of sliding an unsealed incident beyond its original lock window", async () => {
+  it("adopts recovered nearby events into an unsealed canonical incident", async () => {
     const db = makeSqliteD1();
     try {
-      const incident = await ensureIncident(db);
-      await expect(
-        ensureCanonicalIncidents(
+      const incident = await ensureIncident(db, 1, 100500);
+      insertLiveEvent(db, { eventId: 2, startedAt: 100900, endedAt: 101200, peakDeviationBps: -350 });
+      const [nearby] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            endedAt: 101200,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        { nowSec: 101300, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+      );
+
+      const current = db.sqlite
+        .prepare("SELECT current_event_id, current_started_at FROM depeg_resolver_incidents WHERE incident_key = ?")
+        .get(incident.incidentKey) as { current_event_id: number; current_started_at: number };
+      expect(nearby?.incidentKey).toBe(incident.incidentKey);
+      expect(current).toEqual({ current_event_id: 2, current_started_at: 100900 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it.each(FLAP_MIGRATION_REPLAY_SCENARIOS)(
+    "replays migration $migration flap lineage through the primary predicate",
+    async (scenario) => {
+      const db = makeSqliteD1();
+      try {
+        const incident = await seedFlapMigrationIncident(db, scenario);
+        for (const tail of scenario.tails) {
+          insertLiveEvent(db, {
+            ...tail,
+            stablecoinId: scenario.stablecoinId,
+            symbol: scenario.symbol,
+            pegCurrency: scenario.pegCurrency,
+          });
+        }
+
+        const incidents = await ensureCanonicalIncidents(
+          db,
+          scenario.tails.map((tail) => ({
+            eventId: tail.eventId,
+            stablecoinId: scenario.stablecoinId,
+            pegCurrency: scenario.pegCurrency,
+            direction: "below" as const,
+            startedAt: tail.startedAt,
+            endedAt: tail.endedAt,
+            peakDeviationBps: tail.peakDeviationBps,
+            source: "live",
+          })),
+          {
+            nowSec: Math.max(...scenario.tails.map((tail) => tail.endedAt ?? tail.startedAt)) + 60,
+            predictionPolicyVersion: "sticky-24h-v1",
+            policyDelaySec: 72 * 3600,
+            ddrV2EffectiveAt: 90_000,
+            createdBy: "vitest",
+          },
+        );
+        const tailIds = scenario.tails.map((tail) => tail.eventId);
+
+        expect(incidents.map((entry) => entry.incidentKey)).toEqual(
+          tailIds.map(() => incident.incidentKey),
+        );
+        expect(
+          db.sqlite
+            .prepare(
+              `SELECT event_id, relation
+               FROM depeg_resolver_incident_event_links
+               WHERE event_id IN (${tailIds.map(() => "?").join(", ")})
+               ORDER BY linked_at, event_id`,
+            )
+            .all(...tailIds),
+        ).toEqual(
+          tailIds.map((eventId) => ({ event_id: eventId, relation: "repair_replacement" })),
+        );
+        expect(
+          db.sqlite
+            .prepare(
+              `SELECT previous_event_id, current_event_id
+               FROM depeg_resolver_incident_revisions
+               WHERE current_event_id IN (${tailIds.map(() => "?").join(", ")})
+               ORDER BY id`,
+            )
+            .all(...tailIds),
+        ).toEqual(
+          tailIds.map((currentEventId, index) => ({
+            previous_event_id: index === 0 ? scenario.current.eventId : tailIds[index - 1],
+            current_event_id: currentEventId,
+          })),
+        );
+        expect(
+          db.sqlite
+            .prepare(
+              `SELECT current_event_id, current_started_at
+               FROM depeg_resolver_incidents
+               WHERE incident_key = ?`,
+            )
+            .get(incident.incidentKey),
+        ).toEqual({
+          current_event_id: tailIds[tailIds.length - 1],
+          current_started_at: scenario.tails[scenario.tails.length - 1]?.startedAt,
+        });
+      } finally {
+        db.close();
+      }
+    },
+  );
+
+  it.each(["link-count", "incident-span"] as const)(
+    "quarantines automatic adoption at the %s cap",
+    async (cap) => {
+      const db = makeSqliteD1();
+      try {
+        insertOpenEvent(db);
+        const incident = await ensureIncident(db, 1, 100500);
+        let tailStartedAt = 100900;
+
+        if (cap === "link-count") {
+          for (let index = 1; index < DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1; index += 1) {
+            db.sqlite
+              .prepare(
+                `INSERT INTO depeg_resolver_incident_event_links
+                 (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+                 VALUES (?, ?, 'repair_replacement', NULL, ?, 'cap fixture')`,
+              )
+              .run(incident.incidentKey, 1000 + index, 100500 + index);
+          }
+        } else {
+          const currentStartedAt =
+            100000 + DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1 - 3600;
+          tailStartedAt =
+            100000 + DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1 + 1;
+          insertLiveEvent(db, { eventId: 3, startedAt: currentStartedAt });
+          db.sqlite
+            .prepare(
+              `INSERT INTO depeg_resolver_incident_event_links
+               (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+               VALUES (?, 3, 'repair_replacement', NULL, ?, 'span fixture predecessor')`,
+            )
+            .run(incident.incidentKey, currentStartedAt);
+          db.sqlite
+            .prepare(
+              `INSERT INTO depeg_resolver_incident_revisions
+               (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id,
+                erratum_id, created_at, created_by)
+               VALUES (?, 1, 3, 'span fixture predecessor', NULL, NULL, ?, 'vitest')`,
+            )
+            .run(incident.incidentKey, currentStartedAt);
+          db.sqlite
+            .prepare(
+              `UPDATE depeg_resolver_incidents
+               SET current_event_id = 3, current_started_at = ?, updated_at = ?
+               WHERE incident_key = ?`,
+            )
+            .run(currentStartedAt, currentStartedAt, incident.incidentKey);
+        }
+
+        insertLiveEvent(db, { eventId: 2, startedAt: tailStartedAt, peakDeviationBps: -350 });
+        const quarantined: number[] = [];
+        const incidents = await ensureCanonicalIncidents(
           db,
           [
             {
@@ -1068,14 +1558,236 @@ describe("DDRv2 storage migrations and stores", () => {
               stablecoinId: "lusd-liquity",
               pegCurrency: "USD",
               direction: "below",
-              startedAt: 100900,
+              startedAt: tailStartedAt,
               peakDeviationBps: -350,
               source: "live",
             },
           ],
-          { nowSec: 186400, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+          {
+            nowSec: tailStartedAt + 60,
+            predictionPolicyVersion: "sticky-24h-v1",
+            policyDelaySec: 72 * 3600,
+            ddrV2EffectiveAt: 90_000,
+            createdBy: "vitest",
+            onRepairRequired: (eventId) => quarantined.push(eventId),
+          },
+        );
+
+        expect(incidents).toEqual([]);
+        expect(quarantined).toEqual([2]);
+        expect(
+          db.sqlite
+            .prepare(
+              "SELECT COUNT(*) AS count FROM depeg_resolver_incident_event_links WHERE event_id = 2",
+            )
+            .get(),
+        ).toEqual({ count: 0 });
+      } finally {
+        db.close();
+      }
+    },
+  );
+
+  it("closes recovered pre-lock incidents and keeps cNGN-shaped flaps in bounded chains", async () => {
+    const db = makeSqliteD1();
+    try {
+      const firstStartedAt = 100_000;
+      const firstEndedAt = firstStartedAt + 900;
+      insertOpenEvent(db, 90511);
+      const firstIncident = await ensureIncident(db, 90511, firstStartedAt + 300);
+      db.sqlite
+        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = 1 WHERE id = ?")
+        .run(firstEndedAt, 90511);
+
+      const closeEligibleAt =
+        firstEndedAt +
+        DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC +
+        DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1;
+      expect(await closeRecoveredPreLockIncidents(db, closeEligibleAt - 1)).toBe(0);
+      expect(await closeRecoveredPreLockIncidents(db, closeEligibleAt)).toBe(1);
+
+      const [closed] = await loadCanonicalIncidents(db, {
+        incidentKeys: [firstIncident.incidentKey],
+        includeSuperseded: true,
+      });
+      expect(closed).toMatchObject({
+        incidentKey: firstIncident.incidentKey,
+        incidentState: "closed_pre_lock",
+        closedPreLockAt: closeEligibleAt,
+      });
+      expect(
+        coverageRowForIncident(
+          closed,
+          {
+            eventId: 90511,
+            currentEventId: 90511,
+            startedAt: firstStartedAt,
+            endedAt: firstEndedAt,
+            recoveryPrice: 1,
+            stablecoinStatus: null,
+            terminalObserved: null,
+            terminalEvidenceAt: null,
+            terminalEvidenceInterval: null,
+            terminalEvidencePrecision: null,
+          },
+          closeEligibleAt,
         ),
-      ).rejects.toThrow(`Unlinked depeg event 2 overlaps nearby canonical incident ${incident.incidentKey}; explicit repair required`);
+      ).toMatchObject({
+        predictionState: "resolved_before_prediction",
+        coverageCause: "pre_lock_recovered",
+      });
+      expect(await loadCanonicalIncidents(db, { incidentKeys: [firstIncident.incidentKey] })).toEqual([]);
+
+      const outsideStartedAt = firstEndedAt + DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC + 1;
+      const outsideEndedAt = outsideStartedAt + 900;
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_events
+           (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+            started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+           VALUES (?, 'lusd-liquity', 'LUSD', 'peggedUSD', 'below', -325, ?, ?, 0.98, 0.97, 1, 1, 'live')`,
+        )
+        .run(90512, outsideStartedAt, outsideEndedAt);
+      const quarantined: number[] = [];
+      const [fresh] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 90512,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: outsideStartedAt,
+            endedAt: outsideEndedAt,
+            peakDeviationBps: -325,
+            source: "live",
+          },
+        ],
+        {
+          nowSec: outsideEndedAt + 60,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90_000,
+          createdBy: "vitest",
+          onRepairRequired: (eventId) => quarantined.push(eventId),
+        },
+      );
+      expect(quarantined).toEqual([]);
+      expect(fresh.incidentKey).not.toBe(firstIncident.incidentKey);
+
+      const freshCloseAt =
+        outsideEndedAt +
+        DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC +
+        DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1;
+      expect(await closeRecoveredPreLockIncidents(db, freshCloseAt)).toBe(1);
+
+      const withinStartedAt = outsideEndedAt + 3600;
+      const withinEndedAt = withinStartedAt + 900;
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_events
+           (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+            started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+           VALUES (?, 'lusd-liquity', 'LUSD', 'peggedUSD', 'below', -350, ?, ?, 0.98, 0.965, 1, 1, 'live')`,
+        )
+        .run(90513, withinStartedAt, withinEndedAt);
+      const [resurrected] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 90513,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: withinStartedAt,
+            endedAt: withinEndedAt,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        {
+          nowSec: withinEndedAt + 60,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90_000,
+          createdBy: "vitest",
+        },
+      );
+
+      expect(resurrected).toMatchObject({
+        incidentKey: fresh.incidentKey,
+        currentEventId: 90513,
+        incidentState: "active",
+        closedPreLockAt: null,
+        relation: "repair_replacement",
+      });
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT previous_event_id, current_event_id, reason
+             FROM depeg_resolver_incident_revisions
+             WHERE incident_key = ? AND current_event_id = 90513`,
+          )
+          .get(fresh.incidentKey),
+      ).toEqual({
+        previous_event_id: 90512,
+        current_event_id: 90513,
+        reason: "pre-lock closed incident resurrected with nearby event",
+      });
+      expect(
+        db.sqlite
+          .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_incidents WHERE stablecoin_id = 'lusd-liquity'")
+          .get(),
+      ).toEqual({ count: 2 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("does not close a recovered incident after a public outcome is sealed", async () => {
+    const db = makeSqliteD1();
+    try {
+      const { incident } = await sealPredictionFixture(db);
+      db.sqlite
+        .prepare("UPDATE depeg_events SET ended_at = 101000, recovery_price = 1 WHERE id = 1")
+        .run();
+
+      expect(
+        await closeRecoveredPreLockIncidents(
+          db,
+          101000 + DDR_INCIDENT_REOPEN_MERGE_WINDOW_SEC + DDR_PRE_LOCK_CLOSE_SETTLE_MARGIN_SEC_V1,
+        ),
+      ).toBe(0);
+      expect(
+        db.sqlite
+          .prepare("SELECT closed_pre_lock_at FROM depeg_resolver_incidents WHERE incident_key = ?")
+          .get(incident.incidentKey),
+      ).toEqual({ closed_pre_lock_at: null });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("anchors unsealed adoption recency to the current event instead of the first event", async () => {
+    const db = makeSqliteD1();
+    try {
+      const incident = await ensureIncident(db, 1, 100500);
+      insertLiveEvent(db, { eventId: 2, startedAt: 100900, peakDeviationBps: -350 });
+      const [nearby] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        { nowSec: 186400, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+      );
+      expect(nearby?.incidentKey).toBe(incident.incidentKey);
+      expect(nearby?.currentEventId).toBe(2);
     } finally {
       db.close();
     }
@@ -1085,6 +1797,7 @@ describe("DDRv2 storage migrations and stores", () => {
     const db = makeSqliteD1();
     try {
       const { incident } = await sealPredictionFixture(db);
+      insertLiveEvent(db, { eventId: 2, startedAt: 100900, peakDeviationBps: -350 });
       const [nearby] = await ensureCanonicalIncidents(
         db,
         [
@@ -1178,6 +1891,270 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("splits a MIM-shaped regime escalation into a second canonical incident and lock", async () => {
+    const db = makeSqliteD1();
+    try {
+      const gradedStartedAt = 1_780_937_476;
+      const gradedEndedAt = 1_780_980_688;
+      const terminalStartedAt = 1_780_997_700;
+      expect(DDR_SEALED_TAIL_REGIME_ESCALATION_MIN_PEAK_BPS_V1).toBe(1_000);
+      expect(DDR_SEALED_TAIL_REGIME_ESCALATION_MULTIPLIER_V1).toBe(4);
+
+      insertLiveEvent(db, {
+        eventId: 90130,
+        stablecoinId: "mim-abracadabra",
+        symbol: "MIM",
+        startedAt: gradedStartedAt,
+        peakDeviationBps: -113,
+      });
+      const [gradedIncident] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 90130,
+            stablecoinId: "mim-abracadabra",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: gradedStartedAt,
+            peakDeviationBps: -113,
+            source: "live",
+            publicTrackedAtFirstSeen: true,
+            registrySnapshot: { id: "mim-abracadabra", symbol: "MIM" },
+          },
+        ],
+        {
+          nowSec: gradedStartedAt + 60,
+          policyDelaySec: 3600,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: gradedStartedAt - 1,
+          createdBy: "vitest",
+        },
+      );
+      if (!gradedIncident) throw new Error("graded MIM incident was not created");
+      await sealExistingIncident(db, gradedIncident, {
+        eventId: 90130,
+        stablecoinId: "mim-abracadabra",
+        symbol: "MIM",
+        name: "Magic Internet Money",
+        startedAt: gradedStartedAt,
+        lockTimePeakDeviationBps: -113,
+        policyDelaySec: 3600,
+      });
+      db.sqlite
+        .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = 90130")
+        .run(gradedEndedAt, 1);
+
+      insertLiveEvent(db, {
+        eventId: 90141,
+        stablecoinId: "mim-abracadabra",
+        symbol: "MIM",
+        startedAt: terminalStartedAt,
+        peakDeviationBps: -9201,
+      });
+      const [terminalIncident] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 90141,
+            stablecoinId: "mim-abracadabra",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: terminalStartedAt,
+            peakDeviationBps: -9201,
+            source: "live",
+            publicTrackedAtFirstSeen: true,
+            registrySnapshot: { id: "mim-abracadabra", symbol: "MIM" },
+          },
+        ],
+        {
+          nowSec: terminalStartedAt + 60,
+          policyDelaySec: 3600,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: gradedStartedAt - 1,
+          createdBy: "vitest",
+        },
+      );
+      if (!terminalIncident) throw new Error("terminal MIM incident was not created");
+
+      expect(terminalIncident.incidentKey).not.toBe(gradedIncident.incidentKey);
+      expect(terminalIncident.relation).toBe("observed");
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT first_event_id, current_event_id
+             FROM depeg_resolver_incidents
+             WHERE incident_key = ?`,
+          )
+          .get(gradedIncident.incidentKey),
+      ).toEqual({ first_event_id: 90130, current_event_id: 90130 });
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT from_incident_key, to_incident_key, relation, created_by
+             FROM depeg_resolver_incident_lineage
+             WHERE from_incident_key = ?`,
+          )
+          .get(terminalIncident.incidentKey),
+      ).toEqual({
+        from_incident_key: terminalIncident.incidentKey,
+        to_incident_key: gradedIncident.incidentKey,
+        relation: "split_from",
+        created_by: "ddr-worker:auto-regime-split",
+      });
+
+      await sealExistingIncident(db, terminalIncident, {
+        eventId: 90141,
+        stablecoinId: "mim-abracadabra",
+        symbol: "MIM",
+        name: "Magic Internet Money",
+        startedAt: terminalStartedAt,
+        lockTimePeakDeviationBps: -9201,
+        policyDelaySec: 3600,
+      });
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT event_id, incident_key
+             FROM depeg_resolver_public_predictions
+             WHERE event_id IN (90130, 90141)
+             ORDER BY event_id`,
+          )
+          .all(),
+      ).toEqual([
+        { event_id: 90130, incident_key: gradedIncident.incidentKey },
+        { event_id: 90141, incident_key: terminalIncident.incidentKey },
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("uses the sealed lock-time peak instead of the first-event bucket for same-regime tails", async () => {
+    const db = makeSqliteD1();
+    try {
+      insertLiveEvent(db, { eventId: 1, startedAt: 100000, peakDeviationBps: -113 });
+      const [incident] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 1,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100000,
+            peakDeviationBps: -113,
+            source: "live",
+            publicTrackedAtFirstSeen: true,
+            registrySnapshot: { id: "lusd-liquity", symbol: "LUSD" },
+          },
+        ],
+        {
+          nowSec: 100100,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90000,
+          createdBy: "vitest",
+        },
+      );
+      if (!incident) throw new Error("same-regime incident was not created");
+      expect(incident.firstObservedPeakBucketBps).toBe(100);
+      await sealExistingIncident(db, incident, { lockTimePeakDeviationBps: -300 });
+      db.sqlite
+        .prepare("UPDATE depeg_events SET ended_at = 190000, recovery_price = 1 WHERE id = 1")
+        .run();
+      insertLiveEvent(db, { eventId: 2, startedAt: 191000, peakDeviationBps: -1000 });
+
+      const [tail] = await ensureCanonicalIncidents(
+        db,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 191000,
+            peakDeviationBps: -1000,
+            source: "live",
+          },
+        ],
+        {
+          nowSec: 191100,
+          predictionPolicyVersion: "sticky-24h-v1",
+          ddrV2EffectiveAt: 90000,
+          createdBy: "vitest",
+        },
+      );
+
+      expect(tail?.incidentKey).toBe(incident.incidentKey);
+      expect(tail?.relation).toBe("repair_replacement");
+      expect(
+        db.sqlite
+          .prepare("SELECT COUNT(*) AS count FROM depeg_resolver_incidents WHERE stablecoin_id = 'lusd-liquity'")
+          .get(),
+      ).toEqual({ count: 1 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("falls back to authorized sealed-tail adoption when sealing wins the link race", async () => {
+    const db = makeSqliteD1();
+    try {
+      insertOpenEvent(db);
+      const incident = await ensureIncident(db);
+      insertLiveEvent(db, { eventId: 2, startedAt: 100900, peakDeviationBps: -350 });
+      let sealedDuringBatch = false;
+      const raceDb = {
+        ...db,
+        batch: async (statements: D1PreparedStatement[]) => {
+          if (!sealedDuringBatch) {
+            sealedDuringBatch = true;
+            await sealExistingIncident(db, incident);
+          }
+          return db.batch(statements);
+        },
+      } as SqliteD1;
+
+      const [tail] = await ensureCanonicalIncidents(
+        raceDb,
+        [
+          {
+            eventId: 2,
+            stablecoinId: "lusd-liquity",
+            pegCurrency: "USD",
+            direction: "below",
+            startedAt: 100900,
+            peakDeviationBps: -350,
+            source: "live",
+          },
+        ],
+        { nowSec: 201000, predictionPolicyVersion: "sticky-24h-v1", ddrV2EffectiveAt: 90000, createdBy: "vitest" },
+      );
+
+      expect(sealedDuringBatch).toBe(true);
+      expect(tail?.incidentKey).toBe(incident.incidentKey);
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT repair_authorization_id
+             FROM depeg_resolver_incident_event_links
+             WHERE event_id = 2`,
+          )
+          .get(),
+      ).toEqual({ repair_authorization_id: expect.any(Number) });
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT COUNT(*) AS count
+             FROM depeg_resolver_event_repair_authorization_uses
+             WHERE event_id = 2`,
+          )
+          .get(),
+      ).toEqual({ count: 2 });
+    } finally {
+      db.close();
+    }
+  });
+
   it("links sealed live tails that reopen inside the close-gap merge window even when far from incident start", async () => {
     const db = makeSqliteD1();
     try {
@@ -1185,6 +2162,7 @@ describe("DDRv2 storage migrations and stores", () => {
       db.sqlite
         .prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = 1")
         .run(1_000_000, 1.0001);
+      insertLiveEvent(db, { eventId: 2, startedAt: 1_007_200, peakDeviationBps: -425 });
 
       const [tail] = await ensureCanonicalIncidents(
         db,

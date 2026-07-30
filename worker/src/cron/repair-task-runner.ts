@@ -4,6 +4,7 @@ import { runWorkerRepairTaskRunner } from "../lib/repair-tasks";
 export function runRepairTaskRunner(
   db: D1Database,
   signal?: AbortSignal,
+  enabled?: boolean,
 ): Promise<CronResult> {
-  return runWorkerRepairTaskRunner(db, { signal });
+  return runWorkerRepairTaskRunner(db, { signal, enabled });
 }
