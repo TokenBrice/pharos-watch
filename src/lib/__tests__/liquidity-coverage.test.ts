@@ -17,7 +17,7 @@ describe("liquidity coverage", () => {
         );
       }
     }
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(328);
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(329);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
