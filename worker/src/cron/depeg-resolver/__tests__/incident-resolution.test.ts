@@ -11,7 +11,12 @@ import {
 import type { DdrEventDbRow } from "../types";
 import { loadDdrContext, type DdrLoadedContext } from "../context";
 import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
-import { toStructural } from "../utils";
+import {
+  allocateDdrRunId,
+  clearV9DependencyImpairment,
+  hydrateV9DependencyImpairment,
+  toStructural,
+} from "../utils";
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
@@ -154,6 +159,21 @@ describe("deriveMintSurge", () => {
     ).toEqual({ mintSurge: false, mintSurgeCoverage: "mint-burn-hourly" });
   });
 
+  it("marks mint-burn coverage unavailable when event-time onset supply is invalid", () => {
+    expect(
+      deriveMintSurge(
+        [
+          { date: startedAt - 7 * DAY, usd: 0 },
+          { date: startedAt, usd: 0 },
+        ],
+        startedAt,
+        90,
+        [{ hourTs: startedAt - DAY, netFlowUsd: 200_000 }],
+        true,
+      ),
+    ).toEqual({ mintSurge: null, mintSurgeCoverage: "unavailable" });
+  });
+
   it("marks the change-7d fallback explicitly when mint-burn coverage is absent", () => {
     expect(deriveMintSurge(snapshots, startedAt, 25, [], false)).toEqual({
       mintSurge: true,
@@ -205,6 +225,46 @@ describe("toStructural", () => {
     expect(structural.mintIncidents).toEqual([
       { date: "2026-05-24", status: "active", resolvedAt: null },
     ]);
+  });
+
+  it("keeps a wrapper healthy when the V9 serial parent is tracked and non-terminal", () => {
+    hydrateV9DependencyImpairment([
+      {
+        id: "wrapper-fixture",
+        dependencies: { serial: [{ upstreamAssetId: "usdc-circle" }] },
+      },
+    ]);
+
+    try {
+      expect(
+        toStructural({
+          id: "wrapper-fixture",
+          symbol: "WRAP",
+          name: "Wrapper fixture",
+          flags: {
+            backing: "rwa-backed",
+            pegCurrency: "USD",
+            governance: "centralized",
+            yieldBearing: false,
+            rwa: false,
+            navToken: false,
+          },
+        } as StablecoinMeta).dependencyImpaired,
+      ).toBe(false);
+    } finally {
+      clearV9DependencyImpairment();
+    }
+  });
+});
+
+describe("allocateDdrRunId", () => {
+  it("falls back to Math.random entropy when Web Crypto is unavailable", () => {
+    vi.stubGlobal("crypto", undefined);
+    try {
+      expect(allocateDdrRunId("daily", NOW_SEC)).toMatch(/^ddr:daily:1780358400:[0-9a-f]{12}$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
@@ -844,6 +904,41 @@ describe("resolveDdrIncidents", () => {
       severity: "elevated",
       label: "Sustained one-sided outflow (bank-run signal)",
     });
+  });
+
+  it("ignores malformed fresh DEWS signals without fabricating a K5 input", () => {
+    const context = loadedContext({
+      dewsByCoin: new Map([
+        [
+          "usdc-circle",
+          {
+            stablecoin_id: "usdc-circle",
+            score: 40,
+            band: "ALERT",
+            signals_json: "{bad json",
+            computed_at: NOW_SEC - 60,
+          },
+        ],
+      ]),
+      liqByCoin: new Map([
+        [
+          "usdc-circle",
+          {
+            stablecoin_id: "usdc-circle",
+            liquidity_score: 80,
+            concentration_hhi: 0.2,
+            total_tvl_usd: 100,
+            total_volume_24h_usd: 50,
+            updated_at: NOW_SEC - 60,
+          },
+        ],
+      ]),
+    });
+
+    const [row] = resolveDdrIncidents(context, NOW_SEC);
+
+    expect(row.relatedContext.dewsScore).toBe(40);
+    expect(row.resolution.factors.some((factor) => factor.code === "K5_exit_collapse")).toBe(false);
   });
 
   it("omits stale live context while preserving sparse supply coverage", () => {
