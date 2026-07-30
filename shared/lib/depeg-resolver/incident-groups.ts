@@ -21,8 +21,13 @@ import {
 } from "./strata";
 
 const MERGE_GAP_SEC = 6 * 3600;
-const QUARANTINE_MIN_INCIDENTS = 50;
-const QUARANTINE_MEDIAN_DURATION_SEC = 30 * 60;
+export const DURATION_LABEL_MERGE_GAP_SEC = 24 * 3600;
+// Quarantine targets the pathological flap tail only (corpus counts sit at
+// 765/412/382/334/215, then a gap to 151); ordinary high-frequency coins stay
+// in the corpus because coin-dedup already bounds their band influence and
+// removing them starves severe/catastrophic strata below support floors.
+const QUARANTINE_MIN_INCIDENTS = 200;
+const QUARANTINE_MAX_MEDIAN_DURATION_SEC = 2.01 * 3600;
 
 export interface DdrIncidentFragment {
   offsetSec: number;
@@ -135,8 +140,75 @@ export function groupIncidents(
 }
 
 /**
+ * Regroup live 6h incidents into the sticky labels used only by Stage 2.
+ */
+export function groupDurationLabelIncidents(incidents: DdrIncident[]): DdrIncident[] {
+  const byKey = new Map<string, DdrIncident[]>();
+  for (const incident of incidents) {
+    const key = `${incident.stablecoinId}|${incident.direction}`;
+    const list = byKey.get(key);
+    if (list) list.push(incident);
+    else byKey.set(key, [incident]);
+  }
+
+  const grouped: DdrIncident[] = [];
+  for (const list of byKey.values()) {
+    list.sort((a, b) => a.startedAt - b.startedAt);
+    let current: DdrIncident | null = null;
+
+    const startGroup = (incident: DdrIncident): DdrIncident => ({
+      ...incident,
+      endedAt: incident.endedAt,
+      durationSec: incident.endedAt == null ? null : Math.max(0, incident.endedAt - incident.startedAt),
+      recovered: incident.endedAt != null && incident.recovered,
+      fragments: incident.fragments?.length
+        ? incident.fragments.map((fragment) => ({ ...fragment }))
+        : [{ offsetSec: 0, peakDeviationBps: incident.peakDeviationBps }],
+    });
+
+    for (const incident of list) {
+      if (!current) {
+        current = startGroup(incident);
+        continue;
+      }
+
+      const previousEnd = current.endedAt;
+      const contiguous =
+        previousEnd == null || incident.startedAt - previousEnd < DURATION_LABEL_MERGE_GAP_SEC;
+      if (!contiguous) {
+        grouped.push(current);
+        current = startGroup(incident);
+        continue;
+      }
+
+      if (Math.abs(incident.peakDeviationBps) > Math.abs(current.peakDeviationBps)) {
+        current.peakDeviationBps = incident.peakDeviationBps;
+        current.depth = depthBucket(incident.peakDeviationBps);
+      }
+      current.endedAt = incident.endedAt;
+      current.durationSec =
+        incident.endedAt == null ? null : Math.max(0, incident.endedAt - current.startedAt);
+      current.recovered = incident.endedAt != null && incident.recovered;
+      const offsetSec = Math.max(0, incident.startedAt - current.startedAt);
+      current.fragments!.push(
+        ...(incident.fragments?.length
+          ? incident.fragments.map((fragment) => ({
+              offsetSec: offsetSec + fragment.offsetSec,
+              peakDeviationBps: fragment.peakDeviationBps,
+            }))
+          : [{ offsetSec, peakDeviationBps: incident.peakDeviationBps }]),
+      );
+    }
+
+    if (current) grouped.push(current);
+  }
+
+  return grouped;
+}
+
+/**
  * Coins whose history is too fragmented/noisy to inform duration. Excluded from
- * the Stage 2 training set (the >50-incidents, sub-30min-median detector rule).
+ * the Stage 2 training set (the >30-incidents, <2.01h-median detector rule).
  */
 export function quarantinedCoins(incidents: DdrIncident[]): Set<string> {
   const byCoin = new Map<string, number[]>();
@@ -148,9 +220,12 @@ export function quarantinedCoins(incidents: DdrIncident[]): Set<string> {
   }
   const out = new Set<string>();
   for (const [coin, durations] of byCoin) {
-    // Quarantine uses the conventional average-of-middle median; Stage 2 p50
-    // remains duration.ts's nearest-rank percentile for public estimates.
-    if (durations.length > QUARANTINE_MIN_INCIDENTS && (median(durations) ?? 0) < QUARANTINE_MEDIAN_DURATION_SEC) {
+    // Quarantine uses the conventional average-of-middle median; Stage 2 uses
+    // interpolated percentiles for its public estimates.
+    if (
+      durations.length > QUARANTINE_MIN_INCIDENTS &&
+      (median(durations) ?? 0) < QUARANTINE_MAX_MEDIAN_DURATION_SEC
+    ) {
       out.add(coin);
     }
   }

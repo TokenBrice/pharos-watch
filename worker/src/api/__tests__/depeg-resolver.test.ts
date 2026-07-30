@@ -13,6 +13,7 @@ import {
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
 import { DDR_SNAPSHOT_CACHE_GENERATION as DDR_CACHE_ENVELOPE_GENERATION } from "../../lib/depeg-resolver-snapshot-cache";
+import { DDR_DURATION_BAND_META } from "@shared/types/depeg-resolver";
 import type {
   DdrPredictionMeta,
   DdrResponse,
@@ -213,6 +214,7 @@ function snapshot(
       publicWarning: "warning",
       resolutionRubricVersion: "resolution-rubric-v1",
       durationModelVersion: "duration-landmark-v1",
+      durationBand: DDR_DURATION_BAND_META,
       incidentGroupingVersion: "incident-group-v1",
       supportRulesVersion: "support-rules-v1",
       lineage: null,
@@ -288,6 +290,7 @@ describe("handleDepegResolver", () => {
     expect(body._meta.degradedReason).toBe("stale-cache");
     expect(body.rows[0].kind).toBe("prediction");
     expect(body.rows[0].live.stale).toBe(true);
+    expect(body._meta.durationBand).toEqual(DDR_DURATION_BAND_META);
     if (body.rows[0].kind !== "prediction") throw new Error("expected prediction row");
     expect(body.rows[0].frozen.duration.medianSec).toBe(3600);
     expect(body.rows[0].frozen.duration.horizons).toHaveLength(1);

@@ -1,5 +1,6 @@
 import {
   DDR_ERRATUM_REASON_VALUES,
+  DDR_DURATION_BAND_META,
   DDR_PUBLIC_WARNING,
   type DdrPredictionErratum,
   type DdrForecastReadiness,
@@ -226,6 +227,7 @@ function buildDdrMeta(input: {
     publicWarning: DDR_PUBLIC_WARNING,
     resolutionRubricVersion: DDR_VERSION_STAMP.resolutionRubricVersion,
     durationModelVersion: DDR_VERSION_STAMP.durationModelVersion,
+    durationBand: DDR_DURATION_BAND_META,
     incidentGroupingVersion: DDR_VERSION_STAMP.incidentGroupingVersion,
     supportRulesVersion: DDR_VERSION_STAMP.supportRulesVersion,
     lineage: input.lineage,
