@@ -15,7 +15,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into the Dialectic USD Makina Machine and deployed by the Dialectic operator into AMM liquidity and money-market positions through Calibers on Ethereum, Base, Arbitrum, and Monad; execution is bounded by a Risk-Manager-curated Merkle instruction set, per-position and per-swap loss caps, and base-token allowlists, and an optional Security Module stakes DUSD shares as a slashable first-loss buffer",
-  "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor. Exits go through the AsyncRedeemer FIFO queue, carry a 12-hour minimum finalization delay that is not a settlement SLA, and settle in USDC only when the operator finalizes requests after freeing accounting-token liquidity.",
+  "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor. Exits use the AsyncRedeemer queue and settle in USDC only when the operator finalizes requests after freeing accounting-token liquidity. The reviewed implementation advances sequential request IDs, but the Machine Terms make buybacks discretionary, grant no contractual redemption right or queue priority, permit requests to remain unfilled indefinitely, and establish a 12-hour minimum finalization delay rather than a maximum settlement SLA.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -53,10 +53,14 @@
       {
         "label": "DUSD AsyncRedeemer verified source",
         "url": "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract"
+      },
+      {
+        "label": "Makina Recovery Mode",
+        "url": "https://docs.makina.finance/concepts/security/recovery-mode"
       }
     ],
     "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
-    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, and USDC-denominated positions. The Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk and issuer-discretionary eligibility, not as a DUSD transfer blacklist. If a holder cannot receive USDC, the reviewed route does not establish a precommitted alternate settlement asset or guaranteed wallet-remediation path.",
+    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, Caliber-held USDC, and downstream venues. The Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk and issuer-discretionary eligibility, not as a DUSD transfer blacklist. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. If a holder cannot receive USDC, Machine Terms Section 2.f permits transferring DUSD before a request to a newly verified wallet, which may then request a buyback. For an existing request, ERC-721 request-NFT transferability and post-transfer claim behavior are separately established by the deployed contract and events: the active NFT owner may claim only while satisfying the current whitelist. The request has no observed contract-level expiry and persists through NFT transfer, but verification, finalization, and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset.",
     "reviewer": "OpenAI Codex DUSD redemption backstop implementation",
     "reviewedAt": "2026-07-30"
   },

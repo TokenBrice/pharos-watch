@@ -4065,13 +4065,11 @@
   },
   "dusd-dialectic": {
     "title": "Dialectic's Book, Tokenised",
-    "text": "DUSD is a USDC-accounted Makina strategy share, not a fixed-dollar claim. Depositors hand USDC to a Makina Machine operated by Dialectic, and the share price moves with the strategy's marked AUM rather than promising a constant $1 redemption value.\n\nThe portfolio rotates across DeFi lending, AMM, credit, and incentive venues through Makina Calibers and a Risk-Manager-approved instruction set. Pharos now reads Makina's live strategy accounting for portfolio buckets, AUM, debt, share supply, and reference NAV, while retaining a reviewed static fallback when the API is unavailable. That live feed is useful, but it is still first-party strategy accounting rather than independent attestation. Exits are queued, not atomic: DUSD holders request USDC through the AsyncRedeemer FIFO queue, face a documented minimum finalization delay, and depend on the operator freeing accounting-token liquidity. Access can also be gated by whitelist settings, so redemption access is separate from transferability. The DUSD share token itself has no reviewed local freeze path, but the strategy inherits upstream USDC freeze exposure through its accounting token and positions. Read DUSD as an actively managed {{term:yield-bearing}}yield-bearing{{/term}} strategy share with operational guardrails, queued exits, and portfolio risk — not as a par-{{term:redemption}}redeemable{{/term}} payment stablecoin.",
-    "updatedAt": "2026-07-29",
+    "text": "DUSD is a USDC-accounted Makina strategy share, not a fixed-dollar claim: its price follows Dialectic's marked AUM per share. The portfolio rotates through DeFi venues under an approved instruction set, and Pharos can read first-party live accounting for its allocations, debt, supply, and NAV.\n\nThe exit route now has a live same-block capacity bound — idle Ethereum USDC minus the liability of DUSD already locked in the queue — but that backlog-adjusted number is a conditional liquidity proxy, not a reserved buffer or funding promise. The reviewed contract processes request IDs sequentially and currently charges no redemption fee, while the Machine Terms grant neither a contractual redemption right nor queue priority; finalization has no maximum SLA, requests may remain unfilled indefinitely, and the operator may cease the Machine without notice. Custody is equally blunt: Dialectic owns deposited and deployed assets outright, holders receive no trust, proprietary, priority, or bankruptcy-remote claim, and the optional Security Module is not a guaranteed backstop. DUSD itself has no reviewed local freeze path, but upstream USDC can still be frozen; Recovery Mode cannot move Circle-frozen funds, and wallet or request-NFT transfers remain subject to verification and discretionary fill, leaving thin DEX liquidity and the issuer queue as two versions of the same exit problem.",
+    "updatedAt": "2026-07-30",
     "authoredBy": "ai",
     "model": "gpt-5-codex",
-    "reviewedBy": "Codex DUSD tracking completion",
-    "reviewedAt": "2026-07-29",
-    "factsAsOf": "2026-07-29"
+    "factsAsOf": "2026-07-30"
   },
   "ousd-open-standard": {
     "title": "The Everything-Consortium Dollar",

@@ -109,7 +109,8 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
-    expect(getRedemptionBackstopConfig("dusd-dialectic")).toMatchObject({
+    const dusd = getRedemptionBackstopConfig("dusd-dialectic");
+    expect(dusd).toMatchObject({
       routeFamily: "queue-redeem",
       outputAssets: ["usdc-circle"],
       accessModel: "whitelisted-onchain",
@@ -126,8 +127,19 @@ describe("getRedemptionBackstopConfig", () => {
       routeExitCorrelation: "same-protocol-liquidity",
       reviewedAt: "2026-07-30",
     });
-    expect(getRedemptionBackstopConfig("dusd-dialectic")?.capacityModel)
-      .not.toMatchObject({ fallbackRatio: expect.any(Number) });
+    expect(dusd?.capacityModel).not.toMatchObject({ fallbackRatio: expect.any(Number) });
+    expect(dusd?.docs?.find((source) => source.label === "DUSD AsyncRedeemer verified source")).toMatchObject({
+      supports: expect.arrayContaining(["fees"]),
+    });
+    expect(dusd?.docs?.find((source) => source.label === "DUSD Machine Terms")?.supports).not.toContain("fees");
+    const dusdNotes = dusd?.notes?.join(" ") ?? "";
+    expect(dusdNotes).toContain("no contractual queue priority");
+    expect(dusdNotes).toContain("no perpetual zero-fee covenant");
+    expect(dusdNotes).toContain("not a contractual redemption right");
+    expect(dusdNotes).toContain("remain unfilled indefinitely");
+    expect(dusdNotes).toContain("U.S. persons");
+    expect(dusdNotes).toContain("EU/EEA-originating transactions may be refused");
+    expect(dusdNotes).toContain("cease the Machine without notice");
 
     expect(getRedemptionBackstopConfig("susd1plus-lorenzo")).toMatchObject({
       routeFamily: "queue-redeem",
