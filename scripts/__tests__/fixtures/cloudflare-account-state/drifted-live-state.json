@@ -27,7 +27,7 @@
     {
       "type": "self_hosted",
       "selfHostedDomains": ["ops.pharos.watch/*"],
-      "sessionDuration": "12h"
+      "sessionDuration": "24h"
     },
     {
       "type": "self_hosted",
