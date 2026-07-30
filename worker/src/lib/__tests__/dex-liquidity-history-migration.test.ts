@@ -1,8 +1,16 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
+const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
+
+// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
+function resolveMigrationPath(file: string): string {
+  const fixture = path.join(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
+}
 
 function openSqlite(): import("node:sqlite").DatabaseSync {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -12,7 +20,7 @@ function openSqlite(): import("node:sqlite").DatabaseSync {
 
 function applyMigration(sqlite: import("node:sqlite").DatabaseSync, file: string): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted test-only path under worker/migrations/
-  sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, file), "utf8"));
+  sqlite.exec(readFileSync(resolveMigrationPath(file), "utf8"));
 }
 
 function createLegacyDexLiquidityHistory(sqlite: import("node:sqlite").DatabaseSync): void {

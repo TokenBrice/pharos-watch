@@ -31,7 +31,8 @@ const CHILD_PREREQUISITES = {
   "reserve-post-sync-watchdog": ["sync-live-reserves"],
 } as const;
 
-const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
+const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../test-helpers/migration-fixtures");
+
 
 function createHarness() {
   const sqlite = new DatabaseSync(":memory:");

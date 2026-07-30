@@ -1,9 +1,17 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
+const MIGRATIONS_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
+const FIXTURES_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
+
+// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
+function resolveMigrationPath(file: string): string {
+  const fixture = join(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  return existsSync(fixture) ? fixture : join(MIGRATIONS_DIR, file);
+}
 const PREVIOUS_MIGRATION = "0212_cngn_ddr_events_90638_90658_link.sql";
 const TARGET_MIGRATION = "0213_terminalize_published_dex_attempt_1784229000.sql";
 const ATTEMPT_ID =
@@ -12,7 +20,7 @@ const ATTEMPT_ID =
 function applyMigration(db: DatabaseSync, file: string): void {
   // Test-only replay of repo-controlled migration files.
   // eslint-disable-next-line security/detect-non-literal-fs-filename
-  db.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
+  db.exec(readFileSync(resolveMigrationPath(file), "utf8"));
 }
 
 function applyThrough(db: DatabaseSync, throughFile: string): void {

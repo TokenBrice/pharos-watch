@@ -48,7 +48,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
     paths: ["worker/src/cron/telegram-alert-*.ts", "worker/migrations/**"],
     examples: [
       "worker/src/cron/telegram-alert-jobs.ts",
-      "worker/migrations/0183_telegram_fresh_target_effect_fencing.sql",
+      "worker/src/test-helpers/migration-fixtures/0183_telegram_fresh_target_effect_fencing.sql",
     ],
   },
   {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
   buildSourceRiskGoldenFixture,
@@ -30,7 +30,15 @@ import {
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
 import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
 
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
+const MIGRATIONS_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
+const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
+
+// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
+function resolveMigrationPath(file: string): string {
+  const fixture = path.join(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
+}
 
 const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 
@@ -1425,8 +1433,10 @@ describe("yield publication migration compatibility", () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
     try {
-      sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, "0000_baseline.sql"), "utf8"));
-      sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, "0125_yield_publication_generations.sql"), "utf8"));
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+      sqlite.exec(readFileSync(resolveMigrationPath("0000_baseline.sql"), "utf8"));
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+      sqlite.exec(readFileSync(resolveMigrationPath("0125_yield_publication_generations.sql"), "utf8"));
 
       sqlite
         .prepare(

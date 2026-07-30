@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
@@ -26,7 +26,8 @@ import {
   DDR_FORECAST_READINESS_VERSION,
 } from "@shared/lib/depeg-resolver-version";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
+const MIGRATIONS_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
+const FIXTURES_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
 interface SqliteD1 extends D1Database {
   close(): void;
   sqlite: DatabaseSync;
@@ -37,9 +38,14 @@ function migrationFiles(): string[] {
 }
 
 function applyMigrationFile(db: DatabaseSync, file: string): void {
-  // Test-only migration replay loads repo-controlled SQL from the migration directory.
+  // Test-only migration replay loads repo-controlled SQL from the migration
+  // directory, falling back to the frozen fixtures for migrations absorbed by
+  // the 2026-07-30 baseline squash.
+  const fixturePath = join(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  const path = existsSync(fixturePath) ? fixturePath : join(MIGRATIONS_DIR, file);
   // eslint-disable-next-line security/detect-non-literal-fs-filename
-  db.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
+  db.exec(readFileSync(path, "utf8"));
 }
 
 function applyMigrations(db: DatabaseSync): void {

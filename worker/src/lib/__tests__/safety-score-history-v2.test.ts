@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
@@ -26,9 +26,19 @@ import {
 } from "../safety-score-history-v2";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
-const HISTORY_V2_MIGRATION = readFileSync(resolve(MIGRATIONS_DIR, "0201_safety_score_history_v2.sql"), "utf8");
+const FIXTURES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../test-helpers/migration-fixtures");
+
+// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
+function resolveMigrationPath(file: string): string {
+  const fixture = resolve(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  return existsSync(fixture) ? fixture : resolve(MIGRATIONS_DIR, file);
+}
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+const HISTORY_V2_MIGRATION = readFileSync(resolveMigrationPath("0201_safety_score_history_v2.sql"), "utf8");
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
 const HISTORY_V2_IDENTITY_SCHEMA_MIGRATION = readFileSync(
-  resolve(MIGRATIONS_DIR, "0204_safety_score_history_v2_identity_schema.sql"),
+  resolveMigrationPath("0204_safety_score_history_v2_identity_schema.sql"),
   "utf8",
 );
 const digest = (character: string) => character.repeat(64);
