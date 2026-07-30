@@ -114,7 +114,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "01a46daf0043bc02d9088d8522dce71f1aa6ed4a0a6efc09a4212a7493d4226b"
+      "sha256": "76267c55b052b62052e264aca0706b05bb8363241abc199966cfd0b0355f1669"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -489,7 +489,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "935ffbf0a21ed9b1d0faec3ade91d6a8a4b96cf2831df60e006edca96f9e0022"
+  "digest": "d0c83d4e1f71f837af7a39761f478f322ebd6543c0e239c52fac3e62c59f8977"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
