@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "b6c6faf4031b3064a426dc0276c1c049cdb67f746f42c3aa79f0de769a66d281"
+      "sha256": "fdc7f6d4a058238573b14a9c06d31cffacb5ca05c7d5218b820de94c7b805d02"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -114,7 +114,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "a7a4ef4863199d4da25f73de430e0838ceaf0192b85d3c5e5a71ab9b16bdfb5d"
+      "sha256": "01a46daf0043bc02d9088d8522dce71f1aa6ed4a0a6efc09a4212a7493d4226b"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -330,7 +330,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserves.ts",
-      "sha256": "1afeffc1c13d667564a3431ff297d0985404a82618ceb38785e4f0498eecae1b"
+      "sha256": "1d76f48cb63f1323a6764021fa5d20460a85c755ff5f0499a3998cc73df9ce9c"
     },
     {
       "path": "shared/types/safety-score-v9-backing.ts",
@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-wrapper.ts",
-      "sha256": "2b02128dedb2e9d1bbc4629300e6c1d21e0085731bcb6b3556da22c48d937d35"
+      "sha256": "f25b8b26e696f4de46d954b9d44158c76b1913d26bbd4eca2e976770cdd0dc2f"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set.ts",
@@ -489,7 +489,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "bbb6178332b29b61ba195d7c051b9549dbf6f58d2c78421194f8af60af3ce698"
+  "digest": "935ffbf0a21ed9b1d0faec3ade91d6a8a4b96cf2831df60e006edca96f9e0022"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
