@@ -461,7 +461,7 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
           tone={rowBreakdown.falseRecoverable > 0 ? "red" : "muted"}
         />
         <BreakdownStat
-          label="inside IQR"
+          label="inside typical range"
           value={`${rowBreakdown.withinIqrCount}/${rowBreakdown.iqrScoredCount}`}
         />
         <BreakdownStat label="pending" value={pending} />

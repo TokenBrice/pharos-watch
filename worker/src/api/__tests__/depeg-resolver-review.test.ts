@@ -74,7 +74,7 @@ function snapshot(computedAt: number, expiresAt: number): LegacyDdrrCachePayload
       assessmentRowsTruncated: false,
       incidentRowLimit: 20_000,
       incidentRowsTruncated: false,
-      publicRowLimit: 100,
+      publicRowLimit: 400,
       publicRowsTruncated: false,
       methodologyVersions: [DDR_METHODOLOGY_VERSION],
     },

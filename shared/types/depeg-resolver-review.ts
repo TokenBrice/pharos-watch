@@ -22,8 +22,8 @@ import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 
 // Public Zod schemas keep exported companion aliases as the contract type surface.
 
-export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v3";
-export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
+export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";
+export const DDRR_SNAPSHOT_CACHE_GENERATION = 3;
 export const DDRR_PUBLIC_WARNING =
   "Reviews compare frozen DDR predictions Pharos published with later Pharos event data. Coverage rows are not scored as predictions.";
 
@@ -132,6 +132,13 @@ export const DdrrTerminalEvidenceIntervalSchema = z.object({
 });
 export type DdrrTerminalEvidenceInterval = z.infer<typeof DdrrTerminalEvidenceIntervalSchema>;
 
+export const DdrrLineageSchema = z.object({
+  autoRepaired: z.literal(true).optional(),
+  repairSources: z.array(z.string()).min(1).optional(),
+  parentIncidentKey: z.string().optional(),
+});
+export type DdrrLineage = z.infer<typeof DdrrLineageSchema>;
+
 export const DdrrAssessmentSchema = z.object({
   eventId: z.number().int().nonnegative(),
   currentEventId: z.number().int().nonnegative().nullable().optional().default(null),
@@ -163,6 +170,7 @@ export const DdrrAssessmentSchema = z.object({
   horizonCells: z.array(DdrHorizonCellSchema),
   stratum: z.string().nullable(),
   factors: z.array(DdrFactorSchema),
+  lineage: DdrrLineageSchema.optional(),
 });
 export type DdrrAssessment = z.infer<typeof DdrrAssessmentSchema>;
 
@@ -209,6 +217,7 @@ export const DdrrV2BaseRowSchema = z.object({
   terminalEvidenceAt: z.number().int().nonnegative().nullable(),
   terminalEvidenceInterval: DdrrTerminalEvidenceIntervalSchema.nullable(),
   terminalEvidencePrecision: z.enum(DDRR_TERMINAL_EVIDENCE_PRECISION_VALUES).nullable(),
+  lineage: DdrrLineageSchema.optional(),
 });
 export type DdrrV2BaseRow = z.infer<typeof DdrrV2BaseRowSchema>;
 
@@ -330,6 +339,16 @@ export const DdrrHorizonHitRateSchema = z.object({
 });
 export type DdrrHorizonHitRate = z.infer<typeof DdrrHorizonHitRateSchema>;
 
+export const DdrrHorizonCalibrationSchema = z.object({
+  horizon: z.enum(DDR_HORIZON_VALUES),
+  scored: z.number().int().nonnegative(),
+  meanPredictedProbability: z.number().min(0).max(1).nullable(),
+  realizedClosureShare: z.number().min(0).max(1).nullable(),
+  biasPp: z.number().min(-100).max(100).nullable(),
+  zScore: z.number().finite().nullable(),
+});
+export type DdrrHorizonCalibration = z.infer<typeof DdrrHorizonCalibrationSchema>;
+
 export const DdrrV2SummaryMetricsSchema = z.object({
   activeEligibleIncidentCount: z.number().int().nonnegative(),
   policyUniverseIncidentCount: z.number().int().nonnegative(),
@@ -375,6 +394,7 @@ export const DdrrV2SummaryMetricsSchema = z.object({
   invalidatedByReason: z.record(z.string(), z.number().int().nonnegative()),
   accuracyDenominatorLabel: z.string(),
   horizonHitRates: z.array(DdrrHorizonHitRateSchema),
+  horizonCalibration: z.array(DdrrHorizonCalibrationSchema).default([]),
 });
 export type DdrrV2SummaryMetrics = z.infer<typeof DdrrV2SummaryMetricsSchema>;
 

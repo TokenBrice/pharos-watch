@@ -219,6 +219,7 @@ function baseRowFromAssessment(assessment: DdrrAssessmentInput, outcome: DdrrDer
     terminalEvidenceAt: outcome.terminalEvidenceAt,
     terminalEvidenceInterval: outcome.terminalEvidenceInterval,
     terminalEvidencePrecision: outcome.terminalEvidencePrecision,
+    lineage: assessment.lineage,
   };
 }
 
@@ -320,6 +321,7 @@ export function buildDdrrCoverageRow(input: DdrrV2CoverageInput): DdrrV2Coverage
     terminalEvidenceAt: input.terminalEvidenceAt ?? null,
     terminalEvidenceInterval: input.terminalEvidenceInterval ?? null,
     terminalEvidencePrecision: input.terminalEvidencePrecision ?? null,
+    lineage: input.lineage,
     kind: "coverage",
     predictionState: input.predictionState,
     actualEndedAt: input.actualEndedAt ?? null,
@@ -351,6 +353,7 @@ export function buildDdrrInvalidatedPredictionRow(
     terminalEvidenceAt: input.terminalEvidenceAt ?? null,
     terminalEvidenceInterval: input.terminalEvidenceInterval ?? null,
     terminalEvidencePrecision: input.terminalEvidencePrecision ?? null,
+    lineage: input.lineage,
     kind: "invalidated_prediction",
     publicPredictionId: input.publicPredictionId,
     assessmentId: input.assessmentId,
