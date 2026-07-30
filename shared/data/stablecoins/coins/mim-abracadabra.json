@@ -3,6 +3,8 @@
   "name": "Magic Internet Money",
   "symbol": "MIM",
   "status": "frozen",
+  "windDownAnnouncedAt": "2026-06-24",
+  "windDownSourceUrl": "https://abracadabra.money/",
   "frozenAt": "2026-07-26",
   "obituary": {
     "causeOfDeath": "liquidity-drain",

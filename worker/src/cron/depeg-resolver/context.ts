@@ -6,6 +6,7 @@ import {
   type DdrActiveEventInput,
   type DdrIncident,
   type DdrSafetyContextProvenance,
+  type DdrV9ExitContext,
 } from "@shared/lib/depeg-resolver";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -27,6 +28,7 @@ import {
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
   DAY,
@@ -39,7 +41,13 @@ import type {
   DdrLineage,
   QueryRowsResult,
 } from "./types";
-import { formatDdrrFailure, placeholders, toStructural } from "./utils";
+import {
+  clearV9DependencyImpairment,
+  formatDdrrFailure,
+  hydrateV9DependencyImpairment,
+  placeholders,
+  toStructural,
+} from "./utils";
 
 export interface DdrLoadedContext {
   active: DdrActiveEventInput[];
@@ -48,11 +56,15 @@ export interface DdrLoadedContext {
   incidents: DdrIncident[];
   quarantined: Set<string>;
   supplyByCoin: Map<string, { date: number; usd: number }[]>;
+  mintBurnHourlyByCoin: Map<string, { hourTs: number; netFlowUsd: number }[]>;
   dewsByCoin: Map<string, { stablecoin_id: string; score: number; band: string; signals_json: string | null; computed_at: number }>;
-  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; updated_at: number }>;
+  liqByCoin: Map<string, { stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; total_tvl_usd: number | null; total_volume_24h_usd: number | null; updated_at: number }>;
   liqTvlChange7dByCoin: Map<string, number>;
+  liqTvlChange30dByCoin: Map<string, number>;
+  liqVolumeChange30dByCoin: Map<string, number>;
   redemptionByCoin: Map<string, { stablecoin_id: string; immediate_capacity_ratio: number | null; route_family: string | null; updated_at: number }>;
   safetyByCoin: Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>;
+  v9ExitByCoin: Map<string, DdrV9ExitContext>;
   safetyContext: DdrSafetyContextProvenance;
   lineage: DdrLineage;
 }
@@ -60,6 +72,12 @@ export interface DdrLoadedContext {
 export type DdrContextLoadResult =
   | { kind: "ok"; context: DdrLoadedContext }
   | { kind: "degraded"; reason: string; dataAsOf: number | null };
+
+type DdrDexHistoryRow = DexHistoryRow & {
+  total_volume_24h_usd: number;
+};
+
+const MINT_BURN_COVERED_COIN_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
 export function emptyDdrLineage(nowSec: number): DdrLineage {
   return {
@@ -156,6 +174,7 @@ export async function loadDdrContext(
   activeRows: DdrEventDbRow[],
   nowSec: number,
 ): Promise<DdrContextLoadResult> {
+  clearV9DependencyImpairment();
   const currentDeviation = await buildCurrentDeviationMap(db, nowSec);
   if (!currentDeviation.healthy) {
     return {
@@ -231,6 +250,36 @@ export async function loadDdrContext(
     supplyByCoin.set(s.stablecoin_id, list);
   }
 
+  const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
+  const mintBurnResult: QueryRowsResult<{
+    stablecoin_id: string;
+    hour_ts: number;
+    net_flow_usd: number;
+  }> = mintBurnCoinIds.length === 0
+    ? { rows: [], error: null }
+    : await queryRows("mint_burn_hourly", () => db
+        .prepare(
+          `SELECT stablecoin_id, hour_ts, net_flow_usd FROM mint_burn_hourly ` +
+            `WHERE stablecoin_id IN (${placeholders(mintBurnCoinIds.length)}) AND hour_ts >= ? AND hour_ts <= ? ` +
+            "ORDER BY stablecoin_id, hour_ts ASC",
+        )
+        .bind(
+          ...mintBurnCoinIds,
+          Math.min(...active.map((event) => event.startedAt - 7 * DAY)),
+          Math.max(...active.map((event) => event.startedAt)),
+        )
+        .all<{
+          stablecoin_id: string;
+          hour_ts: number;
+          net_flow_usd: number;
+        }>());
+  const mintBurnHourlyByCoin = new Map<string, { hourTs: number; netFlowUsd: number }[]>();
+  for (const row of mintBurnResult.rows) {
+    const list = mintBurnHourlyByCoin.get(row.stablecoin_id) ?? [];
+    list.push({ hourTs: row.hour_ts, netFlowUsd: row.net_flow_usd });
+    mintBurnHourlyByCoin.set(row.stablecoin_id, list);
+  }
+
   const publishedDews = await loadPublishedStressSignalGeneration(db, nowSec);
   const activeCoinIdSet = new Set(activeCoinIds);
   const dewsResult: QueryRowsResult<{
@@ -249,7 +298,7 @@ export async function loadDdrContext(
 
   const liqResult = await queryRows("dex_liquidity", () => db
     .prepare(
-      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, updated_at FROM dex_liquidity ` +
+      `SELECT stablecoin_id, liquidity_score, concentration_hhi, total_tvl_usd, total_volume_24h_usd, updated_at FROM dex_liquidity ` +
         `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) ` +
         `AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
@@ -259,34 +308,71 @@ export async function loadDdrContext(
       liquidity_score: number | null;
       concentration_hhi: number | null;
       total_tvl_usd: number | null;
+      total_volume_24h_usd: number | null;
       updated_at: number;
     }>());
   const liqByCoin = new Map(liqResult.rows.map((l) => [l.stablecoin_id, l]));
 
   const liqHistResult = await queryRows("dex_liquidity_history", () => db
     .prepare(
-      `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence ` +
+      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, snapshot_date, coverage_class, coverage_confidence ` +
         `FROM dex_liquidity_history ` +
         `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) AND snapshot_date >= ? ` +
         `ORDER BY stablecoin_id, snapshot_date DESC`,
     )
-    .bind(...activeCoinIds, nowSec - 8 * DAY)
-    .all<DexHistoryRow>());
-  const liqHistoryByCoin = new Map<string, DexHistoryRow[]>();
+    .bind(...activeCoinIds, nowSec - 32 * DAY)
+    .all<DdrDexHistoryRow>());
+  const liqHistoryByCoin = new Map<string, DdrDexHistoryRow[]>();
   for (const row of liqHistResult.rows) {
     const rows = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
     rows.push(row);
     liqHistoryByCoin.set(row.stablecoin_id, rows);
   }
   const liqTvlChange7dByCoin = new Map<string, number>();
+  const liqTvlChange30dByCoin = new Map<string, number>();
+  const liqVolumeChange30dByCoin = new Map<string, number>();
   const target7d = nowSec - 7 * DAY;
+  const target30d = nowSec - 30 * DAY;
   const { week: trend7dToleranceSec } = getDexLiquidityTrendTolerances();
   for (const row of liqResult.rows) {
     const currentTvl = row.total_tvl_usd;
-    if (currentTvl == null || !Number.isFinite(currentTvl)) continue;
-    const baseline = selectTrendBaseline(liqHistoryByCoin.get(row.stablecoin_id) ?? [], target7d, trend7dToleranceSec);
-    if (!baseline || baseline.total_tvl_usd <= 0) continue;
-    liqTvlChange7dByCoin.set(row.stablecoin_id, ((currentTvl - baseline.total_tvl_usd) / baseline.total_tvl_usd) * 100);
+    const history = liqHistoryByCoin.get(row.stablecoin_id) ?? [];
+    const baseline7d = selectTrendBaseline(history, target7d, trend7dToleranceSec) as DdrDexHistoryRow | null;
+    if (
+      currentTvl != null &&
+      Number.isFinite(currentTvl) &&
+      baseline7d &&
+      baseline7d.total_tvl_usd > 0
+    ) {
+      liqTvlChange7dByCoin.set(
+        row.stablecoin_id,
+        ((currentTvl - baseline7d.total_tvl_usd) / baseline7d.total_tvl_usd) * 100,
+      );
+    }
+    const baseline30d = selectTrendBaseline(history, target30d, trend7dToleranceSec) as DdrDexHistoryRow | null;
+    if (
+      currentTvl != null &&
+      Number.isFinite(currentTvl) &&
+      baseline30d &&
+      baseline30d.total_tvl_usd > 0
+    ) {
+      liqTvlChange30dByCoin.set(
+        row.stablecoin_id,
+        ((currentTvl - baseline30d.total_tvl_usd) / baseline30d.total_tvl_usd) * 100,
+      );
+    }
+    const currentVolume = row.total_volume_24h_usd;
+    if (
+      baseline30d &&
+      baseline30d.total_volume_24h_usd > 0 &&
+      currentVolume != null &&
+      Number.isFinite(currentVolume)
+    ) {
+      liqVolumeChange30dByCoin.set(
+        row.stablecoin_id,
+        ((currentVolume - baseline30d.total_volume_24h_usd) / baseline30d.total_volume_24h_usd) * 100,
+      );
+    }
   }
 
   // Redemption fields come from the store's completed-run snapshot (immutable
@@ -305,6 +391,7 @@ export async function loadDdrContext(
   const redemptionByCoin = new Map(redemptionResult.rows.map((r) => [r.stablecoin_id, r]));
 
   let safetyByCoin = new Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>();
+  let v9ExitByCoin = new Map<string, DdrV9ExitContext>();
   let safetyContext: DdrSafetyContextProvenance = {
     status: "cache-unavailable",
     reason: "safety-score-v9-unavailable",
@@ -320,6 +407,7 @@ export async function loadDdrContext(
           identity: activeSafetySource.snapshot.safetyScoreIdentity,
         };
       } else {
+        hydrateV9DependencyImpairment(activeSafetySource.snapshot.cards);
         safetyContext = {
           status: "v9-identified",
           reason: null,
@@ -338,6 +426,26 @@ export async function loadDdrContext(
               },
             ]),
         );
+        v9ExitByCoin = new Map(
+          activeSafetySource.snapshot.cards
+            .filter((card) => activeCoinIds.includes(card.id))
+            .map((card) => [
+              card.id,
+              {
+                pillarScore: card.pillars.exit.score,
+                reasonCodes: card.pillars.exit.reasons.map((reason) => reason.code),
+                stressRequest: card.breakdowns?.exit.stressRequest ?? null,
+                primaryRoute:
+                  card.breakdowns?.exit.primaryRoute == null
+                    ? null
+                    : {
+                        key: card.breakdowns.exit.primaryRoute.key,
+                        score: card.breakdowns.exit.primaryRoute.score,
+                        capacity: card.breakdowns.exit.primaryRoute.capacity ?? null,
+                      },
+              },
+            ]),
+        );
       }
     } else {
       safetyContext = {
@@ -352,6 +460,7 @@ export async function loadDdrContext(
 
   const resolverHealthFailures = [
     supplyResult.error,
+    mintBurnResult.error,
     dewsResult.error,
     liqResult.error,
     liqHistResult.error,
@@ -370,11 +479,15 @@ export async function loadDdrContext(
       incidents,
       quarantined,
       supplyByCoin,
+      mintBurnHourlyByCoin,
       dewsByCoin,
       liqByCoin,
       liqTvlChange7dByCoin,
+      liqTvlChange30dByCoin,
+      liqVolumeChange30dByCoin,
       redemptionByCoin,
       safetyByCoin,
+      v9ExitByCoin,
       safetyContext,
       lineage: {
         trainingWindow: { start: windowStart, end: nowSec },

@@ -193,6 +193,11 @@ const StablecoinMetaAssetSchemaShape = {
     })
     .strict()
     .optional(),
+  windDownAnnouncedAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  windDownSourceUrl: z.string().url().optional(),
   frozenAt: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
