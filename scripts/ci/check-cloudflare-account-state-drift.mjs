@@ -97,11 +97,12 @@ export function compareCloudflareAccountState(manifest, liveState) {
 
   const accessApplications = asArray(liveState?.accessApplications);
   for (const expected of manifest.accessApplications) {
+    const expectedDomains = sortedStrings(expected.selfHostedDomains.map(normalizeAccessDomain));
     const matchingApplications = accessApplications.filter(
       (application) =>
         isRecord(application) &&
         application.type === expected.type &&
-        sameStrings(application.selfHostedDomains, expected.selfHostedDomains),
+        sameStrings(sortedStrings(asArray(application.selfHostedDomains).map(normalizeAccessDomain)), expectedDomains),
     );
     if (matchingApplications.length !== 1) {
       const noun = matchingApplications.length === 0 ? "missing" : `expected one, found ${matchingApplications.length}`;
@@ -230,18 +231,47 @@ function normalizePagesEnvironmentVariables(value) {
   );
 }
 
+function normalizeUnifiedPagesBindings(production) {
+  const environmentVariables = {};
+  const d1Bindings = [];
+  const kvBindings = [];
+  for (const binding of asArray(production?.bindings)) {
+    if (!isRecord(binding) || typeof binding.name !== "string") continue;
+    if (binding.type === "d1") {
+      d1Bindings.push(binding.name);
+    } else if (binding.type === "kv_namespace") {
+      kvBindings.push(binding.name);
+    } else if (binding.type === "plain_text" || binding.type === "secret_text") {
+      const normalized = { type: binding.type };
+      if (binding.type === "plain_text" && typeof binding.text === "string") {
+        normalized.value = binding.text;
+      }
+      environmentVariables[binding.name] = normalized;
+    }
+  }
+  return { environmentVariables, d1Bindings, kvBindings };
+}
+
 function normalizePagesDomains(value) {
   return asArray(value)
     .map((domain) => (typeof domain === "string" ? domain : isRecord(domain) ? domain.name : undefined))
     .filter((domain) => typeof domain === "string");
 }
 
+function normalizeAccessDomain(value) {
+  return normalizeString(value).replace(/\/\*$/, "");
+}
+
 function normalizeAccessApplications(value) {
-  return asArray(value).map((application) => ({
-    type: normalizeString(application?.type),
-    selfHostedDomains: sortedStrings(application?.self_hosted_domains),
-    sessionDuration: normalizeString(application?.session_duration),
-  }));
+  return asArray(value).map((application) => {
+    const selfHosted = asArray(application?.self_hosted_domains);
+    const domains = selfHosted.length > 0 ? selfHosted : [application?.domain].filter((domain) => typeof domain === "string");
+    return {
+      type: normalizeString(application?.type),
+      selfHostedDomains: sortedStrings(domains.map(normalizeAccessDomain)),
+      sessionDuration: normalizeString(application?.session_duration),
+    };
+  });
 }
 
 function normalizeWorkerDomains(value) {
@@ -320,6 +350,7 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
     ),
   ]);
   const production = isRecord(project?.deployment_configs?.production) ? project.deployment_configs.production : {};
+  const unified = normalizeUnifiedPagesBindings(production);
 
   return {
     zone: {
@@ -330,9 +361,16 @@ export async function fetchCloudflareAccountState({ manifest, apiToken, fetchImp
       project: {
         name: normalizeString(project?.name),
         production: {
-          environmentVariables: normalizePagesEnvironmentVariables(production.env_vars),
-          d1Bindings: Object.keys(isRecord(production.d1_databases) ? production.d1_databases : {}),
-          kvBindings: Object.keys(isRecord(production.kv_namespaces) ? production.kv_namespaces : {}),
+          environmentVariables: {
+            ...normalizePagesEnvironmentVariables(production.env_vars),
+            ...unified.environmentVariables,
+          },
+          d1Bindings: [
+            ...new Set([...Object.keys(isRecord(production.d1_databases) ? production.d1_databases : {}), ...unified.d1Bindings]),
+          ],
+          kvBindings: [
+            ...new Set([...Object.keys(isRecord(production.kv_namespaces) ? production.kv_namespaces : {}), ...unified.kvBindings]),
+          ],
         },
       },
       customDomains: normalizePagesDomains(pageDomains),

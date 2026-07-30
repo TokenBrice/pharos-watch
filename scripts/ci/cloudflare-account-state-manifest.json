@@ -1,110 +1,176 @@
 {
-  "version": 1,
-  "zone": {
-    "name": "pharos.watch",
-    "status": "active"
-  },
-  "pages": {
-    "project": "stablecoin-dashboard",
-    "production": {
-      "requiredEnvironmentVariables": [
-        { "name": "CF_ACCESS_OPS_UI_AUD", "type": "plain_text" },
-        { "name": "CF_ACCESS_TEAM_DOMAIN", "type": "plain_text" },
-        { "name": "OPS_API_SERVICE_TOKEN_ID", "type": "secret_text" },
-        { "name": "OPS_API_SERVICE_TOKEN_SECRET", "type": "secret_text" },
-        { "name": "SELECTOR_SNAPSHOT_IP_HASH_SECRET", "type": "secret_text" },
-        { "name": "SITE_API_ORIGIN", "type": "plain_text", "value": "https://site-api.pharos.watch" },
-        { "name": "SITE_API_SHARED_SECRET", "type": "secret_text" },
-        { "name": "TELEGRAM_ADOPTION_IP_HASH_SECRET", "type": "secret_text" }
-      ],
-      "requiredD1Bindings": ["DB"],
-      "requiredKvBindings": ["SELECTOR_SNAPSHOTS"]
-    },
-    "customDomains": ["ops.pharos.watch", "pharos.watch"]
-  },
-  "accessApplications": [
+ "version": 1,
+ "zone": {
+  "name": "pharos.watch",
+  "status": "active"
+ },
+ "pages": {
+  "project": "stablecoin-dashboard",
+  "production": {
+   "requiredEnvironmentVariables": [
     {
-      "key": "operator-ui",
-      "type": "self_hosted",
-      "selfHostedDomains": ["ops.pharos.watch/*"],
-      "sessionDuration": "4h"
+     "name": "CF_ACCESS_OPS_UI_AUD",
+     "type": "plain_text"
     },
     {
-      "key": "operator-api",
-      "type": "self_hosted",
-      "selfHostedDomains": ["ops-api.pharos.watch/*"]
+     "name": "CF_ACCESS_TEAM_DOMAIN",
+     "type": "secret_text"
+    },
+    {
+     "name": "OPS_API_SERVICE_TOKEN_ID",
+     "type": "secret_text"
+    },
+    {
+     "name": "OPS_API_SERVICE_TOKEN_SECRET",
+     "type": "secret_text"
+    },
+    {
+     "name": "SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+     "type": "secret_text"
+    },
+    {
+     "name": "SITE_API_ORIGIN",
+     "type": "plain_text",
+     "value": "https://site-api.pharos.watch"
+    },
+    {
+     "name": "SITE_API_SHARED_SECRET",
+     "type": "secret_text"
+    },
+    {
+     "name": "TELEGRAM_ADOPTION_IP_HASH_SECRET",
+     "type": "secret_text"
     }
-  ],
-  "workerCustomDomains": {
-    "service": "stablecoin-api",
-    "hostnames": ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"]
+   ],
+   "requiredD1Bindings": [
+    "DB"
+   ],
+   "requiredKvBindings": [
+    "SELECTOR_SNAPSHOTS"
+   ]
   },
-  "rateLimitRules": [
-    {
-      "description": "api-rate-limit-ip",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not (http.request.uri.path in {\"/api/telegram-webhook\" \"/api/telegram-mini-app/session\" \"/api/telegram-mini-app/mutate\"}) and not cf.bot_management.verified_bot)",
-      "ratelimit": {
-        "characteristics": ["ip.src"],
-        "requestsPerPeriod": 120,
-        "period": 10,
-        "mitigationTimeout": 10
-      }
-    },
-    {
-      "description": "api-self-serve-key-intake-limit",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/api-key-requests\" or http.request.uri.path eq \"/api/api-key-requests/verify\") and not cf.bot_management.verified_bot)",
-      "ratelimit": {
-        "characteristics": ["ip.src"],
-        "requestsPerPeriod": 20,
-        "period": 60,
-        "mitigationTimeout": 600
-      }
-    },
-    {
-      "description": "telegram-webhook-ingress-limit",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-webhook\")",
-      "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
-        "requestsPerPeriod": 2400,
-        "period": 60,
-        "mitigationTimeout": 60
-      }
-    },
-    {
-      "description": "telegram-mini-app-session-ingress-limit",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/session\")",
-      "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
-        "requestsPerPeriod": 120,
-        "period": 60,
-        "mitigationTimeout": 60
-      }
-    },
-    {
-      "description": "telegram-mini-app-mutation-ingress-limit",
-      "enabled": true,
-      "action": "block",
-      "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/mutate\")",
-      "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
-        "requestsPerPeriod": 360,
-        "period": 60,
-        "mitigationTimeout": 60
-      }
-    }
-  ],
-  "rateLimitOrdering": [
-    ["api-self-serve-key-intake-limit", "api-rate-limit-ip"],
-    ["telegram-webhook-ingress-limit", "api-rate-limit-ip"],
-    ["telegram-mini-app-session-ingress-limit", "api-rate-limit-ip"],
-    ["telegram-mini-app-mutation-ingress-limit", "api-rate-limit-ip"]
+  "customDomains": [
+   "ops.pharos.watch",
+   "pharos.watch"
   ]
+ },
+ "accessApplications": [
+  {
+   "key": "operator-ui",
+   "type": "self_hosted",
+   "selfHostedDomains": [
+    "ops.pharos.watch/*"
+   ],
+   "sessionDuration": "4h"
+  },
+  {
+   "key": "operator-api",
+   "type": "self_hosted",
+   "selfHostedDomains": [
+    "ops-api.pharos.watch/*"
+   ]
+  }
+ ],
+ "workerCustomDomains": {
+  "service": "stablecoin-api",
+  "hostnames": [
+   "api.pharos.watch",
+   "ops-api.pharos.watch",
+   "site-api.pharos.watch"
+  ]
+ },
+ "rateLimitRules": [
+  {
+   "description": "api-rate-limit-ip",
+   "enabled": true,
+   "action": "block",
+   "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not (http.request.uri.path in {\"/api/telegram-webhook\" \"/api/telegram-mini-app/session\" \"/api/telegram-mini-app/mutate\"}) and not cf.bot_management.verified_bot)",
+   "ratelimit": {
+    "characteristics": [
+     "cf.colo.id",
+     "ip.src"
+    ],
+    "requestsPerPeriod": 120,
+    "period": 10,
+    "mitigationTimeout": 10
+   }
+  },
+  {
+   "description": "api-self-serve-key-intake-limit",
+   "enabled": true,
+   "action": "block",
+   "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/api-key-requests\" or http.request.uri.path eq \"/api/api-key-requests/verify\") and not cf.bot_management.verified_bot)",
+   "ratelimit": {
+    "characteristics": [
+     "ip.src"
+    ],
+    "requestsPerPeriod": 20,
+    "period": 60,
+    "mitigationTimeout": 600
+   }
+  },
+  {
+   "description": "telegram-webhook-ingress-limit",
+   "enabled": true,
+   "action": "block",
+   "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-webhook\")",
+   "ratelimit": {
+    "characteristics": [
+     "ip.src",
+     "cf.colo.id"
+    ],
+    "requestsPerPeriod": 2400,
+    "period": 60,
+    "mitigationTimeout": 60
+   }
+  },
+  {
+   "description": "telegram-mini-app-session-ingress-limit",
+   "enabled": true,
+   "action": "block",
+   "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/session\")",
+   "ratelimit": {
+    "characteristics": [
+     "ip.src",
+     "cf.colo.id"
+    ],
+    "requestsPerPeriod": 120,
+    "period": 60,
+    "mitigationTimeout": 60
+   }
+  },
+  {
+   "description": "telegram-mini-app-mutation-ingress-limit",
+   "enabled": true,
+   "action": "block",
+   "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/mutate\")",
+   "ratelimit": {
+    "characteristics": [
+     "ip.src",
+     "cf.colo.id"
+    ],
+    "requestsPerPeriod": 360,
+    "period": 60,
+    "mitigationTimeout": 60
+   }
+  }
+ ],
+ "rateLimitOrdering": [
+  [
+   "api-self-serve-key-intake-limit",
+   "api-rate-limit-ip"
+  ],
+  [
+   "telegram-webhook-ingress-limit",
+   "api-rate-limit-ip"
+  ],
+  [
+   "telegram-mini-app-session-ingress-limit",
+   "api-rate-limit-ip"
+  ],
+  [
+   "telegram-mini-app-mutation-ingress-limit",
+   "api-rate-limit-ip"
+  ]
+ ]
 }
