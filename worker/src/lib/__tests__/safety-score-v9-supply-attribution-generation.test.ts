@@ -413,7 +413,7 @@ function buildFixtureCache(): FixtureCache {
     ),
     staleTarget: withClockAndAggregate(
       source,
-      SOURCE_CLOCK_SEC + 10 + 30 * 60 + 1,
+      SOURCE_CLOCK_SEC + 10 + 45 * 60 + 1,
       TARGET_AGGREGATE_USD,
     ),
     coTenantStaleGeneration: createCoTenantGeneration(
@@ -563,11 +563,30 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(applied).toMatchObject({
       status: "incompatible",
       generationId: generation.generationId,
-      reason: "generation-identity-or-freshness-mismatch",
+      reason: "generation-stale",
     });
     expect(
       applied.fixedInput.safetyScoreV9SupplyAttributionById,
     ).toEqual({});
+  });
+
+  it("keeps complete generations compatible across the producer schedule beat", () => {
+    const generation = fixtures.acceptedGeneration;
+    const target = withClockAndAggregate(
+      fixtures.acceptedFixture.fixedInput,
+      SOURCE_CLOCK_SEC + 39 * 60,
+      TARGET_AGGREGATE_USD,
+    );
+
+    expect(
+      applySafetyScoreV9SupplyAttributionGeneration(
+        target,
+        generation,
+      ),
+    ).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["xaut-tether"],
+    });
   });
 
   it("classifies only same-input complete future generations as cadence deferred", () => {
@@ -580,7 +599,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       ),
     ).toMatchObject({
       status: "incompatible",
-      reason: "generation-identity-or-freshness-mismatch",
+      reason: "captured-after-consumer",
     });
     expect(
       isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
@@ -604,6 +623,9 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
   it("uses the shorter retry cadence for complete rejected generations", () => {
     const accepted = fixtures.acceptedGeneration;
+    expect(
+      nextSafetyScoreV9SupplyAttributionDueAtSec(accepted),
+    ).toBe(accepted.capturedAtSec + 25 * 60);
     const {
       generationId: _generationId,
       ...acceptedPayload
@@ -632,7 +654,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
     expect(
       nextSafetyScoreV9SupplyAttributionDueAtSec(rejected),
-    ).toBe(rejected.capturedAtSec + 15 * 60);
+    ).toBe(rejected.capturedAtSec + 14 * 60);
   });
 
   it("rejects malformed journal references even when the generation hash is recomputed", () => {

@@ -232,6 +232,10 @@ describe("generateWeeklyRecap", () => {
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
     expect(insert).toBeTruthy();
+    const recentWeeklyQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("SELECT digest_title, digest_text, digest_meta"),
+    );
+    expect(recentWeeklyQuery?.sql).toContain("$.qualityGate");
     expect(insert?.binds[1]).toBe("PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.");
     expect(insert?.binds[2]).toBe("Weekly Calm");
     expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({

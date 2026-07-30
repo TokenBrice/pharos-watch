@@ -29,9 +29,7 @@ const validPool = {
     base_token_price_usd: "1",
     quote_token_price_usd: "1",
     reserve_in_usd: "100000",
-    h24_volume_usd: "10000",
-    pool_fee_percentage: null,
-    locked_liquidity_percentage: null,
+    volume_usd: { h24: "10000" },
   },
   relationships: {
     base_token: { data: { id: "eth_0xbase", type: "token" } },
@@ -116,6 +114,36 @@ describe("coingecko-onchain", () => {
       transportOk: true,
       schemaDegraded: true,
       pools: [],
+    });
+  });
+
+  it("accepts production-shaped CoinGecko Pro pool payloads with omitted optional attributes", async () => {
+    const capturedPool = {
+      id: "eth_0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+      type: "pool",
+      attributes: {
+        address: "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+        name: "USDC / WETH 0.05%",
+        pool_created_at: "2021-12-29T12:35:31Z",
+        base_token_price_usd: "0.9998",
+        quote_token_price_usd: "3820.12",
+        reserve_in_usd: "184250000.42",
+        volume_usd: { h24: "35200000.13" },
+      },
+      relationships: {
+        base_token: { data: { id: "eth_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", type: "token" } },
+        quote_token: { data: { id: "eth_0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", type: "token" } },
+        dex: { data: { id: "uniswap-v3", type: "dex" } },
+      },
+    };
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [capturedPool] }), { status: 200 }),
+    );
+
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xa0b8")).resolves.toEqual({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [capturedPool],
     });
   });
 

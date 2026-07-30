@@ -305,9 +305,7 @@ describe("crawlCoin DexScreener hardening", () => {
             base_token_price_usd: "1.0002",
             quote_token_price_usd: "0.9999",
             reserve_in_usd: "220000",
-            h24_volume_usd: "18000",
-            pool_fee_percentage: "0.01",
-            locked_liquidity_percentage: "25",
+            volume_usd: { h24: "18000" },
           },
           relationships: {
             base_token: { data: { id: "token_0xabc", type: "token" } },
@@ -338,15 +336,15 @@ describe("crawlCoin DexScreener hardening", () => {
       symbol: "USDC / USDT",
       tvlUsd: 220000,
       volume24h: 18000,
-      qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-1bp"],
-      poolType: "cg-cl-1bp",
-      feeTier: 1,
+      qualityMultiplier: QUALITY_MULTIPLIERS["generic"],
+      poolType: "cg-concentrated",
+      feeTier: null,
       balanceRatio: null,
       baseToken: "0xabc",
       quoteToken: "0xquote",
       quoteSymbol: null,
       priceUsd: 1.0002,
-      lockedLiqPct: 25,
+      lockedLiqPct: null,
     });
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
     expect(crawlTokenPools).not.toHaveBeenCalled();
@@ -374,9 +372,7 @@ describe("crawlCoin DexScreener hardening", () => {
             base_token_price_usd: "1",
             quote_token_price_usd: "1",
             reserve_in_usd: "220000",
-            h24_volume_usd: "18000",
-            pool_fee_percentage: null,
-            locked_liquidity_percentage: null,
+            volume_usd: { h24: "18000" },
           },
           relationships: {
             base_token: { data: { id: "solana_MintCase", type: "token" } },
@@ -475,9 +471,7 @@ describe("crawlCoin DexScreener hardening", () => {
         base_token_price_usd: "1.0002",
         quote_token_price_usd: "0.9999",
         reserve_in_usd: "220000",
-        h24_volume_usd: "18000",
-        pool_fee_percentage: "0.01",
-        locked_liquidity_percentage: "25",
+        volume_usd: { h24: "18000" },
       },
       relationships: {
         base_token: { data: { id: "token_0xabc", type: "token" } },
@@ -527,9 +521,7 @@ describe("crawlCoin DexScreener hardening", () => {
             base_token_price_usd: "76259889535.2567",
             quote_token_price_usd: "18550521.8243312",
             reserve_in_usd: "2020820673.4245",
-            h24_volume_usd: "1035914339.44693",
-            pool_fee_percentage: null,
-            locked_liquidity_percentage: null,
+            volume_usd: { h24: "1035914339.44693" },
           },
           relationships: {
             base_token: { data: { id: "eth_0x68749665ff8d2d112fa859aa293f07a622782f38", type: "token" } },

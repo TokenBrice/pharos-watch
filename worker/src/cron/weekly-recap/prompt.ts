@@ -57,6 +57,11 @@ export function buildWeeklyPrompt(
   data: WeeklyInputData,
   recentWeeklyMeta: { meta: Record<string, unknown> | null; title: string | null; rawText?: string | null }[] = [],
 ): string {
+  const safetyIdentity =
+    data.safetyContext?.status === "available"
+      ? data.safetyContext.identity
+      : null;
+  const safetyContextAvailable = safetyIdentity != null;
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
     "",
@@ -66,11 +71,11 @@ export function buildWeeklyPrompt(
     `Active depeg observations across daily editions: ${data.activeDepegObservationsThisWeek}`,
     `Unique depeg signals reconstructed from daily inputs: ${data.uniqueDepegSignalsThisWeek}`,
     `Total blacklist events: ${data.totalBlacklistEventsThisWeek}, ${formatCurrency(data.totalBlacklistAmountUsd)} affected`,
-    `Grade transitions: ${data.gradeTransitionCount}`,
+    `${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: ${data.gradeTransitionCount}`,
   ];
 
-  if (data.safetyContext?.status === "available") {
-    const identity = data.safetyContext.identity;
+  if (safetyContextAvailable) {
+    const identity = safetyIdentity;
     lines.push(
       `Safety source: ${identity.model.toUpperCase()} methodology=${identity.methodologyVersion}, build=${identity.evaluationBuildDigest}, generation=${identity.publicationGenerationId}${identity.model === "v9" ? `, policy=${identity.policyId}:${identity.policyDigest}` : ""}`,
     );
@@ -124,7 +129,9 @@ export function buildWeeklyPrompt(
     lines.push(
       `  Blacklist USD: current ${formatCurrency(d.blacklistUsd.current)} / prior ${formatCurrency(d.blacklistUsd.prior)}`,
     );
-    lines.push(`  Grade transitions: current ${d.gradeTransitions.current} / prior ${d.gradeTransitions.prior}`);
+    lines.push(
+      `  ${safetyContextAvailable ? "Grade transitions" : "Risk transitions"}: current ${d.gradeTransitions.current} / prior ${d.gradeTransitions.prior}`,
+    );
     if (d.gauge.current != null && d.gauge.prior != null) {
       lines.push(
         `  Bank Run Gauge midpoint: current ${d.gauge.current.toFixed(1)} / prior ${d.gauge.prior.toFixed(1)}`,
@@ -211,7 +218,7 @@ export function buildWeeklyPrompt(
       );
     }
   }
-  if (data.weeklySignals.topGradeTransitions.length > 0) {
+  if (safetyContextAvailable && data.weeklySignals.topGradeTransitions.length > 0) {
     lines.push("  Top grade transitions by mcap:");
     for (const transition of data.weeklySignals.topGradeTransitions) {
       lines.push(

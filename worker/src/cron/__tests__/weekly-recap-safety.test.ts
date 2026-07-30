@@ -114,6 +114,16 @@ function available(identity: SafetyScoreV8PublicationIdentity | SafetyScoreV9Pub
   };
 }
 
+function unavailable(reason = "v9-publication-held"): DigestSafetyContext {
+  return {
+    status: "unavailable",
+    expectedModel: "v9",
+    identity: null,
+    publishedAt: null,
+    reason,
+  };
+}
+
 describe("weekly recap safety identity", () => {
   it("keeps only organic transitions comparable with the active V9 policy/build", () => {
     const otherBuild = { ...v9Identity, evaluationBuildDigest: "1".repeat(64) };
@@ -150,15 +160,7 @@ describe("weekly recap safety identity", () => {
       row(3),
       row(4),
     ];
-    const unavailable: DigestSafetyContext = {
-      status: "unavailable",
-      expectedModel: "v9",
-      identity: null,
-      publishedAt: null,
-      reason: "v9-identity-mismatch",
-    };
-
-    const degraded = buildWeeklyInputData(rows, [], unavailable);
+    const degraded = buildWeeklyInputData(rows, [], unavailable("v9-identity-mismatch"));
     const restored = buildWeeklyInputData(rows, [], available(v8Identity));
 
     expect(degraded).toMatchObject({
@@ -208,5 +210,22 @@ describe("weekly recap safety identity", () => {
     expect(prompt).not.toContain("USDT Held An A Grade");
     expect(prompt).not.toContain("USDT's report card stayed A.");
     expect(prompt).toContain("USDC Moved On V9 Evidence");
+  });
+
+  it("does not prime grade language when canonical safety context is unavailable", () => {
+    const rows = [
+      row(0, [v9Transition(1_784_916_000)], v9Identity),
+      row(1, [], v9Identity),
+      row(2, [], v9Identity),
+      row(3, [], v9Identity),
+      row(4, [], v9Identity),
+    ];
+
+    const weekly = buildWeeklyInputData(rows, [], unavailable());
+    const prompt = buildWeeklyPrompt(weekly!);
+
+    expect(prompt).toContain("Risk transitions: 0");
+    expect(prompt).not.toContain("Grade transitions:");
+    expect(prompt).not.toContain("Top grade transitions by mcap");
   });
 });

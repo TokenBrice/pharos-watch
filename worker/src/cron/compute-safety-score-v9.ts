@@ -298,11 +298,14 @@ export async function computeSafetyScoreV9(
     stage: "publication-settled",
     message: `V9 publication ${publication.status}`,
   });
+  const supplyAttributionGenerationDegraded =
+    supplyAttributionGenerationState.status === "incompatible" ||
+    supplyAttributionGenerationState.status === "unavailable";
 
   return {
     status:
       publication.status === "published" &&
-      publication.outcome === "clean"
+      !supplyAttributionGenerationDegraded
         ? "ok"
         : "degraded",
     itemCount:

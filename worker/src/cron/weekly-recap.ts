@@ -332,6 +332,7 @@ export async function generateWeeklyRecap(
       `SELECT digest_title, digest_text, digest_meta
        FROM daily_digest
        WHERE json_extract(digest_meta, '$.type') = 'weekly'
+         AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 4`,
     )
     .all<{ digest_title: string | null; digest_text: string; digest_meta: string | null }>();
