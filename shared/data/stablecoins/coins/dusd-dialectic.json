@@ -2,7 +2,7 @@
   "id": "dusd-dialectic",
   "name": "Dialectic USD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is Dialectic's USDC-accounted Makina strategy share with queued exits, upstream USDC freeze exposure, and NAV tied to deployed positions.",
+  "oneLiner": "DUSD is Dialectic's USDC-accounted Makina strategy share with queued exits, live backlog-adjusted USDC buffer capacity, and upstream USDC freeze exposure.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -15,7 +15,7 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into the Dialectic USD Makina Machine and deployed by the Dialectic operator into AMM liquidity and money-market positions through Calibers on Ethereum, Base, Arbitrum, and Monad; execution is bounded by a Risk-Manager-curated Merkle instruction set, per-position and per-swap loss caps, and base-token allowlists, and an optional Security Module stakes DUSD shares as a slashable first-loss buffer",
-  "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor; exits go through the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and settlement that depends on the operator freeing accounting-token liquidity",
+  "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor. Exits go through the AsyncRedeemer FIFO queue, carry a 12-hour minimum finalization delay that is not a settlement SLA, and settle in USDC only when the operator finalizes requests after freeing accounting-token liquidity.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -45,12 +45,20 @@
       {
         "label": "Makina redemptions and whitelisting",
         "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
+      },
+      {
+        "label": "DUSD Machine Terms",
+        "url": "https://makina.finance/MeccanicoToS.pdf"
+      },
+      {
+        "label": "DUSD AsyncRedeemer verified source",
+        "url": "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract"
       }
     ],
     "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
-    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle USDC and USDC-denominated positions. Separately, the Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk, not a DUSD transfer blacklist.",
-    "reviewer": "Claude stablecoin addition (issue #705)",
-    "reviewedAt": "2026-07-29"
+    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, and USDC-denominated positions. The Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk and issuer-discretionary eligibility, not as a DUSD transfer blacklist. If a holder cannot receive USDC, the reviewed route does not establish a precommitted alternate settlement asset or guaranteed wallet-remediation path.",
+    "reviewer": "OpenAI Codex DUSD redemption backstop implementation",
+    "reviewedAt": "2026-07-30"
   },
   "links": [
     {

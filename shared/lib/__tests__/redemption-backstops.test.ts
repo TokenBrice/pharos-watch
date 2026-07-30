@@ -109,6 +109,26 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
+    expect(getRedemptionBackstopConfig("dusd-dialectic")).toMatchObject({
+      routeFamily: "queue-redeem",
+      outputAssets: ["usdc-circle"],
+      accessModel: "whitelisted-onchain",
+      holderEligibility: "issuer-discretionary",
+      settlementModel: "queued",
+      executionModel: "opaque",
+      capacityModel: {
+        kind: "reserve-sync-metadata",
+        liveCapacityConfidence: "documented-bound",
+        basis: "live-proxy-buffer",
+      },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      routeStatus: "open",
+      routeExitCorrelation: "same-protocol-liquidity",
+      reviewedAt: "2026-07-30",
+    });
+    expect(getRedemptionBackstopConfig("dusd-dialectic")?.capacityModel)
+      .not.toMatchObject({ fallbackRatio: expect.any(Number) });
+
     expect(getRedemptionBackstopConfig("susd1plus-lorenzo")).toMatchObject({
       routeFamily: "queue-redeem",
       accessModel: "permissionless-onchain",

@@ -18,6 +18,27 @@ const PARAMS = {
   otherThresholdPct: 2,
   reconciliationTolerancePct: 0.5,
 };
+const REVIEWED_IMPLEMENTATION = "0xd53dc14e0f268494c7540153126d78e4f54cc01c";
+const ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c";
+const REVIEWED_IMPLEMENTATION_CODE_HASH =
+  "0xeed090b1c06e966eebca301a1fed3f0c152044c04912d8b5d7e7c934fa3a192a";
+const REDEMPTION_STATE = {
+  whitelistEnabled: true,
+  minimumFinalizationDelaySec: 43_200,
+  nextRequestId: 344,
+  lastFinalizedRequestId: 342,
+  pendingRequestCount: 1,
+  lockedShares: 3_000,
+  grossIdleCapacityUsd: 120.722783,
+  queueDepthUsd: 3_104.889979,
+  reservedUnclaimedUsdc: 0.003679,
+  minimumRedeemShares: 1,
+  capacityUsd: 0,
+  blockNumber: 25_646_765,
+  asyncRedeemerAddress: ASYNC_REDEEMER,
+  implementationAddress: REVIEWED_IMPLEMENTATION,
+  implementationRuntimeCodeHash: REVIEWED_IMPLEMENTATION_CODE_HASH,
+};
 
 describe("makina-strategy adapter", () => {
   it("groups protocol buckets, subtracts debts, and preserves unlabelled exposure", () => {
@@ -67,56 +88,97 @@ describe("makina-strategy adapter", () => {
       .toBe(true);
   });
 
-  it("publishes current AsyncRedeemer access, delay, and queue-index telemetry", () => {
-    expect(buildMakinaRedemptionMetadata({
-      whitelistEnabled: true,
-      finalizationDelaySec: 43_200,
-      nextRequestId: 343,
-      lastFinalizedRequestId: 342,
-    })).toEqual({
+  it("publishes backlog-adjusted live queue capacity without score-bearing settlement delay", () => {
+    const metadata = buildMakinaRedemptionMetadata(REDEMPTION_STATE);
+
+    expect(metadata).toEqual({
       redemption: {
+        capacityUsd: 0,
+        capacityKind: "live-queue",
         freshnessKind: "same-run-onchain",
-        holderEligibility: "whitelisted-primary",
-        settlementDelaySec: 43_200,
-        routeStatus: "cohort-limited",
+        blockNumber: 25_646_765,
+        holderEligibility: "issuer-discretionary",
+        queueDepthUsd: 3_104.889979,
+        routeStatus: "open",
         routeStatusSource: "onchain",
         routeStatusReason:
-          "AsyncRedeemer whitelist is enabled; requests and claims are limited to approved holders",
+          "AsyncRedeemer whitelist is enabled; Pharos models the route as issuer-discretionary access rather than impaired",
         sourceUrls: [
-          "https://eth.blockscout.com/address/0x1303c26cfe06bac5bfee29907f37919643def75c?tab=contract",
+          "https://docs.makina.finance/concepts/architecture/machine/redemptions",
+          `https://eth.blockscout.com/address/${ASYNC_REDEEMER}?tab=contract`,
+          "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract",
         ],
       },
       redemptionQueue: {
-        nextRequestId: 343,
+        nextRequestId: 344,
         lastFinalizedRequestId: 342,
-        unfinalizedRequestSpan: 0,
+        unfinalizedRequestSpan: 1,
+        pendingRequestCount: 1,
+        minimumFinalizationDelaySec: 43_200,
+        minimumRedeemShares: 1,
+        lockedShares: 3_000,
+        grossIdleCapacityUsd: 120.722783,
+        queueDepthUsd: 3_104.889979,
+        reservedUnclaimedUsdc: 0.003679,
+        usableCapacityFormula: "max(0, Machine idle Ethereum USDC - convertToAssets(DUSD locked in AsyncRedeemer))",
+        capacityBasis: "live-proxy-buffer",
+        implementationAddress: REVIEWED_IMPLEMENTATION,
+        implementationRuntimeCodeHash: REVIEWED_IMPLEMENTATION_CODE_HASH,
       },
     });
+    expect(metadata.redemption).not.toHaveProperty("settlementDelaySec");
   });
 
-  it("keeps queue telemetry valid without claiming executable capacity or fees", () => {
-    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS, {
-      whitelistEnabled: false,
-      finalizationDelaySec: 43_200,
-      nextRequestId: 350,
-      lastFinalizedRequestId: 342,
-    });
+  it("keeps route telemetry valid with zero floored queue capacity and no fee", () => {
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS, REDEMPTION_STATE);
 
     expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      capacityKind: "live-queue",
       freshnessKind: "same-run-onchain",
-      holderEligibility: "any-holder",
-      settlementDelaySec: 43_200,
+      holderEligibility: "issuer-discretionary",
       routeStatus: "open",
       routeStatusSource: "onchain",
+      queueDepthUsd: 3_104.889979,
     });
-    expect(result.metadata?.redemptionQueue).toEqual({
-      nextRequestId: 350,
+    expect(result.metadata?.redemptionQueue).toMatchObject({
+      nextRequestId: 344,
       lastFinalizedRequestId: 342,
-      unfinalizedRequestSpan: 7,
+      unfinalizedRequestSpan: 1,
+      minimumFinalizationDelaySec: 43_200,
+      grossIdleCapacityUsd: 120.722783,
+      queueDepthUsd: 3_104.889979,
     });
-    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("settlementDelaySec");
     expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid)
       .toBe(true);
+  });
+
+  it("uses the full idle Machine buffer when no DUSD shares are pending in the queue", () => {
+    const metadata = buildMakinaRedemptionMetadata({
+      ...REDEMPTION_STATE,
+      nextRequestId: 345,
+      lastFinalizedRequestId: 344,
+      pendingRequestCount: 0,
+      lockedShares: 0,
+      grossIdleCapacityUsd: 700,
+      queueDepthUsd: 0,
+      capacityUsd: 700,
+    });
+
+    expect(metadata.redemption).toMatchObject({
+      capacityUsd: 700,
+      capacityKind: "live-queue",
+      queueDepthUsd: 0,
+      holderEligibility: "issuer-discretionary",
+      routeStatus: "open",
+    });
+    expect(metadata.redemptionQueue).toMatchObject({
+      pendingRequestCount: 0,
+      lockedShares: 0,
+      queueDepthUsd: 0,
+      grossIdleCapacityUsd: 700,
+    });
   });
 });

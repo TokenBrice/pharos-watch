@@ -6,11 +6,13 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.20`
+- **Current methodology version:** `v4.21`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.20` update: `sbold-k3-capital` now measures same-run BOLD withdrawability from the vault's Liquity V2 Stability Pool positions via `calcFragments()` instead of treating the vault's near-zero idle BOLD balance as its executable buffer. The route uses documented-bound confidence and a strategy-buffer basis because the read excludes unswapped collateral gains and K3 can temporarily restrict withdrawals at its collateral-exposure threshold. Reviewed full-supply routes with an `undisclosed-reviewed` fee can now publish their modeled capacity in `exitRouteObservations` with bounded-unknown fee evidence, but remain non-score-eligible for current redemption scoring until a numeric cost bound exists.
+Latest `v4.21` update: `dusd-dialectic` now uses same-block Makina AsyncRedeemer telemetry for live queue capacity. Usable capacity is limited to `max(0, Machine idle Ethereum USDC - convertToAssets(DUSD.balanceOf(AsyncRedeemer)))` after validating the AsyncRedeemer beacon implementation, Machine `accountingToken()` / `shareToken()` wiring, and redeemer `machine()` binding at the pinned block. The route remains `open` with `holderEligibility: issuer-discretionary` when the whitelist is enabled, and the 12-hour minimum finalization floor is stored as non-scoring queue detail rather than `settlementDelaySec`. If the on-chain proof is unavailable or fails validation, DUSD has no fallback capacity from AUM, supply, reserve weights, deployed positions, or a static ratio.
+
+Previous `v4.20` update: `sbold-k3-capital` now measures same-run BOLD withdrawability from the vault's Liquity V2 Stability Pool positions via `calcFragments()` instead of treating the vault's near-zero idle BOLD balance as its executable buffer. The route uses documented-bound confidence and a strategy-buffer basis because the read excludes unswapped collateral gains and K3 can temporarily restrict withdrawals at its collateral-exposure threshold. Reviewed full-supply routes with an `undisclosed-reviewed` fee can now publish their modeled capacity in `exitRouteObservations` with bounded-unknown fee evidence, but remain non-score-eligible for current redemption scoring until a numeric cost bound exists.
 
 Previous `v4.19` update: live reserve metadata qualifies as executable redemption capacity only when the adapter isolates assets immediately available to the holder route. Ethena's `Liquid Cash` value is a mixed accounting bucket rather than an isolated executable buffer, so USDe keeps its reviewed 0.5% hot-buffer fallback and documented fixed 10 bps fee. The aggregate remains visible as backing composition but no longer inflates effective-exit capacity.
 
@@ -252,6 +254,7 @@ Each row also carries:
   - `open` for normal resolved routes without current impairment evidence
   - `degraded` when the route is currently impaired by market-implied evidence such as a severe active depeg
   - `paused`, `cohort-limited`, and `unknown` are reserved for explicit route-availability sources and backward-compatible legacy rows
+  - whitelist or approved-holder gates should normally be modeled through `accessModel` / `holderEligibility`; use `cohort-limited` only when current route evidence shows impairment beyond that reviewed eligible cohort
   - unknown route status remains a low-confidence signal unless the capacity evidence is direct live telemetry or a source-reviewed documented bound
 - `routeStatusSource`:
   - `static-config` for normal config-derived status

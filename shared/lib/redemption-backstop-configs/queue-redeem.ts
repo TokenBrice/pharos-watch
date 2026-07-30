@@ -123,16 +123,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
-    holderEligibility: "whitelisted-primary",
+    holderEligibility: "issuer-discretionary",
     settlementModel: "queued",
-    executionModel: "rules-based-nav",
-    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "documented-bound", basis: "fixed-buffer" },
-    costModel: undisclosedReviewedFee(
-      "Makina docs describe queued Machine redemptions into the accounting token, but public materials reviewed do not publish one fixed DUSD redemption fee",
-    ),
-    routeStatus: "unknown",
+    executionModel: "opaque",
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      liveCapacityConfidence: "documented-bound",
+      basis: "live-proxy-buffer",
+    },
+    costModel: fixedFee(0, "The reviewed standard AsyncRedeemer implementation does not charge a DUSD redemption fee"),
+    routeStatus: "open",
     routeExitCorrelation: "same-protocol-liquidity",
-    reviewedAt: "2026-07-29",
+    reviewedAt: "2026-07-30",
     docs: [
       sourceRef("Makina Machine lifecycle", "https://docs.makina.finance/concepts/architecture/lifecycle", [
         "route",
@@ -145,11 +147,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "settlement",
       ]),
       sourceRef("Makina DUSD strategy", "https://makina.finance/strategy/dusd", ["route", "capacity"]),
+      sourceRef("DUSD Machine Terms", "https://makina.finance/MeccanicoToS.pdf", [
+        "route",
+        "access",
+        "settlement",
+        "fees",
+      ]),
     ],
     notes: [
-      "DUSD exits enter the AsyncRedeemer FIFO queue and have a documented 12-hour minimum finalization delay; final settlement can take longer because the operator must free USDC liquidity from the strategy.",
-      "The route is intentionally not modeled as atomic or permissionless: Makina's Risk Manager can gate redemption requests and claims with a whitelist, and public sources do not publish a maximum settlement time or reserved queue capacity.",
-      "Fresh Makina reserve telemetry supplies AUM and portfolio composition, but it does not currently expose a bounded immediately redeemable USDC queue capacity; without such telemetry the route remains capacity-unknown rather than falling back to full supply.",
+      "DUSD exits enter the AsyncRedeemer FIFO queue and have a 12-hour minimum finalization delay; Pharos records that floor as non-scoring queue detail, not as a guaranteed settlement SLA.",
+      "The route is intentionally not modeled as atomic, permissionless, or rules-based: Makina can gate redemption requests and claims with a whitelist and the operator must free USDC liquidity before queued requests can settle.",
+      "Fresh Makina route telemetry computes usable queue capacity as max(0, the Machine's idle Ethereum USDC minus the USDC liability of DUSD shares locked in the AsyncRedeemer). If that same-block onchain proof fails validation, the route remains missing-capacity rather than falling back to AUM, full supply, deployed positions, or a static ratio.",
     ],
   },
   "acred-apollo-securitize": {

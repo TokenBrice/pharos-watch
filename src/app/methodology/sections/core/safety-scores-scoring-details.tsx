@@ -131,6 +131,12 @@ export function SafetyScoresScoringDetails() {
           category does not isolate route-executable assets.
         </p>
         <p>
+          Queue-style live telemetry may count only when the adapter proves both a current route buffer and the queued
+          liability from the same evidence set. For DUSD, the Makina path scores only idle Ethereum USDC left after
+          subtracting the USDC value of DUSD already locked in the AsyncRedeemer; its whitelist is represented as
+          issuer-discretionary access rather than a route-status impairment.
+        </p>
+        <p>
           If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can
           stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails.
           Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can

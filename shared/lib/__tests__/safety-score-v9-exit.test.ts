@@ -140,6 +140,29 @@ describe("evaluateV9Exit", () => {
     expect(result.horizons.queued.primaryRouteKey).toBe("redemption:30-day-queue");
   });
 
+  it("does not promote a zero-capacity issuer-discretionary queued route as a positive exit path", () => {
+    const zeroQueue = route({
+      routeKey: "redemption:dusd-async-redeemer",
+      routeFamily: "protocol-redemption",
+      access: "whitelisted-onchain",
+      holderEligibility: "issuer-discretionary",
+      settlement: "queued",
+      queueDepthUsd: 3_104.889979,
+      execution: "opaque",
+      capacityScoringHorizon: "queued",
+      routeScoreCap: "queue-redeem",
+      capacityCurve: [
+        { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 0 },
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 0 },
+      ],
+    });
+
+    const result = evaluateV9Exit({ circulatingUsd: 5_800_000, routes: [zeroQueue] }, V9_CANDIDATE_POLICY_V1);
+
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.horizons.queued.primaryRouteKey).toBeNull();
+  });
+
   it("keeps daily capacity in the bounded near-term lane even when transfers settle atomically", () => {
     const result = evaluateV9Exit(
       {
