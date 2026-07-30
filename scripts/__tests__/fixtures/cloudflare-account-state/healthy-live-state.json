@@ -8,37 +8,74 @@
       "name": "stablecoin-dashboard",
       "production": {
         "environmentVariables": {
-          "CF_ACCESS_OPS_UI_AUD": { "type": "plain_text" },
-          "CF_ACCESS_TEAM_DOMAIN": { "type": "plain_text" },
-          "OPS_API_SERVICE_TOKEN_ID": { "type": "secret_text" },
-          "OPS_API_SERVICE_TOKEN_SECRET": { "type": "secret_text" },
-          "SELECTOR_SNAPSHOT_IP_HASH_SECRET": { "type": "secret_text" },
-          "SITE_API_ORIGIN": { "type": "plain_text", "value": "https://site-api.pharos.watch" },
-          "SITE_API_SHARED_SECRET": { "type": "secret_text" },
-          "TELEGRAM_ADOPTION_IP_HASH_SECRET": { "type": "secret_text" }
+          "CF_ACCESS_OPS_UI_AUD": {
+            "type": "plain_text"
+          },
+          "CF_ACCESS_TEAM_DOMAIN": {
+            "type": "secret_text"
+          },
+          "OPS_API_SERVICE_TOKEN_ID": {
+            "type": "secret_text"
+          },
+          "OPS_API_SERVICE_TOKEN_SECRET": {
+            "type": "secret_text"
+          },
+          "SELECTOR_SNAPSHOT_IP_HASH_SECRET": {
+            "type": "secret_text"
+          },
+          "SITE_API_ORIGIN": {
+            "type": "plain_text",
+            "value": "https://site-api.pharos.watch"
+          },
+          "SITE_API_SHARED_SECRET": {
+            "type": "secret_text"
+          },
+          "TELEGRAM_ADOPTION_IP_HASH_SECRET": {
+            "type": "secret_text"
+          }
         },
-        "d1Bindings": ["DB"],
-        "kvBindings": ["SELECTOR_SNAPSHOTS"]
+        "d1Bindings": [
+          "DB"
+        ],
+        "kvBindings": [
+          "SELECTOR_SNAPSHOTS"
+        ]
       }
     },
-    "customDomains": ["ops.pharos.watch", "pharos.watch"]
+    "customDomains": [
+      "ops.pharos.watch",
+      "pharos.watch"
+    ]
   },
   "accessApplications": [
     {
       "type": "self_hosted",
-      "selfHostedDomains": ["ops.pharos.watch/*"],
+      "selfHostedDomains": [
+        "ops.pharos.watch/*"
+      ],
       "sessionDuration": "4h"
     },
     {
       "type": "self_hosted",
-      "selfHostedDomains": ["ops-api.pharos.watch/*"],
+      "selfHostedDomains": [
+        "ops-api.pharos.watch/*"
+      ],
       "sessionDuration": ""
     }
   ],
   "workerDomains": [
-    { "hostname": "api.pharos.watch", "service": "stablecoin-api" },
-    { "hostname": "ops-api.pharos.watch", "service": "stablecoin-api" },
-    { "hostname": "site-api.pharos.watch", "service": "stablecoin-api" }
+    {
+      "hostname": "api.pharos.watch",
+      "service": "stablecoin-api"
+    },
+    {
+      "hostname": "ops-api.pharos.watch",
+      "service": "stablecoin-api"
+    },
+    {
+      "hostname": "site-api.pharos.watch",
+      "service": "stablecoin-api"
+    }
   ],
   "rateLimitRules": [
     {
@@ -47,7 +84,9 @@
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and (http.request.uri.path eq \"/api/api-key-requests\" or http.request.uri.path eq \"/api/api-key-requests/verify\") and not cf.bot_management.verified_bot)",
       "ratelimit": {
-        "characteristics": ["ip.src"],
+        "characteristics": [
+          "ip.src"
+        ],
         "requestsPerPeriod": 20,
         "period": 60,
         "mitigationTimeout": 600
@@ -59,7 +98,10 @@
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-webhook\")",
       "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
+        "characteristics": [
+          "ip.src",
+          "cf.colo.id"
+        ],
         "requestsPerPeriod": 2400,
         "period": 60,
         "mitigationTimeout": 60
@@ -71,7 +113,10 @@
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/session\")",
       "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
+        "characteristics": [
+          "ip.src",
+          "cf.colo.id"
+        ],
         "requestsPerPeriod": 120,
         "period": 60,
         "mitigationTimeout": 60
@@ -83,7 +128,10 @@
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and http.request.method eq \"POST\" and http.request.uri.path eq \"/api/telegram-mini-app/mutate\")",
       "ratelimit": {
-        "characteristics": ["ip.src", "cf.colo.id"],
+        "characteristics": [
+          "ip.src",
+          "cf.colo.id"
+        ],
         "requestsPerPeriod": 360,
         "period": 60,
         "mitigationTimeout": 60
@@ -95,7 +143,10 @@
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not (http.request.uri.path in {\"/api/telegram-webhook\" \"/api/telegram-mini-app/session\" \"/api/telegram-mini-app/mutate\"}) and not cf.bot_management.verified_bot)",
       "ratelimit": {
-        "characteristics": ["ip.src"],
+        "characteristics": [
+          "cf.colo.id",
+          "ip.src"
+        ],
         "requestsPerPeriod": 120,
         "period": 10,
         "mitigationTimeout": 10
