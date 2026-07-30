@@ -3,6 +3,7 @@
 import {
   DDRR_VERDICT_REVIEW_VALUES,
   DdrrResponseSchema,
+  type DdrrHorizonCalibration,
   type DdrrResponse,
   type DdrrRow,
   type DdrrV2CoverageRow,
@@ -11,6 +12,7 @@ import {
   type DdrrVerdictReview,
 } from "../../shared/types/depeg-resolver-review";
 import type { DdrFactor, DdrFactorCode, DdrFactorSeverity } from "../../shared/types/depeg-resolver";
+import { summarizeDdrrMetrics } from "../../shared/lib/depeg-resolver-review";
 import { mean, median } from "../../shared/lib/stats";
 import { formatPercentFromRatio } from "../../shared/lib/format";
 import {
@@ -190,6 +192,7 @@ export interface DdrrCalibrationReport {
     byStratum: DdrrDurationCalibrationSegment[];
     byDirection: DdrrDurationCalibrationSegment[];
   };
+  horizonCalibration: DdrrHorizonCalibration[];
   noCallCalibration: DdrrNoCallCalibration;
   coverageCalibration: DdrrCoverageCalibration;
   k5ExitCollapse: {
@@ -596,6 +599,7 @@ export function buildDdrrCalibrationReport(
     ),
     byDirection: groupDurationRows(durationRows, (row) => row.direction),
   };
+  const horizonCalibration = summarizeDdrrMetrics(rows).horizonCalibration;
 
   const noCallCalibration = buildNoCallCalibration(noCalls, predictions);
   const coverageCalibration = buildCoverageCalibration(coverage);
@@ -683,6 +687,7 @@ export function buildDdrrCalibrationReport(
     ],
     factorAttribution,
     durationCalibration,
+    horizonCalibration,
     noCallCalibration,
     coverageCalibration,
     k5ExitCollapse: {
@@ -782,6 +787,37 @@ function renderDurationTable(rows: readonly DdrrDurationCalibrationSegment[]): s
   return lines;
 }
 
+function formatPercentagePoints(value: number | null): string {
+  return value == null ? "n/a" : `${value.toFixed(1)} pp`;
+}
+
+function formatZScore(value: number | null): string {
+  return value == null ? "n/a" : value.toFixed(2);
+}
+
+function renderHorizonCalibrationTable(rows: readonly DdrrHorizonCalibration[]): string[] {
+  const lines = [
+    "| Horizon | Scored duration rows | Mean predicted | Realized closure share | Bias | Poisson-binomial z |",
+    "|---|---:|---:|---:|---:|---:|",
+  ];
+  for (const row of rows) {
+    lines.push(
+      [
+        row.horizon,
+        row.scored,
+        formatPercent(row.meanPredictedProbability),
+        formatPercent(row.realizedClosureShare),
+        formatPercentagePoints(row.biasPp),
+        formatZScore(row.zScore),
+      ]
+        .join(" | ")
+        .replace(/^/, "| ")
+        .replace(/$/, " |"),
+    );
+  }
+  return lines;
+}
+
 function renderCountRecord(record: Record<string, number>): string {
   const entries = Object.entries(record).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
   return entries.length === 0
@@ -827,6 +863,12 @@ export function renderDdrrCalibrationReportMarkdown(report: DdrrCalibrationRepor
       ...report.durationCalibration.byDirection,
       ...report.durationCalibration.byStratum,
     ]),
+    "",
+    "## Horizon Expected-vs-Observed Calibration",
+    "",
+    "Bias is mean predicted probability minus realized closure share; z uses a Poisson-binomial normal approximation.",
+    "",
+    ...renderHorizonCalibrationTable(report.horizonCalibration),
     "",
     "## No-Call and Insufficient-Signal Audit",
     "",

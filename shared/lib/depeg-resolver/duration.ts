@@ -10,7 +10,7 @@
 
 import type { DdrDuration, DdrHorizon, DdrHorizonCell } from "../../types/depeg-resolver";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
-import type { DdrIncident } from "./incident-groups";
+import { groupDurationLabelIncidents, type DdrIncident } from "./incident-groups";
 import { candidateStrata, depthBucket, stratumLabel, stratumMatches, type DdrStratumCandidate, type DdrStratumKey } from "./strata";
 
 export const HORIZON_SECONDS: Record<DdrHorizon, number> = {
@@ -35,8 +35,11 @@ const THIN_SUPPORT_MIN_WEIGHTED_CLOSURES = 1;
 
 function percentile(sortedAsc: number[], p: number): number {
   if (sortedAsc.length === 0) return 0;
-  const idx = Math.min(sortedAsc.length - 1, Math.max(0, Math.round((sortedAsc.length - 1) * p)));
-  return sortedAsc[idx];
+  const idx = Math.min(sortedAsc.length - 1, Math.max(0, (sortedAsc.length - 1) * p));
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedAsc[lower];
+  return sortedAsc[lower] + (sortedAsc[upper] - sortedAsc[lower]) * (idx - lower);
 }
 
 function wilson(k: number, n: number): { lower: number; upper: number } {
@@ -86,6 +89,27 @@ function incidentMatchesAtAge(candidate: DdrStratumCandidate, incident: DdrIncid
 function isTrainableIncident(incident: DdrIncident): boolean {
   if (!incident.recovered || incident.durationSec == null) return false;
   return incident.durationSec >= MIN_TRAINING_DURATION_SEC || Math.abs(incident.peakDeviationBps) >= MIN_TRAINING_PEAK_BPS;
+}
+
+function coinMedianRemainingDurations(comparable: DdrIncident[], ageSec: number): number[] {
+  const byCoin = new Map<string, number[]>();
+  for (const incident of comparable) {
+    const durations = byCoin.get(incident.stablecoinId) ?? [];
+    durations.push((incident.durationSec as number) - ageSec);
+    byCoin.set(incident.stablecoinId, durations);
+  }
+  return [...byCoin.values()]
+    .map((durations) => percentile(durations.sort((a, b) => a - b), 0.5))
+    .sort((a, b) => a - b);
+}
+
+export function buildDurationTrainingCorpus(
+  incidents: DdrIncident[],
+  quarantined: Set<string>,
+): DdrIncident[] {
+  return groupDurationLabelIncidents(incidents).filter(
+    (incident) => isTrainableIncident(incident) && !quarantined.has(incident.stablecoinId),
+  );
 }
 
 /** Coin-capped weighted closure probability (each coin contributes ≤ 1.0). */
@@ -140,14 +164,12 @@ export function computeDuration(
   incidents: DdrIncident[],
   quarantined: Set<string>,
 ): DdrDuration {
-  const trainable = incidents.filter(
-    (i) => isTrainableIncident(i) && !quarantined.has(i.stablecoinId),
-  );
+  const trainable = buildDurationTrainingCorpus(incidents, quarantined);
   const { matched, label } = selectStratum(activeKey, trainable, ageSec);
 
   const durationsAll = matched.map((m) => m.durationSec as number).sort((a, b) => a - b);
   const comparable = matched.filter((m) => (m.durationSec as number) >= ageSec);
-  const comparableRemainingDur = comparable.map((m) => (m.durationSec as number) - ageSec).sort((a, b) => a - b);
+  const coinMedianRemainingDur = coinMedianRemainingDurations(comparable, ageSec);
   const uniqueCoinsComparable = new Set(comparable.map((m) => m.stablecoinId)).size;
 
   // Age status uses the full matched-stratum duration distribution, not only
@@ -189,7 +211,7 @@ export function computeDuration(
     else state = "unsupported";
 
     const displayable = (state === "benchmarked" || state === "thin_support") && closures > 0;
-    const interval = displayable ? wilson(Math.round(effectiveClosures), Math.max(1, Math.round(weighted.effectiveN))) : null;
+    const interval = displayable ? wilson(effectiveClosures, weighted.effectiveN) : null;
     const probability = displayable ? weighted.probability : null;
 
     return {
@@ -215,8 +237,8 @@ export function computeDuration(
     suppressed: !hasSupport,
     suppressedReason: hasSupport ? null : "insufficient_support",
     stratum: label,
-    medianSec: hasSupport ? percentile(comparableRemainingDur, 0.5) : null,
-    iqrSec: hasSupport ? [percentile(comparableRemainingDur, 0.25), percentile(comparableRemainingDur, 0.75)] : null,
+    medianSec: hasSupport ? percentile(coinMedianRemainingDur, 0.5) : null,
+    iqrSec: hasSupport ? [percentile(coinMedianRemainingDur, 0.15), percentile(coinMedianRemainingDur, 0.85)] : null,
     ageStatus,
     horizons,
   };

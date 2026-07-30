@@ -7,7 +7,13 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/depeg-resolver-version";
+import {
+  computeMintAuthorityScore,
+  stablecoinToMintAuthorityScoringInput,
+  type MintAuthorityParentResolver,
+} from "@shared/lib/mint-authority-scoring";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { DdrCanonicalIncident, DdrCanonicalIncidentInput, DdrDirection } from "../depeg-resolver-v2-contracts";
 import type { DdrEventDbRow } from "./types";
@@ -20,7 +26,37 @@ function pegCurrencyFromPegType(pegType: string): string {
   return pegType.startsWith("pegged") ? pegType.slice("pegged".length) : "USD";
 }
 
-export function toStructural(meta: StablecoinMeta): DdrCoinStructural {
+const mintAuthorityParentResolver: MintAuthorityParentResolver = (id) =>
+  stablecoinToMintAuthorityScoringInput(TRACKED_META_BY_ID.get(id));
+
+export interface DdrV9DependencyCard {
+  id: string;
+  dependencies: {
+    serial: readonly { upstreamAssetId: string }[];
+  };
+}
+
+let v9DependencyImpairmentByCoin = new Map<string, boolean>();
+
+function hasFrozenOrDeadUpstream(card: DdrV9DependencyCard): boolean {
+  return card.dependencies.serial.some((dependency) => {
+    const upstream = TRACKED_META_BY_ID.get(dependency.upstreamAssetId);
+    return upstream != null && isTerminalStablecoinStatus(upstream.status);
+  });
+}
+
+/** Install the current V9 serial dependency projection for this resolver run. */
+export function hydrateV9DependencyImpairment(cards: readonly DdrV9DependencyCard[]): void {
+  v9DependencyImpairmentByCoin = new Map(cards.map((card) => [card.id, hasFrozenOrDeadUpstream(card)]));
+}
+
+/** Clear V9 dependency state before a run whose V9 publication is unavailable. */
+export function clearV9DependencyImpairment(): void {
+  v9DependencyImpairmentByCoin = new Map();
+}
+
+export function toStructural(meta: StablecoinMeta, dependencyImpaired?: boolean | null): DdrCoinStructural {
+  const v9DependencyImpaired = dependencyImpaired ?? v9DependencyImpairmentByCoin.get(meta.id);
   return {
     id: meta.id,
     symbol: meta.symbol,
@@ -31,12 +67,23 @@ export function toStructural(meta: StablecoinMeta): DdrCoinStructural {
     mechanismArchetype: meta.mechanismArchetype ?? null,
     mintPath: meta.mintAuthority?.mintPath ?? null,
     authorityPosture: meta.mintAuthority?.authorityPosture ?? null,
-    mintIncidentDates: meta.mintAuthority?.mintIncidents?.map((incident) => incident.date) ?? null,
+    mintAuthorityScoreBand: computeMintAuthorityScore(
+      stablecoinToMintAuthorityScoringInput(meta),
+      mintAuthorityParentResolver,
+    ).band,
+    mintIncidents: meta.mintAuthority?.mintIncidents?.map((incident) => ({
+      date: incident.date,
+      status: incident.status,
+      resolvedAt: incident.resolvedAt ?? null,
+    })) ?? null,
+    windDownAnnouncedAt: meta.windDownAnnouncedAt ?? null,
     collateralQuality: meta.collateralQuality ?? null,
     custodyModel: meta.custodyModel ?? null,
     reserves: meta.reserves?.map((r) => ({ risk: r.risk, pct: r.pct })),
     canBeBlacklisted: meta.canBeBlacklisted ?? null,
-    dependencyImpaired: meta.dependencies?.some((d) => FROZEN_IDS.has(d.id) && d.weight >= 0.3) ?? false,
+    dependencyImpaired:
+      v9DependencyImpaired ??
+      (meta.dependencies?.some((d) => FROZEN_IDS.has(d.id) && d.weight >= 0.3) ?? false),
   };
 }
 

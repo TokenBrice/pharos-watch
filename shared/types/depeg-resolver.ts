@@ -43,6 +43,7 @@ export const DDR_KILL_CODE_VALUES = [
   "K3_freeze_seizure",
   "K4_reflexive_spiral",
   "K5_exit_collapse",
+  "K6_wind_down",
 ] as const;
 export const DDR_ANCHOR_CODE_VALUES = [
   "R1_noninflatable_supply",
@@ -105,6 +106,19 @@ export type DdrHorizonCell = z.infer<typeof DdrHorizonCellSchema>;
 export const DDR_AGE_STATUS_VALUES = ["ordinary", "extended", "chronic_tail", "data_issue"] as const;
 export type DdrAgeStatus = (typeof DDR_AGE_STATUS_VALUES)[number];
 
+export const DDR_DURATION_BAND_META = {
+  label: "typical_range",
+  lowerPercentile: 15,
+  upperPercentile: 85,
+} as const;
+
+export const DdrDurationBandMetaSchema = z.object({
+  label: z.literal(DDR_DURATION_BAND_META.label),
+  lowerPercentile: z.literal(DDR_DURATION_BAND_META.lowerPercentile),
+  upperPercentile: z.literal(DDR_DURATION_BAND_META.upperPercentile),
+});
+export type DdrDurationBandMeta = z.infer<typeof DdrDurationBandMetaSchema>;
+
 export const DdrDurationSchema = z.object({
   /** True when Stage 2 is not shown (terminal verdict or insufficient support). */
   suppressed: z.boolean(),
@@ -113,7 +127,7 @@ export const DdrDurationSchema = z.object({
   stratum: z.string().nullable().optional().default(null),
   /** Median time-to-repeg of comparable recovered incidents, seconds. */
   medianSec: z.number().nullable().optional().default(null),
-  /** Interquartile band [p25, p75], seconds. */
+  /** Typical range [p15, p85], seconds. The legacy field name remains for API compatibility. */
   iqrSec: z.tuple([z.number().nonnegative(), z.number().nonnegative()]).nullable().optional().default(null),
   ageStatus: z.enum(DDR_AGE_STATUS_VALUES).nullable().optional().default(null),
   horizons: z.array(DdrHorizonCellSchema),
@@ -451,6 +465,8 @@ export const DdrMetaSchema = z.object({
   publicWarning: z.string(),
   resolutionRubricVersion: z.string(),
   durationModelVersion: z.string(),
+  /** Semantics of legacy `iqrSec` duration fields for this response. */
+  durationBand: DdrDurationBandMetaSchema.optional(),
   incidentGroupingVersion: z.string(),
   supportRulesVersion: z.string(),
   lineage: DdrLineageSchema.nullable().optional().default(null),

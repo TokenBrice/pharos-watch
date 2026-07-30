@@ -11,7 +11,7 @@ import { DDRR_ASSESSMENT_ROW_CAP } from "./assessment-loader";
 
 const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
 const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
-const DDRR_PUBLIC_ROW_CAP = 100;
+const DDRR_PUBLIC_ROW_CAP = 400;
 
 export function buildEmptyDdrrSummary(): DdrrSummary {
   return summarizeDdrrRows([]);

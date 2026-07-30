@@ -20,8 +20,16 @@ export interface DdrCoinStructural {
   mechanismArchetype?: string | null;
   mintPath?: string | null;
   authorityPosture?: string | null;
-  /** YYYY-MM-DD mint-authority incident dates from the registry. */
-  mintIncidentDates?: string[] | null;
+  /** Reviewed Mint Authority Score band, when the registry profile is scoreable. */
+  mintAuthorityScoreBand?: string | null;
+  /** Reviewed mint-authority incidents from the registry. */
+  mintIncidents?: Array<{
+    date: string;
+    status: "active" | "resolved";
+    resolvedAt?: string | null;
+  }> | null;
+  /** YYYY-MM-DD issuer announcement for this token's wind-down or termination. */
+  windDownAnnouncedAt?: string | null;
   collateralQuality?: string | null;
   custodyModel?: string | null;
   reserves?: { risk: string; pct: number }[];
@@ -38,6 +46,8 @@ export interface DdrSupplyContext {
   change30dPct: number | null;
   /** Abnormal mint expansion into the break; null when not measurable. */
   mintSurge: boolean | null;
+  /** Source used for `mintSurge`, so the supply-history fallback stays explicit. */
+  mintSurgeCoverage?: "mint-burn-hourly" | "supply-history-proxy" | "unavailable";
 }
 
 /** Safety provenance controls whether canonical V9 numeric anchors are available. */
@@ -54,6 +64,24 @@ export interface DdrSafetyContextProvenance {
   identity: SafetyScorePublicationIdentity | null;
 }
 
+/** Published V9 exit evidence. Null when the identified publication cannot supply it. */
+export interface DdrV9ExitContext {
+  pillarScore: number | null;
+  reasonCodes: readonly string[];
+  stressRequest: {
+    requestedNotionalUsd: number;
+  } | null;
+  primaryRoute: {
+    key: string;
+    score: number;
+    capacity: {
+      executableUsd: number;
+      requestedNotionalUsd: number;
+      completionRatio: number;
+    } | null;
+  } | null;
+}
+
 /** Live stress / liquidity / exit context at evaluation time. */
 export interface DdrLiveContext {
   dewsBand?: string | null;
@@ -68,6 +96,8 @@ export interface DdrLiveContext {
   safetyGrade?: string | null;
   safetyScore?: number | null;
   safetyContext?: DdrSafetyContextProvenance;
+  /** Exit facts from the identified published V9 snapshot. */
+  v9Exit?: DdrV9ExitContext | null;
   /** Immediately redeemable fraction of circulating supply, 0..1. */
   redemptionCapacityRatio?: number | null;
   /** Redemption route family when a fresh redemption-backstop row is available. */

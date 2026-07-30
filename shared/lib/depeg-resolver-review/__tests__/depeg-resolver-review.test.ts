@@ -174,7 +174,7 @@ describe("DDRR row contract", () => {
   it("bumps the public reviewer version and emits discriminated prediction rows", () => {
     const row = reviewDepegResolverAssessment(assessment(), actualEvent(), REVIEWED_AT);
 
-    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v3");
+    expect(DDRR_REVIEWER_VERSION).toBe("ddr-reviewer-v4");
     expect(row.kind).toBe("prediction_review");
     expect(row.predictionState).toBe("frozen");
     expect(row.lockedAt).toBe(LOCKED_AT);
@@ -190,6 +190,43 @@ describe("DDRR row contract", () => {
     });
 
     expect(rows.map((row) => row.kind)).toEqual(["coverage", "invalidated_prediction"]);
+    expect(rows.map((row) => DdrrRowSchema.parse(row))).toEqual(rows);
+  });
+
+  it("carries additive auto-repair and split lineage through review rows", () => {
+    const reviewRow = reviewDepegResolverAssessment(
+      assessment({
+        lineage: {
+          autoRepaired: true,
+          repairSources: ["ddr-worker:auto-sealed-tail"],
+        },
+      }),
+      actualEvent(),
+      REVIEWED_AT,
+    );
+    const { rows } = reviewDdrrV2Rows({
+      coverageRows: [coverage({ lineage: { parentIncidentKey: "ddr2:parent" } })],
+      invalidatedPredictions: [invalidated({
+        lineage: {
+          autoRepaired: true,
+          repairSources: ["ddr-worker:repair-task-runner-v1"],
+          parentIncidentKey: "ddr2:parent",
+        },
+      })],
+      nowSec: REVIEWED_AT,
+    });
+
+    expect(reviewRow.lineage).toEqual({
+      autoRepaired: true,
+      repairSources: ["ddr-worker:auto-sealed-tail"],
+    });
+    expect(rows[0]?.lineage).toEqual({ parentIncidentKey: "ddr2:parent" });
+    expect(rows[1]?.lineage).toEqual({
+      autoRepaired: true,
+      repairSources: ["ddr-worker:repair-task-runner-v1"],
+      parentIncidentKey: "ddr2:parent",
+    });
+    expect(DdrrRowSchema.parse(reviewRow)).toEqual(reviewRow);
     expect(rows.map((row) => DdrrRowSchema.parse(row))).toEqual(rows);
   });
 });
@@ -402,6 +439,45 @@ describe("DDRR coverage metrics", () => {
     expect(summary.headline.predictionRatePct).toBeNull();
     expect(summary.headline.stateAssignedPct).toBeNull();
     expect(summary.headline.invalidatedPct).toBeNull();
+  });
+
+  it("calibrates horizon probabilities against scored duration outcomes", () => {
+    const calibrationRows = [
+      reviewDepegResolverAssessment(
+        assessment({ horizonCells: [horizonCell("6h", { probability: 0.2 })] }),
+        actualEvent({ endedAt: LOCKED_AT + 3 * 3_600, recoveryPrice: 1 }),
+        LOCKED_AT + 24 * 3_600,
+      ),
+      reviewDepegResolverAssessment(
+        assessment({ horizonCells: [horizonCell("6h", { probability: 0.6 })] }),
+        actualEvent({ endedAt: LOCKED_AT + 12 * 3_600, recoveryPrice: 1 }),
+        LOCKED_AT + 24 * 3_600,
+      ),
+      reviewDepegResolverAssessment(
+        assessment({ horizonCells: [horizonCell("6h", { probability: 0.9 })] }),
+        actualEvent({ endedAt: LOCKED_AT + 3 * 3_600, recoveryPrice: 1 }),
+        LOCKED_AT + 24 * 3_600,
+      ),
+    ];
+
+    const calibration = summarizeDdrrRows(calibrationRows).headline.horizonCalibration;
+    const sixHour = calibration.find((row) => row.horizon === "6h");
+
+    expect(sixHour).toMatchObject({
+      scored: 3,
+      meanPredictedProbability: expect.closeTo(1.7 / 3),
+      realizedClosureShare: expect.closeTo(2 / 3),
+      biasPp: expect.closeTo(-10),
+      zScore: expect.closeTo(0.3 / 0.7),
+    });
+    expect(calibration.find((row) => row.horizon === "24h")).toEqual({
+      horizon: "24h",
+      scored: 0,
+      meanPredictedProbability: null,
+      realizedClosureShare: null,
+      biasPp: null,
+      zScore: null,
+    });
   });
 
   it("uses current policy as the headline once it has enough scored rows", () => {

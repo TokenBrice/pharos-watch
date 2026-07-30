@@ -37,6 +37,11 @@ function resolveWorkerJobLedgerMode(options: StatusEvaluationOptions): WorkerJob
   return normalizeWorkerJobLedgerMode(options.workerJobLedgerMode);
 }
 
+function readRepairRunnerAutoRepairCount(crons: StatusResponse["crons"]): number | null {
+  const value = crons["worker-repair-runner"]?.lastRun?.metadata?.autoRepairCount;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
 export interface RawStatusComputation {
   dbHealthy: boolean;
   availabilityStatus: StatusResponse["availabilityStatus"];
@@ -202,6 +207,7 @@ export async function computeRawStatus(db: D1Database, now: number, options: Sta
   });
   const dataQualityCauses = buildDataQualityCauses({
     dataQuality,
+    repairRunnerAutoRepairCount: readRepairRunnerAutoRepairCount(crons),
     activePriceCoverage: publicHealth.activePriceCoverage,
     missingPriceRatio,
     blacklistMissingRatio,

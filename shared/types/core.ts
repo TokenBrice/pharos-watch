@@ -1070,6 +1070,10 @@ export interface StablecoinMeta {
   status?: StablecoinStatus;
   /** Required for quarantined and delisted assets; rendered on preserved detail pages. */
   listingStatusReview?: StablecoinListingStatusReview;
+  /** YYYY-MM-DD; issuer's public wind-down or termination announcement for this token. */
+  windDownAnnouncedAt?: string;
+  /** Public source for the issuer's wind-down or termination announcement. */
+  windDownSourceUrl?: string;
   /** YYYY-MM-DD; required when status === "frozen". */
   frozenAt?: string;
   /** Obituary content surfaced on the detail page banner and cemetery tombstone; required when status === "frozen". */

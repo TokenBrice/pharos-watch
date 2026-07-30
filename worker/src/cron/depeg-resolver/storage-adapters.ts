@@ -14,6 +14,7 @@ import {
   type DdrV2StoreContracts,
 } from "../depeg-resolver-v2-contracts";
 import {
+  closeRecoveredPreLockIncidents as closeRecoveredPreLockIncidentsStore,
   ensureCanonicalIncidents as ensureCanonicalIncidentsStore,
   loadCanonicalIncidents as loadCanonicalIncidentsStore,
   recordLockDeferral as recordLockDeferralStore,
@@ -130,6 +131,7 @@ function mapStoreIncident(row: StoreDdrCanonicalIncident): DdrCanonicalIncident 
     policyUniverseIncluded: row.policyUniverseIncluded,
     rolloutActiveAtEnablement: row.rolloutActiveAtEnablement,
     incidentState: row.incidentState,
+    closedPreLockAt: row.closedPreLockAt,
     supersededByIncidentKey: row.supersededByIncidentKey,
     confirmedAt: row.confirmedAt,
     lockState: row.lockState,
@@ -275,6 +277,9 @@ function mapStoreErratum(row: StoreDdrPredictionErratum): Record<string, unknown
 }
 
 export const DEFAULT_DDR_V2_STORE_CONTRACTS: DdrV2StoreContracts = {
+  async closeRecoveredPreLockIncidents(db, input) {
+    return closeRecoveredPreLockIncidentsStore(db, input.nowSec);
+  },
   async ensureCanonicalIncidents(db, events, options) {
     const incidents = await ensureCanonicalIncidentsStore(
       db,

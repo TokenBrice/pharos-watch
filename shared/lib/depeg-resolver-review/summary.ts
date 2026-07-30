@@ -4,6 +4,7 @@ import { DDR_PREDICTION_POLICY_VERSION } from "../depeg-resolver-version";
 import {
   DDRR_COVERAGE_PREDICTION_STATE_VALUES,
   type DdrrCoveragePredictionState,
+  DdrrHorizonCalibration,
   DdrrHorizonHitRate,
   DdrrRow,
   DdrrSummary,
@@ -56,6 +57,47 @@ function summarizeHorizons(rows: readonly DdrrRow[]): DdrrHorizonHitRate[] {
       hits,
       misses,
       hitRate: pct(hits, scored),
+    };
+  });
+}
+
+function summarizeHorizonCalibration(rows: readonly DdrrRow[]): DdrrHorizonCalibration[] {
+  const durationRows = rows
+    .filter((row): row is DdrrV2PredictionReviewRow => row.kind === "prediction_review")
+    .filter(isDurationScoredPredictionRow);
+  return DDR_HORIZON_VALUES.map((horizon) => {
+    const observations = durationRows.flatMap((row) => {
+      const review = row.horizonReviews.find((candidate) => candidate.horizon === horizon);
+      if (review?.probability == null || (review.result !== "hit" && review.result !== "miss")) return [];
+      return [{ probability: review.probability, observed: review.result === "hit" ? 1 : 0 }];
+    });
+    const scored = observations.length;
+    if (scored === 0) {
+      return {
+        horizon,
+        scored,
+        meanPredictedProbability: null,
+        realizedClosureShare: null,
+        biasPp: null,
+        zScore: null,
+      };
+    }
+
+    const expectedClosures = observations.reduce((sum, observation) => sum + observation.probability, 0);
+    const observedClosures = observations.reduce((sum, observation) => sum + observation.observed, 0);
+    const variance = observations.reduce(
+      (sum, observation) => sum + observation.probability * (1 - observation.probability),
+      0,
+    );
+    const meanPredictedProbability = expectedClosures / scored;
+    const realizedClosureShare = observedClosures / scored;
+    return {
+      horizon,
+      scored,
+      meanPredictedProbability,
+      realizedClosureShare,
+      biasPp: (meanPredictedProbability - realizedClosureShare) * 100,
+      zScore: variance === 0 ? null : (observedClosures - expectedClosures) / Math.sqrt(variance),
     };
   });
 }
@@ -233,6 +275,7 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
     invalidatedByReason,
     accuracyDenominatorLabel: "first-published frozen prediction outcomes with observed recovery or terminal evidence",
     horizonHitRates: summarizeHorizons(rows),
+    horizonCalibration: summarizeHorizonCalibration(rows),
   };
 }
 

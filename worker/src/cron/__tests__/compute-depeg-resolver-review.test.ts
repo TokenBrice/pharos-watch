@@ -232,7 +232,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         assessmentRowsTruncated: false,
         incidentRowLimit: 20_000,
         incidentRowsTruncated: false,
-        publicRowLimit: 100,
+        publicRowLimit: 400,
         publicRowsTruncated: false,
         methodologyVersions: [DDR_METHODOLOGY_VERSION],
       },
@@ -393,7 +393,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot._meta.degraded).toBe(true);
     expect(snapshot._meta.degradedReason).toContain("incident-row-cap");
     expect(snapshot._meta.reviewedEventCount).toBe(20_000);
-    expect(snapshot.rows).toHaveLength(100);
+    expect(snapshot.rows).toHaveLength(400);
   });
 
   it("reviews published durable v2 prediction payloads", async () => {
@@ -486,6 +486,157 @@ describe("buildDepegResolverReviewSnapshot", () => {
       verdictReview: "correct_recoverable",
     });
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
+  });
+
+  it("annotates auto-repaired and split incident lineage from one bounded D1 batch", async () => {
+    const autoRepairedIncident = incident({
+      incidentKey: "ddr2:auto-repaired-lineage",
+    });
+    const splitIncident = incident({
+      incidentKey: "ddr2:split-child-lineage",
+      eventId: 43,
+      currentEventId: 43,
+      startedAt: STARTED_AT + 3_600,
+      eligibleAt: ELIGIBLE_AT + 3_600,
+    });
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [
+          {
+            id: 42,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT,
+            ended_at: ELIGIBLE_AT + 3_600,
+            recovery_price: 1,
+          },
+          {
+            id: 43,
+            stablecoin_id: "lusd-liquity",
+            started_at: STARTED_AT + 3_600,
+            ended_at: null,
+            recovery_price: null,
+          },
+        ],
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        rows: [{
+          incident_key: autoRepairedIncident.incidentKey,
+          repair_sources: "ddr-worker:repair-task-runner-v1,ddr-worker:auto-sealed-tail",
+        }],
+      },
+      {
+        match: "FROM depeg_resolver_incident_lineage",
+        rows: [{
+          incident_key: splitIncident.incidentKey,
+          parent_incident_key: "ddr2:split-parent-lineage",
+        }],
+      },
+    ]);
+    const batch = vi.spyOn(db, "batch");
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [autoRepairedIncident, splitIncident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        {
+          id: 55,
+          publicPredictionId: 55,
+          incidentKey: autoRepairedIncident.incidentKey,
+          eventId: 42,
+          assessmentId: 90,
+          outcomeKind: "prediction" as const,
+          predictionPolicyVersion: "sticky-24h-v1",
+          predictionMethodologyVersion: DDR_METHODOLOGY_VERSION,
+          policyDelaySec: 86_400,
+          eligibleAt: ELIGIBLE_AT,
+          lockedAt: ELIGIBLE_AT,
+          eventAgeAtLockSec: 86_400,
+          lockTiming: "on_time" as const,
+          rowHash: "e".repeat(64),
+          sealedPayload: {
+            symbol: "LUSD",
+            name: "Liquity USD",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            frozen: {
+              resolution: {
+                tier: "recovery_likely",
+                factors: [],
+              },
+              duration: {
+                suppressed: false,
+                suppressedReason: null,
+                medianSec: 3_600,
+                iqrSec: [1_800, 7_200],
+                horizons: JSON.parse(assessmentRow().horizons_json as string),
+                stratum: "below - moderate - robust - USD",
+              },
+            },
+          },
+        },
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [
+        {
+          publicPredictionId: 55,
+          incidentKey: autoRepairedIncident.incidentKey,
+          snapshotToken: "ddr-public-55",
+          snapshotGeneration: 3,
+          publishedAt: ELIGIBLE_AT + 60,
+          firstPublished: true,
+        },
+      ]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 7_200, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0]?.[0]).toHaveLength(2);
+    expect(snapshot.rows.find((row) => row.incidentKey === autoRepairedIncident.incidentKey)).toMatchObject({
+      kind: "prediction_review",
+      lineage: {
+        autoRepaired: true,
+        repairSources: ["ddr-worker:auto-sealed-tail", "ddr-worker:repair-task-runner-v1"],
+      },
+    });
+    expect(snapshot.rows.find((row) => row.incidentKey === splitIncident.incidentKey)).toMatchObject({
+      kind: "coverage",
+      lineage: { parentIncidentKey: "ddr2:split-parent-lineage" },
+    });
+    expect(DdrrResponseSchema.parse(snapshot)).toEqual(snapshot);
+  });
+
+  it("marks the reviewer snapshot degraded when lineage reads fail", async () => {
+    const lineageIncident = incident({ incidentKey: "ddr2:lineage-read-failure" });
+    const db = mockD1([
+      {
+        match: "FROM depeg_events",
+        rows: [{
+          id: 42,
+          stablecoin_id: "lusd-liquity",
+          started_at: STARTED_AT,
+          ended_at: null,
+          recovery_price: null,
+        }],
+      },
+      {
+        match: "FROM depeg_resolver_incident_event_links",
+        rows: [],
+        throwError: new Error("D1_ERROR: lineage query unavailable"),
+      },
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [lineageIncident]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3_600, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot._meta.degraded).toBe(true);
+    expect(snapshot._meta.degradedReason).toContain("incident-lineage-read-failed");
+    expect(snapshot.rows[0]?.lineage).toBeUndefined();
   });
 
   it("reviews sealed repaired tails against the current source event without moving the lock-time start", async () => {
@@ -2062,6 +2213,34 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("keeps headline stats complete while capping public review rows", async () => {
+    const assessmentRows = Array.from({ length: 401 }, (_, index) =>
+      assessmentRow({
+        event_id: index + 1,
+        started_at: STARTED_AT - index,
+      }),
+    );
+    const eventRows = assessmentRows.map((row) => ({
+      id: row.event_id,
+      stablecoin_id: row.stablecoin_id,
+      started_at: row.started_at,
+      ended_at: ASSESSED_AT + 7_200,
+      recovery_price: 1,
+    }));
+    const db = mockD1([
+      { match: "FROM depeg_resolver_assessments", rows: assessmentRows },
+      { match: "FROM depeg_events", rows: eventRows },
+    ]);
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
+
+    expect(snapshot._meta.reviewedEventCount).toBe(401);
+    expect(snapshot._meta.publicRowLimit).toBe(400);
+    expect(snapshot._meta.publicRowsTruncated).toBe(true);
+    expect(snapshot.rows).toHaveLength(400);
+    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(401);
+  });
+
+  it("serves more than 100 public review rows without truncation", async () => {
     const assessmentRows = Array.from({ length: 101 }, (_, index) =>
       assessmentRow({
         event_id: index + 1,
@@ -2083,10 +2262,9 @@ describe("buildDepegResolverReviewSnapshot", () => {
     const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
 
     expect(snapshot._meta.reviewedEventCount).toBe(101);
-    expect(snapshot._meta.publicRowLimit).toBe(100);
-    expect(snapshot._meta.publicRowsTruncated).toBe(true);
-    expect(snapshot.rows).toHaveLength(100);
-    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(101);
+    expect(snapshot._meta.publicRowLimit).toBe(400);
+    expect(snapshot._meta.publicRowsTruncated).toBe(false);
+    expect(snapshot.rows).toHaveLength(101);
   });
 
   it("stores a cache snapshot with headline DDRR stats", async () => {

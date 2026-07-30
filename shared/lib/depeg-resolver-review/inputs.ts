@@ -6,6 +6,7 @@ import type {
   DdrrCoverageCause,
   DdrrCoveragePredictionState,
   DdrrFailedPublication,
+  DdrrLineage,
   DdrrOutcomeQualityState,
   DdrrSourceEventState,
   DdrrTerminalEvidenceInterval,
@@ -51,6 +52,7 @@ export interface DdrrV2CoverageInput {
   terminalEvidenceAt?: number | null;
   terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
   terminalEvidencePrecision?: DdrrTerminalEvidencePrecision | null;
+  lineage?: DdrrLineage;
   predictionState: DdrrCoveragePredictionState;
   actualEndedAt?: number | null;
   terminalEvidenceSourceDate?: string | null;
@@ -77,6 +79,7 @@ export interface DdrrV2InvalidatedPredictionInput {
   terminalEvidenceAt?: number | null;
   terminalEvidenceInterval?: DdrrTerminalEvidenceInterval | null;
   terminalEvidencePrecision?: DdrrTerminalEvidencePrecision | null;
+  lineage?: DdrrLineage;
   publicPredictionId: number;
   assessmentId: number;
   predictionMethodologyVersion: string;

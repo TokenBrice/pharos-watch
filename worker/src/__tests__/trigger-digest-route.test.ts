@@ -17,8 +17,7 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
 });
 
 import { mockD1 } from "../test-helpers/__shared/mock-d1";
-import { buildRouteContext } from "../handlers/http/context";
-import { getRouteDependencies, route } from "../router";
+import { handleTriggerDigest } from "../api/admin-actions";
 
 function makeCtx() {
   const waits: Promise<unknown>[] = [];
@@ -49,26 +48,17 @@ describe("trigger-digest route", () => {
     const request = makeRequest();
     // Idempotency-Key is optional; absent header makes the handler run
     // directly via runIdempotentAdminAction's no-key shortcut.
-    const url = new URL(request.url);
-    const routeDependencies = getRouteDependencies(url);
-    expect(routeDependencies).not.toBeNull();
 
     const { ctx } = makeCtx();
-    const response = await route(
-      buildRouteContext({
+    const response = await handleTriggerDigest(
+      {
         request,
-        url,
-        env: {
-          DB: mockD1(),
-          CORS_ORIGIN: "https://pharos.watch",
-          ANTHROPIC_API_KEY: "anthropic-key",
-          TELEGRAM_BOT_TOKEN: "bot-token",
-          TELEGRAM_CHAT_ID: "@pharoswatch",
-        } as never,
+        db: mockD1(),
         execCtx: ctx,
         trustedAdmin: true,
-        routeDependencies: routeDependencies ?? [],
-      }),
+        anthropicApiKey: "anthropic-key",
+        telegramCreds: { botToken: "bot-token", chatId: "@pharoswatch" },
+      },
     );
 
     expect(response).not.toBeNull();

@@ -5,7 +5,7 @@ import {
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
-import type { DdrrActualEvent } from "@shared/types/depeg-resolver-review";
+import type { DdrrActualEvent, DdrrLineage } from "@shared/types/depeg-resolver-review";
 import type {
   DdrCanonicalIncident,
   DdrSealedPublicPrediction,
@@ -205,6 +205,7 @@ export function coverageRowForIncident(
   incident: DdrCanonicalIncident,
   actual: DdrrActualEvent | null,
   nowSec: number,
+  lineage?: DdrrLineage,
 ): DdrrV2CoverageInput {
   const state = coverageStateForIncident(incident, actual, nowSec);
   const terminalEvidenceAt = terminalEvidenceAtForEligibility(actual, coverageEligibilityAt(incident));
@@ -217,6 +218,7 @@ export function coverageRowForIncident(
     actualEndedAt: actual?.endedAt ?? null,
     terminalEvidenceSourceDate: terminalEvidenceSourceDate(actual),
     failedPublication: null,
+    lineage,
     ...state,
   };
 }
@@ -226,6 +228,7 @@ export function failedPublicationCoverageRow(
   incident: DdrCanonicalIncident,
   actual: DdrrActualEvent | null,
   payload: Record<string, unknown>,
+  lineage?: DdrrLineage,
 ): DdrrV2CoverageInput {
   const publicationFailed = actual != null && (
     actual.endedAt != null ||
@@ -248,6 +251,7 @@ export function failedPublicationCoverageRow(
     reason: publicationFailed
       ? "sealed_prediction_closed_before_first_publication_manifest"
       : "sealed_prediction_not_in_first_publication_manifest",
+    lineage,
     failedPublication: {
       publicPredictionId: publicPredictionIdOf(sealed),
       assessmentId: sealed.assessmentId,

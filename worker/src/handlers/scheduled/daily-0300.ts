@@ -2,6 +2,7 @@ import type { ScheduledRuntimeContext } from "./context";
 import { runPruneStatusProbeRuns } from "../../cron/prune-status-probe-runs";
 import { runPruneCronHistory } from "../../cron/prune-cron-history";
 import { runRepairTaskRunner } from "../../cron/repair-task-runner";
+import { isDdrRepairTaskRunnerEnabled } from "../../lib/repair-tasks";
 import { runPruneDetailCache } from "../../cron/prune-detail-cache";
 import { runTelegramInactiveCleanup } from "../../cron/telegram-inactive-cleanup";
 import { runTelegramRetentionCleanup } from "../../cron/telegram-retention-cleanup";
@@ -25,7 +26,14 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         },
         {
           job: "worker-repair-runner",
-          run: (signal) => runRepairTaskRunner(runtime.db, signal),
+          run: (signal) => runRepairTaskRunner(
+            runtime.db,
+            signal,
+            isDdrRepairTaskRunnerEnabled(
+              (runtime.env as unknown as { DDR_REPAIR_TASK_RUNNER_ENABLED?: unknown })
+                .DDR_REPAIR_TASK_RUNNER_ENABLED,
+            ),
+          ),
         },
         {
           job: "prune-detail-cache",

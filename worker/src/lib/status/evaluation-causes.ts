@@ -430,6 +430,7 @@ export function buildAvailabilityCauses(input: {
 
 export function buildDataQualityCauses(input: {
   dataQuality: DataQuality;
+  repairRunnerAutoRepairCount?: number | null;
   activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
   missingPriceRatio: number;
   blacklistMissingRatio: number;
@@ -534,6 +535,17 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "info",
       message: "Live reserve composition overview query failed; reserve freshness status may be incomplete.",
+    });
+  }
+
+  if (input.repairRunnerAutoRepairCount != null) {
+    pushCause(dataQualityCauses, {
+      code: "ddr_auto_repair_count",
+      layer: "data-quality",
+      severity: "info",
+      message: `The most recent DDR repair runner execution auto-repaired ${input.repairRunnerAutoRepairCount} task(s).`,
+      metric: "autoRepairCount",
+      value: input.repairRunnerAutoRepairCount,
     });
   }
 

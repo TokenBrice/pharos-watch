@@ -691,6 +691,29 @@ describe("status cause text", () => {
     );
   });
 
+  it("reports the most recent DDR repair runner auto-repair count", () => {
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      repairRunnerAutoRepairCount: 2,
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    });
+
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "ddr_auto_repair_count",
+        severity: "info",
+        metric: "autoRepairCount",
+        value: 2,
+      }),
+    );
+  });
+
   it("degrades and explains unavailable exact publication evidence", () => {
     const dataQuality = makeDataQuality({
       stablecoinPublication: {

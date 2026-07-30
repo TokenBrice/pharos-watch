@@ -31,7 +31,7 @@ function makeEventRow(overrides: Partial<DdrEventDbRow> = {}): DdrEventDbRow {
 }
 
 describe("toStructural", () => {
-  it("carries reviewed mint-authority incident dates into DDR structural context", () => {
+  it("carries curated issuer evidence into DDR structural context", () => {
     const meta = {
       id: "fixture-usd",
       symbol: "FXD",
@@ -44,10 +44,11 @@ describe("toStructural", () => {
         mintPath: "issuer-direct-mint",
         authorityPosture: "concentrated-admin",
         mintIncidents: [
-          { date: "2026-05-24", summary: "Compromised minter minted unbacked supply." },
-          { date: "2026-05-25", summary: "Follow-up reviewed mint incident." },
+          { date: "2026-05-24", status: "active", summary: "Compromised minter minted unbacked supply." },
+          { date: "2026-05-25", status: "resolved", resolvedAt: "2026-05-26", summary: "Follow-up reviewed mint incident." },
         ],
       },
+      windDownAnnouncedAt: "2026-05-24",
     } as StablecoinMeta;
 
     expect(toStructural(meta)).toMatchObject({
@@ -55,7 +56,11 @@ describe("toStructural", () => {
       symbol: "FXD",
       mintPath: "issuer-direct-mint",
       authorityPosture: "concentrated-admin",
-      mintIncidentDates: ["2026-05-24", "2026-05-25"],
+      mintIncidents: [
+        { date: "2026-05-24", status: "active", resolvedAt: null },
+        { date: "2026-05-25", status: "resolved", resolvedAt: "2026-05-26" },
+      ],
+      windDownAnnouncedAt: "2026-05-24",
     });
   });
 });

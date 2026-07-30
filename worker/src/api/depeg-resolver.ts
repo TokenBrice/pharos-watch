@@ -9,6 +9,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";
 import { loadDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
+  DDR_DURATION_BAND_META,
   DDR_EMPTY_READ_OVERLAY,
   DDR_PUBLIC_WARNING,
   DdrResponseSchema,
@@ -56,6 +57,7 @@ function degradedResponse(reason: string): DdrResponse {
       publicWarning: DDR_PUBLIC_WARNING,
       resolutionRubricVersion: DDR_RESOLUTION_RUBRIC_VERSION,
       durationModelVersion: DDR_DURATION_MODEL_VERSION,
+      durationBand: DDR_DURATION_BAND_META,
       incidentGroupingVersion: DDR_INCIDENT_GROUPING_VERSION,
       supportRulesVersion: DDR_SUPPORT_RULES_VERSION,
       lineage: null,
@@ -529,6 +531,7 @@ async function manifestFallbackResponse(db: D1Database, reason: string): Promise
         publicWarning: parsed._meta?.publicWarning ?? DDR_PUBLIC_WARNING,
         resolutionRubricVersion: parsed._meta?.resolutionRubricVersion ?? DDR_RESOLUTION_RUBRIC_VERSION,
         durationModelVersion: parsed._meta?.durationModelVersion ?? DDR_DURATION_MODEL_VERSION,
+        durationBand: parsed._meta?.durationBand,
         incidentGroupingVersion: parsed._meta?.incidentGroupingVersion ?? DDR_INCIDENT_GROUPING_VERSION,
         supportRulesVersion: parsed._meta?.supportRulesVersion ?? DDR_SUPPORT_RULES_VERSION,
         lineage: parsed._meta?.lineage ?? null,

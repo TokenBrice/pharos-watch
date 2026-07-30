@@ -4,6 +4,8 @@
   "symbol": "GYEN",
   "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin now in wind-down, with purchases disabled and redemption-only access open during the initial period.",
   "status": "frozen",
+  "windDownAnnouncedAt": "2026-05-15",
+  "windDownSourceUrl": "https://stablecoin.z.com/press/",
   "frozenAt": "2026-07-08",
   "obituary": {
     "causeOfDeath": "abandoned",

@@ -138,6 +138,7 @@ export function buildDdrManifestBasePayload(response: DdrResponse): unknown {
       publicWarning: response._meta.publicWarning,
       resolutionRubricVersion: response._meta.resolutionRubricVersion,
       durationModelVersion: response._meta.durationModelVersion,
+      durationBand: response._meta.durationBand,
       incidentGroupingVersion: response._meta.incidentGroupingVersion,
       supportRulesVersion: response._meta.supportRulesVersion,
       lineage: response._meta.lineage,

@@ -12,7 +12,9 @@
 
 ## Individual Migrations (current active files)
 
-None. The next migration starts at sequence 0228; do not renumber or reuse absorbed or retired filenames.
+| Sequence | Filename                                                     | Description                                                                                                  |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 0228     | `0228_depeg_resolver_incident_closed_pre_lock.sql`           | Add nullable `closed_pre_lock_at` for the derived pre-lock closed lifecycle state.                          |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

@@ -10,7 +10,13 @@
 
 import type { DdrFactor, DdrResolution, DdrResolutionTier } from "../../types/depeg-resolver";
 import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
-import type { DdrActiveEventInput, DdrCoinStructural, DdrLiveContext, DdrSupplyContext } from "./inputs";
+import type {
+  DdrActiveEventInput,
+  DdrCoinStructural,
+  DdrLiveContext,
+  DdrSupplyContext,
+  DdrV9ExitContext,
+} from "./inputs";
 import { depthBucket } from "./strata";
 
 const RISKY_MINT_PATHS = new Set([
@@ -26,6 +32,41 @@ const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
 const HARD_COLLATERAL_RESERVE_PCT = 80;
 const DAY_SEC = 86400;
 const RECENT_MINT_INCIDENT_WINDOW_SEC = 60 * DAY_SEC;
+const POST_BREAK_MINT_INCIDENT_WINDOW_SEC = 7 * DAY_SEC;
+const STATIC_K2_EXEMPT_ARCHETYPES = new Set(["cdp", "synthetic-delta-neutral"]);
+const K6_WIND_DOWN_SUPPLY_CHANGE_30D_PCT = -40;
+const K6_WIND_DOWN_EXIT_TREND_PCT = -40;
+const K6_CALM_CATASTROPHIC_DEPTH_BPS = 1_000;
+const K6_CALM_CATASTROPHIC_SUPPLY_CHANGE_30D_ABS_PCT = 5;
+const K6_CALM_CATASTROPHIC_VOLUME_24H_USD = 100;
+const V9_EXIT_SEVERE_COMPLETION_RATIO = 0.01;
+const V9_EXIT_ELEVATED_COMPLETION_RATIO = 0.05;
+const V9_EXIT_R2_STRONG_COMPLETION_RATIO = 0.1;
+const V9_EXIT_MIN_EXECUTABLE_USD = 100_000;
+
+export interface DdrWindDownFingerprintContext {
+  tvlChange30d?: number | null;
+  volumeChange30d?: number | null;
+  totalVolume24hUsd?: number | null;
+}
+
+type DdrResolutionLiveContext = DdrLiveContext & DdrWindDownFingerprintContext;
+
+export const DDR_R5_GRADE_MAPPING_VERSION = "r5-grade-v1";
+export const DDR_R5_GRADE_MAPPING = {
+  version: DDR_R5_GRADE_MAPPING_VERSION,
+  strong: ["A+", "A", "A-"],
+  weak: ["B+", "B", "B-"],
+} as const;
+const DDR_R5_STRONG_GRADES: ReadonlySet<string> = new Set(DDR_R5_GRADE_MAPPING.strong);
+const DDR_R5_WEAK_GRADES: ReadonlySet<string> = new Set(DDR_R5_GRADE_MAPPING.weak);
+
+export const DDR_K1_MAS_RISKY_BAND_MAPPING_VERSION = "mas-band-v1";
+export const DDR_K1_MAS_RISKY_BAND_MAPPING = {
+  version: DDR_K1_MAS_RISKY_BAND_MAPPING_VERSION,
+  riskyBands: ["concentrated", "exposed"],
+} as const;
+const DDR_K1_RISKY_MAS_BANDS: ReadonlySet<string> = new Set(DDR_K1_MAS_RISKY_BAND_MAPPING.riskyBands);
 
 export const DDR_INSUFFICIENT_MINT_AUTHORITY_REASON = "No reviewed mint authority";
 export const DDR_INSUFFICIENT_SUPPLY_HISTORY_REASON = "No usable supply history for this coin";
@@ -43,7 +84,7 @@ interface RawFactor {
   label: string;
 }
 
-function parseMintIncidentDateSec(date: string): number | null {
+function parseRegistryDateSec(date: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return null;
   const year = Number(match[1]);
@@ -59,18 +100,126 @@ function parseMintIncidentDateSec(date: string): number | null {
 }
 
 function hasRecentMintIncident(active: DdrActiveEventInput, coin: DdrCoinStructural, asOfSec: number): boolean {
-  return (coin.mintIncidentDates ?? []).some((date) => {
-    const incidentAt = parseMintIncidentDateSec(date);
-    if (incidentAt == null || incidentAt > asOfSec) return false;
-    return Math.abs(incidentAt - active.startedAt) <= RECENT_MINT_INCIDENT_WINDOW_SEC;
+  const windowStart = active.startedAt - RECENT_MINT_INCIDENT_WINDOW_SEC;
+  const windowEnd = active.startedAt + POST_BREAK_MINT_INCIDENT_WINDOW_SEC;
+  return (coin.mintIncidents ?? []).some((incident) => {
+    if (incident.status !== "active") return false;
+    const incidentAt = parseRegistryDateSec(incident.date);
+    if (incidentAt == null || incidentAt > asOfSec || incidentAt < windowStart || incidentAt > windowEnd) return false;
+    if (incident.resolvedAt == null) return true;
+    const resolvedAt = parseRegistryDateSec(incident.resolvedAt);
+    return resolvedAt != null && resolvedAt > asOfSec;
   });
+}
+
+function announcedWindDownDate(coin: DdrCoinStructural, asOfSec: number): string | null {
+  const date = coin.windDownAnnouncedAt;
+  if (date == null) return null;
+  const announcedAt = parseRegistryDateSec(date);
+  return announcedAt != null && announcedAt <= asOfSec ? date : null;
+}
+
+function windDownFingerprintEvidence(
+  active: DdrActiveEventInput,
+  supply: DdrSupplyContext,
+  live: DdrResolutionLiveContext,
+): string | null {
+  const supplyChange30d = supply.change30dPct;
+  if (supplyChange30d != null && Number.isFinite(supplyChange30d)) {
+    if (supplyChange30d <= K6_WIND_DOWN_SUPPLY_CHANGE_30D_PCT) {
+      const collapsedExitTrends = [
+        { label: "7-day DEX TVL", changePct: live.tvlChange7d },
+        { label: "30-day DEX TVL", changePct: live.tvlChange30d },
+        { label: "30-day DEX volume", changePct: live.volumeChange30d },
+      ]
+        .filter(
+          (trend): trend is { label: string; changePct: number } =>
+            trend.changePct != null &&
+            Number.isFinite(trend.changePct) &&
+            trend.changePct <= K6_WIND_DOWN_EXIT_TREND_PCT,
+        )
+        .sort((a, b) => a.changePct - b.changePct);
+      const strongestExitCollapse = collapsedExitTrends[0];
+      if (strongestExitCollapse) {
+        return (
+          `supply contracted ${Math.round(Math.abs(supplyChange30d))}% over 30 days ` +
+          `while ${strongestExitCollapse.label} fell ${Math.round(Math.abs(strongestExitCollapse.changePct))}%`
+        );
+      }
+    }
+
+    const depthBps = Math.abs(active.peakDeviationBps);
+    const volume24hUsd = live.totalVolume24hUsd;
+    if (
+      depthBps >= K6_CALM_CATASTROPHIC_DEPTH_BPS &&
+      Math.abs(supplyChange30d) < K6_CALM_CATASTROPHIC_SUPPLY_CHANGE_30D_ABS_PCT &&
+      volume24hUsd != null &&
+      Number.isFinite(volume24hUsd) &&
+      volume24hUsd >= 0 &&
+      volume24hUsd <= K6_CALM_CATASTROPHIC_VOLUME_24H_USD
+    ) {
+      return (
+        `${Math.round(depthBps)}bps break with flat 30-day supply ` +
+        `and only $${Math.round(volume24hUsd)} DEX volume / 24h`
+      );
+    }
+  }
+
+  return null;
+}
+
+function identifiedV9Exit(live: DdrLiveContext): DdrV9ExitContext | null {
+  return live.safetyContext?.status === "v9-identified" ? live.v9Exit ?? null : null;
+}
+
+function measuredV9ExitCapacity(live: DdrLiveContext): NonNullable<DdrV9ExitContext["primaryRoute"]>["capacity"] | null {
+  const exit = identifiedV9Exit(live);
+  const capacity = exit?.primaryRoute?.capacity;
+  if (
+    exit == null ||
+    capacity == null ||
+    exit.stressRequest == null ||
+    capacity.requestedNotionalUsd !== exit.stressRequest.requestedNotionalUsd
+  ) {
+    return null;
+  }
+  return capacity;
+}
+
+function measuredV9ExitCapacitySeverity(live: DdrLiveContext): "severe" | "elevated" | null {
+  const capacity = measuredV9ExitCapacity(live);
+  if (capacity == null) return null;
+  if (capacity.completionRatio <= V9_EXIT_SEVERE_COMPLETION_RATIO) {
+    return "severe";
+  }
+  if (
+    capacity.completionRatio < V9_EXIT_ELEVATED_COMPLETION_RATIO ||
+    (capacity.executableUsd < V9_EXIT_MIN_EXECUTABLE_USD && capacity.completionRatio < 0.25)
+  ) {
+    return "elevated";
+  }
+  return null;
+}
+
+function hasMeasuredV9ExitRoute(live: DdrLiveContext): boolean {
+  const exit = identifiedV9Exit(live);
+  const capacity = measuredV9ExitCapacity(live);
+  return (
+    exit?.primaryRoute != null &&
+    exit.pillarScore != null &&
+    exit.pillarScore > 0 &&
+    exit.primaryRoute.score > 0 &&
+    capacity != null &&
+    capacity.completionRatio >= V9_EXIT_R2_STRONG_COMPLETION_RATIO &&
+    capacity.executableUsd >= V9_EXIT_MIN_EXECUTABLE_USD
+  );
 }
 
 function killSignals(
   active: DdrActiveEventInput,
   coin: DdrCoinStructural,
   supply: DdrSupplyContext,
-  live: DdrLiveContext,
+  live: DdrResolutionLiveContext,
   asOfSec: number,
 ): RawFactor[] {
   const out: RawFactor[] = [];
@@ -79,8 +228,11 @@ function killSignals(
   const deep = depth === "severe" || depth === "catastrophic";
   const riskyMinter =
     (coin.authorityPosture != null && RISKY_POSTURES.has(coin.authorityPosture)) ||
-    (coin.mintPath != null && RISKY_MINT_PATHS.has(coin.mintPath));
-  const supplyExpanding = supply.mintSurge === true || (supply.change7dPct != null && supply.change7dPct > 20);
+    (coin.mintPath != null && RISKY_MINT_PATHS.has(coin.mintPath)) ||
+    (coin.mintAuthorityScoreBand != null && DDR_K1_RISKY_MAS_BANDS.has(coin.mintAuthorityScoreBand));
+  const supplyExpanding =
+    supply.mintSurge === true ||
+    (supply.mintSurgeCoverage !== "mint-burn-hourly" && supply.change7dPct != null && supply.change7dPct > 20);
   const recentMintIncident = hasRecentMintIncident(active, coin, asOfSec);
 
   // K1 — supply weaponization (below-peg only)
@@ -103,8 +255,9 @@ function killSignals(
   // K2 — backing impairment
   const veryHigh = sumReserveRisk(coin, ["very-high"]);
   const highish = sumReserveRisk(coin, ["high", "very-high"]);
+  const staticReserveRiskApplies = !STATIC_K2_EXEMPT_ARCHETYPES.has(coin.mechanismArchetype ?? "");
   const veryHighReserveConcentration = veryHigh >= SEVERE_VERY_HIGH_RISK_RESERVE_PCT;
-  const severeReserveImpairment = below && deep && veryHighReserveConcentration;
+  const severeReserveImpairment = staticReserveRiskApplies && below && deep && veryHighReserveConcentration;
   if (coin.dependencyImpaired === true || severeReserveImpairment) {
     out.push({
       code: "K2_backing_impairment",
@@ -115,9 +268,10 @@ function killSignals(
         : "Very-high-risk reserves paired with a severe below-peg break",
     });
   } else if (
-    coin.collateralQuality === "exotic" ||
-    highish >= ELEVATED_HIGH_RISK_RESERVE_PCT ||
-    veryHighReserveConcentration
+    staticReserveRiskApplies &&
+    (coin.collateralQuality === "exotic" ||
+      highish >= ELEVATED_HIGH_RISK_RESERVE_PCT ||
+      veryHighReserveConcentration)
   ) {
     out.push({
       code: "K2_backing_impairment",
@@ -177,19 +331,58 @@ function killSignals(
   // K5 — exit collapse
   const liq = live.liquidityScore;
   const rcr = live.redemptionCapacityRatio;
-  if ((liq != null && liq < 20 && live.tvlChange7d != null && live.tvlChange7d < -40) || (rcr != null && rcr < 0.005)) {
+  const v9Exit = identifiedV9Exit(live);
+  const noViableV9Exit = v9Exit?.reasonCodes.includes("no-viable-exit-path") === true;
+  const correlatedV9ExitRoutes = v9Exit?.reasonCodes.includes("correlated-exit-routes") === true;
+  const v9CapacitySeverity = measuredV9ExitCapacitySeverity(live);
+  const legacySevereK5 =
+    (liq != null && liq < 20 && live.tvlChange7d != null && live.tvlChange7d < -40) ||
+    (rcr != null && rcr < 0.005);
+  const legacyElevatedK5 = (liq != null && liq < 30) || live.bankRun === true || (rcr != null && rcr < 0.02);
+  if (legacySevereK5 || noViableV9Exit || v9CapacitySeverity === "severe") {
     out.push({
       code: "K5_exit_collapse",
       kind: "kill",
       severity: "severe",
-      label: "Exit liquidity collapsing with no redemption path",
+      label: noViableV9Exit
+        ? "V9 identifies no viable exit path"
+        : v9CapacitySeverity === "severe"
+          ? "Measured V9 exit capacity is effectively exhausted"
+          : "Exit liquidity collapsing with no redemption path",
     });
-  } else if ((liq != null && liq < 30) || live.bankRun === true || (rcr != null && rcr < 0.02)) {
+  } else if (legacyElevatedK5 || correlatedV9ExitRoutes || v9CapacitySeverity === "elevated") {
     out.push({
       code: "K5_exit_collapse",
       kind: "kill",
       severity: "elevated",
-      label: live.bankRun === true ? "Sustained one-sided outflow (bank-run signal)" : "Thin exit liquidity",
+      label: correlatedV9ExitRoutes
+        ? "V9 exit routes share correlated failure modes"
+        : v9CapacitySeverity === "elevated"
+          ? "Measured V9 exit capacity is thin for the stress request"
+          : live.bankRun === true
+            ? "Sustained one-sided outflow (bank-run signal)"
+            : "Thin exit liquidity",
+    });
+  }
+
+  // K6 — issuer wind-down
+  const windDownDate = announcedWindDownDate(coin, asOfSec);
+  const fingerprintEvidence = windDownFingerprintEvidence(active, supply, live);
+  if (windDownDate != null) {
+    out.push({
+      code: "K6_wind_down",
+      kind: "kill",
+      severity: "severe",
+      label:
+        `Issuer announced wind-down on ${windDownDate}` +
+        (fingerprintEvidence != null ? `; ${fingerprintEvidence} (wind-down fingerprint)` : ""),
+    });
+  } else if (fingerprintEvidence != null) {
+    out.push({
+      code: "K6_wind_down",
+      kind: "kill",
+      severity: "elevated",
+      label: `${fingerprintEvidence} (wind-down fingerprint)`,
     });
   }
 
@@ -220,7 +413,8 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   const veryLow = sumReserveRisk(coin, ["very-low", "low"]);
   const rcr = live.redemptionCapacityRatio;
   const hardCollateral = coin.collateralQuality === "native" || veryLow >= HARD_COLLATERAL_RESERVE_PCT;
-  const liveRedemptionRoute = rcr != null && rcr >= 0.1 && live.redemptionRouteFamily != null;
+  const liveRedemptionRoute =
+    (rcr != null && rcr >= 0.1 && live.redemptionRouteFamily != null) || hasMeasuredV9ExitRoute(live);
   if (hardCollateral && liveRedemptionRoute) {
     out.push({
       code: "R2_hard_collateral_redemption",
@@ -280,19 +474,20 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
 
   // R5 — proven mean-reversion
   // Only an identified canonical V9 publication may unlock this anchor.
-  if (live.safetyContext?.status === "v9-identified" && live.safetyScore != null && live.safetyScore >= 85) {
+  const safetyGrade = live.safetyGrade;
+  if (live.safetyContext?.status === "v9-identified" && safetyGrade != null && DDR_R5_STRONG_GRADES.has(safetyGrade)) {
     out.push({
       code: "R5_proven_meanreversion",
       kind: "anchor",
       severity: "strong",
-      label: "Strong safety/peg track record",
+      label: `Strong V9 safety grade (${safetyGrade})`,
     });
-  } else if (live.safetyContext?.status === "v9-identified" && live.safetyScore != null && live.safetyScore >= 70) {
+  } else if (live.safetyContext?.status === "v9-identified" && safetyGrade != null && DDR_R5_WEAK_GRADES.has(safetyGrade)) {
     out.push({
       code: "R5_proven_meanreversion",
       kind: "anchor",
       severity: "weak",
-      label: "Decent safety/peg track record",
+      label: `Moderate V9 safety grade (${safetyGrade})`,
     });
   }
 
@@ -303,7 +498,7 @@ export function resolveOutlook(
   active: DdrActiveEventInput,
   coin: DdrCoinStructural,
   supply: DdrSupplyContext,
-  live: DdrLiveContext,
+  live: DdrResolutionLiveContext,
   asOfSec = active.startedAt,
 ): DdrResolution {
   const insufficientReasons: string[] = [];
@@ -327,9 +522,9 @@ export function resolveOutlook(
 
   let tier: DdrResolutionTier;
 
-  if (frozenTerminal) {
-    // A terminal coin is recovery_unlikely irrespective of break direction;
-    // an overpeg on a frozen/wound-down issuer is not a recovery signal.
+  if (frozenTerminal || kills.some((kill) => kill.code === "K6_wind_down" && kill.severity === "severe")) {
+    // A terminal issuer or announced token wind-down is recovery_unlikely
+    // irrespective of break direction.
     tier = "recovery_unlikely";
   } else if (active.direction === "above") {
     // Overpeg: recovery is quasi-certain; only a sticky-premium signal lifts to at_risk.

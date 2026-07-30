@@ -51,6 +51,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/depeg-resolver/incident-state.ts",
   "worker/src/cron/depeg-resolver/options.ts",
   "worker/src/cron/depeg-resolver/persistence.ts",
+  "worker/src/cron/depeg-resolver/pre-lock-incident-reaper.ts",
   "worker/src/cron/depeg-resolver/public-projection.ts",
   "worker/src/cron/depeg-resolver/publication.ts",
   "worker/src/cron/depeg-resolver/utils.ts",

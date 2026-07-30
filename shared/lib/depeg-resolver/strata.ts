@@ -73,9 +73,10 @@ export function stratumLabel(key: DdrStratumKey | DdrStratumCandidate): string {
 
 /**
  * Candidate strata for an active event, from most specific to coarsest:
- * exact full → drop currency → collapse the non-minor depth split while
- * preserving structure → finally drop structure. Severe/catastrophic events
- * never borrow the minor-flap clock.
+ * USD subjects drop currency before structure. Non-USD subjects preserve their
+ * currency while dropping structure, so their clock cannot borrow USD history
+ * merely to retain a structural class. Severe/catastrophic events never borrow
+ * the minor-flap clock.
  */
 export function candidateStrata(active: DdrStratumKey): DdrStratumCandidate[] {
   const exact: readonly DdrDepthBucket[] = [active.depth];
@@ -94,13 +95,30 @@ export function candidateStrata(active: DdrStratumKey): DdrStratumCandidate[] {
 
   const out: DdrStratumCandidate[] = [
     { direction: active.direction, depths: exact, structural: active.structural, currency: active.currency },
-    { direction: active.direction, depths: exact, structural: active.structural, currency: STRATUM_ANY },
   ];
+  const retainCurrency = active.currency === "non-USD";
+  const refinedCurrency = retainCurrency ? active.currency : STRATUM_ANY;
+
+  if (retainCurrency) {
+    out.push({ direction: active.direction, depths: exact, structural: STRATUM_ANY, currency: active.currency });
+  } else {
+    out.push({ direction: active.direction, depths: exact, structural: active.structural, currency: STRATUM_ANY });
+  }
   if (collapsedAddsDepthCoverage) {
-    out.push({ direction: active.direction, depths: collapsed, structural: active.structural, currency: STRATUM_ANY });
+    out.push({
+      direction: active.direction,
+      depths: collapsed,
+      structural: retainCurrency ? STRATUM_ANY : active.structural,
+      currency: refinedCurrency,
+    });
   }
   if (broadAddsDepthCoverage) {
-    out.push({ direction: active.direction, depths: broad, structural: active.structural, currency: STRATUM_ANY });
+    out.push({
+      direction: active.direction,
+      depths: broad,
+      structural: retainCurrency ? STRATUM_ANY : active.structural,
+      currency: refinedCurrency,
+    });
   }
   out.push({ direction: active.direction, depths: exact, structural: STRATUM_ANY, currency: STRATUM_ANY });
   if (collapsedAddsDepthCoverage) {

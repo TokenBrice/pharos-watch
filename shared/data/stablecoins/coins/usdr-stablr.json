@@ -278,6 +278,8 @@
   ],
   "marketAvailability": "legacy-or-wind-down",
   "status": "frozen",
+  "windDownAnnouncedAt": "2026-05-24",
+  "windDownSourceUrl": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations",
   "frozenAt": "2026-05-24",
   "obituary": {
     "causeOfDeath": "counterparty-failure",

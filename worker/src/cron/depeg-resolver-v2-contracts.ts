@@ -68,7 +68,8 @@ export interface DdrCanonicalIncident {
   eligibleAt: number;
   policyUniverseIncluded: boolean;
   rolloutActiveAtEnablement?: boolean;
-  incidentState?: "active" | "merged" | "superseded" | "split_source";
+  incidentState?: "active" | "closed_pre_lock" | "merged" | "superseded" | "split_source";
+  closedPreLockAt?: number | null;
   supersededByIncidentKey?: string | null;
   confirmedAt?: number | null;
   lockState?: DdrPredictionLockState | null;
@@ -177,6 +178,10 @@ export interface DdrPublicationManifestInput {
 }
 
 export interface DdrV2StoreContracts {
+  closeRecoveredPreLockIncidents?(
+    db: D1Database,
+    input: { nowSec: number },
+  ): Promise<number>;
   ensureCanonicalIncidents(
     db: D1Database,
     events: DdrCanonicalIncidentInput[],

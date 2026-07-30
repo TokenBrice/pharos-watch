@@ -189,6 +189,26 @@ describe("StablecoinMeta schema — frozen status", () => {
   });
 });
 
+describe("StablecoinMeta schema — issuer wind-down evidence", () => {
+  it("accepts a dated issuer announcement with a source URL", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        windDownAnnouncedAt: "2026-05-24",
+        windDownSourceUrl: "https://issuer.example.com/wind-down",
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
+  it("rejects malformed wind-down dates and source URLs", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ windDownAnnouncedAt: "2026/05/24" }),
+    ], "fixture")).toThrow(/windDownAnnouncedAt/);
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ windDownSourceUrl: "issuer.example.com/wind-down" }),
+    ], "fixture")).toThrow(/windDownSourceUrl/);
+  });
+});
+
 describe("StablecoinMeta schema — listing lifecycle status", () => {
   it("accepts a quarantined record with a dated manual review", () => {
     expect(() => parseStablecoinMetaAssets([
