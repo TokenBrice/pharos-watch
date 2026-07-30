@@ -15,19 +15,19 @@
     "branchCount": 113
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 913,
+    "fileLines": 927,
     "maxFunctionLines": 44,
     "branchCount": 5
   },
   "shared/lib/safety-score-v9/backing.ts": {
-    "fileLines": 1515,
+    "fileLines": 1494,
     "maxFunctionLines": 166,
-    "branchCount": 104
+    "branchCount": 102
   },
   "shared/lib/safety-score-v9/control.ts": {
-    "fileLines": 1195,
-    "maxFunctionLines": 665,
-    "branchCount": 172
+    "fileLines": 1159,
+    "maxFunctionLines": 646,
+    "branchCount": 167
   },
   "shared/lib/safety-score-v9/coverage.ts": {
     "fileLines": 923,
@@ -40,7 +40,7 @@
     "branchCount": 159
   },
   "shared/lib/safety-score-v9/formula.ts": {
-    "fileLines": 1378,
+    "fileLines": 1374,
     "maxFunctionLines": 509,
     "branchCount": 128
   },
@@ -50,12 +50,12 @@
     "branchCount": 82
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1988,
+    "fileLines": 1914,
     "maxFunctionLines": 239,
     "branchCount": 204
   },
   "shared/types/safety-score-v9-public.ts": {
-    "fileLines": 1731,
+    "fileLines": 1723,
     "maxFunctionLines": 75,
     "branchCount": 105
   },
@@ -205,8 +205,8 @@
     "branchCount": 34
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 423,
-    "maxFunctionLines": 307,
+    "fileLines": 414,
+    "maxFunctionLines": 301,
     "branchCount": 11
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
@@ -225,8 +225,8 @@
     "branchCount": 28
   },
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
-    "fileLines": 675,
-    "maxFunctionLines": 381,
+    "fileLines": 666,
+    "maxFunctionLines": 375,
     "branchCount": 45
   },
   "worker/src/cron/dex-liquidity/staging-merge.ts": {
@@ -240,8 +240,8 @@
     "branchCount": 127
   },
   "worker/src/cron/reserve-adapters/sfrxusd-crosschain-redemption.ts": {
-    "fileLines": 1831,
-    "maxFunctionLines": 771,
+    "fileLines": 1436,
+    "maxFunctionLines": 679,
     "branchCount": 60
   },
   "worker/src/cron/sync-mint-burn.ts": {
@@ -340,9 +340,9 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2359,
+    "fileLines": 2358,
     "maxFunctionLines": 252,
-    "branchCount": 275
+    "branchCount": 273
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,
