@@ -1,5 +1,9 @@
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import {
+  safetyScorePublicationIdentitiesAreComparable,
+  safetyScorePublicationIdentitiesMatch,
+} from "@shared/lib/safety-score-publication";
+import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
   type SafetyScoreV8PublicationIdentity,
@@ -47,18 +51,7 @@ export function safetyScoreHistoryIdentitiesMatch(
   left: SafetyScoreHistoryIdentity,
   right: SafetyScoreHistoryIdentity,
 ): boolean {
-  if (
-    left.model !== right.model ||
-    left.schemaVersion !== right.schemaVersion ||
-    left.methodologyVersion !== right.methodologyVersion ||
-    left.evaluationBuildDigest !== right.evaluationBuildDigest ||
-    left.baseInputGenerationId !== right.baseInputGenerationId ||
-    left.publicationGenerationId !== right.publicationGenerationId
-  ) {
-    return false;
-  }
-  if (left.model === "v8" || right.model === "v8") return left.model === right.model;
-  return left.policyId === right.policyId && left.policyDigest === right.policyDigest;
+  return safetyScorePublicationIdentitiesMatch(left, right);
 }
 
 /**
@@ -70,16 +63,7 @@ export function safetyScoreHistoryIdentitiesAreComparable(
   left: SafetyScoreHistoryIdentity,
   right: SafetyScoreHistoryIdentity,
 ): boolean {
-  if (
-    left.model !== right.model ||
-    left.schemaVersion !== right.schemaVersion ||
-    left.methodologyVersion !== right.methodologyVersion ||
-    left.evaluationBuildDigest !== right.evaluationBuildDigest
-  ) {
-    return false;
-  }
-  if (left.model === "v8" || right.model === "v8") return left.model === right.model;
-  return left.policyId === right.policyId && left.policyDigest === right.policyDigest;
+  return safetyScorePublicationIdentitiesAreComparable(left, right);
 }
 
 export function safetyScoreLegacyHistoryV2Id(stablecoinId: string, recordedAt: number): string {

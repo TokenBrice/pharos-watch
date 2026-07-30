@@ -34,7 +34,7 @@ export interface DiscoveryMeta {
   lastHitAt: number | null;
 }
 
-export type DexDeploymentProviderCheckStatus = "success" | "failure";
+export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded";
 
 export interface DexDeploymentProviderCheck {
   chain: string;

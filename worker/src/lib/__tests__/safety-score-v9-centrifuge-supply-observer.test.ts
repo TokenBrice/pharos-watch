@@ -16,33 +16,50 @@ import {
   type CentrifugeSolanaRpcFetcher,
 } from "../safety-score-v9-centrifuge-supply-observer";
 
-const ASSET_ID = "acrdx-anemoy-apollo";
+const ASSET_ID = "jtrsy-anemoy";
 const AGGREGATE_SUPPLY_USD = 51_033_069.79770032;
 const CLOCK_SEC = 1_784_904_600;
 const REGISTRY_FINGERPRINT = "a".repeat(64);
 
 const RAW_BY_CHAIN: Record<string, bigint> = {
   ethereum: 378_869_494_500_836_268_665_209n,
+  arbitrum: 19_837_361_464_973_825_379_103n,
+  avalanche: 8_837_361_464_973_825_379_103n,
+  base: 0n,
+  bsc: 4_837_361_464_973_825_379_103n,
   plume: 32_320_262_971_888_335_278_993_277n,
   monad: 9_837_361_464_973_825_379_103_908n,
-  base: 0n,
 };
 
 const BLOCK_BY_CHAIN: Record<string, number> = {
   ethereum: 25_603_299,
+  arbitrum: 487_200_000,
+  avalanche: 73_000_000,
+  base: 49_057_583,
+  bsc: 52_000_000,
   plume: 83_072_568,
   monad: 89_944_923,
-  base: 49_057_583,
 };
 
 const TIME_BY_CHAIN: Record<string, number> = {
   ethereum: CLOCK_SEC - 30,
+  arbitrum: CLOCK_SEC - 25,
+  avalanche: CLOCK_SEC - 15,
+  base: CLOCK_SEC - 20,
+  bsc: CLOCK_SEC - 10,
   plume: CLOCK_SEC - 7,
   monad: CLOCK_SEC - 4,
-  base: CLOCK_SEC - 20,
 };
 
-const EVM_CHAINS = ["ethereum", "plume", "monad", "base"] as const;
+const EVM_CHAINS = [
+  "ethereum",
+  "arbitrum",
+  "avalanche",
+  "base",
+  "bsc",
+  "plume",
+  "monad",
+] as const;
 
 function uint256(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
@@ -50,7 +67,7 @@ function uint256(value: bigint): `0x${string}` {
 
 function chainRpcs(): Map<string, ChainRpcConfig> {
   return new Map(
-    ["ethereum", "base"].map((chainId) => [
+    ["ethereum", "arbitrum", "avalanche", "base", "bsc"].map((chainId) => [
       chainId,
       {
         chainId,
@@ -76,7 +93,7 @@ function solanaObservation(): ReviewedDeploymentSupplyObservation {
     route.routeId,
   );
   if (!identity || identity.runtime !== "solana") {
-    throw new Error("Missing ACRDX Solana identity");
+    throw new Error("Missing JTRSY Solana identity");
   }
   return {
     routeId: route.routeId,
@@ -145,7 +162,7 @@ function dependencies() {
         if (!chainId || RAW_BY_CHAIN[chainId] == null) return null;
         const values: Record<string, `0x${string}`> = {
           "total-supply": uint256(RAW_BY_CHAIN[chainId]!),
-          decimals: uint256(18n),
+          decimals: uint256(6n),
           "spoke-ward": uint256(1n),
         };
         return calls.map((call) => ({
@@ -183,7 +200,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     const attribution = await observe(deps);
 
     expect(attribution).not.toBeNull();
-    expect(attribution!.deployments).toHaveLength(5);
+    expect(attribution!.deployments).toHaveLength(8);
     expect(
       attribution!.deployments.reduce(
         (sum, row) => sum + row.currentSupplyUsd,
@@ -196,7 +213,7 @@ describe("Centrifuge reviewed deployment observer", () => {
       expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
       expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
     ]);
-    expect(deps.fetchEvmBlockNumber).toHaveBeenCalledTimes(4);
+    expect(deps.fetchEvmBlockNumber).toHaveBeenCalledTimes(7);
     expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
   });
 
@@ -212,7 +229,7 @@ describe("Centrifuge reviewed deployment observer", () => {
             call.label === "total-supply"
               ? uint256(RAW_BY_CHAIN[chainId]!)
               : call.label === "decimals"
-                ? uint256(18n)
+                ? uint256(6n)
                 : uint256(chainId === "monad" ? 0n : 1n),
         }));
       },
@@ -247,8 +264,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     ).resolves.toEqual({
       status: "rejected",
       rejectionCode: "deployment-state-invalid",
-      failedRouteId:
-        "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+      failedRouteId: routeForChain("base").routeId,
     });
   });
 
@@ -259,7 +275,7 @@ describe("Centrifuge reviewed deployment observer", () => {
       route.routeId,
     );
     if (!identity || identity.runtime !== "solana") {
-      throw new Error("Missing ACRDX Solana identity");
+      throw new Error("Missing JTRSY Solana identity");
     }
     const rpc = vi.fn(async (method: string, params: unknown[]) => {
       if (method === "getMultipleAccounts") {

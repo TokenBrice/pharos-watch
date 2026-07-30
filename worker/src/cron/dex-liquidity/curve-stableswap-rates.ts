@@ -71,6 +71,7 @@ interface CurveRatePoolState {
   rates: bigint[];
   amplification: bigint;
   fee: bigint;
+  offpegFeeMultiplier: bigint;
   coinAddresses: `0x${string}`[];
 }
 
@@ -177,10 +178,6 @@ function parsePoolState(input: {
     fee == null ||
     fee >= CURVE_STABLESWAP_FEE_DENOMINATOR ||
     offpegFeeMultiplier == null ||
-    // StableSwap-NG only uses the dynamic-fee formula above its 1e10 fee
-    // denominator. The shared closed-form model accepts one fixed fee, so
-    // dynamic-fee pools remain gated rather than approximated at a snapshot.
-    offpegFeeMultiplier > CURVE_STABLESWAP_FEE_DENOMINATOR ||
     balances.length !== expectedCoins.length ||
     rates.length !== expectedCoins.length ||
     balances.some((balance) => balance <= 0n) ||
@@ -195,7 +192,7 @@ function parsePoolState(input: {
     if (!address || address !== expectedCoins[coinIndex]!.address) return null;
     coinAddresses.push(address);
   }
-  return { balances, rates, amplification, fee, coinAddresses };
+  return { balances, rates, amplification, fee, offpegFeeMultiplier, coinAddresses };
 }
 
 function toTokenUnits(value: bigint, decimals: number): number | null {
@@ -225,7 +222,18 @@ function buildRateAwareExecutionModel(input: {
   // The shared simulator uses the plain paper convention (Ann = A * n^n).
   const amplification = Number(state.amplification) / tokenCount ** (tokenCount - 1);
   if (!Number.isFinite(amplification) || amplification <= 0) return null;
-  const feeRate = Number(state.fee) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR);
+  // StableSwap-NG charges `fee` while the swapped pair sits on balance and
+  // scales it toward `fee * offpeg_fee_multiplier / 1e10` as that pair goes
+  // off balance (`_dynamic_fee`); multipliers at or below the 1e10 denominator
+  // mean the static fee. The shared closed-form model accepts one fixed fee, so
+  // the captured model carries the off-balance maximum: an upper bound on fee
+  // is a lower bound on exit capacity, matching the conservative bound the
+  // source-only Curve path already publishes.
+  const feeMultiplier =
+    state.offpegFeeMultiplier > CURVE_STABLESWAP_FEE_DENOMINATOR
+      ? Number(state.offpegFeeMultiplier) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)
+      : 1;
+  const feeRate = (Number(state.fee) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR)) * feeMultiplier;
   if (!Number.isFinite(feeRate) || feeRate < 0 || feeRate >= 1) return null;
 
   let hasNonBaseRate = false;
@@ -429,9 +437,9 @@ async function enrichChain(input: {
 
 /**
  * Replace eligible Curve StableSwap-NG rate-bearing gates only after reading
- * balances, rate multipliers, amplification, static fee state, and coin order
- * at one fresh, confirmed block. Every failure keeps the original rate-bearing
- * gate.
+ * balances, rate multipliers, amplification, fee state (priced at its
+ * off-balance maximum), and coin order at one fresh, confirmed block. Every
+ * failure keeps the original rate-bearing gate.
  */
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
   metrics: Map<string, LiquidityMetrics>;

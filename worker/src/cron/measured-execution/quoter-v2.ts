@@ -19,6 +19,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { getDexMeasuredExecutionDeployment } from "./registry";
 import { forEachWithConcurrency } from "./concurrency";
 import { MAX_UINT256, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
@@ -133,64 +134,41 @@ async function executeAdaptiveChunk(input: {
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
 }): Promise<AdaptiveChunkResult> {
-  if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-    return {
-      results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
-      transportFailureLabels: input.calls.map((call) => call.label),
-      budgetStopReasonsByLabel: new Map(),
-    };
-  }
-  let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
-  const result = await fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
-    chainRpcs: input.chainRpcs,
+  const result = await executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
+    chain: input.chain,
+    calls: input.calls,
+    blockNumber: input.blockNumber,
     signal: input.signal,
-    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-    ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-    ...(input.rpcBudget
-      ? {
-          beforeRequest: () => {
-            const consumed = input.rpcBudget!.tryConsume();
-            if (!consumed) budgetStopReason = input.rpcBudget!.stopReason;
-            return consumed;
-          },
-        }
-      : {}),
-    maxRetries: 0,
-    gas: QUOTER_MULTICALL_GAS,
-    multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, input.calls.length),
+    execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
+      fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
+        chainRpcs: input.chainRpcs,
+        signal,
+        timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+        ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
+        ...(input.rpcBudget
+          ? {
+              beforeRequest: () => {
+                const consumed = input.rpcBudget!.tryConsume();
+                const reason = input.rpcBudget!.stopReason;
+                if (!consumed && reason) onBudgetStop?.(reason);
+                return consumed;
+              },
+            }
+          : {}),
+        maxRetries: 0,
+        gas: QUOTER_MULTICALL_GAS,
+        multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, calls.length),
+      }),
+    failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
+    getLabel: (call) => call.label,
+    ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
+    failedAttemptAccounting: "single-call",
+    unattemptedResult: "failure-result",
   });
-  if (result != null) {
-    input.rpcBudget?.recordChainResult(input.chain, true);
-    return { results: result, transportFailureLabels: [], budgetStopReasonsByLabel: new Map() };
-  }
-  if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
-    budgetStopReason = "runtime-deadline-exceeded";
-  }
-  if (budgetStopReason != null) {
-    return {
-      results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
-      transportFailureLabels: input.calls.map((call) => call.label),
-      budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
-    };
-  }
-  if (input.calls.length === 1) {
-    input.rpcBudget?.recordChainResult(input.chain, false);
-    return {
-      results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
-      transportFailureLabels: [input.calls[0]!.label],
-      budgetStopReasonsByLabel: new Map(),
-    };
-  }
-  const midpoint = Math.ceil(input.calls.length / 2);
-  const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
-  const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
   return {
-    results: [...left.results, ...right.results],
-    transportFailureLabels: [...left.transportFailureLabels, ...right.transportFailureLabels],
-    budgetStopReasonsByLabel: new Map([
-      ...left.budgetStopReasonsByLabel,
-      ...right.budgetStopReasonsByLabel,
-    ]),
+    results: result.results,
+    transportFailureLabels: result.unattemptedLabels,
+    budgetStopReasonsByLabel: result.budgetStopReasonsByLabel,
   };
 }
 

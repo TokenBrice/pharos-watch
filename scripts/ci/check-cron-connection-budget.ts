@@ -1,4 +1,9 @@
-import { CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
+import {
+  CRON_CONNECTION_BUDGET,
+  CRON_CONNECTION_BUDGET_ENTRIES,
+  CRON_GROWTH_HEADROOM_POLICY,
+  CRON_SCHEDULES,
+} from "../../shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -14,6 +19,16 @@ interface CronConnectionBudgetConfigForCheck {
   maxPerTrigger: number;
   failAt: number;
   fullForNewFetchHeavyWorkAt: number;
+}
+
+interface CronGrowthHeadroomPolicyForCheck {
+  maxFetchCapableEntriesBeforeRebalance: number;
+  maxHeadroomFullTriggersBeforeRebalance: number;
+  queuesOrWorkflowsReview: {
+    connectionPressureAt: number;
+    fanoutPerRun: number;
+    p95DurationMs: number;
+  };
 }
 
 export interface CronConnectionGroupReport {
@@ -40,7 +55,11 @@ export interface CronConnectionTriggerReport {
 export interface CronConnectionBudgetReport {
   budget: CronConnectionBudgetConfigForCheck;
   budgetOnlyCount: number;
+  fetchCapableEntryCount: number;
+  fetchCapableEntryLimitExceeded: boolean;
   failed: boolean;
+  growthPolicy: CronGrowthHeadroomPolicyForCheck;
+  headroomFullTriggerLimitExceeded: boolean;
   headroomFullTriggers: CronConnectionTriggerReport[];
   missingBudgetJobs: string[];
   missingBudgetScheduleKeys: string[];
@@ -65,11 +84,13 @@ function formatJob(job: { job: string; statusTracked: boolean }): string {
 export function evaluateCronConnectionBudget(input: {
   budget?: CronConnectionBudgetConfigForCheck;
   entries?: readonly CronConnectionBudgetEntryForCheck[];
+  growthPolicy?: CronGrowthHeadroomPolicyForCheck;
   schedules?: Record<string, string>;
   slotPlans?: Readonly<Record<string, ScheduledSlotPlanForCheck>>;
 } = {}): CronConnectionBudgetReport {
   const budget = input.budget ?? CRON_CONNECTION_BUDGET;
   const entries = input.entries ?? CRON_CONNECTION_BUDGET_ENTRIES;
+  const growthPolicy = input.growthPolicy ?? CRON_GROWTH_HEADROOM_POLICY;
   const schedules = input.schedules ?? CRON_SCHEDULES;
   const slotPlans: Readonly<Record<string, ScheduledSlotPlanForCheck>> = input.slotPlans ?? SCHEDULED_SLOT_PLANS;
 
@@ -171,10 +192,20 @@ export function evaluateCronConnectionBudget(input: {
     }
   }
 
+  const fetchCapableEntryCount = entries.filter((entry) => entry.maxConnections > 0).length;
+  const fetchCapableEntryLimitExceeded =
+    fetchCapableEntryCount > growthPolicy.maxFetchCapableEntriesBeforeRebalance;
+  const headroomFullTriggerLimitExceeded =
+    headroomFullTriggers.length > growthPolicy.maxHeadroomFullTriggersBeforeRebalance;
+
   return {
     budget,
     budgetOnlyCount: entries.filter((entry) => !entry.statusTracked).length,
-    failed: failed || missingBudgetJobs.length > 0,
+    fetchCapableEntryCount,
+    fetchCapableEntryLimitExceeded,
+    failed: failed || missingBudgetJobs.length > 0 || fetchCapableEntryLimitExceeded || headroomFullTriggerLimitExceeded,
+    growthPolicy,
+    headroomFullTriggerLimitExceeded,
     headroomFullTriggers,
     missingBudgetJobs,
     missingBudgetScheduleKeys,
@@ -183,7 +214,7 @@ export function evaluateCronConnectionBudget(input: {
 }
 
 export function printReport(report: CronConnectionBudgetReport): void {
-  const { budget } = report;
+  const { budget, growthPolicy } = report;
   if (report.missingBudgetScheduleKeys.length > 0) {
     console.error(
       `FAIL: ${pluralize(report.missingBudgetScheduleKeys.length, "cron schedule")} missing from SCHEDULED_SLOT_PLANS: ${report.missingBudgetScheduleKeys.join(", ")}`,
@@ -193,6 +224,18 @@ export function printReport(report: CronConnectionBudgetReport): void {
   if (report.missingBudgetJobs.length > 0) {
     console.error(
       `FAIL: ${pluralize(report.missingBudgetJobs.length, "scheduled job")} missing from CRON_CONNECTION_BUDGET_ENTRIES: ${report.missingBudgetJobs.join(", ")}`,
+    );
+  }
+
+  if (report.fetchCapableEntryLimitExceeded) {
+    console.error(
+      `FAIL: ${report.fetchCapableEntryCount} fetch-capable scheduled entries exceed the reviewed ${growthPolicy.maxFetchCapableEntriesBeforeRebalance}-entry topology. Consolidate or rebalance before adding fetch-heavy scheduled work.`,
+    );
+  }
+
+  if (report.headroomFullTriggerLimitExceeded) {
+    console.error(
+      `FAIL: ${report.headroomFullTriggers.length} headroom-full triggers exceed the reviewed ${growthPolicy.maxHeadroomFullTriggersBeforeRebalance}-trigger topology. Consolidate or rebalance before adding fetch-heavy scheduled work.`,
     );
   }
 
@@ -216,7 +259,7 @@ export function printReport(report: CronConnectionBudgetReport): void {
   }
 
   if (report.failed) {
-    console.error("\nConnection budget exceeded. Rebalance jobs across triggers.");
+    console.error("\nCron connection or growth-headroom policy failed. Rebalance jobs across triggers.");
     return;
   }
 
@@ -235,6 +278,16 @@ export function printReport(report: CronConnectionBudgetReport): void {
         );
       }
     }
+  }
+
+  if (
+    report.fetchCapableEntryCount >= growthPolicy.maxFetchCapableEntriesBeforeRebalance
+    || report.headroomFullTriggers.length >= growthPolicy.maxHeadroomFullTriggersBeforeRebalance
+  ) {
+    const review = growthPolicy.queuesOrWorkflowsReview;
+    console.log(
+      `\nCron growth decision trigger reached. Before new fetch-heavy scheduled work, consolidate or rebalance the topology and have the Worker operations owner consider Cloudflare Queues/Workflows when measured p95 duration reaches ${review.p95DurationMs / 60_000} minutes, fan-out reaches ${review.fanoutPerRun} units/run, or static connection pressure reaches ${review.connectionPressureAt}/${budget.maxPerTrigger}.`,
+    );
   }
 
   console.log(

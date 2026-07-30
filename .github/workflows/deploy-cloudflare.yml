@@ -89,6 +89,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - name: Check Worker migrations
         run: npm run check:migrations
+      - name: Package Worker before D1 mutation
+        run: npm run check:worker-package
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Deploy Worker
@@ -164,3 +166,110 @@ jobs:
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  post-deploy-acceptance:
+    needs:
+      - plan
+      - deploy-worker
+      - pages-release
+    if: >-
+      ${{
+        always()
+        && needs.plan.result == 'success'
+        && (
+          needs.deploy-worker.result == 'success'
+          || needs.pages-release.result == 'success'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.acceptance.outputs.outcome }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.16.0"
+      - id: acceptance
+        name: Record read-only operational acceptance
+        env:
+          PAGES_DEPLOYED: ${{ needs.pages-release.result == 'success' }}
+          WORKER_DEPLOYED: ${{ needs.deploy-worker.result == 'success' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+
+          import { fetchJsonProbe, collectWorkerHttpProbes } from "./scripts/lib/worker-http-probes.mjs";
+          import {
+            selectPostDeployProbes,
+            summarizePostDeployAcceptance,
+          } from "./scripts/lib/post-deploy-acceptance.mjs";
+
+          const probes = selectPostDeployProbes({
+            pagesDeployed: process.env.PAGES_DEPLOYED === "true",
+            workerDeployed: process.env.WORKER_DEPLOYED === "true",
+          });
+          const results = [];
+
+          for (const probe of probes) {
+            if (probe.id === "pages-shell") {
+              const response = await fetchJsonProbe(
+                { apiUrl: "https://stablecoin-dashboard.pages.dev" },
+                "/",
+              );
+              const shell = typeof response.payload === "string" ? response.payload : "";
+              results.push({
+                ...probe,
+                outcome: response.ok && /<html[\s>]/i.test(shell) ? "passed" : "failed",
+                detail: "GET " + response.url + " returned " + response.status + ".",
+              });
+              continue;
+            }
+
+            if (probe.id === "worker-health") {
+              const { health } = await collectWorkerHttpProbes(
+                { apiUrl: "https://api.pharos.watch" },
+                { includeHealth: true },
+              );
+              const healthState = health?.payload?.status;
+              results.push({
+                ...probe,
+                outcome: health?.ok && healthState === "healthy" ? "passed" : "failed",
+                detail:
+                  "GET " + (health?.url ?? "https://api.pharos.watch/api/health")
+                  + " returned " + (health?.status ?? 0) + (healthState ? " (" + healthState + ")." : "."),
+              });
+              continue;
+            }
+
+            if (probe.id === "worker-cron") {
+              results.push({
+                ...probe,
+                outcome: "pending",
+                detail: "Await the first matching scheduled execution; inspect it with npm run ops:watch-worker-cron.",
+              });
+            }
+          }
+
+          const acceptance = summarizePostDeployAcceptance(results);
+          const lines = [
+            "## Post-deploy operational acceptance",
+            "",
+            "- Outcome: " + acceptance.outcome,
+            "- " + acceptance.reason,
+            "- Scope: read-only GET probes only; no production mutation or automatic rollback.",
+            "",
+            "| Probe | Surface | Outcome | Evidence |",
+            "| --- | --- | --- | --- |",
+            ...results.map((result) => "| " + result.id + " | " + result.surface + " | " + result.outcome + " | " + result.detail + " |"),
+            "",
+          ];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+          appendFileSync(process.env.GITHUB_OUTPUT, "outcome=" + acceptance.outcome + "\n");
+
+          if (acceptance.outcome === "failed") process.exitCode = 1;
+          NODE

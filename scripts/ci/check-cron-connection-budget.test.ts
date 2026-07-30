@@ -105,4 +105,36 @@ describe("check-cron-connection-budget", () => {
     expect(report.triggerReports[0]?.totalConnections).toBe(4);
     expect(report.failed).toBe(false);
   });
+
+  it("requires a consolidation decision before growing the reviewed fetch topology", () => {
+    const report = evaluateCronConnectionBudget({
+      budget: {
+        maxPerTrigger: 3,
+        failAt: 3,
+        fullForNewFetchHeavyWorkAt: 2,
+      },
+      growthPolicy: {
+        maxFetchCapableEntriesBeforeRebalance: 1,
+        maxHeadroomFullTriggersBeforeRebalance: 1,
+        queuesOrWorkflowsReview: {
+          connectionPressureAt: 2,
+          fanoutPerRun: 100,
+          p95DurationMs: 60_000,
+        },
+      },
+      entries: [
+        { job: "full-a", maxConnections: 2, scheduleKey: "slot-a", statusTracked: true },
+        { job: "full-b", maxConnections: 2, scheduleKey: "slot-b", statusTracked: true },
+      ],
+      schedules: { "slot-a": "1 * * * *", "slot-b": "2 * * * *" },
+      slotPlans: {
+        "slot-a": { jobChains: [["full-a"]] },
+        "slot-b": { jobChains: [["full-b"]] },
+      },
+    });
+
+    expect(report.fetchCapableEntryLimitExceeded).toBe(true);
+    expect(report.headroomFullTriggerLimitExceeded).toBe(true);
+    expect(report.failed).toBe(true);
+  });
 });

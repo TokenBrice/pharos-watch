@@ -124,21 +124,22 @@ export async function postMiniAppSnapshot(path: string, body: unknown): Promise<
   return hydrateMiniAppResponse(response);
 }
 
-/**
- * Portable watchlist reads use the same versioned, signed Mini App transport
- * as mutations but intentionally return a token or exact preview, not state.
- */
-export async function postMiniAppPortability(path: string, body: unknown): Promise<TelegramMiniAppPortabilityResponse> {
+interface VersionedMiniAppResponse {
+  contractVersion: string;
+  catalogVersion: string;
+}
+
+export async function postVersionedMiniAppJson<T extends VersionedMiniAppResponse>(
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+): Promise<T> {
   const query = new URLSearchParams({
     [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
     [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
   });
   const separator = path.includes("?") ? "&" : "?";
-  const response = await postMiniAppJson(
-    `${path}${separator}${query}`,
-    body,
-    TelegramMiniAppPortabilityResponseSchema,
-  );
+  const response = await postMiniAppJson(`${path}${separator}${query}`, body, schema);
   if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
     throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
       contractVersion: response.contractVersion,
@@ -154,34 +155,20 @@ export async function postMiniAppPortability(path: string, body: unknown): Promi
   return response;
 }
 
+/**
+ * Portable watchlist reads use the same versioned, signed Mini App transport
+ * as mutations but intentionally return a token or exact preview, not state.
+ */
+export async function postMiniAppPortability(path: string, body: unknown): Promise<TelegramMiniAppPortabilityResponse> {
+  return postVersionedMiniAppJson(path, body, TelegramMiniAppPortabilityResponseSchema);
+}
+
 /** Server-side bulk selection previews are signed reads, like portability previews. */
 export async function postMiniAppBulkWatchlistPreview(
   path: string,
   body: unknown,
 ): Promise<TelegramMiniAppBulkWatchlistResponse> {
-  const query = new URLSearchParams({
-    [TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM]: TELEGRAM_MINI_APP_CONTRACT_VERSION,
-    [TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM]: TELEGRAM_MINI_APP_CATALOG_VERSION,
-  });
-  const separator = path.includes("?") ? "&" : "?";
-  const response = await postMiniAppJson(
-    `${path}${separator}${query}`,
-    body,
-    TelegramMiniAppBulkWatchlistResponseSchema,
-  );
-  if (response.contractVersion !== TELEGRAM_MINI_APP_CONTRACT_VERSION) {
-    throw new MiniAppRequestError(409, "contract-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
-    });
-  }
-  if (response.catalogVersion !== TELEGRAM_MINI_APP_CATALOG_VERSION) {
-    throw new MiniAppRequestError(409, "catalog-version-mismatch", null, {
-      contractVersion: response.contractVersion,
-      catalogVersion: response.catalogVersion,
-    });
-  }
-  return response;
+  return postVersionedMiniAppJson(path, body, TelegramMiniAppBulkWatchlistResponseSchema);
 }
 
 export async function postMiniAppState(path: string, body: unknown): Promise<TelegramMiniAppState> {

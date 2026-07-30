@@ -133,7 +133,9 @@ For the site-data proxy:
 
 - `SITE_API_SHARED_SECRET`
 - `SITE_API_ORIGIN=https://site-api.pharos.watch` on production Pages hosts
+- `SELECTOR_SNAPSHOTS` KV namespace binding for Picker snapshots
 - `SELECTOR_SNAPSHOT_IP_HASH_SECRET`
+- `TELEGRAM_ADOPTION_IP_HASH_SECRET`
 - `DB` for Pages-side storage: optional for durable `/_site-data/*` attribution telemetry, but required by `POST /selector-snapshot` for the atomic hashed-IP daily quota store. Plain site-data reads continue without DB telemetry; selector snapshot writes fail closed when the binding is absent.
 
 Optional active overrides (the proxy has production defaults for these already):
@@ -294,17 +296,18 @@ Parameters of record:
   ```
   (http.host eq "api.pharos.watch"
     and starts_with(http.request.uri.path, "/api/")
+    and not (http.request.uri.path in {"/api/telegram-webhook" "/api/telegram-mini-app/session" "/api/telegram-mini-app/mutate"})
     and not cf.bot_management.verified_bot)
   ```
 
 - Threshold: `120` requests / `10` seconds per `IP` characteristic
 - Action: `Block` for `10` seconds
-- Placement: First (evaluates before any other security rule)
+- Placement: after the narrower self-serve and Telegram-ingress rules
 
 Why the expression is tuned this way:
 
-- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The keyed public surface — `api.pharos.watch` — still benefits from a zone-side floor on the exempt routes (`/api/health`, `/api/og/*`, `/api/feedback`, `/api/api-key-requests`, `/api/api-key-requests/verify`, `/api/telegram-webhook`, `/api/telegram-mini-app/session`, `/api/telegram-mini-app/mutate`) and as a flood-control backstop in front of per-key auth.
-- **Path filter** — `starts_with(http.request.uri.path, "/api/")` narrows the match to the legitimate API surface; stray requests to other paths on the host are left to default handling.
+- **Host scope** — `api.pharos.watch` only, not `site-api.pharos.watch` or `ops-api.pharos.watch`. Browser reads to `site-api` arrive via the same-origin Pages Functions proxy (`functions/_site-data/[[path]].ts`), which routes through Cloudflare's internal network; a single colo IP proxying many users could plausibly trip a per-IP limit under load. `site-api` is already gated by `SITE_API_SHARED_SECRET` and `ops-api` by Cloudflare Access, so neither benefits from an additional volumetric filter in front of its own auth layer. The keyed public surface — `api.pharos.watch` — still benefits from a zone-side floor on ordinary public API traffic and the self-serve intake paths, while the three Telegram paths use their narrower ingress rules.
+- **Path filter** — `starts_with(http.request.uri.path, "/api/")` narrows the match to the legitimate API surface; the explicit Telegram exclusions leave those paths to their dedicated per-IP/per-colo ingress rules.
 - **Verified bot carve-out** — `not cf.bot_management.verified_bot` exempts Cloudflare's verified-bot list (Google, Bing, Anthropic/ClaudeBot, etc.) so legitimate crawlers never trip the limit. The field is available on all plans.
 
 To edit, disable, or add an exception:
@@ -317,7 +320,7 @@ Rule id and verification:
 
 - The rule id appears in the rule list and in the rule detail page URL in the dashboard. Record it when the rule is created or edited.
 - Rule matches appear under Security → Events filtered by `Rule ID = <rule-id>`. If the filter page is empty during normal traffic, the rule is live but not matching (that is the expected steady state).
-- No repo smoke covers this rule — it is a zone-side safety net, not a contract. Watch the Events page after each deploy for false positives.
+- The scheduled account-state drift check verifies this policy configuration but does not simulate a matching request. Watch the Events page after each deploy for false positives.
 
 Operational notes:
 
@@ -349,6 +352,32 @@ Verification:
 - Cloudflare dashboard → zone `pharos.watch` → Security → Events, filter by the self-serve rule ID after a test or simulated match.
 - Confirm the rule ID in the dashboard after creation and record it in the incident note when the rule is edited.
 - Confirm `/api/api-key-requests-admin*` is not present in the rule expression before enabling.
+
+---
+
+### 11. Monitor Cloudflare account-state drift
+
+`scripts/ci/cloudflare-account-state-manifest.json` is the committed, secret-free
+expectation for the account-bound configuration that this repository does not
+deploy: the active zone, Pages project and production binding names/types,
+Pages and Worker custom domains, Access applications, and WAF rate-limit rules.
+It contains neither resource IDs nor secret values.
+
+The weekly **Cloudflare Account-State Drift** workflow runs
+`npm run check:cloudflare-account-state` with the repository secret exposed only
+as `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. The script derives the account
+and zone IDs from the `pharos.watch` zone lookup at runtime, performs only
+Cloudflare API `GET` requests, and reports only resource names, public binding
+types, and differing policy fields. It never prints the token, account/zone IDs,
+or Pages secret values.
+
+Create a dedicated read-only API token for this check. It needs the minimum
+read access for the zone lookup, Pages project/domains, Access applications,
+Worker custom domains, and zone WAF/rulesets. Do not reuse a deployment or
+cache-purge token. If the GitHub secret is absent, the workflow fails before
+making a network request and names the required secret. Intentional account
+changes must update the manifest and its fixture tests in the same review;
+Terraform/OpenTofu import remains owner-gated and out of scope.
 
 ---
 

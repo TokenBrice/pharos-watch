@@ -100,7 +100,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - produces a successful no-op when neither surface needs deployment. There is no separate guard or no-op job.
 2. `deploy-worker`
    - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
-   - installs the lockfile workspace, runs `npm run check:migrations`, and applies remote D1 migrations;
+   - installs the lockfile workspace, runs `npm run check:migrations`, proves the strict Worker bundle with `npm run check:worker-package`, and only then applies remote D1 migrations;
    - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
    - queries `wrangler deployments status --json` once and requires the SHA-tagged deployment to be the sole active version at 100% traffic;
    - fails visibly on migration, deploy, or activation-proof failure. It does not preview-upload, poll deployment status, make a custom-domain request from shared GitHub egress, run browser/ops/transport checks, or automatically roll back.
@@ -122,7 +122,7 @@ There is no Pages browser installation, local proxy, GitHub Jobs API polling, de
 
 ## Operational Acceptance
 
-Workflow success proves deployment identity, not every runtime behavior. Record deployment proof and operational acceptance separately.
+Workflow success proves activation identity, not every runtime behavior. The read-only `post-deploy-acceptance` job adds narrow runtime-health evidence for each surface that successfully deployed; it records `passed`, `failed`, or explicitly `pending` in the workflow summary without mutating production or rolling anything back. Record deployment proof and operational acceptance separately.
 
 | Change risk                     | Deployment proof                                       | Operational acceptance                                                                                                   |
 | ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
@@ -131,7 +131,7 @@ Workflow success proves deployment identity, not every runtime behavior. Record 
 | Cron/scheduler/ingestion/memory | Worker activation                                      | First matching scheduled execution completes within its expected status, duration, memory, and publication contract      |
 | D1 migration plus runtime use   | Migration and Worker activation steps succeed          | First affected read/write or scheduled path succeeds; rollback notes acknowledge that Worker rollback does not revert D1 |
 
-Use `npm run ops:watch-worker-cron` for bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. A Worker release also records its first matching scheduled execution as `pending`, because a short deploy job cannot safely wait for and correlate a future cron run. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
 
 ## GitHub Deploy Inputs
 
@@ -149,6 +149,12 @@ Repository secrets consumed only by jobs attached to the production environment:
 The Cloudflare credentials authorize Worker/D1 and Pages deployment. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository. The matching Pages and Worker `SITE_API_SHARED_SECRET` bindings remain Cloudflare-managed; scheduled refreshes reach that authenticated Worker lane through the Pages proxy without exposing the secret to the GitHub runner.
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
+
+The scheduled Cloudflare account-state drift workflow uses the separate
+repository secret `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. It is a dedicated
+read-only credential and is not attached to the production environment; see
+[`docs/operator-origin-access.md`](./operator-origin-access.md) for its scope
+and the secret-free manifest it checks.
 
 Scheduled artifact PR secret:
 
@@ -191,13 +197,13 @@ Current explicitly deferred major cohort:
 - `@types/node@25` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
-Current risk-accepted transitive advisories (triage reference for the weekly `dependency-audit.yml` run):
+Current risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale:
 
 - `brace-expansion` / `GHSA-mh99-v99m-4gvg` (accepted 2026-07-25; review by 2026-08-15): the affected v1 copies are dev-only transitive dependencies of ESLint through `minimatch@3`. They process repository-owned lint/config patterns, are absent from production installs, and are not reachable from user input or a deployed request path. The patched `brace-expansion@5` export is not compatible with these parents, and npm currently offers only breaking parent upgrades; retain this exception until the lint toolchain adopts a compatible patched dependency.
 
-The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Run it directly for dependency changes. The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile as advisory input.
+The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The weekly `dependency-audit.yml` job runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.mjs`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
 
-When the weekly job finds a new high/critical full-lockfile advisory, fix it, pin it away, or document the reviewed unreachable/dev-only risk acceptance here before treating the red job as accepted. Do not run `npm audit fix --force` outside a dedicated dependency tranche; forced fixes can downgrade or cross major lines.
+When the weekly job finds a new high/critical full-lockfile advisory, fix it, pin it away, or add a narrowly scoped, expiring registry entry with the reviewed unreachable/dev-only rationale here. Do not run `npm audit fix --force` outside a dedicated dependency tranche; forced fixes can downgrade or cross major lines.
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 

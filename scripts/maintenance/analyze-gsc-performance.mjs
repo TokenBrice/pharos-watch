@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mjs";
 import {
   collectInputEntries,
   compareText,
@@ -454,37 +454,24 @@ function labelsForPage(page, minImpressions) {
 
 export function renderGscPerformanceReport(report) {
   const lines = [];
-  lines.push("GSC Performance CTR Inventory");
-  lines.push("No live network checks were performed.");
-  lines.push(`Target CTR: ${formatCtr(report.options.targetCtr)}`);
-  lines.push(`Minimum impressions for priority rows: ${formatInteger(report.options.minImpressions)}`);
-  lines.push("");
-
-  lines.push("Inputs:");
-  if (report.inputs.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const input of report.inputs) lines.push(`- ${input}`);
-  }
-  lines.push("");
-
-  lines.push("Unsupported or skipped files:");
-  if (report.notes.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const note of report.notes) lines.push(`- ${note}`);
-  }
-  lines.push("");
-
-  lines.push("Parsed files:");
-  lines.push(`- CSV files: ${report.parsedFileCounts.csv}`);
-  lines.push(`- Performance CSV files: ${report.parsedFileCounts.performance}`);
-  lines.push(`- Page rows: ${report.parsedFileCounts.pageRows}`);
-  lines.push(`- Query-only rows: ${report.parsedFileCounts.queryOnlyRows}`);
-  if (report.parsedFileCounts.skippedMetricRows > 0) {
-    lines.push(`- Skipped rows with malformed metrics: ${report.parsedFileCounts.skippedMetricRows}`);
-  }
-  lines.push("");
+  appendGscReportPreamble(lines, {
+    title: "GSC Performance CTR Inventory",
+    detailLines: [
+      `Target CTR: ${formatCtr(report.options.targetCtr)}`,
+      `Minimum impressions for priority rows: ${formatInteger(report.options.minImpressions)}`,
+    ],
+    inputs: report.inputs,
+    notes: report.notes,
+    parsedFileCounts: [
+      ["CSV files", report.parsedFileCounts.csv],
+      ["Performance CSV files", report.parsedFileCounts.performance],
+      ["Page rows", report.parsedFileCounts.pageRows],
+      ["Query-only rows", report.parsedFileCounts.queryOnlyRows],
+      ...(report.parsedFileCounts.skippedMetricRows > 0
+        ? [["Skipped rows with malformed metrics", report.parsedFileCounts.skippedMetricRows]]
+        : []),
+    ],
+  });
 
   lines.push("Site CTR:");
   lines.push(`- ${formatAggregateMetrics(report.site)}`);
@@ -617,18 +604,4 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
   }
 }
 
-function isMainModule() {
-  return isDirectRun(import.meta.url, process.argv[1]);
-}
-
-if (isMainModule()) {
-  runCli().then(
-    (code) => {
-      process.exitCode = code;
-    },
-    (error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    },
-  );
-}
+runAsyncDirect(import.meta.url, process.argv[1], runCli);

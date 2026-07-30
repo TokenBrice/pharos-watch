@@ -26,8 +26,6 @@ export function buildChainAddressKey(chain: string, address: string): string {
   return canonicalExitRouteAssetKey(chain, address);
 }
 
-export const makeChainAddressKey = buildChainAddressKey;
-
 export function resolveStablecoinToken(
   chain: string,
   token: Pick<DexApiPoolToken, "address" | "symbol">,

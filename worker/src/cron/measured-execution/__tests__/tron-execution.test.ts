@@ -386,6 +386,14 @@ describe("Tron SunSwap measured execution", () => {
       expectedQuoteGenerationId: "quotes-1",
       nowSec: 1_100,
     })).toEqual([]);
+    expect(validateTronMeasuredExecutionProfile({
+      profile,
+      quotedTarget: target(),
+      currentTarget: target(),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec: 4_701,
+    })).toContain("stale-observation");
     const tampered = structuredClone(profile);
     tampered.quoteProof[0]!.route.reserve0Raw = "1413348535104140";
     expect(validateTronMeasuredExecutionProfile({

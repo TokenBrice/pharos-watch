@@ -1,9 +1,16 @@
-import { decodeAbiParameters } from "viem/utils";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters-schemas";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
+import {
+  decodeMentoPoolExchange,
+  MENTO_BIPOOL_MANAGER_ADDRESS,
+  MENTO_GET_EXCHANGE_IDS_SELECTOR,
+  MENTO_GET_POOL_EXCHANGE_SELECTOR,
+  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
+  type MentoPoolExchange,
+} from "@shared/lib/mento-contracts";
 import type { AdapterContext, AdapterResult } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 import { decodeBytes32ArrayWord } from "./abi-decode";
@@ -538,13 +545,6 @@ type EvmOnchainInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 const CELO_CHAIN = "celo";
 const CELO_ONCHAIN_INPUT: EvmOnchainInput = { kind: "onchain-evm", chain: CELO_CHAIN, rpcMode: "public-rpc" };
 
-// Mento V2 BiPoolManager on Celo; verified against forno.celo.org and
-// docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager (2026-07-09).
-const MENTO_BIPOOL_MANAGER_ADDRESS = "0x22d9db95E6Ae61c104A7B6F6C78D7993B94ec901";
-const GET_EXCHANGE_IDS_SELECTOR = "0xdc162e36"; // getExchangeIds()
-const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
-// PoolConfig.spread is a Fixidity fraction with 24-decimal precision.
-const POOL_SPREAD_FIXIDITY_SCALE = 10n ** 24n;
 const MENTO_BROKER_POOL_MAX_EXCHANGE_IDS = 64;
 const MENTO_REDEMPTION_TIMEOUT_MS = 8_000;
 
@@ -556,47 +556,6 @@ const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
 // against 0xb38aEf2b... on 2026-07-09 (hasBeenShutDown reverts there).
 const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
 const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
-
-const POOL_EXCHANGE_ABI_PARAMETERS = [
-  {
-    type: "tuple",
-    components: [
-      { name: "asset0", type: "address" },
-      { name: "asset1", type: "address" },
-      { name: "pricingModule", type: "address" },
-      { name: "bucket0", type: "uint256" },
-      { name: "bucket1", type: "uint256" },
-      { name: "lastBucketUpdate", type: "uint256" },
-      {
-        name: "config",
-        type: "tuple",
-        components: [
-          { name: "spread", type: "uint256" },
-          { name: "referenceRateFeedID", type: "address" },
-          { name: "referenceRateResetFrequency", type: "uint256" },
-          { name: "minimumReports", type: "uint256" },
-          { name: "stablePoolResetSize", type: "uint256" },
-        ],
-      },
-    ],
-  },
-] as const;
-
-interface MentoPoolExchange {
-  asset0: `0x${string}`;
-  asset1: `0x${string}`;
-  pricingModule: `0x${string}`;
-  bucket0: bigint;
-  bucket1: bigint;
-  lastBucketUpdate: bigint;
-  config: {
-    spread: bigint;
-    referenceRateFeedID: `0x${string}`;
-    referenceRateResetFrequency: bigint;
-    minimumReports: bigint;
-    stablePoolResetSize: bigint;
-  };
-}
 
 interface MentoPoolCallOptions {
   signal: AbortSignal;
@@ -648,7 +607,7 @@ function loadMentoExchangeIds(
       const exchangeIdsRaw = await fetchOnchainRawCall({
         ...callOptions,
         contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-        data: GET_EXCHANGE_IDS_SELECTOR,
+        data: MENTO_GET_EXCHANGE_IDS_SELECTOR,
       });
       const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, {
         maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS,
@@ -672,7 +631,7 @@ function loadMentoPoolExchange(
     async () => decodePoolExchange(await fetchOnchainRawCall({
       ...callOptions,
       contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-      data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
+      data: `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
     })),
   );
 }
@@ -680,11 +639,7 @@ function loadMentoPoolExchange(
 function decodePoolExchange(raw: string | null): MentoPoolExchange | null {
   if (typeof raw !== "string" || !raw.startsWith("0x")) return null;
   try {
-    const [decoded] = decodeAbiParameters(
-      POOL_EXCHANGE_ABI_PARAMETERS,
-      raw as `0x${string}`,
-    ) as readonly [MentoPoolExchange];
-    return decoded;
+    return decodeMentoPoolExchange(raw as `0x${string}`);
   } catch {
     return null;
   }
@@ -762,7 +717,7 @@ async function fetchMentoBrokerPoolRedemption(
     // USDm-pegged.
     const counterBucketRaw = match.asset0.toLowerCase() === counterAddress ? match.bucket0 : match.bucket1;
     capacityUsd += decimalNumberFromBigInt(counterBucketRaw, 18);
-    const feeBps = Number((match.config.spread * 10_000n) / POOL_SPREAD_FIXIDITY_SCALE);
+    const feeBps = Number((match.config.spread * 10_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE);
     maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
   }
 

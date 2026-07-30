@@ -30,6 +30,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run typecheck:tests
       - run: npm run typecheck:worker
+      - run: npm run check:structural
 
   full-tests:
     name: Full test suite (${{ matrix.shard }}/2)

@@ -285,6 +285,10 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "target-missing",
     "quote-missing",
     "quote-failed",
+    // A rotating producer admission budget deferred this target before any
+    // capability was exercised. Distinct from `quote-failed`, which asserts an
+    // attempted measurement did not produce a valid profile.
+    "budget-deferred",
     "generation-mismatch",
     "stale-observation",
     "invalid-observation",
@@ -615,6 +619,13 @@ export const PegSummaryCoinSchema = z.object({
    * shown as a self-referential ~0. Mirrors the detection engine's gate.
    */
   pegReferenceUnavailable: z.boolean().optional(),
+  /**
+   * True when no usable current price observation exists for the coin at all
+   * (no price row, or a price the intake pipeline rejected). Deviation is then
+   * unobserved rather than withheld: consumers must never read the null
+   * deviation as "at peg".
+   */
+  currentPriceUnavailable: z.boolean().optional(),
   depegEventCoverageLimited: z.boolean().optional(),
   pegScore: z.number().nullable(),
   priceSource: z.string().optional(),

@@ -844,7 +844,7 @@ describe("buildCurveLookups", () => {
       "taiko",
       "zksync",
     ]);
-    expect(CURVE_CHAINS.slice(8)).toEqual(["optimism", "avalanche", "fantom", "kava"]);
+    expect(CURVE_CHAINS.slice(8)).toEqual(["optimism", "avalanche", "fantom", "kava", "gnosis"]);
   });
 
   it("indexes appended-chain payloads (optimism) for address, fingerprint, and symbol joins", async () => {

@@ -17,13 +17,25 @@ Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting
 
 The soft cap is **32 trigger expressions** before re-architecting batched dispatch. ADR-10 raised the prior cap of 20 after the schedule became fully source-owned, fenced, connection-budgeted, and status-tracked. Crossing 32 requires a follow-up ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
 
+### Current growth gate
+
+The reviewed topology is fixed at **25 physical trigger expressions**, **32 fetch-capable scheduled entries**, and two headroom-full (`5/6`) slots: `halfHourlyMeasuredExecution` and `halfHourlyOffset`. `npm run check:cron-sync` rejects a 26th physical trigger, and `npm run check:cron-connections` rejects another fetch-capable entry or another `5/6` slot until this gate is deliberately re-reviewed. These limits are owned by `CRON_GROWTH_HEADROOM_POLICY` in `shared/lib/cron-jobs.ts`; changing one is a policy change, not a routine schedule edit.
+
+Before adding fetch-heavy scheduled work, the Worker operations owner is the required reviewer and must review the measured workload before one of these consolidation/rebalance paths is executed:
+
+1. Reduce `sync-cl-exit-depth` from `5/6` to `4/6` by serializing or partitioning an EVM lane while preserving its half-hour cadence, then verify the new peak with `check:cron-connections`.
+2. Reduce `sync-dex-liquidity-stage` from `5/6` to `4/6` by serializing the nested provider fan-out or moving a bounded source partition to a slot with proven headroom; retain the `10,40` cadence and re-run the topology checks.
+3. If neither path preserves the required freshness, move the bounded unit of work to Cloudflare Queues or Workflows rather than adding another fetch-heavy cron surface.
+
+The same owner must explicitly consider Queues/Workflows when a proposed workload has measured p95 duration of **10 minutes or more**, fan-out of **1,000 units per run or more**, or static connection pressure of **5/6**. Record the measured duration, fan-out, and connection-budget report in the PR; a threshold crossing requires a decision and rationale, not an automatic migration.
+
 ## Process for new scheduled work
 
 When proposing a new cron job:
 
 1. **Audit existing slots.** Run `npm run check:cron-connections`. The checker derives each trigger's peak from `shared/lib/scheduled-runner-registry.ts`: serial chains use the max child budget, parallel chains are summed, and budget-only side work is modeled as a separate serial stage. Identify slots at or below `4/6`.
 2. **Fit into an existing trigger.** Map the new job into a slot plan in `shared/lib/scheduled-runner-registry.ts` to share an existing trigger that has headroom. Jobs sharing a slot must consume or cancel any fetch response bodies before opening more fetches; see `docs/worker-and-api-limits.md`.
-3. **Only add a new cron expression if** every slot is at or above `5/6` and no rebalancing opportunity exists, or the new job is fetch-isolated in a way that cannot share a slot (e.g. dedicated rate-limit budget for blacklist sync, mint-burn, dex-discovery, telegram dispatch).
+3. **Only add a new cron expression after** the current growth gate has been re-reviewed and the consolidation/rebalance path above is complete. A fetch-isolated job still documents why it cannot share a slot (e.g. dedicated rate-limit budget for blacklist sync, mint-burn, dex-discovery, telegram dispatch).
 4. **Update `CRON_CONNECTION_BUDGET_ENTRIES`** in `shared/lib/cron-jobs.ts` to declare the new job's `maxConnections` and `connectionGroup`. `connectionGroup` documents serial sharing within a chain, but it does not reduce the peak across independent parallel chains. The CI guardrail `scripts/ci/check-cron-connection-budget.ts` (invoked via `npm run check:cron-connections`) blocks merges when any trigger is at or above `6/6`.
 5. **Update `docs/worker-infrastructure.md`** with the new trigger's purpose, expected steady-state connection usage, and rationale for the cadence.
 
@@ -35,5 +47,5 @@ When proposing a new cron job:
 
 ## Enforcement
 
-- `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails when any trigger is at or above `6/6`.
-- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`.
+- `npm run check:cron-connections` (canonical path: `scripts/ci/check-cron-connection-budget.ts`) — runs for Worker-impacting PRs; fails when any trigger is at or above `6/6`, a third `5/6` slot is introduced, or the reviewed fetch-capable-entry count grows.
+- `npm run check:cron-sync` (canonical path: `scripts/ci/check-cron-schedule-sync.ts`) — keeps `worker/wrangler.toml` cron expressions aligned with `shared/lib/cron-jobs.ts` and `shared/lib/scheduled-runner-registry.ts`, and rejects growth beyond the reviewed 25 physical triggers.

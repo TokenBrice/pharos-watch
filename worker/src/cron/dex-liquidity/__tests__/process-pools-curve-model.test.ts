@@ -7,6 +7,7 @@ import {
   buildCurveStableswapExecutionCapability,
   buildCurveStableswapExecutionModel,
   resolveActiveCurveCryptoSwapCandidateByTvl,
+  resolveCurveStableswapCandidateByTvl,
   resolveReviewedCurveStableSwapNgPhysicalPoolId,
   resolveReviewedCurveStableSwapPhysicalPoolId,
 } from "../process-pools";
@@ -459,13 +460,59 @@ describe("buildCurveStableswapExecutionModel", () => {
         "ethereum",
       ),
     ).toBeNull();
+    // R3 promoted the reviewed Ethereum TwoCrypto census, so a family-anchored
+    // address now resolves like a pinned one.
     expect(
       resolveActiveCurveCryptoSwapCandidateByTvl(
         [{ ...active, poolAddress: "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d" }],
         active.tvl,
         "ethereum",
+      )?.poolAddress,
+    ).toBe("0xe79fb88c7937b39b3e1cabd44faefa5258578b2d");
+    // A still-shadow generation (tricrypto-ng has no reviewed family) stays out.
+    expect(
+      resolveActiveCurveCryptoSwapCandidateByTvl(
+        [{ ...active, poolAddress: "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14" }],
+        active.tvl,
+        "ethereum",
       ),
     ).toBeNull();
+  });
+
+  it("resolves an ambiguous StableSwap coin-set join by unique retained TVL", () => {
+    // Ethereum FRAX/FPI: a factory-crypto pool and a factory-stable-ng pool
+    // publish the same coin set, so the fingerprint join fails closed.
+    const cryptoTwin = entry({
+      poolAddress: "0xf861483fa7e511fbc37487d91b6faa803af5d37c",
+      registryId: "factory-crypto",
+      A: 200_000_000,
+      tvl: 164_849,
+      metapoolAdjustedTvl: 164_849,
+    });
+    const stableTwin = entry({
+      poolAddress: "0x2cf99a343e4ecf49623e82f2ec6a9b62e16ff3fe",
+      A: 750,
+      tvl: 51_629,
+      metapoolAdjustedTvl: 51_629,
+    });
+    const candidates = [cryptoTwin, stableTwin];
+
+    expect(resolveCurveStableswapCandidateByTvl(candidates, 51_630)).toBe(stableTwin);
+    // The CryptoSwap twin stays unresolved rather than crossing families.
+    expect(resolveCurveStableswapCandidateByTvl(candidates, 164_861)).toBeNull();
+    // Neither candidate is close enough, and two close candidates stay ambiguous.
+    expect(resolveCurveStableswapCandidateByTvl(candidates, 100_000)).toBeNull();
+    expect(
+      resolveCurveStableswapCandidateByTvl([stableTwin, { ...stableTwin, tvl: 51_700 }], 51_630),
+    ).toBeNull();
+    // Metapools and incomplete captures keep their own gate.
+    expect(
+      resolveCurveStableswapCandidateByTvl([{ ...stableTwin, isMetaPool: true }], 51_630),
+    ).toBeNull();
+    expect(
+      resolveCurveStableswapCandidateByTvl([{ ...stableTwin, executionCoins: undefined }], 51_630),
+    ).toBeNull();
+    expect(resolveCurveStableswapCandidateByTvl(candidates, 0)).toBeNull();
   });
 
   it("fails closed on rate-bearing pools via the coin price spread gate", () => {

@@ -22,6 +22,7 @@ import {
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
   XAUT_CANONICAL_RUNTIME_CODE_SHA256,
   XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
   xautRepresentationGroupAttributionValidationError,
@@ -307,7 +308,7 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
     ).toHaveLength(8);
     expect(
       buildReviewedDeploymentRouteInventory("acrdx-anemoy-apollo")!.routes,
-    ).toHaveLength(5);
+    ).toHaveLength(6);
 
     const attribution = deriveCentrifuge();
     expect(attribution).not.toBeNull();
@@ -526,7 +527,10 @@ describe("XAUT representation-group supply attribution contract", () => {
         attribution,
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
         registryFingerprint: REGISTRY_FINGERPRINT,
-        clockSec: attribution.observedAtSec + 1_801,
+        clockSec:
+          attribution.observedAtSec +
+          XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC +
+          1,
       }),
     ).toContain("observation time");
     expect(

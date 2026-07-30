@@ -2,6 +2,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import {
@@ -11,6 +12,7 @@ import {
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { DefiLlamaCoinsPriceSchema, type DefiLlamaCoinsPriceResponse } from "../../../lib/upstream-schemas";
 import type { PeggedAsset } from "../enrich-prices";
+import { fetchCuratedAggregateOnChainMcap } from "./onchain-supply";
 
 export type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number; last_updated_at?: number }>;
 type SupplementalDefiLlamaPriceData = { coins: NonNullable<DefiLlamaCoinsPriceResponse["coins"]> };
@@ -186,6 +188,7 @@ export function buildSupplementalAsset(input: {
   priceResolution: SupplementalPriceResolution;
   mcap: number;
   supplySource: string;
+  chainCirculating?: PeggedAsset["chainCirculating"];
   circulatingPrevDay?: number | null;
   circulatingPrevWeek?: number | null;
   circulatingPrevMonth?: number | null;
@@ -211,10 +214,46 @@ export function buildSupplementalAsset(input: {
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
     circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
-    chainCirculating: {},
+    chainCirculating: input.chainCirculating ?? {},
     chains: getSupplementalChainLabels(input.meta),
     commodityOunces: input.meta.commodityOunces,
   } as PeggedAsset;
+}
+
+/**
+ * Curated aggregate on-chain supply for supplemental lanes whose upstream row
+ * carries no per-chain breakdown. Returns null unless the asset has a curated
+ * aggregate config, a usable price, and every configured leg reads, so an
+ * unreadable chain can never silently undercount.
+ */
+export async function resolveCuratedAggregateSupplementalSupply(
+  meta: StablecoinMeta,
+  priceData: SupplementalDefiLlamaPriceData,
+  cgData: CoinGeckoMcapData,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<{ mcap: number; supplySource: string; chainCirculating: PeggedAsset["chainCirculating"] } | null> {
+  const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+  if (!priceResolution) return null;
+
+  const aggregate = await fetchCuratedAggregateOnChainMcap(meta, priceResolution.price, chainRpcs, signal);
+  if (!aggregate) return null;
+
+  return {
+    mcap: aggregate.mcap,
+    supplySource: aggregate.supplySource,
+    chainCirculating: Object.fromEntries(
+      Object.entries(aggregate.chainCirculating ?? {}).map(([chainLabel, current]) => [
+        chainLabel,
+        {
+          current,
+          circulatingPrevDay: 0,
+          circulatingPrevWeek: 0,
+          circulatingPrevMonth: 0,
+        },
+      ]),
+    ),
+  };
 }
 
 export function buildPricedSupplementalAsset(
@@ -224,6 +263,7 @@ export function buildPricedSupplementalAsset(
   input: {
     mcap: number;
     supplySource: string;
+    chainCirculating?: PeggedAsset["chainCirculating"];
     circulatingPrevDay?: number | null;
     circulatingPrevWeek?: number | null;
     circulatingPrevMonth?: number | null;
@@ -237,6 +277,7 @@ export function buildPricedSupplementalAsset(
     priceResolution,
     mcap: input.mcap,
     supplySource: input.supplySource,
+    chainCirculating: input.chainCirculating,
     circulatingPrevDay: input.circulatingPrevDay,
     circulatingPrevWeek: input.circulatingPrevWeek,
     circulatingPrevMonth: input.circulatingPrevMonth,

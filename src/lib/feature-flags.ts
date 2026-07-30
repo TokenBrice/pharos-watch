@@ -25,11 +25,14 @@ export const FEATURE_FLAGS = {
   // Default-enabled after W3 launch. Set
   // `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` explicitly to disable.
   heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
-  // expiresAt: 2026-08-01 — pending iOS Safari sticky check
+  // owner: tokenbrice; evidence: 2026-07-29 blacklist banner and hook tests pass.
+  // expiresAt: 2026-09-01 — awaiting iOS Safari sticky review on a coin with active freezes
   blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
-  // expiresAt: 2026-08-01 — pending WCAG AA contrast spot-check
+  // owner: tokenbrice; evidence: 2026-07-29 CLI contrast review passes AA (min 4.78:1 light, 7.23:1 dark).
+  // expiresAt: 2026-09-01 — awaiting human visual review on USDC, USDe, and an active depeg
   quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
-  // expiresAt: 2026-08-01 — pending real-device scrollspy QA
+  // owner: tokenbrice; evidence: 2026-07-29 sticky summary and scrollspy tests pass.
+  // expiresAt: 2026-09-01 — awaiting real-device iOS Safari and Android Chrome scrollspy review
   mobileStickySummary:
     process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
   // expiresAt: 2026-09-01 — pending curation owner + cadence

@@ -202,6 +202,8 @@ export async function computeSafetyScoreV9(
                 generationApplication.acceptedAssetIds.length,
               rejectedCount:
                 generationApplication.rejectedAssetIds.length,
+              invalidAssetIds:
+                generationApplication.invalidAssetIds,
             }
           : {
               status: generationApplication.status,

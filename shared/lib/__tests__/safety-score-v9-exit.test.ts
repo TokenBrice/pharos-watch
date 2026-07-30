@@ -317,6 +317,33 @@ describe("evaluateV9Exit", () => {
     expect(result.reasons).toEqual(["missing-same-notional-route"]);
   });
 
+  // R4 scope verification (owner ruling 2026-07-29). The zero-evaluated-route
+  // return suppresses the default reason only when EVERY per-route diagnostic
+  // is `unsupported-same-notional-route`. Diagnostics come from route traces,
+  // so a portfolio with no routes at all has none to inspect and the default
+  // reason is emitted unconditionally. A fact-set gap carrying
+  // `unsupported-same-notional-route` never reaches this predicate, so
+  // reclassifying the zero-route branch does NOT self-suppress the echo.
+  it("does not self-suppress the missing-route echo when there is no route to diagnose", () => {
+    const withDiagnosticRoute = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "incomplete",
+        routes: [route({ coverageClass: "diagnostic" })],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(withDiagnosticRoute.reasons).toEqual(["unsupported-same-notional-route"]);
+
+    const withoutAnyRoute = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, portfolioStatus: "incomplete", routes: [] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(withoutAnyRoute.reasons).toContain("missing-same-notional-route");
+    expect(withoutAnyRoute.reasons).not.toContain("unsupported-same-notional-route");
+    expect(withoutAnyRoute.score).toBe(withDiagnosticRoute.score);
+  });
+
   it("keeps unresolved optional output visible without invalidating a resolved route", () => {
     const result = evaluateV9Exit(
       {

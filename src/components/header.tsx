@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
 import { PharosLogo } from "@/components/pharos-logo";
+import { ThemeControls } from "@/components/theme-controls";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
   stickyChromeTopOffsetClass,
 } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
-import { ExternalLink, Menu, Monitor, Moon, Search, Sun, X, ChevronRight } from "lucide-react";
+import { ExternalLink, Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
@@ -63,46 +63,6 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
     >
       {body}
     </Link>
-  );
-}
-
-// dark / light / system controls, mirroring the desktop overflow-menu
-// ThemeControls so mobile users can also pick System (44px touch targets).
-function DrawerThemeControls() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // next-themes: only read the selected theme after mount so the active
-    // highlight doesn't cause a hydration mismatch. One-shot, empty deps.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-  const options = [
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "system", label: "System", icon: Monitor },
-  ] as const;
-  return (
-    <div className="flex items-center gap-1">
-      {options.map((opt) => {
-        const Icon = opt.icon;
-        const active = mounted && theme === opt.value;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setTheme(opt.value)}
-            aria-label={`${opt.label} theme`}
-            aria-pressed={active}
-            className={`pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors ${
-              active ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-            }`}
-          >
-            <Icon className="size-4" aria-hidden />
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -317,7 +277,7 @@ export function Header() {
                   <Search className="h-4 w-4" />
                   Search
                 </Button>
-                <DrawerThemeControls />
+                <ThemeControls density="mobile" />
               </div>
             </SheetContent>
           </Sheet>

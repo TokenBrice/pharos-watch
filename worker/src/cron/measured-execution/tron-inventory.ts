@@ -1,4 +1,3 @@
-import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import {
   TRON_MEASURED_TARGET_SCHEMA_VERSION,
   TronMeasuredExecutionTargetSchema,
@@ -6,14 +5,11 @@ import {
   type TronMeasuredExecutionTarget,
   type TronMeasuredExecutionToken,
 } from "@shared/types/tron-measured-execution";
-import type { DexApiPool, DexApiPoolToken } from "../../lib/dex-api-types";
 import {
-  resolveStablecoinIdForDexApiToken,
-} from "../../lib/dex-api-token-pricing";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import {
-  buildNativeMeasuredExecutionToken,
+  buildNativeMeasuredExecutionTargets,
   buildNativeMeasuredPoolDirectionKey,
+  type NativeMeasuredExecutionInventoryAdapter,
+  type NativeMeasuredExecutionInventoryInput,
 } from "./native-inventory";
 import {
   SUNSWAP_V2_FACTORY_ADDRESS,
@@ -30,106 +26,48 @@ export function buildTronMeasuredPoolDirectionKey(stablecoinId: string, poolId: 
   });
 }
 
-function buildToken(input: {
-  pool: DexApiPool;
-  token: DexApiPoolToken;
-  tokenIndex: number;
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-}): TronMeasuredExecutionToken | null {
-  return buildNativeMeasuredExecutionToken({
-    chain: "tron",
-    pool: input.pool,
-    token: input.token,
-    tokenIndex: input.tokenIndex,
-    chainAddressToId: input.chainAddressToId,
-    symbolToChainScopedIds: input.symbolToChainScopedIds,
-    validationReferences: input.validationReferences,
-    stablecoinPriceById: input.stablecoinPriceById,
-    allowSourceTokenUsd: true,
-  }) as TronMeasuredExecutionToken | null;
-}
+type TronPoolAdapter = NonNullable<ReturnType<typeof getTronMeasuredExecutionAdapter>>;
 
-export function buildTronMeasuredExecutionTargets(input: {
-  pools: readonly DexApiPool[];
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-  capturedAt: number;
-}): Map<string, TronMeasuredExecutionTarget> {
-  const targets = new Map<string, TronMeasuredExecutionTarget>();
-  for (const pool of input.pools) {
-    if (canonicalExitRouteChain(pool.chain) !== "tron" || pool.tokens.length !== 2) continue;
-    const adapter = getTronMeasuredExecutionAdapter(pool.source, pool.poolType);
-    if (
-      !adapter ||
-      pool.feeRate !== 0.003 ||
-      !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0
-    ) continue;
-    const poolId = pool.poolAddress.trim();
+const TRON_INVENTORY_ADAPTER: NativeMeasuredExecutionInventoryAdapter<
+  TronMeasuredExecutionTarget,
+  TronPoolAdapter
+> = {
+  chain: "tron",
+  allowSourceTokenUsd: true,
+  getPoolAdapter: (pool) => getTronMeasuredExecutionAdapter(pool.source, pool.poolType),
+  isPoolEligible: (pool) => pool.feeRate === 0.003,
+  buildTarget: ({ pool, poolId, stablecoinId, tokenIn, tokenOut, adapter, capturedAt }) => {
+    const targetId = buildTronMeasuredExecutionTargetId({
+      stablecoinId,
+      poolId,
+      tokenInAddress: tokenIn.address,
+      tokenOutAddress: tokenOut.address,
+    });
+    const parsed = TronMeasuredExecutionTargetSchema.safeParse({
+      schemaVersion: TRON_MEASURED_TARGET_SCHEMA_VERSION,
+      targetId,
+      stablecoinId,
+      adapterProfileId: adapter.adapterProfileId,
+      protocol: adapter.protocol,
+      chain: "tron",
+      poolId,
+      poolType: adapter.poolType,
+      factoryAddress: SUNSWAP_V2_FACTORY_ADDRESS,
+      expectedFactoryCodeHash: SUNSWAP_V2_FACTORY_CODE_HASH,
+      expectedPairCodeHash: SUNSWAP_V2_PAIR_CODE_HASH,
+      tokenIn: tokenIn as TronMeasuredExecutionToken,
+      tokenOut: tokenOut as TronMeasuredExecutionToken,
+      feeRate: 0.003,
+      retainedTvlUsd: pool.tvlUsd,
+      retainedPoolPriceUsd: tokenIn.referencePriceUsd,
+      capturedAt,
+    });
+    return parsed.success ? parsed.data : null;
+  },
+};
 
-    for (let inputIndex = 0; inputIndex < 2; inputIndex++) {
-      const rawTokenIn = pool.tokens[inputIndex]!;
-      const stablecoinId = resolveStablecoinIdForDexApiToken(
-        "tron",
-        rawTokenIn,
-        input.chainAddressToId,
-        input.symbolToChainScopedIds,
-      );
-      if (!stablecoinId) continue;
-      const outputIndex = inputIndex === 0 ? 1 : 0;
-      const tokenIn = buildToken({
-        pool,
-        token: rawTokenIn,
-        tokenIndex: inputIndex,
-        chainAddressToId: input.chainAddressToId,
-        symbolToChainScopedIds: input.symbolToChainScopedIds,
-        validationReferences: input.validationReferences,
-        stablecoinPriceById: input.stablecoinPriceById,
-      });
-      const tokenOut = buildToken({
-        pool,
-        token: pool.tokens[outputIndex]!,
-        tokenIndex: outputIndex,
-        chainAddressToId: input.chainAddressToId,
-        symbolToChainScopedIds: input.symbolToChainScopedIds,
-        validationReferences: input.validationReferences,
-        stablecoinPriceById: input.stablecoinPriceById,
-      });
-      if (!tokenIn || !tokenOut || tokenIn.trackedAssetId !== stablecoinId) continue;
-      if (tokenOut.trackedAssetId === stablecoinId || tokenIn.address === tokenOut.address) continue;
-
-      const targetId = buildTronMeasuredExecutionTargetId({
-        stablecoinId,
-        poolId,
-        tokenInAddress: tokenIn.address,
-        tokenOutAddress: tokenOut.address,
-      });
-      const parsed = TronMeasuredExecutionTargetSchema.safeParse({
-        schemaVersion: TRON_MEASURED_TARGET_SCHEMA_VERSION,
-        targetId,
-        stablecoinId,
-        adapterProfileId: adapter.adapterProfileId,
-        protocol: adapter.protocol,
-        chain: "tron",
-        poolId,
-        poolType: adapter.poolType,
-        factoryAddress: SUNSWAP_V2_FACTORY_ADDRESS,
-        expectedFactoryCodeHash: SUNSWAP_V2_FACTORY_CODE_HASH,
-        expectedPairCodeHash: SUNSWAP_V2_PAIR_CODE_HASH,
-        tokenIn,
-        tokenOut,
-        feeRate: 0.003,
-        retainedTvlUsd: pool.tvlUsd,
-        retainedPoolPriceUsd: tokenIn.referencePriceUsd,
-        capturedAt: input.capturedAt,
-      });
-      if (parsed.success) targets.set(buildTronMeasuredPoolDirectionKey(stablecoinId, poolId), parsed.data);
-    }
-  }
-  return targets;
+export function buildTronMeasuredExecutionTargets(
+  input: NativeMeasuredExecutionInventoryInput,
+): Map<string, TronMeasuredExecutionTarget> {
+  return buildNativeMeasuredExecutionTargets(input, TRON_INVENTORY_ADAPTER);
 }

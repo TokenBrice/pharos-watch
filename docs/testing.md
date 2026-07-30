@@ -20,12 +20,13 @@ npm run typecheck
 npm run typecheck:tests
 npm run typecheck:worker
 npm run check:pr -- --base=origin/main
+npm run check:structural
 npm run check:release
 npm run test:a11y
 npm run test:a11y:hydrated
 ```
 
-`check:pr` mirrors the normal non-doc PR path: changed-file ESLint, source typing, baseline repository checks, Pages/Worker guardrails selected from the diff, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. `test:all`, full lint, typed lint, test-file typechecking, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
+`check:pr` mirrors the normal non-doc PR path: changed-file ESLint, source typing, baseline repository checks, high-stakes coverage-waiver completeness, Pages/Worker guardrails selected from the diff, structural guardrails for affected production or validation paths, critical plus Vitest-affected tests, and generated artifacts selected from their registered sources. `test:all`, full lint, typed lint, test-file typechecking, the structural guardrails, and the Node 26 compatibility proof run nightly or on manual dispatch. `check:release` is the optional local production-build and Worker-bundle rehearsal; the protected GitHub gate and production workflows remain authoritative.
 
 Use `package.json` for the full live npm-script list. `scripts/lib/automation-registry.mjs` owns generated artifacts and deploy-impact classification; `scripts/lib/critical-test-files.mjs` and `scripts/lib/critical-coverage.mjs` own critical-suite membership.
 
@@ -72,9 +73,9 @@ For deployment/worktree operating procedure, secrets, and rollback, see [Deploym
 CI shape:
 
 1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and agent-doc-sync checks.
-2. Other PRs run `check:pr:static` plus two shards of `test:pr`. The static runner always checks changed-file lint, source types, environment and import contracts; it adds data/generated, Worker, and Telegram checks only for relevant paths. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
+2. Other PRs run `check:pr:static` plus two shards of `test:pr`. The static runner always checks changed-file lint, source types, environment/import contracts, and high-stakes coverage-waiver completeness; root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. It runs `check:structural` for affected production and validation paths, enforcing the hotspot, Worker raw-console, provider-resilience, fetch-body, script-entrypoint, CLI-policy, and stale-flag checks. It adds data/generated, Worker, and Telegram checks only for relevant paths. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. A separate 15-minute coverage job runs only when an enrolled critical source file changes, using the PR base SHA for the touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
 3. PRs do not build the static site. The production Pages workflow performs the one authoritative build after merge.
-4. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor additionally analyzes relevant pull requests. Critical coverage is report-only.
+4. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, `check:structural`, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor additionally analyzes relevant pull requests. The weekly/manual all-critical coverage ratchet is blocking. The separate weekly Cloudflare account-state workflow compares the committed secret-free manifest through read-only API requests and fails clearly if `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` is not configured.
 5. A successful protected merge triggers the production deploy classifier. Worker mutation retains migration checks and activation proof; Pages publication retains artifact checks and the release-marker proof.
 
 Generated artifacts have two lifecycle classes in `scripts/lib/automation-registry.mjs`. Ordinary `working-tree` artifacts can be generated from their current inputs. `committed-history` artifacts (`sitemap-dates` and `docs-metadata`) cannot calculate final timestamps until their relevant source commit exists. Their write commands warn on dirty history inputs, and their checks reject dirty relevant inputs or outputs as provisional while allowing unrelated dirty work. The default checked-out-HEAD pre-push guard runs `npm run check:commit-derived-artifacts`. After source commits and focused generator fixes, `npm run check:generated-artifacts` remains the authoritative full-registry freshness check.
@@ -85,8 +86,7 @@ Selected specialized checks:
 
 - Cron schedule/connection changes: `npm run check:cron-sync`, `npm run check:cron-connections`, and `npm run validate:worker-scheduled-smoke`.
 - Worker deployment configuration: `npm run check:worker-config` verifies that production custom domains remain root-owned and asset rules fall through.
-- Worker fetch-body timeout guardrail: `npm run check:fetch-body-timeouts` flags new raw `fetchWithRetry()` response-body reads unless they are explicitly tracked as migration debt; it runs in advisory prebuild mode and can be run directly for Worker fetch changes.
-- Provider fetch resilience changes: `npm run check:provider-resilience` verifies the external-provider registry, required timeout/body/circuit/test markers, and raw Worker `fetch(...)` coverage.
+- Structural guardrails: `npm run check:structural` runs the hotspot ratchet, Worker raw-console usage, provider resilience, fetch-body timeouts, script entrypoints, CLI argument policy, and stale feature-flag checks. It is enforced for affected production and validation paths in PR static validation and for every nightly/manual validation run. The individual commands remain available for focused local diagnosis.
 - Generated public artifacts: `npm run check:generated-artifacts`, with individual checks in `scripts/lib/automation-registry.mjs`.
 - Static export SEO: `npm run seo:check`; this includes unique sitemap-location enforcement, built-anchor rejection for reviewed legacy aliases, and one-hop/permanent checks for internal `_redirects` rules. Releases additionally set `SEO_PREVIOUS_SITEMAP_URL` so the same command rejects disappearance of deployed digest/depeg URLs unless an explicit direct 301 preserves the route. Live SEO smoke is `npm run seo:live-smoke -- --url https://pharos.watch` and enforces sitemap uniqueness against production.
 - Static export accessibility: `npm run test:a11y` scans the bare static export, while `npm run test:a11y:hydrated` reuses the API-backed static-export smoke server so axe sees hydrated product data. Both run route-per-test with 3 Playwright workers (`fullyParallel: true` in `playwright.config.ts`); the scans are independent per route, so parallelism changes no coverage.
@@ -332,7 +332,7 @@ Keep this section focused on how the suite is organized and which surfaces are g
 Critical gate coverage is intentionally smaller than the full suite:
 
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
-- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. It is owned by the weekly/manual Critical Coverage Ratchet workflow, not the blocking reusable validate workflow. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
+- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line/branch coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. The weekly/manual all-critical workflow blocks on it, while the PR workflow runs it only when an enrolled critical source file changes. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
 - `npm run test:critical-contracts` is the explicit API contract set and is always included by `test:pr`.
 
 Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep the full runner in `scripts/maintenance/run-all-tests.mjs`; and keep contract membership in `scripts/lib/critical-test-files.mjs`.
@@ -369,7 +369,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ### Registry Guardrails
 
-- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline. It runs in advisory prebuild mode and can be run directly when CI/operator scripts change.
+- `npm run check:cli-args-policy` scans every committed JavaScript/TypeScript source file for `process.argv`, requires exact enrollment in `scripts/lib/cli-argv-policy.mjs`, and verifies that strict operator/mutating entrypoints reach a parser that imports and calls `scripts/lib/cli-args.mjs`. Read-only, build/local-artifact, and test/dev exemptions are exact path records with audited reasons; new unclassified scripts fail rather than increasing a baseline. `check:structural` enforces it for affected PR paths and nightly/manual validation; it can also be run directly when CI/operator scripts change.
 - `check:oracle-risk-coverage:enforce` remains the direct content guardrail for CDP oracle profiles and required branch evidence. It runs in advisory prebuild mode; its reviewed applicability queue is advisory for current v8 scoring, while explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
 - `src/lib/__tests__/term-markup.test.ts` owns AI-summary glossary-marker integrity as an ordinary noncritical runtime-parser test, including known slugs, balanced markers, and the current corpus totals.
 - Mechanism explainer completeness is split across ordinary noncritical domain tests: `src/app/learn/mechanisms/__tests__/content.test.ts` owns labels, one-liners, editorial content, and representative coin IDs; the existing dynamic-route test owns exact static params; `src/app/__tests__/sitemap-frozen.test.ts` owns sitemap membership. OG images remain generated-artifact-owned.
@@ -389,20 +389,22 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ## Coverage
 
-Full-suite coverage threshold is not enforced. The critical gate applies a 40% default plus explicit per-file floors ranging from 30% to 80%, and touched critical files also have a no-regression ratchet. Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
+Full-suite coverage threshold is not enforced. The critical gate applies a 40% default plus explicit per-file line floors ranging from 30% to 80%, 40% branch/error-path floors at provider, authentication, scoring, and publication boundaries, and a touched-file no-regression ratchet. Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
 
 ### Critical Coverage Gate
 
-CI does **not** run a full-suite coverage gate. The blocking PR/deploy validate workflow also does not run `coverage:critical`; it runs the normal sharded Vitest lane, including critical tests. The weekly/manual Critical Coverage Ratchet workflow runs the critical-path coverage gate via `npm run coverage:critical`:
+CI does **not** run a full-suite coverage gate. The PR workflow runs `coverage:critical` only when an enrolled critical source file changes; its compare ref scopes the no-regression ratchet to the touched file(s). The weekly/manual Critical Coverage Ratchet workflow blocks on the all-critical gate via `npm run coverage:critical`:
 
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
 - Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
+- Applies 40% branch/error-path floors to the `evm-rpc` provider, `auth`, `safety-scores`, and `price-publication-state` boundaries
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
+- Fails non-doc PR static validation when a high-stakes candidate is missing enrollment or a waiver is expired
 - Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
-- The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly without making every PR/deploy validate run pay that full ratchet cost.
+- The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly, while PRs pay the coverage cost only for touched enrolled source.
 - Local rehearsals that need coverage ratchet behavior should run `npm run coverage:critical` directly with the relevant `CRITICAL_COVERAGE_*` env controls.
 
 Gate scripts and ownership:
@@ -419,7 +421,8 @@ Useful env controls:
 - `CRITICAL_COVERAGE_RATCHET_TOLERANCE`
 - `CRITICAL_COVERAGE_RATCHET_ALL`
 - `CRITICAL_COVERAGE_BASELINE_FILE`
-- Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`, `CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION`
+- Per-file line overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`, `CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION`
+- Branch-floor overrides: `CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE`
 
 Selected files have explicit threshold overrides in `scripts/ci/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 

@@ -5,6 +5,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { fetchEtherscanProxyHex } from "../lib/evm-rpc";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
+import { logWorkerEvent } from "../lib/structured-log";
 
 const CACHE_KEY = "usds-status";
 const STALE_HOURS = 20;
@@ -46,7 +47,14 @@ async function readImplementationSlot(apiKey: string | null, signal?: AbortSigna
     const implementationAddress = `0x${result.slice(-40).toLowerCase()}`;
     return EVM_ADDRESS_RE.test(implementationAddress) ? implementationAddress : null;
   } catch (e) {
-    console.warn("[sync-usds] getImplementationAddress failed:", e);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "warn",
+      event: "implementation-address-read-failed",
+      message: "getImplementationAddress failed",
+      error: e,
+    });
     return null;
   }
 }
@@ -70,7 +78,14 @@ async function probeFreezeCapability(apiKey: string | null, signal?: AbortSignal
     if (!THIRTY_TWO_BYTE_HEX_RE.test(result)) return null;
     return true;
   } catch (e) {
-    console.warn("[sync-usds] probeFreezeCapability failed:", e);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "warn",
+      event: "freeze-capability-probe-failed",
+      message: "probeFreezeCapability failed",
+      error: e,
+    });
     return null;
   }
 }
@@ -83,7 +98,13 @@ export async function syncUsdsStatus(
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   if (await shouldSkipFreshCache(db, CACHE_KEY, STALE_HOURS * 3600)) {
-    console.log("[usds-status] Cache still fresh, skipping");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "info",
+      event: "cache-fresh",
+      message: "Cache still fresh; skipping",
+    });
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
@@ -94,7 +115,13 @@ export async function syncUsdsStatus(
   const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);
   if (!implementationAddress) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
-    console.warn("[usds-status] Failed to read implementation slot");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "warn",
+      event: "implementation-slot-unavailable",
+      message: "Failed to read implementation slot",
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -108,7 +135,13 @@ export async function syncUsdsStatus(
     const probeResult = await probeFreezeCapability(etherscanApiKey, signal);
     if (probeResult === null) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
-      console.warn("[usds-status] Probe failed, preserving cached status");
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-usds-status",
+        level: "warn",
+        event: "freeze-probe-unavailable",
+        message: "Probe failed; preserving cached status",
+      });
       return {
         status: "degraded",
         itemCount: 0,
@@ -116,9 +149,22 @@ export async function syncUsdsStatus(
       };
     }
     freezeCapabilityPresent = probeResult;
-    console.log(`[usds-status] Implementation changed to ${implementationAddress}, freeze capability present: ${freezeCapabilityPresent}`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "info",
+      event: "implementation-changed",
+      message: "Implementation changed; freeze capability checked",
+      metadata: { implementationAddress, freezeCapabilityPresent },
+    });
   } else {
-    console.log("[usds-status] Implementation unchanged, no freeze capability");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      level: "info",
+      event: "implementation-unchanged",
+      message: "Implementation unchanged; no freeze capability",
+    });
   }
 
   const statusResult = UsdsStatusResponseSchema.safeParse({
@@ -131,7 +177,13 @@ export async function syncUsdsStatus(
   });
   if (!statusResult.success) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
-    console.error("[sync-usds-status] Status payload validation failed:", statusResult.error.issues);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      event: "status-payload-invalid",
+      message: "Status payload validation failed",
+      metadata: { issues: statusResult.error.issues },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -150,7 +202,13 @@ export async function syncUsdsStatus(
     cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec, signal);
   } catch (err) {
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
-    console.error("[sync-usds-status] Cache write failed:", err);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-usds-status",
+      event: "cache-write-failed",
+      message: "Cache write failed",
+      error: err,
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -163,9 +221,13 @@ export async function syncUsdsStatus(
     };
   }
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
-  console.log(
-    cacheResult.written ? "[usds-status] Cache updated" : "[usds-status] Cache update skipped; newer row exists",
-  );
+  logWorkerEvent({
+    scope: "lib",
+    job: "sync-usds-status",
+    level: "info",
+    event: cacheResult.written ? "cache-updated" : "cache-update-skipped-newer",
+    message: cacheResult.written ? "Cache updated" : "Cache update skipped; newer row exists",
+  });
   return {
     itemCount: cacheResult.written ? 1 : 0,
     metadata: JSON.stringify({

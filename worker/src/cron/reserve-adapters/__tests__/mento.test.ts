@@ -3,6 +3,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encodeAbiParameters } from "viem/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  MENTO_BIPOOL_MANAGER_ADDRESS,
+  MENTO_GET_EXCHANGE_IDS_SELECTOR,
+  MENTO_GET_POOL_EXCHANGE_SELECTOR,
+  MENTO_POOL_EXCHANGE_ABI_PARAMETERS,
+} from "@shared/lib/mento-contracts";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   adaptMentoCdpComposition,
@@ -49,9 +55,6 @@ const mentoDashboardNeutralCacheKey = `text-get:${MENTO_DASHBOARD_URL}:12000:${J
 const MENTO_DASHBOARD_HTML_FIXTURE = String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
 
 // --- Redemption telemetry fixtures ------------------------------------------
-const BIPOOL_MANAGER_ADDRESS = "0x22d9db95E6Ae61c104A7B6F6C78D7993B94ec901";
-const GET_EXCHANGE_IDS_SELECTOR = "0xdc162e36"; // getExchangeIds()
-const GET_POOL_EXCHANGE_SELECTOR = "0x278488a4"; // getPoolExchange(bytes32)
 const USDM_ADDRESS = "0x765de816845861e75a25fca122bb6898b8b1282a";
 const USDC_ADDRESS = "0xceba9300f2b948710d2653dd7b07f33a8b32118c";
 const USDT_ADDRESS = "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e";
@@ -59,31 +62,6 @@ const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
 const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-const POOL_EXCHANGE_ABI_PARAMETERS = [
-  {
-    type: "tuple",
-    components: [
-      { name: "asset0", type: "address" },
-      { name: "asset1", type: "address" },
-      { name: "pricingModule", type: "address" },
-      { name: "bucket0", type: "uint256" },
-      { name: "bucket1", type: "uint256" },
-      { name: "lastBucketUpdate", type: "uint256" },
-      {
-        name: "config",
-        type: "tuple",
-        components: [
-          { name: "spread", type: "uint256" },
-          { name: "referenceRateFeedID", type: "address" },
-          { name: "referenceRateResetFrequency", type: "uint256" },
-          { name: "minimumReports", type: "uint256" },
-          { name: "stablePoolResetSize", type: "uint256" },
-        ],
-      },
-    ],
-  },
-] as const;
 
 function encodeExchangeIds(ids: string[]): `0x${string}` {
   return encodeAbiParameters([{ type: "bytes32[]" }], [ids as `0x${string}`[]]) as `0x${string}`;
@@ -96,7 +74,7 @@ function encodePoolExchange(overrides: {
   bucket1: bigint;
   spread: bigint;
 }): `0x${string}` {
-  return encodeAbiParameters(POOL_EXCHANGE_ABI_PARAMETERS, [{
+  return encodeAbiParameters(MENTO_POOL_EXCHANGE_ABI_PARAMETERS, [{
     asset0: overrides.asset0 as `0x${string}`,
     asset1: overrides.asset1 as `0x${string}`,
     pricingModule: ZERO_ADDRESS as `0x${string}`,
@@ -585,11 +563,11 @@ describe("mento redemption telemetry", () => {
 
   it("computes broker-pool capacity as the summed counter-asset buckets and fee as the max matched spread", async () => {
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
-      expect(contract).toBe(BIPOOL_MANAGER_ADDRESS);
-      if (data === GET_EXCHANGE_IDS_SELECTOR) {
+      expect(contract).toBe(MENTO_BIPOOL_MANAGER_ADDRESS);
+      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
         return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2]);
       }
-      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
+      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
         // MGP-13 stable-pool spread: 5e20 of the 1e24 Fixidity scale = 5 bps.
         return encodePoolExchange({
           asset0: USDM_ADDRESS,
@@ -599,7 +577,7 @@ describe("mento redemption telemetry", () => {
           spread: 5n * 10n ** 20n,
         });
       }
-      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
+      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
         // 1e22 of the 1e24 Fixidity scale = 100 bps (1%).
         return encodePoolExchange({
           asset0: USDT_ADDRESS,
@@ -650,8 +628,8 @@ describe("mento redemption telemetry", () => {
 
   it("converts a single-pool 5 bps spread correctly", async () => {
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      if (data === GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds([EXCHANGE_ID_1]);
-      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
+      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds([EXCHANGE_ID_1]);
+      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
         return encodePoolExchange({
           asset0: USDM_ADDRESS,
           asset1: USDC_ADDRESS,
@@ -686,14 +664,14 @@ describe("mento redemption telemetry", () => {
     let maxActivePoolReads = 0;
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
       requestedData.push(data);
-      if (data === GET_EXCHANGE_IDS_SELECTOR) {
+      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
         return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
       }
       activePoolReads += 1;
       maxActivePoolReads = Math.max(maxActivePoolReads, activePoolReads);
       await Promise.resolve();
       activePoolReads -= 1;
-      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
+      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) {
         return encodePoolExchange({
           asset0: USDM_ADDRESS,
           asset1: USDC_ADDRESS,
@@ -702,7 +680,7 @@ describe("mento redemption telemetry", () => {
           spread: 5n * 10n ** 20n,
         });
       }
-      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
+      if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
         return encodePoolExchange({
           asset0: USDT_ADDRESS,
           asset1: USDM_ADDRESS,
@@ -734,8 +712,8 @@ describe("mento redemption telemetry", () => {
       { requestCache } as never,
     );
     expect(requestedData).toEqual([
-      GET_EXCHANGE_IDS_SELECTOR,
-      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+      MENTO_GET_EXCHANGE_IDS_SELECTOR,
+      `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
     ]);
 
     await fetchMentoReserves(
@@ -747,10 +725,10 @@ describe("mento redemption telemetry", () => {
 
     expect(maxActivePoolReads).toBe(1);
     expect(requestedData).toEqual([
-      GET_EXCHANGE_IDS_SELECTOR,
-      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
-      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
-      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
+      MENTO_GET_EXCHANGE_IDS_SELECTOR,
+      `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+      `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
+      `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
     ]);
   });
 
@@ -761,11 +739,11 @@ describe("mento redemption telemetry", () => {
       let exchangeTwoAttempts = 0;
       vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data, signal }) => {
         requestedData.push(data);
-        if (data === GET_EXCHANGE_IDS_SELECTOR) {
+        if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) {
           return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
         }
-        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) return null;
-        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
+        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) return null;
+        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
           exchangeTwoAttempts += 1;
           if (exchangeTwoAttempts === 1) {
             return new Promise((_resolve, reject) => {
@@ -774,7 +752,7 @@ describe("mento redemption telemetry", () => {
           }
           return null;
         }
-        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
+        if (data === `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
           return encodePoolExchange({
             asset0: USDM_ADDRESS,
             asset1: USDC_ADDRESS,
@@ -815,11 +793,11 @@ describe("mento redemption telemetry", () => {
       )).toBe(true);
       expect(secondResult.metadata?.redemption).toMatchObject({ capacityUsd: 1 });
       expect(requestedData).toEqual([
-        GET_EXCHANGE_IDS_SELECTOR,
-        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
-        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
-        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
-        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
+        MENTO_GET_EXCHANGE_IDS_SELECTOR,
+        `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+        `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
+        `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
+        `${MENTO_GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
       ]);
     } finally {
       vi.useRealTimers();
@@ -832,7 +810,7 @@ describe("mento redemption telemetry", () => {
       (_, index) => `0x${index.toString(16).padStart(64, "0")}`,
     );
     vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => {
-      if (data === GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds(oversizedExchangeIds);
+      if (data === MENTO_GET_EXCHANGE_IDS_SELECTOR) return encodeExchangeIds(oversizedExchangeIds);
       throw new Error(`unexpected capped broker-pool lookup: ${data}`);
     });
     const config = makeRedemptionConfig({

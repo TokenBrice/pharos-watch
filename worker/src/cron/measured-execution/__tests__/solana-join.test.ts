@@ -334,4 +334,80 @@ describe("Solana measured execution join", () => {
       detail: "shadow-score-ineligible",
     });
   });
+
+  it("separates a rotating admission deferral from a genuine quote failure", () => {
+    const target = fixtureTarget();
+    const pool: PoolEntry = {
+      poolId: `solana:${POOL}`,
+      project: "orca",
+      chain: "Solana",
+      tvlUsd: 100_000,
+      symbol: "USDC / USDT",
+      volumeUsd1d: 10_000,
+      poolType: "orca-whirlpool",
+      source: "direct_api",
+      extra: { solanaMeasuredExecutionTarget: target },
+    };
+    const evidenceFor = (failureReason: string): LoadedSolanaMeasuredQuoteEvidence => ({
+      quoteGenerationId: "solana-quotes-active",
+      targetGenerationId: "solana-targets-active",
+      publishedAt: 1_010,
+      byTargetId: new Map([
+        [
+          target.targetId,
+          {
+            quotedTarget: target,
+            status: "failed",
+            failureReason,
+            profile: null,
+            quoteGenerationId: "solana-quotes-active",
+            targetGenerationId: "solana-targets-active",
+            resolution: "latest",
+            latestFailureReason: failureReason,
+          },
+        ],
+      ]),
+    });
+
+    joinSolanaMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdc", [pool]]]),
+      evidence: evidenceFor("budget-deferred"),
+      nowSec: 1_010,
+    });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "budget-deferred",
+    });
+
+    joinSolanaMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdc", [pool]]]),
+      evidence: evidenceFor("rpc-failure"),
+      nowSec: 1_010,
+    });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "quote-failed",
+    });
+  });
+
+  it("keeps stale Solana evidence out of the public measured profile", () => {
+    const { pool, evidence } = fixtureJoin();
+
+    const diagnostics = joinSolanaMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdc", [pool]]]),
+      evidence,
+      nowSec: 4_611,
+    });
+
+    expect(diagnostics).toMatchObject({
+      measuredCount: 0,
+      gatedCount: 1,
+      failuresByReason: { "orca-whirlpool-jupiter-v1:stale-observation": 1 },
+    });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "stale-observation",
+    });
+    expect(pool.extra?.solanaMeasuredExecution).toBeUndefined();
+  });
 });

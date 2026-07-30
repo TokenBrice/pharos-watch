@@ -38,11 +38,11 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "97ef063e42646fce185781a9b9f6c8f47cc5173842a9b0732b7a3972634803ac"
+      "sha256": "be916106d85a1ebf477c9bd57f9f29d24569c4c7618c7b7ddac38f7c986361ae"
     },
     {
       "path": "shared/lib/methodology-versions/safety-score.ts",
-      "sha256": "e957fbcce773c45825a870f3aa1f0d8f2a8726dd8395882e06ec773e58a6a2ec"
+      "sha256": "051f84e660d133ed7f69d4e91dfb9dc388829d9870f0c4f9ce82878d13836dc7"
     },
     {
       "path": "shared/lib/mint-authority-scoring.ts",
@@ -50,7 +50,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
-      "sha256": "4de9777ff57288126d9f44320073826c414071d234a19e1ddfa08b2193ca3bb5"
+      "sha256": "7a5d4a222959e9cbdb5cfd005f9eed5244620f783f8a43e56b9df0191f160495"
     },
     {
       "path": "shared/lib/redemption-backstop-scoring.ts",
@@ -126,7 +126,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "718c5d9a1d63d3ec373b6bdac0c1848032486ebd4ab6a338bc62afd02226d786"
+      "sha256": "3e26c6c1e4e33a4bc0896cfe5ff79053f8506601aec8a90de7f067d20a47e09f"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "0d2475d38f8280b5ed985e648c6bff144c7a85b979fb3623c5e652408658c730"
+  "digest": "08ce279495b6d665caf656c932f5bf8da3be7d36cc7a573a158911ed61177573"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

@@ -6,6 +6,18 @@ import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifa
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mjs";
 
+const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
+const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
+const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
+
+function hasStructuralCheckImpact(changedFiles) {
+  return changedFiles.some(
+    (file) =>
+      STRUCTURAL_CHECK_EXACT_PATHS.has(file) ||
+      STRUCTURAL_CHECK_PREFIXES.some((prefix) => file.startsWith(prefix)),
+  );
+}
+
 function runNpmScript(name, args = [], { env = process.env, spawn = spawnSync } = {}) {
   console.log(`[check:pr:static] npm run ${name}${args.length > 0 ? ` -- ${args.join(" ")}` : ""}`);
   const result = spawn("npm", ["run", name, ...(args.length > 0 ? ["--", ...args] : [])], {
@@ -24,7 +36,16 @@ export function buildPrStaticCheckPlan(changedFiles) {
     { name: "typecheck" },
     { name: "check:env-contract" },
     { name: "check:shared-types-imports" },
+    { name: "check:critical-coverage-completeness" },
   ];
+
+  if (changedFiles.some((file) => ROOT_DEPENDENCY_PATHS.has(file))) {
+    commands.push({ name: "audit:deps" });
+  }
+
+  if (hasStructuralCheckImpact(changedFiles)) {
+    commands.push({ name: "check:structural" });
+  }
 
   if (classification.pagesChanged) {
     commands.push(
@@ -47,6 +68,7 @@ export function buildPrStaticCheckPlan(changedFiles) {
       { name: "check:sql-safety" },
       { name: "check:worker-boundary" },
       { name: "check:worker-config" },
+      { name: "check:worker-package" },
     );
   }
 

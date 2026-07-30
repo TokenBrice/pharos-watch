@@ -18,6 +18,7 @@ import {
   decodeCurveCryptoSwapQuotePoint,
   encodeCurveCryptoSwapGetDy,
   evaluateCurveCryptoSwapEligibility,
+  getCurveCryptoSwapReviewedDeploymentFamily,
   getCurveCryptoSwapShadowPolicy,
   resolveCurveCryptoSwapTokenIndices,
   validateCurveCryptoSwapProfileProof,
@@ -122,6 +123,7 @@ function completeShadowPolicy(
     poolAddress: TWOCRYPTO_POOL,
     generation,
     mode: "shadow",
+    identityAnchor: "pinned-pool-code",
     scoreEligible: false,
     expectedPoolCodeHash: HASH_A,
     expectedFactoryAddress: DEP_A,
@@ -169,18 +171,111 @@ describe("Curve CryptoSwap shadow policy", () => {
       ),
     ).toBe(true);
     const active = CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.mode === "active");
-    expect(active).toHaveLength(8);
+    expect(active).toHaveLength(19);
+    expect(active.every((entry) => entry.scoreEligible && entry.transferSemanticsReviewed)).toBe(true);
+    const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
+    expect(pinned).toHaveLength(8);
     expect(
-      active.every(
+      pinned.every(
         (entry) =>
-          entry.scoreEligible &&
-          entry.transferSemanticsReviewed &&
           entry.expectedPoolCodeHash != null &&
           entry.expectedFactoryCodeHash != null &&
           entry.expectedViewsCodeHash != null &&
           entry.expectedMathCodeHash != null,
       ),
     ).toBe(true);
+    // R3 (2026-07-29) promoted the reviewed Ethereum TwoCrypto census; no other
+    // chain or generation has a reviewed family, so nothing else can ride it.
+    const familyAnchored = active.filter((entry) => entry.identityAnchor === "reviewed-deployment-family");
+    expect(familyAnchored).toHaveLength(11);
+    expect(
+      familyAnchored.every(
+        (entry) =>
+          entry.chain === "ethereum" &&
+          entry.generation === "twocrypto-ng" &&
+          entry.expectedPoolCodeHash == null &&
+          getCurveCryptoSwapReviewedDeploymentFamily(entry.chain, entry.generation) != null,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps every pinned active pool inside its reviewed deployment family", () => {
+    // The family allowlist and the per-pool pins are separate literals; they
+    // must not drift apart, or a family-anchored pool would accept a factory,
+    // views, or math deployment no pinned pool ever proved.
+    for (const entry of CURVE_CRYPTOSWAP_SHADOW_COHORT) {
+      if (entry.identityAnchor !== "pinned-pool-code" || entry.mode !== "active") continue;
+      const family = getCurveCryptoSwapReviewedDeploymentFamily(entry.chain, entry.generation);
+      expect(family).not.toBeNull();
+      expect(entry.expectedFactoryAddress).toBe(family!.factoryAddress);
+      expect(entry.expectedFactoryCodeHash).toBe(family!.factoryCodeHash);
+      expect(entry.expectedViewsAddress).toBe(family!.viewsAddress);
+      expect(entry.expectedViewsCodeHash).toBe(family!.viewsCodeHash);
+      expect(
+        family!.mathDeployments.some(
+          (math) => math.address === entry.expectedMathAddress && math.codeHash === entry.expectedMathCodeHash,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("admits a family-anchored pool on the reviewed dependency triple alone", () => {
+    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find(
+      (entry) => entry.identityAnchor === "reviewed-deployment-family",
+    );
+    if (!policy) throw new Error("missing family-anchored Curve CryptoSwap policy");
+    const family = getCurveCryptoSwapReviewedDeploymentFamily(policy.chain, policy.generation)!;
+    const evidence = {
+      apiIsBroken: false,
+      // Per-pool bytecode is recorded, never pre-pinned: Curve NG bakes
+      // constructor immutables into each pool's runtime code.
+      poolCodeHash: HASH_A,
+      factoryAddress: family.factoryAddress,
+      factoryCodeHash: family.factoryCodeHash,
+      viewsAddress: family.viewsAddress,
+      viewsCodeHash: family.viewsCodeHash,
+      mathAddress: family.mathDeployments[1]!.address,
+      mathCodeHash: family.mathDeployments[1]!.codeHash,
+      ngKillMethodUnavailable: true,
+      transferSemanticsReviewed: true,
+      onChainPoolTokenAddresses: [CRVUSD, WETH] as `0x${string}`[],
+    };
+    const evaluate = (overrides: Partial<typeof evidence>) =>
+      evaluateCurveCryptoSwapEligibility({
+        chain: policy.chain,
+        endpointAddress: policy.poolAddress,
+        policy,
+        evidence: { ...evidence, ...overrides },
+      });
+
+    expect(evaluate({})).toEqual({ ok: true });
+    // Any runtime code hash is accepted for the pool itself, but the read must
+    // have succeeded.
+    expect(evaluate({ poolCodeHash: HASH_B })).toEqual({ ok: true });
+    expect(evaluate({ poolCodeHash: undefined })).toEqual({ ok: false, reason: "runtime-code-unavailable" });
+    // The dependency triple stays exact.
+    expect(evaluate({ factoryAddress: DEP_A })).toEqual({ ok: false, reason: "dependency-identity-mismatch" });
+    expect(evaluate({ viewsAddress: DEP_B })).toEqual({ ok: false, reason: "dependency-identity-mismatch" });
+    expect(evaluate({ mathAddress: DEP_C })).toEqual({ ok: false, reason: "dependency-identity-mismatch" });
+    expect(evaluate({ factoryCodeHash: HASH_B })).toEqual({ ok: false, reason: "dependency-code-hash-mismatch" });
+    expect(evaluate({ viewsCodeHash: HASH_C })).toEqual({ ok: false, reason: "dependency-code-hash-mismatch" });
+    // A reviewed math address paired with the other deployment's hash fails.
+    expect(evaluate({ mathCodeHash: family.mathDeployments[0]!.codeHash })).toEqual({
+      ok: false,
+      reason: "dependency-code-hash-mismatch",
+    });
+    expect(evaluate({ ngKillMethodUnavailable: false })).toEqual({
+      ok: false,
+      reason: "ng-kill-method-not-proven-absent",
+    });
+    expect(evaluate({ transferSemanticsReviewed: false })).toEqual({
+      ok: false,
+      reason: "transfer-semantics-unreviewed",
+    });
+    expect(evaluate({ onChainPoolTokenAddresses: [CRVUSD] })).toEqual({
+      ok: false,
+      reason: "pool-token-order-unverified",
+    });
   });
 
   it("admits a reviewed active policy only with complete matching runtime evidence", () => {
@@ -216,10 +311,21 @@ describe("Curve CryptoSwap shadow policy", () => {
       }),
     ).toEqual({ ok: false, reason: "api-broken-or-unknown" });
 
+    // A family-anchored pool has a complete allowlist, so an unread runtime is
+    // reported as an unavailable read rather than a missing review.
     expect(
       evaluateCurveCryptoSwapEligibility({
         chain: "ethereum",
         endpointAddress: TWOCRYPTO_POOL,
+        evidence: { apiIsBroken: false, ngKillMethodUnavailable: true },
+      }),
+    ).toEqual({ ok: false, reason: "runtime-code-unavailable" });
+
+    // A generation with no reviewed family keeps the incomplete-allowlist gate.
+    expect(
+      evaluateCurveCryptoSwapEligibility({
+        chain: "ethereum",
+        endpointAddress: TRICRYPTO_POOL,
         evidence: { apiIsBroken: false, ngKillMethodUnavailable: true },
       }),
     ).toEqual({ ok: false, reason: "runtime-allowlist-incomplete" });
@@ -360,7 +466,7 @@ describe("Curve CryptoSwap quote transport", () => {
       }),
     );
     expect(outcomes[0]).toMatchObject({
-      eligibility: { ok: false, reason: "runtime-allowlist-incomplete" },
+      eligibility: { ok: false, reason: "runtime-code-unavailable" },
       point: {
         amountInRaw: "1000000000000000000000",
         amountOutRaw: "999000000",
@@ -377,7 +483,7 @@ describe("Curve CryptoSwap quote transport", () => {
     });
   });
 
-  it("caps batches at eight and adaptively isolates a failed Multicall", async () => {
+  it("preserves the Curve adaptive multicall golden split", async () => {
     const sizes: number[] = [];
     const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) => {
       sizes.push(input.calls.length);
@@ -401,7 +507,7 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
   });
 
-  it("attributes only a budget-rejected pool call to the hard RPC budget", async () => {
+  it("preserves the Curve adaptive multicall golden budget-exhaustion result", async () => {
     const executeMulticall = vi.fn(async (input: {
       onBudgetStop?: (reason: "request-budget-exhausted") => void;
     }) => {
@@ -422,6 +528,61 @@ describe("Curve CryptoSwap quote transport", () => {
     });
 
     expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("preserves the Curve adaptive multicall golden deadline result", async () => {
+    const executeMulticall = vi.fn(async () => null);
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() - 1,
+    });
+
+    const outcomes = await quote({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
+  });
+
+  it("preserves the Curve adaptive multicall golden unattempted result", async () => {
+    const sizes: number[] = [];
+    const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) => {
+      sizes.push(input.calls.length);
+      return null;
+    });
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quote({
+      requests: Array.from({ length: 4 }, () => ({
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      })),
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(sizes).toEqual([4, 2]);
+    expect(budget.openChains).toEqual(["ethereum"]);
+    expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
+      "pool-revert",
+      "pool-revert",
+      "pool-revert",
+      "pool-revert",
+    ]);
   });
 
   it("does not relabel a genuine pool revert from an already stopped budget", async () => {
@@ -617,5 +778,26 @@ describe("Curve CryptoSwap stored proof validation", () => {
       quoteProof: [{ ...profile.quoteProof[0]!, amountOutRaw: "999999999" }],
     };
     expect(validateCurveCryptoSwapProfileProof(wrongReturn)).toContain("return-data-mismatch");
+  });
+
+  it("binds the endpoint bytecode per identity anchor", () => {
+    // TWOCRYPTO_POOL is family-anchored: any readable pool hash is accepted,
+    // an unreadable one is not.
+    const profile = makeProfile();
+    expect(getCurveCryptoSwapShadowPolicy("ethereum", TWOCRYPTO_POOL)?.identityAnchor).toBe(
+      "reviewed-deployment-family",
+    );
+    expect(
+      validateCurveCryptoSwapProfileProof({
+        ...profile,
+        executionEndpoint: { ...profile.executionEndpoint, codeHash: HASH_B },
+      }),
+    ).toEqual([]);
+    expect(
+      validateCurveCryptoSwapProfileProof({
+        ...profile,
+        executionEndpoint: { ...profile.executionEndpoint, codeHash: "0x" as `0x${string}` },
+      }),
+    ).toContain("endpoint-code-hash-mismatch");
   });
 });

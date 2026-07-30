@@ -54,6 +54,30 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
     );
 }
 
+/**
+ * Reviewed vault-share receipts that appear as exit-output identities without a
+ * tracked Pharos id. An entry belongs here only when the receipt's vault fixes
+ * its share:asset rate in code, so the receipt carries no NAV of its own and
+ * redeems into exactly one unit of the vault's `asset()`. Its same-notional
+ * value is then the underlying's own observed value, not a par assumption. A
+ * receipt whose share price moves needs a measured NAV source instead.
+ *
+ * Katana Vault Bridge vbTokens are ERC-4626 vaults on Ethereum whose
+ * `convertToShares`/`convertToAssets` are `pure` identity functions and which
+ * are forbidden to charge deposit or withdrawal fees; produced yield is swept
+ * to a separate yield recipient rather than accruing to the share. The Katana
+ * balances are Agglayer bridge wrappers of those vaults (verified through the
+ * bridge's `wrappedTokenToTokenInfo`), so they carry the same fixed rate.
+ */
+const REVIEWED_FIXED_RATE_RECEIPT_UNDERLYING: Readonly<Record<string, string>> = {
+  // vbUSDC: ethereum 0x53e82abbb12638f09d9e624578ccb666217a765e (asset() = USDC),
+  // bridged to katana 0x203a662b0bd271a6ed5a60edfbd04bfce608fd36.
+  "asset:vbusdc": "usdc-circle",
+  // vbUSDT: ethereum 0x6d4f9f9f8f0155509ecd6ac6c544ff27999845cc (asset() = USDT),
+  // bridged to katana 0x2dca96907fde857dd3d816880a0df407eeb2d2f2.
+  "asset:vbusdt": "usdt-tether",
+};
+
 function trackedStablecoinValuation(
   fixedInput: Readonly<ReportCardsFixedInput>,
   trackedAssetId: string,
@@ -107,18 +131,55 @@ function trackedStablecoinValuation(
   };
 }
 
+/**
+ * Values one enumerated output identity. Untracked identities resolve only
+ * through a reviewed fixed-rate receipt conversion; everything else stays
+ * unpriced so its basket cannot be valued from the priced legs alone.
+ */
+function outputIdentityValuation(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetKey: string,
+  observedAtSec: number,
+): ReturnType<typeof trackedStablecoinValuation> {
+  const tracked = trackedStablecoinValuation(fixedInput, assetKey, observedAtSec);
+  if (tracked) return tracked;
+  const underlyingAssetId = REVIEWED_FIXED_RATE_RECEIPT_UNDERLYING[assetKey];
+  if (underlyingAssetId === undefined) return null;
+  const underlying = trackedStablecoinValuation(fixedInput, underlyingAssetId, observedAtSec);
+  if (!underlying) return null;
+  // The receipt redeems one-for-one into the underlying, so it takes the
+  // underlying's observed value under the reviewed conversion's own identity.
+  return { ...underlying, sourceId: "safety-score-v9-extension-fixed-rate-receipt" };
+}
+
 function buildOutputReview(
   fixedInput: Readonly<ReportCardsFixedInput>,
   observation: ExitRouteObservation,
   sourceGenerationId: string,
 ): RouteOutputReview | null {
   const output = observation.output;
-  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
+  // An unresolved basket is reviewable as a basket output once every
+  // enumerated identity has a reviewed valuation path. It keeps the untracked
+  // identities it was captured with, so the reviewed output stays the
+  // conservative mixed basket rather than claiming a tracked-stablecoin output.
+  const receiptBasketKeys =
+    output.kind === "unresolved-basket" && output.assetKeys && output.assetKeys.length > 0
+      ? [...new Set(output.assetKeys)].sort(compareText)
+      : null;
+  const reviewedKind: RouteOutputReview["kind"] | null =
+    receiptBasketKeys !== null
+      ? "basket"
+      : output.kind === "tracked-stablecoin" || output.kind === "fiat" || output.kind === "collateral"
+        ? output.kind
+        : null;
+  if (reviewedKind === null) return null;
   // Collateral outputs without enumerated asset keys are still USD-normalized
   // by the producer at observation time, so they take the same reviewed par
   // valuation as the enumerated collateral branch under a generic key.
   const assetKeys =
-    resolvedExitRouteOutputAssetKeys(output) ?? (output.kind === "collateral" ? ["collateral:mixed"] : null);
+    receiptBasketKeys ??
+    resolvedExitRouteOutputAssetKeys(output) ??
+    (output.kind === "collateral" ? ["collateral:mixed"] : null);
   if (assetKeys === null) return null;
   const basketWeights = [...(output.basketWeights ?? [])]
     .flatMap((weight) =>
@@ -183,7 +244,7 @@ function buildOutputReview(
         ...shared,
       };
     }
-  } else if (output.kind === "tracked-stablecoin" && assetKeys.length > 1) {
+  } else if (receiptBasketKeys !== null || (output.kind === "tracked-stablecoin" && assetKeys.length > 1)) {
     // Prefer the weakest known component when every leg is priced. A live
     // producer may also pin a complete proportional basket and its aggregate
     // unit value; this is accepted only with source identity, source time,
@@ -191,7 +252,7 @@ function buildOutputReview(
     // cost check. Known component downside remains a conservative floor.
     const components = assetKeys.map((assetKey) => ({
       assetKey,
-      tracked: trackedStablecoinValuation(fixedInput, assetKey, observedAtSec),
+      tracked: outputIdentityValuation(fixedInput, assetKey, observedAtSec),
     }));
     const pricedComponents = components.filter(
       (component): component is typeof component & { tracked: NonNullable<typeof component.tracked> } =>
@@ -250,8 +311,12 @@ function buildOutputReview(
       ...shared,
     };
   }
+  // A basket promoted out of an unresolved capture must clear its whole
+  // identity set. Without that it stays unresolved exactly as captured, so its
+  // unresolved-output ownership attribution is unchanged.
+  if (receiptBasketKeys !== null && valuation === null) return null;
   return {
-    kind: output.kind,
+    kind: reviewedKind,
     assetKeys,
     basketWeights,
     valuation,

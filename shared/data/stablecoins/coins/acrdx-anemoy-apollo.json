@@ -112,6 +112,11 @@
       "decimals": 18
     },
     {
+      "chain": "optimism",
+      "address": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+      "decimals": 18
+    },
+    {
       "chain": "solana",
       "address": "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
       "decimals": 6
@@ -431,9 +436,9 @@
   "launchDate": "2025-09-16",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the official deployment registry lists the complete Ethereum, Base, Plume, Monad, and Solana inventory.",
-    "reviewedAt": "2026-07-24",
-    "reviewer": "GPT SOL-NR-A wave6; Codex V9 runtime supply audit",
+    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the reviewed inventory covers Ethereum, Base, Plume, Monad, Optimism, and Solana.",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "GPT SOL-NR-A wave6; Codex V9 runtime supply audit; Claude V9 bridge-deployment materiality wave3",
     "confidence": "verified",
     "protocols": [
       {
@@ -571,6 +576,40 @@
           {
             "label": "Anemoy",
             "url": "https://anemoy.com/"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on optimism is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code): wards() = 1 on the optimism token and eth_getCode confirms the Spoke is deployed there (read 2026-07-29 at block 154876232 on mainnet.optimism.io and optimism.drpc.org). The Optimism token shares the Monad ShareToken address 0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245 and returned name 'Anemoy Tokenized Apollo Diversified Credit Fund Token', symbol ACRDX, 18 decimals, totalSupply 97,931.995174 shares. Root ward = 0 on optimism, matching the Monad Spoke-only ward layout where Root is not deployed per spoke chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 154876232,
+        "controllerChain": "optimism",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:optimism:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "ACRDX optimism ShareToken",
+            "url": "https://optimistic.etherscan.io/token/0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245"
+          },
+          {
+            "label": "Centrifuge Spoke architecture",
+            "url": "https://docs.centrifuge.io/developer/protocol/architecture/spoke/"
           }
         ]
       },

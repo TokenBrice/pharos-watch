@@ -14,6 +14,7 @@ import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/acce
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import {
   evaluateV9Exit,
@@ -348,7 +349,14 @@ function withWmReviewedDeploymentAttribution(
   });
 }
 
-function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean; omitAlphaReserve?: boolean } = {}) {
+function exactTwoAssetFixedInput(
+  options: {
+    mapAlphaCollateral?: boolean;
+    omitAlphaReserve?: boolean;
+    /** Assets that declare a live-reserve adapter but published no snapshot this run. */
+    liveToFallbackCoins?: string[];
+  } = {},
+) {
   const alpha = exactFixedInput();
   const alphaDex = alpha.dexLiqMap.alpha!;
   const alphaPeg = alpha.pegDataById.alpha!;
@@ -388,6 +396,7 @@ function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean; omitAl
       },
     },
     resolvedBlacklistStatuses: { alpha: false, beta: false },
+    ...(options.liveToFallbackCoins ? { liveToFallbackCoins: options.liveToFallbackCoins } : {}),
     liveReserveMap: {
       ...liveReserveMap,
       ...(options.mapAlphaCollateral
@@ -1934,7 +1943,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       ],
       ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
     ]);
-    const noLiveSnapshot = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    // `liveToFallbackCoins` is exactly the set of assets that declare a
+    // live-reserve adapter and published no snapshot this run, so alpha here
+    // HAS a producer and that producer failed.
+    const noLiveSnapshot = exactTwoAssetFixedInput({
+      omitAlphaReserve: true,
+      liveToFallbackCoins: ["alpha"],
+    });
 
     const curated = buildSafetyScoreV9BaselineExtension(noLiveSnapshot, { metaById });
     expect(curated.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
@@ -1950,6 +1965,30 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         message: expect.stringContaining("exact fixed input contains no reserve envelope"),
       }),
     );
+
+    // Owner ruling 2026-07-29 (usdh-hubble): the same unmapped collateral edge
+    // on an asset with NO live-reserve adapter at all is not a producer failure
+    // — no producer was ever expected to publish an envelope for it.
+    const noAdapter = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    const compiledNoAdapter = compileSafetyScoreV9FactSetFromFixedInput(
+      noAdapter,
+      buildSafetyScoreV9BaselineExtension(noAdapter, { metaById }),
+    );
+    expect(compiledNoAdapter.assets.find((asset) => asset.assetId === "alpha")!.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unreviewed-dependency-relationships",
+        responsibility: "method-unsupported",
+        message: expect.stringContaining("no live-reserve adapter is configured"),
+      }),
+    );
+    expect(
+      evaluateV9FactSet(compiledNoAdapter, V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons.find(
+          (reason) =>
+            reason.path === "dependency:collateral:beta:cause:" + "alpha%3Agap%3Aeffective-dependencies",
+        ),
+    ).toMatchObject({ responsibility: "method-unsupported" });
     const evaluatedCurated = evaluateV9FactSet(compiledCurated, V9_CANDIDATE_POLICY_V1);
     expect(
       evaluatedCurated.assets
@@ -3403,6 +3442,241 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(gated.gaps.map((gap) => gap.reasonCode)).toContain("incomplete-dex-route-coverage");
   });
 
+  // Owner rulings R1-A / R1-B / R4 (2026-07-29). Only a producer that could
+  // have delivered may be blamed for an uncovered DEX exit surface.
+  it("splits an uncovered DEX exit surface between method limits and producer failures", () => {
+    // Every cohort here has an empty DEX observation set: cohort A has no
+    // reviewed pool at all, cohort B has retained pools that no execution model
+    // recognises. Whether a portfolio gap or the zero-route branch fires then
+    // depends only on whether another lane carries a route.
+    const withCoverage = (
+      coverage: Partial<
+        NonNullable<ReturnType<typeof exactFixedInput>["dexLiqMap"][string]["exitRouteObservationCoverage"]>
+      >,
+      options: { withRedemptionRoute?: boolean } = {},
+    ) => {
+      const original = options.withRedemptionRoute ? queuedRedemptionFixedInput() : exactFixedInput();
+      const {
+        schemaVersion: omittedSchemaVersion,
+        dexPayloadFingerprint: omittedDexPayloadFingerprint,
+        redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+        registryFingerprint: omittedRegistryFingerprint,
+        inputMethodologyVersions: omittedInputMethodologyVersions,
+        baseInputGenerationId: omittedBaseInputGenerationId,
+        ...draft
+      } = original;
+      void [
+        omittedSchemaVersion,
+        omittedDexPayloadFingerprint,
+        omittedRedemptionPayloadFingerprint,
+        omittedRegistryFingerprint,
+        omittedInputMethodologyVersions,
+        omittedBaseInputGenerationId,
+      ];
+      return createReportCardsFixedInput({
+        ...draft,
+        dexLiqMap: {
+          alpha: {
+            ...original.dexLiqMap.alpha!,
+            exitRouteObservations: [],
+            exitRouteObservationCoverage: {
+              ...original.dexLiqMap.alpha!.exitRouteObservationCoverage!,
+              observationCount: 0,
+              scoreEligibleObservationCount: 0,
+              scoreEligiblePoolCount: 0,
+              evidenceCounts: {},
+              ...coverage,
+            },
+          },
+        },
+      });
+    };
+    const reviewedWithoutDexRoutes = () => {
+      const reviewed = extension();
+      reviewed.assets[0]!.routeReviews = [];
+      return reviewed;
+    };
+    const portfolioGap = (fixed: ReturnType<typeof exactFixedInput>) =>
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()).assets[0]!.gaps.find(
+        (gap) => gap.gapId === "alpha:gap:exit-portfolio-coverage",
+      );
+
+    // R1-A: no reviewed pool exists at all because a deployment chain has no
+    // registered discovery provider. The legacy message claimed reviewed
+    // capability pools were unobserved, which is false for a zero-pool surface.
+    const censusUnsupported = portfolioGap(
+      withCoverage({
+        status: "unknown",
+        retainedPoolCount: 0,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 0,
+        unsupportedPoolCount: 0,
+        evidenceCounts: {},
+        unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+      }, { withRedemptionRoute: true }),
+    );
+    expect(censusUnsupported).toMatchObject({
+      reasonCode: "incomplete-dex-route-coverage",
+      responsibility: "method-unsupported",
+      observationState: "bounded-unknown",
+    });
+    expect(censusUnsupported!.message).not.toContain("do not all carry");
+
+    // The other census reasons ARE producer failures and keep that attribution,
+    // but they still stop asserting reviewed capability pools they do not have.
+    const providerOutage = portfolioGap(
+      withCoverage({
+        status: "unknown",
+        retainedPoolCount: 0,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 0,
+        unsupportedPoolCount: 0,
+        evidenceCounts: {},
+        unsupportedReasons: { deploymentCensusProviderOutage: 1 },
+      }, { withRedemptionRoute: true }),
+    );
+    expect(providerOutage).toMatchObject({
+      reasonCode: "incomplete-dex-route-coverage",
+      responsibility: "producer-failed",
+    });
+    expect(providerOutage!.message).not.toContain("do not all carry");
+
+    // R1-B: retained pools exist, but no reviewed execution model recognises
+    // any of them and nothing is gated — Pharos has no method for this venue.
+    const noExactCapableVenue = portfolioGap(
+      withCoverage({
+        status: "unsupported",
+        retainedPoolCount: 4,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 0,
+        unsupportedPoolCount: 4,
+        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
+      }, { withRedemptionRoute: true }),
+    );
+    expect(noExactCapableVenue).toMatchObject({
+      reasonCode: "incomplete-dex-route-coverage",
+      responsibility: "method-unsupported",
+    });
+
+    // A capability gate means an adapter DOES recognise the venue and the
+    // producer has not delivered it yet, so the surface stays producer-failed.
+    expect(
+      portfolioGap(
+        withCoverage({
+          status: "unsupported",
+          retainedPoolCount: 4,
+          scoreEligiblePoolCount: 0,
+          scoreEligibleCapabilityPoolCount: 0,
+          unsupportedPoolCount: 4,
+          unsupportedReasons: { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 },
+        }, { withRedemptionRoute: true }),
+      ),
+    ).toMatchObject({ reasonCode: "incomplete-dex-route-coverage", responsibility: "producer-failed" });
+
+    // An absent capability count proves nothing about the venue set and must
+    // fail closed to the producer.
+    const unknownCapabilityCount = withCoverage(
+      {
+        status: "unsupported",
+        retainedPoolCount: 4,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: undefined,
+        unsupportedPoolCount: 4,
+        unsupportedReasons: { "nonExecutableEvidence:defillama-pool-shaped": 4 },
+      },
+      { withRedemptionRoute: true },
+    );
+    expect(
+      unknownCapabilityCount.dexLiqMap.alpha!.exitRouteObservationCoverage!.scoreEligibleCapabilityPoolCount,
+    ).toBeUndefined();
+    expect(portfolioGap(unknownCapabilityCount)).toMatchObject({
+      reasonCode: "incomplete-dex-route-coverage",
+      responsibility: "producer-failed",
+    });
+
+    // R4 scope: the same split on the zero-route branch, where no observation
+    // of any lane exists to hang a portfolio gap on.
+    const zeroRouteAsset = (fixed: ReturnType<typeof exactFixedInput>) =>
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()).assets[0]!;
+    const zeroRouteCensusUnsupported = zeroRouteAsset(
+      withCoverage(
+        {
+          status: "unknown",
+          retainedPoolCount: 0,
+          observationCount: 0,
+          scoreEligibleObservationCount: 0,
+          scoreEligiblePoolCount: 0,
+          scoreEligibleCapabilityPoolCount: 0,
+          unsupportedPoolCount: 0,
+          evidenceCounts: {},
+          unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+        },
+      ),
+    );
+    expect(zeroRouteCensusUnsupported.exitRoutes).toEqual([]);
+    expect(zeroRouteCensusUnsupported.exitStatus.observationState).toBe("unsupported");
+    expect(zeroRouteCensusUnsupported.gaps).toContainEqual(
+      expect.objectContaining({
+        gapId: "alpha:gap:exit-routes",
+        reasonCode: "missing-runtime-route-evidence",
+        responsibility: "method-unsupported",
+        observationState: "unsupported",
+      }),
+    );
+
+    const zeroRouteProviderOutage = zeroRouteAsset(
+      withCoverage(
+        {
+          status: "unknown",
+          retainedPoolCount: 0,
+          observationCount: 0,
+          scoreEligibleObservationCount: 0,
+          scoreEligiblePoolCount: 0,
+          scoreEligibleCapabilityPoolCount: 0,
+          unsupportedPoolCount: 0,
+          evidenceCounts: {},
+          unsupportedReasons: { deploymentCensusProviderOutage: 1 },
+        },
+      ),
+    );
+    expect(zeroRouteProviderOutage.gaps).toContainEqual(
+      expect.objectContaining({
+        gapId: "alpha:gap:exit-routes",
+        reasonCode: "missing-runtime-route-evidence",
+        responsibility: "producer-failed",
+        observationState: "missing",
+      }),
+    );
+
+    // Every reclassified gap must still bind cleanly to its policy entry. Only
+    // `incomplete-dex-route-coverage` and `missing-runtime-route-evidence` are
+    // registered for a `local-component` exit path; swapping in a code that is
+    // not would silently reroute the whole cohort to `reconcile-policy-binding`
+    // instead of its owner. This pins the constraint the v9.04 reason-code
+    // rename has to satisfy.
+    const censusUnsupportedCoverage = {
+      status: "unknown" as const,
+      retainedPoolCount: 0,
+      scoreEligibleCapabilityPoolCount: 0,
+      unsupportedPoolCount: 0,
+      unsupportedReasons: { deploymentCensusUnsupportedMethod: 1 },
+    };
+    for (const fixed of [
+      withCoverage(censusUnsupportedCoverage, { withRedemptionRoute: true }),
+      withCoverage(censusUnsupportedCoverage),
+    ]) {
+      const queue = buildV9EvidenceGapQueue({
+        factSet: compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewedWithoutDexRoutes()),
+        policy: V9_CANDIDATE_POLICY_V1,
+      });
+      expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
+    }
+  });
+
   it("treats a pure NAV peg reference as not-applicable while fiat assets still require a peg row", () => {
     const withoutPegRow = () => exactFixedInput({ omitPegRow: true });
     const navExtension = extension();
@@ -4041,7 +4315,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     // Shared exit-route capacity source changes rotate the historical V8
     // evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "0d2475d38f8280b5ed985e648c6bff144c7a85b979fb3623c5e652408658c730",
+      "08ce279495b6d665caf656c932f5bf8da3be7d36cc7a573a158911ed61177573",
     );
   });
 

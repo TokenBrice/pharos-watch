@@ -46,7 +46,7 @@ vi.mock("../dex-liquidity/token-resolution", () => ({
     (symbol: string, chain: string, lookups: { symbolToChainScopedIds: Map<string, Map<string, string[]>> }) =>
       lookups.symbolToChainScopedIds.get(symbol)?.get(chain.toLowerCase()) ?? [],
   ),
-  makeChainAddressKey: vi.fn((chain: string, address: string) => `${chain.toLowerCase()}:${address.toLowerCase()}`),
+  buildChainAddressKey: vi.fn((chain: string, address: string) => `${chain.toLowerCase()}:${address.toLowerCase()}`),
   normalizeTokenAddress: vi.fn((address: string) => address.trim().toLowerCase()),
 }));
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({

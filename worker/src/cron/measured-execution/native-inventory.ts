@@ -1,4 +1,7 @@
-import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+} from "@shared/lib/exit-route-identity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool, DexApiPoolToken } from "../../lib/dex-api-types";
 import {
@@ -20,6 +23,32 @@ export interface NativeMeasuredExecutionTokenFields {
   referencePriceUsd: number;
   referencePriceSource: NativeMeasuredExecutionReferencePriceSource;
   trackedAssetId?: string;
+}
+
+export interface NativeMeasuredExecutionInventoryInput {
+  pools: readonly DexApiPool[];
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  validationReferences?: PriceValidationReferences;
+  stablecoinPriceById?: Map<string, number>;
+  capturedAt: number;
+}
+
+export interface NativeMeasuredExecutionInventoryAdapter<TTarget, TPoolAdapter> {
+  chain: NativeMeasuredExecutionChain;
+  stripPoolChainPrefix?: boolean;
+  allowSourceTokenUsd?: boolean;
+  getPoolAdapter(pool: DexApiPool): TPoolAdapter | null;
+  isPoolEligible(pool: DexApiPool, adapter: TPoolAdapter): boolean;
+  buildTarget(input: {
+    pool: DexApiPool;
+    poolId: string;
+    stablecoinId: string;
+    tokenIn: NativeMeasuredExecutionTokenFields;
+    tokenOut: NativeMeasuredExecutionTokenFields;
+    adapter: TPoolAdapter;
+    capturedAt: number;
+  }): TTarget | null;
 }
 
 export function buildNativeMeasuredPoolDirectionKey(input: {
@@ -99,4 +128,78 @@ export function buildNativeMeasuredExecutionToken(input: {
         : "pool-implied",
     ...(trackedAssetId ? { trackedAssetId } : {}),
   };
+}
+
+export function buildNativeMeasuredExecutionTargets<TTarget, TPoolAdapter>(
+  input: NativeMeasuredExecutionInventoryInput,
+  adapter: NativeMeasuredExecutionInventoryAdapter<TTarget, TPoolAdapter>,
+): Map<string, TTarget> {
+  const targets = new Map<string, TTarget>();
+  for (const pool of input.pools) {
+    if (canonicalExitRouteChain(pool.chain) !== adapter.chain || pool.tokens.length !== 2) continue;
+    const poolAdapter = adapter.getPoolAdapter(pool);
+    if (
+      !poolAdapter ||
+      !adapter.isPoolEligible(pool, poolAdapter) ||
+      !Number.isFinite(pool.tvlUsd) ||
+      pool.tvlUsd <= 0
+    ) continue;
+    const poolId = pool.poolAddress.trim();
+
+    for (let inputIndex = 0; inputIndex < pool.tokens.length; inputIndex++) {
+      const rawTokenIn = pool.tokens[inputIndex]!;
+      const stablecoinId = resolveStablecoinIdForDexApiToken(
+        adapter.chain,
+        rawTokenIn,
+        input.chainAddressToId,
+        input.symbolToChainScopedIds,
+      );
+      if (!stablecoinId) continue;
+      const outputIndex = inputIndex === 0 ? 1 : 0;
+      const tokenIn = buildNativeMeasuredExecutionToken({
+        chain: adapter.chain,
+        pool,
+        token: rawTokenIn,
+        tokenIndex: inputIndex,
+        chainAddressToId: input.chainAddressToId,
+        symbolToChainScopedIds: input.symbolToChainScopedIds,
+        validationReferences: input.validationReferences,
+        stablecoinPriceById: input.stablecoinPriceById,
+        allowSourceTokenUsd: adapter.allowSourceTokenUsd,
+      });
+      const tokenOut = buildNativeMeasuredExecutionToken({
+        chain: adapter.chain,
+        pool,
+        token: pool.tokens[outputIndex]!,
+        tokenIndex: outputIndex,
+        chainAddressToId: input.chainAddressToId,
+        symbolToChainScopedIds: input.symbolToChainScopedIds,
+        validationReferences: input.validationReferences,
+        stablecoinPriceById: input.stablecoinPriceById,
+        allowSourceTokenUsd: adapter.allowSourceTokenUsd,
+      });
+      if (!tokenIn || !tokenOut || tokenIn.trackedAssetId !== stablecoinId) continue;
+      if (tokenOut.trackedAssetId === stablecoinId || tokenIn.address === tokenOut.address) continue;
+      const target = adapter.buildTarget({
+        pool,
+        poolId,
+        stablecoinId,
+        tokenIn,
+        tokenOut,
+        adapter: poolAdapter,
+        capturedAt: input.capturedAt,
+      });
+      if (!target) continue;
+      targets.set(
+        buildNativeMeasuredPoolDirectionKey({
+          stablecoinId,
+          chain: adapter.chain,
+          poolId,
+          stripChainPrefix: adapter.stripPoolChainPrefix,
+        }),
+        target,
+      );
+    }
+  }
+  return targets;
 }

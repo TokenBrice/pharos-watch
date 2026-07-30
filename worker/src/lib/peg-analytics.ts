@@ -153,6 +153,13 @@ export async function derivePegAnalyticsSnapshot(
       supply > 0 &&
       supply < DEPEG_EVENT_MIN_SUPPLY_USD;
 
+    // Price availability is a distinct fact from peg-reference authority: a coin
+    // with no usable price observation has an UNOBSERVED deviation, not a
+    // withheld or quiet one. Downstream scoring must be able to tell the two
+    // apart instead of reading the shared null as "at peg".
+    const currentPriceUnavailable =
+      !meta.flags.navToken && (asset === undefined || !hasUsableCurrentPrice(asset));
+
     let currentDeviationBps: number | null = null;
     let pegReferenceUnavailable = false;
     let pegReference: PegSummaryCoin["pegReference"] = null;
@@ -212,6 +219,7 @@ export async function derivePegAnalyticsSnapshot(
       currentDeviationBps,
       pegReference,
       ...(pegReferenceUnavailable ? { pegReferenceUnavailable } : {}),
+      ...(currentPriceUnavailable ? { currentPriceUnavailable } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,

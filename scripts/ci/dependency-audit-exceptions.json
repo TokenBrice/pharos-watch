@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "exceptions": [
+    {
+      "advisoryId": "GHSA-mh99-v99m-4gvg",
+      "source": 1124334,
+      "dependency": "brace-expansion",
+      "severity": "high",
+      "range": "<=5.0.7",
+      "expiresOn": "2026-08-15",
+      "nodes": [
+        "node_modules/@eslint/config-array/node_modules/brace-expansion",
+        "node_modules/@eslint/eslintrc/node_modules/brace-expansion",
+        "node_modules/eslint-config-next/node_modules/brace-expansion",
+        "node_modules/eslint/node_modules/brace-expansion"
+      ],
+      "affectedPackages": [
+        "@eslint-community/eslint-utils",
+        "@eslint/config-array",
+        "@eslint/eslintrc",
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/parser",
+        "@typescript-eslint/type-utils",
+        "@typescript-eslint/utils",
+        "brace-expansion",
+        "eslint",
+        "eslint-config-next",
+        "eslint-import-resolver-typescript",
+        "eslint-plugin-import",
+        "eslint-plugin-jsx-a11y",
+        "eslint-plugin-react",
+        "eslint-plugin-react-hooks",
+        "minimatch",
+        "typescript-eslint"
+      ]
+    }
+  ]
+}

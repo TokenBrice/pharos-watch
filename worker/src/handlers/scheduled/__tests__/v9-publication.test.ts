@@ -42,7 +42,7 @@ describe("V9 publication scheduling", () => {
       itemCount: 0,
     });
     mocks.runSingleScheduledJob.mockImplementation(async (
-      scheduledRuntime: ScheduledRuntimeContext,
+      _scheduledRuntime: ScheduledRuntimeContext,
       _label: string,
       task: {
         run: (

@@ -8,14 +8,12 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
-  type EvmMulticall3Result,
 } from "./evm-rpc";
 import {
   DECIMALS_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeAddress,
 } from "./evm-selectors";
-import { fetchJsonWithRetry } from "./fetch-retry";
 import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
@@ -26,17 +24,19 @@ import {
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
+import {
+  decodeEvmHexBytes,
+  decodeEvmUint256,
+  fetchReviewedDeploymentSolanaObservation,
+  safetyScoreV9EvmObservationOptions,
+  type SafetyScoreV9SolanaRpcFetcher,
+} from "./safety-score-v9-supply-observation-primitives";
 
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const WARDS_SELECTOR = "0xbf353dbb";
 const ZERO_STORAGE_WORD = `0x${"0".repeat(64)}`;
 const MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
-const SOLANA_RPC_URLS = [
-  "https://api.mainnet-beta.solana.com",
-  "https://api.mainnet.solana.com",
-  "https://solana-rpc.publicnode.com",
-] as const;
 
 export type CentrifugeReviewedDeploymentRejectionCode =
   | "route-inventory-unavailable"
@@ -59,42 +59,6 @@ export type CentrifugeReviewedDeploymentObservationAttempt =
       rejectionCode: CentrifugeReviewedDeploymentRejectionCode;
       failedRouteId: string | null;
     };
-
-interface SolanaRpcEnvelope<T> {
-  result?: T;
-  error?: { code?: number; message?: string };
-}
-
-interface SolanaMintAccountValue {
-  owner?: string;
-  data?: {
-    parsed?: {
-      info?: {
-        decimals?: number;
-        supply?: string;
-        mintAuthority?: string | null;
-      };
-    };
-  };
-}
-
-interface SolanaControllerAccountValue {
-  owner?: string;
-  executable?: boolean;
-}
-
-interface SolanaMultipleAccountsResult {
-  context?: { slot?: number };
-  value?: [
-    SolanaMintAccountValue | null,
-    SolanaControllerAccountValue | null,
-  ];
-}
-
-interface SolanaBlockResult {
-  blockhash?: string;
-  blockTime?: number | null;
-}
 
 interface CentrifugeObserverDependencies {
   sha256HexFromBytes: typeof sha256HexFromBytes;
@@ -137,28 +101,6 @@ function rejectDeployment(
   return { status: "rejected", rejectionCode, failedRouteId };
 }
 
-function decodeUint256(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) {
-    return null;
-  }
-  return BigInt(result.returnData);
-}
-
-function decodeHexBytes(value: string): Uint8Array | null {
-  const body = value.startsWith("0x") ? value.slice(2) : value;
-  if (body.length === 0 || body.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(body)) {
-    return null;
-  }
-  const bytes = new Uint8Array(body.length / 2);
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(
-      body.slice(index * 2, index * 2 + 2),
-      16,
-    );
-  }
-  return bytes;
-}
-
 async function observeCentrifugeEvmDeployment(
   assetId: string,
   routeId: string,
@@ -177,15 +119,11 @@ async function observeCentrifugeEvmDeployment(
     return rejectDeployment(routeId, "chain-rpc-unavailable");
   }
 
-  const options = {
+  const options = safetyScoreV9EvmObservationOptions({
     chainRpcs,
-    ...(identity.extraRpcUrls
-      ? { extraRpcUrls: [...identity.extraRpcUrls] }
-      : {}),
+    extraRpcUrls: identity.extraRpcUrls,
     signal,
-    timeoutMs: 10_000,
-    maxRetries: 1,
-  };
+  });
   const headBlockNumber = await dependencies.fetchEvmBlockNumber(
     chainId,
     options,
@@ -274,10 +212,10 @@ async function observeCentrifugeEvmDeployment(
     return rejectDeployment(routeId, "deployment-state-unavailable");
   }
 
-  const totalSupplyRaw = decodeUint256(results[0]);
-  const decimalsRaw = decodeUint256(results[1]);
-  const spokeWard = decodeUint256(results[2]);
-  const runtimeBytes = decodeHexBytes(runtimeCode);
+  const totalSupplyRaw = decodeEvmUint256(results[0]);
+  const decimalsRaw = decodeEvmUint256(results[1]);
+  const spokeWard = decodeEvmUint256(results[2]);
+  const runtimeBytes = decodeEvmHexBytes(runtimeCode);
   if (
     totalSupplyRaw === null ||
     decimalsRaw === null ||
@@ -310,114 +248,32 @@ async function observeCentrifugeEvmDeployment(
     : rejectDeployment(routeId, "deployment-identity-mismatch");
 }
 
-async function fetchSolanaRpc<T>(
-  method: string,
-  params: unknown[],
-  signal?: AbortSignal,
-): Promise<T | null> {
-  for (const rpcUrl of SOLANA_RPC_URLS) {
-    throwIfAborted(signal);
-    const result = await fetchJsonWithRetry<SolanaRpcEnvelope<T>>(
-      rpcUrl,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-        signal,
-      },
-      0,
-      { timeoutMs: 10_000, maxResponseBytes: 128_000 },
-    );
-    if (
-      result?.response.ok &&
-      !result.body.error &&
-      result.body.result !== undefined
-    ) {
-      return result.body.result;
-    }
-  }
-  return null;
-}
-
-export type CentrifugeSolanaRpcFetcher = <T>(
-  method: string,
-  params: unknown[],
-  signal?: AbortSignal,
-) => Promise<T | null>;
+export type CentrifugeSolanaRpcFetcher = SafetyScoreV9SolanaRpcFetcher;
 
 export async function fetchSolanaCentrifugeDeploymentObservation(
   assetId: string,
   routeId: string,
   contractAddress: string,
   signal?: AbortSignal,
-  rpc: CentrifugeSolanaRpcFetcher = fetchSolanaRpc,
+  rpc?: CentrifugeSolanaRpcFetcher,
 ): Promise<ReviewedDeploymentSupplyObservation | null> {
   const identity = expectedCentrifugeDeploymentIdentity(assetId, routeId);
   if (!identity || identity.runtime !== "solana") return null;
 
-  const accounts = await rpc<SolanaMultipleAccountsResult>(
-    "getMultipleAccounts",
-    [
-      [contractAddress, identity.controllerAddress],
-      { commitment: "finalized", encoding: "jsonParsed" },
-    ],
-    signal,
-  );
-  const slot = accounts?.context?.slot;
-  const mint = accounts?.value?.[0];
-  const controller = accounts?.value?.[1];
-  const info = mint?.data?.parsed?.info;
-  if (
-    !Number.isSafeInteger(slot) ||
-    typeof info?.supply !== "string" ||
-    !/^(0|[1-9][0-9]*)$/.test(info.supply) ||
-    typeof info.decimals !== "number" ||
-    !Number.isInteger(info.decimals) ||
-    typeof info.mintAuthority !== "string" ||
-    typeof mint?.owner !== "string" ||
-    controller?.executable !== false ||
-    typeof controller.owner !== "string"
-  ) {
-    return null;
-  }
-
-  const block = await rpc<SolanaBlockResult>(
-    "getBlock",
-    [
-      slot,
-      {
-        commitment: "finalized",
-        transactionDetails: "none",
-        rewards: false,
-        maxSupportedTransactionVersion: 0,
+  const observation = await fetchReviewedDeploymentSolanaObservation(
+    {
+      routeId,
+      contractAddress,
+      identity: {
+        ...identity,
+        controllerExecutable: false,
       },
-    ],
-    signal,
+      signal,
+    },
+    rpc,
   );
-  if (
-    !Number.isSafeInteger(block?.blockTime) ||
-    block!.blockTime! < 0 ||
-    typeof block?.blockhash !== "string" ||
-    !/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(block.blockhash)
-  ) {
-    return null;
-  }
-
-  const observation: ReviewedDeploymentSupplyObservation = {
-    routeId,
-    chainId: "solana",
-    contractAddress,
-    decimals: info.decimals,
-    rawSupply: info.supply,
-    blockNumberOrSlot: slot!.toString(),
-    blockTimeSec: block!.blockTime!,
-    blockHash: block!.blockhash!,
-    programOwner: mint!.owner!,
-    mintAuthority: info.mintAuthority,
-    controllerAddress: identity.controllerAddress,
-    controllerProgramOwner: controller!.owner!,
-  };
-  return reviewedDeploymentIdentityValidationError(observation, assetId) ===
+  return observation &&
+    reviewedDeploymentIdentityValidationError(observation, assetId) ===
     null
     ? observation
     : null;

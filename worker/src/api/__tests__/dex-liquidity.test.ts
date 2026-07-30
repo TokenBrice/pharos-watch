@@ -44,7 +44,7 @@ describe("handleDexLiquidity", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           chain: "ethereum",
-          contract_address: "0x1",
+          contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           outcome: "verified_no_pools",
           provider_set_json: JSON.stringify(["coingecko", "dexscreener"]),
           reason: "verified empty",

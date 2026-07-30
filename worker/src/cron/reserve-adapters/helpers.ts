@@ -68,7 +68,9 @@ export {
   type OnchainRateProbe,
   type OnchainUint256Caller,
 } from "./onchain";
-export { probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
+export { fetchSolanaTokenSupply, probeOnchainTotalSupply, probeTrackedTokenSupply } from "./token-supply";
+export { fetchStarknetTotalSupply } from "./starknet";
+export { fetchIcrcLedgerTotalSupply } from "./icp";
 export { buildRedemptionSnapshotMetadata, probeOptionalRedemptionRateBps } from "./redemption";
 export { getJsonPath } from "./json-path";
 export { catchAndWarn, reserveDegradedWarning, reserveFatalWarning, reserveInfoWarning } from "./warnings";

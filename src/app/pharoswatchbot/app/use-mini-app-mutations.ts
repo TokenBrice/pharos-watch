@@ -33,6 +33,10 @@ const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 /** Grace period during which a removed coin can be restored via the undo toast. */
 const UNDO_WINDOW_MS = 5_000;
 
+type SignedReadOperation =
+  | Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>
+  | Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>;
+
 function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
     case "export-watchlist":
@@ -341,16 +345,18 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     void performMutation(operation);
   }, [performMutation]);
 
-  const performPortability = useCallback(async (
-    operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>,
-  ): Promise<TelegramMiniAppPortabilityResponse | null> => {
+  const performSignedRead = useCallback(async <T>(
+    operation: SignedReadOperation,
+    request: () => Promise<T>,
+    successAnnouncement: string,
+  ): Promise<T | null> => {
     if (!initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
     setIsMutating(true);
     setPendingOperation(operation);
     try {
-      const response = await postMiniAppPortability(MUTATE_ENDPOINT, { initData, operation });
+      const response = await request();
       setMessage(null);
-      setAnnouncement(operation.kind === "export-watchlist" ? "Watchlist token ready." : "Import preview ready.");
+      setAnnouncement(successAnnouncement);
       webApp?.HapticFeedback?.impactOccurred?.("light");
       return response;
     } catch (err) {
@@ -369,33 +375,21 @@ export function useMiniAppMutations(args: UseMiniAppMutationsArgs): UseMiniAppMu
     }
   }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
 
+  const performPortability = useCallback(async (
+    operation: Extract<TelegramMiniAppPortabilityOperation, { kind: "export-watchlist" | "preview-watchlist-import" }>,
+  ): Promise<TelegramMiniAppPortabilityResponse | null> => performSignedRead(
+    operation,
+    () => postMiniAppPortability(MUTATE_ENDPOINT, { initData, operation }),
+    operation.kind === "export-watchlist" ? "Watchlist token ready." : "Import preview ready.",
+  ), [initData, performSignedRead]);
+
   const performBulkWatchlistPreview = useCallback(async (
     operation: Extract<TelegramMiniAppBulkWatchlistOperation, { kind: "preview-bulk-watchlist" }>,
-  ): Promise<TelegramMiniAppBulkWatchlistResponse | null> => {
-    if (!initData || !portabilityReadsAllowed || state?.viewer.chatId == null || isMutating) return null;
-    setIsMutating(true);
-    setPendingOperation(operation);
-    try {
-      const response = await postMiniAppBulkWatchlistPreview(MUTATE_ENDPOINT, { initData, operation });
-      setMessage(null);
-      setAnnouncement("Bulk watchlist preview ready.");
-      webApp?.HapticFeedback?.impactOccurred?.("light");
-      return response;
-    } catch (err) {
-      if (isMiniAppVersionMismatch(err)) {
-        refreshMiniAppBundleOnce({
-          contractVersion: err.serverContractVersion,
-          catalogVersion: err.serverCatalogVersion,
-        });
-      }
-      setMessage(miniAppErrorMessage(err, "mutation"));
-      webApp?.HapticFeedback?.notificationOccurred?.("error");
-      return null;
-    } finally {
-      setIsMutating(false);
-      setPendingOperation(null);
-    }
-  }, [initData, isMutating, portabilityReadsAllowed, state?.viewer.chatId, webApp]);
+  ): Promise<TelegramMiniAppBulkWatchlistResponse | null> => performSignedRead(
+    operation,
+    () => postMiniAppBulkWatchlistPreview(MUTATE_ENDPOINT, { initData, operation }),
+    "Bulk watchlist preview ready.",
+  ), [initData, performSignedRead]);
 
   const clearUndoToast = useCallback(() => {
     if (undoTimerRef.current) {

@@ -2,7 +2,7 @@ import { formatCompactUsdShort } from "@shared/lib/format";
 import { TELEGRAM_RECAP_TARGET_BODY_CHARACTERS } from "@shared/lib/telegram-recap-policy";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import { numberValue } from "@shared/lib/type-guards";
-import { escapeHtml } from "./telegram";
+import { escapeHtml } from "./telegram-html";
 import { selectTelegramRecapFacts, type TelegramRecapScopedFact } from "./telegram-recap-ranking";
 
 export interface TelegramRecapDigestLink {

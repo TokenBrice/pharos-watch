@@ -253,8 +253,40 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     });
   });
 
-  it("keeps the rate-bearing gate when the captured pool uses a dynamic off-peg fee", async () => {
+  it("prices a dynamic off-peg pool at its off-balance maximum fee", async () => {
+    // Live StableSwap-NG pools publish multipliers of 2x-20x; the captured
+    // model carries fee * multiplier so the exit capacity stays a lower bound.
     const state = dependencies({ offpegFeeMultiplier: 20_000_000_000n });
+    const pool = poolEntry();
+    await enrichCurveStableswapRateInputExecutionModels({
+      metrics: metrics(pool),
+      chainAddressToId,
+      chainRpcs: new Map([["ethereum", {} as never]]),
+      nowSec: BLOCK_TIMESTAMP + 60,
+      dependencies: state as never,
+    });
+
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0002, 12);
+  });
+
+  it("prices a multiplier at or below the fee denominator as the static fee", async () => {
+    const state = dependencies({ offpegFeeMultiplier: 0n });
+    const pool = poolEntry();
+    await enrichCurveStableswapRateInputExecutionModels({
+      metrics: metrics(pool),
+      chainAddressToId,
+      chainRpcs: new Map([["ethereum", {} as never]]),
+      nowSec: BLOCK_TIMESTAMP + 60,
+      dependencies: state as never,
+    });
+
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel?.feeRate).toBeCloseTo(0.0001, 12);
+  });
+
+  it("keeps the rate-bearing gate when the bounded fee reaches the whole trade", async () => {
+    const state = dependencies({ fee: 9_000_000_000n, offpegFeeMultiplier: 20_000_000_000n });
     const pool = poolEntry();
     await enrichCurveStableswapRateInputExecutionModels({
       metrics: metrics(pool),

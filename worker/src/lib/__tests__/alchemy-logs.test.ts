@@ -105,6 +105,34 @@ describe("getAlchemyBlockNumber", () => {
     expect(budget.count).toBe(1);
   });
 
+  it("emits structured JSON-RPC error metadata", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32005, message: "request limit exceeded" } }),
+        { status: 429 },
+      ),
+    );
+
+    const budget = createBudget(100);
+    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+
+    expect(result).toBeNull();
+    expect(JSON.parse(String(warnSpy.mock.calls[0]?.[0]))).toMatchObject({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_json_rpc_error",
+      provider: "alchemy",
+      status: 429,
+      metadata: {
+        method: "eth_blockNumber",
+        rpcErrorCode: -32005,
+        rpcErrorMessage: "request limit exceeded",
+      },
+    });
+    warnSpy.mockRestore();
+  });
+
   it("returns null when budget exhausted", async () => {
     const budget = createBudget(0);
     const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);

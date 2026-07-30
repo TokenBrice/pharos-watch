@@ -24,7 +24,63 @@ export interface NativeMeasuredExecutionJoinTarget {
 export type NativeMeasuredExecutionJoinKind = "solana" | "tron";
 
 type PoolExtra = NonNullable<PoolEntry["extra"]>;
-type NativePublicProfile = NonNullable<PoolExtra["nativeMeasuredExecution"]>;
+export type NativeMeasuredExecutionPublicProfile = NonNullable<PoolExtra["nativeMeasuredExecution"]>;
+
+export interface NativeMeasuredExecutionJoinQuote<
+  TTarget extends NativeMeasuredExecutionJoinTarget,
+  TProfile extends { adapterProfileId: string },
+> {
+  quotedTarget: TTarget;
+  status: "measured" | "failed";
+  failureReason: string | null;
+  profile: TProfile | null;
+}
+
+export interface NativeMeasuredExecutionJoinEvidence<
+  TTarget extends NativeMeasuredExecutionJoinTarget,
+  TProfile extends { adapterProfileId: string },
+> extends NativeMeasuredExecutionJoinEvidenceMetadata {
+  byTargetId: Map<string, NativeMeasuredExecutionJoinQuote<TTarget, TProfile>>;
+}
+
+export interface NativeMeasuredExecutionJoinAdapter<
+  TTarget extends NativeMeasuredExecutionJoinTarget,
+  TProfile extends { adapterProfileId: string },
+  TPublicProfile extends NativeMeasuredExecutionPublicProfile,
+  TPolicy,
+  TQuote extends NativeMeasuredExecutionJoinQuote<TTarget, TProfile>,
+  TEvidence extends NativeMeasuredExecutionJoinEvidenceMetadata & { byTargetId: Map<string, TQuote> },
+  TDiagnostics extends NativeMeasuredExecutionJoinDiagnostics,
+> {
+  kind: NativeMeasuredExecutionJoinKind;
+  getTarget(pool: PoolEntry): TTarget | undefined;
+  createDiagnostics(evidence: TEvidence | null): TDiagnostics;
+  resolvePolicy(adapterProfileId: string): TPolicy | null;
+  policyMatchesProfile(policy: TPolicy, profile: TProfile): boolean;
+  validateProfile(input: {
+    profile: TProfile;
+    quote: TQuote;
+    evidence: TEvidence;
+    target: TTarget;
+    nowSec: number;
+  }): readonly string[];
+  toPublicProfile(profile: TProfile): TPublicProfile;
+  setPublicProfile(pool: PoolEntry, profile: TPublicProfile): void;
+  getActivationFailure(input: {
+    policy: TPolicy;
+    profile: TProfile;
+    quote: TQuote;
+    target: TTarget;
+  }): { reason: DexExecutionCapabilityGate["reason"]; detail?: string } | null;
+  getProofFailure?(input: {
+    policy: TPolicy;
+    profile: TProfile;
+    quote: TQuote;
+    target: TTarget;
+  }): { reason: DexExecutionCapabilityGate["reason"]; detail?: string } | null;
+  getPromotionDetail?(quote: TQuote): string | undefined;
+  onPromoted?(diagnostics: TDiagnostics, quote: TQuote): void;
+}
 
 export function createNativeMeasuredExecutionJoinDiagnostics(
   evidence: NativeMeasuredExecutionJoinEvidenceMetadata | null,
@@ -108,7 +164,7 @@ export function promoteNativeMeasuredExecutionProfile(params: {
   pool: PoolEntry;
   kind: NativeMeasuredExecutionJoinKind;
   target: NativeMeasuredExecutionJoinTarget;
-  publicProfile: NativePublicProfile;
+  publicProfile: NativeMeasuredExecutionPublicProfile;
   detail?: string;
 }): void {
   const extra = ensurePoolExtra(params.pool);
@@ -132,4 +188,112 @@ export function promoteNativeMeasuredExecutionProfile(params: {
   } else {
     extra.tronMeasuredExecutionDiagnostic = diagnostic;
   }
+}
+
+export function joinNativeMeasuredExecutionEvidence<
+  TTarget extends NativeMeasuredExecutionJoinTarget,
+  TProfile extends { adapterProfileId: string },
+  TPublicProfile extends NativeMeasuredExecutionPublicProfile,
+  TPolicy,
+  TQuote extends NativeMeasuredExecutionJoinQuote<TTarget, TProfile>,
+  TEvidence extends NativeMeasuredExecutionJoinEvidenceMetadata & { byTargetId: Map<string, TQuote> },
+  TDiagnostics extends NativeMeasuredExecutionJoinDiagnostics,
+>(input: {
+  poolsByStablecoin: Map<string, PoolEntry[]>;
+  evidence: TEvidence | null;
+  nowSec: number;
+  adapter: NativeMeasuredExecutionJoinAdapter<
+    TTarget,
+    TProfile,
+    TPublicProfile,
+    TPolicy,
+    TQuote,
+    TEvidence,
+    TDiagnostics
+  >;
+}): TDiagnostics {
+  const diagnostics = input.adapter.createDiagnostics(input.evidence);
+  for (const pools of input.poolsByStablecoin.values()) {
+    for (const pool of pools) {
+      const target = input.adapter.getTarget(pool);
+      if (!target) continue;
+      diagnostics.targetCount++;
+      resetNativeMeasuredExecutionJoinFields(pool, input.adapter.kind, target);
+      const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
+        recordNativeMeasuredExecutionFailure({
+          pool,
+          kind: input.adapter.kind,
+          target,
+          diagnostics,
+          reason,
+          detail,
+        });
+      };
+      if (!input.evidence) {
+        fail("quote-missing");
+        continue;
+      }
+      const quote = input.evidence.byTargetId.get(target.targetId);
+      if (!quote) {
+        fail("quote-missing");
+        continue;
+      }
+      if (quote.status !== "measured" || !quote.profile) {
+        fail(
+          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
+          quote.failureReason ?? undefined,
+        );
+        continue;
+      }
+      const policy = input.adapter.resolvePolicy(quote.profile.adapterProfileId);
+      if (!policy || !input.adapter.policyMatchesProfile(policy, quote.profile)) {
+        fail("invalid-observation", "adapter-registration-mismatch");
+        continue;
+      }
+      const issues = input.adapter.validateProfile({
+        profile: quote.profile,
+        quote,
+        evidence: input.evidence,
+        target,
+        nowSec: input.nowSec,
+      });
+      if (issues.length > 0) {
+        fail(mapNativeMeasuredExecutionValidationGate(issues), issues.join(","));
+        continue;
+      }
+      const publicProfile = input.adapter.toPublicProfile(quote.profile);
+      input.adapter.setPublicProfile(pool, publicProfile);
+      const activationFailure = input.adapter.getActivationFailure({
+        policy,
+        profile: quote.profile,
+        quote,
+        target,
+      });
+      if (activationFailure) {
+        fail(activationFailure.reason, activationFailure.detail);
+        diagnostics.measuredCount++;
+        continue;
+      }
+      const proofFailure = input.adapter.getProofFailure?.({
+        policy,
+        profile: quote.profile,
+        quote,
+        target,
+      });
+      if (proofFailure) {
+        fail(proofFailure.reason, proofFailure.detail);
+        continue;
+      }
+      promoteNativeMeasuredExecutionProfile({
+        pool,
+        kind: input.adapter.kind,
+        target,
+        publicProfile,
+        detail: input.adapter.getPromotionDetail?.(quote),
+      });
+      input.adapter.onPromoted?.(diagnostics, quote);
+      diagnostics.measuredCount++;
+    }
+  }
+  return diagnostics;
 }

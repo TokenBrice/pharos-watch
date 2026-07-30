@@ -17,6 +17,9 @@ const PAIR = "0x108752b2a22c731ede3edac2205c63ae553e221a" as const;
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" as const;
 const WETH_BASE = "0x4200000000000000000000000000000000000006" as const;
 const AERODROME_PAIR = "0xcdac0d6c6c59727a65f871236188350531885c43" as const;
+const A7A5 = "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9" as const;
+const USDT_ETHEREUM = "0xdac17f958d2ee523a2206206994597c13d831ec7" as const;
+const A7A5_USDT_PAIR = "0x14d7aab5b4bca6a02e52ac22520b033bf35f4091" as const;
 
 function word(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
@@ -280,6 +283,101 @@ describe("constant-product V2 execution", () => {
       ],
     });
     expect(fetchMulticall).toHaveBeenCalledOnce();
+  });
+
+  it("gates a fully captured V2 pair whose tracked input has no trusted quote leg", async () => {
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
+    const chainAddressToId = new Map([
+      [canonicalExitRouteAssetKey("ethereum", A7A5), "a7a5-old-vector"],
+      [canonicalExitRouteAssetKey("ethereum", USDT_ETHEREUM), "usdt-tether"],
+    ]);
+    const chainRpcs = new Map([
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://rpc.example",
+          explorerUrl: "https://example.com",
+        },
+      ],
+    ]);
+    const fetchMulticall = vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
+      calls.map((call) => ({
+        label: call.label,
+        success: true,
+        returnData: call.label.endsWith("-pair")
+          ? addressWord(A7A5_USDT_PAIR)
+          : call.label.endsWith("-token0")
+            ? addressWord(A7A5)
+            : call.label.endsWith("-token1")
+              ? addressWord(USDT_ETHEREUM)
+              : call.label.endsWith("-reserves")
+                ? reservesWord(5_700_000n * 10n ** 6n, 71_000n * 10n ** 6n)
+                : word(6n),
+      })),
+    );
+    const enrich = async (stablecoinPriceById: Map<string, number>) => {
+      const candidate = buildEvmV2ExecutionCandidate({
+        chain: "ethereum",
+        protocol: "uniswap-v2",
+        poolType: "generic",
+        poolAddress: A7A5_USDT_PAIR,
+        tokenAddresses: [A7A5, USDT_ETHEREUM],
+        tokenSymbols: ["A7A5", "USDT"],
+      })!;
+      const metric = initMetrics("a7a5-old-vector", "A7A5");
+      metric.topPools.push({
+        poolId: canonicalExitRouteAssetKey("ethereum", A7A5_USDT_PAIR),
+        project: "uniswap-v2",
+        chain: "Ethereum",
+        tvlUsd: 71_058,
+        symbol: "A7A5-USDT",
+        volumeUsd1d: 12_000,
+        poolType: "generic",
+        source: "dexscreener",
+        extra: { evmV2ExecutionCandidate: candidate },
+      });
+      await enrichEvmV2ExecutionModels({
+        metrics: new Map([[metric.stablecoinId, metric]]),
+        chainAddressToId,
+        contractMetaByChainAddress: new Map(),
+        stablecoinPriceById,
+        chainRpcs: chainRpcs as never,
+        dependencies: {
+          fetchBlockNumber: vi.fn(async () => 21_000_000),
+          fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+          fetchMulticall: fetchMulticall as never,
+          hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+        },
+      });
+      return metric.topPools[0]!;
+    };
+
+    // Only the counter asset carries an authoritative quote leg: the tracked
+    // input's own reference is the sole missing capture input.
+    const untrusted = await enrich(new Map([["usdt-tether", 1]]));
+    expect(untrusted.extra?.ammExecutionModel).toBeUndefined();
+    expect(untrusted.extra?.evmV2ExecutionCandidate).toBeUndefined();
+    expect(untrusted.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "incomplete-exact-capture",
+    });
+
+    const trusted = await enrich(
+      new Map([
+        ["a7a5-old-vector", 0.0125],
+        ["usdt-tether", 1],
+      ]),
+    );
+    expect(trusted.extra?.executionCapabilityGate).toBeUndefined();
+    expect(trusted.extra?.ammExecutionModel).toMatchObject({
+      source: "uniswap-v2",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.003,
+    });
   });
 
   it("bounds deployment probes so one oversized request cannot gate every V2 pool", async () => {

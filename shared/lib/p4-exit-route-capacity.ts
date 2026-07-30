@@ -564,9 +564,15 @@ export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCov
  * the completeness denominator — a surface whose every budget-admitted
  * capability pool carries a score-eligible observation is fully covered by
  * design, and the overflow count remains visible as diagnostics in
- * `unsupportedReasons.routeSelectionCapabilityOverflow`. Exact-route SCORING
+ * `unsupportedReasons.routeObservationPayloadOverflow` — the key the
+ * sync-dex-liquidity payload-budget trim actually emits. Exact-route SCORING
  * eligibility keeps the strict predicate above: route-budget completeness must
  * never widen which portfolios may replace the aggregate DEX path.
+ *
+ * The rotating measured-execution quote budget is carved out on the same
+ * ground: a `budget-deferred` target was never attempted, so it proves nothing
+ * about the surface. Only that explicit gate is excluded — `quote-failed` and
+ * every other operational reason stay in the denominator and fail closed.
  */
 export function isDexExitRouteCoverageWithinRouteBudget(
   coverage: ExitRouteObservationCoverage | null | undefined,
@@ -579,8 +585,11 @@ export function isDexExitRouteCoverageWithinRouteBudget(
   )
     return false;
 
-  const selectionOverflowCount = coverage.unsupportedReasons["routeSelectionCapabilityOverflow"] ?? 0;
-  const budgetCapabilityPoolCount = coverage.scoreEligibleCapabilityPoolCount - selectionOverflowCount;
+  const selectionOverflowCount = coverage.unsupportedReasons["routeObservationPayloadOverflow"] ?? 0;
+  const quoteBudgetDeferredCount =
+    coverage.unsupportedReasons["executionCapabilityGate:measured-execution:budget-deferred"] ?? 0;
+  const budgetCapabilityPoolCount =
+    coverage.scoreEligibleCapabilityPoolCount - selectionOverflowCount - quoteBudgetDeferredCount;
   return (
     budgetCapabilityPoolCount > 0 &&
     budgetCapabilityPoolCount <= coverage.retainedPoolCount &&

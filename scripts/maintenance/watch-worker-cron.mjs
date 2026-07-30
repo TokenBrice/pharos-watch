@@ -2,6 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mjs";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_API_URL = "https://api.pharos.watch";
@@ -245,57 +246,12 @@ function optionalD1Select(args, descriptor, existingTables = null) {
   }
 }
 
-function accessHeaders(args) {
-  const headers = {};
-  if (args.cfAccessClientId && args.cfAccessClientSecret) {
-    headers["CF-Access-Client-Id"] = args.cfAccessClientId;
-    headers["CF-Access-Client-Secret"] = args.cfAccessClientSecret;
-  }
-  return headers;
-}
-
-async function fetchJsonProbe(args, path, origin = args.apiUrl) {
-  const url = new URL(path, origin);
-  const startedAt = Date.now();
-  try {
-    const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
-    const text = await response.text();
-    let payload = null;
-    try {
-      payload = text ? JSON.parse(text) : null;
-    } catch {
-      payload = text.slice(0, 1000);
-    }
-    return {
-      url: url.toString(),
-      status: response.status,
-      ok: response.ok,
-      latencyMs: Date.now() - startedAt,
-      payload,
-    };
-  } catch (error) {
-    return {
-      url: url.toString(),
-      status: 0,
-      ok: false,
-      latencyMs: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
 async function fetchProbes(args) {
-  const probes = {};
-  if (!args.skipHealth) {
-    probes.health = await fetchJsonProbe(args, "/api/health");
-  }
-  if (args.includeStatus) {
-    probes.status = await fetchJsonProbe(args, "/api/status", args.adminApiUrl);
-  }
-  if (args.includeStatusHistory) {
-    probes.statusHistory = await fetchJsonProbe(args, "/api/status-history", args.adminApiUrl);
-  }
-  return probes;
+  return collectWorkerHttpProbes(args, {
+    includeHealth: !args.skipHealth,
+    includeStatus: args.includeStatus,
+    includeStatusHistory: args.includeStatusHistory,
+  });
 }
 
 function summarizeRuns(runs) {

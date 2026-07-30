@@ -20,6 +20,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { forEachWithConcurrency } from "./concurrency";
 import {
   MAX_UINT256,
@@ -47,9 +48,21 @@ export interface FluidResolverDeployment {
 }
 
 /**
- * Resolver deployments and runtime bytecode reviewed on 2026-07-15. Fluid is
- * intentionally shadow-only until every activation gate in the FORGE design
- * has passed.
+ * Resolver deployments and runtime bytecode reviewed on 2026-07-15; all four
+ * pinned hashes were re-verified against live runtime code on 2026-07-29.
+ * Activation is cohort-scoped exactly like the QuoterV2 registry: Fluid stays
+ * shadow-only and score-ineligible until the reviewed activation gates pass,
+ * and registry presence alone never makes a lane score-eligible. The
+ * 2026-07-29 evidence packet at
+ * agents/safety-score-v9-producer-failed-remediation/artifacts/exact-dex-route-coverage/activation-fluid.json
+ * records what already holds (no bytecode drift, live shadow observations on
+ * Ethereum and Arbitrum, and an independent latest-block reproduction of a
+ * published marginal output ratio) and the gaps that still block promotion:
+ * this adapter carries no on-chain pool binding, so `poolId` and
+ * `poolTokenAddresses` are trusted from the Fluid tickers API instead of being
+ * proved through the Fluid DexFactory, and Base and Polygon have no published
+ * shadow observation to review. Score eligibility additionally requires the
+ * shared P4 capability matrix to admit this adapter profile.
  */
 export const FLUID_RESOLVER_DEPLOYMENTS: readonly FluidResolverDeployment[] = [
   {
@@ -356,11 +369,6 @@ export function decodeFluidResolverQuotePoint(
 }
 
 function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDependencies) {
-  interface AdaptiveChunkResult {
-    results: EvmMulticall3Result[];
-    budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
-  }
-
   async function executeAdaptiveChunk(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -368,50 +376,28 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<AdaptiveChunkResult> {
-    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-      return {
-        results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
-        budgetStopReasonsByLabel: new Map(),
-      };
-    }
-    let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
-    const result = await dependencies.executeMulticall({
-      ...input,
-      onBudgetStop: (reason) => {
-        budgetStopReason = reason;
-      },
+  }) {
+    return executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
+      chain: input.chain,
+      calls: input.calls,
+      blockNumber: input.blockNumber,
+      signal: input.signal,
+      execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
+        dependencies.executeMulticall({
+          chain,
+          calls,
+          blockNumber,
+          chainRpcs: input.chainRpcs,
+          signal,
+          rpcBudget: input.rpcBudget,
+          onBudgetStop,
+        }),
+      failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
+      getLabel: (call) => call.label,
+      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
+      failedAttemptAccounting: "single-call",
+      unattemptedResult: "failure-result",
     });
-    if (result != null) {
-      input.rpcBudget?.recordChainResult(input.chain, true);
-      return { results: result, budgetStopReasonsByLabel: new Map() };
-    }
-    if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
-      budgetStopReason = "runtime-deadline-exceeded";
-    }
-    if (budgetStopReason != null) {
-      return {
-        results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
-        budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
-      };
-    }
-    if (input.calls.length === 1) {
-      input.rpcBudget?.recordChainResult(input.chain, false);
-      return {
-        results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
-        budgetStopReasonsByLabel: new Map(),
-      };
-    }
-    const midpoint = Math.ceil(input.calls.length / 2);
-    const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
-    const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
-    return {
-      results: [...left.results, ...right.results],
-      budgetStopReasonsByLabel: new Map([
-        ...left.budgetStopReasonsByLabel,
-        ...right.budgetStopReasonsByLabel,
-      ]),
-    };
   }
 
   return async function quoteFluidResolverRequests(input: {

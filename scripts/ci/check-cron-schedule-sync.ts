@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   CRON_CONNECTION_BUDGET_ENTRIES,
+  CRON_GROWTH_HEADROOM_POLICY,
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
@@ -35,7 +36,13 @@ interface ScheduledSlotPlanForCheck {
   budgetOnlyJobs?: readonly string[];
 }
 
+interface CronGrowthTopologyPolicyForCheck {
+  maxPhysicalTriggersBeforeRebalance: number;
+}
+
 export interface CronScheduleSyncReport {
+  physicalTriggerLimitExceeded: boolean;
+  growthPolicy: CronGrowthTopologyPolicyForCheck;
   extraPlanKeys: string[];
   failed: boolean;
   missingBudgetJobs: string[];
@@ -98,6 +105,7 @@ export function evaluateCronScheduleSync(input: {
   cronJobDefinitions?: readonly CronJobDefinitionForCheck[];
   cronSchedules?: Record<string, string>;
   cronTriggerSchedules?: Readonly<Record<string, readonly string[]>>;
+  growthPolicy?: CronGrowthTopologyPolicyForCheck;
   scheduledSlotPlans?: Readonly<Record<string, ScheduledSlotPlanForCheck>>;
   wranglerCronTriggers: Iterable<string>;
 }): CronScheduleSyncReport {
@@ -114,6 +122,7 @@ export function evaluateCronScheduleSync(input: {
   const scheduledSlotPlans = input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
   const cronJobDefinitions = input.cronJobDefinitions ?? CRON_JOB_DEFINITIONS;
   const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
+  const growthPolicy = input.growthPolicy ?? CRON_GROWTH_HEADROOM_POLICY;
 
   const wranglerCrons = new Set(input.wranglerCronTriggers);
   const sharedScheduleEntries = Object.entries(cronTriggerSchedules).flatMap(
@@ -151,6 +160,7 @@ export function evaluateCronScheduleSync(input: {
   const expectedBudgetJobs = new Set(cronConnectionBudgetEntries.map((definition) => definition.job));
   const missingBudgetJobs = [...expectedBudgetJobs].filter((job) => !scheduledBudgetJobs.has(job));
   const unknownBudgetJobs = [...scheduledBudgetJobs].filter((job) => !expectedBudgetJobs.has(job));
+  const physicalTriggerLimitExceeded = wranglerCrons.size > growthPolicy.maxPhysicalTriggersBeforeRebalance;
 
   const failed = Boolean(
     onlyInWranglerSchedules.length ||
@@ -162,10 +172,13 @@ export function evaluateCronScheduleSync(input: {
     missingRuntimeJobs.length ||
     unknownRuntimeJobs.length ||
     missingBudgetJobs.length ||
-    unknownBudgetJobs.length,
+    unknownBudgetJobs.length ||
+    physicalTriggerLimitExceeded,
   );
 
   return {
+    physicalTriggerLimitExceeded,
+    growthPolicy,
     extraPlanKeys,
     failed,
     missingBudgetJobs,
@@ -193,6 +206,12 @@ export function printCronScheduleSyncReport(report: CronScheduleSyncReport): voi
   }
 
   console.error("Cron schedule mismatch detected!");
+
+  if (report.physicalTriggerLimitExceeded) {
+    console.error(
+      `\nCron growth decision required: ${report.wranglerTriggerCount} physical triggers exceed the reviewed ${report.growthPolicy.maxPhysicalTriggersBeforeRebalance}-trigger topology. Consolidate or rebalance before adding fetch-heavy scheduled work.`,
+    );
+  }
 
   if (report.onlyInWranglerSchedules.length || report.onlyInSharedSchedules.length) {
     console.error(`\nConfigured trigger drift (${SOURCE_OWNER.wrangler} <-> ${SOURCE_OWNER.schedules}):`);

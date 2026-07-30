@@ -1,4 +1,3 @@
-import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import {
   SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
   SolanaMeasuredExecutionTargetSchema,
@@ -6,12 +5,11 @@ import {
   type SolanaMeasuredExecutionTarget,
   type SolanaMeasuredExecutionToken,
 } from "@shared/types/solana-measured-execution";
-import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { DexApiPool, DexApiPoolToken } from "../../lib/dex-api-types";
-import { resolveStablecoinIdForDexApiToken } from "../../lib/dex-api-token-pricing";
 import {
-  buildNativeMeasuredExecutionToken,
+  buildNativeMeasuredExecutionTargets,
   buildNativeMeasuredPoolDirectionKey,
+  type NativeMeasuredExecutionInventoryAdapter,
+  type NativeMeasuredExecutionInventoryInput,
 } from "./native-inventory";
 import { getSolanaMeasuredExecutionAdapter } from "./solana-registry";
 
@@ -24,100 +22,46 @@ export function buildSolanaMeasuredPoolDirectionKey(stablecoinId: string, poolId
   });
 }
 
-function buildToken(input: {
-  pool: DexApiPool;
-  token: DexApiPoolToken;
-  tokenIndex: number;
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-}): SolanaMeasuredExecutionToken | null {
-  const token = buildNativeMeasuredExecutionToken({
-    chain: "solana",
-    pool: input.pool,
-    token: input.token,
-    tokenIndex: input.tokenIndex,
-    chainAddressToId: input.chainAddressToId,
-    symbolToChainScopedIds: input.symbolToChainScopedIds,
-    validationReferences: input.validationReferences,
-    stablecoinPriceById: input.stablecoinPriceById,
-  });
-  return token as SolanaMeasuredExecutionToken | null;
-}
+type SolanaPoolAdapter = NonNullable<ReturnType<typeof getSolanaMeasuredExecutionAdapter>>;
 
-export function buildSolanaMeasuredExecutionTargets(input: {
-  pools: readonly DexApiPool[];
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-  capturedAt: number;
-}): Map<string, SolanaMeasuredExecutionTarget> {
-  const targets = new Map<string, SolanaMeasuredExecutionTarget>();
-  for (const pool of input.pools) {
-    if (canonicalExitRouteChain(pool.chain) !== "solana" || pool.tokens.length !== 2) continue;
-    const adapter = getSolanaMeasuredExecutionAdapter(pool.source, pool.poolType);
-    if (!adapter || !Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0) continue;
-    const poolId = pool.poolAddress.trim();
+const SOLANA_INVENTORY_ADAPTER: NativeMeasuredExecutionInventoryAdapter<
+  SolanaMeasuredExecutionTarget,
+  SolanaPoolAdapter
+> = {
+  chain: "solana",
+  stripPoolChainPrefix: true,
+  getPoolAdapter: (pool) => getSolanaMeasuredExecutionAdapter(pool.source, pool.poolType),
+  isPoolEligible: () => true,
+  buildTarget: ({ pool, poolId, stablecoinId, tokenIn, tokenOut, adapter, capturedAt }) => {
+    const targetId = buildSolanaMeasuredExecutionTargetId({
+      stablecoinId,
+      adapterProfileId: adapter.adapterProfileId,
+      protocol: adapter.protocol,
+      poolId,
+      tokenInAddress: tokenIn.address,
+      tokenOutAddress: tokenOut.address,
+    });
+    const parsed = SolanaMeasuredExecutionTargetSchema.safeParse({
+      schemaVersion: SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
+      targetId,
+      stablecoinId,
+      adapterProfileId: adapter.adapterProfileId,
+      protocol: adapter.protocol,
+      chain: "solana",
+      poolId,
+      poolType: adapter.poolType,
+      tokenIn: tokenIn as SolanaMeasuredExecutionToken,
+      tokenOut: tokenOut as SolanaMeasuredExecutionToken,
+      retainedTvlUsd: pool.tvlUsd,
+      retainedPoolPriceUsd: tokenIn.referencePriceUsd,
+      capturedAt,
+    });
+    return parsed.success ? parsed.data : null;
+  },
+};
 
-    for (let inputIndex = 0; inputIndex < pool.tokens.length; inputIndex++) {
-      const rawTokenIn = pool.tokens[inputIndex]!;
-      const stablecoinId = resolveStablecoinIdForDexApiToken(
-        "solana",
-        rawTokenIn,
-        input.chainAddressToId,
-        input.symbolToChainScopedIds,
-      );
-      if (!stablecoinId) continue;
-      const outputIndex = inputIndex === 0 ? 1 : 0;
-      const tokenIn = buildToken({
-        pool,
-        token: rawTokenIn,
-        tokenIndex: inputIndex,
-        chainAddressToId: input.chainAddressToId,
-        symbolToChainScopedIds: input.symbolToChainScopedIds,
-        validationReferences: input.validationReferences,
-        stablecoinPriceById: input.stablecoinPriceById,
-      });
-      const tokenOut = buildToken({
-        pool,
-        token: pool.tokens[outputIndex]!,
-        tokenIndex: outputIndex,
-        chainAddressToId: input.chainAddressToId,
-        symbolToChainScopedIds: input.symbolToChainScopedIds,
-        validationReferences: input.validationReferences,
-        stablecoinPriceById: input.stablecoinPriceById,
-      });
-      if (!tokenIn || !tokenOut || tokenIn.trackedAssetId !== stablecoinId) continue;
-      if (tokenOut.trackedAssetId === stablecoinId || tokenIn.address === tokenOut.address) continue;
-
-      const targetId = buildSolanaMeasuredExecutionTargetId({
-        stablecoinId,
-        adapterProfileId: adapter.adapterProfileId,
-        protocol: adapter.protocol,
-        poolId,
-        tokenInAddress: tokenIn.address,
-        tokenOutAddress: tokenOut.address,
-      });
-      const parsed = SolanaMeasuredExecutionTargetSchema.safeParse({
-        schemaVersion: SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
-        targetId,
-        stablecoinId,
-        adapterProfileId: adapter.adapterProfileId,
-        protocol: adapter.protocol,
-        chain: "solana",
-        poolId,
-        poolType: adapter.poolType,
-        tokenIn,
-        tokenOut,
-        retainedTvlUsd: pool.tvlUsd,
-        retainedPoolPriceUsd: tokenIn.referencePriceUsd,
-        capturedAt: input.capturedAt,
-      });
-      if (!parsed.success) continue;
-      targets.set(buildSolanaMeasuredPoolDirectionKey(stablecoinId, poolId), parsed.data);
-    }
-  }
-  return targets;
+export function buildSolanaMeasuredExecutionTargets(
+  input: NativeMeasuredExecutionInventoryInput,
+): Map<string, SolanaMeasuredExecutionTarget> {
+  return buildNativeMeasuredExecutionTargets(input, SOLANA_INVENTORY_ADAPTER);
 }

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mjs";
 
 const CSV_EXT = ".csv";
 const ZIP_EXT = ".zip";
@@ -791,36 +791,21 @@ function formatValues(label, values) {
 
 export function renderGscCoverageReport(report) {
   const lines = [];
-  lines.push("GSC Coverage Inventory");
-  lines.push("No live network checks were performed.");
-  lines.push("");
-
-  lines.push("Inputs:");
-  if (report.inputs.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const input of report.inputs) lines.push(`- ${input}`);
-  }
-  lines.push("");
-
-  lines.push("Unsupported or skipped files:");
-  if (report.notes.length === 0) {
-    lines.push("- none");
-  } else {
-    for (const note of report.notes) lines.push(`- ${note}`);
-  }
-  lines.push("");
-
-  lines.push("Parsed files:");
-  lines.push(`- CSV files: ${report.parsedFileCounts.csv}`);
-  lines.push(`- Chart.csv files: ${report.parsedFileCounts.chart}`);
-  lines.push(`- Metadata.csv files: ${report.parsedFileCounts.metadata}`);
-  lines.push(`- Issue rows: ${report.parsedFileCounts.issue}`);
-  lines.push(`- Table.csv drilldowns: ${report.parsedFileCounts.drilldown}`);
-  if (report.parsedFileCounts.unknown > 0) {
-    lines.push(`- Unrecognized known GSC CSV files: ${report.parsedFileCounts.unknown}`);
-  }
-  lines.push("");
+  appendGscReportPreamble(lines, {
+    title: "GSC Coverage Inventory",
+    inputs: report.inputs,
+    notes: report.notes,
+    parsedFileCounts: [
+      ["CSV files", report.parsedFileCounts.csv],
+      ["Chart.csv files", report.parsedFileCounts.chart],
+      ["Metadata.csv files", report.parsedFileCounts.metadata],
+      ["Issue rows", report.parsedFileCounts.issue],
+      ["Table.csv drilldowns", report.parsedFileCounts.drilldown],
+      ...(report.parsedFileCounts.unknown > 0
+        ? [["Unrecognized known GSC CSV files", report.parsedFileCounts.unknown]]
+        : []),
+    ],
+  });
 
   lines.push("Chart snapshots:");
   if (report.charts.length === 0) {
@@ -936,18 +921,4 @@ export async function runCli(argv = process.argv.slice(2), stdout = process.stdo
   return 0;
 }
 
-function isMainModule() {
-  return isDirectRun(import.meta.url, process.argv[1]);
-}
-
-if (isMainModule()) {
-  runCli().then(
-    (code) => {
-      process.exitCode = code;
-    },
-    (error) => {
-      console.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    },
-  );
-}
+runAsyncDirect(import.meta.url, process.argv[1], runCli);

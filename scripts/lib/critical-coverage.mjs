@@ -123,7 +123,15 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-extension-shock.ts",
   "worker/src/lib/safety-score-v9-extension-supply.ts",
   "worker/src/lib/safety-score-v9-extension-transfer.ts",
+  "worker/src/lib/safety-score-v9-fact-set-backing.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
+  "worker/src/lib/safety-score-v9-fact-set-context.ts",
+  "worker/src/lib/safety-score-v9-fact-set-control.ts",
+  "worker/src/lib/safety-score-v9-fact-set-exit.ts",
+  "worker/src/lib/safety-score-v9-fact-set-operational-resilience.ts",
+  "worker/src/lib/safety-score-v9-fact-set-peg-supply.ts",
+  "worker/src/lib/safety-score-v9-fact-set-schema.ts",
+  "worker/src/lib/safety-score-v9-fact-set-wrapper.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-peg-provenance.ts",
   "worker/src/lib/safety-score-v9-publication-assessment.ts",
@@ -131,6 +139,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-publication-runner.ts",
   "worker/src/lib/safety-score-v9-publication-store.ts",
   "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts",
+  "worker/src/lib/safety-score-v9-supply-observation-primitives.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-generation.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-journal-store.ts",
@@ -356,13 +365,24 @@ export function parseLcov(content) {
 
     let lf = 0;
     let lh = 0;
+    let brf = null;
+    let brh = null;
     for (const line of lines) {
       if (line.startsWith("LF:")) lf = Number.parseInt(line.slice(3), 10);
       if (line.startsWith("LH:")) lh = Number.parseInt(line.slice(3), 10);
+      if (line.startsWith("BRF:")) brf = Number.parseInt(line.slice(4), 10);
+      if (line.startsWith("BRH:")) brh = Number.parseInt(line.slice(4), 10);
     }
 
     if (Number.isFinite(lf) && lf > 0) {
-      map.set(file, { lf, lh, pct: (lh / lf) * 100 });
+      map.set(file, {
+        lf,
+        lh,
+        pct: (lh / lf) * 100,
+        brf,
+        brh,
+        branchPct: Number.isFinite(brf) && brf > 0 && Number.isFinite(brh) ? (brh / brf) * 100 : null,
+      });
     }
   }
 

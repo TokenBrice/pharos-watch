@@ -1968,10 +1968,16 @@ describe("confirmPendingDepegs", () => {
     // log line emitted by the pool-challenger loop.
     function captureLogs(): string[] {
       const logs: string[] = [];
-      vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+      vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
         logs.push(args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "));
       });
       return logs;
+    }
+
+    function findStructuredLog(logs: string[], event: string): Record<string, unknown> | undefined {
+      return logs
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .find((record) => record.event === event);
     }
 
     it("reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", async () => {
@@ -2012,9 +2018,10 @@ describe("confirmPendingDepegs", () => {
         ],
       );
 
-      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
-      expect(summary).toBeTruthy();
-      expect(summary).toMatch(/status=contradict/);
+      expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
+        status: "contradict",
+        metadata: { highTvlConfirmation: false },
+      });
     });
 
     it("reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", async () => {
@@ -2054,10 +2061,10 @@ describe("confirmPendingDepegs", () => {
         ],
       );
 
-      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
-      expect(summary).toBeTruthy();
-      expect(summary).toMatch(/status=confirm/);
-      expect(summary).toMatch(/highTvl=true/);
+      expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
+        status: "confirm",
+        metadata: { highTvlConfirmation: true },
+      });
     });
 
     it("reports poolStatus='recover' only when every qualifying pool is under the secondary bar", async () => {
@@ -2096,10 +2103,10 @@ describe("confirmPendingDepegs", () => {
         ],
       );
 
-      const summary = logs.find((l) => /pool summary: .* status=(confirm|recover|contradict|insufficient)/.test(l));
-      expect(summary).toBeTruthy();
-      expect(summary).toMatch(/status=recover/);
-      expect(summary).not.toMatch(/status=contradict/);
+      expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
+        status: "recover",
+        metadata: { highTvlConfirmation: false },
+      });
     });
   });
 

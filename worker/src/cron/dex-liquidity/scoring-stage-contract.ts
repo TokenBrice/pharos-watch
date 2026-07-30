@@ -9,6 +9,7 @@ import type {
 } from "./orchestrator-phases";
 import type { StagedPoolSkipDimension } from "./staging-merge";
 import type { DataSources, DexPriceObs, LiquidityMetrics } from "./types";
+import type { PoolProcessingRejection } from "./process-pool-types";
 
 export interface DexLiquidityDirectApiSourceSummary {
   circuitEvents: DirectApiFetchPhaseResult["circuitEvents"];
@@ -38,6 +39,7 @@ export interface DexLiquidityScoringSourceState {
 export interface DexLiquidityPoolState {
   fallback: FallbackCrawlerPhaseResult;
   metrics: Map<string, LiquidityMetrics>;
+  poolRejections: PoolProcessingRejection[];
   pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   fluidMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;
   slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget>;

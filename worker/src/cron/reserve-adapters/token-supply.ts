@@ -31,7 +31,15 @@ function isOnchainSolanaInput(input: LiveReserveInput): input is SolanaInput {
   return input.kind === "onchain-solana";
 }
 
-async function fetchSolanaTokenSupplyRaw(
+/**
+ * Raw SPL mint supply in base units, or null when no endpoint answers.
+ *
+ * `probeTrackedTokenSupply()` treats a zero read as an adapter failure, which is
+ * right for reserve adapters but wrong for curated aggregate legs that opt into
+ * `allowZeroSupply`. Those callers read the mint through this reader directly,
+ * mirroring how the EVM branch bypasses the probe with `fetchErc20TotalSupply`.
+ */
+export async function fetchSolanaTokenSupply(
   mintAddress: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -133,7 +141,7 @@ export async function probeTrackedTokenSupply(
     throw new Error(`${adapterName} could not find a solana contract for ${coin.id}`);
   }
 
-  const supply = await fetchSolanaTokenSupplyRaw(mintAddress, signal, ctx);
+  const supply = await fetchSolanaTokenSupply(mintAddress, signal, ctx);
   if (supply == null || supply <= 0n) {
     throw new Error(`${adapterName} totalSupply probe failed for ${coin.id}`);
   }

@@ -377,7 +377,7 @@ describe("Fluid quote outcomes", () => {
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 
-  it("attributes only the request rejected by the hard RPC budget to that budget", async () => {
+  it("preserves the Fluid adaptive multicall golden budget-exhaustion result", async () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (
         _chain: string,
@@ -409,6 +409,63 @@ describe("Fluid quote outcomes", () => {
     });
 
     expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("preserves the Fluid adaptive multicall golden deadline result", async () => {
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+    const deployment = getFluidResolverDeployment("ethereum");
+    if (deployment == null) throw new Error("missing Ethereum deployment fixture");
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() - 1,
+    });
+
+    const outcomes = await quoteFluidResolverRequests({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: deployment.endpointAddress,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+      deploymentVerified: true,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
+  });
+
+  it("preserves the Fluid adaptive multicall golden unattempted result", async () => {
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+    const deployment = getFluidResolverDeployment("ethereum");
+    if (deployment == null) throw new Error("missing Ethereum deployment fixture");
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quoteFluidResolverRequests({
+      requests: Array.from({ length: 4 }, () => ({
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+      deploymentVerified: true,
+    });
+
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
+      4, 2, 1, 1,
+    ]);
+    expect(budget.openChains).toEqual(["ethereum"]);
+    expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
+      "resolver-revert",
+      "resolver-revert",
+      "resolver-revert",
+      "resolver-revert",
+    ]);
   });
 
   it("does not relabel a genuine resolver revert from an already stopped budget", async () => {
@@ -491,6 +548,34 @@ describe("Fluid quote outcomes", () => {
     expect(outcomes).toHaveLength(9);
     expect(outcomes.every((outcome) => outcome.point?.passesCostBound === false)).toBe(true);
     expect(outcomes.every((outcome) => outcome.failureReason == null)).toBe(true);
+  });
+
+  it("preserves the Fluid adaptive multicall golden split", async () => {
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.length === 8
+          ? null
+          : calls.map((call) => ({ label: call.label, success: true, returnData: uint256Return(0n) })),
+    );
+    const deployment = getFluidResolverDeployment("ethereum");
+    if (deployment == null) throw new Error("missing Ethereum deployment fixture");
+    const target = makeTarget();
+
+    const outcomes = await quoteFluidResolverRequests({
+      requests: Array.from({ length: 9 }, (_, index) => ({
+        target,
+        inputUsd: 1_000 + index,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      chainRpcs: new Map(),
+      deploymentVerified: true,
+    });
+
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
+      8, 4, 4, 1,
+    ]);
+    expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
   });
 
   it("processes different pinned blocks on the same chain sequentially", async () => {

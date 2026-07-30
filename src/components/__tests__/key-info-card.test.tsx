@@ -172,6 +172,10 @@ describe("KeyInfoCard contract interactions", () => {
     expect(screen.getByText("7")).toBeTruthy();
     expect(screen.getByText("Ethereum")).toBeTruthy();
     expect(screen.getByText("0x1111...1111")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy Ethereum contract address" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "View Ethereum contract on explorer" }).getAttribute("href"),
+    ).toBe("https://etherscan.io/address/0x1111111111111111111111111111111111111111");
     expect(screen.queryByText("BSC")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Show all 7 contract deployments" }));

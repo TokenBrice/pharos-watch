@@ -280,6 +280,33 @@ describe("derivePegAnalyticsSnapshot", () => {
 
     expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBeNull();
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(true);
+    // A withheld deviation is not an unobserved one: the price itself was usable.
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentPriceUnavailable).toBeUndefined();
+  });
+
+  it("marks coins with no usable price observation so a null deviation is not read as at peg", async () => {
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "AAA",
+          name: "AAA Stable",
+          pegType: "peggedUSD",
+          price: null,
+          circulating: { peggedUSD: 8_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+    });
+
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentPriceUnavailable).toBe(true);
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBeNull();
+    // An asset the price intake never reached at all is the same fact.
+    const absent = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [],
+      methodologyAsOf: 1_700_000_000,
+    });
+    expect(absent.pegDataById.get("usdt-tether")?.currentPriceUnavailable).toBe(true);
   });
 
   it("prefers curated launchDate over supply-history firstSeen when anchoring peg tracking", async () => {

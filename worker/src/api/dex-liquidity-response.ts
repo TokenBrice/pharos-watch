@@ -1,4 +1,5 @@
 import { safeJsonParse } from "../lib/api-utils";
+import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "../lib/dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
 import {
   ExitRouteObservationCoverageSchema,
@@ -146,6 +147,12 @@ export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRo
     }
   >();
   for (const row of rows) {
+    // Rows keyed under a superseded identity (pre-canonical lowercase non-EVM
+    // addresses) are not deployments; counting them double-reports one mint.
+    // loadDexLiquiditySnapshot already applies this same registry filter.
+    if (!CURRENT_DEPLOYMENT_KEYS.has(deploymentKey(row.stablecoin_id, row.chain, row.contract_address))) {
+      continue;
+    }
     const coverage = byStablecoin.get(row.stablecoin_id) ?? {
       observedPools: 0,
       verifiedNoPools: 0,

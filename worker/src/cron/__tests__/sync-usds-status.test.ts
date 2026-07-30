@@ -133,7 +133,12 @@ describe("syncUsdsStatus", () => {
     expect(result.itemCount).toBe(0);
     const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
     expect(metadata.reason).toBe("implementation-slot-unavailable");
-    expect(warnSpy).toHaveBeenCalledWith("[usds-status] Failed to read implementation slot");
+    expect(JSON.parse(String(warnSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "implementation-slot-unavailable",
+      job: "sync-usds-status",
+      level: "warn",
+      message: "Failed to read implementation slot",
+    });
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 

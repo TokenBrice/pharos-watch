@@ -1,5 +1,12 @@
 import { decodeAbiParameters } from "viem/utils";
 import {
+  decodeMentoPoolExchange,
+  MENTO_GET_EXCHANGE_IDS_SELECTOR,
+  MENTO_GET_POOL_EXCHANGE_SELECTOR,
+  MENTO_POOL_SPREAD_FIXIDITY_SCALE,
+  type MentoPoolExchange,
+} from "@shared/lib/mento-contracts";
+import {
   decodeUintWord,
   normalizeAddress,
   ratioToRounded,
@@ -10,39 +17,6 @@ import {
 } from "../core";
 import type { MentoConversionMeasurementEvidence } from "../schema";
 import type { MentoConversionMeasurementTarget } from "../targets";
-
-const POOL_EXCHANGE_PARAMETERS = [
-  {
-    type: "tuple",
-    components: [
-      { name: "asset0", type: "address" },
-      { name: "asset1", type: "address" },
-      { name: "pricingModule", type: "address" },
-      { name: "bucket0", type: "uint256" },
-      { name: "bucket1", type: "uint256" },
-      { name: "lastBucketUpdate", type: "uint256" },
-      {
-        name: "config",
-        type: "tuple",
-        components: [
-          { name: "spread", type: "uint256" },
-          { name: "referenceRateFeedID", type: "address" },
-          { name: "referenceRateResetFrequency", type: "uint256" },
-          { name: "minimumReports", type: "uint256" },
-          { name: "stablePoolResetSize", type: "uint256" },
-        ],
-      },
-    ],
-  },
-] as const;
-
-interface PoolExchange {
-  asset0: `0x${string}`;
-  asset1: `0x${string}`;
-  bucket0: bigint;
-  bucket1: bigint;
-  config: { spread: bigint };
-}
 
 const CR_NA =
   "This token is a reserve/conversion product without an independently collateralized per-token vault system.";
@@ -75,7 +49,7 @@ export async function measureMentoConversion(
       name: "biPoolManager.getExchangeIds",
       to: manager,
       signature: "getExchangeIds()",
-      selector: "0xdc162e36",
+      selector: MENTO_GET_EXCHANGE_IDS_SELECTOR,
     });
     const [exchangeIds] = decodeAbiParameters([{ type: "bytes32[]" }], rawIds as `0x${string}`);
     caller.recordDecoded(`count=${exchangeIds.length}`);
@@ -93,18 +67,17 @@ export async function measureMentoConversion(
       "every exchange id is unique",
     );
 
-    const matches: Array<{ exchangeId: string; exchange: PoolExchange }> = [];
+    const matches: Array<{ exchangeId: string; exchange: MentoPoolExchange }> = [];
     for (let index = 0; index < exchangeIds.length; index += 1) {
       const exchangeId = exchangeIds[index]!;
       const rawExchange = await caller.call({
         name: `biPoolManager.getPoolExchange(${index})`,
         to: manager,
         signature: "getPoolExchange(bytes32)",
-        selector: "0x278488a4",
+        selector: MENTO_GET_POOL_EXCHANGE_SELECTOR,
         args: [BigInt(exchangeId)],
       });
-      const [decoded] = decodeAbiParameters(POOL_EXCHANGE_PARAMETERS, rawExchange as `0x${string}`);
-      const exchange = decoded as unknown as PoolExchange;
+      const exchange = decodeMentoPoolExchange(rawExchange as `0x${string}`);
       const asset0 = normalizeAddress(exchange.asset0, `exchange ${index} asset0`);
       const asset1 = normalizeAddress(exchange.asset1, `exchange ${index} asset1`);
       caller.recordDecoded(
@@ -130,7 +103,7 @@ export async function measureMentoConversion(
       conversionCapacityRaw > 0n,
       `counter bucket ${conversionCapacityRaw} is positive`,
     );
-    const feeBps = Number((match.exchange.config.spread * 10_000n) / 10n ** 24n);
+    const feeBps = Number((match.exchange.config.spread * 10_000n) / MENTO_POOL_SPREAD_FIXIDITY_SCALE);
     derived = {
       mode: "broker-pool",
       exchangeId: match.exchangeId,

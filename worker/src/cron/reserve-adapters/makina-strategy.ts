@@ -575,7 +575,7 @@ export function adaptMakinaStrategyReserves(
 }
 
 export async function fetchMakinaStrategyReserves(
-  coin: StablecoinMeta,
+  _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,

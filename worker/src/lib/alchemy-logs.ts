@@ -4,6 +4,7 @@ import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
 import { throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
+import { logWorkerEvent } from "./structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
@@ -109,7 +110,15 @@ async function jsonRpcCall<T>(
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
   } catch (err) {
-    console.debug("[alchemy-logs] JSON-RPC fetch failed", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "debug",
+      event: "alchemy_json_rpc_fetch_failed",
+      message: "Alchemy JSON-RPC fetch failed",
+      provider: "alchemy",
+      metadata: { method },
+      error: err,
+    });
     return {
       result: null,
       error: { code: -1, message: "network failure" },
@@ -124,9 +133,26 @@ async function jsonRpcCall<T>(
   try {
     json = (await res.json()) as JsonRpcResponse<T>;
   } catch (err) {
-    console.debug("[alchemy-logs] JSON-RPC response body parse failed", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "debug",
+      event: "alchemy_json_rpc_response_parse_failed",
+      message: "Alchemy JSON-RPC response body parse failed",
+      provider: "alchemy",
+      status: res.status,
+      metadata: { method },
+      error: err,
+    });
     if (transientHttpError) {
-      console.warn(`[alchemy-logs] ${method} HTTP ${res.status} non-JSON body`);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_json_rpc_non_json_response",
+        message: "Alchemy JSON-RPC returned a non-JSON response body",
+        provider: "alchemy",
+        status: res.status,
+        metadata: { method },
+      });
       return {
         result: null,
         error: { code: -1, message: "non-JSON response body" },
@@ -143,7 +169,15 @@ async function jsonRpcCall<T>(
   }
 
   if (json?.error) {
-    console.warn(`[alchemy-logs] ${method} error (${json.error.code}): ${json.error.message}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_json_rpc_error",
+      message: "Alchemy JSON-RPC returned an error",
+      provider: "alchemy",
+      status: res.status,
+      metadata: { method, rpcErrorCode: json.error.code, rpcErrorMessage: json.error.message },
+    });
     return {
       result: null,
       error: json.error,
@@ -153,7 +187,15 @@ async function jsonRpcCall<T>(
   }
 
   if (!res.ok) {
-    console.warn(`[alchemy-logs] ${method} HTTP ${res.status} with no JSON-RPC error`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_json_rpc_http_error",
+      message: "Alchemy JSON-RPC returned an HTTP error without a JSON-RPC error",
+      provider: "alchemy",
+      status: res.status,
+      metadata: { method },
+    });
     return {
       result: null,
       error: { code: -1, message: `HTTP ${res.status}` },
@@ -184,7 +226,15 @@ export async function getAlchemyBlockNumber(
     if (!rpc.result || !rpc.result.startsWith("0x")) return null;
     return parseInt(rpc.result, 16);
   } catch (err) {
-    console.debug("[alchemy-logs] eth_blockNumber failed", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "debug",
+      event: "alchemy_block_number_failed",
+      message: "Alchemy eth_blockNumber failed",
+      provider: "alchemy",
+      metadata: { method: "eth_blockNumber" },
+      error: err,
+    });
     return null;
   }
 }
@@ -228,12 +278,26 @@ export async function getAlchemyTransactionContextBatchMany(
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
   } catch (err) {
-    console.debug("[alchemy-logs] transaction-context batch fetch failed", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "debug",
+      event: "alchemy_transaction_context_batch_fetch_failed",
+      message: "Alchemy transaction-context batch fetch failed",
+      provider: "alchemy",
+      error: err,
+    });
     return results;
   }
 
   if (!res.ok) {
-    console.warn(`[alchemy-logs] transaction-context batch HTTP ${res.status}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_transaction_context_batch_http_error",
+      message: "Alchemy transaction-context batch returned an HTTP error",
+      provider: "alchemy",
+      status: res.status,
+    });
     await cancelResponseBodyQuietly(res);
     return results;
   }
@@ -242,18 +306,38 @@ export async function getAlchemyTransactionContextBatchMany(
   try {
     parsed = await res.json();
   } catch (err) {
-    console.debug("[alchemy-logs] transaction-context batch response body parse failed", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "debug",
+      event: "alchemy_transaction_context_batch_parse_failed",
+      message: "Alchemy transaction-context batch response body parse failed",
+      provider: "alchemy",
+      error: err,
+    });
     return results;
   }
 
   if (!Array.isArray(parsed)) {
-    console.warn("[alchemy-logs] transaction-context batch returned non-array JSON body");
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_transaction_context_batch_non_array_response",
+      message: "Alchemy transaction-context batch returned a non-array JSON body",
+      provider: "alchemy",
+    });
     return results;
   }
 
   for (const item of parsed as Array<JsonRpcResponse<unknown>>) {
     if (item?.error) {
-      console.warn(`[alchemy-logs] transaction-context batch item error (${item.error.code}): ${item.error.message}`);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_transaction_context_batch_item_error",
+        message: "Alchemy transaction-context batch item returned an error",
+        provider: "alchemy",
+        metadata: { rpcErrorCode: item.error.code, rpcErrorMessage: item.error.message },
+      });
       continue;
     }
     if (typeof item?.id !== "number" || !Number.isInteger(item.id) || item.id < 0) {
@@ -476,7 +560,15 @@ async function fetchAlchemyLogsRange(
       failureReason: right.failureReason,
     };
   } catch (e) {
-    console.warn("[alchemy-logs] eth_getLogs failed:", e);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_get_logs_failed",
+      message: "Alchemy eth_getLogs failed",
+      provider: "alchemy",
+      metadata: { method: "eth_getLogs" },
+      error: e,
+    });
     return {
       logs: [],
       complete: false,
@@ -532,14 +624,29 @@ async function fetchBlockTimestampBatch(
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
     if (!res.ok) {
-      console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_block_timestamp_batch_http_error",
+        message: "Alchemy block timestamp batch returned an HTTP error",
+        provider: "alchemy",
+        status: res.status,
+        metadata: { method: "eth_getBlockByNumber", batchSize: batch.length },
+      });
       await cancelResponseBodyQuietly(res);
       return missingAll();
     }
 
     const parsed = (await res.json()) as unknown;
     if (!Array.isArray(parsed)) {
-      console.warn("[alchemy-logs] batch eth_getBlockByNumber returned non-array JSON body");
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_block_timestamp_batch_non_array_response",
+        message: "Alchemy block timestamp batch returned a non-array JSON body",
+        provider: "alchemy",
+        metadata: { method: "eth_getBlockByNumber", batchSize: batch.length },
+      });
       return missingAll();
     }
 
@@ -584,7 +691,15 @@ async function fetchBlockTimestampBatch(
     if (missingBlocks.length > 0) issueCount++;
     return { timestamps, missingBlocks, issueCount };
   } catch (e) {
-    console.warn("[alchemy-logs] batch timestamp fetch failed:", e);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "alchemy_block_timestamp_batch_fetch_failed",
+      message: "Alchemy block timestamp batch fetch failed",
+      provider: "alchemy",
+      metadata: { method: "eth_getBlockByNumber", batchSize: batch.length },
+      error: e,
+    });
     return missingAll();
   }
 }
@@ -678,9 +793,14 @@ export async function resolveBlockTimestamps(
     const totalNeeded = uniqueBlocks.length;
     const stillMissing = uniqueBlocks.filter((b) => !timestamps.has(b)).length;
     if (stillMissing > 0) {
-      console.warn(
-        `[alchemy-logs] timestamp resolution incomplete: ${stillMissing}/${totalNeeded} blocks still unresolved after ${fetchIssues} fetch issue(s)`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "alchemy_block_timestamp_resolution_incomplete",
+        message: "Alchemy block timestamp resolution was incomplete",
+        provider: "alchemy",
+        metadata: { stillMissing, totalNeeded, fetchIssues },
+      });
     }
   }
 

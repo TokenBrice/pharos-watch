@@ -9,7 +9,15 @@ import {
 } from "@shared/types/core";
 import { z } from "zod";
 
-export const XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC = 1_800;
+// Explicit per-asset override (owner ruling 2026-07-29): xaut-tether alone runs
+// a 3600s observation window; every other attribution asset stays on the 1800s
+// bound (REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC in
+// safety-score-v9-supply-attribution-contract.ts). XAUT is the only source that
+// pins a finalized Ethereum block and reconciles it against the issuer
+// transparency snapshot, so its observation is already 780-1150s old when the
+// generation is published and then ages across the 30-minute consumption window
+// before a consumer re-derives it. At 1800s that always expired mid-window.
+export const XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC = 3_600;
 export const XAUT_DISCLOSURE_MAX_AGE_SEC = 2 * 86_400;
 export const XAUT_ASSET_ID = "xaut-tether";
 export const XAUT_REPRESENTATION_ID = "xaut0-omnichain";

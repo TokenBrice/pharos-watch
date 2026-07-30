@@ -5,7 +5,7 @@ import {
   type TronMeasuredExecutionQuotePointProof,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "../../lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
@@ -14,11 +14,15 @@ import {
   buildTronMeasuredQuoteGenerationId,
   loadLatestPublishedTronMeasuredTargets,
   publishTronMeasuredQuoteGeneration,
-  type TronMeasuredQuoteOutcome,
+  type PublishedTronMeasuredTargets,
 } from "./persistence";
 import { buildTronMeasuredExecutionProfile } from "./tron-profiles";
 import { quoteTronMeasuredTarget } from "./tron-quotes";
 import { getTronMeasuredExecutionAdapterByProfile } from "./tron-registry";
+import {
+  syncNativeMeasuredExecution,
+  type NativeMeasuredExecutionSyncAdapter,
+} from "./native-sync";
 
 const TRON_ADMISSION_SOURCE_KEY = "measured-execution:tron-admission";
 // The native consumer reads one published generation, so the current SunSwap
@@ -27,12 +31,6 @@ export const TRON_MEASURED_TARGETS_PER_RUN = 21;
 export const TRON_MEASURED_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 export const TRON_MEASURED_REQUEST_HEADROOM_MS = 20_000;
 const TRON_MEASURED_EXECUTION_DEFAULT_ACTIVATION = "shadow" as const;
-
-interface TronQuoteState {
-  target: TronMeasuredExecutionTarget;
-  profile: TronMeasuredExecutionProfile | null;
-  failureReason: string | null;
-}
 
 function getTronMeasuredExecutionActivation(
   targets: readonly TronMeasuredExecutionTarget[],
@@ -107,157 +105,82 @@ export async function syncTronDexMeasuredExecution(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  const startedAt = Math.floor(Date.now() / 1_000);
-  const deadlineMs = Date.now() + TRON_MEASURED_RUNTIME_BUDGET_MS;
-  const deadlineSignal = AbortSignal.timeout(TRON_MEASURED_RUNTIME_BUDGET_MS);
-  const producerSignal = signal ? AbortSignal.any([signal, deadlineSignal]) : deadlineSignal;
-  const targetGeneration = await loadLatestPublishedTronMeasuredTargets(db, signal);
-  if (!targetGeneration || targetGeneration.targets.length === 0) {
-    return {
-      status: "skipped_neutral",
-      itemCount: 0,
-      metadata: JSON.stringify({
-        reason: "tron-target-generation-missing",
-        activation: TRON_MEASURED_EXECUTION_DEFAULT_ACTIVATION,
-      }),
-      productivity: { productive: false, reason: "tron-target-generation-missing" },
-    };
-  }
-
-  const activation = getTronMeasuredExecutionActivation(targetGeneration.targets);
-  const admissionState = await readDexSourcePaginationState(db, TRON_ADMISSION_SOURCE_KEY, "sync-cl-exit-depth");
-  const admissionCursor = admissionState.cursor?.trim() || null;
-  const { admitted, nextCursor } = admitTronMeasuredTargets(targetGeneration.targets, admissionCursor);
-  const quoteGenerationId = buildTronMeasuredQuoteGenerationId(startedAt);
-  const states: TronQuoteState[] = targetGeneration.targets.map((target) => ({
-    target,
-    profile: null,
-    failureReason: admitted.has(target.targetId) ? null : "budget-deferred",
-  }));
-
-  let completed = 0;
-  let rateLimitStopped = false;
-  let lastAttemptedTargetId: string | null = null;
-  for (const state of states) {
-    if (state.failureReason) continue;
-    throwIfAborted(signal);
-    lastAttemptedTargetId = state.target.targetId;
-    try {
-      state.profile = await measureTarget({
-        target: state.target,
-        targetGenerationId: targetGeneration.generationId,
-        quoteGenerationId,
-        trongridApiKey,
-        deadlineMs,
-        signal: producerSignal,
-      });
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      state.failureReason = toErrorMessage(error).slice(0, 300);
-      if (state.failureReason.startsWith("http-429")) {
-        rateLimitStopped = true;
-      }
-    }
-    completed++;
-    await reportProgress?.({
-      stage: "tron-exact-quotes",
-      message: "Capturing Tron exact execution quotes",
-      itemsDone: completed,
-      itemsTotal: admitted.size,
-      metadata: {
-        activation,
-        targetGenerationId: targetGeneration.generationId,
-      },
-    });
-    if (rateLimitStopped) break;
-  }
-  if (rateLimitStopped) {
-    for (const state of states) {
-      if (admitted.has(state.target.targetId) && !state.profile && state.failureReason == null) {
-        state.failureReason = "rate-limit-deferred";
-      }
-    }
-  }
-
-  const outcomes: TronMeasuredQuoteOutcome[] = states.map((state) => state.profile
-    ? { target: state.target, status: "measured", profile: state.profile }
-    : {
-        target: state.target,
-        status: "failed",
-        failureReason: state.failureReason ?? "quote-failed",
-        rawPayload: {
-          adapterProfileId: state.target.adapterProfileId,
-          targetId: state.target.targetId,
-          failureReason: state.failureReason ?? "quote-failed",
-        },
-      });
-  const publishedAt = Math.floor(Date.now() / 1_000);
-  const publication = await publishTronMeasuredQuoteGeneration({
+  return syncNativeMeasuredExecution({
     db,
-    targetGeneration,
-    outcomes,
-    quotedAt: publishedAt,
-    generationId: quoteGenerationId,
+    credential: trongridApiKey,
     signal,
+    reportProgress,
+    adapter: TRON_NATIVE_SYNC_ADAPTER,
   });
-
-  let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
-  const deferredCount = targetGeneration.targets.length - admitted.size;
-  const rateLimitDeferredCount = states.filter((state) => state.failureReason === "rate-limit-deferred").length;
-  const effectiveNextCursor = rateLimitStopped ? lastAttemptedTargetId : nextCursor;
-  if ((deferredCount > 0 || rateLimitStopped) && effectiveNextCursor) {
-    const cursorWrite = await writeDexSourcePaginationState({
-      db,
-      sourceKey: TRON_ADMISSION_SOURCE_KEY,
-      cursor: effectiveNextCursor,
-      cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
-      nowSec: publishedAt,
-      completed: false,
-      pagesFetched: admitted.size,
-      diagnostics: [`deferred-targets:${deferredCount}`, `target-generation:${targetGeneration.generationId}`],
-      job: "sync-cl-exit-depth",
-    });
-    cursorWriteStatus = cursorWrite.written
-      ? "written"
-      : cursorWrite.errorClass === "not-configured"
-        ? "write-failed"
-        : cursorWrite.errorClass;
-  }
-  const attemptedFailureCount = states.filter(
-    (state) =>
-      admitted.has(state.target.targetId) &&
-      !state.profile &&
-      state.failureReason !== "rate-limit-deferred",
-  ).length;
-  const metadata = {
-    activation,
-    targetGenerationId: targetGeneration.generationId,
-    quoteGenerationId: publication.generationId,
-    targetCount: targetGeneration.targets.length,
-    measuredCount: publication.measuredCount,
-    failedCount: publication.failedCount,
-    attemptedFailureCount,
-    deferredCount,
-    rateLimitDeferredCount,
-    rateLimitStopped,
-    admissionCursor,
-    nextAdmissionCursor: effectiveNextCursor,
-    cursorWriteStatus,
-    failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
-      if (outcome.status === "failed") {
-        const reason = outcome.failureReason ?? "unknown";
-        counts[reason] = (counts[reason] ?? 0) + 1;
-      }
-      return counts;
-    }, {}),
-  };
-  return {
-    status: attemptedFailureCount > 0 || cursorWriteStatus === "write-failed" ? "degraded" : "ok",
-    itemCount: publication.measuredCount,
-    metadata: JSON.stringify(metadata),
-    productivity: {
-      productive: publication.measuredCount > 0,
-      reason: publication.measuredCount > 0 ? "published-tron-measured-execution" : "no-tron-measured-execution",
-    },
-  };
 }
+
+export const TRON_NATIVE_SYNC_ADAPTER: NativeMeasuredExecutionSyncAdapter<
+  TronMeasuredExecutionTarget,
+  TronMeasuredExecutionProfile,
+  string,
+  Record<string, never>,
+  PublishedTronMeasuredTargets
+> = {
+  runtimeBudgetMs: TRON_MEASURED_RUNTIME_BUDGET_MS,
+  missingTargetReason: "tron-target-generation-missing",
+  missingTargetActivation: TRON_MEASURED_EXECUTION_DEFAULT_ACTIVATION,
+  progressStage: "tron-exact-quotes",
+  progressMessage: "Capturing Tron exact execution quotes",
+  productivityPublishedReason: "published-tron-measured-execution",
+  productivityEmptyReason: "no-tron-measured-execution",
+  loadTargetGeneration: loadLatestPublishedTronMeasuredTargets,
+  readCursor: (db) =>
+    readDexSourcePaginationState(db, TRON_ADMISSION_SOURCE_KEY, "sync-cl-exit-depth"),
+  admit: (targets, cursor) => {
+    const admission = admitTronMeasuredTargets(targets, cursor);
+    return {
+      admitted: admission.admitted,
+      orderedTargets: targets.filter((target) => admission.admitted.has(target.targetId)),
+      nextCursor: admission.nextCursor,
+      cursorPagesFetched: admission.admitted.size,
+      metadata: {},
+    };
+  },
+  getActivation: getTronMeasuredExecutionActivation,
+  buildQuoteGenerationId: buildTronMeasuredQuoteGenerationId,
+  measureTarget: ({
+    target,
+    targetGenerationId,
+    quoteGenerationId,
+    credential,
+    deadlineMs,
+    signal,
+  }) =>
+    measureTarget({
+      target,
+      targetGenerationId,
+      quoteGenerationId,
+      trongridApiKey: credential,
+      deadlineMs,
+      signal,
+    }),
+  normalizeFailure: (error) => toErrorMessage(error).slice(0, 300),
+  shouldStopAfterFailure: (failureReason) => failureReason.startsWith("http-429"),
+  stoppedDeferredReason: "rate-limit-deferred",
+  publish: publishTronMeasuredQuoteGeneration,
+  writeCursor: (input) =>
+    writeDexSourcePaginationState({
+      db: input.db,
+      sourceKey: TRON_ADMISSION_SOURCE_KEY,
+      cursor: input.cursor,
+      cycleStartedAt: input.cycleStartedAt,
+      nowSec: input.nowSec,
+      completed: false,
+      pagesFetched: input.pagesFetched,
+      diagnostics: [
+        `deferred-targets:${input.deferredCount}`,
+        `target-generation:${input.targetGenerationId}`,
+      ],
+      job: "sync-cl-exit-depth",
+    }),
+  buildMetadata: ({ stopped, stoppedDeferredCount }) => ({
+    rateLimitDeferredCount: stoppedDeferredCount,
+    rateLimitStopped: stopped,
+  }),
+  shouldDegrade: () => false,
+};

@@ -8,7 +8,7 @@ import { crawlTokenPools, createCrawlStats, type CrawlToken } from "../dex-liqui
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
 import type { GtNewPool, GtPool, DexPriceObs } from "../dex-liquidity/types";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
-import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
+import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
@@ -55,14 +55,14 @@ export async function crawlGeckoTerminalPoolsStage({
     const providers = CHAIN_META[chain]?.providers;
     const gtNetwork = GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal;
     if (!gtNetwork) continue;
-    if (cgPriceObservationTargets.has(makeChainAddressKey(chain, address))) continue;
+    if (cgPriceObservationTargets.has(buildChainAddressKey(chain, address))) continue;
     gtTokens.push({
       sourceChain: gtNetwork,
       ourChain: chain,
       address: canonicalExitRouteScopedId(chain, address),
       stablecoinId: context.stablecoinId,
     });
-    gtChainAddressToId.set(makeChainAddressKey(chain, address), context.stablecoinId);
+    gtChainAddressToId.set(buildChainAddressKey(chain, address), context.stablecoinId);
   }
 
   if (gtTokens.length === 0 || context.timeExceeded()) {

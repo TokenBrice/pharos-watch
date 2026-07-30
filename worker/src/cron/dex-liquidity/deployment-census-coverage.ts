@@ -1,3 +1,4 @@
+import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
@@ -53,6 +54,8 @@ export interface DexPlaceholderCoverageClassification {
     staleOutcomeCount: number;
     supersededOutcomeCount: number;
     invalidOutcomeCount: number;
+    unsupportedChainDeploymentCount: number;
+    unsupportedChains: string[];
     oldestObservedAtSec: number | null;
     newestObservedAtSec: number | null;
     maxAgeSec: number;
@@ -112,6 +115,12 @@ export function buildDexKnownEmptyRouteCoverage(): ExitRouteObservationCoverage 
  * Classify a zero-scoring-pool publication row against the exact active
  * deployment census. Only a complete, fresh, all-successful reviewed scope can
  * become known-empty. Every other shape remains explicit unknown evidence.
+ *
+ * The census reports per chain (owner ruling R1-D, 2026-07-29). A deployment on
+ * a chain with no registered discovery provider is a standing scope limit, not a
+ * failed observation, so it is carried as an explicit unsupported remainder
+ * instead of poisoning the provider-supported chains of the same asset. An asset
+ * whose whole footprint is unsupported stays unknown exactly as before.
  */
 export function classifyDexPlaceholderCoverage(params: {
   deployments: readonly ContractDeployment[];
@@ -120,11 +129,17 @@ export function classifyDexPlaceholderCoverage(params: {
   censusAvailable?: boolean;
 }): DexPlaceholderCoverageClassification {
   const reasonCounts: Record<string, number> = {};
-  const expectedKeys = new Set(
-    params.deployments.map((deployment) =>
-      deploymentKey(deployment.chain, deployment.address),
-    ),
-  );
+  const unsupportedChainByKey = new Map<string, string>();
+  const expectedKeys = new Set<string>();
+  for (const deployment of params.deployments) {
+    const key = deploymentKey(deployment.chain, deployment.address);
+    if (getDexDiscoveryProviders(deployment.chain).length === 0) {
+      unsupportedChainByKey.set(key, deployment.chain);
+    } else {
+      expectedKeys.add(key);
+    }
+  }
+  const unsupportedChains = [...new Set(unsupportedChainByKey.values())].sort();
   const rowsByKey = new Map<string, DexDeploymentCensusRow[]>();
   for (const row of params.outcomeRows) {
     const key = deploymentKey(row.chain, row.contract_address);
@@ -136,7 +151,8 @@ export function classifyDexPlaceholderCoverage(params: {
 
   let verifiedNoPoolsCount = 0;
   let observedPoolsCount = 0;
-  let providerInaccessibleCount = 0;
+  let providerInaccessibleCount = unsupportedChainByKey.size;
+  let unsupportedMethodOutcomeCount = 0;
   let missingOutcomeCount = 0;
   let staleOutcomeCount = 0;
   let supersededOutcomeCount = 0;
@@ -144,11 +160,21 @@ export function classifyDexPlaceholderCoverage(params: {
   let oldestObservedAtSec: number | null = null;
   let newestObservedAtSec: number | null = null;
 
+  // The unsupported remainder is a registry fact, so it is reported whether or
+  // not the census table could be read.
+  increment(
+    reasonCounts,
+    "deploymentCensusUnsupportedMethod",
+    unsupportedChainByKey.size,
+  );
+
   if (params.censusAvailable === false) {
     missingOutcomeCount = expectedKeys.size;
     increment(reasonCounts, "deploymentCensusUnavailable");
   } else if (expectedKeys.size === 0) {
-    increment(reasonCounts, "deploymentCensusNoReviewedScope");
+    if (unsupportedChainByKey.size === 0) {
+      increment(reasonCounts, "deploymentCensusNoReviewedScope");
+    }
   } else {
     for (const key of expectedKeys) {
       const rows = rowsByKey.get(key) ?? [];
@@ -219,6 +245,7 @@ export function classifyDexPlaceholderCoverage(params: {
           invalidOutcomeCount++;
         } else if (providerCount === 0) {
           providerInaccessibleCount++;
+          unsupportedMethodOutcomeCount++;
           increment(reasonCounts, "deploymentCensusUnsupportedMethod");
         } else {
           providerInaccessibleCount++;
@@ -255,10 +282,9 @@ export function classifyDexPlaceholderCoverage(params: {
     state = "discovery-deferral";
   } else if (reasonCounts.deploymentCensusProviderOutage) {
     state = "provider-outage";
-  } else if (
-    reasonCounts.deploymentCensusUnsupportedMethod ||
-    reasonCounts.deploymentCensusNoReviewedScope
-  ) {
+  } else if (unsupportedMethodOutcomeCount > 0) {
+    // A provider-supported chain whose census row reports no provider is a
+    // reviewable-scope defect, so it still poisons the asset.
     state = "unsupported-method";
   } else if (
     params.censusAvailable === false ||
@@ -266,7 +292,14 @@ export function classifyDexPlaceholderCoverage(params: {
     staleOutcomeCount > 0
   ) {
     state = "discovery-deferral";
+  } else if (expectedKeys.size === 0) {
+    // Nothing reviewable: either an unsupported-only footprint or no registered
+    // deployment at all.
+    state = "unsupported-method";
   } else {
+    // Every reviewable deployment is a fresh verified-empty result. Any
+    // unsupported-chain remainder stays reported in `unsupportedReasons` and the
+    // census counters instead of demoting the reviewed scope (R1-D).
     state = "complete-empty";
   }
 
@@ -274,10 +307,10 @@ export function classifyDexPlaceholderCoverage(params: {
     state,
     coverage: buildCoverage(
       state === "complete-empty" ? "populated" : "unknown",
-      state === "complete-empty" ? {} : reasonCounts,
+      reasonCounts,
     ),
     census: {
-      expectedDeploymentCount: expectedKeys.size,
+      expectedDeploymentCount: expectedKeys.size + unsupportedChainByKey.size,
       reviewedDeploymentCount,
       verifiedNoPoolsCount,
       observedPoolsCount,
@@ -286,6 +319,8 @@ export function classifyDexPlaceholderCoverage(params: {
       staleOutcomeCount,
       supersededOutcomeCount,
       invalidOutcomeCount,
+      unsupportedChainDeploymentCount: unsupportedChainByKey.size,
+      unsupportedChains,
       oldestObservedAtSec,
       newestObservedAtSec,
       maxAgeSec: DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
@@ -294,20 +329,31 @@ export function classifyDexPlaceholderCoverage(params: {
   };
 }
 
-export function buildDexPlaceholderScoreDetailsJson(params: {
+export interface DexDeploymentCensusDetailParams {
   classification: DexPlaceholderCoverageClassification;
   generationId: string;
   publishedAtSec: number;
-}): string {
+}
+
+/** The published census block, shared by placeholder and zero-pool scored rows. */
+export function buildDexDeploymentCensusDetail(
+  params: DexDeploymentCensusDetailParams,
+): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    state: params.classification.state,
+    generationId: params.generationId,
+    publishedAtSec: params.publishedAtSec,
+    ...params.classification.census,
+  };
+}
+
+export function buildDexPlaceholderScoreDetailsJson(
+  params: DexDeploymentCensusDetailParams,
+): string {
   return JSON.stringify({
     exitRouteObservations: [],
     exitRouteObservationCoverage: params.classification.coverage,
-    dexDeploymentCensus: {
-      schemaVersion: 1,
-      state: params.classification.state,
-      generationId: params.generationId,
-      publishedAtSec: params.publishedAtSec,
-      ...params.classification.census,
-    },
+    dexDeploymentCensus: buildDexDeploymentCensusDetail(params),
   });
 }

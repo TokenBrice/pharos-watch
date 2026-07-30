@@ -5,13 +5,38 @@ import type {
   ShockScenarioResult,
   ShockSimulationRun,
 } from "./shock-simulator";
-import type { ShockCodeSpec, ShockContractCodePin } from "./shock-journal";
-import { SCORE_SHOCK_FRACTION_PPM } from "./shock-targets";
+import { decodeAddressWord, decodeUintWord, normalizeAddress, type PinnedBlock } from "./core";
+import type { ShockCallJournal, ShockCodeSpec, ShockContractCodePin, ShockEthCallSpec } from "./shock-journal";
+import {
+  DEBT_RECONCILIATION_TOLERANCE_PPM,
+  SCORE_SHOCK_FRACTION_PPM,
+  SHOCK_FRACTIONS_PPM,
+  type ShockCoverageTarget,
+} from "./shock-targets";
 
 export interface PassCheck {
   id: string;
   status: "pass";
   detail: string;
+}
+
+export async function readUint(
+  caller: ShockCallJournal,
+  spec: ShockEthCallSpec,
+  wordIndex = 0,
+  label = spec.name,
+): Promise<bigint> {
+  const data = await caller.call(spec);
+  const value = decodeUintWord(data, wordIndex, label);
+  caller.recordDecoded(value.toString());
+  return value;
+}
+
+export async function readAddress(caller: ShockCallJournal, spec: ShockEthCallSpec): Promise<string> {
+  const data = await caller.call(spec);
+  const value = normalizeAddress(decodeAddressWord(data, spec.name), spec.name);
+  caller.recordDecoded(value);
+  return value;
 }
 
 export function requirePass(checks: PassCheck[], id: string, condition: boolean, detail: string): void {
@@ -110,10 +135,25 @@ export function serialiseAggregateScenario(scenario: AggregatedShockScenario) {
   };
 }
 
+export interface MeasuredShockFacts {
+  applicability: "measured";
+  failureReason: null;
+  stressShockFraction: number;
+  stressLiquidatableDebt: string;
+  stressPoolOffsetDebt: string;
+  stressLiquidationCoverageRatio: number;
+  branchContributions: {
+    branchIndex: number;
+    stressLiquidatableDebt: string;
+    stressPoolOffsetDebt: string;
+    stressLiquidationCoverageRatio: number;
+  }[];
+}
+
 export function buildMeasuredFacts(
   aggregateScenarios: readonly AggregatedShockScenario[],
   branchScenarios: readonly { branchIndex: number; scenarios: readonly ShockScenarioResult[] }[],
-) {
+): MeasuredShockFacts {
   const scoreScenario = aggregateScenarios.find((scenario) => scenario.shockFractionPpm === SCORE_SHOCK_FRACTION_PPM);
   if (!scoreScenario) throw new Error(`Missing score-bearing ${SCORE_SHOCK_FRACTION_PPM} ppm scenario`);
 
@@ -134,5 +174,85 @@ export function buildMeasuredFacts(
         stressLiquidationCoverageRatio: scenario.coverageRatio,
       };
     }),
+  };
+}
+
+export interface CdpShockMeasurementEnvelope<
+  TBranch,
+  TFamily extends ShockCoverageTarget["family"] = ShockCoverageTarget["family"],
+> {
+  schemaVersion: 1;
+  kind: "cdp-shock-coverage-measurement";
+  assetId: string;
+  archetype: "cdp";
+  family: TFamily;
+  applicability: { state: "measured"; failureReason: null };
+  completeness: { complete: true; blockers: [] };
+  chain: ShockCoverageTarget["chain"];
+  rpcUrl: string;
+  block: PinnedBlock;
+  sourcePin: ShockCoverageTarget["sourcePin"];
+  shockPolicy: {
+    scoreShockFractionPpm: number;
+    sensitivityShockFractionsPpm: number[];
+    debtReconciliationTolerancePpm: number;
+  };
+  calls: ShockCallJournal["calls"];
+  codePins: readonly ShockContractCodePin[];
+  branches: TBranch[];
+  aggregateScenarios: ReturnType<typeof serialiseAggregateScenario>[];
+  measuredFacts: MeasuredShockFacts;
+  checks: PassCheck[];
+  sources: ShockCoverageTarget["sources"];
+  tool: { name: "measure-cdp-shock-coverage"; version: "1" };
+}
+
+export interface BuildCdpShockMeasurementOptions<
+  TBranch,
+  TTarget extends ShockCoverageTarget = ShockCoverageTarget,
+> {
+  caller: ShockCallJournal;
+  target: TTarget;
+  block: PinnedBlock;
+  rpcUrl: string;
+  codePins: readonly ShockContractCodePin[];
+  branches: TBranch[];
+  aggregateScenarios: readonly AggregatedShockScenario[];
+  measuredFacts: MeasuredShockFacts;
+  checks: PassCheck[];
+}
+
+export function buildCdpShockMeasurement<
+  TBranch,
+  TTarget extends ShockCoverageTarget = ShockCoverageTarget,
+>(
+  options: BuildCdpShockMeasurementOptions<TBranch, TTarget>,
+): CdpShockMeasurementEnvelope<TBranch, TTarget["family"]> {
+  const { caller, target, block, rpcUrl, codePins, branches, aggregateScenarios, measuredFacts, checks } = options;
+  return {
+    schemaVersion: 1,
+    kind: "cdp-shock-coverage-measurement",
+    assetId: target.assetId,
+    archetype: "cdp",
+    family: target.family,
+    applicability: { state: "measured", failureReason: null },
+    completeness: { complete: true, blockers: [] },
+    chain: target.chain,
+    rpcUrl,
+    block,
+    sourcePin: target.sourcePin,
+    shockPolicy: {
+      scoreShockFractionPpm: SCORE_SHOCK_FRACTION_PPM,
+      sensitivityShockFractionsPpm: [...SHOCK_FRACTIONS_PPM],
+      debtReconciliationTolerancePpm: DEBT_RECONCILIATION_TOLERANCE_PPM,
+    },
+    calls: caller.calls,
+    codePins,
+    branches,
+    aggregateScenarios: aggregateScenarios.map(serialiseAggregateScenario),
+    measuredFacts,
+    checks,
+    sources: [...target.sources],
+    tool: { name: "measure-cdp-shock-coverage", version: "1" },
   };
 }

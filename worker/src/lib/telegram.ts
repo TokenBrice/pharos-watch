@@ -1,4 +1,5 @@
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
+import { escapeHtml } from "./telegram-html";
 import { logTelegramEvent } from "./telegram-log";
 import {
   classifyTelegramCaughtFailure,
@@ -69,10 +70,7 @@ export async function postTelegramBotApi(
   });
 }
 
-/** Escape HTML special characters for Telegram HTML parse mode. */
-export function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
+export { escapeHtml } from "./telegram-html";
 
 /** Build the full Telegram message for a digest. */
 export function buildTelegramMessage(

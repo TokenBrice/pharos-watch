@@ -5,10 +5,12 @@ import { USER_AGENT } from "../../../lib/constants";
 import { cgHeaders, cgUrl } from "../../../lib/coingecko";
 import { resolveMarketCap } from "../../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../../lib/abort";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildPricedSupplementalAsset,
   fetchSupplementalPriceData,
+  resolveCuratedAggregateSupplementalSupply,
   resolveSupplementalPrice,
   type CoinGeckoMcapData,
 } from "./shared";
@@ -65,6 +67,7 @@ export async function fetchSilverTokens(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   db?: D1Database,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -94,19 +97,25 @@ export async function fetchSilverTokens(
       }
     }
 
-    return SILVER_METAS
-      .map((meta) => {
-        const mcap = mcapMap[meta.id] ?? 0;
-        if (!mcap) {
-          console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
-        }
+    // Same per-chain gap as gold: CoinGecko exposes only an aggregate supply,
+    // so curated aggregate probes are the only per-chain path. Keep serial.
+    const tokens: PeggedAsset[] = [];
+    for (const meta of SILVER_METAS) {
+      const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+      const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
+      if (!mcap) {
+        console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
+      }
 
-        return buildPricedSupplementalAsset(meta, priceData, cgData, {
-          mcap,
-          supplySource: "coingecko-fallback",
-        });
-      })
-      .filter((token): token is PeggedAsset => token !== null);
+      const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
+        mcap,
+        supplySource: aggregate?.supplySource ?? "coingecko-fallback",
+        chainCirculating: aggregate?.chainCirculating,
+      });
+      if (token) tokens.push(token);
+    }
+
+    return tokens;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.error("[silver] fetchSilverTokens failed:", err);

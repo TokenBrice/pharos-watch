@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mjs";
 
 const DEFAULT_API_URL = "https://api.pharos.watch";
 const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
@@ -193,44 +194,11 @@ function ensureParent(path) {
   mkdirSync(dirname(resolve(ROOT_DIR, path)), { recursive: true });
 }
 
-function accessHeaders(args) {
-  const headers = {};
-  if (args.cfAccessClientId && args.cfAccessClientSecret) {
-    headers["CF-Access-Client-Id"] = args.cfAccessClientId;
-    headers["CF-Access-Client-Secret"] = args.cfAccessClientSecret;
-  }
-  return headers;
-}
-
-async function fetchJsonProbe(args, path, origin = args.apiUrl) {
-  const url = new URL(path, origin);
-  const startedAt = Date.now();
-  try {
-    const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
-    const text = await response.text();
-    let payload = null;
-    try {
-      payload = text ? JSON.parse(text) : null;
-    } catch {
-      payload = text.slice(0, 1000);
-    }
-    return { url: url.toString(), status: response.status, ok: response.ok, latencyMs: Date.now() - startedAt, payload };
-  } catch (error) {
-    return {
-      url: url.toString(),
-      status: 0,
-      ok: false,
-      latencyMs: Date.now() - startedAt,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
 async function collectProbeOnlySnapshot(args) {
-  const probes = {};
-  probes.health = await fetchJsonProbe(args, "/api/health");
-  if (args.includeStatus) probes.status = await fetchJsonProbe(args, "/api/status", args.adminApiUrl);
-  if (args.includeStatusHistory) probes.statusHistory = await fetchJsonProbe(args, "/api/status-history", args.adminApiUrl);
+  const probes = await collectWorkerHttpProbes(args, {
+    includeStatus: args.includeStatus,
+    includeStatusHistory: args.includeStatusHistory,
+  });
   return {
     collectedAt: new Date().toISOString(),
     mode: "probe-only",

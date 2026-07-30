@@ -48,6 +48,7 @@ const UNISWAP_V4_POOL_KEY_PARAMETERS = parseAbiParameters(
 );
 const UNISWAP_V4_MULTICALL_BATCH_SIZE = 8;
 const UNISWAP_V4_MULTICALL_GAS = "0x1c9c380";
+const UNISWAP_V4_Q192 = 1n << 192n;
 
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
@@ -327,6 +328,36 @@ export async function verifyUniswapV4Deployment(input: {
       stateViewPoolManagerReturnData: stateViewBinding.returnData.toLowerCase() as `0x${string}`,
     },
   };
+}
+
+/**
+ * Upper bound on an exact-input quote implied by the proved pre-trade pool
+ * price. A single-pool swap moves the marginal price monotonically against the
+ * taker, so realized output can never beat the pre-trade spot price after the
+ * LP fee, whatever the liquidity distribution across ticks. The bound stays
+ * loose on the fee side (V4 takes any protocol fee first and rounds output
+ * down), so a breach means the quote is not describing the proved pool state.
+ */
+export function computeUniswapV4SpotBoundAmountOut(input: {
+  amountInRaw: bigint;
+  sqrtPriceX96: bigint;
+  lpFeePips: number;
+  zeroForOne: boolean;
+}): bigint | null {
+  if (
+    input.amountInRaw <= 0n ||
+    input.sqrtPriceX96 <= 0n ||
+    !Number.isInteger(input.lpFeePips) ||
+    input.lpFeePips < 0 ||
+    input.lpFeePips >= 1_000_000
+  ) {
+    return null;
+  }
+  const netAmountInRaw = (input.amountInRaw * BigInt(1_000_000 - input.lpFeePips)) / 1_000_000n;
+  const priceX192 = input.sqrtPriceX96 * input.sqrtPriceX96;
+  return input.zeroForOne
+    ? (netAmountInRaw * priceX192) / UNISWAP_V4_Q192
+    : (netAmountInRaw * UNISWAP_V4_Q192) / priceX192;
 }
 
 function encodeSlot0(poolId: `0x${string}`): `0x${string}` {
@@ -965,6 +996,7 @@ export function validateUniswapV4ProfileProof(
     issues.add("v4-pool-state-proof-decode-failed");
   }
 
+  const provedSqrtPriceX96 = /^[0-9]+$/.test(proof.sqrtPriceX96) ? BigInt(proof.sqrtPriceX96) : null;
   const sortedSuccessfulPoints = profile.quoteProof
     .filter((point) => !point.reverted)
     .sort((left, right) => left.inputUsd - right.inputUsd);
@@ -1005,6 +1037,18 @@ export function validateUniswapV4ProfileProof(
         });
         if (amountOut.toString() !== point.amountOutRaw) {
           issues.add("v4-return-data-mismatch");
+        }
+        const spotBoundAmountOut =
+          provedSqrtPriceX96 == null
+            ? null
+            : computeUniswapV4SpotBoundAmountOut({
+                amountInRaw: params.exactAmount,
+                sqrtPriceX96: provedSqrtPriceX96,
+                lpFeePips: proof.lpFee,
+                zeroForOne: params.zeroForOne,
+              });
+        if (spotBoundAmountOut == null || amountOut > spotBoundAmountOut) {
+          issues.add("v4-quote-exceeds-pool-spot-bound");
         }
       }
     } catch {

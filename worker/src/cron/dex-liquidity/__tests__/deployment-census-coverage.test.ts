@@ -74,6 +74,8 @@ describe("DEX placeholder deployment-census coverage", () => {
         staleOutcomeCount: 0,
         supersededOutcomeCount: 0,
         invalidOutcomeCount: 0,
+        unsupportedChainDeploymentCount: 0,
+        unsupportedChains: [],
         oldestObservedAtSec: NOW_SEC - 60,
         newestObservedAtSec: NOW_SEC - 60,
         maxAgeSec: DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
@@ -244,6 +246,67 @@ describe("DEX placeholder deployment-census coverage", () => {
     expect(classification.state).toBe(state);
     expect(classification.coverage.status).toBe("unknown");
     expect(classification.coverage.unsupportedReasons[reason]).toBeGreaterThan(0);
+  });
+
+  it("reports an unsupported-chain remainder without poisoning the reviewed scope", () => {
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [
+        deployment(),
+        deployment("starknet", "0x0000000000000000000000000000000000000003"),
+        deployment("stellar", "GSTELLARASSETISSUER"),
+      ],
+      outcomeRows: [outcome()],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("complete-empty");
+    expect(classification.coverage).toMatchObject({
+      status: "populated",
+      retainedPoolCount: 0,
+      unsupportedPoolCount: 0,
+      unsupportedReasons: { deploymentCensusUnsupportedMethod: 2 },
+    });
+    expect(classification.census).toMatchObject({
+      expectedDeploymentCount: 3,
+      reviewedDeploymentCount: 3,
+      verifiedNoPoolsCount: 1,
+      providerInaccessibleCount: 2,
+      missingOutcomeCount: 0,
+      unsupportedChainDeploymentCount: 2,
+      unsupportedChains: ["starknet", "stellar"],
+    });
+  });
+
+  it("keeps an entirely unsupported footprint poisoned under the same reason key", () => {
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment("starknet", "0x0000000000000000000000000000000000000003")],
+      outcomeRows: [],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("unsupported-method");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusUnsupportedMethod: 1,
+    });
+  });
+
+  it("still fails closed when a provider-supported chain is unreviewed", () => {
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [
+        deployment(),
+        deployment("starknet", "0x0000000000000000000000000000000000000003"),
+      ],
+      outcomeRows: [],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusUnsupportedMethod: 1,
+      deploymentCensusMissingOutcome: 1,
+    });
   });
 
   it("does not mistake a case-folded native row for the current deployment", () => {

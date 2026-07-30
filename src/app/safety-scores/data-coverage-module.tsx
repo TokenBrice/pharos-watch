@@ -14,13 +14,15 @@ const OWNER_SWATCHES: Record<string, string> = {
 
 /**
  * Compact labels for the collapsed rail below `lg`, where four full labels no
- * longer fit on one line. Desktop keeps the view model's full labels.
+ * longer fit on one line. Desktop keeps the view model's full labels. Each one
+ * names the limit's owner, so `method-unsupported` shortens to the method
+ * rather than to "Unsupported", which would read as a claim about the asset.
  */
 const OWNER_SHORT_LABELS: Record<string, string> = {
   "issuer-undisclosed": "Issuer",
   "integration-missing": "Pharos",
   "producer-failed": "Feed",
-  "method-unsupported": "Unsupported",
+  "method-unsupported": "Method",
 };
 
 function formatCount(value: number): string {

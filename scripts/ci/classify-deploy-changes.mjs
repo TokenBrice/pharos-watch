@@ -11,6 +11,7 @@ import {
   hasWorkerReleaseImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
+import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ZERO_SHA = /^0+$/;
@@ -40,6 +41,7 @@ export function classifyChangedFiles(changedFiles, { reason } = {}) {
   const workerDeployRequired = hasWorkerReleaseImpact(normalizedFiles);
   return {
     changedFiles: normalizedFiles,
+    criticalCoverageChanged: normalizedFiles.some((file) => CRITICAL_FILES.includes(file)),
     deployRequired: hasDeployImpact(normalizedFiles),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
     pagesChanged,
@@ -66,6 +68,7 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   if (eventName !== "push") {
     return {
       changedFiles: [],
+      criticalCoverageChanged: true,
       deployRequired: true,
       docsOnly: false,
       pagesChanged: true,
@@ -79,6 +82,7 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   if (!baseSha || ZERO_SHA.test(baseSha) || !headSha) {
     return {
       changedFiles: [],
+      criticalCoverageChanged: true,
       deployRequired: true,
       docsOnly: false,
       pagesChanged: true,
@@ -98,6 +102,7 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   } catch {
     return {
       changedFiles: [],
+      criticalCoverageChanged: true,
       deployRequired: true,
       docsOnly: false,
       pagesChanged: true,
@@ -121,6 +126,7 @@ function writeGithubOutputLine(key, value) {
 }
 
 export function emitGithubOutputs(classification) {
+  writeGithubOutputLine("critical_coverage_changed", classification.criticalCoverageChanged ? "true" : "false");
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
@@ -142,6 +148,7 @@ function runCli(env = process.env) {
       console.error(`  - ${file}`);
     }
   }
+  console.error(`[deploy-changes] critical_coverage_changed=${classification.criticalCoverageChanged}`);
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);

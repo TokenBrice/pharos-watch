@@ -45,6 +45,18 @@ describe("adaptive PR checks", () => {
     ]);
   });
 
+  it("always selects global invariants for unrelated source changes", () => {
+    const selected = selectPrTestFiles(["src/components/unrelated-source.test.ts"]);
+
+    expect(selected).toEqual(
+      expect.arrayContaining([
+        "src/lib/__tests__/reserve-coinid-validation.test.ts",
+        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+        "src/components/unrelated-source.test.ts",
+      ]),
+    );
+  });
+
   it("selects impacted generated artifacts and downstream dependants", () => {
     const registry = [
       { id: "catalog", sourcePaths: ["data/**"] },
@@ -61,6 +73,30 @@ describe("adaptive PR checks", () => {
       "typecheck",
       "check:env-contract",
       "check:shared-types-imports",
+      "check:critical-coverage-completeness",
     ]);
+  });
+
+  it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
+    expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
+      "check:critical-coverage-completeness",
+    );
+  });
+
+  it("packages Worker changes in the adaptive PR lane", () => {
+    expect(buildPrStaticCheckPlan(["worker/src/index.ts"]).commands.map((command) => command.name)).toContain(
+      "check:worker-package",
+    );
+  });
+
+  it("selects structural checks for production and validation surfaces", () => {
+    for (const path of [
+      "src/lib/feature-flags.ts",
+      "worker/src/cron/sync-stablecoins.ts",
+      "scripts/ci/check-provider-resilience.mjs",
+      ".github/workflows/nightly-validation.yml",
+    ]) {
+      expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
+    }
   });
 });

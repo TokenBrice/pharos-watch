@@ -16,6 +16,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
+      critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -71,6 +72,25 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: npm run test:pr -- --shard=${{ matrix.shard }}/2
 
+  critical-coverage:
+    name: Touched critical coverage
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.critical_coverage_changed == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          tooling-cache: "true"
+      - name: Enforce touched critical-file coverage ratchet
+        env:
+          CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.pull_request.base.sha }}
+        run: npm run coverage:critical
+
   docs:
     name: Documentation checks
     needs: detect-changes
@@ -115,11 +135,13 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs: [detect-changes, static, tests, docs, gitleaks]
+    needs: [detect-changes, static, tests, critical-coverage, docs, gitleaks]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       DETECT_RESULT: ${{ needs.detect-changes.result }}
+      CRITICAL_COVERAGE_CHANGED: ${{ needs.detect-changes.outputs.critical_coverage_changed }}
+      CRITICAL_COVERAGE_RESULT: ${{ needs.critical-coverage.result }}
       DOCS_RESULT: ${{ needs.docs.result }}
       GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
       STATIC_RESULT: ${{ needs.static.result }}
@@ -129,6 +151,11 @@ jobs:
         run: |
           if [ "${DETECT_RESULT}" != "success" ] || [ "${GITLEAKS_RESULT}" != "success" ]; then
             echo "Required PR setup failed: detect=${DETECT_RESULT}, gitleaks=${GITLEAKS_RESULT}."
+            exit 1
+          fi
+
+          if [ "${CRITICAL_COVERAGE_CHANGED}" = "true" ] && [ "${CRITICAL_COVERAGE_RESULT}" != "success" ]; then
+            echo "Touched critical coverage failed: ${CRITICAL_COVERAGE_RESULT}."
             exit 1
           fi
 

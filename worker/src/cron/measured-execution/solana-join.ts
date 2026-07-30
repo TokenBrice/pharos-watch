@@ -2,16 +2,14 @@ import {
   toSolanaMeasuredExecutionPublicProfile,
   validateSolanaMeasuredExecutionProfile,
   type SolanaMeasuredExecutionProfile,
+  type SolanaMeasuredExecutionTarget,
 } from "@shared/types/solana-measured-execution";
-import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedSolanaMeasuredQuoteEvidence, type LoadedSolanaMeasuredQuoteEvidence } from "./persistence";
 import {
   createNativeMeasuredExecutionJoinDiagnostics,
-  mapNativeMeasuredExecutionValidationGate,
-  promoteNativeMeasuredExecutionProfile,
-  recordNativeMeasuredExecutionFailure,
-  resetNativeMeasuredExecutionJoinFields,
+  joinNativeMeasuredExecutionEvidence,
+  type NativeMeasuredExecutionJoinAdapter,
   type NativeMeasuredExecutionJoinDiagnostics,
 } from "./native-join";
 import {
@@ -26,6 +24,9 @@ import { RAYDIUM_CLMM_PROGRAM_ID } from "./solana-quotes";
 export interface SolanaMeasuredExecutionJoinDiagnostics extends NativeMeasuredExecutionJoinDiagnostics {
   lastKnownGoodCount: number;
 }
+
+type SolanaMeasuredExecutionJoinQuote =
+  LoadedSolanaMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never;
 
 function hasRequiredRaydiumOnStateProof(
   profile: SolanaMeasuredExecutionProfile,
@@ -77,84 +78,62 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
   nowSec: number;
   resolveAdapterPolicy?: (adapterProfileId: string) => SolanaMeasuredExecutionAdapterRegistration | null;
 }): SolanaMeasuredExecutionJoinDiagnostics {
-  const diagnostics: SolanaMeasuredExecutionJoinDiagnostics = {
-    ...createNativeMeasuredExecutionJoinDiagnostics(input.evidence),
-    lastKnownGoodCount: 0,
-  };
-  for (const pools of input.poolsByStablecoin.values()) {
-    for (const pool of pools) {
-      const target = pool.extra?.solanaMeasuredExecutionTarget;
-      if (!target) continue;
-      diagnostics.targetCount++;
-      const extra = resetNativeMeasuredExecutionJoinFields(pool, "solana", target);
-      const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        recordNativeMeasuredExecutionFailure({
-          pool,
-          kind: "solana",
-          target,
-          diagnostics,
-          reason,
-          detail,
-        });
-      };
-      if (!input.evidence) {
-        fail("quote-missing");
-        continue;
-      }
-      const quote = input.evidence.byTargetId.get(target.targetId);
-      if (!quote) {
-        fail("quote-missing");
-        continue;
-      }
-      if (quote.status !== "measured" || !quote.profile) {
-        fail("quote-failed", quote.failureReason ?? undefined);
-        continue;
-      }
-      const adapter = (input.resolveAdapterPolicy ?? getSolanaMeasuredExecutionAdapterByProfile)(
-        quote.profile.adapterProfileId,
-      );
-      if (!adapter || adapter.protocol !== quote.profile.protocol || adapter.poolType !== quote.profile.poolType) {
-        fail("invalid-observation", "adapter-registration-mismatch");
-        continue;
-      }
-      const issues = validateSolanaMeasuredExecutionProfile({
-        profile: quote.profile,
+  const adapter: NativeMeasuredExecutionJoinAdapter<
+    SolanaMeasuredExecutionTarget,
+    SolanaMeasuredExecutionProfile,
+    ReturnType<typeof toSolanaMeasuredExecutionPublicProfile>,
+    SolanaMeasuredExecutionAdapterRegistration,
+    SolanaMeasuredExecutionJoinQuote,
+    LoadedSolanaMeasuredQuoteEvidence,
+    SolanaMeasuredExecutionJoinDiagnostics
+  > = {
+    kind: "solana",
+    getTarget: (pool) => pool.extra?.solanaMeasuredExecutionTarget,
+    createDiagnostics: (evidence) => ({
+      ...createNativeMeasuredExecutionJoinDiagnostics(evidence),
+      lastKnownGoodCount: 0,
+    }),
+    resolvePolicy: input.resolveAdapterPolicy ?? getSolanaMeasuredExecutionAdapterByProfile,
+    policyMatchesProfile: (policy, profile) =>
+      policy.protocol === profile.protocol && policy.poolType === profile.poolType,
+    validateProfile: ({ profile, quote, target, nowSec }) =>
+      validateSolanaMeasuredExecutionProfile({
+        profile,
         quotedTarget: quote.quotedTarget,
         currentTarget: target,
         expectedTargetGenerationId: quote.targetGenerationId,
         expectedQuoteGenerationId: quote.quoteGenerationId,
-        nowSec: input.nowSec,
-      });
-      if (issues.length > 0) {
-        fail(mapNativeMeasuredExecutionValidationGate(issues), issues.join(","));
-        continue;
-      }
-      const publicProfile = toSolanaMeasuredExecutionPublicProfile(quote.profile);
-      extra.solanaMeasuredExecution = publicProfile;
+        nowSec,
+      }),
+    toPublicProfile: toSolanaMeasuredExecutionPublicProfile,
+    setPublicProfile: (pool, profile) => {
+      pool.extra!.solanaMeasuredExecution = profile;
+    },
+    getActivationFailure: ({ target }) => {
       const policy = getSolanaMeasuredExecutionPriorityTarget(target);
-      if (!isSolanaMeasuredExecutionPriorityTargetScoreEligible(target)) {
-        fail("activation-pending", policy ? "shadow-score-ineligible" : "unratified-target");
-        diagnostics.measuredCount++;
-        continue;
-      }
-      if (policy?.proofRequirement === "raydium-single-segment-onstate-v1" && !hasRequiredRaydiumOnStateProof(quote.profile)) {
-        fail("invalid-observation", "raydium-onstate-proof-invalid");
-        continue;
-      }
-      promoteNativeMeasuredExecutionProfile({
-        pool,
-        kind: "solana",
-        target,
-        publicProfile,
-        ...(quote.resolution === "last-known-good"
-          ? { detail: `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}` }
-          : {}),
-      });
+      return isSolanaMeasuredExecutionPriorityTargetScoreEligible(target)
+        ? null
+        : {
+            reason: "activation-pending",
+            detail: policy ? "shadow-score-ineligible" : "unratified-target",
+          };
+    },
+    getProofFailure: ({ profile, target }) => {
+      const policy = getSolanaMeasuredExecutionPriorityTarget(target);
+      return policy?.proofRequirement === "raydium-single-segment-onstate-v1" &&
+        !hasRequiredRaydiumOnStateProof(profile)
+        ? { reason: "invalid-observation", detail: "raydium-onstate-proof-invalid" }
+        : null;
+    },
+    getPromotionDetail: (quote) =>
+      quote.resolution === "last-known-good"
+        ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
+        : undefined,
+    onPromoted: (diagnostics, quote) => {
       if (quote.resolution === "last-known-good") diagnostics.lastKnownGoodCount++;
-      diagnostics.measuredCount++;
-    }
-  }
-  return diagnostics;
+    },
+  };
+  return joinNativeMeasuredExecutionEvidence({ ...input, adapter });
 }
 
 export function releaseSolanaMeasuredExecutionProofFields(pools: readonly PoolEntry[]): void {

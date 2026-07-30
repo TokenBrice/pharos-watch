@@ -14,15 +14,15 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 
 | Flag                                         | Gates                                                                               | Default                      | `expiresAt`                 |
 | -------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------- | --------------------------- |
-| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        | off                          | 2026-08-01                  |
-| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            | off                          | 2026-08-01                  |
-| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      | off                          | 2026-08-01                  |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        | off                          | 2026-09-01                  |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            | off                          | 2026-09-01                  |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`        | Idea 13b (recent blacklist banner, FE-only v1)                                      | off                          | 2026-09-01                  |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion)                       | on unless explicitly `false` | n/a (default-on, no expiry) |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`       | Idea 4 (curated + tape event-annotated charts)                                      | off                          | 2026-09-01                  |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | Depeg Duration Resolver module on `/depeg/` (emergency rollback)                    | on unless explicitly `false` | 2026-09-01                  |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | Depeg Duration Resolver Reviewer module below DDR on `/depeg/` (emergency rollback) | on unless explicitly `false` | 2026-09-01                  |
 
-`expiresAt` is advisory — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-09-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.mjs`) runs in advisory prebuild mode and fails that check when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
+`expiresAt` is enforceable — each gated flag in code carries the same date in a comment, including the two default-on resolver flags (`DEPEG_RESOLVER` / `DEPEG_RESOLVER_REVIEWER`, both `2026-09-01`); only the default-on `HERO_VERDICT` has no expiry. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. The stale-flag check (`scripts/ci/check-stale-flags.mjs`) is enforced by `check:structural` for affected PR paths and every nightly/manual validation run; it fails when any flag's `expiresAt` is today or earlier and warns 30 days ahead.
 
 ## Flip readiness gates
 
@@ -31,7 +31,7 @@ What must be true before turning each flag on in production:
 ### `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`
 
 - [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-view-model.ts`).
-- [ ] WCAG AA contrast spot-check on the three calm/warn/severe deviation tokens (light + dark themes).
+- [x] WCAG AA contrast spot-check on the calm/warn/severe text tokens (light + dark themes): the 2026-07-29 CLI review of the flag-selected muted, green, amber, orange, and red tokens found a 4.78:1 minimum on light surfaces and 7.23:1 minimum on dark surfaces.
 - [ ] Visual review on USDC + USDe + a coin with an active depeg.
 
 ### `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`
@@ -44,6 +44,18 @@ What must be true before turning each flag on in production:
 - [x] Frozen-asset suppression in place.
 - [x] `useRecentBlacklist7d` aggregates client-side from the existing summary endpoint (no extra worker round-trips).
 - [ ] iOS Safari sticky check on a coin with active freezes.
+
+## 2026-07-29 lifecycle review
+
+All three August 1 flags remain default-off. Their automated checks pass, but
+they must not be inlined until the remaining human or real-device validation
+has been completed.
+
+| Flag | Owner | Evidence reviewed 2026-07-29 | Reason retained | Next review |
+| --- | --- | --- | --- | --- |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | tokenbrice | CLI WCAG review passes AA for all flag-selected text tokens (minimum 4.78:1 light, 7.23:1 dark); `src/lib/__tests__/severity-colors.test.ts` passes. | A human must visually review USDC, USDe, and a coin with an active depeg before the default-off path can be removed. | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | tokenbrice | `src/components/stablecoin-detail/__tests__/mobile-sticky-summary.test.tsx` verifies height publication; `src/components/__tests__/longform-scrollspy-nav.test.tsx` verifies the reactive `scroll-margin-top` calculation. | A real device must verify mounted-summary scrollspy behavior in iOS Safari and Android Chrome. | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | tokenbrice | `src/components/stablecoin-detail/__tests__/recent-blacklist-banner.test.tsx` verifies rendering and frozen-asset suppression; `src/hooks/__tests__/use-recent-blacklist-7d.test.tsx` verifies gating and summary aggregation. | A real iOS Safari device must check sticky behavior for a coin with active freezes. | 2026-09-01 |
 
 ### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
 

@@ -23,6 +23,7 @@ import {
   errorMessageFor,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const DEXSCREENER_BATCH_SIZE = 30;
 const DEXSCREENER_MAX_REQUESTS = 1;
@@ -222,9 +223,15 @@ export async function runDexScreenerPass(
   }
 
   if (stillMissing.length > DEXSCREENER_BATCH_SIZE) {
-    console.warn(
-      `[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to one ${DEXSCREENER_BATCH_SIZE}-address batch`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "dexscreener-targets-capped",
+      message: "Assets still missing prices; capping DexScreener to one address batch",
+      provider: "dexscreener",
+      metadata: { missingAssetCount: stillMissing.length, batchSize: DEXSCREENER_BATCH_SIZE },
+    });
   }
 
   // Priority order: assets that have gone unpriced across the most prior
@@ -342,10 +349,16 @@ export async function runDexScreenerPass(
           }
         } catch (error) {
           if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-          console.warn(
-            `[enrich] DexScreener exact batch lookup threw for ${batchChain} (${batch.length} targets):`,
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-stablecoins",
+            level: "warn",
+            event: "dexscreener-exact-batch-threw",
+            message: "DexScreener exact batch lookup threw",
+            provider: "dexscreener",
+            metadata: { chain: batchChain, targetCount: batch.length },
             error,
-          );
+          });
           pushExactFailure(errorClassFor(error), errorMessageFor(error));
           lookupResult = {
             ok: false,
@@ -358,9 +371,15 @@ export async function runDexScreenerPass(
         if (ok) {
           dexExactSuccessfulCalls = 1;
         } else if (!lookupFailureRecorded) {
-          console.warn(
-            `[enrich] DexScreener exact batch lookup failed for ${batchChain} (${batch.length} targets)`,
-          );
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-stablecoins",
+            level: "warn",
+            event: "dexscreener-exact-batch-failed",
+            message: "DexScreener exact batch lookup failed",
+            provider: "dexscreener",
+            metadata: { chain: batchChain, targetCount: batch.length },
+          });
           pushExactFailure(
             "upstream-error",
             lookupResult.error
@@ -383,16 +402,28 @@ export async function runDexScreenerPass(
           }
         }
       } else if (batch.length > 0) {
-        console.warn(
-          `[enrich] DexScreener pass budget exhausted after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
-        );
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-stablecoins",
+          level: "warn",
+          event: "dexscreener-pass-budget-exhausted",
+          message: "DexScreener pass budget exhausted",
+          provider: "dexscreener",
+          metadata: { attemptedRequests: dexExactAttempts, maxRequests: DEXSCREENER_MAX_REQUESTS },
+        });
       }
     } catch (error) {
       if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
       if (!passTimeout.isTimedOut()) throw error instanceof Error ? error : new Error(String(error));
-      console.warn(
-        `[enrich] DexScreener pass timed out after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoins",
+        level: "warn",
+        event: "dexscreener-pass-timed-out",
+        message: "DexScreener pass timed out",
+        provider: "dexscreener",
+        metadata: { attemptedRequests: dexExactAttempts, maxRequests: DEXSCREENER_MAX_REQUESTS },
+      });
     } finally {
       passTimeout.dispose();
     }
@@ -403,9 +434,28 @@ export async function runDexScreenerPass(
       attempted: dexExactAttempts,
       successful: dexExactSuccessfulCalls,
     });
-    console.log(`[enrich] DexScreener pass: exact=${dexExactSuccessfulCalls}/${dexExactAttempts} resolved=${resolved}`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "info",
+      event: "dexscreener-pass-complete",
+      message: "DexScreener pass complete",
+      provider: "dexscreener",
+      metadata: {
+        successfulExactCalls: dexExactSuccessfulCalls,
+        attemptedExactCalls: dexExactAttempts,
+        resolvedAssetCount: resolved,
+      },
+    });
   } else {
-    console.warn("[enrich] DexScreener exact circuit open — skipping pass 4");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "dexscreener-exact-circuit-open",
+      message: "DexScreener exact circuit open; skipping pass 4",
+      provider: "dexscreener",
+    });
   }
 
   return { resolved, failures: [], diagnostics };
