@@ -319,15 +319,20 @@
     "maxFunctionLines": 0,
     "branchCount": 0
   },
+  "worker/src/lib/depeg-resolver-incident-store.ts": {
+    "fileLines": 1466,
+    "maxFunctionLines": 189,
+    "branchCount": 66
+  },
   "worker/src/lib/scheduled-slot-fence.ts": {
     "fileLines": 717,
     "maxFunctionLines": 160,
     "branchCount": 45
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 254,
-    "maxFunctionLines": 131,
-    "branchCount": 2
+    "fileLines": 260,
+    "maxFunctionLines": 132,
+    "branchCount": 3
   },
   "worker/src/lib/status-reliability.ts": {
     "fileLines": 24,

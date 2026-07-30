@@ -71,6 +71,7 @@ export const TARGET_FILES = [
   "worker/src/cron/yield-sync/sources.ts",
   "worker/src/cron/yield-sync/vaults-fyi.ts",
   "worker/src/lib/live-reserves-store.ts",
+  "worker/src/lib/depeg-resolver-incident-store.ts",
   "worker/src/lib/scheduled-slot-fence.ts",
   "worker/src/lib/status-evaluation.ts",
   "worker/src/lib/status-reliability.ts",
