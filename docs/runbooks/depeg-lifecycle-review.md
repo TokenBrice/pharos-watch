@@ -52,3 +52,20 @@ trigger a freeze review. Thresholds owner-ratified 2026-07-18.
 4. A flag that should be permanently tolerated (e.g., a documented chronic
    soft peg) can be noted in the coin's `notices`; the flag itself will keep
    reappearing by design.
+
+## Wind-down curation loop (DDR K6)
+
+DDR Stage 1 fires **K6 elevated** when a deep or supply-collapsing fingerprint
+looks like an issuer wind-down but the coin registry lacks a timely
+`windDownAnnouncedAt` (see `docs/depeg-resolver.md` Stage 1 K6). That elevated
+factor is the curation prompt — not a separate review treadmill.
+
+| Step | Action |
+|------|--------|
+| 1. Detect | Watch DDR reasons / admin cron metadata for `K6_wind_down` elevated (or a severe miss after a public issuer announcement). |
+| 2. Scope | Confirm the announcement is for **this token/issuer id**, never a venue, minter dependency, or parent protocol alone. Venue wind-downs must not be written onto the coin. |
+| 3. Curate | Within **~3 days**, set optional registry fields on the coin JSON: `windDownAnnouncedAt` (ISO date `YYYY-MM-DD`) and `windDownSourceUrl` (canonical public URL). Semantics: issuer's own public wind-down/termination announcement for this token — distinct from `frozenAt` (Pharos tracking stop). |
+| 4. Validate | Coin schema validation + focused DDR fixtures must accept the fields. Severe K6 only applies when `windDownAnnouncedAt ≤` lock/evaluation time; future announcements must not back-fire on earlier locks. |
+| 5. Freeze if terminal | If the asset is also a stalled collapse, continue with the freeze runbook after curation; freezing is still manual. |
+
+Do not invent announcement dates. If no public issuer announcement exists, leave the fields absent and keep treating the row as fingerprint-only elevated / at-risk rather than forcing a false terminal via K6 severe.

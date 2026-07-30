@@ -1,6 +1,7 @@
 import { DEPEG_RESOLVER_V1 } from "../../data/methodology-changelogs/depeg-resolver/v1";
 import { DEPEG_RESOLVER_V2 } from "../../data/methodology-changelogs/depeg-resolver/v2";
 import { DEPEG_RESOLVER_V3 } from "../../data/methodology-changelogs/depeg-resolver/v3";
+import { DEPEG_RESOLVER_V4 } from "../../data/methodology-changelogs/depeg-resolver/v4";
 import { createMethodologyVersion } from "./base";
 import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
@@ -11,7 +12,7 @@ import {
 const ddr = createMethodologyVersion({
   currentVersion: DDR_METHODOLOGY_VERSION,
   changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
-  changelog: [...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
+  changelog: [...DEPEG_RESOLVER_V4, ...DEPEG_RESOLVER_V3, ...DEPEG_RESOLVER_V2, ...DEPEG_RESOLVER_V1],
 });
 const ddrV2ChangelogEntry = ddr.changelog.find((entry) => entry.version === "2.0");
 
@@ -25,10 +26,10 @@ export {
 export const DDR_METHODOLOGY_CHANGELOG = ddr.changelog;
 
 /** Sub-component versions surfaced in the API _meta for reproducibility. */
-export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v2";
-export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v1";
-export const DDR_INCIDENT_GROUPING_VERSION = "incident-group-v2";
-export const DDR_SUPPORT_RULES_VERSION = "support-rules-v1";
+export const DDR_RESOLUTION_RUBRIC_VERSION = "resolution-rubric-v3";
+export const DDR_DURATION_MODEL_VERSION = "duration-landmark-v2";
+export const DDR_INCIDENT_GROUPING_VERSION = "incident-group-v3";
+export const DDR_SUPPORT_RULES_VERSION = "support-rules-v2";
 
 /** DDRv2 public prediction policy version. */
 export const DDR_PREDICTION_POLICY_VERSION = "sticky-24h-v1";
@@ -73,7 +74,7 @@ export const DDR_PUBLIC_PREDICTION_DELAY_SEC = 24 * 3600;
 /** Normal quarter-hour cron cadence plus edge jitter for on-time lock labeling. */
 export const DDR_LOCK_ON_TIME_GRACE_SEC = 20 * 60;
 
-/** DDRv2 cache/manifest generation values. */
-export const DDR_SNAPSHOT_CACHE_GENERATION = 2;
-export const DDRR_SNAPSHOT_CACHE_GENERATION = 2;
-export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v3";
+/** DDRv4 cache/manifest generation values. */
+export const DDR_SNAPSHOT_CACHE_GENERATION = 3;
+export const DDRR_SNAPSHOT_CACHE_GENERATION = 3;
+export const DDRR_REVIEWER_VERSION = "ddr-reviewer-v4";
