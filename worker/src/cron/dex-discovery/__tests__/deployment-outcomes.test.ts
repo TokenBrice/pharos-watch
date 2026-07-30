@@ -107,8 +107,8 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(328);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(118);
+    expect(outcomes).toHaveLength(329);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(119);
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {

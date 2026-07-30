@@ -256,6 +256,7 @@ jobs:
           }
 
           const acceptance = summarizePostDeployAcceptance(results);
+          console.log(JSON.stringify({ probes: results, acceptance }, null, 2));
           const lines = [
             "## Post-deploy operational acceptance",
             "",
