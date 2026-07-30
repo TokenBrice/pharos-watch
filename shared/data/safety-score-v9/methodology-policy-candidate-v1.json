@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.04",
+  "releaseVersion": "9.05",
   "semantic": {
     "formula": {
       "pillarWeights": {

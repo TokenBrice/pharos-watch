@@ -7,6 +7,7 @@ import {
   SAFETY_SCORE_V9_ROUTE_CAPACITY,
   SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE,
   SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE,
+  SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE,
 } from "@shared/data/methodology-changelogs/safety-score/v9-activation";
 import { scoringAnchorId, VersionCard } from "./content-shared";
 import { scoringChangelogV8Details } from "./content-v8";
@@ -22,6 +23,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.05": (
+    <>
+      <p>{SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.04": (
     <>
       <p>{SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE.summary}</p>
