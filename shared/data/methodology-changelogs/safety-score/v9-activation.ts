@@ -95,3 +95,20 @@ export const SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE: MethodologyChangelogEntr
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE: MethodologyChangelogEntry = {
+  version: "9.05",
+  title: "Wrapper local controls retain partial evidence",
+  date: "2026-07-30",
+  effectiveAt: 1785431359,
+  summary:
+    "Strategy-vault wrapper loss-control facts can now use reviewed local controls from a partial deployment inventory while unresolved controls remain bounded and risk-transfer credit remains disabled unless separately documented.",
+  impact: [
+    "Reviewed local controls on a strategy-vault wrapper populate the wrapper loss-absorption and emergency-control dimension even when the aggregate mint/control review is still bounded",
+    "Unresolved deployment surfaces still fail closed in Economic Control and keep their original evidence responsibility",
+    "Security-module, recovery-mode, and other local emergency controls do not create parent-loss absorption credit; wrapper risk-transfer remains zero unless a separate enforceable backstop is reviewed",
+    "Backing, Exit, and Economic Control weights, score aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

@@ -70,10 +70,17 @@
       "url": "https://dialectic.com"
     },
     {
+      "label": "Machine Terms",
+      "url": "https://makina.finance/MeccanicoToS.pdf"
+    },
+    {
       "label": "Audits",
       "url": "https://docs.makina.finance/contracts/security"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -193,7 +200,7 @@
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Morpho vault borrowers and curators reached through Makina Caliber instructions",
-      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
+      "riskFactors": ["smart-contract", "liquidity", "counterparty", "leverage"],
       "liquidityHorizon": "seven-days"
     },
     {
@@ -234,17 +241,29 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-29",
+    "reviewedAt": "2026-07-30",
     "reviewer": "Claude stablecoin addition (issue #705)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; expected publication URL)",
+        "url": "https://makina.finance/MeccanicoToS.pdf"
+      },
       {
         "label": "Makina Machine share price and AUM",
         "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
       },
       {
+        "label": "Makina Risk Manager",
+        "url": "https://docs.makina.finance/concepts/governance/risk-manager"
+      },
+      {
         "label": "Makina Caliber positions",
         "url": "https://docs.makina.finance/concepts/architecture/caliber/positions"
+      },
+      {
+        "label": "Makina Security Module",
+        "url": "https://docs.makina.finance/concepts/security/security-module"
       },
       {
         "label": "Makina strategies API",
@@ -255,7 +274,7 @@
         "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
       }
     ],
-    "rationale": "Makina publishes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API.",
+    "rationale": "Makina publishes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API and preserves gross AUM, net AUM, and debt telemetry when present. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in Makina's allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Rootfile feeds are not used for this DUSD reserve review while their anomalies remain quarantined.",
     "compositionBasis": "Makina Machine accounting plus the Makina strategy and allocation APIs",
     "compositionAsOf": "2026-07-29",
     "scope": "full-composition",
@@ -265,18 +284,23 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Makina Machine and Caliber contracts",
+        "name": "Dialectic Meccanico Ltd / Makina Machine and Caliber contracts",
         "role": "other",
-        "sharePct": 100
+        "sharePct": 100,
+        "jurisdiction": "British Virgin Islands"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "none",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-29",
+    "reviewedAt": "2026-07-30",
     "reviewer": "OpenAI Codex DUSD evidence closure",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Dialectic Meccanico Machine Terms v1.2 (official team-supplied PDF; expected publication URL)",
+        "url": "https://makina.finance/MeccanicoToS.pdf"
+      },
       {
         "label": "Makina Machine architecture",
         "url": "https://docs.makina.finance/concepts/architecture/machine"
@@ -292,9 +316,13 @@
       {
         "label": "Makina DUSD allocation API",
         "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
+      },
+      {
+        "label": "Makina DUSD strategy API",
+        "url": "https://api.makina.finance/v1/strategies/dusd"
       }
     ],
-    "uncertainty": "DUSD assets are held by the Machine and its chain-specific Calibers and are deliberately deployed into third-party lending, credit, insurance, and incentive positions. The reviewed public materials establish active reuse of capital but do not establish a legal trust, bankruptcy-remote vehicle, independent custodian, or operator-replacement custody arrangement.",
+    "uncertainty": "DUSD assets are held by the Machine and its chain-specific Calibers and are deliberately deployed into third-party lending, credit, insurance, and incentive positions. The official team-supplied Machine Terms v1.2 identified Dialectic Meccanico Ltd as Operator and established that settlement assets and Machine assets are the Operator's property, not assets held for Users. DUSD holders remain ordinary contractual counterparties with no legal, equitable, proprietary, custody, trust, priority, bankruptcy-remote, underlying-asset, yield, governance, or asset-return claim if the Operator becomes insolvent or the Machine ceases. Instruction allowlists, timelocks, recovery mode, and dedicated Machine/Caliber contracts are technical safeguards and do not create legal segregation, trustee custody, or bankruptcy remoteness. The expected publication URL for the official PDF was pending during the 2026-07-30 review.",
     "knownUnknownExposurePct": 0
   },
   "proofOfReserves": {
@@ -547,11 +575,15 @@
             "url": "https://docs.makina.finance/concepts/security/recovery-mode"
           },
           {
+            "label": "Makina Security Module",
+            "url": "https://docs.makina.finance/concepts/security/security-module"
+          },
+          {
             "label": "Security Council Safe on Etherscan",
             "url": "https://etherscan.io/address/0x89faa3b02ef5ab185b8ace489af62748acb50afc"
           }
         ],
-        "evidence": "At Ethereum block 25637903 the Machine's securityCouncil() returns this address; getOwners() returned four listed EOAs, getThreshold() returned 2, VERSION() returned 1.4.1, getModulesPaginated() returned enabled module 0xeec7919bab68876e14737970fe4965ab9737cd29, the guard slot was zero, fallbackHandler() returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and the singleton slot returned 0x41675c099f32341bf84bfc5382af534df5c7461a. The module is verified as RecoveryModeTriggerModule: its immutable SAFE is this Security Council and its only operational path lets the unattributed EOA executor 0xaa1e36165b3ac105f25549c06e1f06d573a40be3 ask the Safe to call setRecoveryMode(true) on a Machine endpoint; only the Safe can replace that executor. The broad Safe path remains 2-of-4, while this narrow module path is effectively 1-of-1 and zero-delay. At block 25638710 the DUSD AsyncRedeemer reported isWhitelistEnabled() = true, finalizationDelay() = 43,200 seconds, nextRequestId() = 343, and lastFinalizedRequestId() = 342. Makina classifies the Security Council as fully trusted: it cannot mint shares, but it can trigger Recovery Mode, force an AUM update past the share-price rate limit (which changes the price at which shares mint and redeem), cancel operations where it actually has guardian or canceller authority, and slash the Security Module."
+        "evidence": "At Ethereum block 25637903 the Machine's securityCouncil() returns this address; getOwners() returned four listed EOAs, getThreshold() returned 2, VERSION() returned 1.4.1, getModulesPaginated() returned enabled module 0xeec7919bab68876e14737970fe4965ab9737cd29, the guard slot was zero, fallbackHandler() returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and the singleton slot returned 0x41675c099f32341bf84bfc5382af534df5c7461a. The module is verified as RecoveryModeTriggerModule: its immutable SAFE is this Security Council and its only operational path lets the unattributed EOA executor 0xaa1e36165b3ac105f25549c06e1f06d573a40be3 ask the Safe to call setRecoveryMode(true) on a Machine endpoint; only the Safe can replace that executor. The broad Safe path remains 2-of-4, while this narrow module path is effectively 1-of-1 and zero-delay. At block 25638710 the DUSD AsyncRedeemer reported isWhitelistEnabled() = true, finalizationDelay() = 43,200 seconds, nextRequestId() = 343, and lastFinalizedRequestId() = 342. Makina classifies the Security Council as fully trusted: it cannot mint shares, but it can trigger Recovery Mode, force an AUM update past the share-price rate limit (which changes the price at which shares mint and redeem), cancel operations where it actually has guardian or canceller authority, and slash the Security Module. The Security Module is a strategy-level, optional first-loss mechanism whose slashing is authorized but discretionary; any module-first absorption is bounded by current stake and slash parameters, and the reviewed terms and team answer do not establish Operator recourse, treasury recapitalization, an external guarantor, binding replenishment, or an enforceable holder loss waterfall."
       }
     ],
     "review": {
@@ -567,6 +599,10 @@
         {
           "label": "Makina trust model and risk",
           "url": "https://docs.makina.finance/concepts/security/trust-and-risk"
+        },
+        {
+          "label": "Makina Security Module",
+          "url": "https://docs.makina.finance/concepts/security/security-module"
         },
         {
           "label": "Makina strategy deployments",
@@ -597,9 +633,9 @@
           "url": "https://makinafi.substack.com/p/post-mortem-january-20th-2026-incident"
         }
       ],
-      "evidence": "Fixed-block reads at Ethereum block 25637903 (module and redeemer closure at block 25638710): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. The Machine beacon's upgradeTo(address) selector is assigned to ADMIN_ROLE 0, with a 172,800-second DAO execution delay and role 0 as its guardian; the Security Council holds role 7, so its cancellation authority for that active selector is not established. The Security Council Safe's enabled RecoveryModeTriggerModule is bound immutably to that Safe, with an unattributed EOA executor that can bypass the 2-of-4 Safe threshold only to request entry into Recovery Mode; the Safe alone can replace the executor. The DUSD AsyncRedeemer whitelist was enabled at block 25638710. Makina's January 20 incident postmortem describes an external Curve accounting/oracle propagation exploit, states that Machine-held funds were not compromised, and records Security Council activation of Recovery Mode; this is one reviewed non-qualifying incident under the privileged/unbacked-mint definition, not exhaustive evidence that no qualifying mint incident exists. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy.",
+      "evidence": "Fixed-block reads at Ethereum block 25637903 (module and redeemer closure at block 25638710): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. The Machine beacon's upgradeTo(address) selector is assigned to ADMIN_ROLE 0, with a 172,800-second DAO execution delay and role 0 as its guardian; the Security Council holds role 7, so its cancellation authority for that active selector is not established. The Security Council Safe's enabled RecoveryModeTriggerModule is bound immutably to that Safe, with an unattributed EOA executor that can bypass the 2-of-4 Safe threshold only to request entry into Recovery Mode; the Safe alone can replace the executor. The DUSD AsyncRedeemer whitelist was enabled at block 25638710. Makina's January 20 incident postmortem describes an external Curve accounting/oracle propagation exploit, states that Machine-held funds were not compromised, and records Security Council activation of Recovery Mode; this is one reviewed non-qualifying incident under the privileged/unbacked-mint definition, not exhaustive evidence that no qualifying mint incident exists. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy. Security Module slashing is authorized but discretionary and bounded by current stake and slash parameters; the reviewed materials establish no Operator recourse, treasury recapitalization, external guarantor, binding replenishment, or enforceable holder loss waterfall, so the Security Module is control evidence only and not positive risk-transfer credit.",
       "reviewer": "OpenAI Codex Safety Score V9 on-chain curation; Claude stablecoin addition (issue #705)",
-      "reviewedAt": "2026-07-29",
+      "reviewedAt": "2026-07-30",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "How should the mint-authority schema and compiler represent the Security Council Safe's enabled RecoveryModeTriggerModule as a distinct zero-delay, 1-of-1 EOA subauthority limited to setRecoveryMode(true), without attributing that threshold or capability to the broader 2-of-4 Safe?",

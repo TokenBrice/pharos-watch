@@ -10,7 +10,6 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
 const AS_OF_SEC = 1_785_283_200;
-const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
   { assetId: "stusds-sky", parentId: "usds-sky" },
@@ -79,22 +78,25 @@ export const AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE: MintAuthorityProfile = {
 function fixedInput(
   activeAssetIds: readonly string[] = [ASSET_ID],
   supplyUsdById: Readonly<Record<string, number>> = {},
+  options: { clockSec?: number; capturedAt?: string } = {},
 ) {
+  const clockSec = options.clockSec ?? AS_OF_SEC;
+  const observedAtSec = clockSec - 100;
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     activeAssetIds: [...activeAssetIds],
-    capturedAt: "2026-07-13T00:00:00.000Z",
+    capturedAt: options.capturedAt ?? "2026-07-13T00:00:00.000Z",
     sourceGeneration: `report-cards:fixture:${ASSET_ID}`,
-    dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
+    dexGenerationId: `dex-liquidity-${observedAtSec}`,
     redemptionGenerationId: "redemption-backstops-unavailable",
     registryRevision: "registry:fixture",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: AS_OF_SEC,
-    updatedAt: AS_OF_SEC,
+    clockSec,
+    updatedAt: clockSec,
     liquidityStale: false,
     redemptionStale: true,
     inputFreshness: {
-      dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
+      dexLiquidity: { updatedAt: observedAtSec, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     pegDataById: Object.fromEntries(
@@ -110,7 +112,7 @@ function fixedInput(
           currentDeviationBps: 1,
           pegScore: 99,
           priceSource: "fixture-price",
-          priceObservedAt: OBSERVED_AT_SEC,
+          priceObservedAt: observedAtSec,
           pegPct: 99,
           severityScore: 0,
           spreadPenalty: 0,
@@ -141,7 +143,7 @@ function fixedInput(
           organicMeasuredTvlUsd: 1_000_000,
           exitRouteObservations: [],
           methodologyVersion: "dex:fixture-v1",
-          updatedAt: OBSERVED_AT_SEC,
+          updatedAt: observedAtSec,
         },
       ]),
     ),
@@ -168,7 +170,7 @@ function fixedInput(
     liveReserveProvenanceMap: Object.fromEntries(
       activeAssetIds.map((assetId) => [
         assetId,
-        { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
+        { source: "fixture-reserve-api", fetchedAt: observedAtSec },
       ]),
     ),
     chainCirculatingById: Object.fromEntries(
@@ -257,7 +259,10 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       }),
     );
     const profile = metaById.get(assetId)!.mintAuthority!;
-    const input = fixedInput(activeAssetIds);
+    const input = fixedInput(activeAssetIds, {}, {
+      clockSec: Date.parse("2026-07-31T00:00:00.000Z") / 1_000,
+      capturedAt: "2026-07-31T00:00:00.000Z",
+    });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;
     const controlReview = asset.controlReview;
