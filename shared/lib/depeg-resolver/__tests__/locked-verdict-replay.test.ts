@@ -4,8 +4,8 @@ import type {
   DdrFactorKind,
   DdrFactorSeverity,
   DdrResolutionTier,
-} from "@shared/types/depeg-resolver";
-import type { DepegDirection } from "@shared/types/market";
+} from "../../../types/depeg-resolver";
+import type { DepegDirection } from "../../../types/market";
 import {
   resolveDepeg,
   resolveOutlook,
