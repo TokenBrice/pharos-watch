@@ -65,7 +65,7 @@ export function parseRolloutSafetyPolicy(manifestText) {
   };
 }
 
-export function parseManifestMigrationRows(manifestText, { sectionHeading, nextHeading } = {}) {
+export function parseManifestMigrationRows(manifestText, { sectionHeading, nextHeading, allowEmpty = false } = {}) {
   const startIndex = sectionHeading ? manifestText.indexOf(sectionHeading) : 0;
   if (startIndex === -1) {
     throw new Error(`worker/migrations/MANIFEST.md is missing the "${sectionHeading}" section.`);
@@ -85,7 +85,9 @@ export function parseManifestMigrationRows(manifestText, { sectionHeading, nextH
   );
 
   if (rows.length === 0) {
-    throw new Error(`worker/migrations/MANIFEST.md section "${sectionHeading}" has no migration rows.`);
+    if (!allowEmpty) {
+      throw new Error(`worker/migrations/MANIFEST.md section "${sectionHeading}" has no migration rows.`);
+    }
   }
 
   return rows;
@@ -98,8 +100,17 @@ export function validateManifestMigrationParity(migrationFiles, manifestText) {
 
   const activeRows = parseManifestMigrationRows(manifestText, {
     sectionHeading: "## Individual Migrations",
-    nextHeading: "## Retired Individual Migrations",
+    nextHeading: manifestText.includes("## Squashed Individual Migrations")
+      ? "## Squashed Individual Migrations"
+      : "## Retired Individual Migrations",
+    allowEmpty: true,
   });
+  const squashedRows = manifestText.includes("## Squashed Individual Migrations")
+    ? parseManifestMigrationRows(manifestText, {
+        sectionHeading: "## Squashed Individual Migrations",
+        nextHeading: "## Retired Individual Migrations",
+      })
+    : [];
   const retiredRows = parseManifestMigrationRows(manifestText, {
     sectionHeading: "## Retired Individual Migrations",
     nextHeading: "## Known Anomalies",
@@ -133,6 +144,20 @@ export function validateManifestMigrationParity(migrationFiles, manifestText) {
   const retiredFilesStillPresent = retiredManifestFiles.filter((file) => migrationFiles.includes(file));
   if (retiredFilesStillPresent.length > 0) {
     errors.push(`retired manifest rows still have checked-in migration files: ${retiredFilesStillPresent.join(", ")}`);
+  }
+
+  const squashedManifestFiles = squashedRows.map((row) => row.filename);
+  const squashedFilesStillPresent = squashedManifestFiles.filter((file) => migrationFiles.includes(file));
+  if (squashedFilesStillPresent.length > 0) {
+    errors.push(`squashed manifest rows still have checked-in migration files: ${squashedFilesStillPresent.join(", ")}`);
+  }
+  const squashedRowsWithBadSequence = squashedRows.filter((row) => !row.filename.startsWith(`${row.sequence}_`));
+  if (squashedRowsWithBadSequence.length > 0) {
+    errors.push(
+      `squashed manifest sequence/filename mismatches: ${squashedRowsWithBadSequence
+        .map((row) => `${row.sequence} -> ${row.filename}`)
+        .join(", ")}`,
+    );
   }
 
   const activeRowsWithBadSequence = activeRows.filter((row) => !row.filename.startsWith(`${row.sequence}_`));

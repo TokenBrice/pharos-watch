@@ -127,7 +127,6 @@
     "check:doc-sync": "tsx scripts/ci/check-doc-sync.ts",
     "check:env-contract": "tsx scripts/ci/check-env-contract.mjs",
     "check:migrations": "node scripts/ci/check-worker-migrations.mjs",
-    "rehearse:d1-squash": "node scripts/ci/rehearse-d1-baseline-squash.mjs",
     "check:cron-connections": "tsx scripts/ci/check-cron-connection-budget.ts",
     "check:telegram-load": "tsx scripts/ci/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node scripts/ci/check-sql-interpolation-safety.mjs",

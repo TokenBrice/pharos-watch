@@ -16,7 +16,7 @@ import {
 
 const DIGEST = "a".repeat(64);
 const MIGRATION = readFileSync(
-  join(process.cwd(), "worker/migrations/0222_report_card_evidence_journal.sql"),
+  join(process.cwd(), "worker/src/test-helpers/migration-fixtures/0222_report_card_evidence_journal.sql"),
   "utf8",
 );
 

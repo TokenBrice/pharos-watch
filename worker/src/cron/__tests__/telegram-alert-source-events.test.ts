@@ -25,7 +25,7 @@ import {
 } from "../telegram-alert-event-lineage";
 
 const MIGRATION_SQL = readFileSync(
-  join(process.cwd(), "worker/migrations/0185_telegram_source_event_resolution.sql"),
+  join(process.cwd(), "worker/src/test-helpers/migration-fixtures/0185_telegram_source_event_resolution.sql"),
   "utf8",
 );
 const NOW = 1_800_000_000;

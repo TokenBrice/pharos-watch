@@ -2,17 +2,21 @@
 
 ## Baseline (0000)
 
-`0000_baseline.sql` consolidates migrations 0001–0071 into a single schema creation script.
+`0000_baseline.sql` consolidates migrations 0001–0227 into a single idempotent schema creation script.
 
 - **Applied only to fresh databases.** Existing databases continue from their last-applied migration and will never execute the baseline.
-- D1's migration runner tracks applied migrations by filename in its internal ledger, so existing databases that have already applied 0001–0071 will correctly skip 0000.
-- Fresh databases apply the baseline then the individual migrations from 0072 onward.
+- D1's migration runner tracks applied migrations by filename in its internal ledger, so existing databases that have already applied 0001–0227 will correctly skip 0000.
+- Fresh databases apply the baseline then any individual migrations from 0228 onward.
 
-**Squash date:** 2026-03-25 (S-014)
+**Squash date:** 2026-07-30 (S-03 / P4-01); previous squash 2026-03-25 (S-014) consolidated 0001–0071.
 
 ## Individual Migrations (current active files)
 
-Applied sequentially after the baseline (fresh setup) or after the previous individual migration (existing databases).
+None. The next migration starts at sequence 0228; do not renumber or reuse absorbed or retired filenames.
+
+## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
+
+These filenames remain recorded in the production migration ledger and must never be reused. The absorbed DDL now lives in `0000_baseline.sql`.
 
 | Sequence | Filename                                                 | Description                                                                                                                                        |
 | -------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |

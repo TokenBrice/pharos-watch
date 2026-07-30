@@ -29,6 +29,17 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "safety-score-v9",
+    title: "Safety Score V9: Backing, Control, Exit",
+    description:
+      "Rebuilt around the three questions holders actually ask: is it backed, who controls it, can you get out? And why that finally puts USDT and USDC at the top.",
+    datePublished: "2026-07-30",
+    source: "safety-score-v9.md",
+    coverImage: "/blog/safety-score-v9-cover.png",
+    coverAlt:
+      "The Pharos lighthouse casting three separate beams, each lighting one word of the headline “Backing. Control. Exit.” beneath the label “Safety Score V9”.",
+  },
+  {
     slug: "pharos-at-six-months",
     title: "Pharos at Six Months: The Lighthouse Is Lit",
     description:

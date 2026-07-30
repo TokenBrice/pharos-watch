@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Inter:wght@400;500;600&amp;display=swap');
+    </style>
+    <radialGradient id="bgGradient" cx="26%" cy="46%" r="72%">
+      <stop offset="0%" stop-color="#0d1f3c"/>
+      <stop offset="100%" stop-color="#050a14"/>
+    </radialGradient>
+    <radialGradient id="lanternAmbient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.22"/>
+      <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4C8B0"/>
+      <stop offset="40%" stop-color="#E8DCC4"/>
+      <stop offset="100%" stop-color="#C8BBAA"/>
+    </linearGradient>
+    <!-- One lantern, three beams: the score's three pillars -->
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#F5EFDD" stop-opacity="0.42"/>
+      <stop offset="35%" stop-color="#E8DCC4" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="sg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="beamBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="9"/>
+    </filter>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+
+  <!-- Ambient glow behind lighthouse -->
+  <circle cx="315" cy="240" r="270" fill="url(#lanternAmbient)"/>
+
+  <!-- Three beam cones from the lantern, one lighting each pillar word -->
+  <g filter="url(#beamBlur)">
+    <polygon points="315,209 1240,146 1240,262" fill="url(#sweep)"/>
+    <polygon points="315,209 1240,296 1240,412" fill="url(#sweep)" opacity="0.78"/>
+    <polygon points="315,209 1240,446 1240,562" fill="url(#sweep)" opacity="0.56"/>
+  </g>
+
+  <!-- Radial beams from lantern (~315, 209) -->
+  <g filter="url(#beamBlur)">
+    <line x1="315" y1="209" x2="315" y2="0" stroke="#E8DCC4" stroke-width="3.5" opacity="0.16"/>
+    <line x1="315" y1="209" x2="110" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.11"/>
+    <line x1="315" y1="209" x2="520" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.11"/>
+    <line x1="315" y1="209" x2="0" y2="80" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
+    <line x1="315" y1="209" x2="0" y2="170" stroke="#E8DCC4" stroke-width="2" opacity="0.04"/>
+  </g>
+
+  <!-- Background stars -->
+  <circle cx="75" cy="60" r="1.2" fill="#E8DCC4" opacity="0.25"/>
+  <circle cx="190" cy="145" r="0.8" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="460" cy="48" r="1" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="680" cy="72" r="1.2" fill="#E8DCC4" opacity="0.18"/>
+  <circle cx="870" cy="118" r="0.9" fill="#E8DCC4" opacity="0.22"/>
+  <circle cx="1020" cy="58" r="1.1" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="1130" cy="105" r="0.8" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="130" cy="495" r="0.9" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="890" cy="520" r="1" fill="#E8DCC4" opacity="0.14"/>
+  <circle cx="1090" cy="465" r="0.8" fill="#E8DCC4" opacity="0.1"/>
+  <circle cx="1155" cy="300" r="0.9" fill="#E8DCC4" opacity="0.16"/>
+  <circle cx="52" cy="335" r="1" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="1040" cy="385" r="0.7" fill="#E8DCC4" opacity="0.13"/>
+  <circle cx="620" cy="150" r="0.8" fill="#E8DCC4" opacity="0.14"/>
+  <circle cx="960" cy="230" r="0.7" fill="#E8DCC4" opacity="0.12"/>
+
+  <!-- Lighthouse icon — scaled 3.8x, centered at (315, 315) -->
+  <g transform="translate(315, 315) scale(3.8) translate(-44, -44)">
+    <circle cx="44" cy="16" r="16" fill="url(#iconGlow)"/>
+
+    <line x1="44" y1="16" x2="44" y2="-4" stroke="#E8DCC4" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="22" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="66" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="4" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="84" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="-4" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+    <line x1="44" y1="16" x2="92" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+
+    <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" stroke-width="2.5" opacity="0.45" stroke-linejoin="round"/>
+
+    <circle cx="44" cy="16" r="5" fill="white" opacity="0.9" filter="url(#sg)"/>
+
+    <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity="0.9"/>
+
+    <rect x="38.5" y="22" width="11" height="7" rx="1" fill="#F5F0E6" opacity="0.85"/>
+    <line x1="42" y1="22" x2="42" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
+    <line x1="46" y1="22" x2="46" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
+
+    <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity="0.85"/>
+
+    <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#tBody)" opacity="0.8"/>
+    <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
+    <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
+
+    <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity="0.7"/>
+    <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity="0.45"/>
+  </g>
+
+  <!-- Eyebrow -->
+  <text x="532" y="180"
+        font-family="'Inter', Arial, sans-serif"
+        font-size="24" font-weight="600"
+        fill="#4bc4de"
+        letter-spacing="0.26em">SAFETY SCORE V9</text>
+
+  <!-- Headline — the three pillars, one per beam -->
+  <text x="529" y="272"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#F5F0E6"
+        letter-spacing="0.01em"
+        filter="url(#softGlow)" opacity="0.55">Backing.</text>
+  <text x="532" y="272"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#F5F0E6"
+        letter-spacing="0.01em">Backing.</text>
+  <text x="532" y="358"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#EFE7D6"
+        letter-spacing="0.01em">Control.</text>
+  <text x="532" y="444"
+        font-family="'Cormorant Garamond', Georgia, serif"
+        font-size="86" font-weight="600"
+        fill="#E8DCC4"
+        letter-spacing="0.01em">Exit.</text>
+
+  <!-- Separator -->
+  <line x1="535" y1="492" x2="1080" y2="492" stroke="#E8DCC4" stroke-width="1.2" opacity="0.16"/>
+
+  <!-- Footer -->
+  <text x="535" y="530"
+        font-family="'Inter', Arial, sans-serif"
+        font-size="19" font-weight="400"
+        fill="#E8DCC4" opacity="0.55"
+        letter-spacing="0.03em">What&#8217;s in the Box · Who Holds the Keys · Can You Leave</text>
+</svg>

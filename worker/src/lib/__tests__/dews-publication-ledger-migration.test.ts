@@ -1,14 +1,22 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
+const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
+
+// Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
+function resolveMigrationPath(file: string): string {
+  const fixture = path.join(FIXTURES_DIR, file);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
+  return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
+}
 
 function applyMigration(sqlite: DatabaseSync, file: string): void {
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted worker migration fixture
-  sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, file), "utf8"));
+  sqlite.exec(readFileSync(resolveMigrationPath(file), "utf8"));
 }
 
 describe("DEWS publication ledger bootstrap migration", () => {
