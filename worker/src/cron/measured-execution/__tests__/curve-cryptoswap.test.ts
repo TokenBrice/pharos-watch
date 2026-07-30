@@ -188,6 +188,18 @@ describe("Curve CryptoSwap shadow policy", () => {
     // chain or generation has a reviewed family, so nothing else can ride it.
     const familyAnchored = active.filter((entry) => entry.identityAnchor === "reviewed-deployment-family");
     expect(familyAnchored).toHaveLength(11);
+    expect(getCurveCryptoSwapReviewedDeploymentFamily("ethereum", "twocrypto-ng")?.mathDeployments).toEqual(
+      expect.arrayContaining([
+        {
+          address: "0x2005995a71243be9fb995dab4742327dc76564df",
+          codeHash: "0xbc931b24ccca3aae2cd24bf83022386ae21d4c96af2f7c7f57a91c743b8352e3",
+        },
+        {
+          address: "0x1fd8af16dc4bebd950521308d55d0543b6cdf4a1",
+          codeHash: "0x70d105ee0e9b857244d87521bbcef34cfb4cbd600592af61bbc7c76180648d61",
+        },
+      ]),
+    );
     expect(
       familyAnchored.every(
         (entry) =>

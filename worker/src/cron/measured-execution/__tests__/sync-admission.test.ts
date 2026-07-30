@@ -9,6 +9,7 @@ import {
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress,
+  isDexMeasuredExecutionTargetScoreEligible,
   resolveMeasuredExecutionCronStatus,
   selectExpiringScoreBearingPriorityPacket,
   type PublishedScoreBearingDexRoute,
@@ -598,6 +599,36 @@ describe("measured execution overflow admission", () => {
         cursorWriteStatus: "not-needed",
       }),
     ).toBe("degraded");
+  });
+
+  it("classifies score-eligible EVM targets separately from shadow diagnostics", () => {
+    expect(isDexMeasuredExecutionTargetScoreEligible(target("coin-a", 100_000))).toBe(true);
+    expect(
+      isDexMeasuredExecutionTargetScoreEligible(
+        target("coin-b", 100_000, "base-univ3", {
+          chain: "base",
+          adapterProfileId: "uniswap-v3-quoter-v2",
+          protocol: "uniswap-v3",
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isDexMeasuredExecutionTargetScoreEligible(
+        target("coin-c", 100_000, "fluid", {
+          adapterProfileId: "fluid-resolver-measured",
+          protocol: "fluid",
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isDexMeasuredExecutionTargetScoreEligible(
+        target("coin-d", 100_000, "aero", {
+          chain: "base",
+          adapterProfileId: "aerodrome-slipstream-quoter-v2",
+          protocol: "aerodrome-slipstream",
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("degrades rotation that cannot refresh every admitted target within one hour", () => {

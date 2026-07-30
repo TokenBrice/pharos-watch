@@ -527,6 +527,33 @@ export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
   );
 }
 
+export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  generation: SafetyScoreV9SupplyAttributionGeneration,
+): boolean {
+  const expectedAssetIds = uniqueSorted(
+    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
+  );
+  const latestGenerationClockSec = Math.max(
+    generation.captureClockSec,
+    generation.capturedAtSec,
+  );
+  const futureClockSkewSec =
+    latestGenerationClockSec - fixedInput.clockSec;
+  return (
+    generation.registryFingerprint === fixedInput.registryFingerprint &&
+    generation.sourceBaseInputGenerationId ===
+      fixedInput.baseInputGenerationId &&
+    generation.sourceGeneration === fixedInput.sourceGeneration &&
+    generation.sourceClockSec === fixedInput.clockSec &&
+    exactStrings(generation.expectedAssetIds, expectedAssetIds) &&
+    generation.rejectedAssetIds.length === 0 &&
+    futureClockSkewSec > 0 &&
+    futureClockSkewSec <=
+      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC
+  );
+}
+
 export function applySafetyScoreV9SupplyAttributionGeneration(
   fixedInput: Readonly<ReportCardsFixedInput>,
   generation:

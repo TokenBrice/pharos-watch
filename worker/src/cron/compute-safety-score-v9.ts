@@ -25,8 +25,10 @@ import {
 } from "../lib/safety-score-v9-supply-attribution";
 import {
   applySafetyScoreV9SupplyAttributionGeneration,
+  isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+  type SafetyScoreV9SupplyAttributionGeneration,
 } from "../lib/safety-score-v9-supply-attribution-generation";
 import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9-supply-attribution-journal-store";
 import { loadExactDexPublicationGeneration } from "../lib/report-cards-snapshot";
@@ -155,6 +157,59 @@ export async function computeSafetyScoreV9(
     });
   }
 
+  const generationCache = caches.get(
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+  );
+  let parsedSupplyAttributionGeneration:
+    SafetyScoreV9SupplyAttributionGeneration | null = null;
+  let generationParseError = false;
+  if (generationCache) {
+    try {
+      parsedSupplyAttributionGeneration =
+        parseSafetyScoreV9SupplyAttributionGeneration(
+          generationCache.value,
+        );
+    } catch {
+      generationParseError = true;
+    }
+  }
+  if (
+    parsedSupplyAttributionGeneration &&
+    isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
+      v9SeedInput,
+      parsedSupplyAttributionGeneration,
+    )
+  ) {
+    return {
+      status: "skipped_neutral",
+      itemCount:
+        parsedSupplyAttributionGeneration.acceptedAssetIds.length,
+      metadata: JSON.stringify({
+        stage: "supply-generation",
+        reason: "supply-attribution-generation-cadence-deferred",
+        sourceGenerationId: fixedInput.sourceGeneration,
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        fixedInputClockSec: fixedInput.clockSec,
+        generationId:
+          parsedSupplyAttributionGeneration.generationId,
+        generationSourceClockSec:
+          parsedSupplyAttributionGeneration.sourceClockSec,
+        generationCaptureClockSec:
+          parsedSupplyAttributionGeneration.captureClockSec,
+        generationCapturedAtSec:
+          parsedSupplyAttributionGeneration.capturedAtSec,
+        acceptedCount:
+          parsedSupplyAttributionGeneration.acceptedAssetIds.length,
+        rejectedCount:
+          parsedSupplyAttributionGeneration.rejectedAssetIds.length,
+      }),
+      productivity: {
+        productive: false,
+        reason: "supply-attribution-generation-cadence-deferred",
+      },
+    };
+  }
+
   let supplyAttributionGenerationState:
     Record<string, unknown> = { status: "not-due" };
   const publication = await runSafetyScoreV9Publication({
@@ -165,28 +220,13 @@ export async function computeSafetyScoreV9(
         stage: "supply-generation",
         message: "Applying bounded V9 supply attribution",
       });
-      const generationCache = caches.get(
-        SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
-      );
       caches.delete(
         SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
       );
-      let generation = null;
-      let generationParseError = false;
-      if (generationCache) {
-        try {
-          generation =
-            parseSafetyScoreV9SupplyAttributionGeneration(
-              generationCache.value,
-            );
-        } catch {
-          generationParseError = true;
-        }
-      }
       const generationApplication =
         applySafetyScoreV9SupplyAttributionGeneration(
           seedInput,
-          generation,
+          parsedSupplyAttributionGeneration,
         );
       supplyAttributionGenerationState = generationParseError
         ? {
