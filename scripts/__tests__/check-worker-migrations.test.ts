@@ -94,6 +94,35 @@ describe("validateManifestMigrationParity", () => {
 ## Known Anomalies
 `;
 
+  it("rejects squashed manifest rows whose files are still checked in", () => {
+    const squashedManifest = `
+## Individual Migrations (current active files)
+
+None. The next migration starts at sequence 0228.
+
+## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
+
+| Sequence | Filename | Description |
+| --- | --- | --- |
+| 0072 | \`0072_telegram_launch_alerts.sql\` | Add launch alerts |
+
+## Retired Individual Migrations
+
+| Sequence | Former Filename | Retirement Note |
+| --- | --- | --- |
+| 0086 | \`0086_treasury_stable_exposure_history.sql\` | Retired |
+
+## Known Anomalies
+`;
+    expect(validateManifestMigrationParity(["0000_baseline.sql"], squashedManifest)).toEqual({
+      activeManifestCount: 0,
+      retiredManifestCount: 1,
+    });
+    expect(() =>
+      validateManifestMigrationParity(["0000_baseline.sql", "0072_telegram_launch_alerts.sql"], squashedManifest),
+    ).toThrow(/squashed manifest rows still have checked-in migration files|missing from the active manifest table/);
+  });
+
   it("accepts one active manifest row per checked-in post-baseline migration", () => {
     expect(
       validateManifestMigrationParity(
