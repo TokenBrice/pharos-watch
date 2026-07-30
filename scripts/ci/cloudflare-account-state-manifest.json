@@ -61,7 +61,7 @@
    "selfHostedDomains": [
     "ops.pharos.watch/*"
    ],
-   "sessionDuration": "4h"
+   "sessionDuration": "12h"
   },
   {
    "key": "operator-api",
@@ -82,9 +82,9 @@
  "rateLimitRules": [
   {
    "description": "api-rate-limit-ip",
-   "enabled": true,
+   "enabled": false,
    "action": "block",
-   "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not (http.request.uri.path in {\"/api/telegram-webhook\" \"/api/telegram-mini-app/session\" \"/api/telegram-mini-app/mutate\"}) and not cf.bot_management.verified_bot)",
+   "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not cf.bot_management.verified_bot)",
    "ratelimit": {
     "characteristics": [
      "cf.colo.id",
