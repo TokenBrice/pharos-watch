@@ -40,7 +40,7 @@ const { syncSafetyScoreV9SupplyAttribution } =
 const JOURNAL_MIGRATION = readFileSync(
   join(
     process.cwd(),
-    "worker/migrations/0223_safety_score_v9_supply_attribution_journal.sql",
+    "worker/src/test-helpers/migration-fixtures/0223_safety_score_v9_supply_attribution_journal.sql",
   ),
   "utf8",
 );

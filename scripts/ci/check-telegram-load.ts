@@ -610,7 +610,9 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
 // Telegram migrations depend on shared Worker schema (for example effect
 // fencing depends on scheduler tables), so this fixture replays the same full
 // ordered stream as production instead of guessing dependencies by filename.
-const MIN_TELEGRAM_PLAN_MIGRATIONS = 120;
+// Since the 2026-07-30 squash the full schema lives in 0000_baseline.sql, so
+// the guard requires the baseline plus however many unsquashed migrations exist.
+const MIN_TELEGRAM_PLAN_MIGRATIONS = 1;
 
 function selectTelegramPlanMigrations(migrationsDir: string): string[] {
   // Mirrors getMigrationFiles() in check-worker-migrations.mjs, inlined to
@@ -623,6 +625,9 @@ function selectTelegramPlanMigrations(migrationsDir: string): string[] {
 function createTelegramPlanDatabase(migrationsDir = resolve("worker/migrations")): DatabaseSync {
   const db = new DatabaseSync(":memory:");
   const migrationFiles = selectTelegramPlanMigrations(migrationsDir);
+  if (!migrationFiles.includes("0000_baseline.sql")) {
+    throw new Error("Telegram plan replay requires worker/migrations/0000_baseline.sql.");
+  }
   if (migrationFiles.length < MIN_TELEGRAM_PLAN_MIGRATIONS) {
     throw new Error(
       `Expected at least ${MIN_TELEGRAM_PLAN_MIGRATIONS} Telegram plan migrations, found ${migrationFiles.length}. ` +

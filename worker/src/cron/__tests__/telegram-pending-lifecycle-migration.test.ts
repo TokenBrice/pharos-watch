@@ -4,7 +4,7 @@ import { fileURLToPath, URL as NodeUrl } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const MIGRATION_PATH = fileURLToPath(
-  new NodeUrl("../../../migrations/0189_telegram_pending_lifecycle_safety.sql", import.meta.url),
+  new NodeUrl("../../test-helpers/migration-fixtures/0189_telegram_pending_lifecycle_safety.sql", import.meta.url),
 );
 
 function setupPreMigrationSchema(): DatabaseSync {

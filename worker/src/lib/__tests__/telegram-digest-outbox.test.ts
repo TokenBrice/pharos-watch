@@ -36,12 +36,12 @@ interface StoredEdition {
 
 // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
 const migrationSql = readFileSync(
-  fileURLToPath(new NodeUrl("../../../migrations/0184_telegram_digest_outbox.sql", import.meta.url)),
+  fileURLToPath(new NodeUrl("../../test-helpers/migration-fixtures/0184_telegram_digest_outbox.sql", import.meta.url)),
   "utf8",
 );
 // eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
 const safetyIdentityMigrationSql = readFileSync(
-  fileURLToPath(new NodeUrl("../../../migrations/0221_telegram_digest_safety_identity.sql", import.meta.url)),
+  fileURLToPath(new NodeUrl("../../test-helpers/migration-fixtures/0221_telegram_digest_safety_identity.sql", import.meta.url)),
   "utf8",
 );
 const creds = { botToken: "bot-token", chatId: "channel-1" };
