@@ -14,11 +14,13 @@ describe("measured execution deployment registry", () => {
       "pancakeswap-v3-quoter-v2:bsc",
       "pancakeswap-v3-quoter-v2:ethereum",
       "uniswap-v3-quoter-v2:arbitrum",
+      "uniswap-v3-quoter-v2:celo",
       "uniswap-v3-quoter-v2:ethereum",
       "uniswap-v3-quoter-v2:polygon",
     ]);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "Ethereum")).toBe(true);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "CeLo")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("pancakeswap-v3-quoter-v2", "bsc")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("aerodrome-slipstream-quoter-v2", "base")).toBe(true);
@@ -26,12 +28,26 @@ describe("measured execution deployment registry", () => {
 
   it("keeps unratified deployments shadow-only fail-closed", () => {
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "linea")).toBe(false);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "bsc")).toBe(false);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "base")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("raydium", "solana")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("", "")).toBe(false);
   });
 
   it("keeps the retired Optimism Uniswap QuoterV2 lane unscheduled", () => {
     expect(getDexMeasuredExecutionDeployment("uniswap-v3-quoter-v2", "Optimism")).toBeNull();
+  });
+
+  it("pins the active Celo Uniswap V3 factory and QuoterV2 case-insensitively", () => {
+    expect(getDexMeasuredExecutionDeployment("UnIsWaP-V3-QuOtEr-V2", "CeLo")).toEqual({
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "celo",
+      endpointAddress: "0x82825d0554fa07f7fc52ab63c961f330fdefa8e8",
+      expectedCodeHash: "0x557b5bc80c7000c05bac66693aff2264927a0a22ea1f80d590449b52d515aa34",
+      factoryAddress: "0xafe208a311b21f13ef87e33a90049fc17a7acdec",
+      expectedFactoryCodeHash: "0x5960f2f785dd273f0eeb9624f32a9f93bd1560dc1335171d22411d48296d79b3",
+    });
   });
 
   it("pins the active Base Aerodrome Slipstream factory and QuoterV2", () => {

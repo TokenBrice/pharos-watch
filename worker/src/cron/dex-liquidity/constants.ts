@@ -57,6 +57,7 @@ export const UNIV3_SUBGRAPHS: Record<string, string> = {
   base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
   arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
   polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
+  celo: "ESdrTJ3twMwWVoQ1hUE2u7PugEHX3QkenudD6aXCkDQ4",
 };
 
 // The Graph caps `first` at 1000 per page; paginate via `skip` to reach pools

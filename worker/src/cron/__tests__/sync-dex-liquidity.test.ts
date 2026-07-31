@@ -213,6 +213,7 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 }));
 
 import { consumeDexLiquidityScoringStage, stageDexLiquidityScoring } from "../dex-liquidity/orchestrator";
+import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
@@ -876,6 +877,27 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(fetchDataSources).toHaveBeenCalledOnce();
     expect(fetchUniV3Data).toHaveBeenCalledOnce();
     expect(fetchAerodromeData).toHaveBeenCalledOnce();
+  });
+
+  it("stages the exact five-chain Uni V3 source family", async () => {
+    expect(Object.keys(UNIV3_SUBGRAPHS)).toEqual([
+      "ethereum",
+      "base",
+      "arbitrum",
+      "polygon",
+      "celo",
+    ]);
+
+    await runDexLiquidityScoringCycle(db, "graph-key");
+
+    expect(fetchUniV3Data).toHaveBeenCalledOnce();
+    const [graphApiKey, symbolToChainScopedIds, chainAddressToId, signal, references] =
+      vi.mocked(fetchUniV3Data).mock.calls[0]!;
+    expect(graphApiKey).toBe("graph-key");
+    expect(symbolToChainScopedIds).toBeInstanceOf(Map);
+    expect(chainAddressToId).toBeInstanceOf(Map);
+    expect(signal).toBeUndefined();
+    expect(references).toEqual(expect.any(Object));
   });
 
   it("passes scheduled chain RPCs into Fluid enrichment", async () => {

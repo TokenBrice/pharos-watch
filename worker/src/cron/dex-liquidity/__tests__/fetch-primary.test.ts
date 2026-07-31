@@ -36,7 +36,9 @@ import { CURVE_CHAINS } from "../constants";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
   CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
+  CURVE_R3_METAPOOL_POOL_IDENTITIES,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
+  shouldRetainCurveCompositePoolIdentity,
 } from "../../measured-execution/curve-composite-identities";
 
 function createMockDb(): D1Database {
@@ -454,6 +456,19 @@ describe("buildCurveLookups", () => {
         sourceFamily: "dl",
       }),
     ]);
+  });
+
+  it("retains every owner-ratified metapool physical identity and no address variants", () => {
+    expect(CURVE_R3_METAPOOL_POOL_IDENTITIES).toHaveLength(9);
+    for (const [chain, poolAddress] of CURVE_R3_METAPOOL_POOL_IDENTITIES) {
+      expect(shouldRetainCurveCompositePoolIdentity(chain, poolAddress)).toBe(true);
+      expect(
+        shouldRetainCurveCompositePoolIdentity(
+          chain,
+          `${poolAddress.slice(0, -1)}${poolAddress.endsWith("0") ? "1" : "0"}`,
+        ),
+      ).toBe(false);
+    }
   });
 
   it("retains extra physical coin identity only for reviewed composite Curve pools", async () => {

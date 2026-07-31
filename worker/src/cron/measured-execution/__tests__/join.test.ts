@@ -14,6 +14,12 @@ vi.mock("../curve-stableswap-ng", async () => {
   );
   return { ...actual, validateCurveStableSwapNgProfileProof: vi.fn(() => []) };
 });
+vi.mock("../curve-composite", async () => {
+  const actual = await vi.importActual<typeof import("../curve-composite")>(
+    "../curve-composite"
+  );
+  return { ...actual, validateCurveCompositeProfileProof: vi.fn(() => []) };
+});
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
@@ -40,6 +46,13 @@ import {
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
   encodeCurveStableSwapNgGetDy,
 } from "../curve-stableswap-ng";
+import {
+  CURVE_NXUSD_METAPOOL_POLICY,
+  CURVE_R3_METAPOOL_POLICIES,
+  CURVE_USD1_METAPOOL_POLICY,
+  encodeCurveCompositeQuote,
+  type CurveMetapoolPolicy,
+} from "../curve-composite";
 
 function curveStableSwapPacket() {
   const policy = CURVE_3POOL_STABLESWAP_POLICY;
@@ -191,6 +204,78 @@ function curveStableSwapNgRoute() {
   return { measuredTarget, profile };
 }
 
+function curveCompositeRoute(policy: CurveMetapoolPolicy) {
+  const poolId = `${policy.chain}:${policy.poolAddress}`;
+  const poolTokenAddresses = policy.executionTokens.map((token) => token.address);
+  const tokenInPolicy = policy.executionTokens[policy.inputIndex]!;
+  const tokenOutPolicy = policy.executionTokens[policy.outputIndex]!;
+  const base = {
+    schemaVersion: "dex-measured-target-v1" as const,
+    stablecoinId: policy.stablecoinId,
+    adapterProfileId: policy.adapterProfileId,
+    protocol: "curve",
+    chain: policy.chain,
+    poolId,
+    poolTokenAddresses,
+    tokenIn: {
+      ...tokenInPolicy,
+      trackedAssetId: policy.stablecoinId,
+      referencePriceUsd: 1,
+    },
+    tokenOut: {
+      ...tokenOutPolicy,
+      referencePriceUsd: 1,
+    },
+    retainedTvlUsd: 1_000_000,
+    retainedPoolPriceUsd: 1,
+    capturedAt: 1_000,
+  };
+  const measuredTarget: DexMeasuredExecutionTarget = {
+    ...base,
+    targetId: buildDexMeasuredExecutionTargetId({
+      adapterProfileId: base.adapterProfileId,
+      stablecoinId: base.stablecoinId,
+      chain: base.chain,
+      protocol: base.protocol,
+      poolId: base.poolId,
+      tokenInAddress: base.tokenIn.address,
+      tokenOutAddress: base.tokenOut.address,
+      poolTokenAddresses,
+    }),
+  };
+  const points = [1_000, 100_000, 1_000_000].map((inputUsd) => {
+    const amountInRaw = BigInt(inputUsd) * 10n ** BigInt(tokenInPolicy.decimals);
+    const outputUsd = inputUsd * 0.999;
+    const amountOutRaw = BigInt(Math.round(outputUsd * 10 ** tokenOutPolicy.decimals));
+    return {
+      amountInRaw: amountInRaw.toString(),
+      amountOutRaw: amountOutRaw.toString(),
+      callData: encodeCurveCompositeQuote({
+        policy,
+        inputIndex: policy.inputIndex,
+        outputIndex: policy.outputIndex,
+        amountInRaw,
+      }),
+      returnData: `0x${amountOutRaw.toString(16).padStart(64, "0")}` as `0x${string}`,
+      inputUsd,
+      outputUsd,
+      costBps: 10,
+      passesCostBound: true,
+    };
+  });
+  const profile = buildDexMeasuredExecutionProfile({
+    target: measuredTarget,
+    targetGenerationId: "curve-composite-target-generation",
+    quoteGenerationId: "curve-composite-quote-generation",
+    quotedAt: 1_060,
+    blockNumber: 25_601_359,
+    endpointAddress: policy.poolAddress,
+    endpointCodeHash: policy.expectedPoolCodeHash,
+    points,
+  });
+  return { measuredTarget, profile };
+}
+
 function target(chain: string = "ethereum"): DexMeasuredExecutionTarget {
   const input = {
     schemaVersion: "dex-measured-target-v1" as const,
@@ -286,6 +371,105 @@ function slipstreamTarget(): DexMeasuredExecutionTarget {
 }
 
 describe("measured execution join activation", () => {
+  it("makes all nine reviewed metapool quotes score eligible without an activation gate", () => {
+    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+      const { measuredTarget, profile } = curveCompositeRoute(policy);
+      const pool: PoolEntry = {
+        poolId: measuredTarget.poolId,
+        project: "curve",
+        chain: policy.chain,
+        tvlUsd: measuredTarget.retainedTvlUsd,
+        symbol: `${measuredTarget.tokenIn.symbol}-${measuredTarget.tokenOut.symbol}`,
+        volumeUsd1d: 10_000,
+        poolType: "curve-metapool",
+        source: "dl",
+        extra: { measuredExecutionTarget: measuredTarget },
+      };
+      const diagnostics = joinDexMeasuredExecutionEvidence({
+        poolsByStablecoin: new Map([[policy.stablecoinId, [pool]]]),
+        evidence: {
+          quoteGenerationId: "curve-composite-quote-generation",
+          targetGenerationId: "curve-composite-target-generation",
+          publishedAt: 1_060,
+          byTargetId: new Map([[
+            measuredTarget.targetId,
+            {
+              quotedTarget: measuredTarget,
+              status: "measured",
+              failureReason: null,
+              profile,
+              quoteGenerationId: "curve-composite-quote-generation",
+              targetGenerationId: "curve-composite-target-generation",
+              resolution: "latest",
+              latestFailureReason: null,
+            },
+          ]]),
+        },
+        nowSec: 1_060,
+      });
+
+      expect(pool.extra?.measuredExecution).toMatchObject({
+        targetId: measuredTarget.targetId,
+        adapterProfileId: policy.adapterProfileId,
+      });
+      expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+      expect(pool.extra?.measuredExecutionDiagnostic?.detail).not.toBe("activation-pending");
+      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
+    }
+  });
+
+  it("keeps the reviewed USD1 and NXUSD metapool adapters shadow-only", () => {
+    for (const policy of [CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY]) {
+      const { measuredTarget, profile } = curveCompositeRoute(policy);
+      const pool: PoolEntry = {
+        poolId: measuredTarget.poolId,
+        project: "curve",
+        chain: policy.chain,
+        tvlUsd: measuredTarget.retainedTvlUsd,
+        symbol: `${measuredTarget.tokenIn.symbol}-${measuredTarget.tokenOut.symbol}`,
+        volumeUsd1d: 10_000,
+        poolType: "curve-metapool",
+        source: "dl",
+        extra: { measuredExecutionTarget: measuredTarget },
+      };
+      const diagnostics = joinDexMeasuredExecutionEvidence({
+        poolsByStablecoin: new Map([[policy.stablecoinId, [pool]]]),
+        evidence: {
+          quoteGenerationId: "curve-composite-quote-generation",
+          targetGenerationId: "curve-composite-target-generation",
+          publishedAt: 1_060,
+          byTargetId: new Map([[
+            measuredTarget.targetId,
+            {
+              quotedTarget: measuredTarget,
+              status: "measured",
+              failureReason: null,
+              profile,
+              quoteGenerationId: "curve-composite-quote-generation",
+              targetGenerationId: "curve-composite-target-generation",
+              resolution: "latest",
+              latestFailureReason: null,
+            },
+          ]]),
+        },
+        nowSec: 1_060,
+      });
+
+      expect(pool.extra?.measuredExecution).toMatchObject({
+        targetId: measuredTarget.targetId,
+        adapterProfileId: policy.adapterProfileId,
+      });
+      expect(pool.extra?.executionCapabilityGate).toEqual({
+        family: "measured-execution",
+        reason: "activation-pending",
+      });
+      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toContain(
+        "shadow-score-ineligible",
+      );
+      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
+    }
+  });
+
   it("keeps an independent exact AMM fallback available after a quote failure", () => {
     const measuredTarget = target();
     const pool: PoolEntry = {

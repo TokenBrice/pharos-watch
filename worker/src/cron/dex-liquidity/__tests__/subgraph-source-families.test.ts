@@ -8,11 +8,15 @@ import {
   AERODROME_PAIR_PAGE_SIZE,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNIV3_POOL_PAGE_SIZE,
+  UNIV3_SUBGRAPHS,
   buildAerodromePairQuery,
   buildUniswapV4PoolQuery,
   buildUniV3PoolQuery,
 } from "../constants";
-import { buildUniswapV4ExecutionCandidateKey } from "../../measured-execution/inventory";
+import {
+  buildUniswapV4ExecutionCandidateKey,
+  buildUniV3ExecutionCandidateKey,
+} from "../../measured-execution/inventory";
 
 describe("subgraph source families", () => {
   afterEach(() => {
@@ -45,6 +49,67 @@ describe("subgraph source families", () => {
     expect(buildUniV3PoolQuery(0)).toContain(`first: ${UNIV3_POOL_PAGE_SIZE}`);
     expect(buildUniV3PoolQuery(0)).toContain("skip: 0");
     expect(buildUniV3PoolQuery(2000)).toContain("skip: 2000");
+  });
+
+  it("queries all five Uni V3 chains and creates a Celo execution candidate", async () => {
+    const configuredChains = Object.entries(UNIV3_SUBGRAPHS);
+    expect(configuredChains.map(([chain]) => chain)).toEqual([
+      "ethereum",
+      "base",
+      "arbitrum",
+      "polygon",
+      "celo",
+    ]);
+
+    const token0 = "0x1111111111111111111111111111111111111111";
+    const token1 = "0x2222222222222222222222222222222222222222";
+    const poolAddress = "0x3333333333333333333333333333333333333333";
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      const matchedChain = configuredChains.find(([, subgraphId]) => url.endsWith(subgraphId))?.[0];
+      if (!matchedChain) {
+        throw new Error("Unexpected Uni V3 subgraph URL");
+      }
+      return new Response(
+        JSON.stringify({
+          data: {
+            pools: [
+              {
+                id: poolAddress,
+                token0: { id: token0, symbol: "USDC", decimals: "6" },
+                token1: { id: token1, symbol: "USDm", decimals: "18" },
+                feeTier: "3000",
+                totalValueLockedUSD: "1000000",
+                volumeUSD: "500000",
+                token0Price: "1",
+                token1Price: "1",
+                totalValueLockedToken0: "500000",
+                totalValueLockedToken1: "500000",
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchUniV3Data("graph-key", new Map(), new Map());
+
+    expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
+    expect(fetchMock.mock.calls.some(([input]) =>
+      String(input).endsWith(UNIV3_SUBGRAPHS.celo),
+    )).toBe(true);
+    expect(result.uniV3ExecutionCandidates.size).toBe(configuredChains.length);
+    const celoKey = buildUniV3ExecutionCandidateKey("celo", [token0, token1], 3000);
+    expect(celoKey).not.toBeNull();
+    expect(result.uniV3ExecutionCandidates.get(celoKey!)).toEqual([
+      expect.objectContaining({
+        chain: "celo",
+        poolAddress,
+        feePips: 3000,
+      }),
+    ]);
   });
 
   it("paginates the Aerodrome query by embedding the skip offset and page size", () => {
