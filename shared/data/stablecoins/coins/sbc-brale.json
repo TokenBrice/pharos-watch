@@ -436,8 +436,8 @@
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "observedAt": "2026-07-14",
-        "observedBlock": 24947752,
+        "observedAt": "2026-07-30",
+        "observedBlock": 25052523,
         "sources": [
           {
             "label": "Ethereum Classic SBC token",
@@ -446,9 +446,13 @@
           {
             "label": "Ethereum Classic RPC",
             "url": "https://etc.rivet.link"
+          },
+          {
+            "label": "Ethereum Classic etc-network RPC corroboration 2026-07-30",
+            "url": "https://geth-at.etc-network.info"
           }
         ],
-        "evidence": "At Ethereum Classic block 24947752, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA. The EIP-1967 implementation slot contained 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 and the admin slot was zero."
+        "evidence": "At Ethereum Classic block 24947752, hasRole(UPGRADER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true and eth_getCode for the authority returned 0x, confirming the current upgrade authority is the Brale EOA. The EIP-1967 implementation slot contained 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 and the admin slot was zero. Re-verified 2026-07-30 at Ethereum Classic block 25052523 on etc.rivet.link, corroborated by geth-at.etc-network.info: UPGRADER_ROLE still held by the Brale EOA, implementation still 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12, totalSupply 36,092.08 SBC (6 decimals)."
       },
       {
         "chain": "solana",

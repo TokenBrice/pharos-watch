@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
     "confidence": "verified",
     "sources": [
       {
@@ -28,11 +28,19 @@
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
       },
       {
+        "label": "FinChain FUSD reserve assets (token names, tokenization agents, fund ratings)",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/reserve-assets"
+      },
+      {
+        "label": "FinChain FUSD vendors (custodian, investment advisor, PoR providers, auditors)",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors"
+      },
+      {
         "label": "FinChain FUSD reserve dashboard",
         "url": "https://fusd.finchain.global/#reserves"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of FinChain FUSD reserves docs and reserve-assets page: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg), with a stated minimum 100% collateralization ratio. Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. Dashboard URL re-opened (SPA shell) and still presents as the real-time reserve-ratio surface linked from docs.",
+    "rationale": "Write-time re-open 2026-07-30 of the FinChain FUSD reserves, reserve-assets, and vendors docs: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg) under a stated minimum 100% collateralization ratio. The reserve-assets page names the tokenized share classes (TKUSD, CUMFU, FUIDL-AC), the tokenization agents (BC Technology (Hong Kong), Standard Chartered Bank (Hong Kong), Finloop Finance Technology Services), and BNY Mellon fund ratings (S&P AAAm, Moody's Aaa-mf, Fitch AAAmmf). Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. Dashboard URL re-opened (SPA shell, figures 'as of February 2026') and still presents as the real-time reserve-ratio surface linked from docs.",
     "compositionBasis": "FinChain named FUSD reserve-fund inventory",
     "scope": "full-composition",
     "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",
@@ -46,10 +54,14 @@
         "rationale": "The three products are identified, but their current allocations are not disclosed."
       }
     ],
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-30"
   },
   "custodyProfile": {
     "providers": [
+      {
+        "name": "Cactus Custody (a Matrixport Company)",
+        "role": "custodian"
+      },
       {
         "name": "Taikang Asset Management (Hong Kong) Company Limited",
         "role": "other",
@@ -69,16 +81,20 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
     "confidence": "verified",
     "sources": [
       {
         "label": "FinChain FUSD reserves",
         "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+      },
+      {
+        "label": "FinChain FUSD vendors (digital asset custody: Cactus Custody)",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors"
       }
     ],
-    "uncertainty": "FinChain names the fund managers and products but not the underlying custodians, current provider shares, segregation terms, bankruptcy-remoteness safeguards, or rehypothecation policy.",
+    "uncertainty": "The vendors page names Cactus Custody (a Matrixport Company) as digital asset custodian and the reserves pages name the three fund managers and tokenization agents, but not the funds' underlying sub-custodians, current provider shares, segregation terms, bankruptcy-remoteness safeguards, or rehypothecation policy.",
     "knownUnknownExposurePct": 100
   }
 }

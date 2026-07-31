@@ -17,17 +17,25 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T36 safety-v9 unknown-reduction w2 backing review",
     "confidence": "probable",
     "sources": [
       {
         "label": "Monerium financial information",
         "url": "https://monerium.com/financial-information/"
+      },
+      {
+        "label": "Monerium EURe MiCA white paper (notified 2026-01-09; covers Monerium EMT safeguarding framework incl. GBPe)",
+        "url": "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
+      },
+      {
+        "label": "ESMA interim MiCA EMT register - Monerium ehf (single EURe white paper notified; no GBPe white paper)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ],
-    "rationale": "Monerium states that e-money is safeguarded in segregated assets and names Arion Bank, LHV Bank, and State Street Global Advisors Europe as safeguarding providers. The page describes EURe holdings in a State Street liquidity fund but does not publish a GBP-specific composition or current allocation.",
-    "compositionBasis": "Monerium safeguarding and financial-information disclosure",
+    "rationale": "Re-verified 2026-07-30. Monerium states that e-money is safeguarded in segregated assets and names Arion Bank, LHV Bank, and State Street Global Advisors Europe as safeguarding providers, and its MiCA white paper states each EMT (it names GBPe among Monerium's EMTs) is backed 1:1 by same-currency funds held as deposits in segregated accounts with credit institutions or invested in qualifying high-quality liquid assets under MiCA Art. 54(b). The financial-information page describes EURe holdings in a State Street liquidity fund but publishes no GBP-specific composition, current allocation, or provider weights, and the ESMA register shows only the EURe white paper notified for Monerium, so no GBPe-specific composition disclosure exists to curate.",
+    "compositionBasis": "Monerium safeguarding and financial-information disclosure plus the MiCA white paper safeguarding framework",
     "scope": "selected-slices",
     "knownUnknownExposure": "The reviewed disclosure does not provide a GBPe-specific split between bank deposits, liquidity funds, or other permitted EMI reserve assets, nor current provider weights.",
     "knownUnknownExposurePct": 100,
@@ -60,17 +68,25 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T36 safety-v9 unknown-reduction w2 backing review",
     "confidence": "probable",
     "sources": [
       {
         "label": "Monerium financial information",
         "url": "https://monerium.com/financial-information/"
+      },
+      {
+        "label": "Monerium business terms of service (section 6 Safeguarding of Funds)",
+        "url": "https://monerium.com/policies/business-terms-of-service/"
+      },
+      {
+        "label": "Monerium EURe MiCA white paper (section D.3 statutory priority claim)",
+        "url": "https://monerium.com/whitepapers/eure-whitepaper.xhtml"
       }
     ],
-    "uncertainty": "Monerium describes segregated safeguarding accounts and names providers, but the public page does not disclose current GBPe provider shares, legal bankruptcy treatment, or rehypothecation terms."
+    "uncertainty": "Monerium's terms and MiCA white paper state that safeguarded funds sit in ring-fenced or separate accounts and that e-money holders enjoy the highest-priority claim against the bankruptcy estate under the Icelandic Bankruptcy Act No. 21/1991, with no creditor able to claim safeguarded funds; this statutory segregation supports a structured bankruptcy-remoteness reading. The public pages still do not disclose current GBPe provider shares or rehypothecation terms, so rehypothecation remains unknown."
   }
 }

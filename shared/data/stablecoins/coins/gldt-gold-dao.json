@@ -84,7 +84,7 @@
       "pct": 100,
       "risk": "low",
       "assetClass": "commodity-allocated",
-      "issuerOrObligor": "Gold DAO GLD NFT swap canister over physical gold bars held in Swiss vaults",
+      "issuerOrObligor": "Gold DAO GLD NFT swap canister over Bity Tokenisation SA gold certificates for physical bars held at Loomis Schweiz AG, Kloten",
       "riskFactors": [
         "custody",
         "market",
@@ -96,28 +96,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Codex post-wave-8 residual review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T44 unknown-reduction wave-2",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Gold DAO physical-gold redemption guide",
         "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
       },
       {
+        "label": "Gold DAO whitepaper — Gold Token (GLDT)",
+        "url": "https://docs.gold-dao.org/v/gold-dao-whitepaper/the-ecosystem/products/gold-token-gldt"
+      },
+      {
         "label": "DefiLlama RWA profile for GLDT",
         "url": "https://defillama.com/rwa/asset/GLDT"
       },
       {
-        "label": "Gold DAO whitepaper",
-        "url": "https://gldt.org/Gold_DAO.pdf"
+        "label": "Gold DAO KPMG vault audit reports",
+        "url": "https://docs.gold-dao.org/other/audit-reports"
+      },
+      {
+        "label": "ICRC API — GLDT ledger (read 2026-07-30)",
+        "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
       }
     ],
-    "rationale": "Re-derived 2026-07-28 from the current Gold DAO redemption guide: 100 GLDT represents one gram of gold and must be reverse-swapped through the GLDT Swap platform to reclaim a GLD NFT; the guide describes the NFT as the deed for a specific audited gold bar held in a Swiss vault. DefiLlama's independent RWA profile corroborates the 100:1 conversion, locked-GLD-NFT backing route, Swiss-vault custody, and physical-redemption sequence. The Gold DAO whitepaper describes the same mint-and-reverse-swap mechanism. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; this reserve classification does not establish that a GLDT holder has a direct legal claim on gold before completing the NFT swap and redemption process.",
-    "compositionBasis": "Current Gold DAO redemption documentation, independently corroborated by DefiLlama's GLDT RWA profile",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-derived 2026-07-30: the Gold DAO whitepaper fixes minting at exactly 100 GLDT per 1 g of GLD NFT locked in the swap canister, with reverse swaps burning GLDT to release the NFT, and the redemption guide confirms GLD NFTs are legal deeds for specific audited gold bars stored in Swiss vaults. DefiLlama's independent RWA profile corroborates the 100:1 backing and locked-GLD-NFT route, names Bity Tokenisation SA as the GLD NFT issuer, and cites the periodic KPMG factual-findings reports over gold held at Loomis Schweiz AG, Kloten (latest published report period 2025-09-30 covering 7.9 kg / 790 certificates; KPMG expressly frames these as agreed-upon procedures, not an assurance audit). The ICRC API read on 2026-07-30 binds the ledger's sole minting account to the Gold DAO swap canister 6f6ua-hqaaa-aaaar-qairq-cai (total supply 594,499.99 GLDT), so the locked-GLD-NFT swap is the only issuance path and the reviewed composition remains one aggregate 100% locked-gold-NFT category; this reserve classification does not establish that a GLDT holder has a direct legal claim on gold before completing the NFT swap and redemption process.",
+    "compositionBasis": "Gold DAO whitepaper and redemption documentation, independently corroborated by DefiLlama's GLDT RWA profile, the KPMG factual-findings vault reports, and the on-chain minting-account binding",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but current bar inventory, serial-level allocation, and custody-provider shares are not disclosed in the reviewed sources.",
+    "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but bar inventory beyond the 2025-09-30 KPMG factual-findings count, serial-level allocation, and per-bar custody shares are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -132,7 +140,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed Swiss vault operator holding the gold bars underlying GLD NFTs",
+        "name": "Loomis Schweiz AG, Kloten — Swiss vault operator holding the gold bars underlying GLD NFTs (named in the 2025-09 KPMG factual-findings report)",
         "role": "custodian",
         "jurisdiction": "Switzerland"
       },
@@ -144,8 +152,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice); Kimi T44 wave-2 refresh",
     "confidence": "manual-review",
     "sources": [
       {
@@ -155,9 +163,13 @@
       {
         "label": "Gold DAO",
         "url": "https://www.gold-dao.org/"
+      },
+      {
+        "label": "Gold DAO KPMG vault audit reports",
+        "url": "https://docs.gold-dao.org/other/audit-reports"
       }
     ],
-    "uncertainty": "GLD NFTs map to specific physical gold bars with serial-level certificates stored in Swiss vaults, supporting bar-level segregation, and the issuer describes recurring independent vault audits (KPMG per the proof-of-reserves entry). The current primary pages do not name the vault operator, insolvency treatment, or rehypothecation terms."
+    "uncertainty": "GLD NFTs map to specific physical gold bars with serial-level certificates, and the 2025-09 KPMG factual-findings report names Loomis Schweiz AG, Kloten as the vault operator holding 7.9 kg of gold for 790 certificates issued by Bity Tokenisation SA, supporting bar-level segregation; KPMG frames the reports as agreed-upon procedures rather than an assurance audit, and no report after 2025-09-30 is published as of 2026-07-30. The reviewed sources do not establish insolvency treatment or rehypothecation terms."
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

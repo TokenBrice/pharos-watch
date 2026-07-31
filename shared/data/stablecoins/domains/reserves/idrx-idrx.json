@@ -2,80 +2,192 @@
   "id": "idrx-idrx",
   "reserves": [
     {
-      "name": "IDR fiat reserves and government bonds",
-      "pct": 100,
+      "name": "USD deposits held in escrow at GHP Consulting Pte. Ltd.",
+      "pct": 37.67,
       "risk": "low",
-      "assetClass": "other",
-      "issuerOrObligor": "PT IDRX Indo Inovasi and undisclosed Indonesian financial institutions",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "legal",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "GHP Consulting Pte. Ltd. (escrow agent)",
+      "riskFactors": ["counterparty", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
+      "pct": 29.45,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "PT Bank Rakyat Indonesia (Persero) Tbk",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
+      "pct": 11.87,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "PT Indodax Nasional Indonesia",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
+      "pct": 9.97,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "PT Kharisma Catur Mandala",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
+      "pct": 7.91,
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "PT Pintu Kemana Saja",
+      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "IDR bank deposits at Bank Ina Perdana, Nobu Bank, and Bank Permata",
+      "pct": 3.13,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "PT Bank Ina Perdana Tbk; PT Bank Nationalnobu Tbk; PT Bank Permata Tbk",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi V9 unknown-reduction wave-2 T03",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "IDRX official website",
-        "url": "https://home.idrx.co/en/"
+        "label": "Reserve Transparency Report IDRX June 2026 (KAP Jojo Sunarjo & Rekan AUP, as of 2026-06-19)",
+        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20June%202026.pdf"
       },
       {
         "label": "IDRX transparency and audit documents",
         "url": "https://home.idrx.co/en/docs/"
-      },
-      {
-        "label": "IDRX mint request documentation",
-        "url": "https://docs.idrx.co/integration/processing-mint-idrx-requests"
       }
     ],
-    "rationale": "IDRX's current issuer materials state that each IDRX is backed 1:1 by Indonesian rupiah reserves and government bonds and describe regular independent audits. The public sources do not expose current weights between fiat and government bonds, named reserve institutions, or a current assurance artifact, so the envelope remains one aggregate basket. Write-time re-open 2026-07-28: IDRX transparency docs page still claims 1:1 IDR peg with third-party audits (document list JS-loaded); mint-request docs corroborate issuance flow. No extractable dated composition table in re-open \u2192 ku=100.",
-    "compositionBasis": "IDRX issuer reserve and minting disclosures; current asset-class weights undisclosed",
+    "rationale": "The June 2026 Reserve Transparency Report is an agreed-upon-procedures engagement (Report No. 00016/3.0408/AUP/99/1180-13/1/VI/2026) performed by KAP Jojo Sunarjo & Rekan (Registered Public Accountant licence 0444/KM.1/2013, XLNC founding member) over PT IDRX Indo Inovasi's Reserve Account Report as of June 19, 2026 at 13:00 WIB. It reports Rp12,639,968,180 of collateral against 12,618,760,039 IDRX in circulation (about 100.17% coverage), itemized as USD deposits in escrow at GHP Consulting Pte. Ltd. ($267,127; Rp4,761,805,902), PT Bank Rakyat Indonesia Rp3,722,163,381, Indodax Rp1,500,179,369, Duitku Rp1,260,417,351, PINTU Rp999,852,469, PT Bank Ina Perdana Rp369,006,340, PT Bank Nationalnobu (Nobu Bank) Rp25,536,025, and PT Bank Permata Rp1,007,343. Institution-level balances normalize to the slice weights shown. The report contains no government-bond holdings; composition is entirely IDR/USD fiat balances at the named institutions. The AUP is not an audit or assurance opinion under Indonesian Institute of CPAs standards, which the accountant states explicitly.",
+    "compositionBasis": "KAP Jojo Sunarjo & Rekan agreed-upon-procedures Reserve Account Report as of 2026-06-19, institution-level balances",
+    "compositionAsOf": "2026-06-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the broad reserve categories but does not publish current fiat-versus-government-bond weights, security holdings, bank providers, maturities, or custody safeguards.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The AUP names every institution and reports institution-level balances, but it is not an assurance opinion; it does not establish account segregation, bankruptcy remoteness, or maturity detail beyond demand balances, and the escrow's underlying USD depository institution at GHP Consulting is not named.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "IDR fiat reserves and government bonds",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "IDRX identifies fiat and government-bond backing but does not publish a defensible current split or constituent list."
+        "reserveName": "USD deposits held in escrow at GHP Consulting Pte. Ltd.",
+        "pct": 37.67,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD deposits held in escrow are exogenous fiat reserve assets rather than tracked stablecoins."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "IDR bank deposits at PT Bank Rakyat Indonesia (Persero) Tbk",
+        "pct": 29.45,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "IDR bank deposits are exogenous fiat reserve assets rather than tracked stablecoins."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "IDR balance held at Indodax (PT Indodax Nasional Indonesia)",
+        "pct": 11.87,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The IDR balance at Indodax is an exogenous fiat reserve asset rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "IDR balance held at Duitku (PT Kharisma Catur Mandala)",
+        "pct": 9.97,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The IDR balance at Duitku is an exogenous fiat reserve asset rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "IDR balance held at PINTU (PT Pintu Kemana Saja)",
+        "pct": 7.91,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The IDR balance at PINTU is an exogenous fiat reserve asset rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "IDR bank deposits at Bank Ina Perdana, Nobu Bank, and Bank Permata",
+        "pct": 3.13,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "IDR bank deposits are exogenous fiat reserve assets rather than tracked stablecoins."
       }
-    ],
-    "compositionAsOf": "2026-07-28"
+    ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed Indonesian financial institutions",
+        "name": "GHP Consulting Pte. Ltd. (escrow agent)",
+        "role": "other",
+        "sharePct": 37.67,
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "PT Bank Rakyat Indonesia (Persero) Tbk",
         "role": "bank",
+        "sharePct": 29.45,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Indodax Nasional Indonesia",
+        "role": "other",
+        "sharePct": 11.87,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Kharisma Catur Mandala (Duitku)",
+        "role": "other",
+        "sharePct": 9.97,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Pintu Kemana Saja (PINTU)",
+        "role": "other",
+        "sharePct": 7.91,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Bank Ina Perdana Tbk",
+        "role": "bank",
+        "sharePct": 2.92,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Bank Nationalnobu Tbk (Nobu Bank)",
+        "role": "bank",
+        "sharePct": 0.2,
+        "jurisdiction": "Indonesia"
+      },
+      {
+        "name": "PT Bank Permata Tbk",
+        "role": "bank",
+        "sharePct": 0.01,
         "jurisdiction": "Indonesia"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi V9 unknown-reduction wave-2 T03",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "IDRX official website",
-        "url": "https://home.idrx.co/en/"
+        "label": "Reserve Transparency Report IDRX June 2026 (KAP Jojo Sunarjo & Rekan AUP, as of 2026-06-19)",
+        "url": "https://storage.googleapis.com/idrx-uploaded-docs/Reserve%20Transparency%20Report%20IDRX%20June%202026.pdf"
       },
       {
         "label": "IDRX transparency and audit documents",
         "url": "https://home.idrx.co/en/docs/"
       }
     ],
-    "uncertainty": "IDRX says reserves are held at transparent financial institutions and audited regularly, but the reviewed public pages do not identify the institutions or establish segregation, bankruptcy remoteness, and rehypothecation safeguards."
+    "uncertainty": "The June 2026 AUP names every reserve institution with institution-level balances and describes USD deposits held in escrow at GHP Consulting Pte. Ltd., but it does not establish account segregation, bankruptcy remoteness, rehypothecation limits, or the legal form of the balances held at Indodax, Duitku, and PINTU."
   }
 }

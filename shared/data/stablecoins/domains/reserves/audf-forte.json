@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
     "confidence": "probable",
     "sources": [
       {
@@ -26,12 +26,20 @@
         "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
       },
       {
+        "label": "Forte AUD transparency page",
+        "url": "https://www.forteaud.com/transparency"
+      },
+      {
         "label": "Forte AUD product site",
         "url": "https://www.forteaud.com/"
+      },
+      {
+        "label": "Forte AUD Terms of Use December 2024",
+        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
       }
     ],
-    "rationale": "MVAB Assurance audited Forte Securities Australia's AUDF reserve bank account as a single AUD cash balance of AUD 4,132,465.51 against AUD 4,125,000 of issued AUDF at 31 December 2025. The report establishes a complete 100% bank-deposit composition; it does not name the bank or disclose account-level terms. Write-time re-open 2026-07-28: MVAB PDF still reports single AUD reserve bank cash $4,132,465.51 vs 4,125,000 AUDF at 31 Dec 2025; Forte site still states AUDF fully backed/redeemable for AUD with published third-party reserve audits.",
-    "compositionBasis": "MVAB independent audit of the AUDF reserve bank-account cash balance",
+    "rationale": "Re-opened 2026-07-30: full-text re-read of the MVAB Assurance independent auditor's report on the AUDF Reserves Report as at 31 December 2025 11:59pm AEDT. Management asserts AUD 4,125,000 total AUDF issued (Ethereum 3,960,000 + Polygon 165,000; Avalanche nil) against AUD 4,132,465.51 cash in a single Australian-dollar reserve bank account; MVAB opines that cash balance is prepared in all material respects under the stated accounting policies (signed Melbourne 8 January 2026). Notes state AUD reserves are owned/managed by Forte Securities Australia Pty Ltd, segregated from operational funds, and unencumbered. No other reserve asset classes are disclosed. No newer monthly PDF was verified beyond the December 2025 report. Bank identity remains undisclosed.",
+    "compositionBasis": "MVAB independent audit of the AUDF reserve bank-account cash balance as of 2025-12-31",
     "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset class is identified as an AUD bank-account cash balance. The bank identity, provider concentration, and account terms remain undisclosed custody details.",
@@ -57,15 +65,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
     "confidence": "probable",
     "sources": [
       {
         "label": "MVAB Assurance AUDF Reserves Report - December 2025",
         "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
+      },
+      {
+        "label": "Forte AUD Terms of Use December 2024",
+        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
       }
     ],
-    "uncertainty": "The audited report identifies one segregated, unencumbered AUDF reserve bank account but does not name the bank, establish statutory bankruptcy remoteness, or state whether the cash may be rehypothecated."
+    "uncertainty": "Management and MVAB describe one segregated, unencumbered AUDF reserve bank account in Australia but do not name the bank, disclose provider allocations, establish statutory bankruptcy remoteness or trust status for token holders, or state anti-rehypothecation / successor-custody terms. Binding terms deny holders a security interest or trust/fiduciary claim on reserves."
   }
 }

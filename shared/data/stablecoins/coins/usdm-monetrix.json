@@ -16,6 +16,30 @@
   "collateral": "USDC at mint, then deployed into Monetrix's on-chain Hyperliquid delta-neutral portfolio including spot assets, matching short perpetual positions, portfolio-margin slots, and vault or redeem-escrow USDC. Liquid USDM is the base dollar receipt; strategy yield accrues only via the separate sUSDM wrapper.",
   "pegMechanism": "USDM targets 1:1 USDC convertibility through Monetrix mint/redeem flows while backing is deployed into a delta-neutral Hyperliquid portfolio. The sUSDM staking wrapper accrues strategy yield separately and is not admitted as an active Pharos stablecoin until a maintained price and market-cap runtime source exists.",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
+    "rationale": "Re-opened 2026-07-30: Monetrix documents USDM minted 1:1 by depositing USDC into MonetrixVault, with backing deployed into a long-spot (BTC, ETH, HYPE) plus short-perpetual delta-neutral portfolio on Hyperliquid earning funding, spot-lending, maker-rebate, and HLP yield; redemption returns USDC 1:1 after a governance-set cooldown (currently 3 days). The live collateral API confirms a spot-plus-margin backing breakdown rather than idle USDC. This is a synthetic delta-neutral stabilization and claim structure, not a fiat custodial, CDP, or tbill design. Classification clears NR eligibility only; it does not assert the mechanism is safe.",
+    "sources": [
+      {
+        "label": "Monetrix delta-neutral strategy documentation",
+        "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+      },
+      {
+        "label": "Monetrix mint USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "Monetrix redeem USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/redeem"
+      },
+      {
+        "label": "Monetrix collateral API",
+        "url": "https://api.monetrix.xyz/data/api/collateral"
+      }
+    ]
+  },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "USDM is minted and redeemed 1:1 against USDC while Monetrix deploys backing into a delta-neutral Hyperliquid strategy; it has no user-owned collateral debt or token-level liquidation branch. The reviewed docs do not identify a public strategy price feed or failover path.",
@@ -93,11 +117,24 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "USDM is backed by USDC, so blacklistability resolves through the upstream Circle collateral dependency rather than a separate Pharos override.",
-    "evidence": "USDM's declared reserve dependency is USDC. Pharos therefore treats the asset as inheriting upstream freeze and blacklist exposure from Circle's USDC collateral.",
-    "reviewer": "Codex issue #454 review",
-    "reviewedAt": "2026-07-08"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "USDM implementation on HyperEVM explorer",
+        "url": "https://hyperevmscan.io/address/0x05faf9cfa7143804e7fb0db423fde8330cd586df"
+      },
+      {
+        "label": "Monetrix audits and contracts",
+        "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+      },
+      {
+        "label": "Monetrix mint USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      }
+    ],
+    "evidence": "Re-verified 2026-07-30: the live USDM implementation ABI on HyperEVM (0x05faf9cfa7143804e7fb0db423fde8330cd586df behind proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377) exposes pause(), unpause(), paused(), and OpenZeppelin EnforcedPause/ExpectedPause errors with Paused/Unpaused events, so a MonetrixAccessController role can halt all USDM transfers; reach is token-wide rather than per-address. The ABI shows no per-address blacklist, freeze, or seize function, and mint is restricted to MonetrixVault (NotVault). Pause authority and UUPS upgrades route through the central ACL whose UPGRADER sits behind the reviewed 48-hour timelock (0xDe54E1F99752062ef448Dcc6C7636f90214C789e), so transfer logic can change after a 48-hour delay. USDM is additionally backed by USDC at mint, so holders retain inherited upstream Circle freeze exposure on the collateral. The failure domain is the Monetrix protocol operator/governance on HyperEVM.",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

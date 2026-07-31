@@ -171,38 +171,39 @@
       "decimals": 8
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Frax documentation",
-        "url": "https://docs.frax.finance/"
-      },
-      {
-        "label": "FRAX Ethereum deployment",
-        "url": "https://etherscan.io/address/0x853d955acef822db058eb8505911ed77f175b99e#code"
-      },
-      {
-        "label": "FRAX Ethereum verified contract API",
+        "label": "FRAX Ethereum verified source (Blockscout)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x853d955acef822db058eb8505911ed77f175b99e"
       },
       {
-        "label": "Fraxtal WFRAX proxy",
-        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002?tab=contract"
+        "label": "Ethereum public RPC observation block",
+        "url": "https://etherscan.io/block/25648138"
       },
       {
-        "label": "Fraxtal verified ProxyAdmin implementation",
-        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000009?tab=contract"
+        "label": "CrossChainCanonical source (frax-solidity)",
+        "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonical.sol"
       },
       {
-        "label": "Fraxtal public RPC",
-        "url": "https://rpc.frax.com"
+        "label": "Sourcify verified Polygon zkEVM FRAX (material CrossChainCanonical)",
+        "url": "https://sourcify.dev/server/v2/contract/1101/0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d?fields=all"
+      },
+      {
+        "label": "FraxFerry / cross-chain docs",
+        "url": "https://docs.frax.finance/cross-chain/bridge"
+      },
+      {
+        "label": "Fraxtal WFRAX predeploy (distinct gas-token wrapper; sub-material for FRAX stablecoin)",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002"
       }
     ],
-    "evidence": "Re-verified at Fraxtal block 38969254 on 2026-07-22: the tracked WFRAX proxy 0xfc00000000000000000000000000000000000002 stored implementation 0x1af97083ddb4fb40aad9644bacc8ef9edcf595d4 and admin 0xfc0000000000000000000000000000000000000a. That admin proxy stored verified ProxyAdmin implementation 0xfc00000000000000000000000000000000000009, whose owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6; its verified source exposes owner-only upgrade and upgradeAndCall. The current WFRAX implementation did not expose a working paused() view, while the owner can replace it and introduce holder-level transfer restrictions. This is an explicit possible upgrade-control finding, not a claim that every FRAX deployment or the current code exposes an active global freeze or blacklist.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "2026-07-30 re-review of holder freeze/blacklist posture for legacy FRAX. Material chain supply (≥10% share) is Ethereum (~60.6%) and Polygon zkEVM (~27.7%). At Ethereum block 25648138, FRAXStablecoin 0x853d955acef822db058eb8505911ed77f175b99e has zero EIP-1967 implementation and admin slots (immutable non-proxy). Verified ABI/source exposes transfer/transferFrom without blacklist, freeze, pause, seize, or isBlacklisted; pool_burn_from is restricted to registered AMO pools (mint domain), not a holder-selective freeze path. Polygon zkEVM material deployment 0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d is CrossChainCanonical (ERC20Permit + Owned): at the same review window EIP-1967 slots were zero; source exposes minter_mint / self minter_burn and exchangesPaused for bridge-token swaps only — no holder blacklist or arbitrary burnFrom of third-party balances. Sub-material Fraxtal predeploy 0xfc00…0002 is WFRAX (wrapped Fraxtal gas token / ex-FXS lineage), not the L1 FRAX stablecoin claim, and is outside the freeze fact for this asset. Conclusion: no direct holder freeze/blacklist on material FRAX stablecoin deployments; canBeBlacklisted=false.",
+    "upstreamSuppressionRationale": "Balance-sheet holdings such as frxUSD, USDC, USDS, BUIDL, and other freezable or issuer-controlled reserve assets can impair claim value or redemption liquidity if those upstream tokens are frozen, but none of those issuers has a direct holder freeze, blacklist, or transfer-restriction path on material FRAX stablecoin deployments. Those exposures remain reserve-quality and dependency risks, not FRAX token blacklistability.",
+    "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

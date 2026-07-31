@@ -560,61 +560,88 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Hamilton Lane SCOPE fund exposure",
+      "name": "Hamilton Lane SCOPE Securitize Tokenized Feeder LP interest (Main Fund NAV)",
       "pct": 100,
       "risk": "high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Hamilton Lane Senior Credit Opportunities Fund (SCOPE) and its underlying private-credit borrowers",
+      "issuerOrObligor": "Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (Delaware) investing into Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg); underlying private-credit borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
         "market",
         "custody",
         "counterparty",
-        "concentration"
+        "concentration",
+        "legal"
       ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T04 safety-v9 unknown-reduction w2 2026-07-30",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Securitize HLSCOPE fund page",
-        "url": "https://securitize.io/primary-market/hl-scope"
+        "label": "SEC Form D/A — Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (CIK 0001976710; filed 2025-08-01)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
       },
       {
-        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "label": "Hamilton Lane SCOPE SA SICAV-RAIF private placement memorandum (December 2025)",
+        "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US"
+      },
+      {
+        "label": "Hamilton Lane SCOPE Global Monthly Report (June 2026)",
+        "url": "https://www.hamiltonlane.com/getContentAsset/106530b1-f11a-4ad0-b56d-b19b3861b165/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/SCOPE-Global-Monthly-Report-June-2026.pdf?language=en-US"
+      },
+      {
+        "label": "Hamilton Lane SCOPE strategy page (monthly valuation cadence)",
+        "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+      },
+      {
+        "label": "Hamilton Lane / Securitize HLSCOPE launch (tokenized feeder structure)",
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      },
+      {
+        "label": "Securitize HLSCOPE primary-market page",
+        "url": "https://securitize.io/primary-market/hl-scope"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Hamilton Lane SCOPE via Securitize announcement: SCOPE is a senior private credit vehicle targeting floating-rate senior secured loans; HLSCOPE is the tokenized feeder exposure. Securitize primary-market page for hl-scope still resolves. Neither surface publishes current loan-level holdings or NAV weights, so the envelope remains 100% Hamilton Lane SCOPE fund-share with knownUnknownExposurePct=100.",
-    "compositionBasis": "Securitize and Hamilton Lane SCOPE fund strategy disclosures; position-level holdings are undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Write-time re-open 2026-07-30. SEC Form D/A (filed 2025-08-01) identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP as a Delaware limited partnership pooled investment fund offered under Rule 506(c) and Investment Company Act Section 3(c)(7), with Securitize Capital, LLC as general partner. Hamilton Lane's December 2025 Main Fund PPM identifies Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg reserved AIF) as the vehicle that holds the private-credit portfolio, with monthly NAV, limited monthly redemptions subject to a 5% quarterly gate, and permission to hold cash/money-market instruments for liquidity. The June 2026 Main Fund monthly report states ~$2.67B fund total assets, 99% first-lien senior secured / 1% junior debt security-type mix, 100% floating-rate, 42% company-level LTV, moderate fund-level leverage, and 400+ issuers across 50+ sponsors — but those figures describe the Main Fund loan book, not a measured feeder-level cash-versus-fund-share split. HLSCOPE remains a single 100% fund-share envelope (feeder LP interest whose economic exposure is Main Fund NAV). Loan-level weights, maturities, and the current cash/liquidity sleeve size are not published as dated feeder or Main Fund balance-sheet percentages, so knownUnknownExposurePct stays 100.",
+    "compositionBasis": "SEC Form D feeder identity; Hamilton Lane Main Fund PPM (structure and liquidity rules); June 2026 Main Fund monthly report (strategy-level portfolio construction). No loan-level or cash-sleeve percentage split for HLSCOPE.",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, maturities, and current funded-versus-cash allocation are not published in the reviewed public sources.",
+    "knownUnknownExposure": "HLSCOPE does not publish a dated feeder balance sheet. The Main Fund reports strategy-level security-type, geography, and industry mixes and a top-10 name list, but not current percentage weights for cash/money-market holdings versus funded loans, per-obligor share outside the top 10, or maturity ladders usable as a reserve split.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Hamilton Lane SCOPE fund exposure",
+        "reserveName": "Hamilton Lane SCOPE Securitize Tokenized Feeder LP interest (Main Fund NAV)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies the SCOPE strategy but does not publish current loan-level or cash weights, so the envelope cannot be split without fabrication."
+        "rationale": "Public materials establish a feeder-to-Main-Fund structure and a predominantly first-lien senior secured private-credit strategy, but do not publish current loan-level, cash-sleeve, or feeder-versus-master allocation weights that could be split without fabrication."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Hamilton Lane (fund manager) underlying fund custodian",
+        "name": "Brown Brothers Harriman (Luxembourg) S.C.A. (Main Fund AIFMD depositary and administrative agent)",
         "role": "custodian",
+        "jurisdiction": "Luxembourg"
+      },
+      {
+        "name": "FundRock LIS S.A. (Main Fund external AIFM)",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
+      },
+      {
+        "name": "Hamilton Lane Advisors, L.L.C. (Main Fund portfolio manager)",
+        "role": "other",
         "jurisdiction": "United States"
       },
       {
-        "name": "Securitize (tokenization platform and transfer agent)",
+        "name": "Securitize Capital, LLC (feeder general partner) and Securitize (tokenization / transfer-agent rails)",
         "role": "other",
         "jurisdiction": "United States"
       }
@@ -622,20 +649,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T04 safety-v9 unknown-reduction w2 2026-07-30",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Securitize HLSCOPE fund page",
-        "url": "https://securitize.io/primary-market/hl-scope"
+        "label": "Hamilton Lane SCOPE SA SICAV-RAIF private placement memorandum (December 2025) — BBH depositary",
+        "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US"
       },
       {
-        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "label": "SEC Form D/A — Hamilton Lane SCOPE Securitize Tokenized Feeder, LP",
+        "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
+      },
+      {
+        "label": "Hamilton Lane / Securitize HLSCOPE launch",
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
       }
     ],
-    "uncertainty": "HLSCOPE is a feeder-fund interest: fund assets sit with the underlying Hamilton Lane fund's custodian under a fund structure that is bankruptcy-remote from the tokenization entity by design, but the reviewed materials do not name the custodian or publish account-level segregation and reuse terms.",
+    "uncertainty": "Main Fund assets are held under an AIFMD depositary appointment to Brown Brothers Harriman (Luxembourg) S.C.A. with safekeeping and cash-flow monitoring duties, supporting structural bankruptcy remoteness of the Luxembourg SICAV-RAIF from Securitize's tokenization stack. Private-credit loans that cannot be held in custody are subject to depositary ownership verification rather than traditional safekeeping. The Delaware feeder's custodian of Main Fund shares, feeder-level account segregation, and reuse/rehypothecation terms are not published in the reviewed public materials.",
     "knownUnknownExposurePct": 100
   },
   "yieldConfig": {

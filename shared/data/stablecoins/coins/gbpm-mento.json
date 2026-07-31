@@ -147,26 +147,46 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Mento V3 stablecoin documentation",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
       {
-        "label": "GBPm Celo token deployment",
-        "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746?tab=contract"
+        "label": "GBPm Celo proxy and implementation (Blockscout verified)",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xccf663b1ff11028f0b19058d0f7b674004a40746"
       },
       {
-        "label": "GBPm Monad token deployment",
-        "url": "https://monad.blockscout.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1?tab=contract"
+        "label": "Mento StableTokenV3 source (burn/account and operator paths)",
+        "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenV3.sol"
+      },
+      {
+        "label": "Mento StableTokenSpoke source (Monad spoke path)",
+        "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenSpoke.sol"
+      },
+      {
+        "label": "GBPm Monad control reads",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "GBPm Celo control reads",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Mento Safe authority",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+      },
+      {
+        "label": "Mento stablecoin availability documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: two tracked GBPm deployments are identified, but the reviewed issuer materials and deployment references do not establish a complete holder-level blacklist or freeze inventory across both deployments.",
-    "evidence": "GBPm is a Mento stablecoin with Celo and Monad deployments. The reviewed primary sources establish the token and deployment scope but do not prove a deployment-wide holder-control function; inherited reserve exposure remains unresolved at the access layer.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30 23:16:46 UTC. On Celo block 73552648, GBPm proxy 0xccf663b1ff11028f0b19058d0f7b674004a40746 resolves via EIP-1967 to verified StableTokenV3 0x815795c30d0758a297b08cd4e0643620c974c318 and owner() is the Mento 4-of-6 Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. The verified implementation has owner-gated setBurner/setOperator; its live TroveManager 0xb38aEf2bF4e34B997330D626EBCd7629De3885C9 and StabilityPool 0x06346c0fAB682dBde9f245D2D84677592E8aaa15 both return isBurner=true, and StabilityPool isOperator=true. Therefore those contracts can call burn(address,uint256) or sendToPool(sender,...) against an arbitrary GBPm holder without allowance: direct individual-holder intervention is Yes. The Monad proxy 0x39bb4e0a204412bb98e821d25e7d955e69d40fd1 at block 91758657 resolves to StableTokenSpoke 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e, whose source exposes only self-burn burn(uint256); its current isBurner reads for the Celo CDP contracts are false. The Celo path controls the asset-level verdict. USDm/cusd-celo reserve exposure remains an inherited upstream failure domain (asset:cusd-celo), separate from the direct burner/operator reach.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

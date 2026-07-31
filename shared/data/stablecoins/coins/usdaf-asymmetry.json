@@ -527,8 +527,9 @@
       }
     ]
   },
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Asymmetry USDaf overview",
@@ -540,28 +541,29 @@
       },
       {
         "label": "Ethereum USDaf BoldToken verified source and ABI",
-        "url": "https://eth.blockscout.com/address/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?tab=contract"
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8"
       },
       {
         "label": "Pinned USDaf V2 BoldToken source",
         "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/BoldToken.sol"
       },
       {
-        "label": "Asymmetry USDaf transparency statistics",
-        "url": "https://app.asymmetry.finance/api/stats"
+        "label": "Asymmetry USDaf documentation",
+        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
       },
       {
-        "label": "Archived Asymmetry Finance website snapshot",
-        "url": "https://web.archive.org/web/20260307073239/https://www.asymmetry.finance/"
+        "label": "Asymmetry Terms of Service",
+        "url": "https://docs.asymmetry.finance/legal/terms-of-service"
       },
       {
-        "label": "Ethereum PublicNode fixed-block reads",
+        "label": "Ethereum PublicNode control reads",
         "url": "https://ethereum.publicnode.com"
       }
     ],
-    "evidence": "At Ethereum block 25534889, the sole tracked USDaf BoldToken 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 had owner() = zero and zero EIP-1967 implementation, admin, and beacon slots. Its verified ABI has no pause, unpause, blacklist, freeze, or address-flag function; those selector probes reverted, while unprivileged zero-value transfer and transferFrom calls returned true. Exact verified BoldToken source limits transfer and transferFrom only by rejecting the zero address and the token itself, not a mutable holder list. Owner-only branch-registration functions cannot be reached after ownership renunciation. The issuer Terms can restrict Website access but state that Asymmetry has no control over distributed-ledger transactions, and do not identify an on-chain USDaf holder-control function. This is direct-token evidence only: reserve-linked upstream exposure remains unsuppressed and is not asserted absent.",
+    "evidence": "Re-derived 2026-07-30 23:16:47 UTC at Ethereum block 25648895. The sole tracked USDaf BoldToken 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 has owner() = zero and zero EIP-1967 implementation/admin/beacon slots. The current verified Blockscout source and pinned BoldToken source expose no pause, freeze, holder blacklist, seizure, or arbitrary-holder burn; transfer and transferFrom zero-value calls from nonzero callers returned true. BoldToken does contain a fixed recipient guard rejecting transfers to core Liquity contracts, but it is not a mutable holder denylist. Asymmetry's current docs/terms describe the protocol and disclaim control over distributed-ledger transactions. Reserve-linked failure domains remain separately inherited from ysyBOLD, scrvUSD, sUSDS, sfrxUSD, tBTC, and wBTC (asset: bold-liquity, scrvusd-curve, susds-sky, sfrxusd-frax, Threshold/tBTC custodians, and WBTC custodians), not USDaf holder transfers.",
     "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "reviewedAt": "2026-07-31",
+    "upstreamSuppressionRationale": "The explicit No verdict is limited to USDaf holder-balance transfers. Its reserve-linked upstream assets and custodians remain separate backing/dependency failure domains and are not asserted freeze-free."
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",

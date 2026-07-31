@@ -104,25 +104,35 @@
     }
   ],
   "deploymentModel": "native-multichain",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Mento V3 smart contracts",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        "label": "Mento EURm token proxy on Celo",
+        "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+      },
+      {
+        "label": "EURm StableTokenV3 implementation (Blockscout verified)",
+        "url": "https://celo.blockscout.com/address/0x815795c30d0758a297b08cd4e0643620c974c318?tab=contract"
+      },
+      {
+        "label": "Mento StableTokenV3 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV3.sol"
+      },
+      {
+        "label": "Safe Transaction Service - Celo (EURm token owner Safe)",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
       },
       {
         "label": "Mento V3 deployment addresses",
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-      },
-      {
-        "label": "Celo EURm contract",
-        "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
       }
     ],
-    "evidence": "Mento's official deployment and contract materials identify EURm's Celo token, Mento Broker minter, and Mento governance controls. The reviewed materials do not establish a direct holder-balance blacklist on EURm; inherited exposure is retained through the EURm/Upstream dependency path resolved by the dashboard.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "Explicit true: a live authorized burner (the Mento Broker) can directly burn an arbitrary holder balance, and the owner Safe can authorize further burners or operators that move holder balances without allowance. This direct freeze/blacklist-equivalent capability is distinct from the transfer-review lane and does not suppress the upstream reserve-basket exposure.",
+    "evidence": "Write-time re-read at Celo block 73546760 (2026-07-30): the EURm proxy 0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73 resolves to the Blockscout-verified StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318 and owner() returned the Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (Safe API at write time: threshold 4, 6 owners). isBurner(0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true: the Mento Broker is a live burner and can call burn(address account, uint256 value) against an arbitrary holder balance without allowance. The verified source also exposes owner-gated setBurner(address,bool) and setOperator(address,bool); an enabled operator can sendToPool(sender,pool,amount) from an arbitrary holder. The observed burner uses constrained protocol paths, but the owner Safe can authorize another burner or operator. This establishes a current direct individual-holder intervention capability even though the ABI has no named blacklist, freeze, or pause function. Same implementation and verdict as the reviewed chfm-mento precedent.",
+    "reviewer": "Kimi T42 unknown-reduction wave-2",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

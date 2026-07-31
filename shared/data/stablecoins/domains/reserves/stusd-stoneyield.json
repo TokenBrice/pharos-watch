@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T12 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -33,9 +33,9 @@
         "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
       }
     ],
-    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules. Write-time re-open 2026-07-28: StoneYield contract-design and yield-generation pages still describe USDC deposit flow StakeableAsset\u2192StrategyRouter\u2192VenuSTUSDVault\u2192Venus; 100% USDC/protocol-position envelope retained.",
+    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules. Write-time re-open 2026-07-30: StoneYield contract-design and yield-generation pages still describe the USDC deposit flow StakeableAsset\u2192StrategyRouter\u2192VenuSTUSDVault\u2192Venus with a 7% protocol fee, and the public contract repository still lists StrategyRouter 0x563f48aAD50a75Ef3662827a4d536dbd46aBb5a2 and VenusUSDCVault 0x375Defe9293671a4459CF7206Ac6f440d0Eb0970 as the reserve path; 100% USDC/protocol-position envelope retained. No audit report, proof-of-reserves, or third-party attestation over the reserve path is published (stoneyield.io claims 'Audited BSC contracts' without naming an auditor or report), so the latest assurance scope remains issuer documentation plus verified on-chain contract sources only.",
     "compositionBasis": "Current StoneYield contract-design and yield-generation documentation",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented StrategyRouter and Venus path. Current vUSDC balances, allocation weights, and any later strategy-module allocation are not published as a durable composition.",
     "knownUnknownExposurePct": 0

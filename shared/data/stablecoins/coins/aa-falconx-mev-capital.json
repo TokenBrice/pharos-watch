@@ -11,16 +11,17 @@
     "rwa": true,
     "navToken": true
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Pareto live credit vaults",
-        "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+        "label": "IdleCDOTranche.sol (pinned commit)",
+        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDOTranche.sol"
       },
       {
-        "label": "Pareto credit-vault audits",
-        "url": "https://docs.pareto.credit/developers/security/audits"
+        "label": "IdleCDO.sol _withdrawOps (pinned commit)",
+        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDO.sol"
       },
       {
         "label": "Ethereum AA_FalconXUSDC verified source",
@@ -31,29 +32,17 @@
         "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
       },
       {
-        "label": "Ethereum IdleCDOEpochVariant verified implementation",
-        "url": "https://eth.blockscout.com/address/0xdd596250f838af8862d30e9c78a143356894a18d"
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       },
       {
-        "label": "Idle Finance tranche source (pinned commit)",
-        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDOTranche.sol"
-      },
-      {
-        "label": "Idle Finance epoch CDO source (pinned commit)",
-        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDOEpochVariant.sol"
-      },
-      {
-        "label": "Archived Pareto live credit-vault documentation",
-        "url": "https://web.archive.org/web/20250621200444/https://docs.pareto.credit/product/credit-vaults/live-vaults"
-      },
-      {
-        "label": "Ethereum PublicNode fixed-block RPC",
-        "url": "https://ethereum.publicnode.com"
+        "label": "Pareto live credit vaults",
+        "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
       }
     ],
-    "evidence": "At Ethereum block 25535156 on 2026-07-15, the verified non-proxy IdleCDOTranche 0xc26a6fa2c37b38e549a4a1807543801db684f99c returned IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d as minter and had zero EIP-1967 implementation, admin, and beacon slots. Its direct transfer and transferFrom paths are ordinary ERC-20 code with no pause, blacklist, freeze, transfer hook, or privileged holder-burn function. The minter is a transparent proxy whose current IdleCDOEpochVariant implementation pauses and permission-checks vault operations, but its _withdrawOps helper always calls tranche.burn(msg.sender, amount), including the borrower-only writeOffDeposit route; it cannot currently burn an arbitrary tranche holder or stop a direct share transfer. The minter's separate pause and mint authority do not prove an existing holder-control function. Issuer product, audit, GitHub, archive, legal-route, and transparency review supplied no additional direct transfer-control claim or independent PoR attestation. The tranche has no direct holder-control path in this review, but the overall status remains inherited because its USDC exposure is not suppressed.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648410. Sole tracked deployment AA_FalconXUSDC 0xc26a6fa2c37b38e549a4a1807543801db684f99c is non-proxy (EIP-1967 implementation slot zero). minter() returns IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d. Runtime bytecode includes burn(address,uint256) and mint but no transfer blacklist/pause/freeze selectors. Pinned IdleCDOTranche.sol exposes burn(account, amount) gated only by msg.sender == minter, which destroys that account's balance without holder authorization—a live holder-selective seize surface controlled by the minter. The minter is a transparent proxy to IdleCDOEpochVariant 0xdd596250f838af8862d30e9c78a143356894a18d; paused() returned true at the observation block. Parent IdleCDO._withdrawOps currently burns only msg.sender, but the token-level minter privilege remains an unconditional burn-any-holder capability and the CDO is upgradeable. Controlling authority: IdleCDO minter/admin over the tranche token. Failure domain: contract:ethereum:0xc26a6fa2c37b38e549a4a1807543801db684f99c plus upgradeable minter 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d. USDC reserve freezes remain additional upstream exposure via variantOf usdc-circle.",
+    "reviewer": "Grok T49 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",

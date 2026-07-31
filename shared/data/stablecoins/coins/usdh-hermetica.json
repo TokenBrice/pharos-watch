@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; BTC margin reserves custodied off-exchange via Copper (Clearloop) and Ceffu (MirrorX) institutional settlement providers, with monthly custodian attestations of assets, liabilities and reserve coverage",
+  "collateral": "Dual yield-engine backing: BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges (delta-neutral), plus STRC digital-credit exposure added in 2026 (Saturn USDat route with Galaxy execution and Clear Street custody, and tokenized STRCx via Backed Assets/Kraken); BTC margin reserves custodied off-exchange via Copper (Clearloop) and Ceffu (MirrorX), with monthly custodian attestations of assets, liabilities and reserve coverage",
   "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
   "mechanismArchetype": "synthetic-delta-neutral",
   "implementationLaunchDate": "2024-09-19",
@@ -97,48 +97,124 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "BTC spot + short BTC perpetual futures (delta-neutral)",
-      "pct": 100,
+      "name": "Ethereum Settlement Wallet (contents not itemized in attestation)",
+      "pct": 89.4,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hermetica protocol Ethereum settlement wallet; documented STRC routes include Saturn USDat (Galaxy execution, Clear Street custody) and STRCx (Backed Assets (JE) Limited via Kraken xStocks)",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Stacks Redeeming Reserve (contents not itemized in attestation)",
+      "pct": 4,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Hermetica protocol redemption-liquidity wallet on Stacks",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Reserve Fund - USDC portion",
+      "pct": 3.9,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, LLC (USDC held in the Hermetica Reserve Fund)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Copper (Clearloop) off-exchange BTC margin",
+      "pct": 2.2,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Hermetica protocol, BTC custodians, and perpetual-futures counterparties",
+      "issuerOrObligor": "Copper Clearloop off-exchange settlement and perpetual-futures counterparties",
       "riskFactors": [
         "market",
         "basis",
         "counterparty",
-        "custody",
-        "liquidity"
+        "custody"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Reserve Fund - USDh portion (circular, protocol's own token)",
+      "pct": 0.5,
+      "risk": "high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Hermetica protocol (Reserve Fund holds its own USDh)",
+      "riskFactors": [
+        "concentration",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hermetica USDh backing mechanism",
-        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing-mechanism"
+        "label": "Hermetica June 2026 custodian attestation",
+        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-june-2026"
       },
       {
-        "label": "Hermetica December 2025 custodian attestation",
-        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-december-2025"
+        "label": "Hermetica USDh backing design",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+      },
+      {
+        "label": "Hermetica STRCx backing-asset integration disclosure",
+        "url": "https://www.blog.hermetica.fi/p/strcx-direct-tokenized-strc-exposure-for-usdh"
+      },
+      {
+        "label": "Hermetica STRC second yield engine disclosure",
+        "url": "https://blog.hermetica.fi/p/strc-the-second-yield-engine-for-usdh"
       }
     ],
-    "rationale": "Hermetica states that USDh is backed by BTC and uses equal short BTC perpetual futures positions to make the reserve delta-neutral. Its monthly custodian attestations identify Copper and Ceffu settlement solutions and report aggregate backing assets and liabilities, but do not disclose the current spot BTC, hedge, or counterparty allocation. Write-time re-open 2026-07-28: Hermetica how-it-works docs still state USDh is Bitcoin + short perpetual hedge (delta-neutral synthetic dollar); overview corroborates. Live hedge-venue weights / margin not dual-published \u2192 ku=100.",
-    "compositionBasis": "Hermetica backing documentation and December 2025 custodian attestation",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Write-time re-open 2026-07-30 of the June 2026 custodian attestation (snapshot 2026-06-30 17:00 UTC): USDh supply $2,465,576.78 against total backing assets $2,576,981.22 (103.92% coverage), split Ethereum Settlement Wallet $2,303,829.94 (89.4%), Stacks Redeeming Reserve $101,765.77 (4.0%), Reserve Fund $114,244.22 (4.4%: USDC $100,148.12 = 3.9% and USDh $14,096.10 = 0.5%), Copper $57,141.30 (2.2%), Ceffu $0.00, Mint Wallet $0.00. Slice weights are computed from these attested figures. Since the March 2026 snapshot the Ceffu balance went to zero and most backing moved to the Ethereum Settlement Wallet, whose contents the attestation does not itemize; Hermetica's April and July 2026 disclosures document new STRC digital-credit backing routes (Saturn USDat with Galaxy execution and Clear Street custody; tokenized STRCx issued by Backed Assets (JE) Limited via Kraken xStocks) that settle on Ethereum. The Reserve Fund's USDh portion is a circular exposure to the protocol's own token. Hermetica's backing docs still describe the delta-neutral BTC basis hedge and Copper/Ceffu off-exchange custody design.",
+    "compositionBasis": "Hermetica June 2026 custodian attestation (2026-06-30 17:00 UTC snapshot) with venue weights computed from attested figures",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The public attestation reports aggregate assets and liabilities but not current spot BTC, short-futures, exchange-counterparty, or custodian weights.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The attestation reports venue-level totals but does not itemize the contents of the Ethereum Settlement Wallet (89.4%) or the Stacks Redeeming Reserve (4.0%), including the current spot BTC, short-futures, STRC-route, and stablecoin shares or venue-level counterparty weights.",
+    "knownUnknownExposurePct": 93.4,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "BTC spot + short BTC perpetual futures (delta-neutral)",
-        "pct": 100,
+        "reserveName": "Ethereum Settlement Wallet (contents not itemized in attestation)",
+        "pct": 89.4,
         "disposition": "basket-needs-split",
-        "rationale": "Official sources establish the delta-neutral BTC design but do not publish the live allocation among collateral and hedge venues."
+        "rationale": "The June 2026 attestation reports a single aggregate for the Ethereum Settlement Wallet; Hermetica's STRC/STRCx disclosures document the routes but not the live allocation among BTC basis margin, STRC credit exposure, and settlement stables."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Stacks Redeeming Reserve (contents not itemized in attestation)",
+        "pct": 4,
+        "disposition": "basket-needs-split",
+        "rationale": "The attestation reports the redemption-liquidity wallet total without itemizing its token contents."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Reserve Fund - USDh portion (circular, protocol's own token)",
+        "pct": 0.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Reserve Fund holds the protocol's own USDh; this circular self-exposure is not a tracked third-party stablecoin dependency."
       }
     ]
   },
@@ -149,27 +225,35 @@
         "role": "custodian"
       },
       {
-        "name": "Ceffu (off-exchange settlement)",
+        "name": "Ceffu (off-exchange settlement; zero balance at the June 2026 attestation)",
         "role": "custodian"
+      },
+      {
+        "name": "Hermetica Ethereum Settlement Wallet (STRC routes via Clear Street prime brokerage and Backed Assets (JE) Limited / Kraken xStocks)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T42 unknown-reduction wave-2 2026-07-30",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Hermetica USDh backing mechanism",
-        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing-mechanism"
+        "label": "Hermetica June 2026 custodian attestation",
+        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-june-2026"
       },
       {
-        "label": "Hermetica December 2025 custodian attestation",
-        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-december-2025"
+        "label": "Hermetica USDh backing design",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+      },
+      {
+        "label": "Hermetica STRC second yield engine disclosure",
+        "url": "https://blog.hermetica.fi/p/strc-the-second-yield-engine-for-usdh"
       }
     ],
-    "uncertainty": "Hermetica's monthly custodian attestations identify Copper and Ceffu settlement solutions holding BTC margin off-exchange, but do not publish per-custodian shares, account-level segregation, or insolvency terms; collateral is actively deployed as futures margin, so reuse within the delta-neutral strategy is inherent.",
+    "uncertainty": "Hermetica's monthly custodian attestations identify the venue-level allocation (Copper, Ceffu, Stacks Redeeming Reserve, Ethereum Settlement Wallet, Reserve Fund) but do not publish per-venue contents, account-level segregation, or insolvency terms; the STRC disclosures name Galaxy (execution) and Clear Street (custody) for the Saturn USDat route and Backed Assets (JE) Limited/Kraken for STRCx without disclosing shares; collateral is actively deployed as futures margin and credit exposure, so reuse within the strategy is inherent.",
     "knownUnknownExposurePct": 100
   },
   "proofOfReserves": {

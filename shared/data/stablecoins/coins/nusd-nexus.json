@@ -108,8 +108,12 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Synapse documentation",
-        "url": "https://docs.synapseprotocol.com/"
+        "label": "Synapse LPToken source (no freeze, blacklist, or transfer pause)",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/amm/LPToken.sol"
+      },
+      {
+        "label": "SynapseERC20 source (MINTER_ROLE mint and burn only; no holder controls)",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
       },
       {
         "label": "NUSD LPToken deployment",
@@ -118,12 +122,16 @@
       {
         "label": "Synapse nexus pool deployment",
         "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: the reviewed Synapse documentation and Ethereum deployments identify the legacy NUSD pool token and its DAI, USDC, and USDT upstream exposure, but do not establish a complete holder-level blacklist or freeze inventory for the token and legacy bridge routes.",
-    "evidence": "NUSD inherits upstream freeze exposure because the modeled reserve basket references DAI, USDC, and USDT stablecoin liquidity. The pool token and canonical Ethereum pool are identified, but no deployment-wide holder-control path is asserted without additional route evidence.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "Deployment-wide inventory completed: every reviewed NUSD deployment is either the canonical Ethereum nexus-pool LPToken clone or a SynapseERC20 bridge deployment, and neither token implementation exposes holder freeze, denylist, or transfer-pause controls.",
+    "evidence": "At Ethereum block 25648538 on 2026-07-30, eth_getCode confirmed the canonical NUSD token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remains the fixed EIP-1167 clone of LPToken implementation 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, and the nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 remains the fixed clone of SwapFlashLoan implementation 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. Verified LPToken source exposes only pool-owner mint, burn, and a self-transfer guard, with no blacklist, freeze, or pausable transfer path; verified SynapseERC20 source for the twelve peripheral bridge deployments exposes only MINTER_ROLE mint and standard burn, again with no holder-level controls. The SwapFlashLoan admin (2-of-3 Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55) can pause deposits, swaps, and single-asset withdrawals but cannot freeze or restrict NUSD token transfers, and neither clone is upgradeable. NUSD's categorical exposure is therefore inherited: the nexus pool holds DAI, USDC, and USDT, and the USDC and USDT issuers can freeze the pool-held upstream balances (DAI has no issuer freeze), which can trap or impair the reserve rather than censor NUSD transfers directly.",
+    "reviewer": "Kimi Safety Score V9 access review T60",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",

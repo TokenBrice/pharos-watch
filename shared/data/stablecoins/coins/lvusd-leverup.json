@@ -80,18 +80,26 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
+        "label": "Monad public RPC (lvUSD token reads)",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Monad lvUSD token contract",
+        "url": "https://monadexplorer.com/address/0xfd44b35139ae53fff7d8f2a9869c503d987f00d1"
+      },
+      {
+        "label": "LeverUp lvUSD documentation",
         "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
       }
     ],
-    "evidence": "lvUSD is tied to a managed perpetuals liquidity layer on a new chain; available sources do not prove a direct blacklist function, but admin and protocol-control risk remain unresolved.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "2026-07-30 on-chain re-review of the sole tracked Monad deployment 0xfd44b35139ae53fff7d8f2a9869c503d987f00d1 at block 91734906. Token is a non-proxy contract (EIP-1967 implementation/admin slots zero; runtime code ~4170 bytes). Resolved selectors include blackList(address) public mapping, updateBlackList(address,bool) (reverts \"only operator\" for non-operators), setOperator(address) (Ownable: only owner), transfer/transferFrom, mint, burn/burnFrom, owner, and issuer — no separate pause() selector. At observation: owner()=issuer()=VMMV engine 0x135951057cfccca7e8ef87ee41318d670f723f68 (itself owned by 3/5 Safe 0xf9bd99a8e5be72adf687b304ed0e0234e0ebccba per mintAuthority), operator()=0x0 so no active blacklister is appointed, and blackList(sample addresses)=false. eth_call transfer from Safe succeeds for a non-blacklisted holder, so ordinary transfers are unrestricted until an operator sets blackList. Owner can appoint an operator and thereby enable holder freezes; that is a direct token-level blacklist surface (reviewedStatus true). Failure domain: LeverUp owner/operator path on Monad. Upstream Circle USDC collateral freeze remains a separate inherited reserve exposure and is not the lvUSD token control path.",
+    "reviewer": "Grok T34 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

@@ -194,9 +194,9 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Re Protocol smart contract addresses",
@@ -225,11 +225,35 @@
       {
         "label": "Archived Re Protocol historical documentation",
         "url": "https://web.archive.org/web/20260512212054/https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+      },
+      {
+        "label": "Tempo TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "reUSD TIP-20 on Tempo explorer",
+        "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000e09a4cfec804f102"
+      },
+      {
+        "label": "reUSD TIP-20 TokenCreated transaction (Tempo block 12906370)",
+        "url": "https://explore.tempo.xyz/tx/0xa88b8859d2d574ba7f05c3686e0d5f23896bcd80e8eab92305cf709623d035cb"
+      },
+      {
+        "label": "reUSD Ethereum ShareToken implementation (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb5276c436f65913cd5332de745d04fedeb4a21d4?fields=sources,abi"
+      },
+      {
+        "label": "reUSD Katana ShareToken implementation (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/747474/0xc84110aa47171452bacc2b6ca08ff2d862cbf968?fields=sources,abi"
+      },
+      {
+        "label": "Tempo RPC",
+        "url": "https://rpc.tempo.xyz"
       }
     ],
-    "evidence": "On 2026-07-15, the issuer deployment inventory and verified implementation or ABI review across the tracked Ethereum, Avalanche, Arbitrum, Base, BNB Chain, and Ink proxies found ShareToken implementations with MINTER_ROLE-gated burn(address user, uint256 amount), which burns an arbitrary supplied holder balance without an allowance. At Ethereum block 25534130 (0x1859eb2), role administration and UUPS upgrades resolved through a 172800-second timelock, while observed minter contracts used constrained protocol paths. No deployed ShareToken ABI exposed a named holder blacklist, freeze, pause, or transfer-hook restriction; issuer terms and disclosure establish KYC-gated product and redemption access but do not prove a standalone self-custody transfer freeze. This is a direct, timelock-mediated holder-intervention surface, so Possible is retained rather than asserting an immediate token blacklist.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "On 2026-07-30 the full nine-chain deployment inventory was re-derived. At Ethereum block 25648350 the reUSD proxy still resolves to ShareToken implementation 0xb5276c436F65913Cd5332DE745d04feDEb4a21D4, whose Sourcify-verified ABI exposes only role-gated mint/burn with no holder blacklist, freeze, pause, or transfer hook; the Arbitrum, Base, and BNB Chain implementations are Sourcify-verified with the identical ShareToken function set, the Katana implementation 0xc84110aa47171452bacc2b6ca08ff2d862cbf968 is Sourcify-verified with the same set, and the Avalanche, Ink, Plasma, and Katana proxies all revert on blacklist(address) and paused() selector probes. The decisive surface is the Tempo TIP-20 reUSD 0x20c000000000000000000000e09a4cfec804f102: the TIP20Factory TokenCreated event at Tempo block 12906370 granted DEFAULT_ADMIN_ROLE to governance Safe 0x8eec10616802Ef639CA55c98ac856553fAdEfBaD, RoleMembershipUpdated logs show that Safe additionally holds PAUSE_ROLE and UNPAUSE_ROLE with no revocations through Tempo block 32484367, and getThreshold() = 3 confirms the Safe is live on Tempo. Under the TIP-20 specification, DEFAULT_ADMIN_ROLE can immediately set the built-in always-reject policy or any TIP-403 blocklist policy via changeTransferPolicyId, and PAUSE_ROLE can halt all transfers; the current paused() = false and transferPolicyId() = 1 (always-allow) are settings, not bounds on reach. A live 3-of-5 Safe can therefore freeze or policy-block reUSD holders on Tempo today, so the asset-level direct holder-intervention posture is reviewed true (individual reach), superseding the 2026-07-15 possible.",
+    "reviewer": "Kimi T38 unknown-reduction wave 2",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

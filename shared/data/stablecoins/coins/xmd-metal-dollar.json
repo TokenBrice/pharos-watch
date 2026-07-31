@@ -116,13 +116,29 @@
     "reviewedStatus": "possible",
     "sources": [
       {
+        "label": "XPR Network explorer - xmd.token",
+        "url": "https://explorer.xprnetwork.org/account/xmd.token"
+      },
+      {
+        "label": "XPR Network explorer - xmd.treasury",
+        "url": "https://explorer.xprnetwork.org/account/xmd.treasury"
+      },
+      {
+        "label": "XPR Network explorer - swapscold",
+        "url": "https://explorer.xprnetwork.org/account/swapscold"
+      },
+      {
+        "label": "XPR Network public API (get_abi / get_table_rows / get_account)",
+        "url": "https://proton.eosusa.io/v1/chain/get_abi"
+      },
+      {
         "label": "Docs",
         "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
       }
     ],
-    "evidence": "XMD runs on an unsupported non-EVM network and is backed by freezable centralized stablecoins; available Pharos sources do not prove a direct holder blacklist path on the XMD token itself.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "On-chain reads on 2026-07-30 via the public XPR Network Antelope API (head block 395509206): the XMD token contract xmd.token exposes a standard eosio.token ABI (close, create, issue, open, retire, transfer) with only accounts/stat tables, so no freeze, blacklist, or per-account hold path exists on XMD itself. Reach of issuer controls: the xmd.treasury contract (actions settoken/removetoken/setglobals) can pause mint and redemption globally (xmdglobals.isPaused, currently 0) or per basket asset (tokens.isPaused) — a mint/redemption gate, not a transfer freeze. Inherited exposure: (1) basket constituent MPD's contract mpd.token has a pausempd action enabling a global MPD transfer pause (currently is_paused 0); (2) the XUSDC/XPYUSD/XPAX basket assets are xtokens bridge wrappers whose upstream USDC (Circle) and PYUSD/USDP (Paxos) tokens are issuer-blacklistable on their native chains, so the bridge reserves and bridged redemption flows inherit upstream freeze reach; (3) XPR Network is an Antelope chain where block producers can apply protocol-level account blacklists. Controlling authority: owner/active permissions of xmd.token, xmd.treasury, xtokens, and mpd.token all resolve on-chain to swapscold, a 2-of-4 Metallicus operator multisig (metalcfo, swapsledger2, swapsledger3, swapsledger4). Failure domains: xpr-network:swapscold (pause and contract-control domain) plus Circle and Paxos upstream blacklist reach over the underlying basket reserves.",
+    "reviewer": "Pharos access research agent (unknown-reduction wave 2, T09)",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

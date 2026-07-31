@@ -368,33 +368,33 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Maker Dai Module documentation",
-        "url": "https://docs.makerdao.com/smart-contract-modules/dai-module"
+        "label": "Sky DSS Dai source (canonical Ethereum token)",
+        "url": "https://github.com/sky-ecosystem/dss/blob/master/src/dai.sol"
       },
       {
-        "label": "MakerDAO DSS Dai token source",
-        "url": "https://github.com/makerdao/dss/blob/master/src/dai.sol"
+        "label": "Blockscout verified Ethereum DAI source",
+        "url": "https://eth.blockscout.com/address/0x6b175474e89094c44da98b954eedeac495271d0f?tab=contract"
       },
       {
-        "label": "Etherscan DAI contract",
-        "url": "https://etherscan.io/token/0x6b175474e89094c44da98b954eedeac495271d0f"
+        "label": "Sourcify verified Polygon Dai proxy",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063?fields=all"
       },
       {
-        "label": "Polygon Blockscout verified DAI child proxy",
-        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063"
+        "label": "Sourcify verified Polygon UChildDAI implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=all"
       },
       {
-        "label": "Polygon Blockscout verified UChildDAI implementation",
-        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x490e379C9cFF64944bE82b849F8FD5972C7999A7"
+        "label": "Polygon public RPC (proxyOwner and transfer-surface reads at block 91165918)",
+        "url": "https://polygon-bor-rpc.publicnode.com"
       },
       {
-        "label": "Polygon archive JSON-RPC pinned read at block 90651088",
-        "url": "https://polygon.drpc.org"
+        "label": "Sky DAI module documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/dai/"
       }
     ],
-    "evidence": "Re-verified 2026-07-22 across both material deployments. MakerDAO's canonical Ethereum Dai source exposes authorized minting plus ordinary ERC-20 transfer, burn, approval, permit, push, pull, and move operations, with no holder blacklist, freeze, seizure, or global transfer-pause function. At Polygon block 90651088, the 11.60%-of-asset child DAI proxy resolved to verified UChildDAI implementation 0x490e379C9cFF64944bE82b849F8FD5972C7999A7; proxyOwner() was the burned 0x0000000000000000000000000000000000000001, DEFAULT_ADMIN_ROLE had zero members, and the sole DEPOSITOR_ROLE member was Polygon's ChildChainManagerProxy 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa. The verified implementation has bridge deposit/withdraw plus ordinary token operations but no holder freeze, blacklist, or seizure surface; paused() and isBlacklisted(address) reverted. DAI still inherits censorship and custody exposure through reserve assets, PSMs, RWA structures, and bridge controls, which remain separate from this direct holder-balance finding.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-07-31 across the canonical Ethereum deployment and material Polygon child deployment. The verified Sky DSS Dai source and Blockscout contract expose ordinary ERC-20 transfer/transferFrom/approval/permit/push/pull/move plus privileged mint/burn wards, with no holder blacklist, freeze, seizure, or global transfer-pause path. At Polygon block 91165918, the DAI child proxy 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 returned proxyOwner() = 0x0000000000000000000000000000000000000001; the Sourcify-verified UChildDAI implementation 0x490e379c9cff64944be82b849f8fd5972c7999a7 exposes bridge deposit/withdraw and ordinary ERC-20 operations but no pause, blacklist, or holder seizure surface (paused()/isBlacklisted() revert). Direct holder balances are therefore permissionless on both material deployments. DAI nevertheless inherits censorship/custody exposure from reserve legs (including USDC/USDT PSM assets, RWA custodians, and bridge custody), while the Polygon ChildChainManagerProxy remains a bridge failure domain; those upstream controls do not create a direct DAI holder freeze function.",
+    "reviewer": "Codex T46 access re-verification",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

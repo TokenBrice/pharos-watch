@@ -126,17 +126,17 @@
         "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/wallet/wallet2.cpp#L1975-L2059"
       },
       {
-        "label": "Zephyr Explorer block 819289",
-        "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+        "label": "Zephyr Explorer current block 830885",
+        "url": "https://explorer.zephyrprotocol.com/api/block/830885"
       },
       {
         "label": "Zephyr reserve snapshot",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "evidence": "Reviewed on 2026-07-15 against official Zephyr v2.3.0 source commit 67c5f53 and native-chain Explorer state. ZSD is a native Zephyr asset, not an issuer-deployed production EVM token. Same-asset ZSD sends map to STABLE_TRANSFER; the reviewed consensus paths expose no address blacklist, holder freeze, seize, privileged burn, or current issuer/admin transfer-pause path. Wallet-RPC freeze marks only a locally held transfer/key image in that wallet's m_transfers state, while daemon set_bans concerns P2P hosts or subnets. At height 819289, block 386f59b9b27984fc4d476d89e1142f0b3189987e2da245eace0268e5fe50cc19, the network was at HF11 and the official reserve snapshot corroborated that height. The 2025 audit hardfork previously restricted normal network transactions and invalidated legacy asset types, but this was a historical consensus-wide migration rather than a current account-targeted issuer control. No direct blacklistability established.",
+    "evidence": "Write-time re-open 2026-07-31 against official Zephyr documentation, v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, and native-chain Explorer block 830885 (2026-07-30 23:15:13 UTC). ZSD is one of four native Zephyr asset types; the official docs list the EVM bridge as testnet-only, so no production wrapper exposure is identified. Same-asset ZSD sends map to STABLE_TRANSFER in cryptonote_tx_utils.cpp; the reviewed consensus and wallet paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer/admin transfer-pause path. wallet2.cpp freeze() only marks a locally held transfer/key image, while daemon bans are host/subnet controls. The failure domain is Zephyr chain consensus and its oracle inputs, not a token-level issuer. No direct blacklistability established.",
     "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",

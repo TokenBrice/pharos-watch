@@ -1261,26 +1261,35 @@
       "decimals": 8
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Last USDXL documentation",
-        "url": "https://www.last.net/"
+        "label": "UpgradeableUsdxlToken.sol (pinned usdxl-core commit)",
+        "url": "https://github.com/lastdotnet/usdxl-core/blob/d733c4b388b21b0f210cca2e3a85403b9351cdf2/src/contracts/usdxl/UpgradeableUsdxlToken.sol"
       },
       {
-        "label": "USDXL HyperEVM token deployment",
+        "label": "UpgradeableERC20.sol (usdxl-core main)",
+        "url": "https://github.com/lastdotnet/usdxl-core/blob/main/src/contracts/usdxl/UpgradeableERC20.sol"
+      },
+      {
+        "label": "USDXL HyperEVM token proxy (Blockscout)",
         "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645?tab=contract"
       },
       {
-        "label": "USDXL Hyperliquid deployment",
-        "url": "https://hypurrscan.io/address/0xf448c3cad413cdf0feb1746d7b057967"
+        "label": "HyperEVM JSON-RPC",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "HypurrFi USDXL docs",
+        "url": "https://docs.hypurrfi.com/products/usdxl"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: USDXL's tracked HyperEVM and Hyperliquid deployments and inherited USDT0 exposure are identified, but a complete holder-level blacklist or freeze inventory is not established across both routes.",
-    "evidence": "The reviewed Last/HypurrFi materials and deployment references establish USDXL's two tracked routes and inherited USDT0 exposure. They do not prove deployment-wide holder-control behavior, so no direct blacklist status is asserted.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At HyperEVM block 41877329, USDXL proxy 0xca79db4b… EIP-1967 implementation = 0xce233555… and admin = Safe 0xf050623d…. Live bytecode of the implementation contains no pause/blacklist/freeze selectors or strings. UpgradeableUsdxlToken is GHO-style: mint/burn are facilitator-bucket operations (burn burns msg.sender only); UpgradeableERC20 transfer/transferFrom are ordinary ERC-20 without holder deny lists. DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE remain empty (prior mint review); proxy upgrade remains the only admin surface and does not constitute a current freeze primitive. HyperCore spot route is the same Last team native asset without a separate EVM freeze surface in this review.",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "USDXL has a USDT0 PSM facilitator and CDP collateral including bridged assets that may themselves be freezeable. Those upstream freezes can impair mint/redeem/liquidity value but do not blacklist or transfer-restrict the USDXL token itself. Recorded as reserve/dependency risk, not USDXL holder freeze."
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -1373,10 +1382,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
     "confidence": "unknown",
     "sources": [
+      {
+        "label": "HypurrFi USDXL docs",
+        "url": "https://docs.hypurrfi.com/products/usdxl"
+      },
       {
         "label": "HypurrFi lending market",
         "url": "https://app.hypurrfi.com/"
@@ -1384,10 +1397,15 @@
       {
         "label": "Last (USDXL) website",
         "url": "https://www.last.net/"
+      },
+      {
+        "label": "HyperEVM JSON-RPC (facilitator list re-pin)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "rationale": "USDXL is minted CDP-style against borrower collateral on HypurrFi's Aave V3 fork on HyperEVM. Reviewed materials define eligible collateral families and identify separate USDT0 and protocol-liquidity paths, but neither Last nor HypurrFi publishes a current collateral inventory or category weights. The prior 60/25/10/5 split was an unsupported approximation and has been replaced by one 100% unresolved reserve envelope.",
+    "rationale": "Re-opened 2026-07-30: USDXL remains a CDP-style synthetic dollar minted against HypurrFi borrower collateral (Aave V3 fork on HyperEVM) with separate facilitator paths (market loans, flash loans, USDT0 PSM). Live getFacilitatorsList() at HyperEVM block 41877329 still returns the three known facilitators, but neither Last nor HypurrFi publishes a dated collateral inventory or category weights across all paths. The 100% unresolved envelope is retained; no weights are inferred from eligible-asset lists. Wind-down notices (Legacy/Pooled market closure) do not create a published reserve split.",
     "compositionBasis": "Issuer-documented collateral and liquidity families; current allocation unavailable",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete current collateral inventory, position weights, and protocol-liquidity allocation are unpublished. No percentage is inferred from eligible-asset lists or protocol descriptions.",
     "knownUnknownExposurePct": 100,

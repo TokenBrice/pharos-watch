@@ -143,27 +143,36 @@
     "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault. Deposits mint shares, and the Manager additionally exposes a discretionary manageAssetAndShares mint/burn path with no supply ceiling. That path is gated on the Administrator's BRIDGE, LOCKBOX, or YIELD roles, which at Ethereum block 25575158 are held by eleven contracts. Two externally owned accounts hold ADMIN and can grant or revoke every non-ADMIN role instantly, so the operator set and therefore the uncapped mint path are under unilateral EOA control; only adding a new ADMIN is delayed, by a four-hour timelock. Base USDC mint authority remains inherited from Circle, and non-Ethereum yUSD is a LayerZero OFT representation with no independent local mint path.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
-      "model": "unknown",
+      "model": "transparent-proxy",
       "proxyAddresses": [
         "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
         "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
         "0x10472f91f67c49260bdd65f016ea0757bb1fc91e"
       ],
       "implementationAddresses": [
-        "0x5bf44d32260aee6b807c490e92ef0481d15ab493"
+        "0x5bf44d32260aee6b807c490e92ef0481d15ab493",
+        "0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8",
+        "0xccaa27e3db44e06bd9001958de5b41301fd28002"
       ],
       "adminAddresses": [
         "0xe26e1d2ae51dcb89e382ca7400b080e6632117b9",
+        "0x25249946d42a5fba2b6b1d191127bcaec70bd103",
+        "0xc79920d40206cc28f7b70e72d623ff7fb83004c1",
         "0x8e31efda4453494a84fa6168d53eb1418c0b4ac4"
       ],
-      "canChangeMintLogic": "unknown",
-      "controlRef": "YieldFi Administrator ADMIN-role EOAs",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25575158,
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "YieldFi TimelockController proposer/executor EOA",
+      "observedAt": "2026-07-30",
+      "observedBlock": 25648573,
       "sources": [
         {
           "label": "Sourcify YieldFi YToken source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+        },
+        {
+          "label": "YieldFi TimelockController RoleGranted logs (Blockscout)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8e31efda4453494a84fa6168d53eb1418c0b4ac4&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         },
         {
           "label": "YieldFi yUSD terms",
@@ -317,6 +326,46 @@
           }
         ],
         "evidence": "The complete Administrator RoleGranted/RoleRevoked replay from block 22364994, confirmed by live hasRole reads at block 25575158, returns exactly two current ADMIN holders: 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 and 0x241ac00dc77fc1981e0483de3da3828b787b8764. eth_getCode returns empty bytecode for both, so neither is a Safe, multisig, or timelock. Verified source shows grantRoles and revokeRoles are onlyAdmin and immediate. Re-verified 2026-07-28 block 25629035: both ADMIN EOAs still hold keccak256(\"ADMIN\") on dual independent RPCs; both remain bytecode-less."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
+        "label": "YieldFi TimelockController proposer/executor EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "A single EOA holds PROPOSER, CANCELLER, and EXECUTOR on the YieldFiTimelockController that owns all three YieldFi ProxyAdmins, so it can replace the YToken, Manager, and Administrator implementations — and thereby rewrite mint logic — after the 86400-second timelock delay.",
+        "failureDomainKeys": [
+          "eoa:evm:0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
+          "contract:ethereum:0x8e31efda4453494a84fa6168d53eb1418c0b4ac4"
+        ],
+        "bypassSurfaces": [
+          "The same EOA is one of the two Administrator ADMIN keys, so it can mint uncapped yUSD shares instantly through the role path without waiting for the timelock."
+        ],
+        "observedBlock": 25648573,
+        "observedAt": "2026-07-30",
+        "sources": [
+          {
+            "label": "YieldFi TimelockController RoleGranted logs (Blockscout)",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8e31efda4453494a84fa6168d53eb1418c0b4ac4&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Ethereum publicnode hasRole re-read 2026-07-30",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum dRPC hasRole corroboration 2026-07-30",
+            "url": "https://eth.drpc.org"
+          },
+          {
+            "label": "Sourcify YieldFi YToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+          }
+        ],
+        "evidence": "Verified on-chain 2026-07-30 at Ethereum block 25648573 on ethereum-rpc.publicnode.com, corroborated by eth.drpc.org: the EIP-1967 admin slots of the three YieldFi proxies resolve to three distinct OZ ProxyAdmins — vault 0x19ebd191f7a24ece672ba13a302212b5ef7f35cb to 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, Manager 0x03acc35286baae6d73d99a9f14ef13752208c8dc to 0x25249946d42a5fba2b6b1d191127bcaec70bd103, Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e to 0xc79920d40206cc28f7b70e72d623ff7fb83004c1 — and owner() on each ProxyAdmin returns YieldFiTimelockController 0x8e31efda4453494a84fa6168d53eb1418c0b4ac4 with getMinDelay() = 86400. A complete RoleGranted/RoleRevoked event replay of the timelock from its deployment block 22484772 (Blockscout) shows DEFAULT_ADMIN_ROLE granted only to the timelock itself and PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE granted to 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 with zero revocation events; live hasRole reads at block 25648573 confirm all three roles remain held, and eth_getCode returns empty bytecode for the EOA. This corrects the 2026-07-20 claim that the timelock had zero role holders and that the upgrade path was inert."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -351,11 +400,15 @@
         {
           "label": "Ethereum dRPC hasRole(ADMIN) corroboration 2026-07-28",
           "url": "https://eth.drpc.org"
+        },
+        {
+          "label": "YieldFi TimelockController RoleGranted logs (Blockscout, replayed 2026-07-30)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8e31efda4453494a84fa6168d53eb1418c0b4ac4&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Ethereum block 25575158. The prior open question on the Manager's terminal operator is resolved: manageAssetAndShares is gated on Administrator BRIDGE, LOCKBOX, or YIELD, whose complete current membership is eleven contracts enumerated by full event replay plus live hasRole reads, and whose grant authority sits with two bytecode-less ADMIN EOAs able to act with no delay. The uncapped nature of the path is read from the verified Manager source, which applies no supply ceiling. Vault proxy admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9 is an OZ ProxyAdmin owned by YieldFiTimelockController 0x8e31efda4453494a84fa6168d53eb1418c0b4ac4 with an 86400-second minimum delay and zero holders across PROPOSER, EXECUTOR, and DEFAULT_ADMIN, so the upgrade path is inert while the role path is live. The non-Ethereum question is resolved at the route layer: every tracked non-Ethereum yUSD deployment is a LayerZero OFT representation of the Ethereum token with no independent local mint path. Reconciliation cadence stays unknown because YieldFi publishes no supply-versus-reserve attestation schedule and the vault's totalAssets is updated by the Manager rather than proven on-chain. Re-verified 2026-07-28 at Ethereum block 25629035 on ethereum-rpc.publicnode.com and eth.drpc.org: Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e hasRole(keccak256(\"ADMIN\"), 0xa6e98a21ea3cbe891b8a24f7233443748c17b387)=true and hasRole(ADMIN, 0x241ac00dc77fc1981e0483de3da3828b787b8764)=true; eth_getCode empty for both ADMIN EOAs. Reconciliation remains profile.reconciliation=unknown (no published attestation schedule); that is scored via the reconciliation field rather than an open review question blocking incidentState.",
-      "reviewer": "Grok wave-8 GROK-RESEARCH controls yusd-yieldfi",
-      "reviewedAt": "2026-07-28",
+      "evidence": "Ethereum block 25575158. The prior open question on the Manager's terminal operator is resolved: manageAssetAndShares is gated on Administrator BRIDGE, LOCKBOX, or YIELD, whose complete current membership is eleven contracts enumerated by full event replay plus live hasRole reads, and whose grant authority sits with two bytecode-less ADMIN EOAs able to act with no delay. The uncapped nature of the path is read from the verified Manager source, which applies no supply ceiling. The non-Ethereum question is resolved at the route layer: every tracked non-Ethereum yUSD deployment is a LayerZero OFT representation of the Ethereum token with no independent local mint path. Reconciliation cadence stays unknown because YieldFi publishes no supply-versus-reserve attestation schedule and the vault's totalAssets is updated by the Manager rather than proven on-chain. Re-verified 2026-07-28 at Ethereum block 25629035 on ethereum-rpc.publicnode.com and eth.drpc.org: Administrator 0x10472f91f67c49260bdd65f016ea0757bb1fc91e hasRole(keccak256(\"ADMIN\"), 0xa6e98a21ea3cbe891b8a24f7233443748c17b387)=true and hasRole(ADMIN, 0x241ac00dc77fc1981e0483de3da3828b787b8764)=true; eth_getCode empty for both ADMIN EOAs. Upgrade-authority correction 2026-07-30 at Ethereum block 25648573 (publicnode + dRPC): the earlier 'zero timelock role holders, upgrade path inert' claim was wrong — the EIP-1967 admin slots of all three YieldFi proxies resolve to three OZ ProxyAdmins (0xe26e1d2a, 0x25249946, 0xc79920d4) all owned by YieldFiTimelockController 0x8e31efda (getMinDelay 86400), and a complete RoleGranted/RoleRevoked replay of the timelock from deployment block 22484772 plus live hasRole reads show ADMIN EOA 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 holds PROPOSER, CANCELLER, and EXECUTOR with no revocations, so one EOA can upgrade every YieldFi implementation after a 24-hour delay; upgradeability is now modeled as transparent-proxy with controlRef on that EOA. Reconciliation remains profile.reconciliation=unknown (no published attestation schedule); that is scored via the reconciliation field rather than an open review question blocking incidentState.",
+      "reviewer": "Grok wave-8 GROK-RESEARCH controls yusd-yieldfi; Kimi T56 w2 upgrade-authority correction (2026-07-30)",
+      "reviewedAt": "2026-07-30",
       "disposition": "scoreable",
       "unresolvedQuestions": []
     }

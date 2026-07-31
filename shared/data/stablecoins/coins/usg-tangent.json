@@ -871,8 +871,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28; Kimi T59 re-review 2026-07-30",
     "confidence": "probable",
     "sources": [
       {
@@ -884,7 +884,7 @@
         "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Tangent USG overview: USG minted against productive collaterals (Curve LP tokens, Pendle PTs) via HEC/LEC markets. Verified USG contract page still live. No position-level weight table; envelope remains 100% productive DeFi collateral with ku=100.",
+    "rationale": "Write-time re-open 2026-07-28 of Tangent USG overview: USG minted against productive collaterals (Curve LP tokens, Pendle PTs) via HEC/LEC markets. Verified USG contract page still live. No position-level weight table; envelope remains 100% productive DeFi collateral with ku=100. Write-time re-open 2026-07-30: Tangent USG overview still describes Curve LP / Pendle PT productive collateral across HEC/LEC markets with no published position-level inventory, per-market collateral weights, or venue custody split; envelope and ku=100 unchanged.",
     "compositionBasis": "Tangent USG product and verified contract disclosures",
     "scope": "selected-slices",
     "knownUnknownExposure": "The current underlying DeFi positions, weights, and venue-level custody allocation are undisclosed.",
@@ -898,7 +898,7 @@
         "rationale": "Tangent identifies the collateral family but does not publish a current position-level inventory for the full USG reserve."
       }
     ],
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-30"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

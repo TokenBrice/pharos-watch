@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Balanced v2 money-market loan collateral across supported chains plus USDC and USDT deposited into the Stability Fund; current constituent weights are not published",
+  "collateral": "SODAX cross-chain money-market borrower collateral backing all facilitator-minted bnUSD; measured 2026-07-30 at Sonic block 76778944: ~39.8% sodahyTB (HiYield Treasury Bill Vault), ~23.7% sodaUSDC, ~7.2% sodaBTC, ~6.9% sodaBNB, ~3.7% each sodaAVAX and sodaSUI, ~3.4% sodasftUSD, ~2.3% sodaETH, ~2.0% sodaUSDT, and a long tail of other SODAX-wrapped crypto collateral. Stability Fund approved-stablecoin 1:1 swaps mint through the same facilitator, so those stablecoin deposits are part of the measured borrower-collateral base",
   "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
@@ -1464,81 +1464,293 @@
   ],
   "reserves": [
     {
-      "name": "Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket",
-      "pct": 100,
-      "risk": "high",
+      "name": "sodahyTB (SODAX-wrapped HiYield Treasury Bill Vault) borrower collateral",
+      "pct": 39.76,
+      "risk": "medium",
       "blacklistable": true,
-      "assetClass": "other",
-      "issuerOrObligor": "Balanced v2 money-market contracts, supported collateral issuers, Circle, and Tether",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "HiYield Treasury Bill Vault (hyTB) tokenized US T-bill shares, SODAX-wrapped as sodahyTB",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaUSDC (SODAX-wrapped USDC) borrower collateral",
+      "pct": 23.71,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial / USDC, SODAX-wrapped as sodaUSDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sodaBTC (SODAX-wrapped BTC family) borrower collateral",
+      "pct": 7.17,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BTC, BTCB, cbBTC, tBTC, and rBTC issuers via the SODAX sodaBTC vault wrapper",
       "riskFactors": [
         "market",
         "liquidity",
-        "smart-contract",
-        "counterparty",
-        "concentration"
+        "custody",
+        "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaBNB (SODAX-wrapped BNB) borrower collateral",
+      "pct": 6.91,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BNB via the SODAX sodaBNB vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaAVAX (SODAX-wrapped AVAX) borrower collateral",
+      "pct": 3.72,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "AVAX via the SODAX sodaAVAX vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaSUI (SODAX-wrapped SUI) borrower collateral",
+      "pct": 3.56,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "SUI via the SODAX sodaSUI vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodasftUSD (SODAX-wrapped staked ftUSD) borrower collateral",
+      "pct": 3.42,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "staked ftUSD (Sonic) via the SODAX sodasftUSD vault wrapper",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "sodaETH (SODAX-wrapped ETH family) borrower collateral",
+      "pct": 2.33,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ETH, ETHB, and Sonic WETH via the SODAX sodaETH vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaUSDT (SODAX-wrapped USDT) borrower collateral",
+      "pct": 2.05,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether / USDT, SODAX-wrapped as sodaUSDT",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sodaWEETH (SODAX-wrapped weETH) borrower collateral",
+      "pct": 1.78,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ether.fi weETH via the SODAX sodaWEETH vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "basis",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaSODA (SODAX governance token) borrower collateral",
+      "pct": 1.72,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "SODAX governance token (SODA)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaHYPE (SODAX-wrapped HYPE) borrower collateral",
+      "pct": 1.15,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "HYPE via the SODAX sodaHYPE vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaSOL (SODAX-wrapped SOL) borrower collateral",
+      "pct": 0.97,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "SOL via the SODAX sodaSOL vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "sodaWSTETH (SODAX-wrapped wstETH) borrower collateral",
+      "pct": 0.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido wstETH via the SODAX sodaWSTETH vault wrapper",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "basis",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%, and sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS below 0.02% combined",
+      "pct": 0.95,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "NEAR, POL, XLM, Sonic S, bnUSD, LL, INJ, WBTC, KAIA, and sUSDS issuers via SODAX vault wrappers",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T14 Safety Score V9 unknown-reduction wave-2",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Balanced v1 transition guide",
-        "url": "https://docs.balanced.network/"
+        "label": "Sonic public RPC: pinned eth_call reads at block 76778944 (2026-07-30T21:18:20Z) — facilitator bucket on bnUSD debt reserve 0x94dc79ce9c515ba4ae4d195da8e6ab86c69bfc38 (selector 0xaa02f94a), variable-debt totalSupply, Aave oracle getAssetPrice per reserve on 0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9, and whale aToken balanceOf spot-check",
+        "url": "https://rpc.soniclabs.com"
       },
       {
-        "label": "Balanced stablecoin page",
+        "label": "SODAX backend API: money market reserve list, complete bnUSD borrower list (82), and per-borrower positions aggregated per reserve",
+        "url": "https://api.sodax.com/v1/be/moneymarket/asset/all"
+      },
+      {
+        "label": "balanced.network's own stats script: official methodology for total supply (facilitator bucket) and total backing (borrower aToken collateral)",
+        "url": "https://balanced.network/js/async-data-stablecoin.js"
+      },
+      {
+        "label": "Balanced bnUSD product page: over-collateralization claim, supported collateral types, Stability Fund 1:1 swap design",
         "url": "https://balanced.network/stablecoin/"
+      },
+      {
+        "label": "DefiLlama/CoinGecko market prices: cross-check basis agreeing with oracle prices within 0.1% on covered assets",
+        "url": "https://coins.llama.fi/prices/current"
       }
     ],
-    "rationale": "Balanced's current v2 stablecoin page lists the supported crypto collateral types and states that its Stability Fund holds deposited USDC and USDT while minting bnUSD. It does not publish current debt or reserve weights by constituent. The former 90/10 rows described the unsupported v1 system and are replaced by one current v2 backing envelope rather than retained as a false allocation. Write-time re-open 2026-07-28: dual sources still describe over-collateralized crypto CDP minting without a public live collateral weight table; knownUnknownExposurePct remains 100. (bnUSD crypto-backed stablecoin page + docs)",
-    "compositionBasis": "Balanced v2 supported-collateral inventory and USDC/USDT Stability Fund design",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Fresh write-time re-measurement 2026-07-30 replacing the 2026-07-28 unknown-weights envelope. MEASUREMENT at Sonic block 76778944 (2026-07-30T21:18:20Z, https://rpc.soniclabs.com): total bnUSD supply = facilitator bucket currentBorrowed = 1,408,507.20 bnUSD (cap 2,500,000; cross-check variableDebtToken 0x9d6658bfdf512bc08ede9ef75d64a9e5d4f321de totalSupply = 1,409,413.59, delta 0.06%). Total backing = sum of all 82 bnUSD borrowers' aToken collateral across 24 nonzero SODAX money-market reserves (SODAX backend API borrowers/positions, indexed ~1.8k blocks behind the pin), each reserve priced with the pool's own Aave oracle getAssetPrice at the pinned block = $2,918,934.98, giving collateralizationRatio 2.072361. Market-price cross-check (DefiLlama/CoinGecko majors) agrees with oracle prices within 0.1% on covered assets; hyTB and SODA have no market-price coverage and rely on the pool oracle. On-chain spot-check: whale 0x73135d19c488ea5b002e0e07135d992ff7e6f070 hyTB aToken balanceOf at the pin = 1,053,059.9039543339, exactly matching the API position read; that single account holds the entire sodahyTB slice (39.76% of backing), so concentration risk is dominated by one tokenized T-bill position. Composition: sodahyTB $1,160,456 (39.76%), sodaUSDC $692,000 (23.71%), sodaBTC $209,393 (7.17%), sodaBNB $201,630 (6.91%), sodaAVAX $108,681 (3.72%), sodaSUI $103,945 (3.56%), sodasftUSD $99,893 (3.42%), sodaETH $67,942 (2.33%), sodaUSDT $59,746 (2.05%), sodaWEETH $51,961 (1.78%), sodaSODA $50,182 (1.72%), sodaHYPE $33,661 (1.15%), sodaSOL $28,196 (0.97%), sodaWSTETH $23,433 (0.80%), tail $27,772 (0.95%). hyTB identified as HiYield Treasury Bill Vault (SnowTrace token 0x8475509d391e6ee5A8b7133221CE17019D307B3E; Balanced BIPs 53/56/59/60). Assurance scope: the SODAX audits index lists 8 reports (Sui, Solana, Soroban, Relay, Collaborative 2025-08, Near, Stacks, LST/Leverage vault), none scoped to the hub EVM money-market Pool. The Stability Fund's approved-stablecoin 1:1 swaps mint through the same facilitator, so its stablecoin holdings are captured inside the borrower-collateral base rather than being an additive unmeasured layer.",
+    "compositionBasis": "Complete enumeration of all 82 bnUSD facilitator borrowers' aToken collateral across 24 nonzero SODAX money-market reserves at Sonic block 76778944, priced with the pool Aave oracle at the same pin per the issuer's official stats methodology",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current constituent weights across v2 loan collateral and the USDC/USDT Stability Fund are not published.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
-        "candidateCoinIds": [
-          "usdc-circle",
-          "usdt-tether"
-        ]
-      }
-    ]
+    "knownUnknownExposure": "None. The entire borrower-collateral base backing the facilitator-minted bnUSD supply was enumerated and priced at the pin; the only measurement caveat is the SODAX API indexer lag (~1.8k blocks behind the pinned block), which the on-chain whale spot-check corroborated exactly.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Balanced v2 money-market and Stability Fund contracts",
-        "role": "other"
+        "name": "SODAX money-market Pool and per-reserve aToken contracts (Sonic hub; Pool 0x553434896D39F867761859D0FE7189d2Af70514E)",
+        "role": "other",
+        "sharePct": 100
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
-    "confidence": "manual-review",
+    "segregation": "omnibus",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T14 Safety Score V9 unknown-reduction wave-2",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Balanced v1 transition guide",
-        "url": "https://docs.balanced.network/"
+        "label": "Sonic public RPC: pinned eth_call reads at block 76778944 (2026-07-30T21:18:20Z)",
+        "url": "https://rpc.soniclabs.com"
       },
       {
-        "label": "Balanced stablecoin page",
-        "url": "https://balanced.network/stablecoin/"
+        "label": "SODAX backend API: money market reserve list and per-borrower positions",
+        "url": "https://api.sodax.com/v1/be/moneymarket/asset/all"
+      },
+      {
+        "label": "SODAX mainnet deployments: hub money-market contract inventory",
+        "url": "https://docs.sodax.com/developers/deployments/mainnet"
       }
     ],
-    "uncertainty": "bnUSD backing sits in Balanced's on-chain v2 money-market and Stability Fund contracts rather than with a legal custodian. Current constituent weights and contract-level provider shares are not published; bridged collateral and USDC/USDT also carry upstream issuer and bridge custody layers.",
-    "knownUnknownExposurePct": 100
+    "uncertainty": "100% of measured bnUSD backing sits as borrower aToken collateral inside the SODAX money-market Pool on the Sonic hub: pooled (omnibus) smart-contract custody with no legal segregation or bankruptcy estate, and Aave-style pool design permits supplied assets to be lent out. Upstream custody layers (the HiYield T-bill vault's off-chain custodian, Circle/Tether issuance, and SODAX spoke-chain asset managers holding underlying tokens) remain as dependency risk carried on the individual reserve slices rather than as unidentified custody.",
+    "knownUnknownExposurePct": 0
   },
   "launchDate": "2021-04-25"
 }

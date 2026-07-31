@@ -358,11 +358,19 @@
       {
         "label": "AdminControls source",
         "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/AdminControls.sol"
+      },
+      {
+        "label": "XDCScan FXD proxy",
+        "url": "https://xdcscan.com/address/0x49d3f7543335cf38fa10889ccff10207e22110b5#code"
+      },
+      {
+        "label": "XDCScan FXD ProxyAdmin",
+        "url": "https://xdcscan.com/address/0xb82ad475fc113671840d510b60cbae5630a07f3b#code"
       }
     ],
-    "evidence": "FXD token source does not show a direct blacklist, but Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. Treat as a possible mutable holder-facing protocol-control surface.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The current FathomStablecoin implementation source shows no per-address blacklist or freeze mapping, and Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. At XDC block 105233053 (2026-07-22 transfer-fact reads) the transparent proxy's ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b was owned by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c, which can unilaterally and immediately replace the token implementation and thereby introduce holder-level transfer restrictions; reach is protocol-wide over the single native XDC deployment with no inherited bridge or wrapper exposure. The controlling authority is therefore that EOA plus the AdminControls operator set, and the failure domain is the Fathom admin/upgrade path on XDC.",
+    "reviewer": "Kimi T23 unknown-reduction wave-2 research",
+    "reviewedAt": "2026-07-30"
   },
   "canBeBlacklisted": "possible",
   "mintAuthority": {
@@ -469,52 +477,95 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Active WXDC, CGO, and psXDC Fathom collateral pools (weights undisclosed)",
-      "pct": 100,
+      "name": "Fathom psXDC collateral pool (PrimeStakedXDC, protocol-priced 1:1 as XDC)",
+      "pct": 74.47,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Fathom Protocol collateral pools, XDC Network, Comtech Gold, and PrimeStakedXDC",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Fathom Protocol psXDC collateral pool and PrimeStakedXDC",
       "riskFactors": [
         "market",
         "smart-contract",
         "liquidity",
-        "counterparty",
+        "basis",
         "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fathom WXDC collateral pool (Wrapped XDC)",
+      "pct": 25.53,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Fathom Protocol WXDC collateral pool and XDC Network",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fathom CGO collateral pool (Comtech Gold)",
+      "pct": 0.001,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Fathom Protocol CGO collateral pool and Comtech Gold",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T23 unknown-reduction wave-2 research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Fathom Protocol whitepaper - FXD over-collateralization",
-        "url": "https://docs.fathom.fi/whitepaper/version-1.0"
+        "label": "Journaled on-chain mechanism measurement at XDC block 105423347 (2026-07-27): shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json",
+        "url": "https://xdcscan.com/block/105423347"
       },
       {
-        "label": "Fathom FXD stablecoin documentation",
-        "url": "https://docs.fathom.fi/fxd-stablecoin"
+        "label": "Fathom XDC deployment registry (XDC and CGO collateral pool IDs; psXDC pool added later and confirmed by the on-chain LogInitCollateralPoolId scan)",
+        "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
       },
       {
-        "label": "Pinned XDC block 104920353",
-        "url": "https://xdcscan.com/block/104920353"
+        "label": "Fathom CollateralPoolConfig",
+        "url": "https://xdcscan.com/address/0x4F5Ea639600A01931B1370CDe99a7B1e7b6b8f6C"
       }
     ],
-    "rationale": "Fathom documents FXD as a CDP-minted dollar backed by protocol collateral pools. An exhaustive LogInitCollateralPoolId scan through finalized XDC block 104920353 found exactly three live debt-bearing pools: WXDC, CGO, and psXDC. Their current debt or collateral weights are not published as an aggregate, so the exact active inventory is retained as one 100% basket rather than assigning an unsupported split. Write-time re-open 2026-07-28: dual sources still describe over-collateralized crypto CDP minting without a public live collateral weight table; knownUnknownExposurePct remains 100. (FXD overcollateralized stablecoin docs + whitepaper)",
-    "compositionBasis": "Fathom documentation plus on-chain active debt-bearing collateral-pool inventory at XDC block 104920353",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "The three live debt-bearing pools (WXDC, CGO, psXDC) established by the exhaustive LogInitCollateralPoolId scan now have measured weights: per-pool CollateralTokenAdapter.totalShare read at XDC block 105423347 (2026-07-27, journaled at shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json) gives 8,708,677.23 WXDC at the delayed feed's $0.0274276 ($238,858.12), 25,407,276.93 psXDC priced 1:1 as XDC by the protocol ($696,860.63), and 0.069533 CGO at $130.553 ($9.08), totaling $935,727.82 and splitting 74.47/25.53/0.001 percent. Write-time re-open 2026-07-30: the Fathom XDC deployment registry still lists the XDC and CGO collateral pool IDs (the psXDC pool postdates the docs page and is confirmed by the on-chain scan), and the journaled block-105423347 measurement remains the latest reconciled snapshot, so the prior 100% undisclosed-weights basket is replaced by the measured three-slice split.",
+    "compositionBasis": "Journaled on-chain per-pool collateral measurement at XDC block 105423347 (2026-07-27) plus the Fathom XDC deployment registry",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The active WXDC, CGO, and psXDC pool identities are established, but current collateral and debt weights plus liquidation-buffer levels are not published as one reconciled snapshot.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "Pool identities and weights are measured as of XDC block 105423347; weights drift with price moves and position flows after that block, liquidation-buffer levels are not published, and psXDC carries the protocol's 1:1-as-XDC pricing assumption rather than a market exchange-rate feed.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Active WXDC, CGO, and psXDC Fathom collateral pools (weights undisclosed)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The three active debt-bearing pool identities are verified on-chain, but no current pool weights support defensible constituent slices."
+        "reserveName": "Fathom psXDC collateral pool (PrimeStakedXDC, protocol-priced 1:1 as XDC)",
+        "pct": 74.47,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "PrimeStakedXDC collateral is an external staking-derivative asset, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Fathom WXDC collateral pool (Wrapped XDC)",
+        "pct": 25.53,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Wrapped XDC collateral is an external cryptoasset, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Fathom CGO collateral pool (Comtech Gold)",
+        "pct": 0.001,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Comtech Gold collateral is an external tokenized-gold asset, not a tracked stablecoin dependency."
       }
     ]
   }

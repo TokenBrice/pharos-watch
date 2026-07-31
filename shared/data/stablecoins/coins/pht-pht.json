@@ -472,25 +472,46 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "APACX PHT overview",
         "url": "https://docs.apacx.io/what-is-pht/pht-overview"
       },
       {
-        "label": "APACX Ethereum contract addresses",
-        "url": "https://docs.apacx.io/technical-references/contract-addresses"
+        "label": "APACX mint, redeem, and bridge guide",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
       },
       {
-        "label": "Verified PHT Ethereum deployment",
-        "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+        "label": "Verified PHT Ethereum deployment source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbe370ad45d44eb45174c4ec60b88839fef32c077"
+      },
+      {
+        "label": "Verified Polygon PHT OFT implementation source and ABI",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x98210a4b34eafd668838108c99ad13a2b4340618"
+      },
+      {
+        "label": "Polygon PHT OFT proxy owner read",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Tronscan PHT OFT metadata and method map",
+        "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+      },
+      {
+        "label": "TronGrid PHT OFT owner read",
+        "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+      },
+      {
+        "label": "Tether Token Terms of Sale and Service",
+        "url": "https://tether.to/en/legal/"
       }
     ],
-    "evidence": "BLOCKED: APACX documents PHT as a Maker-style CDP and publishes the Ethereum core addresses, while the tracked asset also has Polygon and Tron deployments. The reviewed public sources do not provide a deployment-wide holder-control inventory for all three token contracts, so the inherited apcxUSDT/USDT exposure is retained without asserting a direct no-freeze result.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-31. At Ethereum block 25648905 (2026-07-30T23:18:47Z), the verified PHT Dai.sol deployment exposes standard transfer/transferFrom plus auth-only rely/deny/wards and no holder blacklist, seizure, or pause hook. At Polygon block 91165678 (2026-07-30T23:18:57Z), the verified OFT implementation exposes standard transfer/transferFrom and no holder blacklist or pause function, but the proxy owner read returns APACX EOA 0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5 and the UUPS upgrade path can replace transfer logic; this makes direct restriction possible across the Polygon deployment. The current Tronscan method map for PHT OFT TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs lists transfer/transferFrom and owner-only setPeer/setDelegate, with no blacklist or pause selector; a TronGrid constant-contract read at 2026-07-30T23:19:56Z returned owner TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4, but the unverified implementation leaves route-control semantics unresolved. APACX states existing PHT uses apcxUSDT backed 1:1 by USDT; Tether's current terms reserve address blacklisting and freezing authority. Failure domains are the Polygon upgrade owner, Tron OFT owner/LayerZero route, Ethereum auth set, and inherited upstream USDT/Tether control.",
+    "reviewer": "Codex T31 Safety Score V9 access review",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

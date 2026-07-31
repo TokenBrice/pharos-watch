@@ -124,10 +124,10 @@
         "url": "https://rpc.mainnet.citrea.xyz"
       }
     ],
-    "evidence": "CitreaScan marks the deployed JUSD contract verified, and its verified source and ABI expose standard transfer and transferFrom operations with no holder blacklist, freeze, pause, seizure, or global transfer-stop function. At Citrea block 9985719, owner() reverted, reserve() resolved to Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. StablecoinBridge emergencyStop halts bridge issuance but allows users to burn JUSD for its stablecoin; it does not stop native JUSD transfers. Issuer docs and legal materials, GitHub, the explorer, pinned RPC, and the legacy-explorer archive were reviewed; no standalone reserve attestation or transparency report is used for this code-level access conclusion.",
-    "reviewer": "Codex Safety Score V9 data research",
-    "reviewedAt": "2026-07-15",
-    "upstreamSuppressionRationale": "USDC.e, USDT.e, and ctUSD issuer controls can impair bridge collateral or redemption, but Citrea's verified JUSD source does not expose them as native JUSD holder-balance controls; those remain reserve and bridge risks."
+    "evidence": "Re-derived 2026-07-30 23:16:45 UTC at Citrea block 10675546. The sole tracked JUSD deployment 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c is verified by CitreaScan and the pinned JuiceDollar source; its ABI/source expose standard transfer and transferFrom only, with no holder blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. An eth_call transfer(address,uint256) of zero from a nonzero caller returned true; owner() reverted and the EIP-1967 implementation slot was zero. JuiceDollar's functions reference separately documents StablecoinBridge emergencyStop as an issuance/redemption control, not a native JUSD transfer stop. The reserve slice remains an inherited USDT.e/Tether and bridge failure domain (asset:usdt-tether and contract:citrea:0x5cc0e668f8ba61e111b6168e19d17d3c65040614), not a JUSD holder-freeze surface.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-31",
+    "upstreamSuppressionRationale": "USDT.e/Tether controls can impair JUSD collateral or redemption through the StablecoinBridge, but the reviewed JUSD token has no native holder-balance control; the upstream asset and bridge remain separately represented as reserve and bridge failure domains."
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

@@ -996,17 +996,34 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Ethereum DUSD verified token contract",
         "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+      },
+      {
+        "label": "DUSD SetBurnerStatus event history (15 events, 11 active burners)",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x63d74d22e689c715a04f2c13962b1f77f443d35b&topic0=0xd7b463fb7e7be5d5389dafa46448b883b320f7c77f63a00c9db0e2865ccdb3d7"
+      },
+      {
+        "label": "Ethereum PublicNode DUSD owner, pauser, and paused-state reads (block 25648324)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "AltoTimelockController on Etherscan",
+        "url": "https://etherscan.io/address/0xfae841679dc1a93d225ecc827e4bbf3e8d703f86"
+      },
+      {
+        "label": "Alto governance Safe on Etherscan",
+        "url": "https://etherscan.io/address/0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0"
       }
     ],
-    "evidence": "The verified DUSD contract inherits Pausable and lets the owner assign the pausing authority through setPauser(address, bytes32, bool). It also lets the owner authorize burners, and an authorized burner can call burn(from, amount) against an arbitrary account. The reviewed token source does not show a direct transfer blacklist, but these owner-mediated controls create a material holder intervention surface, so Possible is retained.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648324. The verified DUSD source contains no blacklist, freeze, or per-account transfer restriction, and plain ERC-20 transfers are not gated by the PAUSE_TYPE flag, which bounds only mint() and burn(). Two contract pausers (0xe318d8f0dc3c10f507ab7a199e4511fb09737bdf, 0x1c11d2d42929bd17ab7212b79c91862adfa8bbe4) were granted PAUSE_TYPE at deployment block 23908270 and remain active; zero Paused events have ever been emitted, so the pause path is unused and does not reach ordinary transfers. The live holder-intervention surface is seizure-by-burn: burn(from, amount) lets any owner-authorized burner debit an arbitrary account, bounded by that burner's own minterConfig.minted counter. Full SetBurnerStatus history (15 events) leaves the 11 active market/USM contracts as current burners, and the owner can authorize further burners through setBurnerStatus. owner() at block 25648324 remains AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, getMinDelay 3600 seconds) whose proposer/executor is the 3-of-5 Alto Safe 0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0, so every access change passes a one-hour governance delay; failure-domain identity is the token owner timelock plus the governance Safe, with burn reach mediated by the 11 authorized market/USM contracts. Zero PeerSet events confirm no LayerZero OFT peers, so the token is single-chain with no bridged representations. reviewedStatus is true (individual reach): owner-mediated contracts can burn DUSD from individual holders even though no transfer blacklist or freeze function exists. Inherited upstream exposure is tracked on the linked assets: 90.4% of backing is frxUSD held by the frxUSD USM, with sUSDe and syrupUSDC collateral slices.",
+    "reviewer": "Kimi T36 safety-v9 unknown-reduction w2 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -1394,7 +1411,7 @@
       "pct": 90.4,
       "risk": "low",
       "coinId": "frxusd-frax",
-      "depType": "mechanism"
+      "depType": "collateral"
     },
     {
       "name": "WETH / wstETH / rETH mint-market collateral",

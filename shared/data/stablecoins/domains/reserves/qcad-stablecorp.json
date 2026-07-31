@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,9 @@
         "url": "https://stablecorp.ca/transparency"
       }
     ],
-    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. Stablecorp's transparency page links monthly independent QCAD attestations, including May 2026, and the regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes the current allocation within that eligible basket. Write-time re-open 2026-07-28: Stablecorp balances API reports totalSupply=totalFiatReserves=1,651,920.55 CAD as of 2026-07-27T23:10Z (full fiat-reserve parity) but no instrument weights; transparency page + OSC QCAD Digital Trust order still establish regulated CAD reserve posture. Envelope remains 100% fiat reserves with knownUnknownExposurePct=100 pending class split.",
+    "rationale": "2026-07-31 re-open: Stablecorp balances API reports totalSupply=totalFiatReserves=1,652,020.55 CAD as of 2026-07-30T23:10Z (full fiat-reserve parity). The transparency page links monthly independent QCAD attestations, and the OSC QCAD Digital Trust order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes current instrument weights. Envelope remains 100% eligible CAD reserve assets with knownUnknownExposurePct=100 pending class split.",
     "compositionBasis": "Stablecorp live total-reserves disclosure, monthly attestation index, and the regulatory order's eligible-asset envelope",
-    "compositionAsOf": "2026-07-27",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
     "knownUnknownExposurePct": 100,
@@ -63,8 +63,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "prohibited",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -80,7 +80,7 @@
         "url": "https://www.newsfilecorp.com/release/291667/QCAD-Digital-Trust-Announces-Filing-of-Prospectus-Amendment-Accessible-through-SEDAR"
       }
     ],
-    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. QCAD Digital Trust's issuer release identifies VersaBank as the current replacement custodian. Stablecorp separately announced a future phased transition to TD, but no reviewed source establishes that transition as complete; current asset mix and any provider allocation remain unpublished.",
+    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. QCAD Digital Trust's issuer release identifies VersaBank as the current replacement custodian. Stablecorp's 2026-07-30 balances API still reports aggregate parity but no instrument or provider allocation; the announced phased transition to TD remains unverified as complete, and no current failure/replacement or anti-rehypothecation terms were found.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -2,12 +2,13 @@
   "id": "susd-solayer",
   "reserves": [
     {
-      "name": "Wrapped tokenized U.S. Treasury bill and RWA partner basket",
+      "name": "OpenEden cUSDO tokenized U.S. Treasury bill reserve",
       "pct": 100,
       "risk": "low",
       "assetClass": "tokenized-security",
-      "issuerOrObligor": "Qualified Solayer liquidity providers and undisclosed RWA issuers",
+      "issuerOrObligor": "OpenEden Digital Ltd (cUSDO issuer); underlying U.S. Treasury obligations managed by Adam Eve Capital",
       "riskFactors": [
+        "credit",
         "counterparty",
         "custody",
         "smart-contract",
@@ -18,63 +19,63 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Solayer sUSD subscription and redemption process",
-        "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/process"
+        "label": "Solayer RFQ stakeholders (cUSDO transition and issuer details)",
+        "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders"
       },
       {
-        "label": "Solayer sUSD transparency and security",
-        "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
+        "label": "OpenEden cUSDO launch on Solana",
+        "url": "https://openeden.com/news/openeden-launches-cusdo-yield-bearing-stablecoin-on-solana/"
       },
       {
-        "label": "Solayer sUSD litepaper",
-        "url": "https://docs.solayer.org/susd/protocol-info/litepaper"
+        "label": "OpenEden USDO FAQ (reserve and SAC structure)",
+        "url": "https://docs.openeden.com/usdo/faq"
       }
     ],
-    "rationale": "Solayer documents that qualified liquidity providers exchange deposited USDC for wrapped T-bill assets, which the sUSD program locks before minting sUSD at a one-to-one value. The docs permit a broader low-risk RWA basket but do not identify current products or weights, so the reserve remains one structured aggregate slice. Write-time re-open 2026-07-28: Solayer transparency&security docs still describe market-maker PDAs holding TBILL balances on Solana; litepaper/process docs remain structural. No public weight split of TBILL vs other \u2192 ku=100 retained.",
-    "compositionBasis": "Solayer wrapped-T-bill RFQ mint and redemption architecture",
+    "rationale": "Write-time re-open 2026-07-31: Solayer's stakeholder page identifies cUSDO as the exclusive post-2025-11-02 QLP reserve instrument, states that prior Solana TBILL positions were upgraded to cUSDO, and names OpenEden Digital Ltd as issuer with Adam Eve Capital managing Treasury investments. OpenEden's independent launch disclosure states cUSDO on Solana is fully collateralized by tokenized U.S. Treasuries held with qualified custodians; its FAQ documents the regulated segregated-account issuer structure. The exact Treasury-fund mix and QLP balances remain undisclosed, but the reserve asset class and obligor are now known.",
+    "compositionBasis": "Solayer RFQ stakeholder disclosure cross-checked against OpenEden cUSDO reserve and custody disclosures",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current RWA issuers, instruments, maturity profile, and liquidity-provider allocation are not disclosed.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Wrapped tokenized U.S. Treasury bill and RWA partner basket",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The protocol identifies the wrapped T-bill asset class but not the current tokenized products or their weights."
-      }
-    ],
-    "compositionAsOf": "2026-07-28"
+    "knownUnknownExposure": "The precise mix of underlying Treasury funds, maturities, qualified custodians, and QLP balances is not published; the current cUSDO reserve asset and issuer are identified.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Solayer sUSD program and market-maker PDAs",
+        "name": "Solayer sUSD program and qualified liquidity providers (QLPs)",
         "role": "other"
+      },
+      {
+        "name": "OpenEden Digital Ltd / Adam Eve Capital segregated custodial accounts",
+        "role": "other",
+        "jurisdiction": "Bermuda / Singapore"
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Solayer sUSD transparency and security",
-        "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
+        "label": "Solayer RFQ stakeholders",
+        "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders"
       },
       {
-        "label": "Solayer program directory",
-        "url": "https://docs.solayer.org/resources/solayer-programs"
+        "label": "OpenEden USDO FAQ (segregated-account issuer)",
+        "url": "https://docs.openeden.com/usdo/faq"
+      },
+      {
+        "label": "OpenEden cUSDO launch on Solana",
+        "url": "https://openeden.com/news/openeden-launches-cusdo-yield-bearing-stablecoin-on-solana/"
       }
     ],
-    "uncertainty": "Solayer states that isolated program-derived accounts hold each market maker's wrapped T-bill balance, but does not identify the RWA custodians, market-maker shares, bankruptcy-remoteness terms, or rehypothecation policy.",
+    "uncertainty": "Solayer documents QLP self-custody and isolated program accounts, while OpenEden documents segregated custodial accounts and a Bermuda SAC issuer. The underlying custodian-by-fund split, QLP shares, and rehypothecation policy are not disclosed for the sUSD route.",
     "knownUnknownExposurePct": 100
   }
 }

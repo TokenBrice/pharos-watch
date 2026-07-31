@@ -150,9 +150,14 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
+      {
+        "label": "Sourcify LisUSD implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xf5bd9b192092517d60e90c9af17b69b134c4d7f8?fields=sources"
+      },
       {
         "label": "Lista lisUSD CDP documentation",
         "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd"
@@ -162,9 +167,10 @@
         "url": "https://bscscan.com/token/0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5"
       }
     ],
-    "evidence": "Lista's official documentation describes lisUSD as an open-source, collateralized CDP stablecoin and explicitly contrasts it with fiat-backed frozen funds. The verified BSC LisUSD implementation exposes Maker-style wards, mint, burn, and standard ERC-20 transfer operations; no holder blacklist, freeze, or pause control is present in the reviewed token surface. Upstream collateral and PSM assets can carry separate freeze exposure, but no direct lisUSD holder restriction is asserted.",
-    "reviewer": "GPT SOL-CORP-B wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-07-30 at BSC block 113085430: the lisUSD proxy 0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5 resolves through its EIP-1967 slot to the Sourcify full-match LisUSD implementation 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8. The token's transfer and transferFrom enforce only zero-address, balance, and allowance checks; burn is limited to the caller's own balance or allowance; wards() roles gate mint, supply cap, and domain separator only. No blacklist, freeze, pause, or holder-selective transfer control exists in the token surface. Lista's documentation describes lisUSD as an open-source collateralized CDP stablecoin and explicitly contrasts it with fiat-backed frozen funds. Upstream PSM and collateral assets (USDT, USDC, FDUSD) carry their own issuer freeze reach, but that exposure impairs backing rather than lisUSD holder transfers.",
+    "reviewer": "Kimi T51 access review",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "USDT, USDC, and FDUSD held through the Peg Stability Module and CDP collateral joins can be frozen by their issuers at the vault level, which would impair lisUSD backing and redemption value; no path lets those issuers freeze or restrict lisUSD holder transfers, so the direct token verdict is not-blacklistable with the upstream exposure tracked as dependency risk."
   },
   "reserves": [
     {

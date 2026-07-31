@@ -23,21 +23,25 @@
         "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
       },
       {
+        "label": "Sky stUSDS implementation (pinned)",
+        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol"
+      },
+      {
         "label": "Sky USDS contracts",
         "url": "https://github.com/sky-ecosystem/usds"
       },
       {
-        "label": "Sky stUSDS implementation (pinned)",
-        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       },
       {
-        "label": "Sky DSPause",
-        "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
+        "label": "usds-sky blacklistabilityReview (Solana freezeAuthority)",
+        "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
       }
     ],
-    "evidence": "At Ethereum block 25573289, stUSDS asset() returned USDS, its EIP-1967 implementation slot resolved to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22, and the external admin and beacon slots were zero. The verified implementation gates UUPS upgrades through wards; stUSDS.wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1, and the Sky DSPause delay was 172800 seconds. The current implementation has ordinary ERC-20 transfers and no live holder blacklist, pause, seizure, or privileged holder-burn surface. Proxy upgrade authority remains reviewed in Mint Authority and does not create a direct FreezeWatch finding. stUSDS therefore retains upstream-only status through its tracked USDS parent.",
-    "reviewer": "GPT SOL-BIND wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648410. Sole tracked stUSDS proxy 0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9 has EIP-1967 implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 and admin slot zero. asset() returns USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f. wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returns 1 (Pause Proxy). Implementation bytecode has rely/deny and no blacklist, isBlacklisted, freeze, pause, or paused selectors. Pinned StUsds.sol transfer/transferFrom are ordinary ERC-20 balance moves with only zero/self-address guards; _authorizeUpgrade is wards-gated (upgrade is mint-authority domain, not a live holder freeze). No direct holder freeze/blacklist on stUSDS. Upstream: tracked parent usds-sky (variantOf/mintAuthority.inheritedFrom) has reviewed Solana freezeAuthority, so freeze exposure is inherited-upstream. Controlling authority for wrapper upgrades: Sky Pause Proxy wards. Failure domain: asset:usds-sky (upstream) plus contract:ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9 for upgrade surface.",
+    "reviewer": "Grok T49 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

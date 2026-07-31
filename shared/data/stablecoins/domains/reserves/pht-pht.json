@@ -18,28 +18,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "OpenAI Codex V9 integration audit",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T31 Safety Score V9 reserve review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "APACX PHT product page",
-        "url": "https://www.apacx.io/PHT"
+        "label": "APACX mint, redeem, and bridge guide",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
       },
       {
-        "label": "APACX documentation",
-        "url": "https://docs.apacx.io/"
+        "label": "APACX transparency page",
+        "url": "https://docs.apacx.io/transparency"
       },
       {
-        "label": "APACX smart contract audits",
-        "url": "https://docs.apacx.io/technical-references/smart-contract-audits"
+        "label": "APACX PHT ILK Registry",
+        "url": "https://eth.blockscout.com/address/0xc2bd6a0985a66885ef187b9a6c91be34e89c6be9?tab=contract"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Tronscan APACX reserve wallet account",
+        "url": "https://apilist.tronscanapi.com/api/account?address=TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU"
       }
     ],
-    "rationale": "APACX describes PHT as an overcollateralized CDP stablecoin and identifies apcxUSDT as its initial approved collateral wrapper, with apcxUSDC described as a planned beta asset. The reviewed sources do not publish a current PHT vault-collateral balance, an apcxUSDT reserve balance, the underlying USDT custodian, or a reconciliation from apcxUSDT claims to custodial USDT. A configured single-asset liveness probe of PHT supply cannot establish those reserve facts. The prior 100% USDT look-through is therefore replaced by one unlinked, explicitly unreconciled envelope.",
-    "compositionBasis": "APACX's documented eligible collateral category; current PHT collateral amounts and apcxUSDT underlying reserves are unreconciled",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Fresh review remains unable to assign supported reserve weights. APACX's mint guide says all existing PHT are minted with apcxUSDT backed 1:1 by USDT and its transparency page names reserve wallet TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU. However, at Ethereum block 25648905 (2026-07-30T23:18:47Z), current Vat.ilks reads show positive normalized debt in five distinct branches: USDT-A, cPHP-A, ApcxUSDT-A, demoUSDT-A, and USDC-A. The issuer statement and live CDP branch graph therefore conflict, while no branch-level collateral balances or reconciliation are published. The named Tron reserve wallet held 800002.000009 USDT at the 2026-07-30T23:15:58Z Tronscan capture, which does not reconcile the multi-branch PHT collateral claims. Preserve the full residual unknown rather than forcing an unsupported allocation.",
+    "compositionBasis": "APACX collateral disclosure cross-checked against the live Ethereum Vat/ILK branch graph and the named Tron reserve wallet; branch balances and reconciliation remain undisclosed",
+    "compositionAsOf": "2026-07-31",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The complete current PHT vault inventory, apcxUSDT collateral balance, custodial USDT backing, custodian identity, and any live apcxUSDC exposure are not published as a reconciled reserve snapshot.",
+    "knownUnknownExposure": "The complete current PHT vault inventory, branch-level collateral balances across USDT-A/cPHP-A/ApcxUSDT-A/demoUSDT-A/USDC-A, apcxUSDT underlying reconciliation, custodian identity, and any live apcxUSDC exposure are not published as a reconciled reserve snapshot.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -47,7 +55,7 @@
         "reserveName": "Current apcxUSDT-referenced collateral envelope (unreconciled)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "Issuer materials identify apcxUSDT as an eligible collateral wrapper but do not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves."
+        "rationale": "Issuer materials identify apcxUSDT as a collateral wrapper, but live Ethereum reads show additional debt-bearing collateral branches and no source establishes the current percentage mix or reconciles the wrapper to underlying USDT reserves."
       }
     ]
   },

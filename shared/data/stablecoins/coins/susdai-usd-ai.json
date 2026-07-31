@@ -287,8 +287,6 @@
       "name": "PYUSD (PayPal USD)",
       "pct": 60.89741894,
       "risk": "low",
-      "coinId": "pyusd-paypal",
-      "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Paxos (PYUSD issuer) held in USD.AI reserve contracts",
       "riskFactors": [
@@ -315,8 +313,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "GPT SOL-CORP-A wave6; Kimi T48 safety-v9 unknown-reduction w2 (dependency adjudication)",
     "confidence": "verified",
     "sources": [
       {
@@ -328,7 +326,7 @@
         "url": "https://app.usd.ai/reserves"
       }
     ],
-    "rationale": "The issuer's live proof-of-reserves API enumerates every reserve position: a PYUSD T-bill sleeve plus 27 GPU-backed infrastructure loan deals whose shares sum to 60.89741894% PYUSD and 39.10258106% loans as of 2026-07-22. Slice names are aligned to the exact live usdai-proof-of-reserves adapter identities so the reviewed classification overlays the captured rows.",
+    "rationale": "The issuer's live proof-of-reserves API enumerates every reserve position: a PYUSD T-bill sleeve plus 27 GPU-backed infrastructure loan deals whose shares sum to 60.89741894% PYUSD and 39.10258106% loans as of 2026-07-22. Slice names are aligned to the exact live usdai-proof-of-reserves adapter identities so the reviewed classification overlays the captured rows. Dependency adjudication 2026-07-30: sUSDai is a serial wrapper of USDai (asset() re-verified live at Arbitrum block 491177809 returning USDai 0x0A1a1a107E45b7CeD86833863F482Bc5f4eD82EF), so the PYUSD look-through slice is not an additional parallel dependency path — the PYUSD exposure is inherited through the reviewed serial edge to usdai-usd-ai, whose own verified reserve envelope is 100% PYUSD; the slice's direct coin link was removed accordingly and recorded as a reviewed non-link.",
     "compositionBasis": "USD.AI proof-of-reserves API position-level shares aggregated by bucket, fetched 2026-07-22",
     "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
@@ -336,11 +334,51 @@
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
+        "reserveIndex": 0,
+        "reserveName": "PYUSD (PayPal USD)",
+        "pct": 60.89741894,
+        "disposition": "not-applicable",
+        "rationale": "sUSDai is a serial wrapper of USDai; this PYUSD slice is the look-through of the parent's backing. The PYUSD exposure is inherited through the reviewed serial wrapper edge to usdai-usd-ai (whose verified reserve envelope is 100% PYUSD) and is tracked on the parent asset, so the slice is not a separate parallel dependency link."
+      },
+      {
         "reserveIndex": 1,
         "reserveName": "GPU-backed infrastructure loans (NVIDIA hardware)",
         "pct": 39.10258106,
         "disposition": "untracked-exogenous-asset",
         "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "dependencyReview": {
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T48 safety-v9 unknown-reduction w2",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-protocol-overview"
+      },
+      {
+        "label": "Arbitrum sUSDai ERC-4626 implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x23783ee86db1a05dfc6dc2f042606a92c97a374c?tab=contract"
+      },
+      {
+        "label": "Arbitrum PublicNode asset() read at block 491177809 (2026-07-30)",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "USD.AI proof-of-reserves API (Arbitrum)",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      }
+    ],
+    "rationale": "The complete effective dependency set of sUSDai is one serial wrapper claim on USDai covering the whole share: the reviewed Arbitrum ERC-4626 vault mints sUSDai only against USDai deposits, and asset() re-verified live at Arbitrum block 491177809 (2026-07-30) returned USDai 0x0A1a1a107E45b7CeD86833863F482Bc5f4eD82EF. The curated PYUSD reserve slice is the look-through of the parent's 100%-PYUSD backing and is inherited through this serial edge, not mapped as a parallel collateral edge; the GPU-loan bucket is untracked exogenous private credit. The Ethereum, Base, and Plasma OToken satellites are LayerZero mint-route controls reviewed under bridgeRouteRisk, not separate economic dependencies.",
+    "relationships": [
+      {
+        "id": "usdai-usd-ai",
+        "weight": 1,
+        "type": "wrapper",
+        "economicRole": "serial-claim",
+        "reason": "sUSDai is minted only by depositing USDai into the reviewed Arbitrum ERC-4626 vault (asset() = USDai, re-verified at Arbitrum block 491177809 on 2026-07-30), so the whole sUSDai claim resolves serially to the usdai-usd-ai parent."
       }
     ]
   },

@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "OpenAI Codex V9 integration audit",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
     "confidence": "manual-review",
     "sources": [
       {
@@ -49,9 +49,9 @@
         "url": "https://api.monetrix.xyz/data/api/protocol/overview"
       }
     ],
-    "rationale": "Monetrix documents USDC as the mint input and deploys backing into a delta-neutral Hyperliquid spot-plus-short strategy. On the 2026-07-28 re-open, the live collateral API explicitly returned backing.reconciled=false: backing.totalUsd was not presented as a non-double-counted sum of spotUsd, marginUsd, and the signed bufferUsd. The positions API separately mixed spot value, perpetual notional, and a negative idle-USDC value. Those fields do not establish that the current backing remains a 100% USDC reserve slice. The prior USDC look-through is therefore replaced by one unlinked strategy and custody envelope until Monetrix publishes a reconciled reserve equation.",
+    "rationale": "Monetrix documents USDC as the mint input and deploys backing into a delta-neutral Hyperliquid spot-plus-short strategy. On the 2026-07-30 re-open, the live collateral API still explicitly returned backing.reconciled=false (totalUsd 2653139.87 vs supply 2647852.41, collateralizationPct 100.20, status FULL_BACKED): backing.totalUsd was not presented as a non-double-counted sum of spotUsd, marginUsd, and the signed bufferUsd. The positions API separately mixed spot value, perpetual notional, and a negative idle-USDC value. Those fields do not establish that the current backing remains a 100% USDC reserve slice. The prior USDC look-through therefore stays replaced by one unlinked strategy and custody envelope until Monetrix publishes a reconciled reserve equation.",
     "compositionBasis": "Monetrix's documented USDC mint input plus live but explicitly unreconciled strategy, collateral, and supply telemetry",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-30",
     "scope": "selected-slices",
     "knownUnknownExposure": "Current non-double-counted spot, margin, hedge, idle-liquidity, custody, and redemption-backing amounts are not published as a reconciled reserve composition.",
     "knownUnknownExposurePct": 100,

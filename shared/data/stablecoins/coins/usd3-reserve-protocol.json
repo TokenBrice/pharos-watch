@@ -47,25 +47,35 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Reserve Protocol pause and freeze states",
-        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/pause-and-freeze.md"
+        "label": "Reserve Protocol pause/freeze states documentation",
+        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/pause-freeze-states.md"
       },
       {
-        "label": "USD3 Main proxy on Ethereum Blockscout",
-        "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+        "label": "USD3 RToken proxy on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/address/0x0d86883faf4ffd7aeb116390af37746f45b6f378"
+      },
+      {
+        "label": "USD3 RTokenP1 implementation on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/address/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      },
+      {
+        "label": "USD3 Base OptimismMintableERC20 on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xefb97aaf77993922ac4be4da8fbc9a2425322677?fields=all"
       },
       {
         "label": "USD3 Base OptimismMintableERC20 on Blockscout",
         "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
       }
     ],
-    "evidence": "Current-source access review: the Ethereum USD3 RToken inherits Reserve Protocol's governance-controlled system pause/freeze surface; the current Main review records frozen=false and issuancePaused=false, with the OWNER_ROLE held by a three-day TimelockController. Reserve's documented frozen state leaves ERC-20 functions enabled rather than providing a holder blacklist. The Base OptimismMintableERC20 representation uses the canonical bridge and no separate holder blacklist was identified. Upstream USDC, USDS, and Steakhouse exposures remain conservatively inherited.",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
-    "reviewedAt": "2026-07-14"
+    "evidence": "2026-07-30 fresh holder freeze/blacklist review across both material deployments. Ethereum (~99.6% of supply): at block 25648300 the USD3 ERC-1967 proxy 0x0d86883faf4ffd7aeb116390af37746f45b6f378 stores implementation RTokenP1 0x258ce833cf9ad19208372763a00aa1565dd40b3c, whose verified ABI exposes transfer/transferFrom and no blacklist, freeze, seize, or holder-restriction function. Reserve's pause-freeze-states documentation defines issuance-paused, trading-paused, and frozen as system-wide protocol interaction halts (issue/redeem revert while ERC-20 transfers are not holder-restricted), not a per-holder blacklist; at the same block Main 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 returned frozen()=false, issuancePaused()=false, and tradingPaused()=false. Base (~0.4%): at block 49328479 the canonical OptimismMintableERC20 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned BRIDGE()=0x4200000000000000000000000000000000000010 and REMOTE_TOKEN()=Ethereum USD3, holds a zero EIP-1967 implementation slot (immutable), and its Sourcify-verified ABI exposes only bridge mint/burn with no blacklist or pause. Reserve governance can replace the Ethereum RToken implementation through the 3-day TimelockController (guardian-cancelable); that is a future upgrade-control path scored in the control pillar, not a current holder freeze capability. Conclusion: no holder-level freeze or blacklist exists on current USD3 deployments.",
+    "reviewer": "Kimi T30 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "Collateral tokens inside the USD3 basket (USDC via Aave, Compound, and Steakhouse wrappers; USDS via Savings USDS) are issuer-freezable upstream assets; an upstream freeze could impair redemption liquidity or claim value, but it cannot freeze or restrict a holder's USD3 balance or transfers on either deployment. Those exposures remain reserve-quality and dependency risks, not USD3 blacklistability."
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

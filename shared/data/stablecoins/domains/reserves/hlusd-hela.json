@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T10 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -30,13 +30,17 @@
       {
         "label": "HeLa HLUSD overview",
         "url": "https://docs.helalabs.com/hlusd/editor"
+      },
+      {
+        "label": "About HLUSD (StableHodl docs)",
+        "url": "https://docs.stablehodl.com/overview/about-hlusd"
       }
     ],
-    "rationale": "HeLa's current documentation states that HLUSD is fully backed by custodial USDC reserves managed by a licensed Australian financial institution and describes the peg as 1 HLUSD to 1 USDC. The complete direct reserve dependency is therefore USDC.",
+    "rationale": "HeLa's current documentation states that HLUSD is fully backed by custodial USDC reserves managed by a licensed Australian financial institution and describes the peg as 1 HLUSD to 1 USDC. The complete direct reserve dependency is therefore USDC. 2026-07-30 re-check: no third-party reserve attestation, auditor report, proof-of-reserves dashboard, or dated reserve-to-liability reconciliation is published on docs.helalabs.com, StableHodl docs, helalabs.com (transparency/reserves/audit/attestation paths 404), or the whitepaper beyond a design intent for regular auditing.",
     "compositionBasis": "Current HeLa issuer documentation for the HLUSD reserve and redemption model",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No direct reserve asset remains unidentified in the issuer's current full-backing disclosure.",
+    "knownUnknownExposure": "No direct reserve asset remains unidentified in the issuer's current full-backing disclosure. Assurance cadence, third-party attestations, and named custodian continuity remain undisclosed.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -50,8 +54,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T10 safety-v9 unknown-reduction w2",
     "confidence": "probable",
     "sources": [
       {
@@ -61,8 +65,12 @@
       {
         "label": "HeLa HLUSD overview",
         "url": "https://docs.helalabs.com/hlusd/editor"
+      },
+      {
+        "label": "HeLa whitepaper §6.2 (custody committee design intent)",
+        "url": "https://helalabs.com/hela-whitepaper.pdf"
       }
     ],
-    "uncertainty": "HeLa identifies a licensed Australian financial institution and regulated custodians but does not publish the provider name, reserve account segregation, insolvency treatment, or rehypothecation terms."
+    "uncertainty": "2026-07-30: HeLa still identifies only a licensed Australian financial institution / regulated custodians without naming the provider, license type, reserve account segregation, bankruptcy remoteness, rehypothecation terms, anti-rehypothecation controls, or failure/replacement/successor-custody mechanics. Whitepaper §6.2 states a committee of reputable companies will manage fiat-asset custody and regular auditing, but publishes no active roster or legal vehicle. Failure-domain isolation of custody from HeLa runtime governance is not documented."
   }
 }

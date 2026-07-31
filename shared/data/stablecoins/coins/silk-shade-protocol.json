@@ -39,9 +39,9 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-07-28",
-      "reviewer": "Grok wave-8 GROK-RESEARCH controls",
-      "rationale": "ShadeLend is documented as isolated-risk overcollateralized vault markets with stability-pool liquidations, and the SCRT Labs v1.10 proposal lists multiple Shade oracle contracts (Silk Index Oracle plus LST/collateral routers). That architecture implies market-specific oracle and liquidation branches, but Secret Network privacy and the reviewed public sources do not publish a complete current production map of vault collateral identities to feed paths, heartbeats, fallbacks, and per-vault LTV/liquidation parameters, so branch inventory remains unresolved rather than invented.",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T08 wave-2 oracle review",
+      "rationale": "Re-opened 2026-07-30: ShadeLend is documented as isolated-risk overcollateralized vault markets with stability-pool liquidations, and the SCRT Labs v1.10 proposal lists multiple Shade oracle contracts (Silk Index Oracle plus LST/collateral routers). That architecture implies market-specific oracle and liquidation branches, but Secret Network privacy and the reviewed public sources do not publish a complete current production map of vault collateral identities to feed paths, heartbeats, fallbacks, and per-vault LTV/liquidation parameters, so branch inventory remains unresolved rather than invented.",
       "sources": [
         {
           "label": "SILK overcollateralized minting (ShadeLend)",
@@ -57,8 +57,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 GROK-RESEARCH controls",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T08 wave-2 oracle review",
     "confidence": "verified",
     "sources": [
       {
@@ -118,11 +118,19 @@
       {
         "label": "Minting and redemption docs",
         "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+      },
+      {
+        "label": "SNIP-20 reference implementation (code id 877 base; no per-address freeze/blacklist)",
+        "url": "https://github.com/scrtlabs/snip20-reference-impl/blob/master/src/contract.rs"
+      },
+      {
+        "label": "SCRT Labs v1.10 hardcoded-admins proposal (SILK SNIP-25 at code id 877)",
+        "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
       }
     ],
-    "evidence": "No direct SILK holder blacklist was identified, but Shade documentation lists stablecoins such as USDC in collateral/redemption pool routes. Under the any-reserve FreezeWatch policy, that resolves as upstream freeze exposure.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30: the SILK SNIP-25 token instantiates the SNIP-20 reference implementation at code id 877 per the SCRT Labs v1.10 hardcoded-admins proposal. That implementation's execute surface exposes no per-address freeze, blacklist, or transfer-block function; the only admin restriction primitive is SetContractStatus (NormalRun / StopAllButRedeems / StopAll), a global pause affecting all holders equally, controllable by the contract admin (ShadeDAO Multisig, on-chain-verified 5-of-7). The current contract status level is private Secret Network state. No direct SILK holder blacklist was identified, but Shade documentation and the Shade Lend announcement list stablecoins such as USDC among collateral and redemption-pool routes, so under the any-reserve FreezeWatch policy the posture resolves as upstream freeze exposure.",
+    "reviewer": "Kimi T08 wave-2 access review",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -148,8 +156,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T08 wave-2 reserve review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -165,6 +173,10 @@
         "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
       },
       {
+        "label": "What Is Shade Lend? (collateral categories and example collateral set)",
+        "url": "https://shadeprotocol.io/blog/what-is-shade-lend"
+      },
+      {
         "label": "Shade Protocol source repository",
         "url": "https://github.com/securesecrets/shade"
       },
@@ -173,9 +185,9 @@
         "url": "https://app.shadeprotocol.io"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Shade SILK overcollateralized minting docs: SILK minted by locking 120–150%+ accepted volatile collateral in ShadeLend isolated markets with stability-pool liquidations. Secret Network privacy still prevents a public constituent reconciliation; envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
+    "rationale": "Write-time re-open 2026-07-30 of Shade SILK overcollateralized minting docs and the Shade Lend announcement: SILK is minted by locking 120–150%+ accepted collateral in ShadeLend isolated vault markets with stability-pool liquidations; vaults span three documented categories (stablecoins, staking derivatives, normal crypto tokens) with examples including stkd-SCRT, stATOM, stOSMO, stLUNA, IST, DAI, FRAX, and USDC. Secret Network privacy still prevents a public constituent reconciliation and the live whitelist is not published, so the envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
     "compositionBasis": "Shade documentation of overcollateralized vault backing, Stability Pool liquidations, and collateral redemptions; current private collateral mix undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "Current collateral identities, balances, and weights cannot be reconciled from the reviewed public sources or private Secret Network state.",
     "knownUnknownExposurePct": 100,
@@ -302,10 +314,12 @@
         "address": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
         "label": "ShadeDAO Multisig (Secret Network contract admin)",
         "role": "governor",
-        "authorityType": "unknown",
+        "authorityType": "multisig",
         "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 7,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
             "label": "SCRT Labs v1.10 hardcoded-admins proposal",
@@ -314,10 +328,14 @@
           {
             "label": "ShadeDAO docs",
             "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao"
+          },
+          {
+            "label": "Secret Network LCD account query (Lavender.Five)",
+            "url": "https://secretnetwork-api.lavenderfive.com/cosmos/auth/v1beta1/accounts/secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf"
           }
         ],
-        "evidence": "The v1.10 hardcoded-admins proposal names this account \"ShadeDAO Multisig\" and assigns it as the CosmWasm contract admin of the SILK token, ShadeLend Overseer, Single Vault Registry, Redemption Model (secret1mk2yt0gywtz704439mkqzjmntj09r837vc73s3), Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w), Admin Auth, and the Shade oracle stack, explicitly to enable logic upgrades without state migration. ShadeDAO governance operates through SHD tokenholder-directed assembly multisigs. The multisig's signer set, threshold, and any subsequent admin changes are not publicly verifiable on Secret Network, so the authority model is recorded without a threshold and confidence is capped at manual-review.",
-        "observedAt": "2026-07-27"
+        "evidence": "The v1.10 hardcoded-admins proposal names this account \"ShadeDAO Multisig\" and assigns it as the CosmWasm contract admin of the SILK token, ShadeLend Overseer, Single Vault Registry, Redemption Model (secret1mk2yt0gywtz704439mkqzjmntj09r837vc73s3), Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w), Admin Auth, and the Shade oracle stack, explicitly to enable logic upgrades without state migration. On-chain re-derivation 2026-07-30 via the Secret Network LCD account endpoint (chain: secret, account_number 117105): the account pubkey is a cosmos.crypto.multisig.LegacyAminoPubKey with threshold 5 over 7 secp256k1 public keys, confirming a native 5-of-7 Cosmos SDK multisig; the signer identities behind those pubkeys are not publicly disclosed, consistent with ShadeDAO's SHD-elected assembly model. Native Cosmos multisig accounts have no Safe-style module/guard surface. Any subsequent admin changes to dependent contracts remain private Secret Network state, so profile confidence stays manual-review.",
+        "observedAt": "2026-07-30"
       }
     ],
     "upgradeability": {
@@ -340,9 +358,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend vault contracts registered in the Shade Single Vault Registry, with risk parameters managed by the ShadeLend Overseer and every mint-critical contract (SILK SNIP-25 token, Overseer, Vault Registry, Redemption Model, Stability Pool, Admin Auth, oracle stack) administered by the ShadeDAO Multisig secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf per the SCRT Labs Secret Network v1.10 hardcoded-admins governance proposal executed in September 2023. CosmWasm admin migration lets that multisig replace mint-critical contract logic without state migration, so mint logic is governance-changeable. Shade documentation also describes bounded conversion minting and bond/arbitrage (AMO) mint access; the contract identities and current status of those additional mint paths are not publicly enumerable and are recorded as a residual uncertainty. Secret Network's privacy model prevents live reads of the minter registry, multisig composition, and vault parameters, so confidence is capped at manual-review. Mechanism boundary dating: the Secret Network ecosystem history dates the Shade/SILK mainnet launch to April 2023 and the Shade team's April 2023 hackathon documentation states ShadeLend was live on mainnet; implementationLaunchDate uses the conservative 2023-04 month-end.",
-      "reviewer": "Kimi wave-7 CTRL shard-a5",
-      "reviewedAt": "2026-07-27",
+      "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend vault contracts registered in the Shade Single Vault Registry, with risk parameters managed by the ShadeLend Overseer and every mint-critical contract (SILK SNIP-25 token, Overseer, Vault Registry, Redemption Model, Stability Pool, Admin Auth, oracle stack) administered by the ShadeDAO Multisig secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf per the SCRT Labs Secret Network v1.10 hardcoded-admins governance proposal executed in September 2023. On-chain re-derivation 2026-07-30 (Secret Network LCD, Lavender.Five, account_number 117105) resolves that admin as a native Cosmos SDK LegacyAminoPubKey multisig with threshold 5 over 7 secp256k1 public keys; signer identities behind the pubkeys are undisclosed. CosmWasm admin migration lets that multisig replace mint-critical contract logic without state migration, so mint logic is governance-changeable. Shade documentation also describes bounded conversion minting and bond/arbitrage (AMO) mint access; the contract identities and current status of those additional mint paths are not publicly enumerable and are recorded as a residual uncertainty. Secret Network's privacy model prevents live reads of the minter registry and vault parameters, so reconciliation remains unknown and confidence is capped at manual-review. Mechanism boundary dating: the Secret Network ecosystem history dates the Shade/SILK mainnet launch to April 2023 and the Shade team's April 2023 hackathon documentation states ShadeLend was live on mainnet; implementationLaunchDate uses the conservative 2023-04 month-end.",
+      "reviewer": "Kimi T08 wave-2 controls review",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "SILK minting and redemption",
@@ -351,6 +369,10 @@
         {
           "label": "SCRT Labs v1.10 hardcoded-admins proposal",
           "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+        },
+        {
+          "label": "Secret Network LCD account query (Lavender.Five, ShadeDAO Multisig 5-of-7)",
+          "url": "https://secretnetwork-api.lavenderfive.com/cosmos/auth/v1beta1/accounts/secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf"
         },
         {
           "label": "Secret Network ecosystem history",
@@ -369,7 +391,7 @@
           "url": "https://github.com/securesecrets/shade"
         }
       ],
-      "sourceFreeRationale": "Mechanism and admin structure established from Shade docs and the SCRT Labs v1.10 governance proposal; Secret Network privacy precludes live verification of the current minter registry, assembly multisig thresholds, and bond/arbitrage mint-path status.",
+      "sourceFreeRationale": "Mechanism and admin structure established from Shade docs and the SCRT Labs v1.10 governance proposal; the ShadeDAO Multisig authority model is on-chain verified (5-of-7), but Secret Network privacy precludes live verification of the current minter registry, signer identities, and bond/arbitrage mint-path status.",
       "disposition": "scoreable"
     }
   },

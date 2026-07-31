@@ -132,8 +132,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi unknown-reduction wave-2 T02 reserve review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -141,14 +141,22 @@
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"
       },
       {
-        "label": "ISC reserve dashboard",
-        "url": "https://dashboard.isc.money/"
+        "label": "ISC reserve oversight page (audit scheme under consideration)",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight.md"
+      },
+      {
+        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings by asset class, fetched 2026-07-30)",
+        "url": "https://isc.money/api/reserve-balances"
+      },
+      {
+        "label": "ISC dashboard isc-history API (daily target-price series through 2026-07-30)",
+        "url": "https://isc.money/api/isc-history"
       }
     ],
-    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash, but directs readers to a dashboard for the current allocation. The reviewed dashboard did not expose a dated, verifiable holdings snapshot. Because the initial target is not evidence of current holdings, the prior five equal-weight rows have been replaced by one 100% unresolved multi-asset envelope.",
-    "compositionBasis": "ISC whitepaper target asset families; current allocation unavailable",
+    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash. Re-reviewed 2026-07-30: the dashboard now serves a reserve-balances JSON API naming two reserves (Reserve A and Reserve B) with current USD-denominated holdings across cash, IB01, SGLD, VWRA, and AGGU that roughly track the target, and an isc-history API publishing a daily target-price series through 2026-07-30. The holdings disclosure is undated, mutable, single-source, and unaudited — the oversight page still describes the reserve audit scheme as under consideration — so it does not satisfy the dated, verifiable evidence standard, and the single 100% unresolved multi-asset envelope is retained.",
+    "compositionBasis": "ISC whitepaper target asset families; current allocation issuer-published but unaudited and undated",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current reserve allocation, holdings, custody providers, valuation date, liability reconciliation, and implementation launch date are not established by the reviewed primary sources.",
+    "knownUnknownExposure": "The issuer-published current allocation is unaudited and undated; the custody providers and legal entities behind Reserve A and Reserve B, the valuation date, liability reconciliation, and any independent attestation are not established by the reviewed primary sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -170,8 +178,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi unknown-reduction wave-2 T02 reserve review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -179,11 +187,15 @@
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"
       },
       {
-        "label": "ISC reserve dashboard",
-        "url": "https://dashboard.isc.money/"
+        "label": "ISC reserve key entities (reserves own assets; users have no direct ownership rights)",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities.md"
+      },
+      {
+        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings, fetched 2026-07-30)",
+        "url": "https://isc.money/api/reserve-balances"
       }
     ],
-    "uncertainty": "The whitepaper describes a community-governed ISC Reserve basket but does not name custody providers, account segregation, insolvency treatment, rehypothecation terms, or the managers behind the target allocation.",
+    "uncertainty": "The whitepaper states the ISC Reserves maintain full possession and ownership of the assets, and the dashboard API names two reserves (Reserve A and Reserve B), but no custody providers, legal entities, account segregation, insolvency treatment, or rehypothecation terms are disclosed.",
     "knownUnknownExposurePct": 100
   },
   "yieldConfig": {

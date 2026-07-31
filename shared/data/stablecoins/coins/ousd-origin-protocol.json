@@ -44,21 +44,39 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Ethereum OUSD proxy",
-        "url": "https://eth.blockscout.com/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86?tab=contract"
+        "label": "Origin Dollar OUSD.sol (GitHub master)",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/token/OUSD.sol"
       },
       {
-        "label": "Ethereum OUSD verified implementation",
-        "url": "https://eth.blockscout.com/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33?tab=contract"
+        "label": "Origin Dollar VaultCore.sol (GitHub master)",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/vault/VaultCore.sol"
+      },
+      {
+        "label": "Ethereum OUSD proxy (Etherscan)",
+        "url": "https://etherscan.io/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86#code"
+      },
+      {
+        "label": "Ethereum OUSD implementation 0xa7b7c59a (storage slot EIP-1967)",
+        "url": "https://etherscan.io/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33#code"
+      },
+      {
+        "label": "Origin OUSD docs",
+        "url": "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum.publicnode.com"
       }
     ],
-    "evidence": "The live proxy implementation exposes ordinary transfer and transferFrom without a blacklist or pause check. Its privileged Vault may nevertheless call burn(account, amount) against an arbitrary nonzero account. The verified token source therefore establishes a material privileged holder-intervention surface without proving a direct transfer blacklist, so Possible is retained.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25648342, OUSD proxy 0x2a8e1e67… EIP-1967 implementation slot returned 0xa7b7c59a…; vaultAddress() returned Vault 0xE75D77B1…; governor() and admin() returned Timelock 0x35918cDE…. Verified OUSD.sol transfer/transferFrom execute with no blacklist, pause, freeze, or sanction check. burn(account,amount) is onlyVault. VaultCore requestWithdrawal, redeem, and burnForStrategy all call oToken.burn(msg.sender, amount) — never an arbitrary third-party holder. Single material deployment is native Ethereum (bridge-route review). No token-level freeze surface is present.",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "OUSD is 100% USDC-backed via Morpho/Curve strategies. Circle USDC can freeze upstream USDC balances and impair vault liquidity/redemption, but USDC freeze does not blacklist or stop transfer of the OUSD ERC-20 itself. That exposure is reserve/dependency risk, not OUSD holder freeze."
   },
   "collateralQuality": "exotic",
   "governanceQuality": "wrapper",

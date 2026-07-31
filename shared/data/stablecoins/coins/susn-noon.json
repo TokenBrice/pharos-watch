@@ -11,12 +11,26 @@
     "rwa": true,
     "navToken": true
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as possible admin-control exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sUSN resolves to Possible because existing metadata indicates a mutable or pause-capable control surface without a confirmed direct freeze or arbitrary-burn surface.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Sourcify verified StakingVaultOFTUpgradeableHyperlane implementation (chain 1)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34"
+      },
+      {
+        "label": "sUSN Ethereum proxy on Etherscan",
+        "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (slot and role reads)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648380: the sUSN proxy 0xe24a3dc889621612422a64e6388927901608b91d still resolves to the Sourcify exact-match StakingVaultOFTUpgradeableHyperlane implementation 0xd1ffb6a6a42c86b931b2a6d388d1f25c1c775b34 behind ProxyAdmin 0x1908284b50ee152c9f00c8e65a81fc1c4520bd81. The verified source keeps a per-account blacklist mapping: blacklistAccount(address) (onlyRole(BLACKLIST_MANAGER_ROLE)) sets it, and both the deposit path and _update revert with BlacklistedAddress when the sender or recipient is blacklisted, so a single privileged call freezes a named holder's sUSN on the canonical Ethereum deployment. On-chain reads at the same block: owner() = the Noon 3-of-6 admin Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f and hasRole(DEFAULT_ADMIN_ROLE, Safe) = true, so that Safe controls the blacklist surface (it can grant BLACKLIST_MANAGER_ROLE at will; the Safe does not currently hold the manager role directly). The zkSync, Sophon, and Starknet deployments are Hyperlane lock-mint warp representations of this same token family, so a canonical-chain blacklist also traps their locked collateral. Upstream USN reserve-side exposure remains tracked on the parent usn-noon record.",
+    "reviewer": "Kimi T39 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "variantOf": "usn-noon",
   "variantKind": "savings-passthrough",

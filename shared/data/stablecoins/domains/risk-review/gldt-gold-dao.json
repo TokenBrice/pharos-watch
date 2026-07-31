@@ -1,20 +1,30 @@
 {
   "id": "gldt-gold-dao",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "GLDT Ethereum contract",
-        "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856"
+        "label": "GLDT Ethereum verified source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x86856814e74456893cfc8946bedcbb472b5fa856"
       },
       {
-        "label": "GLDT website",
-        "url": "https://gldt.org/"
+        "label": "ICRC API — GLDT ledger (read 2026-07-30)",
+        "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
+      },
+      {
+        "label": "GoldDAO/gold-dao repository — dfx.json DFINITY ICRC-1 ledger wasm pin",
+        "url": "https://github.com/GoldDAO/gold-dao"
+      },
+      {
+        "label": "Ethereum public RPC (block 25648434 owner read)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The reviewed EVM GLDT source is an Ownable ERC-20 whose owner controls minting and burn/withdraw bridge operations; the route review identifies the owner/minter as a single off-chain bridge signer. No separate direct holder blacklist or freeze function is documented, but the issuer-operated bridge and physical-gold custody route remain inherited control and failure-domain exposure.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30 across all four deployments. EVM (Ethereum/Base/Arbitrum, 0x86856814e74456893cfc8946bedcbb472b5fa856): the verified Ethereum Token source is OpenZeppelin ERC20+Ownable+ERC20Permit with stock transfer/transferFrom — no blacklist, freeze, pause, or seize path; burn1-burn4 burn only msg.sender for the ICP bridge route; onlyOwner covers mint/batchMint/withdrawEth/updateMinAmount/updateOwner, and owner() read at Ethereum block 25648434 returned the bridge operator 0x70AE25592209B57F62b3a3e832ab356228a2192C, so owner reach is mint-only and never holder-burn; the 2026-07-20 bridge-route review verified the identical function set on Base and Arbitrum (a 2026-07-30 Base source re-check was unavailable, explorer error). Canonical ICP ledger 6c7su-kiaaa-aaaar-qaira-cai: Gold DAO's dfx.json pins the stock DFINITY ICRC-1 ledger-suite wasm and candid (dfinity/ic commit 75dd48c), whose interface exposes only ICRC-1/2/3/21 methods with no freeze, blacklist, block-account, or pause entrypoint; a live on-chain standards query on 2026-07-30 returned exactly ICRC-1/2/3/21, and the ICRC API shows the sole minting account is the GLDT swap canister. The ledger controller is the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai, so a DAO proposal could install replacement wasm — an upgrade-governance path tracked by the transfer-posture overlay, not a current holder-freeze capability. No deployment exposes a holder-targeted freeze or blacklist in current code, so the 2026-07-14 'inherited' verdict (which had no resolvable tracked upstream) is resolved to false.",
+    "reviewer": "Kimi T44 unknown-reduction wave-2",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive, confirmed 2026-07-31: the inferred upstream signal comes from the word \"gram(s)\" in GLDT's gold-backing collateral text matching the unrelated tracked coin grams-token-teknoloji (symbol GRAMS, a Turkish silver token). GLDT's only backing is locked GLD NFTs over physical gold; no tracked freezable upstream stablecoin is held. Bridge-operator and SNS upgrade-governance reach remain tracked as bridge-route and control risks."
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

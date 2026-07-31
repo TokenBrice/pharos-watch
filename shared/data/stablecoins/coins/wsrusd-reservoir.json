@@ -862,11 +862,31 @@
       {
         "label": "Reservoir rUSD parent record",
         "url": "https://app.reservoir.xyz/reserves"
+      },
+      {
+        "label": "Reservoir smart-contract address inventory",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Tempo TIP-20 transfer-policy specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Reservoir rUSD on Tempo",
+        "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000007f7ba549dd0251b9"
+      },
+      {
+        "label": "wsrUSD Solana mint",
+        "url": "https://solscan.io/token/7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
+      },
+      {
+        "label": "Solana finalized mint account read",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Current-source access review: the verified wsrUSD contract is a constructor-deployed ERC-4626 wrapper with no identified holder blacklist or freeze selector; MANAGER and DEFAULT_ADMIN controls govern wrapper parameters rather than individual holder transfers. wsrUSD inherits the upstream rUSD reserve and protocol-control exposure, so parent access risk remains conservatively retained.",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-31 across the tracked wrapper surfaces. Reservoir's verified Savingcoin source for Ethereum wsrUSD is a constructor-deployed ERC-4626/ERC20 with MANAGER and DEFAULT_ADMIN roles for cap/rate/update/recovery operations, but no blacklist, freeze, pause, seize, or arbitrary-holder-burn function; the 15 EVM representation deployments use the same 12,275-byte LayerZero OFT code family with ordinary transfer paths. Solana finalized slot 436244454 (2026-07-30T23:20:08Z) for mint 7bxM8cRF... reports freezeAuthority = null. The wrapper therefore has no current local holder-freeze reach. Upstream access is inherited from tracked rUSD: Tempo rUSD TIP-20 currently reads paused() = false and transferPolicyId() = 1 at block 32494649, but the Reservoir admin can activate TIP-403 blacklist/transfer policy, pause, or burnBlocked controls under the TIP-20 standard. Failure domain is the Reservoir rUSD parent/Tempo admin, not wsrUSD's wrapper or OFT contracts.",
+    "reviewer": "T52 access review (fresh exact replay)",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

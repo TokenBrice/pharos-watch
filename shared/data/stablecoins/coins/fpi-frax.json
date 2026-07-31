@@ -78,22 +78,32 @@
       "chain": "fraxtal",
       "address": "0xfc00000000000000000000000000000000000003",
       "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+      "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "FPI Ethereum token verified source",
+        "label": "FPI Ethereum token verified source (Blockscout)",
         "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+      },
+      {
+        "label": "FPI Ethereum token verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?fields=all"
+      },
+      {
+        "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
+        "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
       },
       {
         "label": "FPI Fraxtal token address",
         "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000003?tab=contract"
-      },
-      {
-        "label": "Frax AMO overview",
-        "url": "https://docs.frax.finance/amo/overview"
       },
       {
         "label": "Fraxtal verified ProxyAdmin implementation",
@@ -104,9 +114,10 @@
         "url": "https://rpc.frax.com"
       }
     ],
-    "evidence": "At Fraxtal block 0x24d7f6f, the tracked FPI proxy 0xfc00000000000000000000000000000000000003 stored implementation 0xfcc0d30000000000000000000000000000000003 and admin 0xfc0000000000000000000000000000000000000a. That admin proxy stored verified ProxyAdmin implementation 0xfc00000000000000000000000000000000000009, whose owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6; its verified source exposes owner-only upgrade and upgradeAndCall. The owner can therefore replace the FPI implementation and introduce holder-level transfer restrictions. This is an upgrade-control finding, not a claim that every FPI deployment or the current code exposes an active global freeze or blacklist.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "2026-07-30 re-review across every live deployment. Ethereum FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e (about 5.889M FPI, 52% of supply) had zero EIP-1967 implementation and admin slots at block 25648258; its Blockscout- and Sourcify-verified source exposes transfer/transferFrom plus owner-gated addMinter/removeMinter/minter_mint/minter_burn_from, with no blacklist, freeze, pause, seize, or arbitrary holder-burn path. ZKsync Era FPI 0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85 (250,000 FPI at zkSync block 71379489, about 2%) is verified CrossChainCanonicalV2, immutable (zero EIP-1967 slots), with owner(), timelock_address(), and sole minter all the codeless EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, and the same restriction-free minter-model interface. Fraxtal FPI 0xfc00000000000000000000000000000000000003 (about 5.190M FPI, 46% of supply) is an upgradeable proxy: at Fraxtal block 39317542 the implementation 0xfcc0d30000000000000000000000000000000003 answered owner() 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 and minters() reads, while selector probes for paused, blacklist, isBlacklisted, freeze, frozen, and blocklist all reverted, so the current code has no active freeze or blacklist. However, the proxy admin 0xfc0000000000000000000000000000000000000a resolves to the verified ProxyAdmin whose owner is that same address, a live 3-of-5 Safe (getThreshold 3, five owners) that can replace the FPI implementation immediately, without a timelock, over the 46% Fraxtal supply share. That instant no-timelock code replacement is a mutable holder-facing control, so the reviewed verdict remains possible rather than false: no active holder freeze exists in any deployed code, but the Fraxtal upgrade path could introduce one.",
+    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "FPI's FRAX-denominated reserves and AMO positions (reviewed 2026-07-30 for frax-frax as not holder-blacklistable) and LP or governance-token reserve slices can impair claim value or redemption liquidity if those upstream assets fail or freeze, but none of those actors has a direct holder freeze, blacklist, or transfer-restriction path on FPI token deployments. Those exposures remain reserve-quality and dependency risks, not FPI blacklistability."
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
@@ -335,9 +346,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "FPI is deployed on Ethereum and Fraxtal, and Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement. Pharos treats this row as canonical rollup-bridge exposure. 2026-07-20 cohort dc-1 pass: Ethereum and Fraxtal rows both confirmed issuer-native FPI deployments; the zkSync-unmatched supply row remains without a verified deployment address.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "summary": "FPI is deployed on Ethereum, Fraxtal, and zkSync Era. Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement, and Pharos treats the Ethereum/Fraxtal rows as canonical rollup-bridge exposure. 2026-07-30 cohort T11 pass: the previously unmatched zkSync Era supply row is now matched to the verified issuer-canonical CrossChainCanonicalV2 deployment 0xd405617db7473b0a3158356be7bc9ebec6d88b85 (sole-minter deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, the same Frax zkSync deployer pattern as the reviewed FRAX zkSync route), leaving no unmatched material deployment.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "protocols": [
       {
@@ -407,6 +418,36 @@
           {
             "label": "Fraxtal FPI",
             "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+        "protocol": "Frax CrossChainCanonicalV2 (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-30 at zkSync Era block 71379489: name 'Frax Price Index', symbol FPI, 18 decimals, totalSupply 250,000 FPI (about 2% of cross-chain supply). Verified CrossChainCanonicalV2 source with zero EIP-1967 implementation and admin slots (immutable); owner(), timelock_address(), and sole minter all resolve to the codeless deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 — the same Frax zkSync deployer EOA pattern flagged in the reviewed FRAX zkSync route. L2Beat independently attributes zkSync Era FPI value to the Frax Ferry path. Issuer-canonical deployment, not a third-party bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-30",
+        "sources": [
+          {
+            "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
+            "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
+          },
+          {
+            "label": "Frax CrossChainCanonicalV2 source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalV2.sol"
+          },
+          {
+            "label": "L2Beat zkSync Era TVS breakdown (FPI via Frax Ferry)",
+            "url": "https://l2beat.com/scaling/projects/zksync-era/tvs-breakdown"
           }
         ]
       }

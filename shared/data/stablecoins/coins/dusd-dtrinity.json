@@ -298,25 +298,54 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "dTRINITY dUSD documentation",
-        "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
-      },
-      {
-        "label": "dTRINITY documentation",
-        "url": "https://docs.dtrinity.org/"
+        "label": "Official ERC20StablecoinUpgradeable source (PAUSER_ROLE + ERC20Pausable; no holder blacklist)",
+        "url": "https://github.com/dtrinity/ethereum-solidity-contracts/blob/main/contracts/dstable/ERC20StablecoinUpgradeable.sol"
       },
       {
         "label": "Ethereum dUSD proxy",
         "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+      },
+      {
+        "label": "Fraxtal dUSD proxy",
+        "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+      },
+      {
+        "label": "Katana dUSD proxy",
+        "url": "https://katanascan.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+      },
+      {
+        "label": "Sonic dUSD proxy",
+        "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+      },
+      {
+        "label": "dTRINITY security addresses (Emergency Governance Safes / PAUSER path)",
+        "url": "https://docs.dtrinity.org/security/addresses"
+      },
+      {
+        "label": "Ethereum public RPC used for paused()/PAUSER_ROLE reads at block 25648892",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Fraxtal public RPC used for paused()/PAUSER_ROLE reads at block 39321334",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Katana public RPC used for paused()/PAUSER_ROLE reads at block 38710567",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "Sonic public RPC used for paused()/PAUSER_ROLE reads at block 76782957",
+        "url": "https://rpc.soniclabs.com"
       }
     ],
-    "evidence": "dTRINITY documentation describes dUSD as a protocol stablecoin with whitelisted stablecoin and yield-bearing collateral, while the reviewed Ethereum mint-control record identifies a proxy and unresolved AMO/SMO controller identity. The reserve policy can include issuer-controlled stablecoins, but no deployment-wide holder blacklist or freeze function is proven in the reviewed sources; inherited upstream exposure and unresolved control reach are retained.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-opened 2026-07-31. Official ERC20StablecoinUpgradeable inherits OpenZeppelin ERC20Pausable and exposes PAUSER_ROLE-gated pause()/unpause(); _update is whenNotPaused, so a live PAUSER can halt all holder transfers globally. Verified source and ABI expose no isBlacklisted/blacklist/freeze selectors. Fresh public-RPC reads at the latest observed blocks (2026-07-31 UTC) returned paused()=false and PAUSER_ROLE=true for the listed emergency/governance authority: Ethereum block 25648892 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), Fraxtal block 39321334 (Emergency Governance 5-of-5 Safe 0xABfBcf92986B4Ba43FaAecf545F0b2Cc45067af9), Katana block 38710567 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), and Sonic block 76782957 (Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262). Reach is token-level global pause, not per-address freeze. Residual: reserve assets include freezable upstream stablecoins (USDC/USDT/etc.), which is reserve-asset exposure rather than a dUSD token blacklist.",
+    "reviewer": "Codex T13 access review 2026-07-31",
+    "reviewedAt": "2026-07-31"
   },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",

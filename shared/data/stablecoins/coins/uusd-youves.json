@@ -669,25 +669,31 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Youves documentation",
-        "url": "https://docs.youves.com/"
+        "label": "TzKT uUSD FA2 entrypoints (balance_of/transfer/mint/burn/execute)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW/entrypoints?json=true"
       },
       {
-        "label": "Youves governance documentation",
-        "url": "https://docs.youves.com/governance/Governance-Mechanism/"
+        "label": "TzKT uUSD FA2 active administrators bigmap 7705",
+        "url": "https://api.tzkt.io/v1/bigmaps/7705/keys?active=true&limit=100"
       },
       {
-        "label": "TzKT uUSD engine administrator",
-        "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/"
+        "label": "Youves smart-contract registry (uUSD FA2 KT1XRPE…)",
+        "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      },
+      {
+        "label": "TzKT finalized head (observation level)",
+        "url": "https://api.tzkt.io/v1/head"
       }
     ],
-    "evidence": "Youves documents uUSD as a collateralized Tezos asset administered through Youves engine contracts and governance. The reviewed TzKT state identifies the shared 4-of-7 FlatYouves DEX Admin as the operative engine administrator; collateral includes USDt on Tezos, which carries upstream issuer freeze exposure. No direct uUSD holder blacklist is proven in the reviewed source, so inherited exposure is retained.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Write-time re-review on 2026-07-31 of the sole tracked Tezos FA2 uUSD token KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW (token_id 0). TzKT at finalized head level 14291558 (2026-07-30T23:17:28Z) lists only balance_of, burn(owner,token_id,token_amount), execute(lambda), mint, remove_administrator, set_administrator, set_token_metadata, transfer, and update_operators; there is no blacklist, freeze, pause, or transfer-hook entrypoint. The active token_id 0 administrator bigmap entries are the Youves Vault Creator and legacy/V3 engine contracts; they mint/burn along vault and liquidation accounting but expose no holder freeze list. The official Youves registry identifies KT1XRPE… as the uUSD FA2 and lists the same legacy/active engine deployments. Ordinary FA2 transfer has no pause/blacklist gate. Conclusion: no direct holder freeze/blacklist surface; canBeBlacklisted=false.",
+    "upstreamSuppressionRationale": "Material collateral includes USDt on Tezos, which Tether can freeze at the collateral layer, and engine administrators can mint/burn uUSD as part of vault accounting. Those surfaces affect collateral value or supply accounting; they are not a uUSD FA2 holder-level freeze/blacklist path. Upstream USDt freeze and engine mint authority remain reserve and mint-control risks.",
+    "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-31"
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",

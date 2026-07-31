@@ -20,23 +20,55 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T13 reserve re-review 2026-07-31",
     "confidence": "verified",
     "sources": [
       {
-        "label": "dTRINITY dUSD documentation",
+        "label": "dTRINITY dUSD documentation (eligible reserve assets by network)",
         "url": "https://docs.dtrinity.org/protocol-components/dusd"
       },
       {
-        "label": "dTRINITY network support",
+        "label": "dTRINITY network support (chain-isolated reserves)",
         "url": "https://docs.dtrinity.org/key-concepts/network-support"
+      },
+      {
+        "label": "dTRINITY security addresses (collateral vaults / AMO vaults)",
+        "url": "https://docs.dtrinity.org/security/addresses"
+      },
+      {
+        "label": "Ethereum collateral vault 0x84c58066… (listCollateral / totalValue)",
+        "url": "https://etherscan.io/address/0x84c58066a4408454b7380f168c95F571419253f4"
+      },
+      {
+        "label": "Fraxtal collateral vault 0x624E12dE…",
+        "url": "https://fraxscan.com/address/0x624E12dE7a97B8cFc1AD1F050a1c9263b1f4FeBC"
+      },
+      {
+        "label": "Katana collateral vault 0xA5f9F623…",
+        "url": "https://katanascan.com/address/0xA5f9F6238406B1301D0ED09555a2893dc1A26A49"
+      },
+      {
+        "label": "Sonic collateral vault 0xD6BBab42… (deployment artifact)",
+        "url": "https://github.com/dtrinity/sonic-solidity-contracts/blob/main/deployments/sonic_mainnet/dUSD_CollateralHolderVault.json"
+      },
+      {
+        "label": "Ethereum public RPC listCollateral()/totalValue() reads at block 25648892",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Fraxtal public RPC listCollateral()/totalValue() reads at block 39321334",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Katana public RPC listCollateral()/totalValue() reads at block 38710567",
+        "url": "https://rpc.katana.network"
       }
     ],
-    "rationale": "dTRINITY documents chain-isolated reserves that may contain eligible stablecoins, yieldcoins, and Curve AMO positions, with governance able to change allocations over time. The documentation identifies accepted assets and reserve-vault architecture but does not publish a reconciled current balance sheet across deployments, so the prior static component percentages are replaced by one complete aggregate basket. Write-time re-open 2026-07-28: dTRINITY dUSD docs still state soft-pegged dollar with >=$1 collateral in chain-isolated reserves and 1:1 mint/redeem against eligible reserve assets; site corroborates. Eligible-asset weights not published \u2192 ku=100.",
-    "compositionBasis": "dTRINITY documented eligible-asset and chain-isolated reserve envelope; current balances are undisclosed",
+    "rationale": "2026-07-31 re-open. Issuer docs still list per-network eligible reserve classes (Ethereum: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, Curve LP receipts; Fraxtal: bridged USDC/USDT/DAI/sDAI plus frxUSD/sfrxUSD and Curve LP; Katana: vbUSDC, vbUSDT, AUSD, frxUSD, sfrxUSD; no public Sonic/Ronin eligible-asset tables on the same page). Fresh public-RPC reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567 called listCollateral() and totalValue() on the documented collateral vaults, confirming current supported-asset membership and nonzero vault accounting, but they do not yield a publishable multi-deployment weight table: Ethereum remains dominated by AMO-dUSD accounting receipts rather than itemized Curve LP legs; Fraxtal mixes residual sfrxUSD with AMO accounting; Katana exposes multiple idle stablecoin/yieldcoin balances. Sonic/Ronin remain outside the documented reserve table. Protocol accounting totals do not replace a reconciled, weighted reserve balance sheet. Static component percentages remain unsupported; one complete aggregate basket with known-unknown residual is retained.",
+    "compositionBasis": "dTRINITY documented eligible-asset envelope plus 2026-07-31 on-chain listCollateral()/totalValue() reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567; current multi-chain asset weights remain undisclosed/unreconcilable",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current deployment weights, reserve-asset balances, AMO allocations, and aggregate coverage reconciliation are not published in the reviewed documentation.",
+    "knownUnknownExposure": "Per-asset and per-network reserve weights, Curve AMO LP leg valuation, and a cross-deployment assets-and-liabilities reconciliation are not published; on-chain idle vault balances alone are incomplete where AMO debt receipts dominate.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -44,10 +76,10 @@
         "reserveName": "Chain-isolated eligible stablecoin, yieldcoin, and AMO position basket",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The protocol publishes eligible assets and vault addresses but not current per-asset or per-network reserve balances."
+        "rationale": "Docs name eligible assets per network and vault addresses; 2026-07-31 listCollateral()/totalValue() reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567 confirm membership but not a durable, oracle-priced weight table that sums across Ethereum AMO positions, Fraxtal, Katana, Sonic, and Ronin without fabrication."
       }
     ],
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-31"
   },
   "custodyProfile": {
     "providers": [
@@ -63,8 +95,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T13 reserve research 2026-07-30",
     "confidence": "probable",
     "sources": [
       {
@@ -74,9 +106,17 @@
       {
         "label": "dTRINITY security addresses",
         "url": "https://docs.dtrinity.org/security/addresses"
+      },
+      {
+        "label": "dTRINITY Terms of Use (effective 2026-06-24)",
+        "url": "https://docs.dtrinity.org/informational/terms-of-use"
+      },
+      {
+        "label": "CollateralHolderVault source (role-gated withdraw/exchange)",
+        "url": "https://github.com/dtrinity/ethereum-solidity-contracts/blob/main/contracts/dstable/CollateralHolderVault.sol"
       }
     ],
-    "uncertainty": "dTRINITY publishes per-network collateral-vault and AMO-vault addresses and states that reserves are isolated by chain. It also permits reserve deployment into productive assets and AMO positions, but the reviewed sources do not establish legal segregation, bankruptcy remoteness, current contract-level allocations, or a uniform collateral-reuse restriction.",
+    "uncertainty": "Reserves sit in on-chain CollateralHolderVault / AMO contracts with COLLATERAL_WITHDRAWER_ROLE and strategy roles; docs state chain-isolated reserves. Binding Terms (effective 2026-06-24) disclaim fiduciary, custodian, trustee, and recovery obligations and deny token-holder beneficial interest in protocol assets. No named off-chain bank custodian, legal segregation, bankruptcy remoteness, alternate-provider continuity plan, or non-rehypothecation covenant for reserve assets was established.",
     "knownUnknownExposurePct": 100
   }
 }

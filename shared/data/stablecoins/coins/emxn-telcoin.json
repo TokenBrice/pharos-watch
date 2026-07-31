@@ -12,21 +12,25 @@
     "navToken": false
   },
   "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
-  "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
+  "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; Telcoin's Terms of Use effective 2026-06-30 (section XXIX) document a 1:1 redemption policy for verified Telcoin Account holders (0.15% fee, $2,000 per-transaction cap, 1-3 business days standard), but no eMXN-specific reserve-attestation report has been published",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 mechanism review",
-    "rationale": "Telcoin Digital Cash materials establish MXN fiat reserves and issuer rails, but the reviewed sources do not provide current independent assurance, reserve reconciliation, claim segregation, custody continuity, or loss-recovery inputs for a complete mechanism review.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T17 archetype review",
+    "rationale": "Telcoin's Terms of Use effective 2026-06-30, section XXIX, establish eMXN as an eXYZ token issued by Telcoin LLC, backed by an equivalent or greater value of fiat currency or currency equivalents held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account, with a documented 1:1 redemption policy for verified account holders. This issuer-managed fiat-reserve claim structure matches the fiat-cash archetype; the bank-issued eUSD under Telcoin Digital Asset Bank is a separate product governed by separate terms. No independent assurance engagement, named reserve institution, or custody-continuity disclosure has been published, so the mechanism component reviews remain bounded.",
     "sources": [
+      {
+        "label": "Telcoin Terms of Use (effective 2026-06-30), section XXIX eXYZ Terms",
+        "url": "https://www.telco.in/en/terms-of-use"
+      },
       {
         "label": "Telcoin Digital Cash",
         "url": "https://www.telco.in/en/digital-cash"
       },
       {
-        "label": "Telcoin banking platform",
-        "url": "https://bank.telco.in/"
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
       }
     ]
   },
@@ -326,7 +330,7 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "Telcoin Digital Asset Bank and undisclosed Mexican reserve institutions",
+      "issuerOrObligor": "Telcoin LLC and undisclosed regulated financial institutions holding the eXYZ Segregated Accounts",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -338,27 +342,27 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T17 backing review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Telcoin Digital Cash",
-        "url": "https://www.telco.in/en/digital-cash"
+        "label": "Telcoin Terms of Use (effective 2026-06-30), section XXIX eXYZ Terms",
+        "url": "https://www.telco.in/en/terms-of-use"
       },
       {
-        "label": "Telcoin Digital Asset Bank",
-        "url": "https://bank.telco.in/"
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
       },
       {
         "label": "Telcoin Digital Asset Bank terms",
         "url": "https://bank.telco.in/terms-of-use"
       }
     ],
-    "rationale": "Telcoin's Digital Cash disclosure identifies eMXN as a live Mexican-peso Digital Cash asset on Polygon and describes the product family as issued through regulated financial institutions. The reviewed primary sources do not publish an eMXN-specific reserve report, asset-class split, named reserve institution, or fixed redemption window, so the existing 100% aggregate envelope is retained without fabricated subcategories.",
-    "compositionBasis": "Telcoin Digital Cash issuer disclosure for the eMXN reserve envelope",
+    "rationale": "Telcoin's Terms of Use effective 2026-06-30, section XXIX, state that eMXN is an eXYZ token issued by Telcoin LLC, backed by an equivalent or greater value of Mexican-peso currency or currency equivalents held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account; the separate bank.telco.in terms confirm eUSD under Telcoin Digital Asset Bank is a distinct product, so the eMXN obligor is Telcoin LLC. The reviewed primary sources do not publish an eMXN-specific reserve report, asset-class split, named reserve institution, or reserve-liquidity disclosure, so the 100% aggregate envelope is retained without fabricated subcategories.",
+    "compositionBasis": "Telcoin Terms of Use section XXIX eXYZ reserve disclosure for the eMXN reserve envelope",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report. Telcoin states that monthly attestations will be published, but none was located in the reviewed sources.",
+    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report. Telcoin states that monthly attestations will be published, but none was located in the reviewed sources as of 2026-07-30.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -366,21 +370,20 @@
         "reserveName": "Mexican peso fiat reserves for Telcoin Digital Cash",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The issuer describes the Digital Cash reserve concept but does not publish eMXN-specific composition or assurance evidence."
+        "rationale": "The issuer's Terms of Use describe the segregated eXYZ reserve structure but do not publish eMXN-specific composition or assurance evidence."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Telcoin Digital Asset Bank",
+        "name": "Telcoin LLC (eXYZ issuer)",
         "role": "other",
         "jurisdiction": "United States"
       },
       {
-        "name": "Undisclosed Mexican reserve institutions",
-        "role": "bank",
-        "jurisdiction": "Mexico"
+        "name": "Undisclosed regulated financial institutions holding eXYZ Segregated Accounts",
+        "role": "bank"
       },
       {
         "name": "Telcoin eMXN Polygon contract",
@@ -391,20 +394,20 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T17 backing review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Telcoin Digital Cash",
-        "url": "https://www.telco.in/en/digital-cash"
+        "label": "Telcoin Terms of Use (effective 2026-06-30), section XXIX eXYZ Terms",
+        "url": "https://www.telco.in/en/terms-of-use"
       },
       {
-        "label": "Telcoin Digital Asset Bank terms",
-        "url": "https://bank.telco.in/terms-of-use"
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
       }
     ],
-    "uncertainty": "The reviewed sources identify Telcoin's regulated-bank framework but do not identify the eMXN reserve account, Mexican bank counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The custody profile is therefore intentionally unknown until an eMXN-specific report is published."
+    "uncertainty": "The Terms of Use effective 2026-06-30 state that eXYZ reserves are held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account and for the benefit of users, but the reviewed sources name no reserve institution or custodian, disclose no bankruptcy-remoteness determination, rehypothecation terms, or custodian-replacement provisions, and provide no independent confirmation of the segregation. The custody profile therefore remains intentionally unknown until an eMXN-specific assurance report is published."
   },
   "launchDate": "2024-03-25"
 }

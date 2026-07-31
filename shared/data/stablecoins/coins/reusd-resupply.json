@@ -148,25 +148,27 @@
   ],
   "deploymentModel": "single-chain",
   "governanceQuality": "dao-governance",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "REUSD verified contract source",
+        "label": "Sourcify verified reUSD Stablecoin source (match 6319599)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x57ab1e0003f623289cd798b1824be09a793e4bec?fields=all"
+      },
+      {
+        "label": "Blockscout verified reUSD contract",
         "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
       },
       {
-        "label": "Resupply governance voting",
-        "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
-      },
-      {
-        "label": "Resupply admin permissions",
-        "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
+        "label": "Resupply Stablecoin.sol source",
+        "url": "https://github.com/resupplyfi/resupply/blob/main/src/protocol/Stablecoin.sol"
       }
     ],
-    "evidence": "The verified REUSD source exposes owner/operator-controlled mint and standard ERC-20 transfers, but no holder blacklist, freeze, seizure, or global pause function. The owner is Resupply Core and proposal execution is governed by the token-weighted Voter with a seven-day vote and one-day execution delay. crvUSD and frxUSD lending-vault collateral create upstream loss exposure without granting their controllers access to REUSD holder balances.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-07-30 against two independent verifiers: the reUSD deployment at 0x57ab1e0003f623289cd798b1824be09a793e4bec is a Sourcify-matched and Blockscout-verified LayerZero OFT (Stablecoin.sol) exposing owner/operator-controlled mint, allowance-gated burn, and standard ERC-20 transfers with no holder blacklist, freeze, seizure, or pause function. The only censorship-adjacent surface is the owner-set LayerZero msgInspector, which can revert outbound bridge messages but cannot touch Ethereum holder balances. The owner is Resupply Core, executed through the token-weighted Voter with a seven-day vote and one-day execution delay.",
+    "reviewer": "Kimi T27 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "crvUSD and frxUSD lending-vault collateral drives the heuristic upstream exposure, but neither Curve nor Frax controllers hold any function over the REUSD token itself; that exposure is collateral loss risk, not freeze reach over REUSD holder balances, so the direct verdict is no blacklist capability."
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -265,7 +267,7 @@
   "reserves": [
     {
       "name": "Curve crvUSD lending markets",
-      "pct": 94,
+      "pct": 93.2,
       "risk": "high",
       "coinId": "crvusd-curve",
       "assetClass": "protocol-position",
@@ -280,7 +282,7 @@
     },
     {
       "name": "Frax frxUSD lending markets",
-      "pct": 6,
+      "pct": 6.8,
       "risk": "high",
       "coinId": "frxusd-frax",
       "assetClass": "protocol-position",
@@ -295,8 +297,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III V9 reserve-slice review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "SOL-III V9 reserve-slice review; Kimi T27 V9 reserve-slice refresh",
     "confidence": "verified",
     "sources": [
       {
@@ -308,9 +310,9 @@
         "url": "https://github.com/resupplyfi/resupply/blob/537b5a0424efd1663b7a2c3262d4a2d0536fc670/src/protocol/ResupplyPair.sol"
       }
     ],
-    "rationale": "The independent resupply-pairs producer enumerated every configured positive-collateral pair and converted its ERC-4626 shares at the same on-chain capture. Aggregating by underlying produced 94% Curve crvUSD lending-market exposure and 6% Fraxlend frxUSD lending-market exposure. Both are layered protocol positions whose upstream issuer and smart-contract failure domains remain explicit.",
-    "compositionBasis": "Exact live Resupply pair registry and ERC-4626 collateral conversion captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The independent resupply-pairs producer enumerated every configured positive-collateral pair and converted its ERC-4626 shares at the same on-chain capture; a 2026-07-30 replay of all eleven configured pairs at Ethereum block 25648351 (underlying(), getPairAccounting(), collateral(), convertToAssets()) reproduced the split: 24,483,249 crvUSD-side and 1,792,040 frxUSD-side converted assets, i.e. 93.2% Curve crvUSD lending-market exposure and 6.8% Fraxlend frxUSD lending-market exposure. Both are layered protocol positions whose upstream issuer and smart-contract failure domains remain explicit.",
+    "compositionBasis": "Exact live Resupply pair registry and ERC-4626 collateral conversion captured at Ethereum block 25648351 on 2026-07-30",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No positive-collateral pair is omitted; vault liquidity, borrower collateral, and upstream crvUSD or frxUSD solvency remain structured risk factors within the two classified positions.",
     "knownUnknownExposurePct": 0

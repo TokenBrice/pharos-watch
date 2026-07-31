@@ -36,10 +36,10 @@
     "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
-      "rationale": "Lumi documents LUA staking, floor-price support, minting, and reserve-backed AMM flows, but does not establish whether the current production mechanism has a complete oracle, collateral-health, liquidation, backstop, or shutdown branch that can be reviewed as applicable or not applicable.",
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T20 wave-2 unknown reduction",
+      "rationale": "Re-opened Lumi docs 2026-07-30: LUAUSD is minted by staking LUA against the protocol's internal floor price, which is defined by Lumi's own segmented LUA bonding-curve minting function rather than an external price feed. The staking flow has vesting and an early-redemption penalty (0-30%) instead of borrower collateral ratios, health factors, or liquidation auctions, and the reviewed LUAUSD UtilityToken source contains no oracle, price-feed, or liquidation dependency. Stabilization runs through Lumi's AMO rebalancing its own Curve pool, again an internal AMM path. The oracle/liquidation branch is therefore reviewed as genuinely not applicable to this oracleless internal-pricing design; residual opacity about the AMO's exact trigger conditions is retained in the summary rather than scored as an external-oracle exposure.",
       "sources": [
         {
           "label": "Lumi staking and stablecoin documentation",
@@ -48,11 +48,19 @@
         {
           "label": "Lumi LUA minting documentation",
           "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+        },
+        {
+          "label": "Lumi Finance LUAUSD token docs",
+          "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
+        },
+        {
+          "label": "Sourcify verified LUAUSD UtilityToken source (Arbitrum)",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SOL-3 adversarial verification",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
     "confidence": "limited",
     "sources": [
       {
@@ -110,9 +118,9 @@
         "url": "https://api.coingecko.com/api/v3/coins/lumi-finance-luausd"
       }
     ],
-    "evidence": "The verified UtilityToken source exposes owner mint authority and allowance-based burnFrom, but no direct holder freeze, blacklist, pause, seize, or arbitrary burn function. Lumi's protocol materials and the reviewed reserve metadata describe stablecoin collateral, so FreezeWatch retains inherited upstream exposure while keeping the token-level direct-control finding conservative.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-07-30 against the Sourcify exact-match UtilityToken source (chain 42161, 0x1dd6b5f9281c6b4f043c02a83a46c2772024636c): the contract exposes onlyOwner mint and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function, and transfers are unrestricted. Lumi's protocol materials and the reviewed reserve metadata describe USDT/USDC stablecoin collateral, so FreezeWatch retains inherited upstream exposure while keeping the token-level direct-control finding conservative.",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -245,8 +253,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
     "confidence": "manual-review",
     "sources": [
       {
@@ -258,9 +266,9 @@
         "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: LUAUSD docs state all circulating LUAUSD can be exchanged for USDT 1:1; legacy staking docs describe over-collateralized mint by staking LUA at floor price. lumi.finance marketing site returned HTTP 404. No current split between LUA collateral and USDT POL; envelope remains 100% aggregate other with ku=100.",
+    "rationale": "Write-time re-open 2026-07-30: LUAUSD docs still state all circulating LUAUSD can be exchanged for USDT 1:1; legacy staking docs describe over-collateralized mint by staking LUA at floor price. lumi.finance marketing site previously returned HTTP 404. No current split between LUA collateral and USDT POL is published; envelope remains 100% aggregate other with ku=100.",
     "compositionBasis": "Lumi Finance documented backing model; current split between LUA collateral and stablecoin protocol-owned liquidity undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split between LUA floor-price collateral, USDT/USDC protocol-owned liquidity, and Curve pool positions is not published as a dated aggregate.",
     "knownUnknownExposurePct": 100,

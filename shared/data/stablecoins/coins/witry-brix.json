@@ -16,13 +16,17 @@
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "Brix documentation identifies wiTRY as the yield-bearing wrapper claim on iTRY, whose disclosed backing is the Digital Liquidity Fund's Turkish money-market fund basket. The token is an NAV/yield-accreting short-duration fund exposure rather than a fixed TRY cash claim; the existing tbill archetype is retained as the closest supported V9 category.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T56 w2 archetype re-review",
+    "rationale": "Re-verified 2026-07-30 against live Brix materials: iTRY is fully backed by the Digital Liquidity Fund's DLF token, shares of a regulated basket of Turkish money-market funds with a daily NAV published by a licensed fund administrator, and wiTRY is the ERC-4626 staking wrapper whose value accrues against iTRY as fund yield is minted into the staking contract. The live stabilization and claim structure is therefore an NAV-accreting short-duration money-market-fund exposure rather than a fixed TRY cash claim, a CDP, or a private-credit fund; the tbill archetype remains the matching supported V9 category. wiTRY has no tracked parent asset (iTRY is not a Pharos-tracked coin), so no archetypeOverride parent divergence applies.",
     "sources": [
       {
         "label": "Brix iTRY backing and custody documentation",
         "url": "https://docs.brix.money/itry/backing"
+      },
+      {
+        "label": "Brix iTRY product page (wiTRY ERC-4626 staking)",
+        "url": "https://brix.money/itry"
       },
       {
         "label": "Brix proof-of-reserves documentation",

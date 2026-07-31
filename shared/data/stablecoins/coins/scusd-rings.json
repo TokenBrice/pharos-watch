@@ -49,13 +49,17 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Veda BoringVault source",
+        "label": "Veda BoringVault source (BeforeTransferHook)",
         "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+      },
+      {
+        "label": "Veda TellerWithMultiAssetSupport deny/beforeTransfer source",
+        "url": "https://github.com/Veda-Labs/boring-vault/blob/main/src/base/Roles/TellerWithMultiAssetSupport.sol"
       },
       {
         "label": "Ethereum scUSD BoringVault verified source",
@@ -66,13 +70,17 @@
         "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
       },
       {
-        "label": "Veda Teller architecture",
-        "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+        "label": "Ethereum public RPC (hook/teller state)",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Sonic public RPC (hook/teller state)",
+        "url": "https://rpc.soniclabs.com"
       }
     ],
-    "evidence": "The current Ethereum and Sonic scUSD BoringVault deployments are immutable, with a LayerZeroTeller as the documented mint entry point and chain-specific Safe/timelock governance controlling RolesAuthority capabilities. The reviewed source and deployment evidence do not establish a current direct holder blacklist, freeze, or transfer-pause function. Possible is retained because privileged capability administration and cross-chain teller routing remain material intervention surfaces; upstream stablecoin exposure is not treated as proof of direct scUSD holder control.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "2026-07-30 re-review of both material deployments (Ethereum block 25648302, Sonic block 76778912). scUSD is the immutable Veda BoringVault share token at 0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae on Ethereum and Sonic (owner()=0; authority=RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348). transfer/transferFrom call BeforeTransferHook; on both chains hook() returns the LayerZeroTeller 0x358CFACf00d0B4634849821BB3d1965b472c776a. That Teller bytecode and the public TellerWithMultiAssetSupport source expose denyAll/denyFrom/denyTo/denyOperator (requiresAuth) and beforeTransfer(from,to,operator), which reverts TransferDenied for deny-listed parties and SharesAreLocked during any share-lock window. shareLockPeriod()=0 and isPaused()=false at observation; deny calls from unprivileged callers revert UNAUTHORIZED, so activation is gated by RolesAuthority grants under chain-specific 4/6 Veda/Paladin Safe + one-day TimelockController paths documented in mintAuthority. Failure domain: Veda/Paladin RolesAuthority+Teller deny surface on each chain, plus LayerZero share routing. Upstream USDC/USDT/DAI/GHO freeze exposure remains via reserves and is not the token-level control path. Direct holder freeze/blacklistability is therefore true, not merely possible.",
+    "reviewer": "Grok T34 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

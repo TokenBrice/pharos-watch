@@ -204,11 +204,32 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Reservoir's stablecoin collateral and PSM exposure to tracked freezable stablecoins such as USDC, USDT, USD1, PYUSD, RLUSD, GHO, and AUSD.",
-    "evidence": "rUSD inherits upstream freeze risk because the Reservoir balance sheet and PSM are built around tracked stablecoins with issuer or governance control surfaces.",
-    "reviewer": "Codex metadata review",
-    "reviewedAt": "2026-05-22"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Reservoir rUSD token on Ethereum (verified source)",
+        "url": "https://eth.blockscout.com/address/0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+      },
+      {
+        "label": "Reservoir RusdOft on Arbitrum (verified source)",
+        "url": "https://arbitrum.blockscout.com/address/0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+      },
+      {
+        "label": "Tempo rUSD TIP-20 preinstall",
+        "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000007f7ba549dd0251b9"
+      },
+      {
+        "label": "Tempo TIP-20 specification (pause, TIP-403 transfer policies, burnBlocked)",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Reservoir official contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      }
+    ],
+    "evidence": "A freeze/blacklist capability exists now on rUSD's live Tempo deployment: rUSD on Tempo is a TIP-20 protocol precompile at 0x20c0000000000000000000007f7ba549dd0251b9, and the TIP-20 standard ships every token with pause(), TIP-403 whitelist/blacklist transfer policies, and burnBlocked(). The token's DEFAULT_ADMIN_ROLE is actively held by Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (granted at creation via TIP20Factory, Tempo block 12113547), which can at any time activate a blacklist policy, pause all transfers, or burn blocked balances; at Tempo block 32485354 the token reads paused() = false and transferPolicyId() = 1 (always-allow), but the control surface is live. By contrast the canonical Ethereum token 0x09d4214c03d01f49544c0448dbe3a27f768f2b34 (verified Blockscout source 'Stablecoin', non-proxy, OpenZeppelin AccessControl + ERC20Burnable only) has no blacklist, pause, freeze, or arbitrary-burn path — its sole privileged function is MINTER-role mint — and every EVM sidechain deployment is verified vanilla LayerZero OFT v2 + Ownable with no freeze surface (Arbitrum RusdOft source re-verified 2026-07-30), while the Solana mint has freezeAuthority unset. The canonical supply therefore carries no freeze reach, but the tracked Tempo TIP-20 deployment carries a real admin-controlled freeze/blacklist surface, making the honest asset-level answer true.",
+    "reviewer": "Kimi V9 gap-clearing re-review (access freeze, 2026-07-30)",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
@@ -1029,24 +1050,43 @@
         "destinationChain": "tempo",
         "canonicalChain": "ethereum",
         "contractAddress": "0x20c0000000000000000000007f7ba549dd0251b9",
-        "protocol": "Stargate Hydra rUSD (authority unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "DefiLlama's reservoir-stablecoin adapter lists this Tempo Mainnet deployment as 'rUSD on Tempo Mainnet (Stargate Hydra OFT, decimals=6)'. On-chain 2026-07-20 it is a Tempo preinstalled TIP-20 token (1-byte code, name 'Reservoir Stablecoin', totalSupply 10 raw units ≈ $0.00001 dust); the preinstall exposes no readable bridge controller (no owner(), no endpoint()), and no Stargate rUSD escrow/pool on Ethereum could be established, so the route controller stays honestly unresolved.",
+        "protocol": "LayerZero OFT adapter (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reservoir's official contract registry lists 'rUSD OFT adapter' 0xc593478d188259eaf3706b070fb8c17cf00b25b8 and 'rUSD TIP20' 0x20c0000000000000000000007f7ba549dd0251b9 on Tempo, resolving this route as Reservoir's own LayerZero wiring (DefiLlama's old 'Stargate Hydra' label no longer appears in its current reservoir-stablecoin config, and Stargate Hydra only wraps USDC/USDT/WETH). At Tempo block 32485354: the TIP-20 preinstall (1-byte precompile code, name 'Reservoir Stablecoin', 6 decimals, totalSupply 10 raw units of dust) granted DEFAULT_ADMIN_ROLE at creation to Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (block 12113547) and ISSUER_ROLE to the OFT adapter (block 16478140, granted by 0xb7570e32); the adapter returns token() = the TIP-20 and endpoint() = 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c (eid 30410) whose delegates(adapter) = 0xb7570e32, and the adapter's proxy admin 0xbccbc2a5cdef7d85184c97284ccea0a3de9b05db has owner() = 0x0, locking the implementation. On Ethereum at block 25689424 the canonical rUSD OFT adapter 0xf0e9f6d9ba5d1b3f76e0f82f9dcdb9ebeef4b4da returns token() = native rUSD and peers(30410) = the Tempo adapter, so rUSD mint/burn on Tempo runs only through LayerZero-verified messages between Reservoir's adapter pair (the Tempo-side peers(30101) entry is not yet set).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-30",
+        "observedBlock": 32485354,
+        "controllerChain": "tempo",
+        "controllerAddress": "0xc593478d188259eaf3706b070fb8c17cf00b25b8",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:tempo:0xc593478d188259eaf3706b070fb8c17cf00b25b8"
+        ],
         "sources": [
+          {
+            "label": "Reservoir official contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "Tempo explorer rUSD TIP-20",
+            "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000007f7ba549dd0251b9"
+          },
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
           {
             "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
             "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
-          },
-          {
-            "label": "Tempo explorer rUSD token",
-            "url": "https://explorer.tempo.xyz/address/0x20c0000000000000000000007f7ba549dd0251b9"
           }
         ]
       },

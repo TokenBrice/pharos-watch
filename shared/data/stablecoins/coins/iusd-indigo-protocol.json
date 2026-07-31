@@ -18,9 +18,9 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
-    "rationale": "Indigo V3 documents iAssets as overcollateralized Cardano CDPs that may use ADA or DAO-whitelisted Cardano native tokens, with additional governed peg-stability modules for approved stablecoin pairs. The Koios policy record anchors the Cardano implementation boundary used for the implementation date.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Codex Safety Score V9 reserve batch 7; re-verified by Kimi T21 unknown-reduction wave 2",
+    "rationale": "Indigo V3 documents iAssets as overcollateralized Cardano CDPs that may use ADA or DAO-whitelisted Cardano native tokens, with additional governed peg-stability modules for approved stablecoin pairs. The Koios policy record anchors the Cardano implementation boundary used for the implementation date. Re-verified 2026-07-30: the live V3 documentation still describes iUSD as single-collateral-type overcollateralized loans with per-pair liquidation, maintenance, and redemption ratios and Stability Pool liquidations, and Koios reports 1,480,346.261574 iUSD outstanding under the immutable PlutusV2 policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880, so the cdp archetype stands.",
     "sources": [
       {
         "label": "Indigo Protocol documentation",
@@ -258,16 +258,16 @@
         "url": "https://indigoprotocol.io/disclaimer.html"
       }
     ],
-    "evidence": "Indigo's V3 documentation, last updated 2026-06-25, describes an iUSD/USDCx Peg Stabilization Module: USDCx-to-iUSD minting and iUSD-to-USDCx redemption. It states that the DAO can enable or disable each direction of a stable pair and that the Indigo Foundation controlled loan redemptions at V3 launch. The official V3 configuration identifies PSM reference output 5a3581c7623683ca7a458f368d215816390c9cdaa8b5748deb7904b571889005#0; a Koios POST to utxo_info on 2026-07-15 returned PlutusV3 script hash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3, whose serialized validation messages include 'Minting is not enabled' and 'Redeeming is not enabled'. The current iUSD policy reference 8fac023fd9556f66ffdac8cb71879fabd6995480f7ad976213d1e1ee85de75cd#0 is PlutusV2, so the earlier policy was not treated as current PSM source evidence. Cardano documents that ordinary native-token transfers do not execute a policy, and no holder-address blacklist or direct iUSD transfer freeze was established. USDCx terms state that Circle may delay or deny xReserve USDC release and bridge parties may pause the bridge. This establishes possible governed PSM and upstream redemption-route access exposure, not a claim that an issuer can freeze standalone iUSD balances.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Indigo's V3 documentation, last updated 2026-06-25, describes an iUSD/USDCx Peg Stabilization Module: USDCx-to-iUSD minting and iUSD-to-USDCx redemption. It states that the DAO can enable or disable each direction of a stable pair and that the Indigo Foundation controlled loan redemptions at V3 launch. The official V3 configuration identifies PSM reference output 5a3581c7623683ca7a458f368d215816390c9cdaa8b5748deb7904b571889005#0; a Koios POST to utxo_info on 2026-07-15 returned PlutusV3 script hash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3, whose serialized validation messages include 'Minting is not enabled' and 'Redeeming is not enabled'. The current iUSD policy reference 8fac023fd9556f66ffdac8cb71879fabd6995480f7ad976213d1e1ee85de75cd#0 is PlutusV2, so the earlier policy was not treated as current PSM source evidence. Cardano documents that ordinary native-token transfers do not execute a policy, and no holder-address blacklist or direct iUSD transfer freeze was established. USDCx terms state that Circle may delay or deny xReserve USDC release and bridge parties may pause the bridge. This establishes possible governed PSM and upstream redemption-route access exposure, not a claim that an issuer can freeze standalone iUSD balances. Re-verified 2026-07-30: the live V3 documentation still describes the iUSD/USDCx PSM with DAO per-direction enable/disable and Foundation-controlled loan redemptions at launch; the mainnet system parameters still name stableswapHash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3 with the same reference output; a Koios address_assets query on the derived stableswap payment credential (enterprise address addr1wyj9gfdmf9q3g9xu5jhc7fgf03dz07fryjwqw70l4g4utgcsp3cwd) shows a single UTXO holding 4,400 iUSD and no stablecoin; and the USDCx Portal Terms of Use PDF and Indigo disclaimer both still resolve (HTTP 200).",
+    "reviewer": "Codex Safety Score V9 access review; re-verified by Kimi T21 unknown-reduction wave 2",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "mature-alt-l1",
   "governanceQuality": "dao-governance",
   "reserves": [
     {
       "name": "ADA-backed Indigo V3 iUSD CDP debt",
-      "pct": 99.64,
+      "pct": 87.1,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Cardano ADA and Indigo Protocol",
@@ -281,7 +281,7 @@
     },
     {
       "name": "NIGHT-backed Indigo V3 iUSD CDP debt",
-      "pct": 0.25,
+      "pct": 0.26,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "NIGHT token and Indigo Protocol",
@@ -294,11 +294,11 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Unreconciled non-CDP iUSD issuance",
-      "pct": 0.11,
+      "name": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
+      "pct": 12.64,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Indigo Protocol PSM, accrued interest, or other non-CDP path",
+      "issuerOrObligor": "USDCx (IOG xReserve bridge of Circle USDC), USDM (Moneta), and Indigo Protocol CDP vaults",
       "riskFactors": [
         "smart-contract",
         "counterparty"
@@ -307,8 +307,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 recovery review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T21 unknown-reduction wave 2",
     "confidence": "verified",
     "sources": [
       {
@@ -328,37 +328,41 @@
         "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880&_asset_name=69555344"
       },
       {
+        "label": "Koios address_assets for Indigo stableswap and CDP validator payment credentials",
+        "url": "https://api.koios.rest/api/v1/address_assets"
+      },
+      {
         "label": "Indigo V3 mainnet system parameters",
         "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
       }
     ],
-    "rationale": "In a coordinated 2026-07-21 live fetch, Indigo's public indexer reported 189 ADA-backed iUSD CDPs with 1,290,925.193112 iUSD debt and six NIGHT-backed CDPs with 3,269.173323 iUSD debt. Koios reported 1,295,611.271196 iUSD outstanding, so indexed CDP debt reconciles 99.8906% of supply: 99.6383% ADA debt and 0.2523% NIGHT debt, rounded here to 99.64% and 0.25%. The endpoints do not expose a shared historical snapshot slot, so the remaining 1,416.904761 iUSD, or 0.1094%, is preserved as an explicit non-CDP unknown rather than attributed to a PSM without proof. Using contemporaneous branch prices, indexed collateral was approximately USD 2.504m against USD 1.294m CDP debt, or 193.45%.",
-    "compositionBasis": "Outstanding iUSD supply attributed by live indexed CDP debt, with collateral values derived from branch-specific Indigo oracle prices",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "In a coordinated 2026-07-30 live fetch, Indigo's public indexer reported 188 ADA-backed iUSD CDPs with 1,289,374.623387 iUSD debt and seven NIGHT-backed CDPs with 3,895.620486 iUSD debt. Koios reported 1,480,346.261574 iUSD outstanding, so indexed CDP debt reconciles 87.3627% of supply: 87.0995% ADA debt and 0.2632% NIGHT debt, rounded here to 87.10% and 0.26%. The endpoints do not expose a shared historical snapshot slot, so the remaining 187,076.017701 iUSD, or 12.6373%, is preserved as an explicit unknown rather than normalized away. Tx-level Koios inspection of the largest mints between 2026-07-22 and 2026-07-30 (61aa93ba78b7ad387d3baae46ed5f59b8716515b6fefc76c5ef4e1138fa856f4, 9f64719273ad6f756d6161309206c39adb6bf75047998fe1c01b12a45945f7bb, 6e2832110e65b956e7af743cf555ea7e6908f7135a4ded09a1cec65853b3a872) shows new CDP outputs holding USDCx collateral (policy 1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e34, asset 5553444378) alongside CDP NFTs while 85,681.35, 15,489.29 and 27,803.68 iUSD were minted, directly evidencing USDCx-collateral iUSD CDP issuance since about 2026-07-23 that the public indexer does not yet list. A 2026-07-30 Koios address_assets check shows the stableswap (PSM) validator payment credential (enterprise address addr1wyj9gfdmf9q3g9xu5jhc7fgf03dz07fryjwqw70l4g4utgcsp3cwd) holding a single UTXO of 4,400 iUSD and no stablecoin, while the CDP validator payment credential (enterprise address addr1w8lsky9l7g8yk695j9yjukaxeqzg5uz8vwc2gh8zn9w6p0sy523pp) holds 156,397.028232 USDCx, 30,524.851380 USDM, and 1.711213 USDA - roughly $186.9k of stablecoin collateral consistent in size with the residual and with the Limitless USDCx/USDM collateral markets the V3 docs describe, but the public CDP indexer does not attribute those balances per iAsset, so no constituent link is asserted.",
+    "compositionBasis": "Outstanding iUSD supply attributed by live indexed CDP debt, with Indigo validator stablecoin balances inspected via Koios address_assets",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 1,416.904761 iUSD difference between total policy supply and indexed CDP debt may reflect a peg-stability module, accrued interest, or another non-CDP issuance path; no reviewed public endpoint splits that 0.1094% remainder.",
-    "knownUnknownExposurePct": 0.11,
+    "knownUnknownExposure": "The 187,076.017701 iUSD difference between total policy supply and indexed CDP debt is dominated by USDCx/USDM-collateral CDP markets not yet covered by the public indexer (mint transactions prove USDCx-collateral CDPs minting iUSD since about 2026-07-23), with smaller possible contributions from a peg-stability module, accrued interest, or another path; no reviewed public endpoint splits that 12.6373% remainder per iAsset, though stablecoin balances of similar size sit at the Indigo CDP validator payment credential.",
+    "knownUnknownExposurePct": 12.64,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "ADA-backed Indigo V3 iUSD CDP debt",
-        "pct": 99.64,
+        "pct": 87.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ADA is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "NIGHT-backed Indigo V3 iUSD CDP debt",
-        "pct": 0.25,
+        "pct": 0.26,
         "disposition": "untracked-exogenous-asset",
         "rationale": "NIGHT is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "Unreconciled non-CDP iUSD issuance",
-        "pct": 0.11,
+        "reserveName": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
+        "pct": 12.64,
         "disposition": "basket-needs-split",
-        "rationale": "The public supply and CDP endpoints establish the exact remainder but do not identify whether it is PSM inventory, accrued interest, or another non-CDP path, so no constituent link is asserted."
+        "rationale": "Mint transactions prove USDCx-collateral CDPs mint iUSD, and the CDP validator holds roughly $186.9k of USDCx, USDM, and USDA, but no public endpoint attributes those balances per iAsset or per CDP, so no constituent link or exact split is asserted."
       }
     ]
   },

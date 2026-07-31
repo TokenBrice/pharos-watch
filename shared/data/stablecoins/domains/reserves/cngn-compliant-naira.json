@@ -17,16 +17,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "probable",
     "sources": [
       {
         "label": "cNGN transparency and reserve disclosure",
         "url": "https://cngn.co/transparency"
+      },
+      {
+        "label": "WrappedCBDC cNGN terms (1:1 Naira-only minting and reserve backing)",
+        "url": "https://cngn.co/terms-and-condition"
+      },
+      {
+        "label": "Africa Stablecoin Consortium FAQ (partner-bank reserve and audit disclosures)",
+        "url": "https://asc.africa/faqs"
       }
     ],
-    "rationale": "cNGN's current transparency page states that cNGN is backed 1:1 by naira maintained in approved licensed commercial banks and presents the reserve amount as naira. It does not support the previous 54% bank-deposit and 46% money-market-and-Treasury split, so the composition is normalized to the currently disclosed bank reserve rather than preserving unsupported weights.",
+    "rationale": "2026-07-31 re-open: cNGN's transparency page states that tokens are maintained 1:1 with Naira in licensed custodian banks and that reserve funds receive monthly audits. WrappedCBDC's terms limit minting to Naira deposits and require each token to be backed 1:1 by Naira held in reserve; the ASC FAQ independently describes partner commercial-bank reserve accounts and traditional-currency/cash-equivalent backing. No dated reserve-attestation artifact or custodian-bank names were retrievable, so the current structured envelope remains 100% Naira bank deposits and does not preserve the earlier unsupported 54%/46% split.",
     "compositionBasis": "Current cNGN issuer transparency disclosure",
     "scope": "full-composition",
     "knownUnknownExposure": "The page does not identify the custodian banks, their allocation shares, account terms, or link a dated reserve examination report; the exact deposit liquidity is therefore unknown.",
@@ -52,16 +60,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "probable",
     "sources": [
       {
         "label": "cNGN transparency and reserve disclosure",
         "url": "https://cngn.co/transparency"
+      },
+      {
+        "label": "WrappedCBDC cNGN terms (reserve custody and 1:1 backing)",
+        "url": "https://cngn.co/terms-and-condition"
+      },
+      {
+        "label": "Africa Stablecoin Consortium FAQ (partner commercial-bank reserves)",
+        "url": "https://asc.africa/faqs"
       }
     ],
-    "uncertainty": "The issuer identifies licensed commercial banks but does not name them, disclose shares, or establish segregation, bankruptcy remoteness, or rehypothecation safeguards.",
+    "uncertainty": "The 2026-07-31 re-opened issuer transparency, terms, and ASC FAQ identify only licensed/partner commercial banks and reserve accounts; they do not name active banks, disclose allocation shares, establish segregation or bankruptcy remoteness, state anti-rehypothecation terms, or document failure/replacement/successor-custody mechanics.",
     "knownUnknownExposurePct": 100
   }
 }

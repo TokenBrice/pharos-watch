@@ -66,9 +66,9 @@
         "url": "https://arbitrum-one.publicnode.com"
       }
     ],
-    "evidence": "At Arbitrum block 484220930, the DUSD proxy resolves to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. Its blacklist mapping and removeFromWhitelist() prevent re-whitelisting and thereby mint/redeem eligibility, while pause() gates mint, redeem, and releasePendingRedeem. The verified implementation does not override ERC-20 transfer or transferFrom and contains no blacklist or pause hook on holder-to-holder transfers. Possible is retained because the current V9 status vocabulary cannot separately encode eligibility censorship without asserting a holder-transfer freeze.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "At Arbitrum block 484220930, the DUSD proxy resolves to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. Its blacklist mapping and removeFromWhitelist() prevent re-whitelisting and thereby mint/redeem eligibility, while pause() gates mint, redeem, and releasePendingRedeem. The verified implementation does not override ERC-20 transfer or transferFrom and contains no blacklist or pause hook on holder-to-holder transfers. Re-verified at Arbitrum block 489415741 (2026-07-30): the proxy EIP-1967 implementation and admin slots, the offchainTreasuryOracle binding, and the oracle offchainSigner are unchanged and paused() returned false, so the code-level findings continue to hold. Possible is retained because the current V9 status vocabulary cannot separately encode eligibility censorship without asserting a holder-transfer freeze.",
+    "reviewer": "Codex Safety Score V9 access review; Kimi T06 wave-2 re-verification",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",

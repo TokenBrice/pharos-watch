@@ -48,9 +48,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "dTRINITY sdUSD documentation",
@@ -97,9 +96,9 @@
         "url": "https://rpc.frax.com"
       }
     ],
-    "evidence": "READY_FOR_REPLAY: official documentation lists only the Ethereum and Fraxtal sdUSD vault receipts and states that deployments are chain-isolated. At Ethereum block 25535363, proxy 0x7cb20517776636ed76b68edb3d99dcce356abf02 resolved through its EIP-1967 implementation slot to DStakeTokenV2 0x9c278036c3c4529472751502dfc71bb1f0a3bfd4; ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be was owned by TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b, which held the token DEFAULT_ADMIN_ROLE and had a 86400-second delay. The live router was 0xdd26c236ec95d03ddf3cb67b7f54864719e9be5a, paused() was false, and current normal ERC20/ERC4626 withdrawals and public solver paths honor allowance whenever caller differs from owner. Router PAUSER_ROLE can pause deposits and redemptions, not token transfers. However, this is not inherited-only: DEFAULT_ADMIN_ROLE can call migrateCore() after the timelock, and its only candidate checks are the reported dStakeToken and collateralVault. A candidate router satisfying those checks can call router-only burnFromRouter() with initiator equal to owner, reaching its allowance-bypass branch and burning that holder's shares. This source-derived mutable holder-seizure route is direct possible, not an active blacklist/true finding. At Fraxtal block 38637738, proxy 0x58acc2600835211dcb5847c5fa422791fd492409 resolved to exact-match DStakeToken 0x0f51b15939a42bd995ecd3a2c151dc58621856c6; its DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b was owned by 0x0bafaDA2a5824864720873EE40cd960b36445212. The current Fraxtal implementation has ordinary ERC20/ERC4626 allowance behavior and no live blacklist/pause/transfer-hook/arbitrary-holder-burn function, but its upgrade owner can change that code. The separately documented dUSD/dTRINITY upstream exposure remains additional; this direct possible review does not suppress it. The Terms describe interface/protocol restrictions and upgrades in general terms but do not establish a current token-holder blacklist. Archive.org returned no snapshot for the reviewed sdUSD docs or Terms URL.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Re-verified 2026-07-30. Official documentation lists only the Ethereum and Fraxtal sdUSD vault receipts and states that deployments are chain-isolated. Pinned source re-read (dtrinity/ethereum-solidity-contracts commit d3103f88): DStakeTokenV2 does not override share transfers and is not Pausable; burnFromRouter skips allowance only when initiator equals owner, and the live DStakeRouterV2 passes msg.sender as initiator, so the current router cannot seize third-party shares; router PAUSER_ROLE pauses deposits and redemptions, not share transfers; the only seizure-capable path is DEFAULT_ADMIN_ROLE calling migrateCore() behind the 86400-second timelock (3-of-5 Safe) to install a candidate router. At Ethereum block 25656501 the proxy EIP-1967 implementation slot still resolved to DStakeTokenV2 0x9c278036c3c4529472751502dfc71bb1f0a3bfd4 and hasRole(DEFAULT_ADMIN_ROLE, TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b) returned true; at Fraxtal block 39317837 the proxy still resolved to DStakeToken 0x0f51b15939a42bd995ecd3a2c151dc58621856c6. Neither deployment has a live blacklist, pause, or transfer hook, so the wrapper carries no independent live freeze verdict. The governing live exposure is upstream: dUSD (dusd-dtrinity, recorded in mintAuthority.inheritedFrom) was re-reviewed 2026-07-30 with a true verdict - a live PAUSER_ROLE can halt all dUSD transfers globally, which would block sdUSD mint and redemption flows while sdUSD share transfers themselves stay unpaused. The verdict is therefore inherited from that named upstream; the wrapper's timelock-mutable seizure path above remains documented but requires a 24-hour governance action, not a live call. The Terms describe interface/protocol restrictions and upgrades in general terms but do not establish a current token-holder blacklist.",
+    "reviewer": "Kimi T24 unknown-reduction wave-2 research",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
@@ -333,10 +332,45 @@
       {
         "label": "Inherited dUSD AMO/governed-reserve mint authority",
         "role": "governor",
-        "authorityType": "unknown",
+        "authorityType": "safe",
         "directMintAbility": "none",
-        "canRaiseCap": "unknown",
-        "evidence": "Underlying dUSD is minted 1:1 against a governance-set whitelist of reserve stablecoins, with AMO pre-minting dUSD into Curve pools and contributor governance (pre-TGE multisig) controlling the whitelist, AMO/SMO, and a mint kill-switch. sdUSD inherits this concentrated-admin posture, plus the March 17 2026 dTRINITY exploit exposure noted on the dUSD profile."
+        "chain": "ethereum",
+        "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x4B58fF1AAE6AdD7465A5584eBCaeb876ec8f21FD",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0x64dbDD2AAD00383Defc305398F18a019161558CB",
+            "0xDC672ba6e55B71b39FA5423D42B88E7aDF9d24A4",
+            "0x9E0c8376940aBE845A89b7304147a95c72644f59"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-07-20",
+          "observedBlock": 25573508,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "dTRINITY deployed-address registry",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "Ethereum dUSD token",
+            "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+          },
+          {
+            "label": "Ethereum public RPC fixed-block reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Resolved 2026-07-30 against the parent dusd-dtrinity authority graph. Underlying dUSD is minted by documented MINTER_ROLE contracts (Ethereum AMO Manager 0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880, hasRole(MINTER_ROLE) re-verified true at Ethereum block 25656501, plus the flagged undocumented second minter 0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85) against a governance-set whitelist of reserve stablecoins, with AMO pre-minting into Curve pools. The dUSD DEFAULT_ADMIN_ROLE is held by the 86400-second TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (hasRole re-verified true at block 25656501) resolving to the same 3-of-5 governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 as this wrapper; Fraxtal and Katana follow the same timelocked 3-of-5 pattern, while Sonic's admin sits directly under a 2-of-4 Safe with no timelock. The dUSD token exposes no supply cap, so the inherited authority can raise effective sdUSD backing supply without a cap; sdUSD share mint itself remains deposit-backed. sdUSD inherits this concentrated-admin posture, plus the March 17 2026 dTRINITY exploit exposure noted on the dUSD profile."
       },
       {
         "label": "dSTAKE Fraxtal upgrade Safe (via 24-hour TimelockController)",
