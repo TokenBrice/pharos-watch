@@ -169,8 +169,11 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     // then the reviewed external-lock/mint bridge route drags it to 68 before
     // MAS 64 applies once: round(68*0.65 + 64*0.35) = 67. Wrappers inherit the
     // parent's pre-MAS score minus haircut, then take their own MAS drag once.
+    // sfrxUSD was re-reviewed to its own external-lock-mint tier: its six
+    // non-native deployments are FraxZero LayerZero OFTs, so it no longer
+    // rides the parent's milder issuer-native-burn-mint grade.
     expect(frxusd?.dimensions.decentralization.score).toBe(67);
-    expect(sfrxusd?.dimensions.decentralization.score).toBe(65);
+    expect(sfrxusd?.dimensions.decentralization.score).toBe(60);
     expect(ybold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sbold?.dimensions.decentralization.score).toBeGreaterThan(10);
     expect(sfrxusd?.dimensions.decentralization.score).toBeGreaterThan(10);

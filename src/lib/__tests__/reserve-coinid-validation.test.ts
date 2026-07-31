@@ -61,12 +61,12 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
   [
-    "bnusd-balanced::Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket::USDC",
-    "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
+    "bnusd-balanced::Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%, and sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS below 0.02% combined::DAI",
+    "Substring artifact: the DAI match sits inside sodaINJ. Balanced reports no DAI collateral in this aggregated sub-0.5% tail.",
   ],
   [
-    "bnusd-balanced::Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket::USDT",
-    "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
+    "bnusd-balanced::Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%, and sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS below 0.02% combined::USDS",
+    "Substring artifact: the USDS match sits inside sodaSUSDS, a below-0.02% wrapped sUSDS tail position that carries no separate weight.",
   ],
   [
     "dola-inverse-finance::sDOLA-scrvUSD Curve LP and residual LP collateral::DOLA",
@@ -111,14 +111,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::DAI",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
-    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base routed into Aave::USDC",
-    "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
-  ],
-  [
-    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base routed into Aave::USDT",
-    "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
     "nxusd-nereus::Nereus overcollateralized crypto positions including DAI collateral::DAI",
@@ -185,10 +177,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Maple does not publish the current split between retained USDT and deployed institutional-credit strategies.",
   ],
   [
-    "xmd-metal-dollar::USDC, PYUSD, and XPAX stablecoin reserve basket::USDC",
-    "Metal Dollar discloses the basket constituents but not current constituent weights.",
-  ],
-  [
     "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
     "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
   ],
@@ -201,20 +189,20 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
   ],
   [
-    "weusd-picwe::PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)::USDC",
-    "WEUSD's current USDC claim conflicts with older basket evidence and lacks a reconciled reserve inventory.",
+    "weusd-picwe::PicWe WEUSD backing (docs 100% USDC claim; Movement dual MOVE+stablecoin mint-state; unreconciled)::USDC",
+    "PicWe's Phase-1 100% USDC documentation conflicts with the on-chain Movement dual MOVE+stablecoin mint state and with EVM mint USDC balances that do not match issued supply, so no dated inventory splits the basket.",
   ],
   [
     "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
     "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
   ],
   [
-    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD/USDT dust; Rest_of_Assets)::GHO",
+    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD dust; Ethena USDe dust; Rest_of_Assets)::GHO",
     "Yuzu reports GHO inside an aggregate residual strategy bucket without a separable current weight, so a GHO coinId would overstate the dependency.",
   ],
   [
-    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD/USDT dust; Rest_of_Assets)::USDT",
-    "The Aave USDT dust position sits inside the same aggregate residual bucket without a separable current weight, so a USDT coinId would overstate the dependency.",
+    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD dust; Ethena USDe dust; Rest_of_Assets)::USDe",
+    "The Ethena USDe dust position sits inside the same aggregate residual bucket; every constituent is below ~0.3% of backing after grouping, so no single tracked coinId is representative.",
   ],
   [
     "ousg-ondo-finance::OUSG tokenized Treasury fund portfolio::OUSG",
@@ -225,16 +213,16 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "APACX identifies apcxUSDT as an eligible collateral wrapper but does not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves.",
   ],
   [
-    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::USDC",
-    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+    "euro3-3a-dao::Mendi meUSDC collateral (Linea)::USDC",
+    "meUSDC is a Mendi lending-market receipt, classified alongside mewETH/mewstETH as a protocol position: 3A's liquidation claim tracks Mendi pool solvency, not a directly held USDC slice. The directly held USDC.e vault collateral carries the usdc-circle link.",
   ],
   [
-    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::USDT",
-    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+    "euro3-3a-dao::Mendi meUSDT collateral (Linea)::USDT",
+    "Same Mendi receipt-token treatment; the borrower mix behind meUSDT is not an exact upstream USDT dependency, while the direct USDT vault collateral slice carries the usdt-tether link.",
   ],
   [
-    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::DAI",
-    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+    "iusd-indigo-protocol::USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance::USDC",
+    "Mint transactions prove USDCx-collateral CDPs mint iUSD, but no public endpoint attributes the validator's USDCx/USDM/USDA balances per iAsset or per CDP, so no constituent link or exact split is asserted.",
   ],
 ]);
 
