@@ -164,7 +164,7 @@ The display score is computed from `shared/lib/mint-authority-scoring.ts` throug
 
 Per-dimension mechanism quality ratings (`strong` / `adequate` / `limited` / `weak` / `failed`) are deliberately **not** extracted or published. Publishing them would introduce a public rating vocabulary, which is methodology-visible; the reviewed prose and its sources are not, because they only explain component scores the report card already publishes. A test pins the public view shape so the ratings cannot leak back in. The section hides when the asset has no overlay, or when the overlay carries no notes or no sources.
 
-The rail treatment clamps the notes to six lines behind a single `Show more · N sources` control that opens both the full prose and the source list, because reviewed notes run to roughly 1,700 characters on the median asset and past 6,000 on the longest — neither fits a 22rem column unclamped. Only the in-flow copy carries the `#mechanism-review` anchor.
+The compact rail treatment clamps the notes to six lines behind a single `Show more · N sources` control that opens both the full prose and the source list, because reviewed notes run to roughly 1,700 characters on the median asset and past 6,000 on the longest — neither fits a 22rem column unclamped. The in-flow section uses the full card width and keeps sources visible; notes longer than the collapse threshold render a roughly 320-character lead behind one `Read the full review` control, while shorter notes render whole without a toggle. Only the in-flow copy carries the `#mechanism-review` anchor.
 
 ### Access posture evidence
 

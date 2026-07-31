@@ -39,6 +39,30 @@ describe("MechanismReviewPanel", () => {
     expect(section?.className).toContain("xl:hidden");
   });
 
+  it("cuts long in-flow notes to a lead behind one control and keeps the sources visible", () => {
+    const longNotes = `${review.notes} `.repeat(20).trim();
+    render(<MechanismReviewPanel review={{ ...review, notes: longNotes }} />);
+
+    // The cut happens in the string, not with line-clamp: one full-width line
+    // carries ~150 characters, so a line-based fold would hide almost nothing.
+    const lead = screen.getByText(/Segregated Accounts/).textContent ?? "";
+    expect(lead.length).toBeLessThan(400);
+    expect(lead.endsWith("…")).toBe(true);
+    // The full-width section keeps its citations visible while the prose is cut.
+    expect(screen.getByText("Sources (2)")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /Read the full review/ }));
+
+    expect(screen.getByText(/Segregated Accounts/).textContent).toBe(longNotes);
+    expect(screen.getByRole("button", { name: /Show less/ })).toBeTruthy();
+  });
+
+  it("omits the in-flow toggle for notes short enough to lose nothing to the fold", () => {
+    render(<MechanismReviewPanel review={review} />);
+    expect(screen.queryByRole("button", { name: /Read the full review/ })).toBeNull();
+    expect(screen.getByText(/Segregated Accounts/).textContent).toBe(review.notes);
+  });
+
   it("clamps the compact rail copy until it is expanded", () => {
     render(<MechanismReviewPanel review={review} compact />);
     // Reviewed notes run past 6,000 characters on the longest assets, which
