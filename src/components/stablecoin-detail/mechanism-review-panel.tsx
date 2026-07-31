@@ -31,13 +31,19 @@ function ArchetypeBadge({ review }: { review: MechanismReviewView }) {
   );
 }
 
-function SourceList({ review }: { review: MechanismReviewView }) {
+function SourceList({
+  review,
+  listClassName,
+}: {
+  review: MechanismReviewView;
+  listClassName?: string;
+}) {
   return (
     <>
       <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
         Sources ({review.sources.length})
       </h3>
-      <ul className="mt-2 space-y-2">
+      <ul className={cn("mt-2 space-y-2", listClassName)}>
         {review.sources.map((source) => (
           <li key={source.url} className="flex min-w-0 gap-2 text-xs leading-relaxed">
             <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -120,6 +126,76 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
 }
 
 /**
+ * Collapsed length of the in-flow lead, in characters. Cut in the string rather
+ * than with `line-clamp` so the fold does not move with the viewport: at the
+ * full card width one clamped line already carries ~150 characters, so a
+ * line-based cut hides almost nothing on wide screens.
+ */
+const NOTES_LEAD_CHARS = 320;
+
+/** Notes at or under this length would lose nothing to the fold. */
+const NOTES_COLLAPSE_THRESHOLD = 420;
+
+function buildLead(notes: string) {
+  const cut = notes.slice(0, NOTES_LEAD_CHARS);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
+/**
+ * In-flow treatment below `xl`. The prose runs the full card width — a
+ * `max-w-prose` column left most of the card empty — and long notes cut to a
+ * lead behind one control the way the rail does.
+ */
+function FullMechanismReview({ review }: { review: MechanismReviewView }) {
+  const [open, setOpen] = useState(false);
+  const collapsible = review.notes.length > NOTES_COLLAPSE_THRESHOLD;
+  const showLead = collapsible && !open;
+
+  return (
+    <Card id="mechanism-review" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT, "xl:hidden")}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <div className="flex min-w-0 items-center gap-2">
+          <FlaskConical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Mechanism review</DetailSectionTitle>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <ArchetypeBadge review={review} />
+          <span className="font-mono text-[11px] text-muted-foreground">Reviewed {review.reviewedAt}</span>
+        </div>
+      </CardHeader>
+      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
+        <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          {showLead ? buildLead(review.notes) : review.notes}
+        </p>
+
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            className="pharos-focus-ring mt-3 inline-flex min-h-7 items-center gap-1 rounded-sm text-xs font-medium text-frost-blue"
+          >
+            {open ? "Show less" : "Read the full review"}
+            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        <div className="mt-5 border-t border-border/40 pt-4">
+          {/* Citation labels are long; two columns keep the list from running
+              the full card width as one sparse stack. */}
+          <SourceList review={review} listClassName="md:grid md:grid-cols-2 md:gap-x-8 md:space-y-0 md:gap-y-2" />
+        </div>
+
+        <p className="mt-4">
+          <ExplainerLink review={review} />
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
  * The reviewed evidence behind the Backing pillar's mechanism component scores.
  * Those scores render in the report card; this is the "why we believe this" —
  * dated analyst prose and the sources it was measured against.
@@ -137,32 +213,5 @@ export function MechanismReviewPanel({
 }) {
   if (review === null) return null;
   if (compact) return <CompactMechanismReview review={review} />;
-
-  return (
-    <Card id="mechanism-review" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT, "xl:hidden")}>
-      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <div className="flex min-w-0 items-center gap-2">
-          <FlaskConical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Mechanism review</DetailSectionTitle>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <ArchetypeBadge review={review} />
-          <span className="font-mono text-[11px] text-muted-foreground">Reviewed {review.reviewedAt}</span>
-        </div>
-      </CardHeader>
-      <CardContent className={DETAIL_MODULE_BODY_CLASS}>
-        <p className="max-w-prose whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-          {review.notes}
-        </p>
-
-        <div className="mt-5 border-t border-border/40 pt-4">
-          <SourceList review={review} />
-        </div>
-
-        <p className="mt-4">
-          <ExplainerLink review={review} />
-        </p>
-      </CardContent>
-    </Card>
-  );
+  return <FullMechanismReview review={review} />;
 }
