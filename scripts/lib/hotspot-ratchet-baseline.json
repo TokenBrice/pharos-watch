@@ -210,7 +210,7 @@
     "branchCount": 11
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 1693,
+    "fileLines": 1694,
     "maxFunctionLines": 490,
     "branchCount": 131
   },

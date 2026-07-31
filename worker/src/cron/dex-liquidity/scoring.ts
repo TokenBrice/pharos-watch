@@ -1393,7 +1393,8 @@ export async function computeDexPrices(
   throwIfAborted(signal);
 
   const primaryPrices = new Map(preloadedPrimaryPrices);
-  let loadedStrictPrimaryPrices = false;
+  // A supplied map is already trust-filtered; missing entries are intentional.
+  let loadedStrictPrimaryPrices = preloadedPrimaryPrices !== undefined;
   const loadPrimaryPrices = async (stablecoinId: string): Promise<Map<string, number>> => {
     if (primaryPrices.has(stablecoinId) || loadedStrictPrimaryPrices) return primaryPrices;
     loadedStrictPrimaryPrices = true;
