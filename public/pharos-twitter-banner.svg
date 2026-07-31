@@ -12,22 +12,10 @@
       <stop offset="40%" stop-color="#E8DCC4" stop-opacity="0.06"/>
       <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#D4C8B0"/>
-      <stop offset="40%" stop-color="#E8DCC4"/>
-      <stop offset="100%" stop-color="#C8BBAA"/>
-    </linearGradient>
-    <filter id="sg" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
     <filter id="beamBlur" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur in="SourceGraphic" stdDeviation="5"/>
     </filter>
+    <clipPath id="markDisc"><rect width="400" height="400" rx="200"/></clipPath>
   </defs>
 
   <!-- Background -->
@@ -65,45 +53,11 @@
   <circle cx="1200" cy="290" r="0.7" fill="#E8DCC4" opacity="0.13"/>
   <circle cx="500" cy="420" r="0.9" fill="#E8DCC4" opacity="0.08"/>
 
-  <!-- Lighthouse icon — scaled 2.66x, centered at (545, 250) -->
-  <g transform="translate(545, 250) scale(2.66) translate(-44, -44)">
-    <!-- Glow behind lantern -->
-    <circle cx="44" cy="16" r="16" fill="url(#iconGlow)"/>
-
-    <!-- Beams -->
-    <line x1="44" y1="16" x2="44" y2="-4" stroke="#E8DCC4" stroke-width="2.5" opacity="0.55" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="22" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="66" y2="-2" stroke="#E8DCC4" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="4" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="84" y2="4" stroke="#E8DCC4" stroke-width="2" opacity="0.25" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="-4" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
-    <line x1="44" y1="16" x2="92" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
-
-    <!-- Shield outline -->
-    <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" stroke-width="2.5" opacity="0.45" stroke-linejoin="round"/>
-
-    <!-- Lantern light -->
-    <circle cx="44" cy="16" r="5" fill="white" opacity="0.85" filter="url(#sg)"/>
-
-    <!-- Dome -->
-    <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity="0.9"/>
-
-    <!-- Lantern room -->
-    <rect x="38.5" y="22" width="11" height="7" rx="1" fill="#F5F0E6" opacity="0.85"/>
-    <line x1="42" y1="22" x2="42" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
-    <line x1="46" y1="22" x2="46" y2="29" stroke="#0a1628" stroke-width="0.8" opacity="0.3"/>
-
-    <!-- Gallery -->
-    <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity="0.85"/>
-
-    <!-- Tower shaft -->
-    <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#tBody)" opacity="0.8"/>
-    <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
-    <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#0d1f3c" stroke-width="2" opacity="0.35"/>
-
-    <!-- Base -->
-    <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity="0.7"/>
-    <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity="0.45"/>
+  <!-- Pharos brand mark — centered at (545, 250), 230px disc -->
+  <g transform="translate(545, 250) scale(0.575) translate(-200, -200)" clip-path="url(#markDisc)">
+    <path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="#0A0A0A"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M280.906 400.602H122.977L201.934 225.845L280.906 400.602Z" fill="#EEEEEE"/>
+    <path d="M208.675 122.569C208.836 125.476 210.853 156.915 228.73 163.317C238.333 166.747 248.509 161.533 260.496 153.873C278.58 142.348 304.57 122.866 332.349 90.4873C317.268 111.959 304.113 131.35 292.974 148.111C277.228 171.847 270.742 182.457 274.386 192.93C277.091 200.704 284.379 205.506 303.608 213.12C321.004 220.026 345.574 228.19 376.698 233.746H234.342C234.342 215.387 219.208 200.504 200.539 200.504C181.87 200.504 166.736 215.387 166.736 233.746H23.301C54.4488 228.19 78.9958 220.026 96.3918 213.12C115.621 205.506 122.932 200.704 125.637 192.93C129.258 182.457 122.795 171.847 107.027 148.111C95.9106 131.35 82.7317 111.959 67.6506 90.4873C95.429 122.866 121.42 142.348 139.503 153.873C151.49 161.533 161.667 166.747 171.27 163.317C189.146 156.915 191.164 125.476 191.324 122.569C194.235 98.7424 197.1 74.9149 200.011 51.0879C202.899 74.9149 205.787 98.7424 208.675 122.569Z" fill="#EEEEEE"/>
   </g>
 
   <!-- "Pharos" title -->

@@ -1,64 +1,17 @@
-<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="55%">
-      <stop offset="0%" stop-color="#0d1f3c"/>
-      <stop offset="100%" stop-color="#050a14"/>
-    </radialGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#D4C8B0"/>
-      <stop offset="40%" stop-color="#E8DCC4"/>
-      <stop offset="100%" stop-color="#C8BBAA"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Full-bleed dark background (no transparency; covers entire viewBox for maskable safety) -->
-  <rect width="88" height="88" fill="#050a14"/>
-  <!-- Subtle radial gradient layered on top (still opaque) -->
-  <rect width="88" height="88" fill="url(#bg)"/>
-
-  <!-- Maskable safe zone: scale art to 0.78 around center (44, 44) to fit inside the 80% inner circle.
-       Original art group used translate(0, 5) for optical centering; we re-anchor to keep the
-       lantern + shield + base entirely inside the safe radius (~35 px from center). -->
-  <g transform="translate(44, 44) scale(0.78) translate(-44, -39)">
-    <!-- Glow behind lantern -->
-    <circle cx="44" cy="20" r="12" fill="url(#glow)"/>
-
-    <!-- Beams -->
-    <line x1="44" y1="20" x2="44" y2="6" stroke="#E8DCC4" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
-    <line x1="44" y1="20" x2="28" y2="9" stroke="#E8DCC4" stroke-width="1.8" opacity="0.35" stroke-linecap="round"/>
-    <line x1="44" y1="20" x2="60" y2="9" stroke="#E8DCC4" stroke-width="1.8" opacity="0.35" stroke-linecap="round"/>
-    <line x1="44" y1="20" x2="14" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
-    <line x1="44" y1="20" x2="74" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
-
-    <!-- Shield outline -->
-    <path d="M20,14 L68,14 L68,38 Q68,68 44,78 Q20,68 20,38 Z" fill="none" stroke="#E8DCC4" stroke-width="2.5" opacity="0.45" stroke-linejoin="round"/>
-
-    <!-- Lantern light -->
-    <circle cx="44" cy="20" r="4" fill="white" opacity="0.85"/>
-
-    <!-- Dome -->
-    <path d="M40,25 C40,19 48,19 48,25 Z" fill="#E8DCC4" opacity="0.9"/>
-
-    <!-- Lantern room -->
-    <rect x="39.5" y="25" width="9" height="5.5" rx="0.8" fill="#F5F0E6" opacity="0.85"/>
-    <line x1="42.5" y1="25" x2="42.5" y2="30.5" stroke="#0a1628" stroke-width="0.7" opacity="0.3"/>
-    <line x1="45.5" y1="25" x2="45.5" y2="30.5" stroke="#0a1628" stroke-width="0.7" opacity="0.3"/>
-
-    <!-- Gallery -->
-    <rect x="36" y="30.5" width="16" height="3" rx="1.2" fill="#E8DCC4" opacity="0.85"/>
-
-    <!-- Tower shaft -->
-    <path d="M38.5,33.5 L49.5,33.5 L52,60 L36,60 Z" fill="url(#tBody)" opacity="0.8"/>
-    <!-- Bands -->
-    <line x1="37.8" y1="43" x2="50.5" y2="43" stroke="#0d1f3c" stroke-width="1.8" opacity="0.35"/>
-    <line x1="37" y1="52" x2="51.3" y2="52" stroke="#0d1f3c" stroke-width="1.8" opacity="0.35"/>
-
-    <!-- Base -->
-    <rect x="33" y="60" width="22" height="4" rx="2" fill="#E8DCC4" opacity="0.7"/>
-    <rect x="30" y="64" width="28" height="4" rx="2" fill="#E8DCC4" opacity="0.45"/>
-  </g>
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#pharos-mark-disc)">
+<path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="#0A0A0A"/>
+<g clip-path="url(#pharos-mark-inner)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M280.906 400.602H122.977L201.934 225.845L280.906 400.602Z" fill="#EEEEEE"/>
+<path d="M208.675 122.569C208.836 125.476 210.853 156.915 228.73 163.317C238.333 166.747 248.509 161.533 260.496 153.873C278.58 142.348 304.57 122.866 332.349 90.4873C317.268 111.959 304.113 131.35 292.974 148.111C277.228 171.847 270.742 182.457 274.386 192.93C277.091 200.704 284.379 205.506 303.608 213.12C321.004 220.026 345.574 228.19 376.698 233.746H234.342C234.342 215.387 219.208 200.504 200.539 200.504C181.87 200.504 166.736 215.387 166.736 233.746H23.301C54.4488 228.19 78.9958 220.026 96.3918 213.12C115.621 205.506 122.932 200.704 125.637 192.93C129.258 182.457 122.795 171.847 107.027 148.111C95.9106 131.35 82.7317 111.959 67.6506 90.4873C95.429 122.866 121.42 142.348 139.503 153.873C151.49 161.533 161.667 166.747 171.27 163.317C189.146 156.915 191.164 125.476 191.324 122.569C194.235 98.7424 197.1 74.9149 200.011 51.0879C202.899 74.9149 205.787 98.7424 208.675 122.569Z" fill="#EEEEEE"/>
+</g>
+</g>
+<defs>
+<clipPath id="pharos-mark-disc">
+<rect width="400" height="400" rx="200" fill="white"/>
+</clipPath>
+<clipPath id="pharos-mark-inner">
+<path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="white"/>
+</clipPath>
+</defs>
 </svg>

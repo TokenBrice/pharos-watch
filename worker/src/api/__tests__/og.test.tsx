@@ -269,7 +269,9 @@ describe("stablecoin OG card data", () => {
       const markup = renderToStaticMarkup(element);
       expect(markup).toContain("NR");
       expect(markup).toContain("Safety score unavailable");
-      expect(markup).not.toContain("0.0");
+      // Match a rendered text node, not the raw markup: the card frame inlines the brand-mark
+      // SVG, whose path geometry legitimately contains "0.0" inside `d="…"` coordinates.
+      expect(markup).not.toContain(">0.0");
     });
 
     it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {

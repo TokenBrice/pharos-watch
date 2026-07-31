@@ -154,7 +154,7 @@ export function TopNav() {
         className="pharos-focus-ring flex shrink-0 items-center gap-2.5 rounded-lg pr-2"
         aria-label="Pharos home"
       >
-        <PharosLogo size={28} className="rounded-lg shadow-sm" priority />
+        <PharosLogo size={28} className="rounded-full shadow-sm" priority />
         <span className="pharos-display text-[15px] font-bold tracking-tight text-foreground">Pharos</span>
       </Link>
 

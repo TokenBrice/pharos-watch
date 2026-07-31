@@ -147,11 +147,15 @@
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
-/pharos-icon.png
+/pharos-mark.png
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 
-/pharos-icon.svg
+/pharos-mark-on-light.svg
+  ! Cache-Control
+  Cache-Control: public, max-age=604800, immutable
+
+/pharos-mark-on-dark.svg
   ! Cache-Control
   Cache-Control: public, max-age=604800, immutable
 

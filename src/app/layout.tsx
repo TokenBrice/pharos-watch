@@ -55,12 +55,15 @@ export const metadata: Metadata = {
     creator: "@TokenBrice",
     images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
   },
+  // `?v=2` busts the 7-day immutable cache on the 2026-07-31 brand-mark swap. These three
+  // filenames are browser conventions and cannot be renamed, so the query string is the only
+  // cache-busting lever available; the renamable brand assets were renamed instead.
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=2", sizes: "16x16 32x32 48x48" },
+      { url: "/favicon.svg?v=2", type: "image/svg+xml" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "/apple-touch-icon.png?v=2",
   },
 };
 
