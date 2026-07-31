@@ -88,6 +88,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "D1 detail cache rows and circuit-breaker state are authoritative across isolates.",
   },
   {
+    sourcePath: "worker/src/cron/depeg-resolver/utils.ts",
+    stateNames: ["v9DependencyImpairmentByCoin"],
+    owner: "Depeg resolver V9 dependency projection",
+    kind: "cache",
+    resetOrTtl: "Hydrated from the current V9 cards at resolver-run start; cleared when V9 publication is unavailable and resets with the isolate.",
+    durableTruth: "The current Safety Score V9 publication inputs and stablecoin registry statuses are authoritative; this only avoids repeated per-coin dependency scans inside one run.",
+  },
+  {
     sourcePath: "worker/src/cron/telegram-quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",
