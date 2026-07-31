@@ -235,9 +235,9 @@
     "branchCount": 86
   },
   "worker/src/cron/measured-execution/curve-composite.ts": {
-    "fileLines": 1688,
-    "maxFunctionLines": 352,
-    "branchCount": 127
+    "fileLines": 2188,
+    "maxFunctionLines": 388,
+    "branchCount": 141
   },
   "worker/src/cron/reserve-adapters/sfrxusd-crosschain-redemption.ts": {
     "fileLines": 1436,
@@ -295,8 +295,8 @@
     "branchCount": 2
   },
   "worker/src/cron/weekly-recap.ts": {
-    "fileLines": 658,
-    "maxFunctionLines": 473,
+    "fileLines": 659,
+    "maxFunctionLines": 474,
     "branchCount": 28
   },
   "worker/src/cron/yield-config.ts": {
