@@ -31,6 +31,7 @@ import {
 } from "../lib/stablecoin-catalog-sources";
 
 const RESERVE_TOTAL_ALLOWLIST = new Set<string>();
+const SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH = 160;
 const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // Kava USDX remains a live tracked feed while the cemetery keeps the 2022
   // UST-collateral depeg incident as a separate historical row.
@@ -162,6 +163,22 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
   }
 
   return null;
+}
+
+export function getReservePublicLabelIssues(coin: StablecoinMeta): string[] {
+  const issues: string[] = [];
+
+  (coin.reserves ?? []).forEach((reserve, index) => {
+    const publicLabelLength = reserve.name.trim().length;
+    if (publicLabelLength <= SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH) return;
+    issues.push(
+      `reserves[${index}] "${reserve.name}" is ${publicLabelLength} characters; ` +
+        `Safety Score V9 public backing component labels are capped at ` +
+        `${SAFETY_SCORE_V9_PUBLIC_BACKING_COMPONENT_LABEL_MAX_LENGTH} characters`,
+    );
+  });
+
+  return issues;
 }
 
 // D2 honesty guard (owner ruling 2026-07-23): the privileged commodity-allocated
@@ -516,6 +533,10 @@ function runStablecoinDataCheck(): void {
       const reserveTotalIssue = getReserveTotalIssue(entry.coin);
       if (reserveTotalIssue) {
         reportError(`${entry.file} (${entry.coin.id}): ${reserveTotalIssue}`);
+      }
+
+      for (const reservePublicLabelIssue of getReservePublicLabelIssues(entry.coin)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${reservePublicLabelIssue}`);
       }
 
       const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getCommodityAllocatedPegMatchIssues, getDependencyReserveOverlapIssues } from "../ci/check-stablecoin-data";
+import {
+  getCommodityAllocatedPegMatchIssues,
+  getDependencyReserveOverlapIssues,
+  getReservePublicLabelIssues,
+} from "../ci/check-stablecoin-data";
 
 describe("stablecoin dependency/reserve source ownership", () => {
   it("allows manual and reserve-derived relationships to coexist when their keys differ", () => {
@@ -64,5 +68,34 @@ describe("commodity-allocated peg-match guard", () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toContain("commodity-allocated");
     expect(issues[0]).toContain("USD");
+  });
+});
+
+describe("reserve public-label guard", () => {
+  it("keeps reserve names within the Safety Score V9 backing component label limit", () => {
+    expect(
+      getReservePublicLabelIssues({
+        reserves: [
+          {
+            name: "A".repeat(160),
+            pct: 100,
+            risk: "low",
+          },
+        ],
+      } as never),
+    ).toEqual([]);
+
+    const issues = getReservePublicLabelIssues({
+      reserves: [
+        {
+          name: ` ${"A".repeat(161)} `,
+          pct: 100,
+          risk: "low",
+        },
+      ],
+    } as never);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain("is 161 characters");
+    expect(issues[0]).toContain("capped at 160 characters");
   });
 });
