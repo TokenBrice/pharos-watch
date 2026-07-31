@@ -18,8 +18,8 @@
   "dependencies": {
     "@cf-wasm/resvg": "^0.3.5",
     "react": "^19.2.7",
-    "satori": "^0.28.0",
-    "viem": "2.55.4",
+    "satori": "^0.29.0",
+    "viem": "2.55.8",
     "zod": "^4.4.3"
   }
 }
