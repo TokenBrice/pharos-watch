@@ -36,7 +36,9 @@ import {
   applySafetyScoreV9SupplyAttributionGeneration,
   computeSafetyScoreV9SupplyAttributionGenerationId,
   createSafetyScoreV9SupplyAttributionGeneration,
+  diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility,
   isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred,
+  isSafetyScoreV9SupplyAttributionGenerationCompatible,
   nextSafetyScoreV9SupplyAttributionDueAtSec,
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
@@ -579,6 +581,12 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     );
 
     expect(
+      isSafetyScoreV9SupplyAttributionGenerationCompatible(
+        target,
+        generation,
+      ),
+    ).toBe(true);
+    expect(
       applySafetyScoreV9SupplyAttributionGeneration(
         target,
         generation,
@@ -587,6 +595,72 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       status: "applied",
       acceptedAssetIds: ["xaut-tether"],
     });
+  });
+
+  it("reports exact compatibility reasons before applying a generation", () => {
+    const generation = fixtures.acceptedGeneration;
+    const registryMismatch = {
+      ...fixtures.target,
+      registryFingerprint: "f".repeat(64),
+    };
+    const expectedAssetMismatch = {
+      ...fixtures.target,
+      activeAssetIds: fixtures.target.activeAssetIds.filter(
+        (assetId) => assetId !== "xaut-tether",
+      ),
+    };
+    const beforeSourceClock = {
+      ...fixtures.target,
+      clockSec: generation.sourceClockSec - 1,
+    };
+
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        registryMismatch,
+        generation,
+      ),
+    ).toBe("registry-fingerprint-mismatch");
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        expectedAssetMismatch,
+        generation,
+      ),
+    ).toBe("expected-asset-ids-mismatch");
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        beforeSourceClock,
+        generation,
+      ),
+    ).toBe("source-clock-after-fixed-input");
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        fixtures.acceptedFixture.fixedInput,
+        generation,
+        generation.captureClockSec - 1,
+      ),
+    ).toBe("capture-clock-after-consumer");
+    expect(
+      isSafetyScoreV9SupplyAttributionGenerationCompatible(
+        registryMismatch,
+        generation,
+      ),
+    ).toBe(false);
+  });
+
+  it("clears attribution when no generation is available", () => {
+    const applied = applySafetyScoreV9SupplyAttributionGeneration(
+      fixtures.target,
+      null,
+    );
+
+    expect(applied).toMatchObject({
+      status: "unavailable",
+      generationId: null,
+      reason: "generation-missing",
+    });
+    expect(
+      applied.fixedInput.safetyScoreV9SupplyAttributionById,
+    ).toEqual({});
   });
 
   it("classifies only same-input complete future generations as cadence deferred", () => {
