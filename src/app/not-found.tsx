@@ -47,7 +47,7 @@ export default function NotFound() {
     <div className="mx-auto flex min-h-[60vh] max-w-3xl flex-col items-center justify-center gap-6 py-10 text-center">
       <FadedBeamSvg />
       <Image
-        src="/pharos-icon.png"
+        src="/pharos-mark.png"
         alt="Pharos"
         width={96}
         height={96}

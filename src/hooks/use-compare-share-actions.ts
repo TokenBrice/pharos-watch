@@ -72,7 +72,7 @@ export function useCompareShareActions({
   } | null> => {
     if (comparisonCoins.length < 2) return null;
 
-    const pharosLogo = await loadImage("/pharos-icon.png");
+    const pharosLogo = await loadImage("/pharos-mark.png");
     if (!pharosLogo) return null;
 
     const logoImages = await Promise.all(

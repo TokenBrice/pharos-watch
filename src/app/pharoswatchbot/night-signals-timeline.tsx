@@ -44,7 +44,7 @@ function SignalRow({ alert }: { alert: AlertExample }) {
         <p className="pharos-signal-copy mt-3 text-sm leading-relaxed text-muted-foreground">{alert.tagline}</p>
         <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
           <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-            <Image src="/pharos-icon.png" alt="" width={20} height={20} className="rounded-full" />
+            <Image src="/pharos-mark.png" alt="" width={20} height={20} className="rounded-full" />
             <span className="text-xs font-medium text-foreground">PharosWatchBot</span>
           </div>
           <p className="mt-2 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
