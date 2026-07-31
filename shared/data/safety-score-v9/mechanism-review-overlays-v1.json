@@ -899,7 +899,7 @@
     {
       "assetId": "jpym-mento",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Mento deployments-v2 JPYm CDP contract set, pinned commit e2022291",
@@ -918,7 +918,7 @@
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Mechanism-classification conflict resolved by on-chain verification 2026-07-27 (owner ruling: evidence decides): JPYm is backed by the Mento Liquity-v2 CDP deployment, superseding the 2026-07-15 FPMM conversion-token reading. Active minter roles resolve to BorrowerOperationsv300JPYm with TroveManagerv300JPYm, StabilityPoolv300JPYm, and FXPriceFeedProxyJPYm live in the pinned deployments-v2 contract set; the BiPoolManager retains a minter role but backs no current supply (legacy, operationally inert). Wave-6 block-pinned measurement at finalized Celo block 72133274: collateralization 1.679490127255 with Stability Pool deposits 0, re-verified 2026-07-27 at roughly 1.695 (171,960 USDm collateral against 16,596,009 JPYm debt in the sole active trove). The empty Stability Pool grades backstop weak; standard Liquity-v2 fork parameters and liquidation mechanics grade adequate from the pinned deployment; the existing limited structural-redemption grade stands. Residual uncertainty: the legacy BorrowerOperations address also holds a minter role; on-chain state shows only v300 active in troves, and bootstrap-era mint history has not been ruled out.",
+      "notes": "Mechanism-classification conflict resolved by on-chain verification 2026-07-27 (owner ruling: evidence decides): JPYm is backed by the Mento Liquity-v2 CDP deployment, superseding the 2026-07-15 FPMM conversion-token reading. Active minter roles resolve to BorrowerOperationsv300JPYm with TroveManagerv300JPYm, StabilityPoolv300JPYm, and FXPriceFeedProxyJPYm live in the pinned deployments-v2 contract set; the BiPoolManager retains a minter role but backs no current supply (legacy, operationally inert). Wave-6 block-pinned measurement at finalized Celo block 72133274: collateralization 1.679490127255 with Stability Pool deposits 0, re-verified 2026-07-27 at roughly 1.695 (171,960 USDm collateral against 16,596,009 JPYm debt in the sole active trove). The empty Stability Pool grades backstop weak; standard Liquity-v2 fork parameters and liquidation mechanics grade adequate from the pinned deployment; the existing limited structural-redemption grade stands. Residual uncertainty: the legacy BorrowerOperations address also holds a minter role; on-chain state shows only v300 active in troves, and bootstrap-era mint history has not been ruled out. 2026-07-30 component curation: the pinned deployments-v2 contract set exposes exactly one JPYm Liquity-v2 branch backed solely by USDm, so branch isolation is structurally not applicable; Mento V3 CDP documentation of the Liquity-v2 fork evidences permanent branch shutdown on oracle failure or TCR at the 110% SCR with urgent redemptions, Stability Pool offset, then redistribution of uncovered debt and collateral to active Troves, grading shutdown/bad-debt limited because the measured-empty Stability Pool leaves redistribution across a single active trove as the residual bad-debt path.",
       "metrics": {
         "collateralizationRatio": 1.679490127255,
         "liquidationCapacityRatio": 0
@@ -943,6 +943,15 @@
         "backstop": {
           "applicability": "measured",
           "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "JPYm is a single-branch Liquity-v2 deployment backed solely by USDm; there are no independent collateral branches to isolate.",
+          "sourceUrl": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
         },
         "structuralRedemption": {
           "applicability": "measured",
@@ -3253,7 +3262,7 @@
     {
       "assetId": "vchf-vnx",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "VNX FRT terms (no holder right, no contractual commitment, and VNX Gold-based reserve formation)",
@@ -3269,6 +3278,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: no source names VCHF's reserve banks or securities custodians, per-custodian allocations, no-rehypothecation terms, or custodian-failure/succession mechanics. The AREVA AUP as of 2024-12-31 (latest, 19 months stale, predating the 2026-06-30 exchange-operations suspension) verified the reserve only by inspection of unnamed bank confirmations; the FRT terms reference only unnamed banking partners and expressly allow unilateral service discontinuation. Searched: transparency page live plus Wayback 2026-02/03/04/07, FRT terms, VNX gitbook docs (now VNX-Gold-only), rwa.xyz, Sygnum/partner and press coverage. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://vnx-terms.s3.amazonaws.com/VNX-FRT-Terms.pdf"
         }
       }
     },
@@ -4423,7 +4437,7 @@
     {
       "assetId": "xo-exodus",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "MoonPay stablecoin terms",
@@ -4442,7 +4456,12 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed MoonPay terms and XO launch disclosure do not publish an XO-specific dated reserve report or reserve-to-liability reconciliation.",
+          "rationale": "Re-verified 2026-07-30: no XO-specific dated reserve report, attestation, or reserve-to-liability reconciliation exists (unchanged vs the 2026-06-18 baseline). MoonPay's stablecoin terms commit only to a backing statement with no attestation cadence or named auditor; the MoonPay legal index has no attestation page; the M0 dashboard/API tracks XO supply but holds collateral only as aggregate per-minter $M figures. Chronicle's continuous M0 validator verification (2026-01-29 release plus live validator-signed collateral updates) covers MoonPay-issued stablecoins generically but is not XO-named and is not a periodic dated reconciliation, so it does not meet the limited evidence class. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred.",
+          "sourceUrl": "https://www.moonpay.com/es/legal/stablecoin_terms"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: MoonPay's stablecoin terms require segregated reserves for holders at unnamed depository institutions and qualified custodians, but name no custodian or bank, publish no per-provider allocations, no-rehypothecation terms, or custodian-failure/succession mechanics. M0's guidance documents generic SPV custody and wind-down mechanics without naming any SPV operator, custodian, or validator, and none of it is XO-specific. MoonPay Trust Company's NYDFS charter covers digital-asset custody/OTC and is not evidenced as XO's reserve custodian. Searched: MoonPay terms/legal index/newsroom, XOCash.com, M0 docs incl. llms-full.txt, M0 GraphQL API, Exodus launch PR, SEC EDGAR, web. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred.",
           "sourceUrl": "https://www.moonpay.com/es/legal/stablecoin_terms"
         }
       }
@@ -4486,7 +4505,7 @@
     {
       "assetId": "dusd-dtrinity",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "dTRINITY binding terms of use, effective June 24, 2026",
@@ -4505,8 +4524,13 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed dUSD terms and product documentation do not publish an independent reserve attestation or supply-to-reserve reconciliation.",
+          "rationale": "The reviewed current dUSD product documentation and binding terms publish reserve classes, vault addresses, and protocol accounting mechanics but no dated independent reserve attestation or reserve-to-liability reconciliation. The missing evidence is issuer-undisclosed; no weak or failed quality is inferred.",
           "sourceUrl": "https://docs.dtrinity.org/protocol-components/dusd"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed terms, security address registry, and dUSD product page do not publish an active reserve custodian/venue set, provider allocations, anti-rehypothecation controls, or failure, replacement, or successor-custody mechanics. The missing evidence is issuer-undisclosed; no weak or failed quality is inferred.",
+          "sourceUrl": "https://docs.dtrinity.org/informational/terms-of-use"
         }
       }
     },
@@ -4553,22 +4577,25 @@
     {
       "assetId": "audf-forte",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
-          "label": "Forte AUD binding terms of use version 3.0, dated December 5, 2024",
+          "label": "Forte AUD Terms of Use December 2024 (binding; deny security interest/trust; holder disclaims reserve entitlement)",
           "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
         },
         {
-          "label": "AUDF seller product disclosure statement dated November 27, 2025",
+          "label": "MVAB Assurance AUDF Reserves Report December 2025 (single unnamed AUD reserve bank cash)",
+          "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
+        },
+        {
+          "label": "AUDF seller product disclosure statement (Cointree)",
           "url": "https://www.cointree.com/company/pds/audf-pds/"
         },
         {
-          "label": "AUDF reserve report as of September 30, 2025",
-          "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1428c2bfea7755ffcd51/1770853416057/AUDF%2B-%2BReserves%2BReport%2B%28September%2B2025%29.pdf"
+          "label": "Forte AUD transparency page",
+          "url": "https://www.forteaud.com/transparency"
         }
       ],
-      "notes": "Binding AUDF terms expressly deny holders a security interest, right to reserves or proceeds, trust, and fiduciary relationship; the current seller PDS describes holders as unsecured creditors and states that reserves are not on trust and may be reached by adverse creditors. This affirmative adverse evidence supports weak claim and segregation. The reserve report reconciles one unnamed bank account and does not establish named providers and allocations, reserve-wide anti-rehypothecation, succession, or failure recovery, so custody continuity remains uncurated. 2026-07-20 follow-up: the September 2025 reserves report pairs management's assertion (AUD 4,132,344.68 of reserves against 4,125,000 AUDF on issue) with an MVAB Assurance independent audit opinion under Australian Auditing Standards whose scope is the reserve cash balance only — the current Cointree PDS confirms the monthly audit verifies reserve balances but not the number of tokens in circulation — and no newer monthly report could be verified on the client-rendered transparency page, supporting limited assurance and reconciliation. The reserve bank remains unnamed and no provider allocation, non-rehypothecation, or failure-continuity terms were established, so custody continuity remains uncurated.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -4576,13 +4603,19 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-checked 2026-07-30 under the strict evidence standard. The December 2025 MVAB report identifies one segregated, unencumbered AUD reserve bank-account cash balance of $4,132,465.51 but does not name the bank, disclose provider allocations, or document anti-rehypothecation, alternate-custodian, or failure/successor-custody mechanics. Binding Terms of Use (December 2024) state holders have no entitlement to reserves or proceeds, create no security interest, and create no trust or fiduciary relationship. Issuer-undisclosed custody continuity is recorded as unavailable; no weak or failed grade is inferred from the absence.",
+          "sourceUrl": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
         }
-      }
+      },
+      "notes": "Binding AUDF terms expressly deny holders a security interest, right to reserves or proceeds, trust, and fiduciary relationship; claim and segregation remains weak. MVAB monthly audit of the single unnamed reserve bank cash balance supports limited assurance and reconciliation. 2026-07-30 evidence delta: custodyContinuity = unavailable (bank identity, provider allocations, anti-rehypothecation, and successor-custody still issuer-undisclosed). Non-score-bearing pending independent review and later curation authorization. Preserves existing claimAndSegregation weak and assuranceAndReconciliation limited."
     },
     {
       "assetId": "audx-aussie-dollar-token",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "AUDX binding platform terms, updated June 24, 2025",
@@ -4593,15 +4626,24 @@
           "url": "https://www.audxtoken.com/_files/ugd/539754_a67b17ada9b3459ca3d94fcc8736803d.pdf"
         },
         {
-          "label": "Aura AUDX limited-assurance reserve report as of May 31, 2026",
-          "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
+          "label": "Aura AUDX limited-assurance reserve report as of June 30, 2026",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf"
+        },
+        {
+          "label": "AUDX reserve transparency archive (monthly reports through June 2026)",
+          "url": "https://www.audxtoken.com/transparency"
         }
       ],
-      "notes": "Binding AUDX terms designate fiat as client money held in a statutory trust account for all AUDX holders, the product disclosure statement confirms client beneficial ownership, and Aura's June 2026 limited-assurance report directly confirms designated accounts and reconciles A$4,008,056 of supply to A$4,018,780.50 of reserves. This supports limited claim and segregation. Adequate is not supported because no institution is publicly named and TAU remains under relief while applying for an AFSL. Named providers and allocations, provider-level anti-rehypothecation, succession, and failure recovery remain uncurated.",
+      "notes": "Binding AUDX terms designate fiat as client money held in a statutory trust account for all AUDX holders, the product disclosure statement confirms client beneficial ownership, and Aura's July 2026 limited-assurance report (period end 2026-06-30, signed 2026-07-06) directly confirms designated accounts and reconciles A$3,008,057.00 of supply to A$3,231,280.83 of reserves. This supports limited claim and segregation. Adequate is not supported because no institution is publicly named and TAU remains under relief while applying for an AFSL. 2026-07-30 wave-2 write-time re-open: the transparency archive now lists monthly reports through 30 June 2026; neither the terms, the PDS, nor any attestation names the reserve financial institutions or publishes provider allocations, provider-level anti-rehypothecation controls, succession, or failure-recovery mechanics, so custody continuity is recorded as sourced unavailable (issuer-undisclosed), retaining the bounded-unknown gap without a weak or failed grade.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed AUDX disclosure surface (terms-and-conditions, PDS, Aura monthly assurance reports through 2026-06-30, transparency archive) does not name the reserve financial institutions or publish provider allocations, provider-level anti-rehypothecation controls, or failure, replacement, and successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://www.audxtoken.com/transparency"
         }
       }
     },
@@ -5217,7 +5259,7 @@
     {
       "assetId": "qcad-stablecorp",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "Stablecorp QCAD transparency disclosure (1:1 Canadian-dollar backing in regulated financial institutions with independent monthly attestations)",
@@ -5235,6 +5277,11 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "2026-07-31 re-review of the QCAD balances API, Stablecorp transparency page, and OSC QCAD Digital Trust order establishes an eligible trust/custody framework but does not publish the active reserve venue set, provider allocations, anti-rehypothecation controls, or failure/replacement/successor-custody mechanics. Record issuer-undisclosed without a weak/failed grade.",
+          "sourceUrl": "https://stablecorp.ca/transparency"
         }
       },
       "notes": "Stablecorp's transparency disclosure states that every QCAD is backed 1:1 by Canadian dollars held in regulated financial institutions with independent monthly attestations, under the QCAD Digital Trust reserve framework. The issuer's live balances API read on 2026-07-20 reported totalSupply of 1,651,920.55 QCAD exactly equal to totalFiatReserves of CAD 1,651,920.55, a current self-reported reconciliation. Claim and segregation is limited: the 1:1 reserve commitment and named trust framework are issuer disclosure, and the trust instrument itself was not reviewed, so beneficial ownership and bankruptcy-remoteness are not established. Assurance and reconciliation is limited: the exact live supply-reserves equality plus the disclosed monthly attestation cadence exceed pure self-description, but the current month's independent attestation report was not reviewed and the API is issuer-operated. Custody continuity is deliberately left uncurated: the regulated institutions holding the CAD reserves are not named in the reviewed sources, and provider allocations, anti-rehypothecation terms, and failure recovery were not established."
@@ -5242,7 +5289,7 @@
     {
       "assetId": "xagm-matrixdock",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Matrixdock XAGm product disclosure (LBMA Good Delivery silver bars in Asian vaults, Fungible Reserve Standard, live supply versus bullion weight, ozPerToken, Proof of Reserves and mint budget)",
@@ -5260,6 +5307,11 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Matrixdock XAGm product page and XAGm PoR/mint-budget documentation describe backing silver only as vaulted in reputable Asian vaults and do not name the vault custodians, disclose per-vault allocations, anti-rehypothecation terms, or failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://www.matrixdock.com/xagm"
         }
       },
       "notes": "Matrixdock discloses that XAGm is backed by 99.9% LBMA-accredited Good Delivery silver bars vaulted in Asia under its Fungible Reserve Standard, with a live page reporting 66,001.267 XAGm supply against 65,934.000 troy ounces across 66 bars and an ozPerToken of 0.998980822 (reducing daily for a 0.3% annual custody fee), consistent at displayed precision; a Proof of Reserves and mint-budget framework aligns on-chain minting with off-chain reserves. Claim and segregation is limited: the structure, redemption for KYC-approved users, and bar-level backing are issuer disclosures, and no public tokenholder trust instrument establishing beneficial ownership or bankruptcy-remoteness was reviewed (the sibling XAUm review reached the same ceiling). Assurance and reconciliation is limited: the live supply-versus-bullion reconciliation and PoR/mint-budget framework are self-reported, and no current independent Bureau Veritas report covering present supply was reviewed in this pass. Custody continuity is deliberately left uncurated: the vault providers are described only as reputable Asian vaults in the reviewed XAGm material, and custodian names, allocations, and failure or replacement terms were not established."
@@ -5295,7 +5347,7 @@
     {
       "assetId": "xmd-metal-dollar",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Metallicus Metal Dollar disclosure (reserve-backed stablecoin index treasury holding USDC, PYUSD, and USDP in a smart-contract basket; 1:1 mint and redeem)",
@@ -5304,6 +5356,14 @@
         {
           "label": "XPR Network Metal Dollar help article",
           "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+        },
+        {
+          "label": "Metal Dollar whitepaper v1.1 (no attestation, audit, or custody disclosure)",
+          "url": "https://cdn.metallicus.com/Metal_Dollar_Whitepaper_v1.1.pdf"
+        },
+        {
+          "label": "XPR Network explorer - xmd.treasury (on-chain reserve venue)",
+          "url": "https://explorer.xprnetwork.org/account/xmd.treasury"
         }
       ],
       "metrics": {},
@@ -5313,11 +5373,16 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Metal Dollar product disclosures do not publish current basket weights, an independent reserve attestation, or a reserve-to-liability reconciliation.",
+          "rationale": "Re-checked 2026-07-30 across the Metallicus product page, metaldollar.com, XPR Network help center, Metal Dollar whitepaper v1.1, and the Metallicus newsroom: no independent reserve attestation, audit artifact, or reserve-to-liability reconciliation is published for XMD. Supply and treasury balances are publicly readable on-chain (xmd.token stat vs xmd.treasury accounts at head block 395509206: 2,376,317.765957 XMD vs 2,376,317.826106 basket units), enabling third-party reconciliation but not constituting issuer assurance.",
           "sourceUrl": "https://www.metallicus.com/metal-dollar"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "On-chain reads on 2026-07-30 identify the reserve venue as the xmd.treasury contract account on XPR Network controlled by the swapscold 2-of-4 Metallicus operator multisig, but the issuer does not publish legal custody arrangements, provider allocations, anti-rehypothecation controls, or failure, replacement, or successor-custody mechanics; upstream bridge custody of the xtokens wrapper reserves is also unpublished. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://explorer.xprnetwork.org/account/xmd.treasury"
         }
       },
-      "notes": "Metallicus discloses Metal Dollar as a reserve-backed stablecoin index whose treasury holds USDC, PYUSD, and USDP in a smart-contract-managed basket with 1:1 mint and redeem between basket stablecoins and XMD, governed by predefined contract rules under Metal DAO oversight. Claim and segregation is limited: the basket backing and 1:1 convertibility are issuer disclosures describing an on-chain contract reserve rather than a legally segregated holder claim, and no holder terms, trust, or bankruptcy-remoteness instrument was reviewed. Custody continuity and assurance and reconciliation are deliberately left uncurated: the reviewed sources do not publish the basket contract addresses, current basket composition weights, an independent reconciliation, or any attestation for the reserve treasury."
+      "notes": "Metallicus discloses Metal Dollar as a reserve-backed stablecoin index whose treasury holds USDC, PYUSD, and USDP in a smart-contract-managed basket with 1:1 mint and redeem between basket stablecoins and XMD, governed by predefined contract rules under Metal DAO oversight. Claim and segregation is limited: the basket backing and 1:1 convertibility are issuer disclosures describing an on-chain contract reserve rather than a legally segregated holder claim, and no holder terms, trust, or bankruptcy-remoteness instrument was reviewed.\n\n2026-07-30 evidence delta under the strict evidence standard. assuranceAndReconciliation = unavailable: no attestation, audit, or reconciliation artifact is published; on-chain readability of supply vs treasury balances is not issuer assurance. custodyContinuity = unavailable: the on-chain venue (xmd.treasury under the swapscold 2-of-4 multisig) is now identified, but legal custody terms, provider allocations, anti-rehypothecation controls, and successor-custody mechanics remain issuer-undisclosed; upstream bridge custody is unpublished. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization."
     },
     {
       "assetId": "usdb-blast",
@@ -5546,7 +5611,7 @@
     {
       "assetId": "ntbill-nest",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Nest documentation (non-custodial segregated Vault architecture; Core Vault, Vault Extension valuation, and Manager contracts)",
@@ -5567,7 +5632,12 @@
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Nest disclosures do not publish a holder loss waterfall, loss-allocation terms, or an enforceable recapitalization commitment for nTBILL.",
+          "rationale": "Re-verified 2026-07-30: the binding Nest Terms and Conditions assign all losses to users (§3 assumption of risk; §4.1 no warranties) and the vault-operations documentation defines each vault token as a pro rata claim on vault NAV with no junior tranche, reserve fund, or issuer top-up; no holder loss waterfall, loss-allocation terms, or enforceable recapitalization commitment is published for nTBILL. The only binding legal document in the docs sitemap is the T&C; no vault-specific terms or prospectus exist. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://docs.nest.credit/"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: Nest publishes a measured composition split (0.31% liquid / 19.5% JTRSY / 80.2% USTB, snapshot 2026-07-29) and a T+1 redemption estimate, but no measured vault-level WAM, duration, maturity ladder, or liquidity table in the positions/price APIs or the docs sitemap. Underlying USTB has a dated issuer holdings table plus an independent WAM computation (~32 days, Vault Street 2026-05-22), but JTRSY has only policy limits (0-3 month remaining maturity) and a stale 2024 WAM (46 days), so a vault-level measured duration cannot be derived without fabricating a weighted ratio. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred.",
           "sourceUrl": "https://docs.nest.credit/"
         }
       },
@@ -6214,7 +6284,7 @@
     {
       "assetId": "fusd-finchain",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "FinChain FUSD introduction (BMA-licensed segregated accounts company, minimum 100% collateralization policy, $1 fixed with daily rebase)",
@@ -6231,6 +6301,10 @@
         {
           "label": "FinChain FUSD self-reported real-time reserve dashboard",
           "url": "https://fusd.finchain.global/#reserves"
+        },
+        {
+          "label": "FinChain FUSD vendors (PoR providers named; Financial Auditor blank)",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors"
         }
       ],
       "notes": "FinChain's own documentation establishes that FUSD is issued by FinChain Bermuda Limited, a Bermuda Monetary Authority-licensed segregated accounts company, collateralized by tokenized U.S. Treasury bills and money-market funds under a stated minimum 100% collateralization policy, fixed at $1 with a daily rebasing yield distribution for eligible customers only; the reserves page names the underlying portfolios (Taikang Kaitai US Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund, BNY Mellon U.S. Dollar Liquidity Fund) and points to an issuer-operated real-time reserve-ratio dashboard. These are self-reported issuer disclosures without a reviewed trust, custody, or segregated-account agreement, so fund claim and seniority, NAV valuation (fixed-$1 token plus daily rebase against the self-reported reserve ratio), and duration and liquidity (named money-market and T-bill funds, but no published WAM, duration, or redemption-timing SLA) are each limited. Loss recovery design remains uncurated: no named independent attestor, attestation cadence, or dated reserve-to-liability report is public (coin-file mint-tier review of 2026-07-15), so no independent assurance or reconciliation control was established; seniority and bankruptcy treatment of the SAC structure also remain unestablished.",
@@ -6244,6 +6318,11 @@
         },
         "durationAndLiquidity": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "No named independent attestor, attestation cadence, dated reserve-to-liability report, insurance facility, or documented loss-absorption waterfall is published; the vendors page names PoR providers but leaves Financial Auditor blank, and the claimed Chainlink PoR has no pinnable feed address (checked issuer docs, dashboard bundle, and press 2026-07-30).",
+          "sourceUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/vendors"
         }
       }
     },
@@ -7406,7 +7485,7 @@
     {
       "assetId": "usdglo-glo",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "Brale USDGLO Reserve Report as of May 31, 2026 (management assertion defining reserve assets as held in unencumbered accounts segregated from other Brale accounts)",
@@ -7426,6 +7505,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "2026-07-31 re-review of Brale's June 30 USDGLO management report, transparency archive, and generic terms finds no named reserve custodians, provider allocations, bankruptcy treatment, anti-rehypothecation terms, or failure/replacement/successor-custody mechanics. The report is not an independent accountant's opinion; record issuer-undisclosed without a weak/failed grade.",
+          "sourceUrl": "https://brale.xyz/stablecoins/USDGLO"
         }
       }
     },
@@ -7631,7 +7715,7 @@
     {
       "assetId": "usdp-parallel",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "Parallelizer Module documentation (mint/burn at oracle value with adaptive fees, exposure targets, anytime proportional redemption, penalty factor below 100% collateral ratio)",
@@ -7664,6 +7748,10 @@
         {
           "label": "Ethereum PublicNode RPC used for the journaled eth_call reads at block 25627275",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Parallel DIA fundamental oracle",
+          "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/dia/fundamental"
         }
       ],
       "notes": "Reviewed 2026-07-27 (supersedes the 2026-07-20 review with a fresh measurement and new backstop evidence). The Parallelizer Module documentation establishes a basket conversion mechanism rather than a debt CDP: USDp is minted and burnt at oracle value against a DAO-whitelisted asset set with adaptive fees that widen as an asset depegs or exposures breach target bounds, and any holder can redeem at any time for a proportional share of the backing basket, with a dynamic penalty factor applied when the system collateral ratio falls below 100% so redemptions re-collateralize the system. The mechanism therefore has no borrower debt positions and no liquidation engine; liquidationMechanics and the liquidation capacity metric are structurally not applicable. MEASURED 2026-07-27 ~22:52 UTC: Parallel's server-rendered transparency inventory publishes per-asset reserve values summing to 2,055,279.68 USD (Ethereum: frxUSD 251,516.15, sfrxUSD 478,747.92, USDe 48.45, sUSDe 104,949.32; HyperEVM: sUSDe 522,175.30, USDeOFT 28,695.76; Base: sUSDS 77,515.19, USDS 21.61, USDC 4.00; Avalanche: ygamiUSDC 576,451.58, USDC 15,154.39) against a published total USDp supply of 1,976,343.74, a backing ratio of 1.039940 (down from 1.040064 on 2026-07-20). The reported collateralization ratio is an observed issuer-dashboard measurement, not a vault TCR. External anchors this review: (1) pinned eth_call totalSupply reads across all eight deployment chains (Ethereum 25627275, Base 49201858, Avalanche 91391171, HyperEVM 41619438, Arbitrum 488406161, Optimism 154797144, Sonic 76609019, Sei 222617726) sum to 1,976,338.49 USDp, within 5.3 of the dashboard figure; (2) the Ethereum Parallelizer diamond at block 25627275 returned getCollateralList = [frxUSD, sfrxUSD, USDe, sUSDe] (matching the dashboard's Ethereum basket) and getCollateralRatio = 1.007832280 with 828,660.97 stablecoins issued tracked by the instance, implying ~835,151 USD of Ethereum-instance collateral versus the dashboard's 835,261.85 Ethereum reserve figure (0.013% apart, oracle-timing noise). The whitelisted basket, per-asset exposure targets, and adaptive fee schedule are documented and on-chain verified, supporting adequate collateralization parameters. Permissionless anytime proportional redemption at oracle value supports adequate structural redemption, subject to the documented whitelist caveat for restricted collateral assets. The documented below-100% redemption penalty is a socialized, fee-based recapitalization path rather than an insurance fund, and pause/guardian powers sit with DAO governance and a team multisig, supporting limited shutdownAndBadDebt. NEW backstop evidence: the Parallel Insurance Fund (ratified MIP-28, updated PGP-31) is documented with itemized assets (vlAURA 1,113,709.10, Aura-ECLP PAR/paUSD LP positions, VaultsCore minimums of 10,000 PAR and 1,000 paUSD per V2 chain) and named per-chain multisigs; the DAO has approved covering Parallel V3 USDp deployments on Ethereum, Base, Sonic, HyperEVM, and Avalanche up to 100% of the fund via the bug bounty program. The Ethereum fund multisig 0x6aF71a3723D3c0Ed69f84EE259c9De3019C2a77c was verified on-chain at block 25627275 holding 17,855.61 USDC and 0.0936 WETH. This is issuer-published structured data with an on-chain anchor, supporting limited backstop — not adequate, because coverage is discretionary (DAO-multisig administered and routed through the bug bounty program rather than contractually automatic into the Parallelizer), largely legacy-token-denominated, the verified liquid stable float is small relative to the ~2.06M USD backing, and the vlAURA/LP itemization was not independently verified in this review. NOT established: the isolation between per-chain Parallelizer baskets sharing one fungible USDp — the Proof of Solvency page documents that each chain's Parallelizer holds its own backing, but no loss-isolation or cross-chain rebalancing mechanism is documented, so branchIsolation remains bounded-unknown; and the freshness bounds or failover behavior of the underlying Chainlink/RedStone/DIA feeds, which are scored under oracle risk.",
@@ -7702,6 +7790,11 @@
         },
         "structuralRedemption": {
           "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "unavailable",
+          "rationale": "Re-opened 2026-07-31: Parallel documents separate per-chain Parallelizer backing contracts and a common cross-chain USDp oracle, but publishes no verifiable loss-isolation, cross-chain rebalancing, or chain-specific residual-deficit settlement guarantee. Record issuer-undisclosed unavailable rather than infer branch isolation from separate addresses.",
+          "sourceUrl": "https://docs.parallel.best/security/proof-of-solvency"
         }
       }
     },
@@ -8049,7 +8142,7 @@
     {
       "assetId": "wpen-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Ripio wFIAT product page (1:1 mint against local-currency deposits and burn-to-redeem flow covering the wFIAT token family)",
@@ -8068,15 +8161,20 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed wFIAT disclosure and attestation index do not publish a wPEN-specific reserve attestation or certified reserve balance.",
+          "rationale": "Re-checked 2026-07-30 on the Ripio wFIAT page and the local-stablecoins page: Ripio now publishes local-accountant-certified collateral attestations for wBRL, wCOP, wARS (second attestation), and wMXN as of 2026-03-31, each reconciling on-chain issuance/burn against a domestic bank balance, but no wPEN-specific attestation, certified reserve balance, or reconciliation cadence is published on either page or in the wFIAT whitepaper. Recorded as issuer-undisclosed; no weak or failed grade inferred from absence.",
           "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-checked 2026-07-30 across the Ripio wFIAT page, local-stablecoins page, wFIAT whitepaper, and Ripio legal paths (terms URL 404): the issuer does not publish the wPEN reserve custodian or Peruvian bank identity, account segregation or bankruptcy-remoteness structure, anti-rehypothecation terms, or any custodian-failure, replacement, or successor-custody mechanics. SOC 1/SOC 2 Type II claims cover Ripio infrastructure, not wPEN reserve custody. Recorded as issuer-undisclosed; no weak or failed grade inferred from absence.",
+          "sourceUrl": "https://www.ripio.com/en/wfiat"
         }
       }
     },
     {
       "assetId": "wusd-worldwide",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "WSPN About WUSD disclosure (100% HQLA reserve policy: cash, cash equivalents including money-market funds and repurchase agreements, T-bills under 90 days; 1:1 USD redemption via WSPN Mint Account)",
@@ -8085,6 +8183,14 @@
         {
           "label": "WSPN WUSD product page (cited in the coin file; JavaScript-rendered and not independently re-verified in this pass)",
           "url": "https://www.wspn.io/wusd"
+        },
+        {
+          "label": "WSPN FAQ (periodic third-party audit claim; no published attestation report)",
+          "url": "https://wspn.io/faq.html"
+        },
+        {
+          "label": "WSPN-OpenEden TBILL reserve partnership announcement",
+          "url": "https://www.businesswire.com/news/home/20240222125092/en/WSPN-and-OpenEden-Labs-Forge-Pioneering-Partnership-for-On-Chain-Integration-of-WUSD-Stablecoin-in-DeFi-Ecosystem/"
         }
       ],
       "notes": "WSPN's About WUSD disclosure states that WUSD is backed 100% by high-quality liquid assets — cash, cash equivalents including money-market funds and repurchase agreements, and short-dated U.S. Treasury bills under 90 days, with an indicative 70-80% cash-and-equivalents / 20-30% T-bill allocation — and that WUSD is always redeemable 1:1 for USD, with qualified businesses converting USD to and from WUSD at no additional cost through a WSPN Mint Account. This issuer self-disclosure of the reserve and redemption policy supports a limited claim-and-segregation rating. NOT established: the binding holder terms — the Terms of Service PDF and whitepaper URLs cited in the coin file now return the site's single-page-app shell and no usable archive snapshot could be retrieved — any named custodian or segregation/bankruptcy-remoteness language, and any third-party attestation or examination of the reserves (the 2026-06-18 Pharos compliance review found no monthly attestation, and none was located in this pass). Custody continuity and assurance and reconciliation therefore remain bounded-unknown.",
@@ -8095,7 +8201,12 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed WUSD disclosure does not publish a dated third-party attestation, examination, or reserve-to-liability reconciliation.",
+          "rationale": "Re-verified 2026-07-30: WSPN publishes no dated third-party attestation, examination, or reserve-to-liability reconciliation; the FAQ and site transparency page carry commitment language only (announced, unpublished), which the ratified evidence standard excludes.",
+          "sourceUrl": "https://developer.wspn.io/5768563m0"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: the issuer claims trust-structure custody with licensed trust companies/custodians but publishes no named custodian, trustee, bank, or segregation/bankruptcy-remoteness terms; the OpenEden TBILL arrangement covers only an undisclosed portion of reserves.",
           "sourceUrl": "https://developer.wspn.io/5768563m0"
         }
       }
@@ -8754,7 +8865,7 @@
     {
       "assetId": "bnusd-balanced",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Balanced bnUSD stablecoin page: over-collateralization claim, Stability Fund 1:1 swap design with per-coin caps, contract-level Redemption method, Savings Rate (pinned 2026-07-20; site unreachable from the review environment on 2026-07-27)",
@@ -8816,6 +8927,11 @@
         },
         "structuralRedemption": {
           "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "unavailable",
+          "rationale": "Re-reviewed 2026-07-30: SODAX money-market docs, the balanced.network stablecoin page, and the SODAX audits index publish no shutdown, wind-down, bad-debt allocation, or deficit-elimination procedure for the hub Pool, and none of the 8 listed audits covers the hub EVM Pool. On-chain at Sonic block 76778944 the Pool (proxy 0x553434896D39F867761859D0FE7189d2Af70514E, implementation 0x83d7b2f35b1993c49c0a4ee99a0e472228e82560, POOL_REVISION 6) exposes no eliminateReserveDeficit/getReserveDeficit surface. The missing design is recorded as unavailable rather than inferred weak.",
+          "sourceUrl": "https://docs.sodax.com/welcome-to-sodax/audits"
         }
       }
     },
@@ -9083,7 +9199,7 @@
     {
       "assetId": "wars-argentine-peso",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Ripio local-stablecoins page: second wARS attestation completed and certified by local public accountants as of 2026-03-31 (973,000,960.19 wARS vs ARS 1,036,276,284 on deposit)",
@@ -9099,6 +9215,11 @@
       "components": {
         "assuranceAndReconciliation": {
           "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed wFIAT disclosure surface (whitepaper, 2026-03-31 independent certification, and the live Ripio local-stablecoins page, all re-opened 2026-07-30) does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
+          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
         }
       }
     },
@@ -9135,7 +9256,7 @@
     {
       "assetId": "xusd-babelfish",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "BabelFish docs: XUSD is a meta-stablecoin aggregating stablecoins 1:1 across networks; deposits/withdrawals via the aggregator; DAO-governed",
@@ -9158,15 +9279,20 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed BabelFish disclosures publish no attestation, and the current XUSD basket could not be reconciled from the documented contract reads.",
-          "sourceUrl": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/what-is-babelfish.md"
+          "rationale": "Re-verified 2026-07-30: no attestation exists, and fresh on-chain reads (Rootstock block 9109001) show the documented reserve contract balances reconcile only ~53.4% of XUSD totalSupply; the location of the remaining backing is undisclosed, so full reconciliation is not achievable from public sources.",
+          "sourceUrl": "https://public-node.rsk.co"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: identified on-chain custody (masset manager under documented multisig admin) covers only ~53.4% of supply-backing balances at Rootstock block 9109001; the custody location and continuity arrangements of the remaining backing are undisclosed.",
+          "sourceUrl": "https://public-node.rsk.co"
         }
       }
     },
     {
       "assetId": "weusd-picwe",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "PicWe docs: WEUSD claimed pegged 1 WEUSD = 1 USD 'always', Phase 1 collateral 100% USDC with 'instant mint/redeem', 'on-chain reserves' and 'real-time auditability'",
@@ -9185,7 +9311,12 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed WEUSD disclosure asserts real-time auditability but publishes no reserve address, attestation, audit, or verifiable proof-of-reserves report.",
+          "rationale": "2026-07-30 re-review of PicWe docs (https://docs.picwe.org/what-is-weusd, https://docs.picwe.org/mint-and-redeem), security page (https://docs.picwe.org/developers/security — Movebit code audit only), transparency/reserves/proof-of-reserves paths (404), and on-chain pins (BSC block 113074656 mint USDC ~0.62 vs ~32.4k WEUSD supply; Movement legacy MintState dual stablecoin+MOVE counters vs ~465k supply) finds no independent reserve attestation, named attestor, dated reserve-to-liability reconciliation, or verifiable PoR report. 'Real-time auditability' is marketing without a published reserve inventory. Recorded as issuer-undisclosed; no weak/failed grade inferred from absence.",
+          "sourceUrl": "https://docs.picwe.org/what-is-weusd"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "2026-07-30 re-review of PicWe docs (https://docs.picwe.org/what-is-weusd, https://docs.picwe.org/mint-and-redeem, https://docs.picwe.org/developers/contracts, https://docs.picwe.org/developers/security) and on-chain mint infrastructure finds only PicWe-operated smart-contract mint/redeem paths (EVM 0x5D54…F22C; Movement current 0xf39c…1ff6; Movement legacy 0xed80…f83d). No published bank/trust/qualified-custodian identity, legal segregation, bankruptcy remoteness, anti-rehypothecation controls, successor-custody protocol, or failure-domain isolation from PicWe admin EOAs / package upgrade keys. Recorded as issuer-undisclosed; no weak/failed grade inferred from absence.",
           "sourceUrl": "https://docs.picwe.org/what-is-weusd"
         }
       }
@@ -9315,7 +9446,7 @@
     {
       "assetId": "cngn-compliant-naira",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "cNGN transparency page: cNGN maintained 1:1 with the naira, reserves 'securely held in licensed custodian banks', monthly audits on reserve funds",
@@ -9338,6 +9469,11 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "2026-07-31 re-review of cNGN transparency, WrappedCBDC terms, and ASC FAQ confirms only unnamed licensed/partner commercial banks. No active custodian identity, provider allocation, anti-rehypothecation control, bankruptcy treatment, or failure/replacement/successor-custody mechanics is published; record issuer-undisclosed without a weak/failed grade.",
+          "sourceUrl": "https://cngn.co/transparency"
         }
       }
     },
@@ -9465,7 +9601,7 @@
     {
       "assetId": "eearn-ember",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-31",
       "sources": [
         {
           "label": "Ember docs core concepts: users deposit assets and receive receipt tokens (shares); yield accrues via the vault exchange rate following ERC-4626 principles; redemptions return deposit coins at the current rate; curators deploy pooled deposits into DeFi/cross-chain/CeFi strategies",
@@ -9492,6 +9628,11 @@
         },
         "assuranceAndReconciliation": {
           "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "2026-07-31 review of Ember core concepts, legal terms, eEARN product disclosure, verified vault implementation, and live Ethereum accounting finds no eEARN-specific active custodian/venue set, provider allocations, anti-rehypothecation controls, or failure/replacement/successor-custody mechanics. Record issuer-undisclosed; do not infer weak or failed from absence.",
+          "sourceUrl": "https://learn.ember.so/ember-protocol/core-concepts"
         }
       }
     },
@@ -9863,7 +10004,7 @@
     {
       "assetId": "ussd-sonic-labs",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Frax branded-stablecoin documentation (USSD backed 1:1 by frxUSD held in the BrandedCustodian; mint, redeem, and LayerZero bridge mechanics)",
@@ -9890,6 +10031,16 @@
         },
         "lossRecoveryDesign": {
           "quality": "adequate"
+        },
+        "durationAndLiquidity": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: Frax's live balance-sheet API publishes measured composition and quantities for the frxUSD reserve USSD inherits, but no measured WAM, duration, maturity ladder, or liquidity horizon exists in the API, the facts.frax.finance page, Frax docs, or Sonic's USSD docs/disclaimer — only qualitative 'short-duration' labels and marketing liquidity claims. Underlying funds publish their own fund-level WAMs (WTGXX 1940-Act ≤60-day WAM; BUIDL/USTB factsheets), but no Frax/Sonic-published measured figure aggregates them and none was derived here. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred.",
+          "sourceUrl": "https://docs.soniclabs.com/sonic/ussd"
+        },
+        "navValuation": {
+          "applicability": "unavailable",
+          "rationale": "Re-verified 2026-07-30: USSD is a par 1:1 frxUSD wrapper (Frax branded-stablecoin docs; Sonic disclaimer affirmatively assigns all reserve/valuation roles to Frax Inc.), so no USSD-level NAV layer exists; at the frxUSD level, valuation is self-reported by Frax with no independent fund administrator, valuation agent, or accounting-firm attestation published (Kerne mid-2026 gap report; LlamaRisk 2025-08-01 notes attestations only as a future commitment). The on-chain BrandedCustodian 1:1 balance (re-verified today) is raw parity, not an administered valuation. Missing evidence recorded as issuer-undisclosed; no weak or failed grade is inferred. Note: a not-applicable disposition (structural absence of a NAV layer on a par wrapper) was considered and rejected in favor of the fleet precedent for wrapper tokens (usdk-kast), which records unavailable.",
+          "sourceUrl": "https://docs.frax.com/fraxnet/branded-stablecoins"
         }
       }
     },
@@ -11111,7 +11262,7 @@
     {
       "assetId": "zkusd-goal3",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Goal3 documentation (Wayback Machine snapshot 2024-02-25) — $zkUSD page: '1 $zkUSD can always be redeemed through the portal into 1 USDC'; backing described as collateralized assets within the Goal3 sportsbook, 'provable on-chain'",
@@ -11140,6 +11291,11 @@
           "applicability": "unavailable",
           "rationale": "The reviewed archived Goal3 audit covers smart-contract code rather than reserves, and no reserve attestation, proof-of-reserves, or circulation reconciliation is published.",
           "sourceUrl": "https://web.archive.org/web/20231202053812/https://docs.goal3.xyz/audit"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "No custodian, reserve address, or segregation terms are disclosed; the only identifiable deposit destination (Lockdrop treasury 0xa5ad8953de51ced330e788dddde19a5f96cac082) held 0 USDC and 0 USDC.e at zkSync Era block 71379594 (2026-07-30), so there is no custody arrangement whose continuity can be graded.",
+          "sourceUrl": "https://mainnet.era.zksync.io"
         }
       }
     },
@@ -15964,7 +16120,7 @@
     {
       "assetId": "nwisdom-nest",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Nest available vaults nWISDOM",
@@ -15989,9 +16145,17 @@
         {
           "label": "Nest Wisdom last-price-update API",
           "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
+        },
+        {
+          "label": "Nest terms and conditions",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+        },
+        {
+          "label": "Nest flow of funds",
+          "url": "https://docs.nest.credit/security-and-compliance/flow-of-funds/"
         }
       ],
-      "notes": "RWA Nest vault; share price <1 indicates mark-to-market of underlying fund. Component evidence: creditQuality (limited) — xCRDYX / WisdomTree private-credit digital fund tracks Gapstow-style alternative credit (BDCs, CEFs, mREITs) per Nest product description; positions API confirms >98% of NAV in xCRDYX. Limited: market price of fund shares can be below NAV (share price 0.95).; valuationCadence (limited) — Dual Nest hourly process + live API/on-chain rate. Limited issuer-operated marks.; maturityAndLiquidity (limited) — 4-day Nest redemption estimate (per Nest available-vaults, snapshot 2026-07-27); underlying fund is publicly traded credit vehicles with secondary market liquidity plus small nTBILL/liquid buffer. Dual Nest docs + positions. Limited WAM.; custody (limited) — Nest non-custodial vault + tokenized WisdomTree fund shares on-chain. Dual Nest flow-of-funds + positions token addresses..",
+      "notes": "RWA Nest vault; share price <1 indicates mark-to-market of underlying fund. Component evidence: creditQuality (limited) — xCRDYX / WisdomTree private-credit digital fund tracks Gapstow-style alternative credit (BDCs, CEFs, mREITs) per Nest product description; positions API confirms >98% of NAV in xCRDYX. Limited: market price of fund shares can be below NAV (share price 0.95).; valuationCadence (limited) — Dual Nest hourly process + live API/on-chain rate. Limited issuer-operated marks.; maturityAndLiquidity (limited) — 4-day Nest redemption estimate (per Nest available-vaults, snapshot 2026-07-27); underlying fund is publicly traded credit vehicles with secondary market liquidity plus small nTBILL/liquid buffer. Dual Nest docs + positions. Limited WAM.; custody (limited) — Nest non-custodial vault + tokenized WisdomTree fund shares on-chain. Dual Nest flow-of-funds + positions token addresses.. legalEnforceability (weak) - Nest DAO LLC (Marshall Islands DAO LLC) offers nWISDOM only under an interface-level terms agreement: as-is/no warranties, ICC binding arbitration (BVI seat), class-action waiver; no prospectus, trust deed, or direct contractual holder claim on the underlying WisdomTree fund assets is published. Matches ratified 2026-07-29 sibling grades for inalpha-nest and nopal-nest.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0.041666666666666664
@@ -16015,6 +16179,9 @@
         },
         "custody": {
           "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "weak"
         }
       }
     },
@@ -16805,7 +16972,7 @@
     {
       "assetId": "mmev-midas",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-07-27",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Midas mMEV product page",
@@ -16818,9 +16985,25 @@
         {
           "label": "CoinGecko product listing",
           "url": "https://www.coingecko.com/en/coins/midas-mmev"
+        },
+        {
+          "label": "Midas mMEV Final Terms dated 13 February / 17 July 2025 (ISIN CH1423036644)",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
+        },
+        {
+          "label": "Midas mMEV Key Information Document dated 2 February 2026",
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/ExalrROLjCG6HOXvhzhn/KID_mMEV.pdf"
+        },
+        {
+          "label": "Midas Issuance & Redemption (instant mode and 1-7 business-day standard queue)",
+          "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption"
+        },
+        {
+          "label": "Midas mMEV token documentation",
+          "url": "https://docs.midas.app/tokens/mmev"
         }
       ],
-      "notes": "mMEV: Midas docs CF-walled; wrote honest unavailable SDN metrics without component grades (insufficient dual-source for limited+).",
+      "notes": "mMEV: 2026-07-30 candidate: the binding Final Terms (13 Feb 2025, re-filed 17 July 2025, ISIN CH1423036644) and KID (2 Feb 2026) were recovered from Midas's legal-document index. venueAndCustody is weak because the terms list Custodian, Security Agent, and Token Trustee as n/a with no product-specific account-control evidence. lossAbsorption is weak because holder claims are qualified subordinated, the KID confirms subordination and no deposit protection, and no enforceable security-agent or first-loss layer is named; this is positive adverse legal evidence, not a missing-evidence inference. unwindCapacity is limited because redemption is available at any time but valued through hypothetical best-efforts asset liquidation, and the Midas operational route can fall back from instant liquidity to a 1-7 business-day queue. Hedge reconciliation, funding stress, and margin/liquidation remain bounded; all required metrics remain null and unavailable.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -16829,21 +17012,31 @@
       "metricApplicability": {
         "hedgeCoverageRatio": {
           "state": "unavailable",
-          "rationale": "mMEV is a Midas NAV liquid-yield token tracking a market-neutral/manager strategy. No reconciled hedge notional or net-delta inventory is public. Searched: midas.app product page, docs.midas.app llms-listed transparency/risk pages (HTTP 403 Cloudflare at write time), CoinGecko listing. Do not invent policy-1 coverage.",
-          "sourceUrl": "https://midas.app/mmev"
+          "rationale": "mMEV is a Midas NAV liquid-yield token tracking a market-neutral/manager strategy. No reconciled hedge notional or net-delta inventory is public; the Final Terms track NAV of referenced wallet addresses minus a 100bps tracking error and 20% performance fee. Searched: Final Terms (2025-07-17), KID (2026-02-02), docs.midas.app/tokens/mmev (live 2026-07-30), midas.app product page (HTTP 403 Cloudflare at research time). Do not invent policy-1 coverage.",
+          "sourceUrl": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
         },
         "marginBufferPct": {
           "state": "unavailable",
-          "rationale": "No product-specific published excess-margin or overcollateralization figure (NAV feed is not excess collateral). Same search surfaces; Midas risk-monitoring docs CF-blocked.",
-          "sourceUrl": "https://docs.midas.app/llms.txt"
+          "rationale": "No product-specific published excess-margin or overcollateralization figure (NAV feed is not excess collateral). Same search surfaces; Final Terms and KID publish no margin buffer.",
+          "sourceUrl": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
         },
         "lossAbsorptionShare": {
           "state": "unavailable",
-          "rationale": "No dual-sourced insurance/first-loss pool size relative to token supply. Midas legal/KID materials CF-blocked this pass for this product.",
-          "sourceUrl": "https://docs.midas.app/llms.txt"
+          "rationale": "Metric applies to the market-neutral strategy. The recovered Final Terms list Collateral, Security Agent, and Token Trustee as n/a, and neither the terms nor the 2026-02-02 KID publish any insurance fund, junior tranche, funded reserve, or other quantified first-loss pool relative to token supply. The qualified-subordinated holder claim and absent security-agent layer are affirmative adverse evidence for the weak lossAbsorption component; they do not establish a numeric lossAbsorptionShare, so no zero is inferred.",
+          "sourceUrl": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
         }
       },
-      "components": {}
+      "components": {
+        "venueAndCustody": {
+          "quality": "weak"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "weak"
+        }
+      }
     },
     {
       "assetId": "mre7yield-midas",
@@ -17118,19 +17311,37 @@
     {
       "assetId": "dusd-fluid",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-28",
+      "reviewedAt": "2026-07-30",
       "sources": [
         {
           "label": "Fluid Finance issuer FAQ for DUSD reserve and oracle design, published 2021-12-31",
           "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+        },
+        {
+          "label": "Wayback Machine snapshot of fluid.ch/dusd (2023-03-10, latest available)",
+          "url": "http://web.archive.org/web/20230310124908/https://fluid.ch/dusd/"
+        },
+        {
+          "label": "Arbitrum Blockscout - OffchainTreasuryOracle transaction history",
+          "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=txs"
         }
       ],
-      "notes": "Re-reviewed Fluid Finance's issuer-authored DUSD FAQ and the current product locations on 2026-07-28. The dated FAQ describes a planned public treasury API, CeFi-validator signatures, and an audit then in progress; it does not contain a completed assurance report or a dated reserve-to-DUSD-circulation reconciliation. The current fluid.ch DUSD location did not expose a current reserve report during this review. Promised audits and a smart-contract audit are not financial reserve assurance, so assuranceAndReconciliation remains applicable but issuer-undisclosed.",
+      "notes": "Wave-2 re-review on 2026-07-30 independently confirms the 2026-07-28 unavailable disposition for assurance and reconciliation and extends it to claim and segregation and custody continuity. The issuer FAQ describes a planned public treasury API, CeFi-validator signatures, and an audit then in progress; no completed assurance report or dated reserve-to-DUSD reconciliation exists. The issuer site fluid.ch returned HTTP 522 and its latest archived DUSD product page (2023-03-10) only repeats marketing claims of safeguarded, bankruptcy-remote client accounts at unnamed regulated European banks. On-chain at Arbitrum block 489415741 the OffchainTreasuryOracle answer (10,782,314.982420) exactly equals totalSupply (2,952,323.892420) plus totalPendingRedeems (7,829,991.090000), and the oracle's last update transaction is dated 2024-04-21, so the self-reported treasury figure is stale and a redemption queue exceeding 2.6x circulating supply is unsettled. No named custodian, no legal holder-claim or segregation terms, and no independent attestation were found; all three components remain applicable but issuer-undisclosed.",
       "metrics": {},
       "components": {
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed issuer FAQ describes planned API signatures and an audit in progress but publishes no completed reserve assurance report or dated DUSD assets-and-liabilities reconciliation.",
+          "rationale": "The issuer FAQ describes planned API signatures and an audit in progress but publishes no completed reserve assurance report or dated reconciliation; on-chain, the treasury oracle has not been updated since 2024-04-21 and its answer merely equals supply plus a large unsettled pending-redemption queue.",
+          "sourceUrl": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=txs"
+        },
+        "claimAndSegregation": {
+          "applicability": "unavailable",
+          "rationale": "Only unverifiable issuer marketing (2021 FAQ; 2023-03-10 archived product page) claims safeguarded, ringfenced, bankruptcy-remote client funds; no binding terms, named custodian, or independent corroboration establishes a holder claim or reserve segregation.",
+          "sourceUrl": "http://web.archive.org/web/20230310124908/https://fluid.ch/dusd/"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "No custodian or partner bank is named in any current or archived issuer source, and no reserve report, attestation, or provider-disclosure establishes custody continuity; the issuer site was unreachable (HTTP 522) in this review.",
           "sourceUrl": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
         }
       }
