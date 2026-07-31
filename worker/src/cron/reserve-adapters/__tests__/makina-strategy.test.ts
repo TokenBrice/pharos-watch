@@ -67,6 +67,25 @@ describe("makina-strategy adapter", () => {
       .toBe(true);
   });
 
+  it("does not hide stale allocations behind a fresh strategy timestamp", () => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    strategy.meta.generated_at = "2026-07-29T09:28:20.429Z";
+    allocations.meta.generated_at = "2026-07-19T09:28:20.429Z";
+
+    const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS);
+    const validation = validateAdapterOutput(result, {
+      adapter: getReserveAdapter("makina-strategy") ?? undefined,
+      now: Math.floor(Date.parse("2026-07-29T09:28:20.429Z") / 1000),
+    });
+
+    expect(result.metadata?.sourceTimestamp).toBe(
+      Math.floor(Date.parse("2026-07-19T09:28:20.429Z") / 1000),
+    );
+    expect(validation.valid).toBe(false);
+    expect(validation.warnings.map((warning) => warning.code)).toContain("stale-source-data");
+  });
+
   it("publishes current AsyncRedeemer access, delay, and queue-index telemetry", () => {
     expect(buildMakinaRedemptionMetadata({
       whitelistEnabled: true,
