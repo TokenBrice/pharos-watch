@@ -94,63 +94,23 @@ export function CardFrame({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Pharos Logo - SVG lighthouse icon */}
+          {/* Pharos brand mark. Card BG is light, so this is the on-light variant (dark disc,
+              light star) — the same file as public/pharos-mark-on-light.svg, inlined because
+              satori cannot fetch a same-origin asset. The emblem carries its own disc, so there
+              is no plate behind it. */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 40,
-                height: 40,
-                borderRadius: 7,
-                backgroundColor: "#18191c",
-              }}
-            >
-            <svg width="34" height="34" viewBox="0 0 88 88" fill="none">
+            <svg width="40" height="40" viewBox="0 0 400 400" fill="none">
               <defs>
-                <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#E8DCC4" stopOpacity="0.45"/>
-                  <stop offset="100%" stopColor="#E8DCC4" stopOpacity="0"/>
-                </radialGradient>
-                <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#D4C8B0"/>
-                  <stop offset="40%" stopColor="#E8DCC4"/>
-                  <stop offset="100%" stopColor="#C8BBAA"/>
-                </linearGradient>
+                <clipPath id="pharos-mark-disc">
+                  <rect width="400" height="400" rx="200" fill="white"/>
+                </clipPath>
               </defs>
-              {/* Glow behind lantern */}
-              <circle cx="44" cy="16" r="16" fill="url(#glow)"/>
-              {/* Beams */}
-              <line x1="44" y1="16" x2="44" y2="-4" stroke="#E8DCC4" strokeWidth="2.5" opacity="0.55" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="22" y2="-2" stroke="#E8DCC4" strokeWidth="2.5" opacity="0.4" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="66" y2="-2" stroke="#E8DCC4" strokeWidth="2.5" opacity="0.4" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="4" y2="4" stroke="#E8DCC4" strokeWidth="2" opacity="0.25" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="84" y2="4" stroke="#E8DCC4" strokeWidth="2" opacity="0.25" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="-4" y2="14" stroke="#E8DCC4" strokeWidth="1.5" opacity="0.15" strokeLinecap="round"/>
-              <line x1="44" y1="16" x2="92" y2="14" stroke="#E8DCC4" strokeWidth="1.5" opacity="0.15" strokeLinecap="round"/>
-              {/* Shield */}
-              <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" strokeWidth="3" opacity="0.5" strokeLinejoin="round"/>
-              {/* Lantern light */}
-              <circle cx="44" cy="16" r="5" fill="white" opacity="0.85"/>
-              {/* Dome */}
-              <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity="0.9"/>
-              {/* Lantern room */}
-              <rect x="38.5" y="22" width="11" height="7" rx="1" fill="#F5F0E6" opacity="0.85"/>
-              <line x1="42" y1="22" x2="42" y2="29" stroke="#18191c" strokeWidth="0.8" opacity="0.3"/>
-              <line x1="46" y1="22" x2="46" y2="29" stroke="#18191c" strokeWidth="0.8" opacity="0.3"/>
-              {/* Gallery */}
-              <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity="0.85"/>
-              {/* Tower shaft */}
-              <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#tBody)" opacity="0.8"/>
-              {/* Bands */}
-              <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#18191c" strokeWidth="2" opacity="0.35"/>
-              <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#18191c" strokeWidth="2" opacity="0.35"/>
-              {/* Base */}
-              <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity="0.7"/>
-              <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity="0.45"/>
+              <g clipPath="url(#pharos-mark-disc)">
+                <path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="#0A0A0A"/>
+                <path fillRule="evenodd" clipRule="evenodd" d="M280.906 400.602H122.977L201.934 225.845L280.906 400.602Z" fill="#EEEEEE"/>
+                <path d="M208.675 122.569C208.836 125.476 210.853 156.915 228.73 163.317C238.333 166.747 248.509 161.533 260.496 153.873C278.58 142.348 304.57 122.866 332.349 90.4873C317.268 111.959 304.113 131.35 292.974 148.111C277.228 171.847 270.742 182.457 274.386 192.93C277.091 200.704 284.379 205.506 303.608 213.12C321.004 220.026 345.574 228.19 376.698 233.746H234.342C234.342 215.387 219.208 200.504 200.539 200.504C181.87 200.504 166.736 215.387 166.736 233.746H23.301C54.4488 228.19 78.9958 220.026 96.3918 213.12C115.621 205.506 122.932 200.704 125.637 192.93C129.258 182.457 122.795 171.847 107.027 148.111C95.9106 131.35 82.7317 111.959 67.6506 90.4873C95.429 122.866 121.42 142.348 139.503 153.873C151.49 161.533 161.667 166.747 171.27 163.317C189.146 156.915 191.164 125.476 191.324 122.569C194.235 98.7424 197.1 74.9149 200.011 51.0879C202.899 74.9149 205.787 98.7424 208.675 122.569Z" fill="#EEEEEE"/>
+              </g>
             </svg>
-            </div>
             <span
               style={{
                 fontSize: 22,
