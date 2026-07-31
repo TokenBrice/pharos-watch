@@ -80,35 +80,29 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "DephaserJPY verified source on Optimism (Blockscout)",
-        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+        "label": "Sourcify Optimism contract source",
+        "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
       },
       {
-        "label": "Sourcify Base DephaserJPY ABI",
-        "url": "https://sourcify.dev/server/v2/contract/8453/0xc47da4cb96ce65a96844a01bfae509f9d5454534?fields=abi,compilation"
+        "label": "Docs",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt"
       },
       {
-        "label": "Optimism public RPC (mainnet.optimism.io) role/storage reads",
-        "url": "https://mainnet.optimism.io"
+        "label": "DephaserJPY verified source on Optimism",
+        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
       },
       {
-        "label": "Base public RPC (mainnet.base.org) role/storage reads",
-        "url": "https://mainnet.base.org"
-      },
-      {
-        "label": "DePhaser JPYT overview (USDT/USDC reserve routes)",
-        "url": "https://docs.dephaser.com/concept/what-is-jpyt.md"
+        "label": "DephaserJPY verified source on Base",
+        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
       }
     ],
-    "evidence": "2026-07-30 re-review of direct holder freeze/blacklist on both material JPYT deployments (same address 0xc47da4cb96ce65a96844a01bfae509f9d5454534 on Optimism and Base). Verified Blockscout source is AccessControlEnumerable + ERC20 + ERC20Permit with only MINTER_ROLE and BURNER_ROLE; there is no pause, blacklist, freeze, seize, or transfer-hook. burn(uint256) burns only msg.sender; burnFrom spends allowance before burn so BURNER_ROLE alone cannot burn unapproved holders. At Optimism block 154923376 and Base block 49328091, EIP-1967 implementation and admin slots are zero (immutable non-proxy). getRoleMemberCount(MINTER_ROLE)=1 and getRoleMemberCount(BURNER_ROLE)=1 on both chains, each held by the per-chain DepositManager (Optimism 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, Base 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276). Conclusion: no direct holder freeze/blacklist surface; canBeBlacklisted=false.",
-    "upstreamSuppressionRationale": "Locked USDT (Optimism) and USDC (Base) routed into Aave can be frozen or impaired by Tether/Circle (or Aave market liquidity), which can harm JPYT redemption value, but neither issuer has a holder-level freeze, blacklist, or transfer-restriction path on the JPYT ERC-20 itself. Those exposures remain reserve-quality and dependency risks, not JPYT token blacklistability.",
-    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Current-source re-review: the verified DephaserJPY token source exposes no direct holder freeze or blacklist function, and PAUSER_ROLE has no members on the reviewed Optimism or Base deployments. burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
+    "reviewer": "Codex FreezeWatch review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

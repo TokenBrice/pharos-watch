@@ -1502,7 +1502,7 @@
     {
       "name": "sodaBTC (SODAX-wrapped BTC family) borrower collateral",
       "pct": 7.17,
-      "risk": "high",
+      "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BTC, BTCB, cbBTC, tBTC, and rBTC issuers via the SODAX sodaBTC vault wrapper",
       "riskFactors": [
@@ -1572,7 +1572,7 @@
     {
       "name": "sodaETH (SODAX-wrapped ETH family) borrower collateral",
       "pct": 2.33,
-      "risk": "high",
+      "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ETH, ETHB, and Sonic WETH via the SODAX sodaETH vault wrapper",
       "riskFactors": [
@@ -1604,7 +1604,7 @@
     {
       "name": "sodaWEETH (SODAX-wrapped weETH) borrower collateral",
       "pct": 1.78,
-      "risk": "high",
+      "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ether.fi weETH via the SODAX sodaWEETH vault wrapper",
       "riskFactors": [
@@ -1661,7 +1661,7 @@
     {
       "name": "sodaWSTETH (SODAX-wrapped wstETH) borrower collateral",
       "pct": 0.8,
-      "risk": "high",
+      "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido wstETH via the SODAX sodaWSTETH vault wrapper",
       "riskFactors": [

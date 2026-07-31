@@ -1,46 +1,61 @@
 {
   "id": "doc-money-on-chain",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Rootstock Blockscout - verified DoCToken source (OwnerBurnableToken)",
+        "label": "Money On Chain published contract verification and upgrade inventory",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+      },
+      {
+        "label": "Money On Chain OwnerBurnableToken documentation",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/abis-documentation/ownerburnabletoken"
+      },
+      {
+        "label": "Rootstock Blockscout - verified DoCToken source and ABI",
         "url": "https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
       },
       {
-        "label": "Rootstock Blockscout - MoCExchange proxy / MoCExchange implementation",
+        "label": "Rootstock Blockscout - MoCExchange proxy and current verified implementation",
         "url": "https://rootstock.blockscout.com/address/0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038"
       },
       {
-        "label": "Rootstock Blockscout - MoC proxy / DeployableMoC implementation",
-        "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
-      },
-      {
-        "label": "Rootstock public node",
+        "label": "Rootstock public node - pinned block 9,080,700 calls",
         "url": "https://public-node.rsk.co"
       },
       {
-        "label": "Arbitrum DOC MyOFT (Arbiscan)",
-        "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+        "label": "Money On Chain OwnerBurnableToken architecture documentation",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/contracts-architecture/ownerburnabletoken"
       },
       {
-        "label": "Arbitrum public RPC",
+        "label": "Sourcify - verified DOC Arbitrum MyOFT source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x2ad62eb9744c720364f6ac856360a43e8a2229b5?fields=abi,metadata"
+      },
+      {
+        "label": "Arbitrum Blockscout - DOC MyOFT deployment",
+        "url": "https://arbitrum.blockscout.com/address/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+      },
+      {
+        "label": "Arbitrum public RPC - pinned block 486,628,680 calls",
         "url": "https://arb1.arbitrum.io/rpc"
       },
       {
-        "label": "Ethereum eDOC SideToken (Blockscout)",
-        "url": "https://eth.blockscout.com/address/0x69f6d4d4813f8e2e618dae7572e04b6d5329e207"
+        "label": "Money On Chain official main-RBTC-contract repository",
+        "url": "https://github.com/money-on-chain/main-RBTC-contract"
       },
       {
-        "label": "Money On Chain published contract verification inventory",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
+        "label": "Money On Chain public dapp transparency surface",
+        "url": "https://dapp.moneyonchain.com/"
+      },
+      {
+        "label": "Money On Chain published privacy/legal page",
+        "url": "https://moneyonchain.com/privacy-policy/"
       }
     ],
-    "evidence": "At Rootstock block 9109008, DoCToken 0xe700691d owner() = MoCExchange 0x6acb83bb…; totalSupply ~2.99e6 DOC. Live DOC bytecode has burn(address,uint256) and owner() but no pause/blacklist/freeze selectors or strings. Verified OwnerBurnableToken burn is onlyOwner. MoCExchange uses that burn only inside redeem paths (redeemFreeDoc/doDocRedeem/redeemAllDoc). User-facing MoC (DeployableMoC) always calls mocExchange.redeemFreeDoc(msg.sender, …) and redeemAllDoc(msg.sender, msg.sender); connector.isWhitelisted(MoC 0xf773B590…) = true at the same block, so the only live whitelisted entry point binds burns to the redeeming user. Upgrade of MoCExchange remains a mint/governance risk (see mintAuthority), not a current freeze primitive. At Arbitrum block 489419615, DOC MyOFT 0x2ad62eb9 owner = 0xb2395eaa…; bytecode has owner/setPeer/transfer but no blacklist/pause/burn(address). Ethereum eDOC 0x69f6d4d4 is a bridge SideToken with minter = RSK Bridge and no blacklist/pause selectors. Failure domains: Rootstock MoC governance upgrade path; Arbitrum OFT owner; Ethereum RSK bridge multisig/federation — none is a live DOC transfer blacklist.",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "rBTC collateral and LayerZero/RSK-bridge route risks can impair claim value or peripheral representation solvency, but they do not give those upstream actors a current holder-level freeze or blacklist on Rootstock DOC, Arbitrum DOC OFT, or eDOC transfer paths."
+    "evidence": "At Rootstock block 9,080,700 (hash 0x724d88376c86934387d39f8b7f65c7cec3f4030807765ef514111847115fdeed; 2026-07-22 19:16:34 UTC), non-proxy DoCToken.owner() returned MoCExchange 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038 and an unrelated zero-value transfer succeeded. A pinned eth_call impersonating MoCExchange successfully invoked burn(address,uint256) for one wei against holder 0xe4822f07c1d988a8f2f53d1817f7e8848897b67a, while the same call from an unrelated address reverted with Ownable: caller is not the owner. This proves the owner-only arbitrary-holder burn primitive, but MoCExchange is a contract and cannot originate that simulated transaction. Its current verified implementation uses DoCToken burn in whitelisted redemption paths that pass the redeeming user as the holder; no callable current admin path for arbitrary seizure was identified. MoCExchange remains upgradeable through Money On Chain's published governance route, so governance could change the system-owned call path. Possible is therefore retained rather than treating an impersonated eth_call or upgrade authority as a live direct freeze. At Arbitrum block 486,628,680 (hash 0x979a02a2c5f3b75dfddf6e91d1b51a4e740bbe988e3bca4b22a590d6503e4ee1; 2026-07-22 19:24:28 UTC), the verified non-proxy DOC MyOFT owner remained 0xb2395eaaeb03fb1f46647c423378b24f2e906305, an unrelated zero-value transfer succeeded, and the verified ABI exposed peer and delegate administration but no holder blacklist, pause, freeze, or seize function. Those owner controls affect cross-chain reachability rather than a current local-transfer freeze. Sourcify and Arbitrum Blockscout continue to verify the deployment and source, preserving route continuity without relying on archived evidence. The issuer dapp remains the public on-chain transparency surface; the reviewed official legal and documentation set did not identify a separate terms or proof-of-reserves report.",
+    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-22"
   },
   "oracleRisk": {
     "tier": "standard-external",

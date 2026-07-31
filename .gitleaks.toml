@@ -13,3 +13,8 @@ useDefault = true
 description = "EVM addresses (0x + 40 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
 regexes = ['''^0x[a-fA-F0-9]{40}$''']
+
+[[allowlists]]
+description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"
+regexTarget = "secret"
+regexes = ['''^ibc/[A-F0-9]{64}$''']

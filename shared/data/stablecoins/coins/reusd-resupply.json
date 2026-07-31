@@ -148,27 +148,25 @@
   ],
   "deploymentModel": "single-chain",
   "governanceQuality": "dao-governance",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Sourcify verified reUSD Stablecoin source (match 6319599)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x57ab1e0003f623289cd798b1824be09a793e4bec?fields=all"
-      },
-      {
-        "label": "Blockscout verified reUSD contract",
+        "label": "REUSD verified contract source",
         "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
       },
       {
-        "label": "Resupply Stablecoin.sol source",
-        "url": "https://github.com/resupplyfi/resupply/blob/main/src/protocol/Stablecoin.sol"
+        "label": "Resupply governance voting",
+        "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
+      },
+      {
+        "label": "Resupply admin permissions",
+        "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 against two independent verifiers: the reUSD deployment at 0x57ab1e0003f623289cd798b1824be09a793e4bec is a Sourcify-matched and Blockscout-verified LayerZero OFT (Stablecoin.sol) exposing owner/operator-controlled mint, allowance-gated burn, and standard ERC-20 transfers with no holder blacklist, freeze, seizure, or pause function. The only censorship-adjacent surface is the owner-set LayerZero msgInspector, which can revert outbound bridge messages but cannot touch Ethereum holder balances. The owner is Resupply Core, executed through the token-weighted Voter with a seven-day vote and one-day execution delay.",
-    "reviewer": "Kimi T27 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "crvUSD and frxUSD lending-vault collateral drives the heuristic upstream exposure, but neither Curve nor Frax controllers hold any function over the REUSD token itself; that exposure is collateral loss risk, not freeze reach over REUSD holder balances, so the direct verdict is no blacklist capability."
+    "evidence": "The verified REUSD source exposes owner/operator-controlled mint and standard ERC-20 transfers, but no holder blacklist, freeze, seizure, or global pause function. The owner is Resupply Core and proposal execution is governed by the token-weighted Voter with a seven-day vote and one-day execution delay. crvUSD and frxUSD lending-vault collateral create upstream loss exposure without granting their controllers access to REUSD holder balances.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

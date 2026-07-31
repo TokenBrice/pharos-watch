@@ -351,9 +351,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "USDD core features",
@@ -376,10 +375,9 @@
         "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 across every material deployment. The issuer's core-features documentation guarantees freeze-free transactions (no centralized authority can freeze user funds). Function-level review of all three direct token implementations — Ethereum Usdd.sol via Blockscout verified source, BNB Chain Usdd.sol via Sourcify full match, and the Tron contract ABI via Tronscan — shows only Maker-style rely/deny authorization, mint, burn, move, permit, and ERC-20 transfer operations: no holder blacklist, balance freeze, seizure, or pause function exists on any canonical deployment, so direct freeze reach is none and no freeze failure domain applies. USDD is not a wrapper or variant, so there is no inherited upstream token-level freeze path; the legacy BTTC predicate representation is a peripheral bridge route without canonical freeze reach. Upstream USDT/USDC exposure sits in PSM/reserve custody and is scored in the backing lane (the report-card resolver still infers Upstream from reserve text), not as token transfer reach. This is a direct-token finding and does not characterize transfer controls in the separate transfer-review lane. Prior verification: GPT SOL-CORP-A wave6, 2026-07-22.",
-    "reviewer": "Kimi T47 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "Suppression recorded 2026-07-31. USDT held in PSM and direct vaults, plus Smart Allocator stablecoin deployments on Aave/JustLend, are issuer-freezable and can impair USDD backing or 1:1 redemption; Tether and Circle have no function over USDD balances, because none of the Tron, Ethereum, or BNB Chain implementations exposes a holder blacklist, freeze, seizure, or pause. Those exposures remain reserve-quality and dependency risks (failure domain asset:usdt-tether), not USDD blacklistability."
+    "evidence": "USDD's official core-features documentation states that no centralized authority can freeze user funds. The reviewed Tron, Ethereum, and BNB Chain direct token implementations expose Maker-style authorization, mint, burn, and ERC-20 transfer operations but no holder blacklist, balance freeze, seizure, or global pause function. This is a direct-token finding and does not characterize transfer controls in the separate transfer-review lane.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

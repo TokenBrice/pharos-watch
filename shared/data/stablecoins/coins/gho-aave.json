@@ -214,10 +214,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "upstreamSuppressionRationale": "GHO's stataUSDC/stataUSDT GSM reserve slices are freezable upstream stablecoins, but a Tether or Circle freeze of GSM-held balances impairs redemption backing; it cannot freeze, seize, or block an existing GHO holder balance on any reviewed deployment. Upstream reserve freezability is therefore reserve-side backing risk tracked through the reserve envelope, not GHO blacklistability.",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Aave GHO introduction",
@@ -228,14 +226,6 @@
         "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
       },
       {
-        "label": "Sourcify verified Ethereum GhoToken ABI",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f?fields=abi"
-      },
-      {
-        "label": "Ethereum PublicNode RPC reads at block 25648497",
-        "url": "https://ethereum-rpc.publicnode.com"
-      },
-      {
         "label": "Aave GHO bridging documentation",
         "url": "https://aave.com/help/gho-stablecoin/bridging-gho"
       },
@@ -244,9 +234,9 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "Re-derived 2026-07-30. Reach: at Ethereum block 25648497 the canonical GHO token 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f is a live 8,046-byte non-proxy deployment (both EIP-1967 implementation and admin slots read zero), and its verified Sourcify ABI exposes only transfer, transferFrom, approve, permit, facilitator mint/burn, and AccessControl facilitator/bucket role management — no blacklist, freeze, pause, seizure, or arbitrary-holder-burn function; burn is scoped to facilitator bucket flows, not holder balances. Controlling authority: the Aave ACL Admin executor's DEFAULT_ADMIN, FACILITATOR_MANAGER, and BUCKET_MANAGER roles govern facilitator admission and bucket capacity (mint domain) and reach no holder-balance control. Non-Ethereum deployments are Chainlink CCIP burn/mint representations per Aave's bridging documentation and the CCIP directory; their token-pool lane, rate-limit, and mint/burn controls govern bridge routes, not holder-level freezes of GHO balances, and they carry ~2% of supply. Inherited upstream exposure: none token-side; the stataUSDC/stataUSDT GSM reserve exposure is suppressed as backing-side risk per the recorded rationale. Failure-domain identity: aave-governance (facilitator/bucket administration) and protocol:chainlink-ccip (bridge routes) — neither can freeze a GHO holder balance.",
-    "reviewer": "Kimi T48 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "The verified immutable Ethereum GHO token exposes standard transfer and transferFrom operations without a holder blacklist, balance freeze, seizure, or global pause function. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; their token-pool mint, burn, and route controls do not establish a holder-level blacklist on GHO balances. This is a direct-token finding and does not suppress bridge-route or reserve impairment risk.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",

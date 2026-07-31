@@ -43,32 +43,25 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "evidence": "Fresh on-chain inventory at Rootstock block 9109013 on 2026-07-30: the XUSD token 0xb5999795be0ebb5bab23144aa5fd6a02d080299f runtime bytecode (7896 bytes, non-proxy) contains no blacklist/freeze/pause selectors, but it does contain burn(address,uint256), and owner() re-verified as the masset manager proxy 0x1440d19436beeaf8517896bffb957a88ec95a00f. That manager is an EIP-1967 proxy (implementation 0x92d7ad53b2d824277d22877d5299c2af479da322, whose bytecode also carries no blacklist/freeze/pause selectors) administered by the 2-of-5 Gnosis Safe 0x37a706259f5201c03f6cb556a960f30f86842d01, so both the owner path and the upgrade path give BabelFish multisigs individual holder-level seizure reach (arbitrary burn) over XUSD balances. Branch-token bytecode scan at the same block: DLLR 0xc1411567d2670e24d9c4daaa7cda95686e1250aa, rUSDT 0xef213441a85df4d7acbdae0cf78004e1e486bb96 (verified SideToken source), DAI 0x6b1a73d547f4009a26b8485b63d7015d248ad406, and DOC 0xe700691da7b9851f2f35f8b8182c69c53ccad9db carry no blacklist/freeze/pause selectors; the configured but currently zero-balance USDC.e branch 0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67 is a verified FiatTokenProxy whose implementation 0x40461291347e1ecbb09499f3371d3f17f10d7159 exposes blacklist/unBlacklist/isBlacklisted/pause with blacklister, owner, masterMinter, and pauser all returning 0x3e7f423105854ae9b4019f92d9fe9757074cf2f3. Upstream issuer freeze reach (Tether over the rUSDT bridge escrow; Circle-class control over the empty USDC.e branch) bears on collateral, not on XUSD holder transfers; the holder-level control surface is the documented owner-burn plus proxy-upgrade path.",
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "XUSD is a reserve-backed aggregator whose current DLLR and Rootstock bridged USDT exposures inherit upstream issuer or protocol access surfaces; the reviewed XUSD controller evidence does not establish a separate holder-level blacklist path for every branch.",
+    "evidence": "Current BabelFish and Rootstock evidence identifies the XUSD masset manager controller and the linked DLLR, bridged USDT, and DOC reserve branches. The inherited posture is retained because the reviewed sources do not prove a complete holder freeze or transfer-control inventory across XUSD and every upstream reserve branch.",
     "sources": [
       {
-        "label": "Rootstock XUSD token",
-        "url": "https://rootstock.blockscout.com/token/0xb5999795be0ebb5bab23144aa5fd6a02d080299f"
+        "label": "BabelFish XUSD overview",
+        "url": "https://wiki.sovryn.com/en/technical-documents/xusd-overview"
+      },
+      {
+        "label": "BabelFish XUSD composition",
+        "url": "https://babelfish.gitbook.io/the-babelfish-gitbook/tutorials-and-guides/xusd-statistics"
       },
       {
         "label": "Rootstock XUSD masset manager",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
-      },
-      {
-        "label": "Rootstock USDC.e FiatTokenProxy branch",
-        "url": "https://rootstock.blockscout.com/address/0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67"
-      },
-      {
-        "label": "Rootstock public RPC (block 9109013 reads)",
-        "url": "https://public-node.rsk.co"
-      },
-      {
-        "label": "BabelFish XUSD overview",
-        "url": "https://wiki.sovryn.com/en/technical-documents/xusd-overview"
       }
     ],
-    "reviewer": "Kimi T33 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "reviewer": "SONG-2 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",

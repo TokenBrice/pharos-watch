@@ -742,35 +742,45 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Curve Stablecoin.vy (official repository)",
-        "url": "https://github.com/curvefi/curve-stablecoin/blob/master/curve_stablecoin/Stablecoin.vy"
+        "label": "Curve crvUSD source repository",
+        "url": "https://github.com/curvefi/curve-stablecoin"
       },
       {
         "label": "crvUSD Ethereum deployment",
         "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
       },
       {
-        "label": "crvUSD Arbitrum representation",
-        "url": "https://arbiscan.io/address/0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5#code"
+        "label": "Gnosis crvUSD bridge token",
+        "url": "https://gnosisscan.io/address/0xabef652195f98a91e490f047a5006b71c85f058d#code"
       },
       {
-        "label": "Ethereum JSON-RPC (1rpc.io)",
-        "url": "https://1rpc.io/eth"
+        "label": "Polygon crvUSD bridge token",
+        "url": "https://polygonscan.com/address/0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6#code"
       },
       {
-        "label": "Arbitrum JSON-RPC (1rpc.io)",
-        "url": "https://1rpc.io/arb"
+        "label": "BNB Chain crvUSD bridge token",
+        "url": "https://bscscan.com/address/0xe2fb3f127f5450dee44afe054385d74c392bdef4#code"
+      },
+      {
+        "label": "Taiko crvUSD bridge token",
+        "url": "https://taikoscan.io/address/0xc8f4518ed4bab9a972808a493107926ce8237068#code"
+      },
+      {
+        "label": "Fraxtal crvUSD bridge token",
+        "url": "https://fraxscan.com/address/0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3#code"
+      },
+      {
+        "label": "Sonic crvUSD bridge token",
+        "url": "https://sonicscan.org/address/0x7fff4c4a827c84e32c5e175052834111b2ccd270#code"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648407 and Arbitrum block 489423259. Canonical Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is a non-proxy Vyper deployment (EIP-1967 implementation and admin slots zero). Runtime bytecode has no blacklist, isBlacklisted, freeze, pause, or paused selectors; minter() returns ControllerFactory 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc; only burn(uint256)/mint paths appear (self-burn and minter mint). Official Stablecoin.vy transfer/transferFrom call unrestricted _transfer; burn is msg.sender-only and burnFrom is allowance-gated, with no holder deny-list. Material Arbitrum representation 0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5 likewise lacks freeze/blacklist/pause selectors (bridge mint/burn surface only). Prior bridge-control inventory (OmniBridge/PoS/L2StandardBridge/Sonic Gateway/LayerZero) remains bridge-domain risk, not a current holder freeze. Failure domain: contract:ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e under Curve minter authority for supply only. Collateral issuer freezes (WBTC/cbBTC) are backing exposure, not token-level blacklistability.",
-    "reviewer": "Grok T49 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "Suppression recorded 2026-07-31. LLAMMA collateral includes custodied WBTC and cbBTC, and PegKeeper pools pair crvUSD against USDC, USDT, PYUSD, and frxUSD; BitGo, Coinbase, Circle, or Tether can freeze those balances and impair collateral value or peg-arbitrage liquidity. None of those issuers has a function over the crvUSD ERC-20, which carries no blacklist, freeze, or pause selector on the reviewed Ethereum and Arbitrum deployments. Those exposures remain reserve-quality and dependency risks, not crvUSD blacklistability."
+    "evidence": "Re-verified 2026-07-22. The Ethereum token and all ten tracked bridge representations were reviewed through verified source, proxy/controller reads, or canonical bridge mappings. No current implementation exposed an active holder blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause controlled by Curve. The representations do expose bridge mint/burn and, on several chains, proxy or bridge-owner upgrade surfaces: Gnosis is owned by OmniBridge, Polygon uses the PoS child-token implementation, Taiko maps through ERC20Vault to Ethereum crvUSD, Fraxtal names L2StandardBridge, Sonic names Sonic Gateway as minter, and BNB Chain names the Curve X-DAO LayerZero bridge/minter pair. Those are bridge-control risks rather than evidence of a current holder-level restriction. WBTC/cbBTC and stablecoin collateral issuer controls remain recorded separately as backing exposure.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -88,7 +88,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Unitas Terms of Service",
@@ -105,19 +105,11 @@
       {
         "label": "Unitas Solana mint",
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
-      },
-      {
-        "label": "USDu BSC verified source (Sourcify)",
-        "url": "https://sourcify.dev/server/v2/contract/56/0xea953ea6634d55dac6697c436b1e81a679db5882?fields=abi,metadata,sources"
-      },
-      {
-        "label": "Solana finalized mint account read",
-        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "evidence": "Re-derived 2026-07-31 across both material deployments. The Sourcify-exact BSC USDU source is OpenZeppelin ERC20 + Burnable + Permit + Ownable2Step: its only account-targeted burnFrom(address,uint256) spends the caller's allowance, and the ABI/source contains no blacklist, freeze, pause, seize, or transfer hook. At BSC block 113096627 (2026-07-30T23:19:17Z), the immutable token still has owner-controlled mint/minter administration but no holder-freeze entry point. Solana finalized slot 436244304 (2026-07-30T23:19:03Z) for Token-2022 mint 9ckR7pPP... reports freezeAuthority = null; its mintAuthority is self-referential as previously recorded, so no Token-2022 freeze authority exists. Unitas Terms of Service nevertheless reserve a contractual right to freeze, burn, or restrict USDu/sUSDu for legal or terms violations. That issuer/operational promise is not backed by a discovered on-chain holder-control path, so the honest posture is Possible rather than Yes or No. Failure domains are the Unitas service/terms operator and BSC owner Safe for minting; neither was shown to have current arbitrary-holder transfer reach.",
-    "reviewer": "T52 access review (fresh exact replay)",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Unitas's Terms of Service reserve the right to freeze, burn, or otherwise restrict USDu and sUSDu under a user's control for legal or terms violations, while the same terms describe the tokens as issued through open-source contracts and state that Unipay cannot unilaterally modify user balances. This is a material issuer/operational restriction signal, but it does not by itself prove a live token-level blacklist or freeze function across the BNB and Solana deployments. The inherited status is retained for the documented centralized operational rails and the unresolved contract-level boundary.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

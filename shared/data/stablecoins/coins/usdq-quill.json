@@ -16,9 +16,9 @@
   "mechanismArchetype": "cdp",
   "llamaId": "228",
   "detailProvider": "defillama",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Quill USDQ documentation",
@@ -57,9 +57,9 @@
         "url": "https://rpc.scroll.io"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 at Scroll block 34525380 via eth_getStorageAt on https://rpc.scroll.io: the sole current USDQ proxy 0xdb9e8f82d6d45fff803161f2a5f75543972b229a still resolves its EIP-1967 implementation slot to the verified BoldToken 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523, with the EIP-1967 admin and beacon slots both zero. The re-fetched verified implementation source is unchanged in its holder-control surface: transfer and transferFrom call _requireValidRecipient, which rejects only the zero address and USDQ itself; there is no pause, freeze, blacklist, seize, sanction, or _update hook anywhere in the executable code, and the source header's blacklist wording refers only to those fixed protocol-recipient guards. burn(address,uint256) remains restricted to the configured CollateralRegistry or registered BorrowerOperations, TroveManager, and StabilityPool settlement paths, not an issuer holder blacklist. The only route to a future freeze is UUPS upgrade: _authorizeUpgrade is AccessManaged-restricted to the QuillAccessManager, whose upgrade role sits with the Quill 3-of-6 Safe on a 300-second scheduled path. Consistent with repo precedent for multisig/timelock-gated upgradeable tokens (ousd-origin-protocol, usdxl-last, yzusd-yuzu), that gated mutability surface is not a current holder freeze capability, so false is asserted. The Quill USDQ documentation and active-contract registry disclose no holder freeze or censorship mechanism.",
+    "evidence": "At Scroll block 34365654 on 2026-07-15, the sole current USDQ proxy 0xdb9e8f82d6d45fff803161f2a5f75543972b229a pointed to verified BoldToken implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523, with zero EIP-1967 admin and beacon slots, and authority 0xBe589551397d0F28255e429DDB478620b1C2f08a. The verified transfer and transferFrom routes call _requireValidRecipient, which rejects only the zero address and USDQ itself; neither is authority-restricted, and the implementation exposes no pause, freeze, blacklist, or dynamic recipient list. The source header's blacklist wording is not matched by its executable recipient check. burn(address,uint256) is restricted to the configured CollateralRegistry or registered BorrowerOperations, TroveManager, and StabilityPool settlement paths, not an issuer holder blacklist. Direct false cannot be asserted because QuillUUPSUpgradeable makes _authorizeUpgrade restricted: the AccessManager maps upgradeToAndCall to role 2 and the Quill Safe holds that role with a 300-second scheduled path. Possible is therefore bounded to mutable future implementation authority, not a confirmed current holder freeze. The issuer documentation index exposed no terms/legal, independent proof-of-reserves/transparency, or official source repository; archive and audit disclosures did not establish a different current holder-control surface.",
     "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "reviewedAt": "2026-07-15"
   },
   "oracleRisk": {
     "tier": "standard-external",
