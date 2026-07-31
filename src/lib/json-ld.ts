@@ -38,7 +38,7 @@ export const PHAROS_ORG_NODE = {
   "@id": `${SITE_URL}#organization`,
   name: "Pharos",
   url: SITE_URL,
-  logo: `${SITE_URL}/pharos-icon.png`,
+  logo: `${SITE_URL}/pharos-mark.png`,
   description: PHAROS_SITE_DESCRIPTION,
   foundingDate: "2026-01-29",
   sameAs: [
@@ -84,7 +84,7 @@ export function buildPharosOrganizationNode(siteUrl: string = SITE_URL) {
     ...PHAROS_ORG_NODE,
     "@id": `${siteUrl}#organization`,
     url: siteUrl,
-    logo: `${siteUrl}/pharos-icon.png`,
+    logo: `${siteUrl}/pharos-mark.png`,
     ethicsPolicy: `${siteUrl}/about/#principles`,
     correctionsPolicy: `${siteUrl}/about/#corrections-policy`,
     funding: {

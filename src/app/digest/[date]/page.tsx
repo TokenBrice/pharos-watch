@@ -135,7 +135,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
               "@type": "Organization",
               name: "Pharos",
               url: SITE_URL,
-              logo: `${SITE_URL}/pharos-icon.png`,
+              logo: `${SITE_URL}/pharos-mark.png`,
             },
             mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
           }),
