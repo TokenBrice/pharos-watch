@@ -105,6 +105,13 @@ This is the as-built system after the designer's Figma redesign. It is **light-d
 
 It explicitly rejects the Web3-marketing aesthetic (purple gradients, glassmorphism, buzzwords), corporate-fintech blandness, and the generic-SaaS dashboard of interchangeable KPI tiles. Cards are flat. Accents are semantic. The lighthouse is the only metaphor, and it is drawn, not decorated.
 
+> **Brand mark vs. drawn identity (2026-07-31).** The Pharos **brand mark** is now a star/beacon
+> emblem — a circular disc carrying a radiant star over an upward beam — and it is deliberately
+> **not** a small lighthouse. Everything else on this page still describes the drawn
+> lighthouse/nautical identity, which is unchanged and stays. The two now diverge on purpose:
+> the mark is the identity at avatar scale, the drawn lighthouse is the identity in the product.
+> This is a deliberate split, not drift — do not "reconcile" one to the other.
+
 **Source of truth.** This file is faithful to the **as-built code** and is the machine-readable mirror for AI agents generating screens. Its tokens mirror `src/styles/tokens/primitives.css` + `semantic.css` (the live source, resolved through `src/app/globals.css`). The canonical human-facing rationale lives in `docs/design-context.md` (canonical), `docs/design-language.md` (live baseline), and `docs/design-tokens.md`. The Figma inventory lives in `agents/figma-redesign/`. Regenerate this file (`/impeccable document`) when tokens or the homepage composition change.
 
 > **History:** a Figma handoff proposed retiring frost-blue for a neutral/Radix palette; the owner's final call (2026-06-27) **kept frost-blue + the lighthouse identity** and neutralized only the global nav (sidebar → top-nav). This doc reflects that decision and the shipped code, not the superseded retirement proposal.
@@ -196,7 +203,7 @@ Lead with the character, then specify shape, color assignment, states, and disti
 
 A global top bar at `≥lg`; content runs full-width beneath it. The left "watch column" sidebar is retired.
 
-- **Contents:** brand mark (ABC Whyte Inktrap wordmark, Bricolage fallback) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
+- **Contents:** brand mark — the circular star/beacon emblem (`PharosLogo`, theme-swapped between `pharos-mark-on-light.svg` and `pharos-mark-on-dark.svg`) beside the ABC Whyte Inktrap wordmark (Bricolage fallback) · six dropdown menus (Overview / Markets / Risk / Analyze / Learn / Reference, mapped from `nav-config.ts`) · global Search (⌘K, `openCommandPalette()`) · overflow menu (Telegram Bot / What's New / API Access / health status + dark·light·system theme controls), triggered by a lighthouse glyph.
 - **Behavior:** sticky `h-14`, frosted (`bg-background/85 backdrop-blur-md`), hairline bottom border. Active menu = neutral `bg-muted/60 text-foreground` (**not** frost). A `CoreTopRail` tape (registry chips + event ticker) sticks below it.
 - **Mobile:** the `header.tsx` drawer (`<lg`), whose active group keeps a `border-l-frost-blue` accent. The desktop sidebar/`watch-column` lighthouse beam is gone. The stablecoin detail page uses the `LongformScrollspyNav` `pill-tabs` emphasis (Figma coin template): a rounded-full group on the neutral control fill with an elevated-neutral active pill (`.pharos-pill-tab-active`) — no frost. The frost-lit recipe (`.pharos-rail-tab-active` + `pharos-nav-beam`) survives on methodology-family longform pages.
 

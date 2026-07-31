@@ -154,6 +154,8 @@ Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached
 
 These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
 
+The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-templates/shared.tsx`) because satori cannot fetch a same-origin asset. It is the **on-light** variant — the same art as `public/pharos-mark-on-light.svg` — because the card background is light. Keep the two in sync by hand when the mark changes; a mark swap needs a **Worker deploy** and invalidates the 15-minute OG cache.
+
 ## CI guardrails
 
 - `npm run seo:check` (`scripts/ci/check-seo-static.mjs`) inspects the built `out/` for OG metadata. As part of T2, this check also asserts that every relative `og:image` / `twitter:image` URL resolves to a file in `out/`. This catches broken references like the historical `/og-default.png` regression.
@@ -164,7 +166,7 @@ These are the OG images that automatically reflect current data. If their templa
 These files in `public/` are not referenced from `src/` but are kept in case of external/legacy inbound links:
 
 - `og-image.png` — pre-`og-card.png` default fallback.
-- `og-card.svg` — predecessor of `og-card.png`.
+- `og-card.svg` — predecessor of `og-card.png`. Also **visibly stale** since the 2026-07-31 brand-mark swap: it still carries the drawn lighthouse mark. Left untouched deliberately (it is an orphan); do not treat it as drift.
 - `og-pharosville.png` — `/pharosville` promo page no longer exists in app.
 
 Audit and remove if you confirm no external surfaces still point at them.
