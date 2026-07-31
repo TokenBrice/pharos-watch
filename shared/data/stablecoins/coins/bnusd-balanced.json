@@ -1674,7 +1674,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%, and sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS below 0.02% combined",
+      "name": "Tail borrower collateral: sodaNEAR 0.42%, sodaPOL 0.24%, sodaXLM 0.21%, sodaS 0.05%, bnUSD 0.02%; sodaLL/sodaINJ/sodaWBTC/sodaKAIA/sodaSUSDS <0.02% combined",
       "pct": 0.95,
       "risk": "high",
       "assetClass": "cryptoasset",
