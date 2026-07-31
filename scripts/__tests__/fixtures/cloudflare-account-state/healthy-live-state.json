@@ -80,7 +80,7 @@
   "rateLimitRules": [
     {
       "description": "api-rate-limit-ip",
-      "enabled": false,
+      "enabled": true,
       "action": "block",
       "expression": "(http.host eq \"api.pharos.watch\" and starts_with(http.request.uri.path, \"/api/\") and not cf.bot_management.verified_bot)",
       "ratelimit": {

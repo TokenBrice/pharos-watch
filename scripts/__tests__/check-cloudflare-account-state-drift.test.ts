@@ -123,6 +123,17 @@ describe("Cloudflare account-state drift comparison", () => {
     expect(compareCloudflareAccountState(manifest, readFixture("healthy-live-state.json"))).toEqual([]);
   });
 
+  it("reports the broad public API rate limit when it is disabled", () => {
+    const liveState = readFixture("healthy-live-state.json");
+    const broadApiRateLimit = liveState.rateLimitRules.find((rule) => rule.description === "api-rate-limit-ip");
+    if (!broadApiRateLimit) throw new Error("healthy fixture is missing api-rate-limit-ip");
+    broadApiRateLimit.enabled = false;
+
+    expect(compareCloudflareAccountState(manifest, liveState)).toContain(
+      "rateLimitRules.api-rate-limit-ip.enabled: expected true, found false",
+    );
+  });
+
   it("reports fixture drift by resource and field without reporting values for secrets", () => {
     expect(compareCloudflareAccountState(manifest, readFixture("drifted-live-state.json"))).toEqual(
       expect.arrayContaining([
