@@ -115,7 +115,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
-  it("admits V9 after a degraded same-version core slot", async () => {
+  it("skips V9 after a degraded same-version core slot", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
@@ -134,9 +134,9 @@ describe("runV9AfterCoreWithinWindow", () => {
       run,
     );
 
-    expect(result.status).toBe("ok");
-    expect(result.itemCount).toBe(335);
-    expect(run).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.productivity?.reason).toBe("v9-core-slot-not-ready");
+    expect(run).not.toHaveBeenCalled();
     expect(fixture.bind).toHaveBeenCalledWith(
       Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
     );

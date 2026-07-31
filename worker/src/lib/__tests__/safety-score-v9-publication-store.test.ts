@@ -5,6 +5,7 @@ import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-ca
 import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationAttempt,
+  loadSafetyScoreV9FailedPublicationAttempt,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
@@ -117,7 +118,7 @@ describe("Safety Score V9 publication store", () => {
     ]);
   });
 
-  it("records failed attempt metadata without replacing publication or health", async () => {
+  it("records failed attempt metadata without replacing accepted attempt, publication, or health", async () => {
     const { db } = database();
     const publication = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: 110,
@@ -139,11 +140,11 @@ describe("Safety Score V9 publication store", () => {
       publicationAttempt: {
         schemaVersion: 1,
         attemptedAtSec: publication.publishedAtSec,
-        outcome: "published-clean",
+        outcome: "published-partial",
         publicationGenerationId:
           publication.publicationGenerationId,
         quarantines: [],
-        affectedAssetIds: [],
+        affectedAssetIds: ["usdc-circle"],
       },
       publicationClockSec: publication.publishedAtSec,
     });
@@ -172,6 +173,16 @@ describe("Safety Score V9 publication store", () => {
       currentHealth,
     );
     await expect(loadSafetyScoreV9PublicationAttempt(db)).resolves.toMatchObject(
+      {
+        outcome: "published-partial",
+        publicationGenerationId:
+          publication.publicationGenerationId,
+        affectedAssetIds: ["usdc-circle"],
+      },
+    );
+    await expect(
+      loadSafetyScoreV9FailedPublicationAttempt(db),
+    ).resolves.toMatchObject(
       {
         outcome: "failed",
         publicationGenerationId: null,

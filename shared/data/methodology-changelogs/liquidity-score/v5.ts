@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.98",
+    title: "Trust-filtered DEX primary-price handoff",
+    date: "2026-07-31",
+    effectiveAt: 1785456000,
+    summary:
+      "The DEX scoring consumer now treats the staged primary-price map as an authoritative trust-filtered input instead of backfilling omitted assets from the broader stablecoin cache.",
+    impact: [
+      "Assets intentionally omitted from the trust-filtered primary-price handoff can still publish their DEX-implied median and source aggregates, but primary price and primary-relative deviation fields remain null",
+      "Untrusted or low-confidence primary references can no longer re-enter DEX price publication solely because an observed DEX asset was missing from the staged map",
+      "DEX weighted medians, retained-pool price sources, aggregate liquidity, visible pool selection, target publication, V8 liquidity scoring, and Safety Score V9 route inputs are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.97",
     title: "Retired Optimism Uniswap V3 shadow lane",
     date: "2026-07-29",

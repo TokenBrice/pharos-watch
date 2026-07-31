@@ -591,7 +591,11 @@ export function adaptMakinaStrategyReserves(
     throw new Error("makina-strategy accounting token mismatch");
   }
 
-  const sourceTimestamp = readTimestamp(strategy.meta?.generated_at ?? allocations.meta?.generated_at, "generated_at");
+  const strategyTimestamp = readTimestamp(strategy.meta?.generated_at, "strategy generated_at");
+  const allocationsTimestamp = readTimestamp(allocations.meta?.generated_at, "allocations generated_at");
+  // The result combines accounting state with allocation-driven reserve slices, so
+  // its freshness cannot be newer than either source.
+  const sourceTimestamp = Math.min(strategyTimestamp, allocationsTimestamp);
   const reportedAumUsd = readNonNegativeAccountingValue(
     strategyData.lastReportedAum ?? strategyData.aum,
     accountingDecimals,
