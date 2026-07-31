@@ -20,16 +20,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
     "confidence": "manual-review",
     "sources": [
       {
         "label": "zkSync Era zkUSD token contract explorer",
         "url": "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757"
+      },
+      {
+        "label": "Verified Goal3 Lockdrop portal implementation (treasuryAddress deposit destination)",
+        "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+      },
+      {
+        "label": "zkSync Era RPC (treasuryAddress, token-balance, totalSupply, and owner reads at block 71379594)",
+        "url": "https://mainnet.era.zksync.io"
       }
     ],
-    "rationale": "The reachable explorer identifies a deployed zkUSD token contract, but it does not establish any reserve asset, collateral pool, counterparty, coverage ratio, custody arrangement, or assurance process. The prior Goal3 technical documentation no longer resolves, so the full backing is retained as unknown without carrying forward its unsupported positive premise.",
+    "rationale": "Re-derived 2026-07-30 at zkSync Era block 71379594: the verified Lockdrop portal source names treasuryAddress as the stablecoin deposit destination, and treasuryAddress() returned 0xa5ad8953de51ced330e788dddde19a5f96cac082. That treasury held 0 USDC and 0 USDC.e (and 53,236.81 zkUSD) against a totalSupply of 1,179,099.482755 zkUSD; explorer token-transfer history shows the treasury's USDC.e was moved out in tranches through 2024-10-16 to addresses no current source identifies. No reserve asset, collateral pool, counterparty, coverage ratio, custody arrangement, or assurance process is established by a current primary source, and docs.goal3.xyz and goal3.xyz still do not resolve in DNS, so the full backing is retained as unknown without carrying forward the archived documentation's unsupported positive premise.",
     "compositionBasis": "No current primary reserve-composition disclosure; token-contract identification only",
     "scope": "full-composition",
     "knownUnknownExposure": "Reserve existence, asset composition, counterparties, custody, liquidity, and current coverage are not evidenced by a current primary reserve source.",
@@ -54,16 +62,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
     "confidence": "manual-review",
     "sources": [
       {
         "label": "zkSync Era zkUSD token contract explorer",
         "url": "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757"
+      },
+      {
+        "label": "Verified Goal3 Lockdrop portal implementation (treasuryAddress deposit destination)",
+        "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+      },
+      {
+        "label": "zkSync Era RPC (treasuryAddress and token-balance reads at block 71379594)",
+        "url": "https://mainnet.era.zksync.io"
       }
     ],
-    "uncertainty": "The explorer identifies the deployed token address only. It does not identify any reserve or custody provider, asset-account segregation, bankruptcy remoteness, or rehypothecation restriction, and the prior Goal3 documentation no longer resolves.",
+    "uncertainty": "The only reserve-adjacent address identifiable from current primary sources is the Lockdrop portal treasury 0xa5ad8953de51ced330e788dddde19a5f96cac082, which held 0 USDC and 0 USDC.e at zkSync Era block 71379594. No custodian, segregation terms, bankruptcy-remoteness safeguards, or rehypothecation restriction is disclosed, and the prior Goal3 documentation no longer resolves.",
     "knownUnknownExposurePct": 100
   }
 }

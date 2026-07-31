@@ -3,61 +3,57 @@
   "reserves": [
     {
       "name": "Fintech and crypto credit receivables",
-      "pct": 84.9,
+      "pct": 90.8,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "3Jane credit facility borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration"],
-      "liquidityHorizon": "over-seven-days"
+      "issuerOrObligor": "3Jane Fintech Credit Conduits and Crypto Credit Lines",
+      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Aave USDC liquidity buffer",
-      "pct": 15.1,
+      "pct": 9.2,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "blacklistable": true,
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave V3 and Circle USDC",
-      "riskFactors": ["smart-contract", "counterparty", "liquidity"],
+      "issuerOrObligor": "Aave V3 USDC market / Circle Internet Financial",
+      "riskFactors": ["smart-contract", "counterparty", "liquidity", "custody"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-27",
-    "reviewer": "Safety Score V9 Agent 09",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Codex integration reserve-slice review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "3Jane suppliers",
-        "url": "https://docs.3jane.xyz/architecture/core-money-market/suppliers"
+        "label": "3Jane USD3 on-chain accounting (Ethereum block 25648096, 2026-07-30)",
+        "url": "https://ethereum-rpc.publicnode.com"
       },
       {
-        "label": "3Jane pool interest rates",
-        "url": "https://docs.3jane.xyz/architecture/core-money-market/pool-interest-rates"
+        "label": "3Jane backing overview (credit sleeves and Aave idle reserve)",
+        "url": "https://docs.3jane.xyz/backing/backing.md"
       },
       {
-        "label": "3Jane risks",
-        "url": "https://docs.3jane.xyz/risks"
-      },
-      {
-        "label": "3Jane money-market contracts",
-        "url": "https://github.com/3jane-protocol/moneymarket-contracts"
+        "label": "3Jane USD3/sUSD3 suppliers (senior liability and the two credit sleeves)",
+        "url": "https://docs.3jane.xyz/usd3-susd3/suppliers.md"
       }
     ],
-    "rationale": "The 2026-07-27 onchain adapter capture exposes the strategy's waUSDC position, the MorphoCredit market liquidity available to that position, and the remaining deployed credit exposure. The adapter allocates 15.1% to the Aave USDC liquidity buffer and 84.9% to deployed credit rather than treating the full NAV as liquid USDC.",
-    "compositionBasis": "Current 3Jane onchain-accounting capture: the strategy's waUSDC position was split pro rata by MorphoCredit market liquidity, converted through waUSDC.convertToAssets(), and combined with direct idle USDC",
-    "compositionAsOf": "2026-07-27",
+    "rationale": "Write-time Ethereum reads at block 25648096 (2026-07-30) on canonical USD3 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc resolved nav(), totalAssets(), totalSupply(), USD3 waUSDC accounting, Aave market liquidity, availableWithdrawLimit(address(0)), minCommitmentTime(), isShutdown(), and USD3's USDC balance. The adapter-valued snapshot resolves 90.8% Fintech and crypto credit receivables and 9.2% Aave USDC liquidity buffer, with no idle USDC, zero minimum commitment time, and isShutdown=false. 3Jane's current backing and supplier disclosures independently describe the two credit sleeves (Fintech Credit Conduits and Crypto Credit Lines) and idle USDC supplied to the Aave V3 USDC market. The on-chain snapshot supplies the dated weights; the issuer disclosure supplies the honest group identities and the immediate-liquidity claim.",
+    "compositionBasis": "Canonical USD3 on-chain accounting, valued through its waUSDC position and the Aave V3 USDC market at Ethereum block 25648096; issuer documentation for the backing-sleeve identities.",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full NAV is allocated between classified liquid USDC and private-credit exposures; facility-level borrower identities, maturities, and concentration remain attributes of the classified aggregate credit sleeve rather than an unallocated reserve share.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "3Jane publishes this live on-chain view as one combined credit-receivables group. Its current public disclosure identifies Fintech Credit Conduits and Crypto Credit Lines but does not publish a dated on-chain or dashboard split between those sleeves, facility/originator weights, or individual merchant obligors. The combined group remains structured at the disclosed level; its unverified sub-split is not inferred.",
+    "knownUnknownExposurePct": 90.8,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Fintech and crypto credit receivables",
-        "pct": 84.9,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The bucket represents loans and receivables owed by credit-facility borrowers, not a tracked stablecoin or wrapper that can carry a canonical coinId."
+        "pct": 90.8,
+        "disposition": "basket-needs-split",
+        "rationale": "The current on-chain accounting emits one credit-receivables value. 3Jane documents the Fintech Credit Conduits and Crypto Credit Lines sleeves but does not disclose their current weights or the underlying facility and merchant allocations, so no narrower dependency or obligor split is authored."
       }
     ]
   }

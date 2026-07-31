@@ -26,13 +26,13 @@ export function isOnchainAvailable(apiKey: string | null): boolean {
 export interface CgPoolAttributes {
   address: string;
   name: string;
-  pool_created_at: string | null;
-  base_token_price_usd: string | null;
-  quote_token_price_usd: string | null;
-  reserve_in_usd: string | null;
-  h24_volume_usd: string | null;
-  pool_fee_percentage: string | null;
-  locked_liquidity_percentage: string | null;
+  pool_created_at?: string | null;
+  base_token_price_usd?: string | null;
+  quote_token_price_usd?: string | null;
+  reserve_in_usd?: string | null;
+  h24_volume_usd?: string | null;
+  pool_fee_percentage?: string | null;
+  locked_liquidity_percentage?: string | null;
   // GT-compat fields (CG onchain returns the same shape)
   volume_usd?: { h24: string | null } | null;
 }
@@ -72,18 +72,22 @@ function isStringOrNull(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
 }
 
+function isOptionalStringOrNull(value: unknown): value is string | null | undefined {
+  return value === undefined || isStringOrNull(value);
+}
+
 function isCgPoolAttributes(value: unknown): value is CgPoolAttributes {
   if (!isRecord(value)) return false;
   return (
     typeof value.address === "string" &&
     typeof value.name === "string" &&
-    isStringOrNull(value.pool_created_at) &&
-    isStringOrNull(value.base_token_price_usd) &&
-    isStringOrNull(value.quote_token_price_usd) &&
-    isStringOrNull(value.reserve_in_usd) &&
-    isStringOrNull(value.h24_volume_usd) &&
-    isStringOrNull(value.pool_fee_percentage) &&
-    isStringOrNull(value.locked_liquidity_percentage) &&
+    isOptionalStringOrNull(value.pool_created_at) &&
+    isOptionalStringOrNull(value.base_token_price_usd) &&
+    isOptionalStringOrNull(value.quote_token_price_usd) &&
+    isOptionalStringOrNull(value.reserve_in_usd) &&
+    isOptionalStringOrNull(value.h24_volume_usd) &&
+    isOptionalStringOrNull(value.pool_fee_percentage) &&
+    isOptionalStringOrNull(value.locked_liquidity_percentage) &&
     (value.volume_usd === undefined ||
       value.volume_usd === null ||
       (isRecord(value.volume_usd) && isStringOrNull(value.volume_usd.h24)))

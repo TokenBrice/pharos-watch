@@ -19,22 +19,36 @@ function statsMatcher(stats: {
   avg_ms: number;
   max_ms: number;
   cap_hits: number;
+  recent_cap_hits?: number;
   budget_truncations?: number;
+  recent_budget_truncations?: number;
   latest_cap_hit_at?: number | null;
   latest_budget_truncation_at?: number | null;
 }): MockTableConfig {
+  const row = {
+    budget_truncations: 0,
+    latest_cap_hit_at: null,
+    latest_budget_truncation_at: null,
+    recent_cap_hits: stats.recent_cap_hits ?? stats.cap_hits,
+    recent_budget_truncations:
+      stats.recent_budget_truncations ?? stats.budget_truncations ?? 0,
+    ...stats,
+  };
   return {
     match: "FROM cron_runs",
     matchBinds: [
       SYNC_TIMEOUT_MS,
       SYNC_TIMEOUT_MS,
+      NOW_SEC - 24 * 3600,
+      SYNC_TIMEOUT_MS,
+      NOW_SEC - 24 * 3600,
       "sync-stablecoins",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
       STALE_SLOT_METADATA_REASON,
     ],
-    rows: [{ budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats }],
-    first: { budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats },
+    rows: [row],
+    first: row,
   };
 }
 
@@ -43,22 +57,36 @@ function liveReservesStatsMatcher(stats: {
   avg_ms: number;
   max_ms: number;
   cap_hits: number;
+  recent_cap_hits?: number;
   budget_truncations?: number;
+  recent_budget_truncations?: number;
   latest_cap_hit_at?: number | null;
   latest_budget_truncation_at?: number | null;
 }): MockTableConfig {
+  const row = {
+    budget_truncations: 0,
+    latest_cap_hit_at: null,
+    latest_budget_truncation_at: null,
+    recent_cap_hits: stats.recent_cap_hits ?? stats.cap_hits,
+    recent_budget_truncations:
+      stats.recent_budget_truncations ?? stats.budget_truncations ?? 0,
+    ...stats,
+  };
   return {
     match: "FROM cron_runs",
     matchBinds: [
       LIVE_RESERVES_TIMEOUT_MS,
       LIVE_RESERVES_TIMEOUT_MS,
+      NOW_SEC - 24 * 3600,
+      LIVE_RESERVES_TIMEOUT_MS,
+      NOW_SEC - 24 * 3600,
       "sync-live-reserves",
       SINCE_SEC,
       STALE_SLOT_CHILD_ERROR,
       STALE_SLOT_METADATA_REASON,
     ],
-    rows: [{ budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats }],
-    first: { budget_truncations: 0, latest_cap_hit_at: null, latest_budget_truncation_at: null, ...stats },
+    rows: [row],
+    first: row,
   };
 }
 
@@ -169,6 +197,34 @@ describe("runCronDurationWatchdog", () => {
     });
   });
 
+  it("does not degrade when repeated at-cap history has fewer than three hits in the recent window", async () => {
+    const db = mockD1([
+      statsMatcher({
+        n: 660,
+        avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
+        max_ms: SYNC_TIMEOUT_MS,
+        cap_hits: 8,
+        recent_cap_hits: 2,
+        latest_cap_hit_at: NOW_SEC - 60,
+      }),
+    ]);
+
+    const result = await runCronDurationWatchdog(db);
+    const metadata = JSON.parse(String(result.metadata));
+
+    expect(result.status).toBeUndefined();
+    expect(metadata.runtimeBreaching).toEqual([]);
+    expect(metadata.stats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          job: "sync-stablecoins",
+          capHits: 8,
+          recentCapHits: 2,
+        }),
+      ]),
+    );
+  });
+
   it("degrades on repeated budget truncations below the trend sample floor", async () => {
     const db = mockD1([
       statsMatcher({
@@ -197,6 +253,7 @@ describe("runCronDurationWatchdog", () => {
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
         max_ms: SYNC_TIMEOUT_MS,
         cap_hits: 3,
+        recent_cap_hits: 0,
         latest_cap_hit_at: NOW_SEC - 3 * 86400,
       }),
     ]);

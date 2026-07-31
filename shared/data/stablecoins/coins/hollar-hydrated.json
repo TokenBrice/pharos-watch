@@ -153,26 +153,26 @@
     }
   ],
   "deploymentModel": "single-chain",
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Hydration HOLLAR documentation",
-        "url": "https://docs.hydration.net/products/hollar/"
+        "label": "Pinned official GhoToken source",
+        "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/GhoToken.sol"
       },
       {
-        "label": "Hydration HSM runtime configuration",
-        "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/assets.rs#L1824-L1840"
+        "label": "Pinned official delegated-transfer source",
+        "url": "https://github.com/galacticcouncil/hollar/blob/7bbf3e1dc03313db72c1ad488aaa56c55b6e299c/src/contracts/gho/ERC20.sol"
       },
       {
-        "label": "Hydration OpenGov tracks",
-        "url": "https://github.com/galacticcouncil/hydration-node/blob/d514dd7b428405e82b4a29b442ba20be0f9539db/runtime/hydradx/src/governance/tracks.rs#L30-L65"
+        "label": "Hydration EVM RPC",
+        "url": "https://rpc.hydradx.cloud"
       }
     ],
-    "evidence": "HOLLAR is a single Hydration-runtime asset rather than a conventional EVM token. Hydration's published runtime configuration gives Root, EconomicParameters, or GeneralAdmin authority over the HSM, and its OpenGov configuration includes a Root track that can change runtime behavior. The reviewed sources do not establish a current holder-level blacklist, freeze, pause, or transfer restriction for HOLLAR; possible is retained for the material governance-controlled intervention surface without asserting a direct holder-control function.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-07-30 at Hydration EVM block 13389205 via rpc.hydradx.cloud: hasRole(DEFAULT_ADMIN_ROLE, 0xaa7e0000000000000000000000000000000aa7e0) returns true and delegatedToken() returns the configured 0x0000000000000000000000000000000001000000. The official GhoToken source gates setDelegatedToken behind DEFAULT_ADMIN_ROLE, and its ERC20.transferFrom accepts the delegated token's allowance in place of holder approval, so the role holder can point delegatedToken at a contract returning arbitrary allowances and move any individual holder's HOLLAR without holder consent. Hydration OpenGov's root track can additionally replace runtime logic wholesale. Holder-level seizure reach over individual accounts is therefore a live governance-controlled capability, not a hypothetical one.",
+    "reviewer": "Kimi T27 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
       {
@@ -33,11 +33,15 @@
       {
         "label": "Ring Protocol Core verified source",
         "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+      },
+      {
+        "label": "Ring documentation index (current product surface)",
+        "url": "https://docs.ring.exchange/llms.txt"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of docs.ring.exchange (current product is swap/wrapping stack; llms.txt lists no USDR reserve inventory) and Blockscout verified USDR/Core contract pages (permissioned issuance surface). No reproducible reserve composition; envelope remains 100% other with ku=100.",
+    "rationale": "Write-time re-open 2026-07-31 of the current Ring documentation index (which describes Ring Swap, FewToken wrapping, routing, and developer tooling but no USDR reserve inventory) and verified Blockscout source for the deployed USDR AssetToken and Ring Core contracts. The contracts establish a permissioned issuance surface but expose no reproducible reserve ledger, asset inventory, allocation weights, obligors, or redemption-liquidity schedule. The reserve envelope therefore remains an honest 100% other slice with 100% unresolved composition.",
     "compositionBasis": "Current issuer documentation and verified deployed contracts; no current reserve allocation published",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The current reserve assets, strategy positions, allocation weights, obligors, and withdrawal liquidity are not publicly reproducible.",
     "knownUnknownExposurePct": 100,
@@ -61,8 +65,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "TERRA-II reserve verification",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
       {
@@ -72,9 +76,13 @@
       {
         "label": "Ring Protocol Core verified source",
         "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+      },
+      {
+        "label": "Ring documentation index (current product surface)",
+        "url": "https://docs.ring.exchange/llms.txt"
       }
     ],
-    "uncertainty": "No current public source identifies reserve custodians, provider shares, legal segregation, insolvency treatment, or rehypothecation terms.",
+    "uncertainty": "No current public source identifies reserve assets, custodians, provider shares, legal segregation, insolvency treatment, or rehypothecation terms.",
     "knownUnknownExposurePct": 100
   }
 }

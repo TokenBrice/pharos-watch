@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "USDC (Circle)",
-      "pct": 22.6,
+      "pct": 16.3,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     },
     {
       "name": "frxUSD (Frax)",
-      "pct": 67.1,
+      "pct": 72.4,
       "risk": "low",
       "coinId": "frxusd-frax",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     },
     {
       "name": "Tokenized Korean Treasury Bonds (Etherfuse Stablebond / Shinhan custody)",
-      "pct": 10.3,
+      "pct": 11.4,
       "risk": "low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Etherfuse Stablebond and the Republic of Korea",
@@ -53,8 +53,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -66,9 +66,9 @@
         "url": "https://krwq.cash/transparency"
       }
     ],
-    "rationale": "KRWQ's live issuer API reported $213,432.60 of USDC, $634,652.75 of frxUSD, and $97,525.92 of tokenized Korean Treasury Bonds on 2026-07-21. Normalizing those three identified reserve values gives the rounded 22.6% / 67.1% / 10.3% composition.",
+    "rationale": "2026-07-31 re-open: KRWQ's live issuer API response timestamped 2026-07-30T23:15Z reports $142,590.41 of USDC, $634,652.75 of frxUSD, and $99,565.54 of Korean Treasury Bond exposure. Normalizing those three identified reserve values ($876,808.70 total) gives the rounded 16.3% / 72.4% / 11.4% composition. The transparency dashboard independently exposes the same three reserve categories, custodians, and 30-second update cadence.",
     "compositionBasis": "KRWQ live custodian asset values normalized by current USD value",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve categories and current values in the issuer feed are identified; the Korean Treasury Bond slice is exogenous to the tracked stablecoin graph.",
     "knownUnknownExposurePct": 0,
@@ -76,7 +76,7 @@
       {
         "reserveIndex": 2,
         "reserveName": "Tokenized Korean Treasury Bonds (Etherfuse Stablebond / Shinhan custody)",
-        "pct": 10.3,
+        "pct": 11.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The reserve is an identified tokenized Korean Treasury instrument rather than a tracked stablecoin dependency."
       }
@@ -97,8 +97,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
@@ -110,6 +110,6 @@
         "url": "https://krwq.cash/transparency"
       }
     ],
-    "uncertainty": "The reviewed KRWQ materials identify Shinhan custody for the tokenized Korean Treasury slice and expose current reserve values, but do not establish custody shares for each stablecoin slice or general rehypothecation terms."
+    "uncertainty": "The 2026-07-31 re-opened KRWQ API and transparency dashboard identify Shinhan Securities for the KTB slice and separate USDC/frxUSD custodian contracts, but do not establish custody shares for each stablecoin slice, bankruptcy treatment of the stablecoin custodians, or general rehypothecation and failure-continuity terms."
   }
 }

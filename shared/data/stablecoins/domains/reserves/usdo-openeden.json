@@ -5,7 +5,6 @@
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
       "pct": 79.18,
       "risk": "very-low",
-      "coinId": "tbill-openeden",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital and United States Treasury",
       "riskFactors": ["duration", "liquidity", "custody", "counterparty", "smart-contract"],
@@ -68,7 +67,7 @@
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
       }
     ],
-    "rationale": "OpenEden's issuer-operated reserve API snapshot at 2026-07-22T08:00:19.092Z reported $28,760,245.354108024 in reserve assets against 28,431,286.133951165 USDO, a 101.157% reserve ratio. The API constituent values normalize to the rounded full-composition weights recorded here: OpenEden TBILL 79.18%, BUIDL 9.40%, RLUSD 8.24%, VBILL 2.97%, and USDC 0.21%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "rationale": "OpenEden's issuer-operated reserve API snapshot at 2026-07-22T08:00:19.092Z reported $28,760,245.354108024 in reserve assets against 28,431,286.133951165 USDO, a 101.157% reserve ratio. The API constituent values normalize to the rounded full-composition weights recorded here: OpenEden TBILL 79.18%, BUIDL 9.40%, RLUSD 8.24%, VBILL 2.97%, and USDC 0.21%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices. 2026-07-30 addendum (Kimi T53 dependency review): the machine-readable coinId link from the TBILL slice to tbill-openeden was removed because tbill-openeden is quarantined (listingStatusReview changedAt 2026-07-15, reviewBy 2026-08-15, withheld for missing runtime supply/market-cap sources) and therefore outside the report-card active set, which left the compiled dependency graph invalid with issue outside-active-set:tbill-openeden. The slice's economic description (79.18% OpenEden TBILL, tokenized U.S. T-bills) is unchanged; restore the coinId link if tbill-openeden re-enters the active set.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
     "compositionAsOf": "2026-07-22",
     "scope": "full-composition",

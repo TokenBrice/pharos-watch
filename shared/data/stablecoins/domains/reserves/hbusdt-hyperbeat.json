@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Kimi T59 re-review 2026-07-30",
     "confidence": "probable",
     "sources": [
       {
@@ -44,7 +44,7 @@
         "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "rationale": "At HyperEVM block 40439370, the active Depositor accepted USDT0 while the reviewed Hyperbeat documentation also listed USDe and USR as broader or legacy inputs. The sources do not pin a current 60.5% hoUSDT / 39.5% masterUSD allocation or publish a durable constituent split, so hbUSDT is represented as one dynamic strategy envelope rather than an unsupported static snapshot. Write-time re-open 2026-07-28: Hyperbeat USDT vault docs still describe automated multi-strategy USDT vault with Accountable proof-of-solvency link; builder-code vault docs corroborate. Live strategy weights not dual-published as fixed composition \u2192 ku=100. Accountable dashboard returned 503 at write time.",
+    "rationale": "At HyperEVM block 40439370, the active Depositor accepted USDT0 while the reviewed Hyperbeat documentation also listed USDe and USR as broader or legacy inputs. The sources do not pin a current 60.5% hoUSDT / 39.5% masterUSD allocation or publish a durable constituent split, so hbUSDT is represented as one dynamic strategy envelope rather than an unsupported static snapshot. Write-time re-open 2026-07-28: Hyperbeat USDT vault docs still describe automated multi-strategy USDT vault with Accountable proof-of-solvency link; builder-code vault docs corroborate. Live strategy weights not dual-published as fixed composition \u2192 ku=100. Accountable dashboard returned 503 at write time. Write-time re-open 2026-07-30: Hyperbeat USDT vault docs still describe dynamic deployment of deposited assets into HyperEVM protocols with RockawayX risk oversight and publish no constituent or venue split; the Accountable proof-of-solvency dashboard returned HTTP 503 again at write time (also 503 on 2026-07-15 and 2026-07-28), so live strategy weights remain undisclosed and the single dynamic envelope with ku=100 stands.",
     "compositionBasis": "Hyperbeat vault documentation, Accountable transparency, and fixed-block HyperEVM deposit-token review",
     "scope": "full-composition",
     "knownUnknownExposure": "Current strategy venues, position weights, look-through assets, and custody-provider shares are dynamic or undisclosed in the reviewed evidence.",
@@ -58,7 +58,7 @@
         "rationale": "The reviewed sources describe eligible inputs and a dynamic strategy product but do not support durable venue, asset, or position weights."
       }
     ],
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-30"
   },
   "custodyProfile": {
     "providers": [

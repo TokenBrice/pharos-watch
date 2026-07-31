@@ -45,17 +45,29 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "Polymarket pUSD documentation",
         "url": "https://docs.polymarket.com/concepts/pusd"
       },
       {
-        "label": "Website",
-        "url": "https://polymarket.com/"
+        "label": "Polymarket collateral contract registry",
+        "url": "https://docs.polymarket.com/resources/contracts"
+      },
+      {
+        "label": "Polygon PUSD verified implementation source",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f"
+      },
+      {
+        "label": "Polygon CollateralOnramp verified source",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x93070a847efef7f70739046a929d47a521f5b8ee"
+      },
+      {
+        "label": "Circle USDC Terms",
+        "url": "https://www.circle.com/legal/usdc-terms"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Fresh Polygon replay at block 91165530 (2026-07-30T23:15:15Z) read the PUSD proxy's EIP-1967 implementation slot as 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() as 0x47ebfac3353314c788b96cdcbf41daadfe03629c (the Polymarket Timelock). The verified CollateralToken source is a Solady ERC-20/UUPS wrapper: it defines wrap, unwrap, burn, minter/wrapper administration, and _authorizeUpgrade onlyOwner, but no blacklist, pause, seizure, or transfer-hook path; Polymarket's current docs likewise describe pUSD as a transferable standard ERC-20. The immutable CollateralOnramp source only gates wrapping with per-asset pause state and cannot freeze existing pUSD balances. However, the Timelock can upgrade the token, and the reserve sidecar contains Circle USDC and USDC.e; Circle's current USDC Terms expressly reserve address blocking and freezing of associated USDC. The direct PUSD holder-freeze path is therefore not evidenced, but inherited Circle reserve exposure and upgrade/admin control keep the bounded posture at possible.",
+    "reviewer": "Codex T37 access replay",
+    "reviewedAt": "2026-07-31"
   },
   "liveReservesConfig": {
     "adapter": "pusd-vault",

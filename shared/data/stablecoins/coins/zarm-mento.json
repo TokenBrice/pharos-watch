@@ -135,10 +135,10 @@
         "url": "https://forno.celo.org"
       }
     ],
-    "sourceFreeRationale": "The current holder-facing ZARm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "At Celo block 72189914, ZARm proxy 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 resolved to StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E and a 172800-second Mento Timelock owner. The verified active implementation has ordinary ERC-20 transfer and transferFrom, permissioned minting, and burn(uint256) only for msg.sender; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. The direct token-level freeze posture is therefore No as of this review. USDT, EURC, and USDC-family reserve collateral remains separately represented and can still produce computed upstream exposure.",
-    "reviewer": "GPT SOL-MENTO wave6",
-    "reviewedAt": "2026-07-22"
+    "sourceFreeRationale": "The current holder-facing ZARm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At Celo block 73552600 (2026-07-30T23:15:58Z), ZARm's sole tracked deployment 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 returned owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147, broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() = 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() = zero. The implementation slot resolved to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e; its ABI/source has ordinary transfer/transferFrom, permissioned mint, and broker/exchange-scoped burn(msg.sender) and Celo-VM-only gas debiting via debitGasFees, with no blacklist, freeze, pause, seizure, governance-reachable arbitrary-holder burn, or transfer-hook mechanism. Direct ZARm holder freeze access is No. The controlling failure domain is the Mento Timelock's upgrade/authorization path; inherited exposure remains through the live Mento Reserve's AUSD, sUSDS, EURC, USDT, USDC, axlEUROC/axlUSDC, and related issuer-controlled collateral, so reviewedStatus remains inherited.",
+    "reviewer": "Codex T64 access review",
+    "reviewedAt": "2026-07-31"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

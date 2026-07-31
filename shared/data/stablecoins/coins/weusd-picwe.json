@@ -70,40 +70,52 @@
         "url": "https://docs.picwe.org/what-is-weusd"
       },
       {
+        "label": "PicWe FAQ (critical contracts can be paused)",
+        "url": "https://docs.picwe.org/faq"
+      },
+      {
+        "label": "PicWe security (pause mechanisms marketing)",
+        "url": "https://docs.picwe.org/developers/security"
+      },
+      {
+        "label": "Sourcify verified BSC PicWe_USD ABI (chain 56)",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xdd73ea766b80417c0607a3f08e34a0c415d89d56?fields=abi"
+      },
+      {
+        "label": "Sourcify verified Base PicWe_USD ABI (chain 8453)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xdd73ea766b80417c0607a3f08e34a0c415d89d56?fields=abi"
+      },
+      {
+        "label": "Sourcify verified Arbitrum PicWe_USD ABI (chain 42161)",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0xdd73ea766b80417c0607a3f08e34a0c415d89d56?fields=abi"
+      },
+      {
         "label": "BSC WEUSD verified contract source",
         "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
       },
       {
-        "label": "Base WEUSD verified contract",
-        "url": "https://base.blockscout.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
-      },
-      {
-        "label": "Arbitrum WEUSD verified contract",
-        "url": "https://arbitrum.blockscout.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
-      },
-      {
-        "label": "Plume WEUSD verified contract",
-        "url": "https://explorer.plume.org/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
-      },
-      {
-        "label": "Movement WEUSD module ABI",
+        "label": "Movement current WEUSD module ABI (TransferRef/BurnRef)",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd"
       },
       {
-        "label": "Movement PicWe package registry",
-        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+        "label": "Movement current mint/redeem module (pause/unpause)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_mint_redeem"
       },
       {
-        "label": "Aptos fungible asset capability documentation",
+        "label": "Movement current cross-chain gas module (pause/unpause)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd_cross_chain_gas"
+      },
+      {
+        "label": "Movement legacy WEUSD module ABI (dominant supply package; TransferRef/BurnRef)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xed805e77c40d7e6ac5cd3e67514c485176621a2aa21e860cd515121d44a2f83d/module/weusd"
+      },
+      {
+        "label": "Movement legacy package resources (upgrade_number 17, compatible policy)",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xed805e77c40d7e6ac5cd3e67514c485176621a2aa21e860cd515121d44a2f83d/resources"
+      },
+      {
+        "label": "Aptos fungible asset capability documentation (TransferRef freeze; BurnRef burn)",
         "url": "https://aptos.dev/build/smart-contracts/fungible-asset"
-      },
-      {
-        "label": "PicWe official documentation repository",
-        "url": "https://github.com/Picwe/picwe-docs"
-      },
-      {
-        "label": "Archived PicWe WEUSD documentation",
-        "url": "https://web.archive.org/web/20260210025231/https://docs.picwe.org/what-is-weusd"
       },
       {
         "label": "DefiLlama WEUSD deployment supply",
@@ -112,23 +124,11 @@
       {
         "label": "BNB Chain fixed-block RPC",
         "url": "https://bsc-dataseed.bnbchain.org"
-      },
-      {
-        "label": "Base fixed-block RPC",
-        "url": "https://mainnet.base.org"
-      },
-      {
-        "label": "Arbitrum fixed-block RPC",
-        "url": "https://arb1.arbitrum.io/rpc"
-      },
-      {
-        "label": "Plume fixed-block RPC",
-        "url": "https://rpc.plume.org"
       }
     ],
-    "evidence": "At BSC block 110046907, Base block 48645553, Arbitrum block 483958453, and Plume block 81162729 on 2026-07-15, tracked EVM token 0xdd73ea766b80417c0607a3f08e34a0c415d89d56 had a zero EIP-1967 implementation slot and independently verified PicWe_USD source/ABIs limited to ERC20, permit, AccessControl, MINTER_ROLE, and mint. They expose no pause, freeze, blacklist, or arbitrary-holder-burn function, and burnFrom is allowance-gated. Asset-wide false is not supportable because Movement is 465086.702603 of 501682.757399 current listed deployment supply (92.70%). Its PicWe package publishes neither module source nor source map while its WEUSD ABI stores TransferRef and BurnRef; linked mint/redeem and bridge modules expose pause functions, and publisher-compatible package upgrades leave scope and authorization unprovable. Aptos fungible-asset documentation says TransferRef can freeze holders and BurnRef can burn fungible assets. This is bounded direct possible, not a confirmed current all-holder freeze. Issuer documentation did not provide independently verifiable legal terms or proof-of-reserves/transparency attestations.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "2026-07-30 re-review. EVM: at BSC block 113074656 (2026-07-30T20:34:28Z) token 0xdd73ea766b80417c0607a3f08e34a0c415d89d56 has zero EIP-1967 implementation slot; Sourcify ABIs on BSC/Base/Arbitrum expose only ERC20 + ERC20Burnable + AccessControl + ERC20Permit + mint (MINTER_ROLE) — no pause, freeze, blacklist, blocklist, or arbitrary-holder-burn; paused() eth_call reverts; burnFrom is allowance-gated. Controlling authority on EVM is DEFAULT_ADMIN_ROLE/MINTER_ROLE (prior review: EOA 0xc122…0bc + mint/redeem 0x5D54…F22C). Movement (material): DefiLlama 2026-07-30 chain balances show Movement ~465086.70 of ~501682.76 listed supply (~92.7%). Both current package 0xf39c…1ff6 and legacy package 0xed80…f83d (DefiLlama Movement supply module; weusd::total_supply 465086.702603 at ledger block_height 80220565) store ManagedFungibleAsset with transfer_ref and burn_ref; Aptos FA docs allow TransferRef to freeze accounts and BurnRef to burn. Current package weusd_mint_redeem and weusd_cross_chain_gas expose admin pause/unpause (is_paused=false at review). Legacy package upgrade_number=17 with compatible policy 1 — publisher can replace modules without on-chain timelock. Failure domain: PicWe package publishers / admin EOAs on each deployment; no third-party freeze oracle. Upstream: if/when reserves were USDC/USDC.e, Circle freeze would impair redemption collateral, but that is inherited collateral risk, not a WEUSD token-level blacklist. Direct holder freeze is therefore possible via Movement FA TransferRef (and mint-path pause), not a confirmed live all-holder freeze, and not present on EVM bytecode — asset-wide false is unsupported.",
+    "reviewer": "Grok T16 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",

@@ -85,22 +85,31 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Docs",
+        "label": "Yearn yBOLD documentation",
         "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
       },
       {
-        "label": "GitHub",
-        "url": "https://github.com/yearn/yBOLD"
+        "label": "Etherscan yBOLD EIP-1167 vault share",
+        "url": "https://etherscan.io/address/0x9f4330700a36b29952869fac9b33f45eedd8a3d8#code"
+      },
+      {
+        "label": "Blockscout verified Yearn V3 Vault implementation",
+        "url": "https://eth.blockscout.com/address/0xd8063123bba3b480569244ae66bfe72b6c84b00d?tab=contract"
+      },
+      {
+        "label": "Liquity BOLD parent freeze review (no holder blacklist)",
+        "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
       }
     ],
-    "evidence": "Yearn documents yBOLD as transferable and redeemable, but the tokenized strategy remains an actively managed vault wrapper with Yearn strategy smart-contract risk and documented privileged-rights lifecycle. Pharos treats direct holder-blacklist exposure as unproven while retaining Possible for vault-control uncertainty.",
-    "reviewer": "Codex yBOLD tracking pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "2026-07-30 re-review of yBOLD holder freeze/blacklist posture. Sole tracked deployment is Ethereum 0x9f4330700a36b29952869fac9b33f45eedd8a3d8. At Ethereum block 25648273 the runtime is the 45-byte EIP-1167 minimal-proxy form hard-coded to Yearn V3 Vault implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; EIP-1967 implementation and admin slots on both the clone and the implementation were zero (no upgrade path to introduce freeze later). Verified VaultV3 source: transfer/transferFrom/_transfer only enforce non-zero/self receiver and balance/allowance; there is no blacklist, freeze, pause, seize, or allowlist on the share transfer path. role_manager (observed 0xb3bd6b2e61753c311efbcf0111f75d29706d9a41) and Roles including EMERGENCY_MANAGER gate strategy lifecycle and shutdown_vault (deposit limit zero / debt pull), not holder transfer. isShutdown() was false; asset() returned BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d; apiVersion() returned 3.0.4. Yearn docs independently state yBOLD has no transfer restrictions and is always redeemable for BOLD. Upstream BOLD's reviewed immutable token has no holder freeze surface. Conclusion: canBeBlacklisted=false (reach none).",
+    "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30",
+    "upstreamSuppressionRationale": "yBOLD is a Yearn V3 vault share over BOLD Stability Pool deposits. Role-manager strategy allocation, shutdown, and Stability Pool execution risk can impair vault NAV or withdrawal liquidity, and the parent BOLD claim can be impaired by Liquity branch risk, but neither Yearn vault roles nor the reviewed BOLD token exposes a direct holder freeze, blacklist, pause, or selective transfer-restriction path on yBOLD shares. Those exposures remain strategy and reserve/dependency risks, not yBOLD token blacklistability."
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

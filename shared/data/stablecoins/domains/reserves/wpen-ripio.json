@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T18 safety-v9 unknown-reduction w2",
     "confidence": "probable",
     "sources": [
       {
@@ -27,13 +27,17 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
+        "label": "Ripio wFIAT product page",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
         "label": "Ripio wFIAT whitepaper",
         "url": "https://www.ripio.com/en/assets/wars/whitepaper"
       }
     ],
-    "rationale": "Ripio's current local-stablecoin disclosure describes wrapped local tokens as backed by liquid instruments denominated in the local currency. The wFIAT framework and the existing wPEN record identify Peruvian-sol cash or liquid instruments, but no reliable public wPEN-specific attestation, current balance, instrument split, or reserve-provider allocation was located.",
+    "rationale": "Re-checked 2026-07-30: Ripio's wFIAT and local-stablecoins pages describe wrapped local tokens as minted 1:1 against local-currency deposits with funds held in regulated liquid instruments, and now publish collateral attestations certified by local public accountants for wBRL, wCOP, wARS (second), and wMXN as of 2026-03-31 — each naming only a domestic bank account in the local currency. No wPEN-specific attestation, certified balance, instrument split, bank identity, or reserve-provider allocation is published on either page or in the wFIAT whitepaper, so the wPEN reserve remains identified only as Peruvian-sol cash and local-currency liquid instruments.",
     "compositionBasis": "Ripio wFIAT local-stablecoin framework applied to wPEN; token-specific reserve allocation is undisclosed",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve currency and broad instrument class are identified, but current balances, instrument weights, bank identities, and token-specific attestation evidence are unavailable.",
     "knownUnknownExposurePct": 100,
@@ -62,8 +66,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T18 safety-v9 unknown-reduction w2",
     "confidence": "probable",
     "sources": [
       {

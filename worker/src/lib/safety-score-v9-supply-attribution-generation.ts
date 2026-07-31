@@ -31,10 +31,14 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
   128 * 1_024;
-const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_INTERVAL_SEC =
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_PRODUCER_INTERVAL_SEC =
+  25 * 60;
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =
+  14 * 60;
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC =
+  45 * 60;
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC =
   30 * 60;
-const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC =
-  15 * 60;
 
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -478,8 +482,8 @@ export function nextSafetyScoreV9SupplyAttributionDueAtSec(
   return (
     generation.capturedAtSec +
     (generation.rejectedAssetIds.length === 0
-      ? SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_INTERVAL_SEC
-      : SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC)
+      ? SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_PRODUCER_INTERVAL_SEC
+      : SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC)
   );
 }
 
@@ -499,6 +503,14 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
       reason: string;
     };
 
+type SupplyAttributionGenerationCompatibilityReason =
+  | "registry-fingerprint-mismatch"
+  | "expected-asset-ids-mismatch"
+  | "source-clock-after-fixed-input"
+  | "capture-clock-after-consumer"
+  | "captured-after-consumer"
+  | "generation-stale";
+
 function withoutSupplyAttribution(
   fixedInput: Readonly<ReportCardsFixedInput>,
 ): ReportCardsFixedInput {
@@ -508,23 +520,48 @@ function withoutSupplyAttribution(
   });
 }
 
+export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  generation: SafetyScoreV9SupplyAttributionGeneration,
+  consumerClockSec = fixedInput.clockSec,
+): SupplyAttributionGenerationCompatibilityReason | null {
+  const expectedAssetIds = uniqueSorted(
+    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
+  );
+  if (generation.registryFingerprint !== fixedInput.registryFingerprint) {
+    return "registry-fingerprint-mismatch";
+  }
+  if (!exactStrings(generation.expectedAssetIds, expectedAssetIds)) {
+    return "expected-asset-ids-mismatch";
+  }
+  if (generation.sourceClockSec > fixedInput.clockSec) {
+    return "source-clock-after-fixed-input";
+  }
+  if (generation.captureClockSec > consumerClockSec) {
+    return "capture-clock-after-consumer";
+  }
+  if (generation.capturedAtSec > consumerClockSec) {
+    return "captured-after-consumer";
+  }
+  if (
+    consumerClockSec - generation.capturedAtSec >
+    SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC
+  ) {
+    return "generation-stale";
+  }
+  return null;
+}
+
 export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
   fixedInput: Readonly<ReportCardsFixedInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): boolean {
-  const expectedAssetIds = uniqueSorted(
-    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
-  );
-  return (
-    generation.registryFingerprint === fixedInput.registryFingerprint &&
-    exactStrings(generation.expectedAssetIds, expectedAssetIds) &&
-    generation.sourceClockSec <= fixedInput.clockSec &&
-    generation.captureClockSec <= consumerClockSec &&
-    generation.capturedAtSec <= consumerClockSec &&
-    consumerClockSec - generation.capturedAtSec <=
-      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_INTERVAL_SEC
-  );
+  return diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+    fixedInput,
+    generation,
+    consumerClockSec,
+  ) === null;
 }
 
 export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
@@ -550,7 +587,7 @@ export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
     generation.rejectedAssetIds.length === 0 &&
     futureClockSkewSec > 0 &&
     futureClockSkewSec <=
-      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC
+      SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CADENCE_DEFER_MAX_SKEW_SEC
   );
 }
 
@@ -568,17 +605,17 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
       reason: "generation-missing",
     };
   }
-  if (
-    !isSafetyScoreV9SupplyAttributionGenerationCompatible(
+  const compatibilityReason =
+    diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
       fixedInput,
       generation,
-    )
-  ) {
+    );
+  if (compatibilityReason) {
     return {
       status: "incompatible",
       generationId: generation.generationId,
       fixedInput: withoutSupplyAttribution(fixedInput),
-      reason: "generation-identity-or-freshness-mismatch",
+      reason: compatibilityReason,
     };
   }
 

@@ -12,17 +12,17 @@ describe("page metadata helpers", () => {
   it("builds phrase-safe stablecoin descriptions", () => {
     const usdt = TRACKED_META_BY_ID.get("usdt-tether");
     const usde = TRACKED_META_BY_ID.get("usde-ethena");
-    const frax = TRACKED_META_BY_ID.get("frax-frax");
+    const nect = TRACKED_META_BY_ID.get("nect-beraborrow");
 
     expect(usdt).toBeDefined();
     expect(usde).toBeDefined();
-    expect(frax).toBeDefined();
+    expect(nect).toBeDefined();
 
     expect(buildStablecoinDetailDescription(usdt!)).toContain("backed by real-world assets");
     expect(buildStablecoinDetailDescription(usde!)).toContain("collateralized by crypto assets");
-    // frax-frax re-graded inherited -> possible by the TERRA deep-drain
-    // re-review (Fraxtal ProxyAdmin upgrade-control finding).
-    expect(buildStablecoinDetailDescription(frax!)).toContain("Blacklist or freeze exposure is possible");
+    // nect-beraborrow is graded possible: the immutable DebtToken burn path is
+    // reachable by any address the owner adds to the PSM-bond whitelist.
+    expect(buildStablecoinDetailDescription(nect!)).toContain("Blacklist or freeze exposure is possible");
   });
 
   it("uses pre-launch tracker wording before live stablecoin data exists", () => {

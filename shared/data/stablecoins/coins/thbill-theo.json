@@ -14,6 +14,22 @@
   "collateral": "Basket of institutional-grade tokenized U.S. Treasury bills; currently 100% tULTRA, a wrapped representation of Standard Chartered Libeara's ULTRA fund (Delta Wellington Ultra Short Treasury On-Chain Fund), managed by Wellington Management, custodied by Standard Chartered, fund administration by FundBridge Capital",
   "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as T-bill yield accrues; KYC-gated mint/redemption processed instantly in USDC, underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T50 research (safety-v9-unknown-reduction-w2)",
+    "rationale": "Re-derived 2026-07-30 from Theo's live documentation and product page: thBILL is a NAV-accreting tokenized claim on a basket of institutional U.S. Treasury funds (tULTRA/ULTRA via Libeara-Wellington-Standard Chartered, plus FILQ via Fidelity International/Sygnum), minted and redeemed only by KYC-verified participants against USDC with no permissionless mint path and no claim on underlying assets for holders. The live stabilization and claim structure is a tokenized T-bill fund share, matching the tbill archetype already recorded; thBILL has no variantOf parent, so no archetypeOverride divergence applies.",
+    "sources": [
+      {
+        "label": "Theo thBILL documentation (composition, KYC-gated mint/redemption, no holder claim on underlying)",
+        "url": "https://docs.theo.xyz/platform/thbill"
+      },
+      {
+        "label": "Theo thBILL product page (ULTRA + FILQ basket, NAV appreciation)",
+        "url": "https://theo.xyz/thbill"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "theo-short-duration-us-treasury-fund",
   "pythFeedId": "0x5b1bc5a579deba54dbaa9bc1c5b2e2b3f116d8d5ec27fbb3b9dc140a78e9f1e2",

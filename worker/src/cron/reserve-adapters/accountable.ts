@@ -24,6 +24,9 @@ interface AccountableDashboardResponse {
       interval?: string;
       verifiability?: string;
       total_reserves?: unknown;
+      total_supply?: unknown;
+      inventory?: unknown;
+      pol?: unknown;
       type?: Record<string, unknown>;
       reserves_split?: unknown;
       deployment?: Record<string, unknown>;
@@ -49,6 +52,10 @@ interface AccountableParams {
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split", "protocol_split"]);
 const TOTAL_RESERVES_RELATIVE_TOLERANCE = 0.01;
 const TOTAL_RESERVES_ABSOLUTE_TOLERANCE = 1;
+/** The dashboard publishes `collateralization` to six decimals, so cent-level rounding of the
+ *  reserve/supply inputs moves a derived ratio by <1e-6. This stays far below the ~2e-2 spread
+ *  between the gross and net-of-protocol-owned bases it has to tell apart. */
+const COLLATERALIZATION_RECONCILIATION_TOLERANCE = 1e-4;
 
 function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   const params = parseLiveReserveAdapterParams("accountable", config.params);
@@ -152,13 +159,112 @@ function extractBucketEntries(
   }
 }
 
-function extractTotalReserves(value: unknown): number | undefined {
+function extractOptionalReserveScalar(
+  value: unknown,
+  field: string,
+  options?: { requirePositive?: boolean },
+): number | undefined {
   if (value == null) return undefined;
   const numeric = extractAccountableBucketValue(value);
-  if (numeric == null || numeric <= 0) {
-    throw new Error(`Accountable total_reserves has invalid value: ${String(value)}`);
+  if (numeric == null || numeric < 0 || (options?.requirePositive && numeric === 0)) {
+    throw new Error(`Accountable ${field} has invalid value: ${String(value)}`);
   }
   return numeric;
+}
+
+/** Sum of the reserve components the issuer holds itself (unsold inventory plus
+ *  protocol-owned liquidity). Absent unless the feed publishes at least one of them. */
+function extractProtocolOwnedUsd(
+  reserves: NonNullable<NonNullable<AccountableDashboardResponse["data"]>["reserves"]>,
+): number | undefined {
+  const inventory = extractOptionalReserveScalar(reserves.inventory, "inventory");
+  const pol = extractOptionalReserveScalar(reserves.pol, "pol");
+  if (inventory == null && pol == null) return undefined;
+  return (inventory ?? 0) + (pol ?? 0);
+}
+
+/** Which denominator the dashboard's headline `collateralization` is actually built on.
+ *  Most Accountable feeds report gross total_reserves/total_supply, but the self-hosted Apyx
+ *  instance reports the ratio net of protocol-owned inventory and liquidity on *both* sides,
+ *  which reads ~2pp lower than the gross ratio. Deriving the basis instead of assuming it keeps
+ *  the reported number from being curated as a gross coverage fact. */
+type CollateralizationBasis = "gross" | "net-of-protocol-owned" | "unreconciled" | "underived";
+
+interface CollateralizationReconciliation {
+  basis: CollateralizationBasis;
+  reportedRatio: number;
+  supplyUsd?: number;
+  totalReservesUsd?: number;
+  protocolOwnedUsd?: number;
+  grossRatio?: number;
+  netRatio?: number;
+}
+
+function reconcileCollateralization(
+  reportedRatio: number,
+  totalReserves: number | undefined,
+  totalSupply: number | undefined,
+  protocolOwnedUsd: number | undefined,
+): CollateralizationReconciliation {
+  if (totalReserves == null || totalSupply == null) {
+    return { basis: "underived", reportedRatio };
+  }
+
+  const grossRatio = totalReserves / totalSupply;
+  const netDenominator = protocolOwnedUsd == null ? null : totalSupply - protocolOwnedUsd;
+  const netRatio =
+    protocolOwnedUsd != null && netDenominator != null && netDenominator > 0
+      ? (totalReserves - protocolOwnedUsd) / netDenominator
+      : null;
+  const matches = (candidate: number) =>
+    Math.abs(candidate - reportedRatio) <= COLLATERALIZATION_RECONCILIATION_TOLERANCE;
+
+  return {
+    basis: matches(grossRatio)
+      ? "gross"
+      : netRatio != null && matches(netRatio)
+        ? "net-of-protocol-owned"
+        : "unreconciled",
+    reportedRatio,
+    supplyUsd: totalSupply,
+    totalReservesUsd: totalReserves,
+    ...(protocolOwnedUsd != null ? { protocolOwnedUsd } : {}),
+    grossRatio,
+    ...(netRatio != null ? { netRatio } : {}),
+  };
+}
+
+function formatRatioPct(ratio: number): string {
+  return `${(ratio * 100).toFixed(2)}%`;
+}
+
+/** Suffix appended to the undercollateralization warning so the headline percentage can never be
+ *  read as gross liability coverage without the denominator it was computed on. */
+function collateralizationBasisSuffix(reconciliation: CollateralizationReconciliation): string {
+  switch (reconciliation.basis) {
+    case "net-of-protocol-owned":
+      return ` net of protocol-owned reserves (gross reserves/supply ${formatRatioPct(reconciliation.grossRatio!)})`;
+    case "unreconciled":
+      return ` on an unreconciled denominator (gross reserves/supply ${formatRatioPct(reconciliation.grossRatio!)})`;
+    default:
+      return "";
+  }
+}
+
+function buildCollateralizationReconciliationWarning(
+  reconciliation: CollateralizationReconciliation,
+) {
+  if (reconciliation.basis !== "unreconciled") return null;
+  const derived = [
+    `gross reserves/supply ${reconciliation.grossRatio!.toFixed(6)}`,
+    ...(reconciliation.netRatio != null
+      ? [`net-of-protocol-owned ${reconciliation.netRatio.toFixed(6)}`]
+      : []),
+  ].join(", ");
+  return reserveDegradedWarning(
+    "collateralization-unreconciled",
+    `Accountable dashboard collateralization ${reconciliation.reportedRatio} matches no derivable denominator (${derived}); the reported ratio is not a reproducible coverage measurement`,
+  );
 }
 
 function validateMappedBucketValues(
@@ -262,7 +368,13 @@ export function adaptAccountableDashboard(
   const mappedForValidation = breakdown.filter(({ name }) => name in riskMap);
   validateMappedBucketValues(mappedForValidation, bucket, { allowNegativeBuckets });
   const mapped = positiveBreakdown.filter(({ name }) => name in riskMap);
-  const totalReserves = extractTotalReserves(payload.data.reserves.total_reserves);
+  const totalReserves = extractOptionalReserveScalar(payload.data.reserves.total_reserves, "total_reserves", {
+    requirePositive: true,
+  });
+  const totalSupply = extractOptionalReserveScalar(payload.data.reserves.total_supply, "total_supply", {
+    requirePositive: true,
+  });
+  const protocolOwnedUsd = extractProtocolOwnedUsd(payload.data.reserves);
   validateBucketTotalAgainstReserves(breakdown, totalReserves, bucket, {
     excludeBuckets: totalReservesExcludeBuckets,
     skipValidation: params.skipTotalReservesValidation,
@@ -278,11 +390,31 @@ export function adaptAccountableDashboard(
   if (collateralizationRatio == null || collateralizationRatio < 0) {
     throw new Error(`Accountable dashboard returned invalid collateralization: ${String(payload.data.collateralization)}`);
   }
+  const reconciliation = reconcileCollateralization(
+    collateralizationRatio,
+    totalReserves,
+    totalSupply,
+    protocolOwnedUsd,
+  );
+  const basisSuffix = collateralizationBasisSuffix(reconciliation);
   const collateralizationWarnings = buildCoverageShortfallWarnings({
     code: "reserve-undercollateralized",
-    message: (pct) => `Accountable dashboard reports ${pct}% collateralization`,
+    message: (pct) => `Accountable dashboard reports ${pct}% collateralization${basisSuffix}`,
     coverageRatio: collateralizationRatio,
   });
+  const reconciliationWarning = buildCollateralizationReconciliationWarning(reconciliation);
+  const protocolOwnedDenominator = totalReserves ?? totalValue;
+  const protocolOwnedPct = protocolOwnedUsd == null
+    ? 0
+    : computeUnknownExposurePct(protocolOwnedUsd, protocolOwnedDenominator);
+  const protocolOwnedWarning = protocolOwnedPct > 0
+    ? buildUnknownExposureWarning({
+        code: "protocol-owned-bucket",
+        message:
+          `Accountable reserves include ${protocolOwnedUsd!.toFixed(2)} USD of issuer-held inventory and protocol-owned liquidity that is not itemized third-party backing`,
+        unknownExposurePct: protocolOwnedPct,
+      })
+    : null;
 
   const slices = slicesFromValues(
     [
@@ -313,7 +445,12 @@ export function adaptAccountableDashboard(
 
   return {
     slices,
-    ...((unknownExposurePct > 0 || signedBuckets.length > 0 || totalValidationWarning || collateralizationWarnings.length > 0)
+    ...((unknownExposurePct > 0
+      || signedBuckets.length > 0
+      || totalValidationWarning
+      || protocolOwnedWarning
+      || reconciliationWarning
+      || collateralizationWarnings.length > 0)
       ? {
           warnings: [
             ...(unknownExposurePct > 0
@@ -325,6 +462,8 @@ export function adaptAccountableDashboard(
               : []),
             ...(signedBuckets.length > 0 ? [buildSignedBucketWarning(signedBuckets, totalValue)] : []),
             ...(totalValidationWarning ? [totalValidationWarning] : []),
+            ...(protocolOwnedWarning ? [protocolOwnedWarning] : []),
+            ...(reconciliationWarning ? [reconciliationWarning] : []),
             ...collateralizationWarnings,
           ],
         }
@@ -338,9 +477,15 @@ export function adaptAccountableDashboard(
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       collateralization: payload.data.collateralization,
       collateralizationRatio,
+      collateralizationBasis: reconciliation.basis,
+      collateralizationReconciliation: reconciliation,
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
+      ...(totalSupply != null ? { supplyUsd: totalSupply } : {}),
+      ...(protocolOwnedUsd != null
+        ? { protocolOwnedUsd, protocolOwnedPctOfReserves: protocolOwnedPct }
+        : {}),
       ...(bucket === "deployment"
         ? {
             deploymentSnapshot: buildDeploymentSnapshotMetadata(

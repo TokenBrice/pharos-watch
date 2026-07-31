@@ -16,13 +16,21 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "rationale": "XT.COM describes XTUSD as an XTDao vault system in which users mint debt against overcollateralized assets and unsafe vaults are auctioned. Those borrower-vault and liquidation mechanics establish the cdp archetype even though the current live collateral and control graph remain opaque.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "GPT SOL-NR-A wave6; Kimi T53 archetype re-verification",
+    "rationale": "XT.COM describes XTUSD as an XTDao vault system in which users mint debt against overcollateralized assets and unsafe vaults are auctioned. Those borrower-vault and liquidation mechanics establish the cdp archetype even though the current live collateral and control graph remain opaque. 2026-07-30 re-verification: at XSC block 47,929,909 the live MakerDAO DSS-style system is unchanged — the XTUSD token 0x1a6131ea… still has the DaiJoin 0xa57cde05… as its ward (wards = 1) and the Vat 0xf9d4810f… still returns live() = 1, so the borrower-vault mint path that grounds the cdp classification remains the live stabilization structure. A fresh v9 baseline replay compiles archetype = cdp with no missing-archetype gap.",
     "sources": [
       {
         "label": "XT.COM TAI to XTUSD announcement",
         "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+      },
+      {
+        "label": "XSC public RPC (datarpc1.xsc.pub, XTUSD token wards and Vat live reads, block 47929909, 2026-07-30)",
+        "url": "https://datarpc1.xsc.pub"
+      },
+      {
+        "label": "xscscan token API (XTUSD 0x1a6131ea…, accessed 2026-07-30)",
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
       }
     ]
   },

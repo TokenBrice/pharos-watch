@@ -18,20 +18,23 @@ function makeCgPool(
     lockedLiquidityPct: string | null;
   }> = {},
 ) {
+  const attributes = {
+    address: overrides.address ?? "0xPool",
+    name: overrides.name ?? "USDC / USDT",
+    pool_created_at: overrides.createdAt ?? "2025-01-01T00:00:00.000Z",
+    base_token_price_usd: overrides.basePriceUsd ?? "1.00",
+    quote_token_price_usd: overrides.quotePriceUsd ?? "1.00",
+    reserve_in_usd: overrides.reserveUsd ?? "150000",
+    volume_usd: { h24: overrides.volumeUsd24h ?? "25000" },
+    ...(overrides.feePct !== undefined ? { pool_fee_percentage: overrides.feePct } : {}),
+    ...(overrides.lockedLiquidityPct !== undefined
+      ? { locked_liquidity_percentage: overrides.lockedLiquidityPct }
+      : {}),
+  };
   return {
     id: "pool-1",
     type: "pool",
-    attributes: {
-      address: overrides.address ?? "0xPool",
-      name: overrides.name ?? "USDC / USDT",
-      pool_created_at: overrides.createdAt ?? "2025-01-01T00:00:00.000Z",
-      base_token_price_usd: overrides.basePriceUsd ?? "1.00",
-      quote_token_price_usd: overrides.quotePriceUsd ?? "1.00",
-      reserve_in_usd: overrides.reserveUsd ?? "150000",
-      h24_volume_usd: overrides.volumeUsd24h ?? "25000",
-      pool_fee_percentage: overrides.feePct ?? "0.01",
-      locked_liquidity_percentage: overrides.lockedLiquidityPct ?? "42",
-    },
+    attributes,
     relationships: {
       base_token: { data: { id: `token_${overrides.baseAddress ?? "0xBase"}`, type: "token" } },
       quote_token: { data: { id: `token_${overrides.quoteAddress ?? "0xQuote"}`, type: "token" } },

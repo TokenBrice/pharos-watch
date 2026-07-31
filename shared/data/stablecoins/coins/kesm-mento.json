@@ -15,11 +15,12 @@
   },
   "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies KESm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a KESm-specific borrower trove.",
   "pegMechanism": "KESm is issued through Mento v2's USDm/KESm Broker and BiPoolManager exchange. A USDm-to-KESm swap burns incoming USDm and mints outgoing KESm; the reverse burns KESm and mints USDm. The virtual pool prices swaps from the KES/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
-    "rationale": "Primary evidence resolves KESm as a reserve-backed legacy Broker stable with no borrower CDP. Pharos's current closed archetype enum has no protocol-reserve-backed FX category: fiat-cash is custodial off-chain cash issuance, algorithmic is reflexive or unbacked, and cdp requires borrower vaults. The false cdp value is removed rather than replaced with another materially inaccurate label.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Claude owner-ruling R2 Mento archetype application",
+    "rationale": "Owner ruling 2026-07-31 places Mento's protocol-reserve-backed FX inventory under the fiat-cash archetype umbrella, following the reserve-backed USDm/EURm precedent already recorded on cusd-celo and ceur-celo. KESm is minted and burned as reserve-backed inventory against the shared Mento Reserve through the Mento Broker at oracle rates: there is no borrower trove, no position health factor, and no liquidation path, so cdp remains inapplicable. Under this ruling fiat-cash reads as reserve-backed cash-equivalent inventory issuance rather than strictly custodial off-chain cash.",
     "sources": [
       {
         "label": "Pinned Mento stablecoin backing config",
@@ -28,6 +29,14 @@
       {
         "label": "Pinned Mento Broker source",
         "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      },
+      {
+        "label": "Mento V3 stable token docs",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento reserve model documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ]
   },
@@ -132,12 +141,24 @@
       {
         "label": "Mento reserve configuration",
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "KESm current verified ABI",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+      },
+      {
+        "label": "Mento StableTokenV2 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento live reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ],
-    "sourceFreeRationale": "The current holder-facing KESm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "At finalized Celo block 72780426, KESm's sole tracked Celo deployment resolved to the verified StableTokenV2 implementation used by the Mento Broker assets. The implementation exposes ordinary ERC-20 transfers, permissioned minting, and self-burn only; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. KESm's direct token-level freeze posture is therefore No. The current Mento Reserve's USDT, EURC, and USDC-family collateral remains separately represented and can still produce computed upstream exposure.",
-    "reviewer": "GPT SOL-MENTO wave6",
-    "reviewedAt": "2026-07-22"
+    "sourceFreeRationale": "The current holder-facing KESm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At Celo block 73552600 (2026-07-30T23:15:58Z), KESm's sole tracked deployment 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 returned owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147, broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() = 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() = zero. Its implementation slot resolved to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e; the verified ABI/source exposes ordinary transfer/transferFrom, permissioned mint, and broker/exchange-scoped burn(msg.sender) and Celo-VM-only gas debiting via debitGasFees, with no blacklist, freeze, pause, seizure, governance-reachable arbitrary-holder burn, or transfer-hook mechanism. Direct KESm holder freeze access is therefore No. The controlling failure domain is the Mento Timelock's upgrade/authorization path; inherited exposure remains through the live Mento Reserve's AUSD, sUSDS, EURC, USDT, USDC, axlEUROC/axlUSDC, and related issuer-controlled collateral, so reviewedStatus remains inherited.",
+    "reviewer": "Codex T64 access review",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

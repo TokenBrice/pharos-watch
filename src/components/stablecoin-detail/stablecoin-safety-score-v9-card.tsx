@@ -140,7 +140,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
 
   const bar = (
     <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
-      <span className="break-words font-mono text-[10px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
+      <span className="break-words font-mono text-[11px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
         {row.label}
       </span>
       <span
@@ -155,15 +155,15 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       </span>
       <span
         className={cn(
-          "text-right font-mono text-[10px] font-medium tabular-nums",
+          "text-right font-mono text-[11px] font-medium tabular-nums",
           ROW_TONE_SCORE_CLASS[row.tone],
         )}
       >
         {displayedScore}
       </span>
       <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
-        {weightLabel !== null ? <span className="block text-[9px]">· {weightLabel}</span> : null}
-        {row.status !== null ? <span className="mt-0.5 block break-words text-[8px]">{row.status}</span> : null}
+        {weightLabel !== null ? <span className="block text-[10px]">· {weightLabel}</span> : null}
+        {row.status !== null ? <span className="mt-0.5 block break-words text-[9px]">{row.status}</span> : null}
       </span>
     </div>
   );
@@ -173,7 +173,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       <div className={cn(nested && "pl-3")}>
         {bar}
         {row.detail !== null ? (
-          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground">{row.detail}</p>
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{row.detail}</p>
         ) : null}
       </div>
     );
@@ -186,7 +186,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[9px] leading-snug text-muted-foreground"
+        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[10px] leading-snug text-muted-foreground"
       >
         {row.detail}
         <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
@@ -212,11 +212,11 @@ function BreakdownGroupSection({
     <div>
       {group.label !== null ? (
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border/30 pb-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-foreground/85">
+          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-foreground/85">
             {group.label}
           </span>
           {group.score !== null ? (
-            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
               {group.score.toFixed(0)} / 100
               {group.weight !== null ? ` · ${(group.weight * 100).toFixed(0)}% pillar weight` : ""}
             </span>
@@ -232,7 +232,7 @@ function BreakdownGroupSection({
             type="button"
             onClick={() => setTailOpen((value) => !value)}
             aria-expanded={tailOpen}
-            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-[10px] font-medium text-muted-foreground"
+            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-[11px] font-medium text-muted-foreground"
           >
             <span>{group.tail.label}</span>
             <ChevronDown
@@ -272,21 +272,21 @@ function PillarBreakdownDetails({
       <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
         {breakdown.context.map((item) => (
           <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3">
-            <dt className="min-w-0 break-words text-[10px] text-muted-foreground">{item.label}</dt>
-            <dd className="min-w-0 break-words text-right font-mono text-[10px] text-foreground">{item.value}</dd>
+            <dt className="min-w-0 break-words text-[11px] text-muted-foreground">{item.label}</dt>
+            <dd className="min-w-0 break-words text-right font-mono text-[11px] text-foreground">{item.value}</dd>
           </div>
         ))}
         {scoreChanged ? (
           <div className="flex min-w-0 items-baseline justify-between gap-3">
-            <dt className="min-w-0 break-words text-[10px] text-muted-foreground">Evaluator to published</dt>
-            <dd className="shrink-0 text-right font-mono text-[10px] text-foreground">
+            <dt className="min-w-0 break-words text-[11px] text-muted-foreground">Evaluator to published</dt>
+            <dd className="shrink-0 text-right font-mono text-[11px] text-foreground">
               {breakdown.evaluatedScore!.toFixed(1)} to {breakdown.publishedScore!.toFixed(1)}
             </dd>
           </div>
         ) : null}
       </dl>
       {breakdown.sectionLabel === "Route components" ? (
-        <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
+        <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
           Route capacity is specific to the selected executable path. Exchange-wide volume,
           aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
         </p>
@@ -296,11 +296,11 @@ function PillarBreakdownDetails({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
           {breakdown.sectionLabel}
         </span>
         {breakdown.aggregationWeight !== null ? (
-          <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
             {(breakdown.aggregationWeight * 100).toFixed(0)}% aggregation weight
           </span>
         ) : null}
@@ -309,7 +309,7 @@ function PillarBreakdownDetails({
       {contextRowCount > 0 ? (
         collapseContext ? (
           <details className="group mt-2 border-y border-border/30 py-1.5">
-            <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
+            <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
               <span>Measurement detail ({contextRowCount})</span>
               <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
             </summary>
@@ -326,7 +326,7 @@ function PillarBreakdownDetails({
 
       {breakdown.alternatives.length > 0 ? (
         <details className="group mt-3 border-t border-border/30 pt-2">
-          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
+          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
             <span>
               Alternative {breakdown.alternatives.length === 1 ? "route" : "routes"}
               {" "}({breakdown.alternatives.length})
@@ -339,10 +339,10 @@ function PillarBreakdownDetails({
           <ul className="divide-y divide-border/30">
             {breakdown.alternatives.map((route) => (
               <li key={route.key} className="flex min-w-0 items-baseline justify-between gap-3 py-1.5">
-                <span className="min-w-0 break-words text-[10px] leading-[1.35] text-foreground/85">
+                <span className="min-w-0 break-words text-[11px] leading-[1.35] text-foreground/85">
                   {route.label}
                 </span>
-                <span className="shrink-0 text-right font-mono text-[9px] text-muted-foreground">
+                <span className="shrink-0 text-right font-mono text-[10px] text-muted-foreground">
                   {route.score === null ? "Not scored" : `${route.score.toFixed(0)} / 100`}
                   {route.included ? " · included" : route.detail === null ? "" : ` · ${route.detail}`}
                 </span>

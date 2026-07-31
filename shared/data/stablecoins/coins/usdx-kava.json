@@ -290,21 +290,31 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
+    "upstreamSuppressionRationale": "The text/reserve resolver can infer upstream exposure from Kava CDP collateral language (legacy debt types include exchange-issued assets such as btcb-a and usdt-a), but collateral-price and seizure risk inside CDP vaults is backing risk, not a USDX holder freeze surface under FreezeWatch semantics.",
     "sources": [
       {
-        "label": "Kava Mint documentation",
-        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+        "label": "Kava x/cdp params API (live read at height 21878704)",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Kava evmutil params API (no USDX conversion pair)",
+        "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
+      },
+      {
+        "label": "Kava CDP module docs",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
       },
       {
         "label": "Tracked Osmosis IBC USDX denom",
         "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
       }
     ],
-    "evidence": "BLOCKED: the tracked record is an Osmosis IBC denomination rather than a native Kava token contract. Kava Mint documentation establishes the CDP-origin design, but the reviewed public materials do not provide a current native Kava and IBC-path holder freeze, denylist, or transfer-control authority inventory. The inherited classification is retained; no direct holder-control posture is asserted without that evidence.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30 at Kava height 21878704: /kava/cdp/v1beta1/params still reports debt denom usdx, and /kava/evmutil/v1beta1/params lists no usdx conversion pair, so USDX exists only as a Cosmos SDK bank denom on Kava with no ERC-20 or contract admin surface. The x/cdp module account holds minter/burner permissions and can seize CDP vault collateral through liquidations, but Kava module documentation describes no holder freeze, denylist, pause, or transfer-control authority over USDX bank balances, and Cosmos bank sends carry no per-denom freeze hook. The only tracked off-chain representation is the Osmosis IBC voucher ibc/C78F65...790AE, an ibc-go transfer denom that likewise exposes no freeze authority. No direct or upstream issuer freeze surface is identified.",
+    "reviewer": "Kimi T39 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

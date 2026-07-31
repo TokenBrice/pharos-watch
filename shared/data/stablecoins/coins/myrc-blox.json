@@ -42,7 +42,22 @@
     "attestorTier": "niche",
     "provider": "Tommy Ung & Partners PLT",
     "cadence": "monthly",
-    "attestorJurisdiction": "Malaysia"
+    "attestorJurisdiction": "Malaysia",
+    "latestReport": {
+      "periodEnd": "2025-07-31",
+      "publishedAt": "2025-08-29",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Codex T61 reserve review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
+          "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -238,7 +253,7 @@
       "name": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "other",
+      "assetClass": "cash",
       "issuerOrObligor": "Blox Blockchain Sdn Bhd and undisclosed Malaysian financial institutions",
       "riskFactors": [
         "counterparty",
@@ -247,13 +262,13 @@
         "concentration",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28; Codex T61 re-review 2026-07-31",
+    "confidence": "verified",
     "sources": [
       {
         "label": "BLOX MYRC transparency",
@@ -266,21 +281,25 @@
       {
         "label": "BLOX MYRC product page",
         "url": "https://www.blox.my"
+      },
+      {
+        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
+        "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of MYRC whitepaper PDF: every MYRC fully backed 1:1 by MYR in a BLOX-managed reserve fund; audits claimed but instrument-level bank holdings not itemized. Transparency page re-opened (marketing shell) still asserts 1:1 MYR redeemability. Envelope remains 100% MYR-denominated reserves with ku=100.",
-    "compositionBasis": "BLOX transparency and whitepaper disclosure of MYR-denominated reserve assets",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Write-time re-open 2026-07-31: the live BLOX MYRC page still states 1:1 MYR backing in trustee accounts and independent Malaysian-accountant audits. The 2025-08-29 Tommy Ung & Partners PLT reasonable-assurance examination reports 1,211,350.50 MYRC in circulation against 1,211,350.50 MYR held, with a reserve breakdown of 100% cash and bank deposits readily withdrawable for redemption. Current institutions, account segregation, balances, and later-period attestation are not disclosed; the structured envelope is nevertheless now precisely 100% cash/MYR with immediate stated liquidity.",
+    "compositionBasis": "BLOX disclosures and Tommy Ung & Partners PLT reserve attestation identifying 100% MYR cash deposits",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current reserve asset classes, financial institutions, provider shares, balances, and legal segregation terms are not disclosed in the reviewed primary sources.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The latest independent report identifies 100% cash/MYR bank deposits, but current financial institutions, provider shares, balances, and legal segregation terms are not disclosed.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer discloses only a MYR-denominated reserve-asset envelope, without current asset classes, institutions, or weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The latest independent reserve report identifies the full reserve as MYR cash/bank deposits; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
       }
     ]
   },
@@ -295,9 +314,9 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve batch 7; Codex T61 re-review 2026-07-31",
+    "confidence": "verified",
     "sources": [
       {
         "label": "BLOX MYRC transparency",
@@ -306,10 +325,14 @@
       {
         "label": "MYRC whitepaper",
         "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+      },
+      {
+        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
+        "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
       }
     ],
-    "uncertainty": "BLOX says cash is held at Malaysian financial institutions but does not identify the institutions or establish current provider shares, segregation, bankruptcy remoteness, or rehypothecation restrictions.",
-    "knownUnknownExposurePct": 100
+    "uncertainty": "BLOX and the latest attestation identify MYR cash deposits held for MYRC redemption but do not identify the institutions or establish current provider shares, account segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "knownUnknownExposurePct": 0
   },
   "notices": [
     {

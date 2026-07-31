@@ -114,11 +114,23 @@
       {
         "label": "Tracked sBOLD Ethereum deployment",
         "url": "https://etherscan.io/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11#code"
+      },
+      {
+        "label": "Blockscout verified sBold source",
+        "url": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract"
+      },
+      {
+        "label": "Blockscout verified BOLD (BoldToken) source",
+        "url": "https://eth.blockscout.com/address/0x6440f144b7e50d6a8439336510312d2f54beb01d?tab=contract"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "BLOCKED: sBOLD documentation, the K3 Capital public repository, and the tracked Ethereum token address identify the product and deployment, but the public source set does not establish the verified implementation, administrator, or holder-control inventory. Possible is retained rather than asserting a direct no-freeze result.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-review 2026-07-30 against the Blockscout-verified sBold source (matches the public K3Capital/sBOLD repository). The token exposes no holder blacklist, balance freeze, seizure, or arbitrary burn: transfer and transferFrom are unmodified OpenZeppelin ERC-20 paths with no _update hook. BaseSBold adds OpenZeppelin Pausable with pause()/unpause() gated by onlyOwner; whenNotPaused guards deposit, mint, redeem, withdraw, and swap, so the owner can halt vault entry/exit and solver swaps system-wide but cannot halt share transfers or freeze individual holders. At Ethereum block 25621906 (2026-07-30, ethereum-rpc.publicnode.com), paused() returned false and owner() returned the K3 2-of-3 Safe 0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5, matching the mint-authority review at block 25573280. The contract is non-proxy (EIP-1967 slots zero at block 25573280). Inherited upstream exposure: the verified BoldToken at 0x6440f144b7e50d6a8439336510312d2f54beb01d exposes no pause, blacklist, or freeze functions, so no freeze reach is inherited from BOLD. Possible is retained because the mutable owner pause is a holder-facing operation-halting surface, per the convention applied to comparable pause-capable wrappers.",
+    "reviewer": "Kimi T29 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

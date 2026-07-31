@@ -982,11 +982,23 @@
       {
         "label": "Berachain NECT verified debt-token contract",
         "url": "https://routescan.io/address/0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+      },
+      {
+        "label": "Routescan verified NECT DebtToken source (read 2026-07-30)",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+      },
+      {
+        "label": "Beraborrow contract-address registry",
+        "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+      },
+      {
+        "label": "Berachain public RPC (block 24216612 whitelist reads)",
+        "url": "https://rpc.berachain.com"
       }
     ],
-    "evidence": "The verified NECT DebtToken leaves ordinary transfer and transferFrom unguarded by a direct blacklist or pause check. However, the MetaBeraborrowCore owner can whitelist a PSM bond, and a whitelisted PSM bond can call burn(account, amount) against an arbitrary account. This owner-mediated arbitrary-holder burn path is a material intervention surface, so Possible is retained rather than asserting no freeze exposure.",
-    "reviewer": "Codex Safety Score V9 ACCESS curation",
-    "reviewedAt": "2026-07-26"
+    "evidence": "Re-derived 2026-07-30 against the verified multi-collateral DebtToken source (Routescan, Berachain 80094) and live RPC reads at block 24216612. Ordinary transfer and transferFrom carry no blacklist or pause check, only recipient validation. However, burn(address _account, uint256 _amount) executes _burn(_account, _amount) for any caller in the denManagers or PSMBonds whitelist mappings, so any whitelisted contract has the standing code-level capability to destroy an arbitrary holder balance without allowance. Live whitelist reads: borrowerOperations(0xDB32cA8f3bB099A76D4Ec713a2c2AACB3d8e84B9) = true, denManagers(0xf1356Cb726C2988C65c5313350C9115D9Af0f954, WBERA branch) = true, liquidStabilityPools(0x597877Ccf65be938BD214C4c46907669e3E62128) = true, and the constructor-whitelisted PSMBond entry is the 0x000000000000000000000000000000000000dEaD placeholder; the official Beraborrow contract registry lists no real PSM bond deployment, so the currently burn-capable set is the mechanism-bound BorrowerOperations and DenManager contracts. Whitelist membership is onlyOwner via MetaBeraborrowCore, whose owner is the 4-of-7 Beraborrow Safe behind a 3-day timelock (per the mint-authority review), so the owner can admit a PSM bond that exercises the arbitrary-burn path without any token code change. Because the seize-capable burn function is live and immutable and activation requires only an owner whitelist action, Possible is retained rather than asserting no freeze exposure.",
+    "reviewer": "Kimi T44 unknown-reduction wave-2",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",

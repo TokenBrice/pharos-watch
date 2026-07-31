@@ -2,65 +2,72 @@
   "id": "axcnh-anchorx",
   "reserves": [
     {
-      "name": "CNH cash held at regulated financial institutions",
+      "name": "CNH reserve (composition undisclosed)",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "AnchorX Global Limited / undisclosed reserve counterparties",
       "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
-    "confidence": "verified",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T58 safety-v9 unknown-reduction w2 (rejected-redo re-derivation)",
+    "confidence": "unknown",
     "sources": [
       {
         "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
         "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
       },
       {
-        "label": "AnchorX public reserves data (GitHub anchorx-reserves data.json)",
+        "label": "AnchorX public reserves data (GitHub anchorx-reserves data.json, latest commit 2026-07-29)",
         "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json"
+      },
+      {
+        "label": "AnchorX public site",
+        "url": "https://www.anchorx.org/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: the Kreston ISRS 4400 AUP (report date 15/06/2026, as-of 31 May 2026) still verifies CNH 39,198,348 of cash held at regulated financial institutions against 39,128,445 AxCNH in circulation for AnchorX Global Limited, confirms the reserve account is in the company's name, and states company confirmation that funds are free from other claims, unrestricted for redemptions, and prohibited from other uses. The public GitHub reserves feed (consumed by anchorx.org/transparency) continues to describe reserve composition disclosures and lists the May 2026 SharePoint report among monthly attestations. Institution names remain undisclosed. Modeled as one 100% CNH cash slice.",
-    "compositionBasis": "Kreston AxCNH agreed-upon procedures report as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Write-time re-open 2026-07-31: the issuer's GitHub reserve feed (latest commit 2026-07-29) reports circulationAmount 39.13 and reservesAmount 39.13 and links March/June attestation files, but publishes no reserve asset classes, institution names, terms, or allocation. The linked SharePoint attestation URLs redirect to Microsoft sign-in in the current retrieval environment, so the report contents cannot be re-derived now. AnchorX's public site likewise exposes no structured composition. The prior 100% bank-deposit slice is therefore not retained; the complete reserve remains an explicit unknown residual pending a retrievable assurance report.",
+    "compositionBasis": "AnchorX public reserve feed and linked attestation index; current attestation contents unavailable",
+    "compositionAsOf": "2026-07-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies the complete reserve as CNH cash at regulated financial institutions; the institution names, deposit terms, and account-level allocation are not publicly disclosed.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The current issuer feed does not disclose the reserve composition; linked attestations were not retrievable at write time.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "CNH cash held at regulated financial institutions",
+        "reserveName": "CNH reserve (composition undisclosed)",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "CNH cash held at financial institutions is an external reserve asset rather than a tracked stablecoin dependency."
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer feed confirms matched headline totals but does not identify reserve assets; the linked attestations require sign-in in the current retrieval environment."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed regulated financial institutions",
-        "role": "bank",
-        "sharePct": 100
+            "name": "Undisclosed reserve counterparties",
+            "role": "bank"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
-    "rehypothecation": "prohibited",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
-    "confidence": "verified",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T58 safety-v9 unknown-reduction w2 (rejected-redo re-derivation)",
+    "confidence": "unknown",
     "sources": [
       {
-        "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
+        "label": "AnchorX public reserves data (GitHub anchorx-reserves data.json, latest commit 2026-07-29)",
+        "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json"
+      },
+      {
+        "label": "Kreston AxCNH linked attestation (retrieval attempted 2026-07-31)",
         "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
       }
     ],
-    "uncertainty": "Kreston verified that the reserve account was in AnchorX Global Limited's name and recorded the company's confirmation that funds were free from other claims, unrestricted for redemptions, and prohibited from other uses. The financial institutions are unnamed and the report does not establish statutory bankruptcy remoteness or disclose deposit terms."
+    "uncertainty": "No provider share, segregation, bankruptcy-remoteness, or rehypothecation fact is asserted because the current public feed omits them and the linked attestation was not retrievable without SharePoint sign-in."
   }
 }

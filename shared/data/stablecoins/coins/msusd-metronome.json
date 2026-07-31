@@ -925,7 +925,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Metronome Synth contract registry",
@@ -942,11 +942,35 @@
       {
         "label": "msUSD cross-chain proxy",
         "url": "https://etherscan.io/address/0xf37982e3f33ac007c690ed6266f3402d24aa27ea#code"
+      },
+      {
+        "label": "msUSD SyntheticToken implementation (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x206b88b20d9b2709153ab596add007b21124eb26?fields=abi,metadata,sources"
+      },
+      {
+        "label": "msUSD Hemi implementation (verified explorer)",
+        "url": "https://explorer.hemi.xyz/address/0x952a7dfa706806f1d744ff150dd231c0616e33d1?tab=contract"
+      },
+      {
+        "label": "msUSD Optimism deployment",
+        "url": "https://optimistic.etherscan.io/address/0x9dabae7274d28a45f0b65bf8ed201a5731492ca0#code"
+      },
+      {
+        "label": "msUSD Base deployment",
+        "url": "https://basescan.org/address/0x526728dbc96689597f85ae4cd716d4f7fccbae9d#code"
+      },
+      {
+        "label": "msUSD Plasma deployment",
+        "url": "https://plasmascan.to/address/0x29ad7fe4516909b9e498b5a65339e54791293234#code"
+      },
+      {
+        "label": "Metronome Synth docs",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
       }
     ],
-    "evidence": "Metronome's official contract registry identifies the Ethereum msUSD synthetic token and a separate cross-chain ProxyOFT deployment. The documentation describes msUSD as a protocol synthetic asset and the reviewed materials do not establish a dated holder blacklist or freeze inventory across the native and bridged deployments. The inherited status is retained for protocol, collateral, and cross-chain control dependencies; no direct holder restriction is asserted without deployment-wide verified source evidence.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-31 across all five tracked EVM deployments (Ethereum block 25648904, Optimism 154927378, Base 49332093, Hemi 4965568, Plasma 28513144). Each proxy resolves to the Metronome SyntheticToken implementation family; the exact verified source exposes seize(address from,address to,uint256) and gates it to registered Pool or DebtToken contracts, with no holder allowance. Its _transfer path moves any holder balance to a beneficiary, so this is direct holder-selective seizure even though there is no blacklist mapping. Live poolRegistry() reads were 0x11ead85c679eaf528c9c1fe094bf538db880048a (Ethereum), 0xe7c65eaeb1ca920f0db73cdfb4915dd31472a6a1 (Optimism), 0x4372a2b9304296c06197a823f25cf03119d2fd82 (Base), 0xdbd9cfb0b54c08e75085f8c8844e8054d13bd39a (Hemi), and 0x1c1c67e52942f4dd20a7262a9d17ea2a2e16acf3 (Plasma); their governor() controls pool registration and returned 0xd1de3f9cd4ae2f23da941a67ca4c739f8dd9af33 (Ethereum), 0xe01df4ac1e1e57266900e62c37f12c986495a618 (Optimism/Base/Plasma), and 0x468f87db090bc61c690cd86430b5407675b99242 (Hemi). Failure domain: Metronome pool/debt-token contracts and each chain's PoolRegistry governor.",
+    "reviewer": "T52 access review (fresh exact replay)",
+    "reviewedAt": "2026-07-31"
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {

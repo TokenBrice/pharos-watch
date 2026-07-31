@@ -11,21 +11,38 @@
     "rwa": false,
     "navToken": false
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
+      {
+        "label": "Arbitrum USDai verified implementation (Blockscout)",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x0ab74df531c0d8f1c46643e404b3d14723bbc212"
+      },
+      {
+        "label": "USDai Arbitrum proxy",
+        "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
+      },
+      {
+        "label": "Arbitrum PublicNode JSON-RPC",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Plasma RPC",
+        "url": "https://rpc.plasma.to"
+      },
       {
         "label": "USD.AI documentation",
         "url": "https://docs.usd.ai/"
-      },
-      {
-        "label": "USDai Ethereum deployment",
-        "url": "https://etherscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef#code"
       }
     ],
-    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not provide a primary-source holder-control model for the native token and its Arbitrum, Base, and Plasma deployments. No direct blacklist or transfer-restriction claim is made; the existing inherited upstream exposure remains recorded.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-derived 2026-07-30. Material Arbitrum hub (proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef): at Arbitrum block 489423393 EIP-1967 implementation is 0x0ab74df531c0d8f1c46643e404b3d14723bbc212. Verified USDai source exposes BLACKLIST_ADMIN_ROLE, setBlacklist(account,bool), isBlacklisted(account) (local list plus Circle USDC 0xaf88… and Tether USDT 0xFd08… lists on Arbitrum), and _update gated by notBlacklisted(msg.sender/from/to); pause modifiers also present. isBlacklisted(address(0)) returned false (function live). Ethereum block 25648410 and Base/Plasma implementations at the same proxy address lack isBlacklisted selectors (bridge mint/burn only on those spokes), so holder-level blacklist reach is Arbitrum-hub primary; spokes remain bridge/mint surfaces. Controlling authority: BLACKLIST_ADMIN_ROLE on the Arbitrum implementation. Failure domain: contract:arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef (blacklist admin) with inherited USDC/USDT list coupling on Arbitrum.",
+    "reviewer": "Grok T49 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
   },
   "collateral": "PYUSD held by the canonical USDai contract on Arbitrum and reconciled 1:1 against canonical plus bridged USDai liabilities; GPU-loan DEAL exposure belongs to the separate sUSDai yield layer",
   "pegMechanism": "Users mint and redeem canonical USDai against PYUSD through the Arbitrum hub. Satellite USDai supply is tracked as bridgedSupply against the same PYUSD pool, while sUSDai separately deploys deposited USDai into GPU-backed credit strategies.",

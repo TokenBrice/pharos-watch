@@ -108,12 +108,12 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract \u2014 the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
+    "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract — the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
     "controls": [
       {
         "chain": "optimism",
         "address": "0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9",
-        "label": "JPYT MINTER_ROLE holder \u2014 Optimism",
+        "label": "JPYT MINTER_ROLE holder — Optimism",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -136,12 +136,12 @@
             "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 135 bytes \u2014 an ERC-1967 proxy whose implementation slot holds 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5 (verified as UsdtDepositManager); EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", i.e. an OZ v5 UUPS proxy. Verified source: mint(address,uint256) is onlyRole(MINTER_ROLE) and there is no cap, so this minter is unbounded at the token level. The same address also holds BURNER_ROLE (count=1)."
+        "evidence": "At Optimism block 154,216,813: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 135 bytes — an ERC-1967 proxy whose implementation slot holds 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5 (verified as UsdtDepositManager); EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", i.e. an OZ v5 UUPS proxy. Verified source: mint(address,uint256) is onlyRole(MINTER_ROLE) and there is no cap, so this minter is unbounded at the token level. The same address also holds BURNER_ROLE (count=1)."
       },
       {
         "chain": "optimism",
         "address": "0xbdeb54641a23e2716a2978cde3cdeb1aed335479",
-        "label": "JPYT DEFAULT_ADMIN_ROLE holder \u2014 Optimism",
+        "label": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -161,7 +161,7 @@
       {
         "chain": "base",
         "address": "0x0eab9d66adb8527cd7c0e7e7c1782580431ec276",
-        "label": "JPYT MINTER_ROLE holder \u2014 Base",
+        "label": "JPYT MINTER_ROLE holder — Base",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -176,12 +176,12 @@
             "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "At Base block 48,621,528: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 100 bytes \u2014 an ERC-1967 proxy whose implementation slot holds 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb; EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\" (OZ v5 UUPS). Same address also holds BURNER_ROLE (count=1). This is the USDC DepositManager on Base \u2014 a distinct deployment from the Optimism minter."
+        "evidence": "At Base block 48,621,528: getRoleMemberCount(MINTER_ROLE)=1 and getRoleMember(MINTER_ROLE,0)=0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, confirmed current with hasRole(MINTER_ROLE, addr)=true. eth_getCode returns 100 bytes — an ERC-1967 proxy whose implementation slot holds 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb; EIP-1967 admin slot is zero and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\" (OZ v5 UUPS). Same address also holds BURNER_ROLE (count=1). This is the USDC DepositManager on Base — a distinct deployment from the Optimism minter."
       },
       {
         "chain": "base",
         "address": "0x2db58fcae002ae16963f122dd657bb360398c54c",
-        "label": "JPYT DEFAULT_ADMIN_ROLE holder \u2014 Base",
+        "label": "JPYT DEFAULT_ADMIN_ROLE holder — Base",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -201,7 +201,7 @@
       {
         "chain": "optimism",
         "address": "0x32d55717901ac132049de8a3e82db03b255091e0",
-        "label": "JPYT DepositManager upgrade admin \u2014 Optimism",
+        "label": "JPYT DepositManager upgrade admin — Optimism",
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
@@ -215,12 +215,12 @@
             "url": "https://optimism.blockscout.com/address/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5?tab=contract"
           }
         ],
-        "evidence": "At Optimism block 154,217,078: the UsdtDepositManager implementation gates _authorizeUpgrade(address) with onlyRole(UPGRADER_ROLE). Enumerating RoleGranted/RoleRevoked logs on the DepositManager proxy (0x77c1e4\u2026) shows UPGRADER_ROLE has never been granted, but DEFAULT_ADMIN_ROLE is currently held by EOA 0x32d55717901ac132049de8a3e82db03b255091e0 (granted at block 151,189,060; the earlier holder 0xd012c3d2\u2026 was revoked at block 151,189,090 \u2014 hasRole confirms only 0x32d5\u2026 is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and upgrade the mint implementation. Upgrade-only: it holds no role on the JPYT token itself."
+        "evidence": "At Optimism block 154,217,078: the UsdtDepositManager implementation gates _authorizeUpgrade(address) with onlyRole(UPGRADER_ROLE). Enumerating RoleGranted/RoleRevoked logs on the DepositManager proxy (0x77c1e4…) shows UPGRADER_ROLE has never been granted, but DEFAULT_ADMIN_ROLE is currently held by EOA 0x32d55717901ac132049de8a3e82db03b255091e0 (granted at block 151,189,060; the earlier holder 0xd012c3d2… was revoked at block 151,189,090 — hasRole confirms only 0x32d5… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and upgrade the mint implementation. Upgrade-only: it holds no role on the JPYT token itself."
       },
       {
         "chain": "base",
         "address": "0x5642c7c728b10c0ddb258783e242833871b5352b",
-        "label": "JPYT DepositManager upgrade admin \u2014 Base",
+        "label": "JPYT DepositManager upgrade admin — Base",
         "role": "proxy-admin",
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
@@ -234,13 +234,13 @@
             "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
           }
         ],
-        "evidence": "At Base block 48,621,794: UPGRADER_ROLE has never been granted on the Base DepositManager (0x0eab9d\u2026), and DEFAULT_ADMIN_ROLE is currently held by EOA 0x5642c7c728b10c0ddb258783e242833871b5352b (granted at block 45,594,302; the earlier holder 0xc584ac10\u2026 was revoked at block 45,594,338 \u2014 hasRole confirms only 0x5642\u2026 is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and replace implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Upgrade-only: it holds no role on the JPYT token itself."
+        "evidence": "At Base block 48,621,794: UPGRADER_ROLE has never been granted on the Base DepositManager (0x0eab9d…), and DEFAULT_ADMIN_ROLE is currently held by EOA 0x5642c7c728b10c0ddb258783e242833871b5352b (granted at block 45,594,302; the earlier holder 0xc584ac10… was revoked at block 45,594,338 — hasRole confirms only 0x5642… is current). getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE, so this EOA can self-grant UPGRADER_ROLE and replace implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Upgrade-only: it holds no role on the JPYT token itself."
       }
     ],
     "upgradeability": {
       "model": "custom",
       "canChangeMintLogic": true,
-      "controlRef": "JPYT DEFAULT_ADMIN_ROLE holder \u2014 Optimism",
+      "controlRef": "JPYT DEFAULT_ADMIN_ROLE holder — Optimism",
       "observedAt": "2026-07-14",
       "observedBlock": 154216813,
       "sources": [
@@ -374,66 +374,116 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Locked USDT on Optimism and USDC on Base routed into Aave",
-      "pct": 100,
+      "name": "USDT locked on Optimism DepositManager and supplied to Aave V3 (aOptUSDT)",
+      "pct": 87,
       "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether and Circle via DePhaser DepositManager and Aave custody routes",
+      "issuerOrObligor": "Tether via DePhaser UsdtDepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 and Aave V3 Optimism aOptUSDT 0x6ab707aca953edaefbc4fd23ba73294241490620",
       "riskFactors": [
         "counterparty",
         "smart-contract",
         "liquidity",
-        "concentration",
-        "custody"
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC locked on Base DepositManager and supplied to Aave V3 (aBasUSDC)",
+      "pct": 13,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle via DePhaser UsdcDepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 and Aave V3 Base aBasUSDC 0x4e65fe4dba92790696d040ac24aa414708f5c0ab",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
       {
-        "label": "DePhaser JPYT overview",
-        "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+        "label": "DePhaser JPYT overview (USDT/USDC lock routes)",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt.md"
       },
       {
-        "label": "DephaserJPY verified source on Optimism",
-        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
       },
       {
-        "label": "DephaserJPY verified source on Base",
-        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+        "label": "UsdtDepositManager source (Aave supply + totalDepositToken)",
+        "url": "https://github.com/0xDephaser/contracts/blob/main/src/UsdtDepositManager.sol"
       },
       {
-        "label": "DePhaser USDT DepositManager source on Optimism",
-        "url": "https://optimism.blockscout.com/address/0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9?tab=contract"
+        "label": "Optimism RPC aOptUSDT balanceOf DepositManager @ block 154923376",
+        "url": "https://mainnet.optimism.io"
       },
       {
-        "label": "DePhaser USDC DepositManager source on Base",
-        "url": "https://base.blockscout.com/address/0x0eab9d66adb8527cd7c0e7e7c1782580431ec276?tab=contract"
+        "label": "Base RPC aBasUSDC balanceOf DepositManager @ block 49328091",
+        "url": "https://mainnet.base.org"
       }
     ],
-    "rationale": "The current DePhaser token and DepositManager records identify two collateral routes: USDT on Optimism and USDC on Base, with deposited collateral routed into Aave. The reviewed sources do not publish a current chain-level allocation split, so the complete reserve is represented as one aggregate basket and no unsupported 50/50 allocation is inferred. Write-time re-open 2026-07-28: DePhaser JPYT docs still describe yen-pegged stablecoin with USDT/USDC redeem paths; Optimism/Base DepositManager verified contracts remain dual chain evidence. Live USDT vs USDC weight split not published \u2192 knownUnknownExposurePct=100.",
-    "compositionBasis": "DePhaser JPYT documentation plus current verified token and DepositManager sources",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Write-time re-open 2026-07-30. Issuer docs and UsdtDepositManager source confirm dual routes: users lock USDT on Optimism or USDC on Base; DepositManager supplies the deposit token into Aave V3 and mints JPYT. Live aToken balances of the DepositManager proxies measure the reserve envelope: Optimism aOptUSDT (0x6ab707aca953edaefbc4fd23ba73294241490620) balanceOf(0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) = 44,797.16 USDT at block 154923376; Base aBasUSDC (0x4e65fe4dba92790696d040ac24aa414708f5c0ab) balanceOf(0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) = 6,893.12 USDC at block 49328091; combined 51,690.27 USD -> 86.66%/13.34% rounded to 87/13 integer slices. Matching totalDepositToken reads (40,544.29 USDT / 6,059.53 USDC) confirm the same ~87/13 liability split. Operator-claimable Aave surplus (getCurrentAaveProfit) is included in aToken balances and is not a separate reserve class. Residual unknowns: Aave utilization-driven withdrawal latency and legal custody terms beyond on-chain smart-contract custody.",
+    "compositionBasis": "On-chain aToken balances of DePhaser DepositManager proxies plus issuer money-flow docs",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The collateral asset family and Aave routing are identified, but the current Optimism/Base allocation, exact Aave positions, and custody/legal terms are not published in the reviewed sources.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Locked USDT on Optimism and USDC on Base routed into Aave",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies both tracked stablecoin routes but does not publish a current defensible allocation split.",
-        "candidateCoinIds": [
-          "usdt-tether",
-          "usdc-circle"
-        ]
-      }
-    ]
+    "knownUnknownExposure": "Legal segregation/bankruptcy-remoteness of Aave positions and instantaneous redeemable liquidity under high Aave utilization are not published as static legal terms; weights themselves are measured.",
+    "knownUnknownExposurePct": 0
   },
-  "launchDate": "2024-10-16"
+  "launchDate": "2024-10-16",
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "DePhaser UsdtDepositManager (Optimism UUPS proxy 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) holding aOptUSDT",
+        "role": "other",
+        "sharePct": 87,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "DePhaser UsdcDepositManager (Base UUPS proxy 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) holding aBasUSDC",
+        "role": "other",
+        "sharePct": 13,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Aave V3 Pool (Optimism/Base) as aToken lending venue",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "UsdtDepositManager source (supplies deposit token to Aave; aToken held by manager)",
+        "url": "https://github.com/0xDephaser/contracts/blob/main/src/UsdtDepositManager.sol"
+      },
+      {
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+      },
+      {
+        "label": "Optimism/Base aToken balance pins (DepositManager holders)",
+        "url": "https://mainnet.optimism.io"
+      }
+    ],
+    "uncertainty": "Reserves are held as Aave aTokens by upgradeable DepositManager contracts; Aave markets rehypothecate supply to borrowers. No off-chain segregated custody, bankruptcy-remote trust, or legal segregation opinion was located. DepositManager DEFAULT_ADMIN can self-grant UPGRADER_ROLE and replace the implementation."
+  }
 }

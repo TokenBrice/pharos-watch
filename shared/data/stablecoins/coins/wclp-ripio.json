@@ -182,18 +182,34 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
+      {
+        "label": "Sourcify exact-match LatamStable implementation (Base, chain 8453)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba?fields=sources,compilation"
+      },
+      {
+        "label": "WCLP Ethereum proxy",
+        "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
+      },
       {
         "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ethereum public RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC fixed-block reads",
+        "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "Ripio's current issuer page lists wCLP in its local-stablecoin product family and describes issuer-managed local-currency stablecoins. It does not publish a current token-level blacklist, freeze, pause, privileged-burn, or transfer-restriction inventory for all tracked wCLP deployments. Possible is retained for centrally issued multi-chain mechanics without asserting a direct holder-control function.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-07-30. The Sourcify exact-match LatamStable implementation 0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba (source re-opened 2026-07-30) inherits ERC20PausableUpgradeable with _update gated whenNotPaused, so a live PAUSER_ROLE can halt every holder transfer globally; it exposes no per-address blacklist, freeze, or seize mapping. All six deployments share this implementation: the Ethereum and Base proxy EIP-1967 implementation slots re-read at Ethereum block 25656501 and Base block 49328608 both resolve to it, and the 2026-07-20 deployment-scoped transfer review verified code-hash identity on worldchain, bsc, polygon, and gnosis. Role history from RoleGranted/RoleRevoked logs on Ethereum: deployer 0x5ca3f8eeba12d83408fc097c2dad79212456f20f held all roles from initialization (block 23891029) and was fully revoked at block 24995207, when DEFAULT_ADMIN, PAUSER, MINTER, and UPGRADER all moved to Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b. Fixed-block reads confirm hasRole(PAUSER_ROLE, that EOA) = true and paused() = false at Ethereum block 25656501 and Base block 49328608; UPGRADER_ROLE (UUPS, no timelock) is held by the same EOA, with the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 as second DEFAULT_ADMIN. Reach is a token-level global pause controlled by a single EOA, not a per-address blacklist, and transfers are currently open; true reflects that live pause capability (same verdict basis as the dusd-dtrinity 2026-07-30 review). No wrapper or bridge inheritance applies - issuance is issuer-native burn-mint on every chain.",
+    "reviewer": "Kimi T24 unknown-reduction wave-2 research",
+    "reviewedAt": "2026-07-30"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
@@ -408,8 +424,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "OpenAI Codex backing review; Kimi T24 re-verification",
     "confidence": "probable",
     "sources": [
       {
@@ -417,7 +433,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "rationale": "Ripio's current local-stablecoin page identifies WCLP as a Chilean-peso stablecoin in its wFIAT product family. The repository's existing collateral description supports a single aggregate reserve envelope of Chilean-peso cash and liquid local-currency instruments, but the reviewed issuer page does not publish a WCLP-specific asset split, named financial institution, or reserve attestation.",
+    "rationale": "Ripio's current local-stablecoin page identifies WCLP as a Chilean-peso stablecoin in its wFIAT product family. Re-checked 2026-07-30: the wFIAT attestation index publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but still no wCLP attestation or reserve report, so the composition stays unclassified rather than borrowing sibling-token assurance. The repository's existing collateral description supports a single aggregate reserve envelope of Chilean-peso cash and liquid local-currency instruments, but the reviewed issuer page does not publish a WCLP-specific asset split, named financial institution, or reserve attestation.",
     "compositionBasis": "Ripio wFIAT local-stablecoin disclosure for WCLP",
     "scope": "full-composition",
     "knownUnknownExposure": "The full 100% reserve envelope remains unclassified beyond Chilean-peso cash and liquid local-currency instruments; no per-token attestation or current category weights were found.",

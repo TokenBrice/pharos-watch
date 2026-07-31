@@ -543,8 +543,8 @@
     }
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T64 reserve review",
     "confidence": "probable",
     "sources": [
       {
@@ -554,9 +554,13 @@
       {
         "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio wFIAT product page",
+        "url": "https://www.ripio.com/en/wfiat"
       }
     ],
-    "rationale": "The March 31, 2026 certification reconciles 518,689 outstanding wMXN across six chains and MXN937,364.13 of collateral to a Mexican bank statement, then certifies that all outstanding tokens are backed by Mexican pesos at a financial institution in Mexico. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-07-28: independent CPA certification PDF for wMXN as of 2026-03-31 still certifies 100% local-currency bank-deposit collateral; Ripio local stablecoins page still lists the wFIAT products.",
+    "rationale": "The March 31, 2026 certification reconciles 518,689 outstanding wMXN across six chains and MXN937,364.13 of collateral to a Mexican bank statement, then certifies that all outstanding tokens are backed by Mexican pesos at a financial institution in Mexico. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-07-31: the CPA certification PDF still states 100% local-currency bank-deposit collateral, and Ripio's current local-stablecoins and wFIAT pages still identify wMXN as a peso-backed wFIAT product. No later reserve breakdown or named bank was disclosed, so the single 100% bank-deposit slice preserves the documented unknowns.",
     "compositionBasis": "Independent public accountant certification of the wMXN collateral as of March 31, 2026",
     "compositionAsOf": "2026-03-31",
     "scope": "full-composition",
@@ -574,8 +578,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T64 reserve review",
     "confidence": "probable",
     "sources": [
       {

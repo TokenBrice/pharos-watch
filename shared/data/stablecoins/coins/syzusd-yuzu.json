@@ -36,11 +36,12 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "yzusd-yuzu",
   "implementationLaunchDate": "2025-10-10",
+  "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
-    "disposition": "unresolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "rationale": "syzUSD is an ERC-4626 strategy-vault share redeemable for yzUSD. It has no mechanism that intentionally diverges from the parent, so no direct override is set: the variant inherits yzUSD's resolved cdp archetype while retaining its distinct NAV-accreting wrapper semantics.",
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T38 unknown-reduction wave 2",
+    "rationale": "syzUSD is Yuzu's ERC-4626 staking wrapper over yzUSD: issuer documentation re-read on 2026-07-30 states that staking converts form only, confers no separate rights beyond representing the staked position, and unstaking back to yzUSD completes almost instantly, so the wrapper's live stabilization and claim structure is exactly the parent's. Parent yzusd-yuzu carries a resolved cdp archetype (an overcollateralized on-chain strategy pool with the yzPP junior tranche absorbing first losses), and this variant intentionally does not diverge, so mechanismArchetype is set to cdp and no archetypeOverride is recorded. Classification clears NR eligibility only; it does not assert that the mechanism is safe.",
     "sources": [
       {
         "label": "Yuzu syzUSD documentation",

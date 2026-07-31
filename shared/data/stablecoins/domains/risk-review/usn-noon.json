@@ -1,8 +1,8 @@
 {
   "id": "usn-noon",
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Noon contracts and addresses",
@@ -13,13 +13,29 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
       },
       {
+        "label": "Ethereum USN implementation source (USNUpgradeableHyperlane.sol)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=sources"
+      },
+      {
         "label": "Ethereum USN proxy",
         "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed#code"
+      },
+      {
+        "label": "Noon admin Safe API",
+        "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+      },
+      {
+        "label": "USN zkSync Era warp token",
+        "url": "https://era.zksync.network/address/0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
+      },
+      {
+        "label": "USN Sophon warp token",
+        "url": "https://explorer.sophon.xyz/address/0xc1aa99c3881b26901af70738a7c217dc32536d36"
       }
     ],
-    "evidence": "Noon's official contracts page identifies USN deployments as an Ethereum home token with LayerZero OFT representations, and the verified Ethereum implementation exposes upgradeable OFT and Hyperlane cross-chain administration. The reviewed primary sources do not establish a current holder blacklist or freeze function, but the upgradeable proxy and external messaging controls leave a material intervention surface. Possible is retained pending a dated control inventory for the native and bridged deployments.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "On 2026-07-30 the access posture was re-derived across the canonical and bridged deployments. At Ethereum block 25648350 the USN proxy 0xdA67B4284609d2d48e5d10cfAc411572727dc1eD still resolves to implementation 0x6bdc8104ec827cd48b9cac526420b59a31bc8397, whose Sourcify-verified source (contracts/USNUpgradeableHyperlane.sol) exposes onlyOwner blacklistAccount(address) and unblacklistAccount(address) over a public blacklist mapping and reverts transfers with BlacklistedAddress whenever blacklist[from] || blacklist[to]. owner() returned the Noon 3-of-6 admin Safe 0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f, so the live signer set can blacklist any holder immediately; the 48-hour timelock covers only proxy upgrades, not the blacklist function. The same token codebase runs on the bridged representations: the zkSync Era warp 0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6 exposes the blacklist(address) view and its blacklistAccount reverts AccessControlUnauthorizedAccount for unauthorized callers, and the Sophon warp 0xc1aa99c3881b26901af70738a7c217dc32536d36 exposes the blacklist view and reverts OwnableUnauthorizedAccount (probes at zkSync Era block 71379660 and Sophon block 29616847); the Starknet representation is owner-administered under the 2026-07-20 bridge-route review. Direct holder-level freeze reach is therefore a current live fact, so the posture is reviewed true (individual reach), superseding the 2026-07-14 possible.",
+    "reviewer": "Kimi T38 unknown-reduction wave 2",
+    "reviewedAt": "2026-07-30"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

@@ -16,25 +16,29 @@
     "reviewedStatus": true,
     "sources": [
       {
+        "label": "Sourcify exact-match Umbrella StakeToken implementation (pause + whenNotPaused _update)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
+      },
+      {
+        "label": "Ethereum PublicNode RPC observation block 25648452",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "stkGHO proxy on Etherscan",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      },
+      {
         "label": "Aave Umbrella documentation",
         "url": "https://aave.com/help/umbrella/umbrella"
       },
       {
-        "label": "stkGHO verified Ethereum contract",
-        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
-      },
-      {
-        "label": "Aave GHO contract",
+        "label": "Aave GHO underlying token",
         "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
-      },
-      {
-        "label": "stkGHO verified implementation",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-22: the stkGHO implementation exposes owner-controlled pause(), and its _update transfer path is guarded by whenNotPaused. paused() was false at review, but the owner can block all stkGHO share transfers while paused. This is a direct current control surface in addition to the GHO exposure, so the status is true rather than inherited-only.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is the Ethereum upgradeable proxy 0x4f82…5033. At Ethereum block 25648452: EIP-1967 implementation 0x75e8…0197, admin ProxyAdmin 0xde9f…6a9a whose owner is Aave Governance V3 Level-1 Executor 0x5300…192A; asset()=GHO 0x40d1…c2f; paused()=false; owner() on the stake token = 0xd400…a8. Sourcify exact-match StakeToken.sol inherits PausableUpgradeable, exposes onlyOwner pause()/unpause(), and gates _update (and therefore transfer/transferFrom) with whenNotPaused — so the owner can block all holder share transfers while paused. No isBlacklisted/blacklist/freeze/burn(account) selectors on the implementation. Freeze reach is therefore direct (global pause) under Aave governance-controlled ownership, not inherited-only; GHO remains an additional upstream exposure. Transfer categorical posture matches restrictable via the same pause surface; material-scope publication of the transfer overlay still requires chainCirculatingById for this asset.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

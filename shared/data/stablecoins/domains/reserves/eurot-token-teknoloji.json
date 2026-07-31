@@ -16,19 +16,23 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi backing re-review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Token EURO proof of reserves",
         "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      },
+      {
+        "label": "Token Teknoloji EUROT product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
       }
     ],
-    "rationale": "Token states that EURO reserves are held in euro at Ziraat Participation Bank and Akbank. The issuer page identifies the reserve institutions but does not publish current balances, account terms, or bank-level weights.",
-    "compositionBasis": "Token proof-of-reserves disclosure",
+    "rationale": "Re-verified 2026-07-30: Token's proof-of-reserves page (English and Turkish) states that EUROT euro reserves are kept in euro at Ziraat Participation Bank and Akbank, and links bank-signed balance letters (Akbank 2024-05-08, Ziraat Participation 2024-07-24) corroborating euro balances at both banks; the product page confirms the 1:1 euro backing mechanism. The issuer does not publish current balances, the bank-level split, or account terms.",
+    "compositionBasis": "Token proof-of-reserves disclosure (re-verified 2026-07-30)",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve banks are named, but the split between them and the applicable account liquidity and safeguarding terms are undisclosed.",
+    "knownUnknownExposure": "The reserve banks are named, but the published bank balance letters are dated 2024-05-08 and 2024-07-24, and the split between the banks, current balances, and applicable account liquidity and safeguarding terms are undisclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -38,7 +42,8 @@
         "disposition": "untracked-exogenous-asset",
         "rationale": "The disclosed backing is direct euro bank deposits rather than a tracked stablecoin dependency."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-30"
   },
   "custodyProfile": {
     "providers": [
@@ -56,13 +61,17 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi backing re-review",
     "confidence": "probable",
     "sources": [
       {
         "label": "Token EURO proof of reserves",
         "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      },
+      {
+        "label": "Token Teknoloji EUROT product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
       }
     ],
     "uncertainty": "Token names the two reserve banks but does not disclose the account structure, bank-level shares, segregation, bankruptcy treatment, or rehypothecation terms."

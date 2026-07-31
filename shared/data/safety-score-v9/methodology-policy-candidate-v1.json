@@ -2095,6 +2095,7 @@
         "*"
       ],
       "pathKinds": [
+        "deployment-control",
         "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",

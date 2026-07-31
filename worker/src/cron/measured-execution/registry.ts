@@ -13,7 +13,7 @@ export interface DexMeasuredExecutionDeployment {
     | "pancakeswap-v3-quoter-v2"
     | "aerodrome-slipstream-quoter-v2";
   protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
-  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc";
+  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -61,6 +61,15 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     expectedCodeHash: "0xceb5b8bc35e09fc64b1c48c6b920e0d2e37d5710e4f3ef214e1a81f75acee51e",
     factoryAddress: "0x33128a8fc17869897dce68ed026d694621f6fdfd",
     expectedFactoryCodeHash: "0x95707a4ac71f20181a63ef7d180e3c625be5d20fc8f6f980befa966bad568132",
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2",
+    protocol: "uniswap-v3",
+    chain: "celo",
+    endpointAddress: "0x82825d0554fa07f7fc52ab63c961f330fdefa8e8",
+    expectedCodeHash: "0x557b5bc80c7000c05bac66693aff2264927a0a22ea1f80d590449b52d515aa34",
+    factoryAddress: "0xafe208a311b21f13ef87e33a90049fc17a7acdec",
+    expectedFactoryCodeHash: "0x5960f2f785dd273f0eeb9624f32a9f93bd1560dc1335171d22411d48296d79b3",
   },
   {
     adapterProfileId: "aerodrome-slipstream-quoter-v2",
@@ -113,13 +122,17 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * memory limit and the owner accepted clean retirement. Keys not listed here
  * remain shadow-only fail-closed when a reviewed deployment still exists. The
  * initial cohort was restored 2026-07-20 after the #592 security rollup
- * emptied it as an over-broad artifact.
+ * emptied it as an over-broad artifact. Owner ruling R5 activated Celo as the
+ * coupled Graph + QuoterV2 lane reviewed in
+ * agents/safety-score-v9-producer-failed-remediation/artifacts/exact-dex-route-coverage/activation-univ3-chains.json
+ * after the OOM split-invocation became permanent.
  */
 export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [
   "aerodrome-slipstream-quoter-v2:base",
   "uniswap-v3-quoter-v2:ethereum",
   "uniswap-v3-quoter-v2:polygon",
   "uniswap-v3-quoter-v2:arbitrum",
+  "uniswap-v3-quoter-v2:celo",
   "pancakeswap-v3-quoter-v2:base",
   "pancakeswap-v3-quoter-v2:bsc",
   "pancakeswap-v3-quoter-v2:ethereum",
@@ -137,10 +150,13 @@ export function getDexMeasuredExecutionDeployment(
   adapterProfileId: string,
   chain: string,
 ): DexMeasuredExecutionDeployment | null {
+  const normalizedAdapterProfileId = adapterProfileId.trim().toLowerCase();
   const normalizedChain = chain.trim().toLowerCase();
   return (
     DEX_MEASURED_EXECUTION_DEPLOYMENTS.find(
-      (deployment) => deployment.adapterProfileId === adapterProfileId && deployment.chain === normalizedChain,
+      (deployment) =>
+        deployment.adapterProfileId === normalizedAdapterProfileId &&
+        deployment.chain === normalizedChain,
     ) ?? null
   );
 }

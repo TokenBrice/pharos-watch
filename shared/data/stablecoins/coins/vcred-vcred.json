@@ -64,13 +64,21 @@
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "Hemi contract source",
+        "label": "Hemi explorer verified VCRED source (API)",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
+      {
+        "label": "Hemi explorer VCRED contract page",
         "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+      },
+      {
+        "label": "Hemi public RPC observation block 4965111",
+        "url": "https://rpc.hemi.network/rpc"
       }
     ],
-    "evidence": "The tracked Hemi deployment is the only catalogued vCRED token contract. Its reviewed verified source exposes standard ERC-20 transfer and transferFrom behavior plus admin mint authority, but no holder freeze, blacklist, pause, seize, arbitrary burn, or transfer-restriction function. The admin mint surface is recorded separately and is not treated as authority to block an existing holder transfer.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is Hemi 0x7188…0aa1. Verified source (explorer API) is OpenZeppelin ERC20 + ERC20Burnable + Ownable and states free transferability; onlyOwner mint(address,uint256) is the sole privileged path; burn paths are the stock holder/allowance burns (burn(uint256) present; no burn(address,uint256) onlyOwner seize). At Hemi block 4965111: non-proxy (EIP-1967 implementation/admin slots zero); owner()=Safe 0x3ede…75Be; bytecode lacks pause/paused/isBlacklisted/blacklist/freeze/setOperator selectors. No upstream stablecoin wrapper inheritance. Freeze reach is none; transfer posture is permissionless. Transfer categorical publication still requires chainCirculatingById for material deployment scope.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

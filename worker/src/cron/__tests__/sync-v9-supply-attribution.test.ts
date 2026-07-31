@@ -64,7 +64,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     vi.useRealTimers();
   });
 
-  it("publishes one exact degraded generation and retries only after 15 minutes", async () => {
+  it("publishes one exact degraded generation and retries only after the producer cooldown", async () => {
     const { sqlite, db } = openDb();
     try {
       const fixedInput = createSafetyScoreV9FullRegistryInput();

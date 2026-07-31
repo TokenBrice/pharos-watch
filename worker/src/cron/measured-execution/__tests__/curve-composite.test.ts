@@ -13,9 +13,11 @@ import {
 } from "@shared/types/measured-execution";
 import {
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
+  CURVE_GUSD_3CRV_METAPOOL_POLICY,
   CURVE_METAPOOL_ADAPTER_PROFILE_ID,
   CURVE_NXUSD_METAPOOL_POLICY,
   CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
+  CURVE_R3_METAPOOL_POLICIES,
   CURVE_USD1_METAPOOL_POLICY,
   buildCurveCompositeMeasuredExecutionTarget,
   createCurveCompositeQuoteExecutor,
@@ -24,6 +26,7 @@ import {
   validateCurveCompositeProfileProof,
   type CurveCompositePoolPolicy,
   type CurveCompositeRuntimeEvidence,
+  type CurveMetapoolPolicy,
 } from "../curve-composite";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 
@@ -48,6 +51,14 @@ const LEGACY_FACTORY_ARRAY_ABI = parseAbi([
   "function get_underlying_coins(address pool) view returns (address[8])",
   "function get_underlying_decimals(address pool) view returns (uint256[8])",
 ]);
+const MAIN_REGISTRY_ARRAY_ABI = parseAbi([
+  "function get_coins(address pool) view returns (address[8])",
+  "function get_underlying_coins(address pool) view returns (address[8])",
+  "function get_underlying_decimals(address pool) view returns (uint256[8])",
+]);
+const MAIN_REGISTRY_ABI = parseAbi([
+  "function get_pool_from_lp_token(address lpToken) view returns (address)",
+]);
 const ERC20_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const ERC4626_ABI = parseAbi([
   "function asset() view returns (address)",
@@ -57,7 +68,7 @@ const BLOCK_NUMBER = 25_618_327;
 const BLOCK_TIMESTAMP = 1_784_970_583;
 
 function addressMap(): Map<string, string> {
-  return new Map([
+  const result = new Map([
     ["ethereum:0x865377367054516e17014ccded1e7d814edc9ce4", "dola-inverse-finance"],
     ["ethereum:0x9d39a5de30e57443bff2a8307a4256c8797a3497", "susde-ethena"],
     ["ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", "usd1-world-liberty-financial"],
@@ -65,10 +76,18 @@ function addressMap(): Map<string, string> {
     ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
     ["avalanche:0xf14f4ce569cb3679e99d5059909e23b07bd2f387", "nxusd-nereus"],
   ]);
+  for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+    for (const token of policy.executionTokens) {
+      if (token.trackedAssetId) {
+        result.set(`${policy.chain}:${token.address}`, token.trackedAssetId);
+      }
+    }
+  }
+  return result;
 }
 
 function priceMap(): Map<string, number> {
-  return new Map([
+  const result = new Map([
     ["dola-inverse-finance", 0.996],
     ["susde-ethena", 1.24],
     ["usd1-world-liberty-financial", 0.999],
@@ -76,6 +95,10 @@ function priceMap(): Map<string, number> {
     ["usdt-tether", 0.999],
     ["nxusd-nereus", 0.8094],
   ]);
+  for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+    if (!result.has(policy.stablecoinId)) result.set(policy.stablecoinId, 1);
+  }
+  return result;
 }
 
 function rateTarget() {
@@ -160,6 +183,36 @@ function nxusdTarget(
   });
 }
 
+function reviewedMetapoolTarget(policy: CurveMetapoolPolicy) {
+  return buildCurveCompositeMeasuredExecutionTarget({
+    curveData: {
+      poolAddress: policy.poolAddress,
+      registryId: policy.expectedRegistryId,
+      isMetaPool: true,
+      basePoolAddress: policy.metapool.basePoolAddress,
+      poolCoins: policy.poolTokens.map((token, index) => ({
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        usdPrice: 1,
+        isBasePoolLpToken: index === 1,
+      })),
+      underlyingCoins: policy.executionTokens.map((token) => ({
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        usdPrice: 1,
+      })),
+    },
+    chain: policy.chain,
+    stablecoinId: policy.stablecoinId,
+    chainAddressToId: addressMap(),
+    stablecoinPriceById: priceMap(),
+    retainedTvlUsd: 1_000_000,
+    capturedAt: BLOCK_TIMESTAMP - 60,
+  });
+}
+
 function bindingCall(
   role: string,
   target: `0x${string}`,
@@ -186,9 +239,12 @@ function encodeFactoryAddresses(
       result: addresses,
     } as never);
   }
-  const width = functionName === "get_coins" ? 4 : 8;
+  const width =
+    functionName === "get_coins" && policy.factoryArrayEncoding === "legacy-fixed" ? 4 : 8;
   return encodeFunctionResult({
-    abi: LEGACY_FACTORY_ARRAY_ABI,
+    abi: policy.factoryArrayEncoding === "registry-fixed"
+      ? MAIN_REGISTRY_ARRAY_ABI
+      : LEGACY_FACTORY_ARRAY_ABI,
     functionName,
     result: [
       ...addresses,
@@ -212,7 +268,9 @@ function encodeFactoryDecimals(
     });
   }
   return encodeFunctionResult({
-    abi: LEGACY_FACTORY_ARRAY_ABI,
+    abi: policy.factoryArrayEncoding === "registry-fixed"
+      ? MAIN_REGISTRY_ARRAY_ABI
+      : LEGACY_FACTORY_ARRAY_ABI,
     functionName: "get_underlying_decimals",
     result: [...decimals, ...Array.from({ length: 8 - decimals.length }, () => 0n)],
   } as never);
@@ -250,20 +308,24 @@ function commonBindingCalls(
         policy.poolTokens.map((token) => token.address),
       ),
     ),
-    bindingCall(
-      "factory-implementation",
-      policy.factoryAddress,
-      encodeFunctionData({
-        abi: FACTORY_ABI,
-        functionName: "get_implementation_address",
-        args: [policy.poolAddress],
-      }),
-      encodeFunctionResult({
-        abi: FACTORY_ABI,
-        functionName: "get_implementation_address",
-        result: policy.implementationAddress,
-      }),
-    ),
+    ...(policy.implementationBinding === "factory-lookup"
+      ? [
+          bindingCall(
+            "factory-implementation",
+            policy.factoryAddress,
+            encodeFunctionData({
+              abi: FACTORY_ABI,
+              functionName: "get_implementation_address",
+              args: [policy.poolAddress],
+            }),
+            encodeFunctionResult({
+              abi: FACTORY_ABI,
+              functionName: "get_implementation_address",
+              result: policy.implementationAddress,
+            }),
+          ),
+        ]
+      : []),
     ...policy.poolTokens.map((token, index) =>
       bindingCall(
         `pool-coin-${index}`,
@@ -387,9 +449,33 @@ function rateEvidence(): CurveCompositeRuntimeEvidence {
 }
 
 function metapoolEvidence(
-  policy: typeof CURVE_USD1_METAPOOL_POLICY | typeof CURVE_NXUSD_METAPOOL_POLICY =
-    CURVE_USD1_METAPOOL_POLICY,
+  policy: CurveMetapoolPolicy = CURVE_USD1_METAPOOL_POLICY,
 ): CurveCompositeRuntimeEvidence {
+  const basePoolRole = policy.metapool.basePoolBinding === "registry-lp-token"
+    ? "registry-base-pool-from-lp-token"
+    : "factory-base-pool";
+  const basePoolCallData = policy.metapool.basePoolBinding === "registry-lp-token"
+    ? encodeFunctionData({
+        abi: MAIN_REGISTRY_ABI,
+        functionName: "get_pool_from_lp_token",
+        args: [policy.poolTokens[1].address],
+      })
+    : encodeFunctionData({
+        abi: FACTORY_ABI,
+        functionName: "get_base_pool",
+        args: [policy.poolAddress],
+      });
+  const basePoolReturnData = policy.metapool.basePoolBinding === "registry-lp-token"
+    ? encodeFunctionResult({
+        abi: MAIN_REGISTRY_ABI,
+        functionName: "get_pool_from_lp_token",
+        result: policy.metapool.basePoolAddress,
+      })
+    : encodeFunctionResult({
+        abi: FACTORY_ABI,
+        functionName: "get_base_pool",
+        result: policy.metapool.basePoolAddress,
+      });
   return {
     blockTimestamp: BLOCK_TIMESTAMP,
     proof: {
@@ -409,18 +495,10 @@ function metapoolEvidence(
       calls: [
         ...commonBindingCalls(policy),
         bindingCall(
-          "factory-base-pool",
+          basePoolRole,
           policy.factoryAddress,
-          encodeFunctionData({
-            abi: FACTORY_ABI,
-            functionName: "get_base_pool",
-            args: [policy.poolAddress],
-          }),
-          encodeFunctionResult({
-            abi: FACTORY_ABI,
-            functionName: "get_base_pool",
-            result: policy.metapool.basePoolAddress,
-          }),
+          basePoolCallData,
+          basePoolReturnData,
         ),
         bindingCall(
           "factory-underlying-coins",
@@ -514,6 +592,196 @@ function compositeProfile(
 }
 
 describe("reviewed Curve rate-bearing and metapool targets", () => {
+  it("admits exactly the nine owner-ratified metapools as active underlying routes", () => {
+    expect(CURVE_R3_METAPOOL_POLICIES).toHaveLength(9);
+    expect(new Set(CURVE_R3_METAPOOL_POLICIES.map((policy) => policy.stablecoinId))).toEqual(
+      new Set([
+        "alusd-alchemix",
+        "dola-inverse-finance",
+        "eusd-electronic-usd",
+        "gusd-gemini",
+        "mai-qidao",
+        "meusd-mezo",
+        "msusd-metronome",
+        "ousd-origin-protocol",
+        "tusd-trueusd",
+      ]),
+    );
+
+    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+      const target = reviewedMetapoolTarget(policy);
+      expect(DexMeasuredExecutionTargetSchema.safeParse(target).success).toBe(true);
+      expect(policy).toMatchObject({
+        adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+        quoteFunction: "get_dy_underlying",
+        mode: "active",
+        scoreEligible: true,
+      });
+      const decoded = decodeFunctionData({
+        abi: POOL_ABI,
+        data: encodeCurveCompositeQuote({
+          policy,
+          inputIndex: policy.inputIndex,
+          outputIndex: policy.outputIndex,
+          amountInRaw: 1_000n * 10n ** BigInt(policy.executionTokens[policy.inputIndex]!.decimals),
+        }),
+      });
+      expect(decoded.functionName).toBe("get_dy_underlying");
+      expect(decoded.args.slice(0, 2)).toEqual([
+        BigInt(policy.inputIndex),
+        BigInt(policy.outputIndex),
+      ]);
+
+      const evidence = metapoolEvidence(policy);
+      expect(evaluateCurveCompositeEligibility({
+        chain: policy.chain,
+        endpointAddress: policy.poolAddress,
+        blockNumber: BLOCK_NUMBER,
+        nowSec: BLOCK_TIMESTAMP + 60,
+        evidence,
+      })).toEqual({ ok: true });
+      expect(
+        validateCurveCompositeProfileProof(compositeProfile(target!, policy, evidence)),
+      ).toEqual([]);
+    }
+  });
+
+  it("fails every active metapool target closed on registry, base, order, or decimals drift", () => {
+    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+      const valid = {
+        poolAddress: policy.poolAddress,
+        registryId: policy.expectedRegistryId,
+        isMetaPool: true,
+        basePoolAddress: policy.metapool.basePoolAddress,
+        poolCoins: policy.poolTokens.map((token, index) => ({
+          address: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          usdPrice: 1,
+          isBasePoolLpToken: index === 1,
+        })),
+        underlyingCoins: policy.executionTokens.map((token) => ({
+          address: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          usdPrice: 1,
+        })),
+      };
+      const build = (
+        curveData: Parameters<typeof buildCurveCompositeMeasuredExecutionTarget>[0]["curveData"],
+      ) =>
+        buildCurveCompositeMeasuredExecutionTarget({
+          curveData,
+          chain: policy.chain,
+          stablecoinId: policy.stablecoinId,
+          chainAddressToId: addressMap(),
+          stablecoinPriceById: priceMap(),
+          retainedTvlUsd: 1_000_000,
+          capturedAt: BLOCK_TIMESTAMP,
+        });
+
+      expect(build({ ...valid, registryId: "unreviewed" })).toBeNull();
+      expect(build({
+        ...valid,
+        basePoolAddress: "0x1111111111111111111111111111111111111111",
+      })).toBeNull();
+      expect(build({
+        ...valid,
+        poolCoins: [...valid.poolCoins].reverse(),
+      })).toBeNull();
+      expect(build({
+        ...valid,
+        underlyingCoins: valid.underlyingCoins.map((token, index) => ({
+          ...token,
+          decimals: index === policy.outputIndex ? token.decimals + 1 : token.decimals,
+        })),
+      })).toBeNull();
+    }
+  });
+
+  it("rejects active runtime evidence with any pinned deployment or quote identity drift", () => {
+    const wrongAddress = "0x1111111111111111111111111111111111111111" as const;
+    const wrongHash = `0x${"33".repeat(32)}` as `0x${string}`;
+    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+      const evidence = metapoolEvidence(policy);
+      const evaluate = (
+        proof: DexMeasuredExecutionCurveCompositeProof,
+      ) => evaluateCurveCompositeEligibility({
+        chain: policy.chain,
+        endpointAddress: policy.poolAddress,
+        blockNumber: BLOCK_NUMBER,
+        nowSec: BLOCK_TIMESTAMP + 60,
+        evidence: { ...evidence, proof },
+      });
+
+      expect(evaluate({
+        ...evidence.proof,
+        registeredPoolAddress: wrongAddress,
+        poolCodeHash: wrongHash,
+      })).toEqual({ ok: false, reason: "runtime-code-hash-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        factoryAddress: wrongAddress,
+      })).toEqual({ ok: false, reason: "factory-code-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        implementationAddress: wrongAddress,
+      })).toEqual({ ok: false, reason: "implementation-code-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        quoteFunction: "get_dy",
+      })).toEqual({ ok: false, reason: "pool-token-order-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        poolTokenAddresses: [...evidence.proof.poolTokenAddresses].reverse(),
+      })).toEqual({ ok: false, reason: "pool-token-order-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        executionTokenAddresses: [
+          wrongAddress,
+          ...evidence.proof.executionTokenAddresses.slice(1),
+        ],
+      })).toEqual({ ok: false, reason: "pool-token-order-mismatch" });
+      expect(evaluate({
+        ...evidence.proof,
+        metapool: {
+          ...evidence.proof.metapool!,
+          basePoolAddress: wrongAddress,
+        },
+      })).toEqual({ ok: false, reason: "base-pool-mismatch" });
+    }
+  });
+
+  it("pins GUSD to the standalone main-registry proof shape", () => {
+    const policy = CURVE_GUSD_3CRV_METAPOOL_POLICY;
+    const target = reviewedMetapoolTarget(policy)!;
+    const evidence = metapoolEvidence(policy);
+    const roles = evidence.proof.calls.map((call) => call.role);
+
+    expect(policy).toMatchObject({
+      expectedRegistryId: "main",
+      factoryArrayEncoding: "registry-fixed",
+      implementationBinding: "standalone-runtime",
+      implementationAddress: policy.poolAddress,
+      metapool: { basePoolBinding: "registry-lp-token" },
+    });
+    expect(roles).not.toContain("factory-implementation");
+    expect(roles).toContain("registry-base-pool-from-lp-token");
+    expect(validateCurveCompositeProfileProof(compositeProfile(target, policy, evidence))).toEqual([]);
+
+    const wrongBaseBinding = structuredClone(compositeProfile(target, policy, evidence));
+    wrongBaseBinding.curveCompositeProof!.calls.find(
+      (call) => call.role === "registry-base-pool-from-lp-token",
+    )!.returnData = encodeFunctionResult({
+      abi: MAIN_REGISTRY_ABI,
+      functionName: "get_pool_from_lp_token",
+      result: "0x1111111111111111111111111111111111111111",
+    });
+    expect(validateCurveCompositeProfileProof(wrongBaseBinding)).toContain(
+      "metapool-path-proof-mismatch",
+    );
+  });
+
   it("builds exact shadow targets with independently valued outputs", () => {
     const rate = rateTarget();
     const meta = metapoolTarget();
@@ -570,6 +838,14 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       inputIndex: 0,
       outputIndex: 2,
       quoteFunction: "get_dy_underlying",
+    });
+    expect(CURVE_USD1_METAPOOL_POLICY).toMatchObject({
+      mode: "shadow",
+      scoreEligible: false,
+    });
+    expect(CURVE_DOLA_SUSDE_RATE_BEARING_POLICY).toMatchObject({
+      mode: "shadow",
+      scoreEligible: false,
     });
   });
 

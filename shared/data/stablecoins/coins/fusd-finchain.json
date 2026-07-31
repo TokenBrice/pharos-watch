@@ -439,8 +439,10 @@
         "0x29A48097055d6779e6832355680B7C7bF0D43C53"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "FUSD ProxyAdmin (upgrade authority, EOA-owned)",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-07-30",
+      "observedBlock": 25648357,
       "sources": [
         {
           "label": "Ethereum FinChain FUSD token",
@@ -453,6 +455,10 @@
         {
           "label": "FinChain deployments",
           "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        },
+        {
+          "label": "Ethereum RPC (ProxyAdmin owner() and eth_getCode reads at block 25648357: owner is EOA 0xc61f22aa, no timelock, delaySec 0)",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     }

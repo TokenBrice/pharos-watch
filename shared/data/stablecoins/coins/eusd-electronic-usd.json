@@ -134,8 +134,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Reserve Protocol documentation",
@@ -150,13 +151,17 @@
         "url": "https://etherscan.io/address/0xe1ec57c8ee970280f237863910b606059e9641c9"
       },
       {
+        "label": "eUSD governance Safe on Etherscan",
+        "url": "https://etherscan.io/address/0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064"
+      },
+      {
         "label": "eUSD RTokenP1 verified implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-22 against the verified RTokenP1 implementation and Reserve documentation. The deployed RToken transfer path rejects transfer-to-self but does not establish a mutable direct holder blacklist, freeze, seizure, or transfer-pause path. The separately reviewed reserve basket retains USDC and USDT exposure, so inherited status is preserved without asserting a direct eUSD holder-control function.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-reviewed 2026-07-30 against the verified RTokenP1 implementation, Reserve documentation, and live Ethereum state. The deployed RToken transfer path rejects transfer-to-self but has no holder blacklist, freeze, seizure, or transfer-pause function, and the reserve basket's inherited USDC/USDT freeze exposure is unchanged. At Ethereum block 25,652,077, however, the Central Auth 0xe1ec57c8ee970280f237863910b606059e9641c9 still reported exactly one DEFAULT_ADMIN_ROLE member, the 3-of-5 Gnosis Safe 0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064 (getThreshold() = 3 over the same five owners, no timelock), and the eUSD proxy 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f still resolved to the upgradeable RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That Safe can grant itself OWNER and replace the token implementation with no delay, so holder-control functionality can be introduced instantly. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
+    "reviewer": "Kimi safety-v9 W2 T54 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

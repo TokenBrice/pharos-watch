@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T34 wave-2 unknown reduction",
     "confidence": "verified",
     "sources": [
       {
@@ -29,12 +29,20 @@
       {
         "label": "Trevee documentation",
         "url": "https://docs.trevee.xyz/"
+      },
+      {
+        "label": "LlamaRisk Rings / scUSD Aave onboarding review",
+        "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
+      },
+      {
+        "label": "Ethereum public RPC vault balance reads",
+        "url": "https://ethereum.publicnode.com"
       }
     ],
-    "rationale": "Trevee identifies the Veda BoringVault backing addresses, accepted stablecoins, and strategy deployment across external protocols, but does not publish a current asset-versus-strategy allocation. The prior 70/30 split is therefore replaced by one explicit 100% mixed basket rather than preserving unsupported weights. Write-time re-open 2026-07-28: Trevee treasury-backing-address docs still list multi-stablecoin Veda BoringVault accepts (USDC/USDT/DAI/GHO/USDC.e) with DeBank bundle links but no live weight split; second Trevee docs surface corroborates scAsset treasury model. knownUnknownExposurePct remains 100.",
-    "compositionBasis": "Trevee disclosed Veda BoringVault backing architecture",
+    "rationale": "Write-time re-open 2026-07-30: Trevee treasury-backing-address docs still list the Ethereum Veda BoringVault as accepting USDC, USDT, DAI, GHO, and Sonic USDC.e, with funds deployed across external protocols under a published risk framework, and publish DeBank/Octav links rather than a dated asset-versus-strategy weight table. LlamaRisk independently describes the same multi-protocol strategy set (Aave, Morpho, Sky, Fluid, etc.) without a stable static split. Spot eth_call balanceOf reads of idle USDC/USDT/DAI/GHO on the vault address alone are not a full composition (strategies hold aTokens and other positions off the bare ERC-20 balances). The envelope therefore remains one explicit 100% mixed basket with knownUnknownExposurePct 100 rather than fabricating unsupported constituent weights.",
+    "compositionBasis": "Trevee disclosed Veda BoringVault backing architecture; independent LlamaRisk strategy inventory; on-chain idle-balance spot check confirming idle balances are not a full allocation",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are not published in a source suitable for a defensible static split.",
+    "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are not published in a source suitable for a defensible static split; live wallet explorers change continuously and idle ERC-20 balances omit strategy positions.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -51,7 +59,7 @@
         ]
       }
     ],
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-30"
   },
   "custodyProfile": {
     "providers": [
@@ -63,16 +71,20 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T34 wave-2 unknown reduction",
     "confidence": "verified",
     "sources": [
       {
         "label": "Trevee scUSD treasury and backing addresses",
         "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+      },
+      {
+        "label": "LlamaRisk Rings / scUSD Aave onboarding review",
+        "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
       }
     ],
-    "uncertainty": "Trevee publishes the dedicated backing addresses and states that funds are deployed across protocols. It does not publish current chain shares, strategy shares, legal bankruptcy-remoteness terms, or a complete controller/custodian inventory.",
+    "uncertainty": "Trevee publishes dedicated BoringVault backing addresses and states funds are deployed across protocols. LlamaRisk notes aToken rehypothecation risk in lending strategies. Neither source publishes current chain shares, strategy shares, legal bankruptcy-remoteness terms, or a complete controller/custodian inventory.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -36,7 +36,9 @@ interface JobDurationStats {
   avgMs: number;
   maxMs: number;
   capHits: number;
+  recentCapHits: number;
   budgetTruncations: number;
+  recentBudgetTruncations: number;
   latestCapHitAt: number | null;
   latestBudgetTruncationAt: number | null;
   timeoutMs: number;
@@ -86,7 +88,9 @@ interface StatsRow {
   avg_ms: number | null;
   max_ms: number | null;
   cap_hits: number | null;
+  recent_cap_hits: number | null;
   budget_truncations: number | null;
+  recent_budget_truncations: number | null;
   latest_cap_hit_at: number | null;
   latest_budget_truncation_at: number | null;
 }
@@ -145,9 +149,10 @@ function isRecent(timestampSec: number | null, nowSec: number, windowSec: number
 
 function isRuntimeBreaching(stats: JobDurationStats, nowSec: number): boolean {
   const hasRecentCapHits =
-    stats.capHits >= DURATION_ALERT_CAP_HITS && isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
+    stats.recentCapHits >= DURATION_ALERT_CAP_HITS &&
+    isRecent(stats.latestCapHitAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
   const hasRecentBudgetTruncations =
-    stats.budgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS &&
+    stats.recentBudgetTruncations >= DURATION_ALERT_BUDGET_TRUNCATIONS &&
     isRecent(stats.latestBudgetTruncationAt, nowSec, RUNTIME_CAP_RECENT_WINDOW_SEC);
   const hasAverageTrend = stats.runs >= MIN_RUNS_FOR_TREND && stats.avgRatio >= DURATION_ALERT_AVG_RATIO;
   return hasAverageTrend || hasRecentCapHits || hasRecentBudgetTruncations;
@@ -308,6 +313,7 @@ export async function runCronDurationWatchdog(
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const sinceSec = nowSec - LOOKBACK_SEC;
+  const runtimeRecentSinceSec = nowSec - RUNTIME_CAP_RECENT_WINDOW_SEC;
   const watchedJobs = Object.entries(CRON_TIMEOUT_MS);
 
   const statements = watchedJobs.map(([job, timeoutMs]) =>
@@ -318,6 +324,7 @@ export async function runCronDurationWatchdog(
            CAST(AVG(duration_ms) AS INT) AS avg_ms,
            MAX(duration_ms) AS max_ms,
            SUM(CASE WHEN duration_ms >= ? THEN 1 ELSE 0 END) AS cap_hits,
+           SUM(CASE WHEN duration_ms >= ? AND started_at > ? THEN 1 ELSE 0 END) AS recent_cap_hits,
            MAX(CASE WHEN duration_ms >= ? THEN started_at ELSE NULL END) AS latest_cap_hit_at,
            SUM(
              CASE
@@ -326,6 +333,13 @@ export async function runCronDurationWatchdog(
                ELSE 0
              END
            ) AS budget_truncations,
+           SUM(
+             CASE
+               WHEN json_valid(metadata) AND started_at > ? THEN
+                 CASE WHEN json_extract(metadata, '$.runBudgetTruncated') = 1 THEN 1 ELSE 0 END
+               ELSE 0
+             END
+           ) AS recent_budget_truncations,
            MAX(
              CASE
                WHEN json_valid(metadata) AND json_extract(metadata, '$.runBudgetTruncated') = 1
@@ -345,7 +359,17 @@ export async function runCronDurationWatchdog(
              END
            )`,
       )
-      .bind(timeoutMs, timeoutMs, job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON),
+      .bind(
+        timeoutMs,
+        timeoutMs,
+        runtimeRecentSinceSec,
+        timeoutMs,
+        runtimeRecentSinceSec,
+        job,
+        sinceSec,
+        STALE_SLOT_CHILD_ERROR,
+        STALE_SLOT_METADATA_REASON,
+      ),
   );
   const results = await db.batch<StatsRow>(statements);
   throwIfAborted(signal);
@@ -359,7 +383,9 @@ export async function runCronDurationWatchdog(
       avgMs,
       maxMs: row?.max_ms ?? 0,
       capHits: row?.cap_hits ?? 0,
+      recentCapHits: row?.recent_cap_hits ?? 0,
       budgetTruncations: row?.budget_truncations ?? 0,
+      recentBudgetTruncations: row?.recent_budget_truncations ?? 0,
       latestCapHitAt: row?.latest_cap_hit_at ?? null,
       latestBudgetTruncationAt: row?.latest_budget_truncation_at ?? null,
       timeoutMs,

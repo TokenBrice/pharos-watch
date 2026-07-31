@@ -4,6 +4,7 @@ import {
   buildCurveStableSwapNgMeasuredExecutionTarget,
   buildCurveStableSwapMeasuredExecutionTargets,
   buildCurveCryptoSwapMeasuredExecutionTarget,
+  buildPoolExecutionCapability,
   buildCurveStableswapExecutionCapability,
   buildCurveStableswapExecutionModel,
   resolveActiveCurveCryptoSwapCandidateByTvl,
@@ -11,7 +12,16 @@ import {
   resolveReviewedCurveStableSwapNgPhysicalPoolId,
   resolveReviewedCurveStableSwapPhysicalPoolId,
 } from "../process-pools";
-import type { CurvePoolEntry } from "../types";
+import {
+  CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+  CURVE_R3_METAPOOL_POLICIES,
+} from "../../measured-execution/curve-composite";
+import type {
+  PoolProcessingContext,
+  PoolProtocolEnrichment,
+  ResolvedPoolIdentity,
+} from "../process-pool-types";
+import type { CurvePoolEntry, LlamaPool } from "../types";
 
 const USDC = "0x00000000000000000000000000000000000000c1";
 const USDT = "0x00000000000000000000000000000000000000c2";
@@ -50,6 +60,79 @@ const chainAddressToId = new Map([
   [`ethereum:${USDC}`, "usdc-circle"],
   [`ethereum:${USDT}`, "usdt-tether"],
 ]);
+
+function compositeCapability(
+  curveData: CurvePoolEntry,
+  chain: string,
+  stablecoinId: string,
+) {
+  const inputToken = curveData.underlyingCoins?.[0] ?? curveData.poolCoins?.[0];
+  const exactAddressMap = new Map(chainAddressToId);
+  exactAddressMap.set(
+    "ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "usdc-circle",
+  );
+  exactAddressMap.set(
+    "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "usdt-tether",
+  );
+  if (inputToken) exactAddressMap.set(`${chain}:${inputToken.address}`, stablecoinId);
+  const pool: LlamaPool = {
+    pool: curveData.poolAddress ?? "0x1111111111111111111111111111111111111111",
+    chain,
+    project: "curve",
+    symbol: curveData.poolCoins?.map((coin) => coin.symbol).join("-") ?? "UNKNOWN-3CRV",
+    tvlUsd: curveData.tvl,
+    volumeUsd1d: 1_000,
+    volumeUsd7d: 7_000,
+    stablecoin: true,
+    underlyingTokens: curveData.poolCoins?.map((coin) => coin.address) ?? null,
+    apyBase: 0,
+    apyReward: 0,
+    apy: 0,
+    sigma: 0,
+    exposure: "multi",
+    count: 1,
+  };
+  const context = {
+    chainAddressToId: exactAddressMap,
+    stablecoinPriceById: new Map([
+      [stablecoinId, 1],
+      ["usdc-circle", 1],
+      ["usdt-tether", 1],
+    ]),
+    measuredTargetCapturedAt: 1_000,
+    curvePoolCandidatesByFingerprint: new Map(),
+    uniV3ExecutionCandidates: new Map(),
+    uniswapV4ExecutionCandidates: new Map(),
+    aerodromeV2ExecutionCandidates: new Map(),
+    uniqueAerodromeV2ExecutionCandidates: new Map(),
+  } as unknown as PoolProcessingContext;
+  const identity = {
+    pool,
+    protocol: "curve",
+    chainNorm: chain,
+    fpCurveKey: null,
+  } as unknown as ResolvedPoolIdentity;
+  const enrichment: PoolProtocolEnrichment = {
+    curveAddressMatch: true,
+    curveData,
+    curveMeasuredRouteData: undefined,
+    rawContribTvl: curveData.tvl,
+    resolvedPoolType: "curve",
+    qualityMultiplier: 1,
+    feeTierForExtra: undefined,
+    balanceRatio: 1,
+    poolMaturityDays: 1_000,
+    organicFraction: 1,
+    hasMeasuredOrganicFraction: true,
+    effectivePoolTvl: curveData.tvl,
+    balanceDetails: undefined,
+    volumeUsd1d: 1_000,
+    volumeUsd7d: 7_000,
+  };
+  return buildPoolExecutionCapability(context, identity, enrichment, stablecoinId);
+}
 
 describe("buildCurveStableswapExecutionModel", () => {
   it("builds a schema-valid stableswap model with the tracked input token", () => {
@@ -100,6 +183,81 @@ describe("buildCurveStableswapExecutionModel", () => {
     ).toBeNull();
     expect(buildCurveStableswapExecutionModel(entry(), "ethereum", "dai-makerdao", chainAddressToId)).toBeNull();
     expect(buildCurveStableswapExecutionModel(undefined, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+    expect(
+      buildCurveStableswapExecutionCapability(
+        entry({ isMetaPool: true }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ).gate,
+    ).toEqual({ family: "curve-stableswap", reason: "metapool-unsupported" });
+  });
+
+  it("routes only the nine reviewed metapools into measured execution", () => {
+    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+      const source: CurvePoolEntry = {
+        ...entry(),
+        poolAddress: policy.poolAddress,
+        registryId: policy.expectedRegistryId,
+        isMetaPool: true,
+        basePoolAddress: policy.metapool.basePoolAddress,
+        tvl: 1_000_000,
+        poolCoins: policy.poolTokens.map((token, index) => ({
+          address: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          usdPrice: 1,
+          isBasePoolLpToken: index === 1,
+        })),
+        underlyingCoins: policy.executionTokens.map((token) => ({
+          address: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          usdPrice: 1,
+        })),
+      };
+      const capability = compositeCapability(source, policy.chain, policy.stablecoinId);
+
+      expect(capability.measuredExecutionTarget).toMatchObject({
+        stablecoinId: policy.stablecoinId,
+        adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+      });
+      expect(capability.executionCapabilityGate).toBeUndefined();
+    }
+
+    const unreviewed = compositeCapability(
+      {
+        ...entry(),
+        poolAddress: "0x1111111111111111111111111111111111111111",
+        registryId: "factory",
+        isMetaPool: true,
+        basePoolAddress: "0x2222222222222222222222222222222222222222",
+        poolCoins: [
+          {
+            address: "0x3333333333333333333333333333333333333333",
+            symbol: "UNKNOWN",
+            decimals: 18,
+            usdPrice: 1,
+            isBasePoolLpToken: false,
+          },
+          {
+            address: "0x4444444444444444444444444444444444444444",
+            symbol: "3Crv",
+            decimals: 18,
+            usdPrice: 1,
+            isBasePoolLpToken: true,
+          },
+        ],
+      },
+      "ethereum",
+      "unknown-stablecoin",
+    );
+    expect(unreviewed.measuredExecutionTarget).toBeUndefined();
+    expect(unreviewed.executionCapabilityGate).toEqual({
+      family: "curve-stableswap",
+      reason: "metapool-unsupported",
+    });
   });
 
   it("fails closed on CryptoSwap registries despite a published amplification", () => {

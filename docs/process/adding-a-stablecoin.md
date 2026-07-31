@@ -305,7 +305,7 @@ Three optional clusters on `StablecoinMeta` drive the detail-page hero verdict, 
 
 Mapping cheatsheet:
 
-- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD)
+- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD). Formally also covers protocol-reserve-backed FX inventory — assets minted and burned against a shared on-chain protocol reserve at oracle rates with no borrower vault, health factor, or liquidation path (the Mento class: USDm, EURm, and the Mento FX stables). Read the class as reserve-backed cash-equivalent inventory issuance, not strictly custodial off-chain cash.
 - `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
 - `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
 - `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)

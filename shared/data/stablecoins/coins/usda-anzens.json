@@ -140,18 +140,21 @@
     "reconciliation": "periodic",
     "supervision": "none",
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
-      "controlRef": "Anzens issuance backend",
-      "observedAt": "2026-07-20",
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-30",
       "sources": [
+        {
+          "label": "Koios script_info — USDA minting policy plutusV2",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Cardano native-token minting policies",
+          "url": "https://developers.cardano.org/docs/native-tokens/minting/"
+        },
         {
           "label": "Koios policy_asset_list for USDA policy",
           "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
-        },
-        {
-          "label": "Cardano Token Registry — Anzens USDA",
-          "url": "https://raw.githubusercontent.com/cardano-foundation/cardano-token-registry/master/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json"
         }
       ]
     },

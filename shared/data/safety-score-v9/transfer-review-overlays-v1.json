@@ -1773,23 +1773,27 @@
     },
     {
       "assetId": "bbqusdc-steakhouse",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T55 ACCESS",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify reports an exact match for MetaMorpho at Ethereum block 25575158; the address holds direct non-proxy code and both EIP-1967 implementation and admin slots are zero, so the deployment is immutable. MetaMorpho is ERC4626 plus ERC20Permit plus Ownable2Step and does not override _update or _beforeTokenTransfer; it defines no pause, blacklist, allowlist, freeze or seizure path. Owner authority 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd covers curation and fees, not holder share transfer.",
+          "evidence": "At Ethereum block 25648449 the Smokehouse USDC address holds direct non-proxy code (EIP-1967 implementation and admin slots zero). Official MetaMorpho source and bytecode lack pause, blacklist, allowlist, freeze, seizure, and transfer-hook paths; owner is Steakhouse Safe for vault curation/fees only. asset() is USDC. Sole catalogued deployment; share transfer is ordinary ERC-20/ERC-4626.",
           "sources": [
             {
-              "label": "Sourcify exact-match Ethereum MetaMorpho sources",
+              "label": "Official MetaMorpho source",
+              "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+            },
+            {
+              "label": "Sourcify exact-match Ethereum MetaMorpho vault",
               "url": "https://sourcify.dev/server/v2/contract/1/0xbeefff209270748ddd194831b3fa287a5386f5bc?fields=sources,compilation"
             },
             {
-              "label": "Etherscan bbqUSDC contract",
-              "url": "https://etherscan.io/address/0xbeefff209270748ddd194831b3fa287a5386f5bc#code"
+              "label": "Ethereum 1rpc observation block 25648449",
+              "url": "https://1rpc.io/eth"
             }
           ]
         }
@@ -2456,19 +2460,23 @@
     },
     {
       "assetId": "stkgho-umbrella-aave",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T55 ACCESS",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575158 the EIP-1967 implementation slot resolves to 0x75e8ac0c063b6966e2a9954adedf39bde9370197, Sourcify exact-matched as UmbrellaStakeToken (StakeToken plus ERC4626StakeTokenUpgradeable), and the EIP-1967 admin slot resolves to live ProxyAdmin 0xde9f8379a5a972100d0373103a849e8abdf56a9a. The implementation inherits PausableUpgradeable; paused() read false at the observed block. Aave Umbrella governance can pause the stake token and can replace the implementation through the live admin, so holder transfer is subject to discretionary restriction.",
+          "evidence": "At Ethereum block 25648452 the EIP-1967 implementation is 0x75e8ac0c063b6966e2a9954adedf39bde9370197 (Sourcify exact-match Umbrella StakeToken) and admin is ProxyAdmin 0xde9f8379a5a972100d0373103a849e8abdf56a9a owned by Aave Governance V3 Level-1 Executor. StakeToken pause()/unpause() are onlyOwner and _update is whenNotPaused, so holder transfer/transferFrom can be globally blocked while paused. paused() was false at the observed block. No per-holder blacklist selectors. Sole catalogued deployment.",
           "sources": [
             {
               "label": "Sourcify exact-match Ethereum UmbrellaStakeToken implementation",
               "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
+            },
+            {
+              "label": "Ethereum PublicNode observation block 25648452",
+              "url": "https://ethereum.publicnode.com"
             },
             {
               "label": "Etherscan stkGHO proxy",
@@ -2661,23 +2669,31 @@
     },
     {
       "assetId": "kgst-kyrgyz-som",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x94be0bba8e1e303fe998c9360b57b826f1a4f828",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At BSC block 111124210 the EIP-1967 implementation slot resolves to 0xa903a6c1c3bd45927542823528a6fa73a2a410e2, Sourcify exact-matched as Stablecoin (ERC20PermitUpgradeable plus Ownable2StepUpgradeable plus PausableUpgradeable). Its _transfer override carries whenNotPaused, notFrozen(from) and notFrozen(to), and freeze(address) and unfreeze(address) are onlyOwner, so the owner 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5 can block any individual holder's transfers or halt all transfers. paused() read false and the freeze list is a denylist rather than a default-deny allowlist, so the posture is restrictable rather than permissioned.",
+          "evidence": "At BSC block 113079584, EIP-1967 implementation=0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin=0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; owner()=2/5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify-exact Stablecoin implementation overrides _transfer with whenNotPaused + notFrozen(from/to); freeze/unfreeze and pause/unpause are onlyOwner. paused() was false. Denylist (not default-deny allowlist) ⇒ restrictable rather than permissioned.",
           "sources": [
             {
-              "label": "Sourcify exact-match BSC Stablecoin implementation",
-              "url": "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources,compilation"
+              "label": "Sourcify KGST Stablecoin implementation",
+              "url": "https://sourcify.dev/server/v2/contract/56/0xa903a6c1c3bd45927542823528a6fa73a2a410e2?fields=sources,compilation,abi"
             },
             {
               "label": "BscScan KGST proxy",
               "url": "https://bscscan.com/address/0x94be0bba8e1e303fe998c9360b57b826f1a4f828#code"
+            },
+            {
+              "label": "KGST owner Safe",
+              "url": "https://bscscan.com/address/0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5"
+            },
+            {
+              "label": "BSC block 113079584",
+              "url": "https://bscscan.com/block/113079584"
             }
           ]
         }
@@ -2685,23 +2701,23 @@
     },
     {
       "assetId": "gtusdcp-gauntlet",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575158 the address holds direct non-proxy code verified on Blockscout as Morpho VaultV2. Its transfer and transferFrom require canSendShares(sender) and canReceiveShares(recipient), which delegate to the configurable sendSharesGate and receiveSharesGate addresses. Both gate slots, and the asset gates, read the zero address at the observed block, so transfers are currently unrestricted, but curator 0x9e33faae38ff641094fa68c65c2ce600b3410585 and owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec can set a share gate that blocks holder transfer at any time.",
+          "evidence": "ETH block 25648243 VaultV2: gates currently zero but curator-settable after timelock.",
           "sources": [
             {
-              "label": "Blockscout verified Ethereum VaultV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+              "label": "VaultV2 source",
+              "url": "https://github.com/morpho-org/vault-v2/blob/549b113106e505b83952c7b296622534338d5f92/src/VaultV2.sol"
             },
             {
-              "label": "Etherscan gtUSDCp contract",
-              "url": "https://etherscan.io/address/0x8c106eedad96553e64287a5a6839c3cc78afa3d0#code"
+              "label": "Ethereum RPC",
+              "url": "https://ethereum.publicnode.com"
             }
           ]
         },
@@ -2710,15 +2726,15 @@
           "contractOrTokenId": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Sourcify reports an exact match for MetaMorpho at Base block 48888022; the address holds direct non-proxy code and both EIP-1967 slots are zero, so the deployment is immutable. MetaMorpho does not override _update or _beforeTokenTransfer and declares no pause, blacklist, allowlist, freeze or seizure, so holder share transfer cannot be blocked.",
+          "evidence": "Base MetaMorpho block 49328092: ordinary ERC-20 transfers; no gate.",
           "sources": [
             {
-              "label": "Sourcify exact-match Base MetaMorpho sources",
-              "url": "https://sourcify.dev/server/v2/contract/8453/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61?fields=sources,compilation"
+              "label": "Sourcify Base",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61?fields=abi,compilation"
             },
             {
-              "label": "Basescan gtUSDCp contract",
-              "url": "https://basescan.org/address/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61#code"
+              "label": "Base RPC",
+              "url": "https://mainnet.base.org"
             }
           ]
         },
@@ -2727,15 +2743,15 @@
           "contractOrTokenId": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Sourcify verifies the runtime at Arbitrum block 485758765 as MetaMorphoV1_1; the address holds direct non-proxy code and both EIP-1967 slots are zero. MetaMorphoV1_1 does not override _update or _beforeTokenTransfer and declares no pause, blacklist, allowlist, freeze or seizure on the share transfer path.",
+          "evidence": "Arbitrum MetaMorphoV1_1 block 489415296: ordinary transfers; no freeze/gate.",
           "sources": [
             {
-              "label": "Sourcify verified Arbitrum MetaMorphoV1_1 sources",
-              "url": "https://sourcify.dev/server/v2/contract/42161/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed?fields=sources,compilation"
+              "label": "Arbitrum Blockscout",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
             },
             {
-              "label": "Arbiscan gtUSDCp contract",
-              "url": "https://arbiscan.io/address/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed#code"
+              "label": "Arbitrum RPC",
+              "url": "https://arb1.arbitrum.io/rpc"
             }
           ]
         }
@@ -3019,23 +3035,27 @@
     },
     {
       "assetId": "gtusdc-gauntlet",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T53 transfer-fact",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xdd0f28e19c1780eb6396170735d45153d261490d",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as MetaMorpho, and at Ethereum block 25575174 no EIP-1967 implementation, admin, or beacon slot was set. The verified source does not override transfer, transferFrom, or _update, and it contains no pause, blacklist, allowlist, freeze, seizure, or arbitrary holder burn path. Owner, curator, allocator, and guardian authority is confined to market caps, timelocks, fees, and allocation; none of it reaches share transfers.",
+          "evidence": "Blockscout exact-match verified MetaMorpho source (compiler v0.8.21) and all 40 bundled dependencies expose no blacklist, freeze, pause, allowlist, or holder-transfer hook; holder transfer/transferFrom are vanilla OpenZeppelin ERC20 paths and the vault never overrides ERC20 _update. At Ethereum block 25648562 the EIP-1967 implementation slot was zero (immutable, non-proxy), asset() was USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, and owner() was the Gauntlet Safe 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, whose authority is limited to vault parameters (fees, caps, timelocks, market allocation) with no holder-transfer gating.",
           "sources": [
             {
-              "label": "Sourcify verified MetaMorpho source (chain 1)",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xdd0f28e19c1780eb6396170735d45153d261490d"
+              "label": "Blockscout verified gtUSDC MetaMorpho source",
+              "url": "https://eth.blockscout.com/address/0xdd0f28e19c1780eb6396170735d45153d261490d?tab=contract"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575174 reads",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Official morpho-org/metamorpho MetaMorpho.sol",
+              "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+            },
+            {
+              "label": "Ethereum observation block 25648562",
+              "url": "https://etherscan.io/block/25648562"
             }
           ]
         }
@@ -3043,22 +3063,22 @@
     },
     {
       "assetId": "jpyt-dephaser",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
       "deployments": [
         {
           "chainId": "optimism",
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify verifies this direct deployment as DephaserJPY. At Optimism block 154483545 no EIP-1967 implementation, admin, or beacon slot was set. The verified source keeps the unmodified OpenZeppelin ERC-20 transfer path with no pause, blacklist, freeze, or transfer hook; mint is MINTER_ROLE-only, burn(uint256) burns only the caller, and burnFrom(address,uint256) calls _spendAllowance before _burn so BURNER_ROLE alone cannot reach an unapproved holder.",
+          "evidence": "Verified DephaserJPY at Optimism block 154923376: immutable; ordinary ERC-20 transfer; no pause/blacklist/allowlist/hook.",
           "sources": [
             {
-              "label": "Sourcify verified DephaserJPY source (chain 10)",
-              "url": "https://sourcify.dev/server/v2/contract/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+              "label": "Optimism Blockscout verified source",
+              "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
             },
             {
-              "label": "Optimism public RPC used for the block 154483545 reads",
+              "label": "Optimism RPC",
               "url": "https://mainnet.optimism.io"
             }
           ]
@@ -3068,14 +3088,14 @@
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Sourcify verifies the Base deployment at the same deterministic address as the same DephaserJPY source. At Base block 48888261 no EIP-1967 implementation, admin, or beacon slot was set. Transfers use the unmodified ERC-20 path, and the only privileged paths are role-gated mint, caller-only burn, and allowance-spending burnFrom.",
+          "evidence": "Same DephaserJPY on Base; EIP-1967 zero at block 49328091; no transfer restriction surface.",
           "sources": [
             {
-              "label": "Sourcify verified DephaserJPY source (chain 8453)",
-              "url": "https://sourcify.dev/server/v2/contract/8453/0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+              "label": "Sourcify Base ABI",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xc47da4cb96ce65a96844a01bfae509f9d5454534?fields=abi,compilation"
             },
             {
-              "label": "Base public RPC used for the block 48888261 reads",
+              "label": "Base RPC",
               "url": "https://mainnet.base.org"
             }
           ]
@@ -3262,15 +3282,15 @@
     },
     {
       "assetId": "stusd-stoneyield",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T12 safety-v9 unknown-reduction w2",
       "deployments": [
         {
           "chainId": "bsc",
           "contractOrTokenId": "0x806dd21af6de051fb811760a5768d04a99160eb9",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Sourcify exact-matches this direct deployment as STUSD, and at BSC block 111124651 no EIP-1967 implementation, admin, or beacon slot was set. Its _update override calls getLockInfo(from) on the immutable wrapper and reverts when the transfer would move the holder's locked balance. At the same block wrapper() resolved to 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a, Sourcify exact-matched as STUSDWrapper, whose owner or OPERATOR_ROLE holder calls wrapWithLock(to,amount,unlockTime); that call raises the recipient's stored unlockTime for the whole existing locked balance. The lock state governing transferability is therefore issuer-written and holder-selective.",
+          "evidence": "Fresh reads at BSC block 113076787 via bsc-rpc.publicnode.com: wrapper() resolved to 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a and EIP-1967 implementation/admin slots read zero on both STUSD and the wrapper, confirming direct non-upgradeable deployments. The verified STUSD source's _update calls getLockInfo(from) on the wrapper and reverts when the transfer would move the holder's locked balance; the verified STUSDWrapper restricts wrapWithLock(to,amount,unlockTime) to its owner (0x9ab82f8e97bf3202173b92e06e6593f336b76ccf, an EIP-7702 EOA delegating to 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, unchanged at this block) or OPERATOR_ROLE, and that call raises the recipient's stored unlockTime for the whole existing locked balance. The lock state governing transferability is therefore issuer-written and holder-selective.",
           "sources": [
             {
               "label": "Sourcify verified STUSD source (chain 56)",
@@ -3281,8 +3301,8 @@
               "url": "https://sourcify.dev/server/v2/contract/56/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a"
             },
             {
-              "label": "BSC public RPC used for the block 111124651 reads",
-              "url": "https://bsc-dataseed.binance.org"
+              "label": "BSC public RPC used for the block 113076787 reads",
+              "url": "https://bsc-rpc.publicnode.com"
             }
           ]
         }
@@ -3353,70 +3373,74 @@
         }
       ]
     },
+{
+  "assetId": "usdp-parallel",
+  "reviewedAt": "2026-07-22",
+  "reviewer": "GPT SOL-TRANSFER wave6",
+  "deployments": [
     {
-      "assetId": "usdp-parallel",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
-      "deployments": [
+      "chainId": "ethereum",
+      "contractOrTokenId": "0x9b3a8f7cec208e247d97dee13313690977e24459",
+      "scope": "canonical",
+      "posture": "restrictable",
+      "evidence": "At Ethereum block 25575201 this proxy reported symbol USDp and its EIP-1967 implementation slot resolved to 0xa19c5d1013a8682ac76206a085ec24ac89f7c025, verified on Blockscout as TokenP. The verified implementation adds no transfer hook, but burnSelf(uint256 amount,address burner) is marked restricted and calls _burn(burner, amount) with no allowance check, so any AccessManager-authorized role can destroy an arbitrary holder balance; _authorizeUpgrade is likewise restricted, leaving the AccessManager able to replace the token logic.",
+      "sources": [
         {
-          "chainId": "ethereum",
-          "contractOrTokenId": "0x9b3a8f7cec208e247d97dee13313690977e24459",
-          "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "At Ethereum block 25575201 this proxy reported symbol USDp and its EIP-1967 implementation slot resolved to 0xa19c5d1013a8682ac76206a085ec24ac89f7c025, verified on Blockscout as TokenP. The verified implementation adds no transfer hook, but burnSelf(uint256 amount,address burner) is marked restricted and calls _burn(burner, amount) with no allowance check, so any AccessManager-authorized role can destroy an arbitrary holder balance; _authorizeUpgrade is likewise restricted, leaving the AccessManager able to replace the token logic.",
-          "sources": [
-            {
-              "label": "Blockscout verified TokenP implementation",
-              "url": "https://eth.blockscout.com/address/0xa19c5d1013a8682ac76206a085ec24ac89f7c025?tab=contract"
-            },
-            {
-              "label": "Ethereum public RPC used for the block 25575201 slot reads",
-              "url": "https://ethereum-rpc.publicnode.com"
-            }
-          ]
+          "label": "Blockscout verified TokenP implementation",
+          "url": "https://eth.blockscout.com/address/0xa19c5d1013a8682ac76206a085ec24ac89f7c025?tab=contract"
         },
         {
-          "chainId": "avalanche",
-          "contractOrTokenId": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
-          "scope": "material-bridge",
-          "posture": "restrictable",
-          "evidence": "At Avalanche block 90981824 this USDp ERC-1967 proxy resolved to Routescan-verified TokenP implementation 0xcb3e564293393e0d4f43305a250d4e1716de600b and authority() returned nonzero AccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The implementation's restricted burnSelf(uint256,address) burns the supplied holder balance without an allowance check, and its restricted _authorizeUpgrade permits authorized roles to replace the token logic.",
-          "sources": [
-            {
-              "label": "Routescan verified Avalanche TokenP implementation",
-              "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xcb3e564293393e0d4f43305a250d4e1716de600b"
-            },
-            {
-              "label": "Parallel official Avalanche USDp address",
-              "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
-            },
-            {
-              "label": "Avalanche public RPC used for block 90981824 reads",
-              "url": "https://api.avax.network/ext/bc/C/rpc"
-            }
-          ]
+          "label": "Ethereum public RPC used for the block 25575201 slot reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     },
     {
+      "chainId": "avalanche",
+      "contractOrTokenId": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+      "scope": "material-bridge",
+      "posture": "restrictable",
+      "evidence": "At Avalanche block 90981824 this USDp ERC-1967 proxy resolved to Routescan-verified TokenP implementation 0xcb3e564293393e0d4f43305a250d4e1716de600b and authority() returned nonzero AccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The implementation's restricted burnSelf(uint256,address) burns the supplied holder balance without an allowance check, and its restricted _authorizeUpgrade permits authorized roles to replace the token logic.",
+      "sources": [
+        {
+          "label": "Routescan verified Avalanche TokenP implementation",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xcb3e564293393e0d4f43305a250d4e1716de600b"
+        },
+        {
+          "label": "Parallel official Avalanche USDp address",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
+        },
+        {
+          "label": "Avalanche public RPC used for block 90981824 reads",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        }
+      ]
+    }
+  ]
+},
+    {
       "assetId": "vcred-vcred",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T55 ACCESS",
       "deployments": [
         {
           "chainId": "hemi",
           "contractOrTokenId": "0x71881974e96152643c74a8e0214b877cfb2a0aa1",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The Hemi explorer verifies this direct deployment as VCRED, a plain OpenZeppelin ERC20 plus ERC20Burnable plus Ownable token. At Hemi block 4891574 no EIP-1967 implementation, admin, or beacon slot was set and owner() was nonzero 0x3edeef3ae2e9aa5b55e5ce4d324f9c24165c75be. Owner authority is limited to mint(address,uint256); transfer and transferFrom are unmodified, burn and burnFrom are the stock holder and allowance paths, and there is no pause, blacklist, freeze, seizure, or transfer hook.",
+          "evidence": "At Hemi block 4965111 the VCRED deployment is non-proxy (EIP-1967 slots zero) with owner Safe 0x3edeef3ae2e9aa5b55e5ce4d324f9c24165c75be. Verified source is OpenZeppelin ERC20 + ERC20Burnable + Ownable stating free transferability; onlyOwner mint is the sole privileged path; transfer/transferFrom are unmodified and no pause, blacklist, freeze, seizure, or transfer hook exists. Sole catalogued deployment.",
           "sources": [
             {
-              "label": "Hemi explorer verified VCRED source",
-              "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+              "label": "Hemi explorer verified VCRED source (API)",
+              "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
             },
             {
-              "label": "Hemi public RPC used for the block 4891574 reads",
+              "label": "Hemi public RPC observation block 4965111",
               "url": "https://rpc.hemi.network/rpc"
+            },
+            {
+              "label": "Hemi explorer VCRED contract page",
+              "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
             }
           ]
         }
@@ -3857,48 +3881,40 @@
     },
     {
       "assetId": "syzusd-yuzu",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T38 unknown-reduction wave 2",
       "deployments": [
         {
           "chainId": "plasma",
           "contractOrTokenId": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Plasma block 27808344, the EIP-1967 implementation and admin slots resolved to 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0. ProxyAdmin owner() was Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with threshold 4. The current official StakedYuzuUSD implementation leaves ordinary ERC-20 transfers inherited, but this ProxyAdmin can replace the transfer implementation, so the deployment is restrictable.",
+          "evidence": "At Plasma block 28507453 the transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8) reverts on blacklist(address) probes, reads paused() = false, and resolves asset() to yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc; the 2026-07-22 verified-source review found the vault pause scoped to mint and redemption with no holder blacklist or transfer hook, so current share transfers are unrestricted. The EIP-1967 ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 is owned by the live 4-of-5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d, which can replace the implementation and introduce holder-transfer restrictions, so the deployment is restrictable.",
           "sources": [
             {
-              "label": "Plasmascan syzUSD proxy",
-              "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
+              "label": "syzUSD vault on Plasmascan",
+              "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
             },
             {
-              "label": "Pinned official StakedYuzuUSD source",
-              "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/StakedYuzuUSD.sol"
-            },
-            {
-              "label": "Plasma public RPC used for block 27808344 reads",
-              "url": "https://rpc.plasma.to"
+              "label": "Yuzu syzUSD documentation",
+              "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
             }
           ]
         },
         {
           "chainId": "monad",
           "contractOrTokenId": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-          "scope": "material-bridge",
+          "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Monad block 89485759, the EIP-1967 implementation and admin slots resolved to 0xe536b80e7f859e72ad095d769da1da45b7312d53 and ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331. ProxyAdmin owner() was nonzero contract 0xd32ab76a165f1a716986ba8c58344e3df4397f5e. The current official StakedYuzuUSD implementation leaves ordinary ERC-20 transfers inherited, but the ProxyAdmin can replace that implementation, so the deployment is restrictable.",
+          "evidence": "At Monad block 91740218 the transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53) reverts on blacklist(address) and paused() probes (no freeze selectors exposed) and share transfers are ordinary unrestricted ERC-20 movements. The ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 is owned by contract 0xd32ab76a165f1a716986ba8c58344e3df4397f5e, which can replace the implementation and introduce holder-transfer restrictions, so the deployment is restrictable.",
           "sources": [
             {
-              "label": "Monad syzUSD proxy",
+              "label": "syzUSD vault on Monadexplorer",
               "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
             },
             {
-              "label": "Pinned official StakedYuzuUSD source",
-              "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/StakedYuzuUSD.sol"
-            },
-            {
-              "label": "Monad public RPC used for block 89485759 reads",
-              "url": "https://rpc.monad.xyz"
+              "label": "Yuzu syzUSD documentation",
+              "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
             }
           ]
         }
@@ -4471,6 +4487,79 @@
             {
               "label": "Zephyr Explorer block 819289",
               "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "xdai-gnosis",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
+      "deployments": [
+        {
+          "chainId": "gnosis",
+          "contractOrTokenId": "xDAI",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "xDAI is the native Gnosis Chain gas balance. Ordinary holder transfers are consensus/ledger value transfers with no issuer ERC-20 transfer hook, blacklist, freeze, pause, or allowlist. Bridge mint/burn (Home Bridge 0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6 + BlockReward 0x481c034c6d9441db23Ea48De68BCAe812C5d39bA) only creates or destroys balances on bridge execution, not selective transfer restriction of existing holders. Observed against Gnosis block 47473648. Traded WXDAI 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d is a plain WETH-style wrapper and is not the canonical native supply contract.",
+          "sources": [
+            {
+              "label": "Gnosis Chain token docs",
+              "url": "https://docs.gnosischain.com/about/tokens/"
+            },
+            {
+              "label": "Gnosis xDAI bridge docs",
+              "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+            },
+            {
+              "label": "Gnosis block 47473648",
+              "url": "https://gnosis.blockscout.com/block/47473648"
+            },
+            {
+              "label": "WXDAI wrapper contract",
+              "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdx-kava",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T39 Safety Score V9 access review",
+      "deployments": [
+        {
+          "chainId": "kava",
+          "contractOrTokenId": "usdx",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "USDX is a native Cosmos SDK bank denom on Kava (x/cdp debt_param denom usdx read at height 21878704). /kava/evmutil/v1beta1/params lists no usdx conversion pair, so there is no ERC-20 or contract transfer-control surface; bank sends are validated by consensus alone with no per-denom freeze, denylist, pause, or transfer hook in Kava's module set.",
+          "sources": [
+            {
+              "label": "Kava x/cdp params API (live read at height 21878704)",
+              "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+            },
+            {
+              "label": "Kava evmutil params API (no USDX conversion pair)",
+              "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
+            },
+            {
+              "label": "Kava CDP module docs",
+              "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+            }
+          ]
+        },
+        {
+          "chainId": "osmosis",
+          "contractOrTokenId": "ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "The only tracked off-chain USDX representation is this ibc-go transfer voucher on Osmosis; ibc-go x/transfer vouchers are bank denoms with no issuer freeze, denylist, pause, or transfer-hook authority.",
+          "sources": [
+            {
+              "label": "Mintscan Osmosis IBC USDX denom",
+              "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
             }
           ]
         }

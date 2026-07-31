@@ -13,19 +13,31 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T33 unknown-reduction wave-2 backing review",
     "confidence": "probable",
     "sources": [
       {
         "label": "WSPN whitepaper reserve-management policy",
         "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+      },
+      {
+        "label": "WSPN About WUSD disclosure (HQLA policy, indicative 70-80% / 20-30% ranges)",
+        "url": "https://developer.wspn.io/5768563m0"
+      },
+      {
+        "label": "WSPN FAQ (trust-structure custody and periodic third-party audit claims; no published report)",
+        "url": "https://wspn.io/faq.html"
+      },
+      {
+        "label": "WSPN-OpenEden TBILL reserve partnership announcement",
+        "url": "https://www.businesswire.com/news/home/20240222125092/en/WSPN-and-OpenEden-Labs-Forge-Pioneering-Partnership-for-On-Chain-Integration-of-WUSD-Stablecoin-in-DeFi-Ecosystem/"
       }
     ],
-    "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation. Because the disclosed ranges are policy targets rather than a dated current composition, the prior fixed 75/25 estimate is replaced with one evidenced aggregate basket.",
+    "rationale": "WSPN's reserve policy limits backing to cash, cash equivalents, and Treasury bills and describes a possible 70-80% cash-equivalent and 20-30% sub-90-day Treasury allocation; a 2024 partnership allocates an undisclosed portion of reserves to OpenEden TBILL. Re-verified on 2026-07-30: the About WUSD disclosure, FAQ, and whitepaper still publish policy ranges only — no dated current composition, and the FAQ's periodic third-party audit claim has no published report. The disclosed ranges are policy targets rather than a dated current composition, so one evidenced aggregate basket is retained.",
     "compositionBasis": "WSPN reserve-management policy; current asset-class weights undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "The eligible reserve categories and maximum Treasury maturity are disclosed, but current category weights, instruments, banks, and provider shares are not public in the reviewed source.",
+    "knownUnknownExposure": "The eligible reserve categories and maximum Treasury maturity are disclosed, but current category weights, instruments, banks, provider shares, and the size of the announced TBILL allocation are not public in the reviewed sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -47,15 +59,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T33 unknown-reduction wave-2 backing review",
     "confidence": "probable",
     "sources": [
       {
         "label": "WSPN whitepaper reserve-segregation policy",
         "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
+      },
+      {
+        "label": "WSPN FAQ (trust-structure custodial arrangements; custodians unnamed)",
+        "url": "https://wspn.io/faq.html"
       }
     ],
-    "uncertainty": "WSPN states that reserve and operating funds use separate bank accounts, but the reviewed source does not identify the banks, provider shares, legal account structure, bankruptcy treatment, or rehypothecation terms."
+    "uncertainty": "WSPN states that reserve and operating funds use separate bank accounts and its FAQ claims a trust structure for custodial arrangements managed by licensed trust companies and custodians, but no reviewed source identifies the banks, trustees, custodians, provider shares, legal account structure, bankruptcy treatment, or rehypothecation terms."
   }
 }

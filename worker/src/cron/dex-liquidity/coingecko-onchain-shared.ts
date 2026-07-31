@@ -41,7 +41,7 @@ export function parseCgPool(pool: CgPool, chain: string): ParsedPool | null {
     quoteTokenAddress,
     baseTokenPriceUsd: Number.parseFloat(attrs.base_token_price_usd ?? ""),
     quoteTokenPriceUsd: Number.parseFloat(attrs.quote_token_price_usd ?? ""),
-    createdAt: attrs.pool_created_at,
+    createdAt: attrs.pool_created_at ?? null,
     poolName: attrs.name,
   };
 }

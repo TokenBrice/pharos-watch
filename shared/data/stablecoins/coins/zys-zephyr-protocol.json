@@ -234,9 +234,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T44 unknown-reduction wave-2",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Zephyr Protocol documentation",
@@ -247,16 +247,20 @@
         "url": "https://zephyrprotocol.com/yield"
       },
       {
-        "label": "Zephyr Protocol source repository",
+        "label": "Zephyr Scanner reserve snapshot (captured 2026-07-19, height 822991)",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      },
+      {
+        "label": "Zephyr Protocol source repository (v2.3.0)",
         "url": "https://github.com/ZephyrProtocol/zephyr"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 of Zephyr Protocol documentation: native assets include ZYS (Zephyr Yield Share) as the yield-bearing share of the ZSD reserve system. Source repository still public. Yield marketing page is thin; composition remains 100% tracked zsd-zephyr-protocol dependency (wrapper), ku=0 at ZYS level.",
-    "compositionBasis": "Zephyr Protocol documentation, yield description, and source repository",
+    "rationale": "Write-time re-open 2026-07-30: Zephyr documentation still lists ZYS as the native ZSD Yield Coin and the yield page defines it as a share of the ZSD yield reserve, minted and redeemed against ZSD through the consensus MINT_YIELD/REDEEM_YIELD conversion in the pinned v2.3.0 source (still the latest official release). The live Zephyr Scanner reserve snapshot (captured 2026-07-19 at height 822991; the endpoint trailed the network tip 830837 by roughly 11 days at read time) reports zsd_yield_reserve 355,777.18 ZSD against zys_circ 183,232.76 ZYS at a yield price of 1.9417 ZSD per ZYS, corroborating that ZYS is backed exclusively by the protocol ZSD yield reserve. Composition remains 100% tracked zsd-zephyr-protocol dependency (wrapper), ku=0 at the ZYS level; the scanner is the protocol's own self-reported telemetry, which is noted as the assurance ceiling.",
+    "compositionBasis": "Zephyr Protocol documentation, yield description, pinned v2.3.0 source, and the live Zephyr Scanner reserve snapshot",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct ZYS reserve slice is identified; underlying ZSD backing remains the upstream asset's reserve question.",
     "knownUnknownExposurePct": 0,
-    "compositionAsOf": "2026-07-28"
+    "compositionAsOf": "2026-07-30"
   },
   "custodyProfile": {
     "providers": [

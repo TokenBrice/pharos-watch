@@ -186,8 +186,9 @@
       }
     ]
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "infiniFi contract-address documentation",
@@ -216,11 +217,27 @@
       {
         "label": "infiniFi protocol source",
         "url": "https://github.com/InfiniFi-Labs/infinifi-protocol"
+      },
+      {
+        "label": "IUSD TIP-20 TokenCreated transaction (Tempo block 12424756)",
+        "url": "https://explore.tempo.xyz/tx/0xde30ac10c5a41b56645529c4948b7e5e1952ccabf67641dc294e42591311d488"
+      },
+      {
+        "label": "IUSD TIP-20 DEFAULT_ADMIN_ROLE grant to infiniFi Safe (Tempo block 22529597)",
+        "url": "https://explore.tempo.xyz/tx/0xb71298b1197347442d65239ed7e0279b41d2c90fe79f1889350a37f5f747a082"
+      },
+      {
+        "label": "IUSD TIP-20 creation-admin role revocation (Tempo block 22529608)",
+        "url": "https://explore.tempo.xyz/tx/0x9d83852436c8d05c474079eeb23663f2fcf1b4bae0c4b71b2225343547c42221"
+      },
+      {
+        "label": "infiniFi admin Safe",
+        "url": "https://app.safe.global/home?safe=eth:0x80608f852d152024c0a2087b16939235fec2400c"
       }
     ],
-    "evidence": "The accepted deployment inventory includes Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, BNB OFT IUSD 0x60B14ec49874Af1BA471685cb11132101aeBdF09, and Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E with OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. The issuer-listed Plasma address is excluded because pinned metadata identifies it as iUSDT, not iUSD. At Ethereum block 25534201, the verified ReceiptToken deployment was unpaused and its source has no transfer hook or holder blacklist. At BNB block 110030607, verified InfiniFiOFT source exposed standard OFT/ERC-20 transfers without a pause ABI. At Tempo block 30008157, TIP-20 IUSD reported paused() = false and transferPolicyId() = 1, while its official specification permits PAUSE_ROLE, DEFAULT_ADMIN_ROLE transfer-policy changes, and BURN_BLOCKED_ROLE burns of policy-blocked balances; the OFT adapter resolved token() to TIP-20 IUSD and owner() to the infiniFi Safe. Route role membership and Tempo adapter source were not fully enumerable, so a global no-freeze/no-restriction conclusion is unsupported.",
-    "reviewer": "GPT SOL-CORP-B wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "On 2026-07-30 the deployment inventory was re-derived. The Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c read paused() = false at block 25648350 and its verified source exposes no holder blacklist or transfer hook; the BNB OFT 0x60B14ec49874Af1BA471685cb11132101aeBdF09 exposes no pause or blacklist selector. The decisive surface is the Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E: the TIP20Factory TokenCreated event at Tempo block 12424756 names creation admin 0xa11ce67cd9ad7295948a681617aa81e0523e0679; RoleMembershipUpdated logs show DEFAULT_ADMIN_ROLE granted to the infiniFi admin Safe 0x80608f852d152024c0a2087b16939235fec2400c at block 22529597 and the creation admin's own DEFAULT_ADMIN_ROLE revoked at block 22529608, with no subsequent role events through Tempo block 32484367, while ISSUER_ROLE is held by the reviewed LayerZero OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. getThreshold() = 4 confirms the 4-of-7 Safe is live on Tempo. Under the TIP-20 specification, DEFAULT_ADMIN_ROLE can immediately set the built-in always-reject policy or any TIP-403 blocklist policy via changeTransferPolicyId and can grant PAUSE_ROLE; the current paused() = false and transferPolicyId() = 1 (always-allow) are settings, not bounds on reach. The infiniFi Safe can therefore policy-block or pause IUSD transfers on Tempo today, so the asset-level direct holder-intervention posture is reviewed true (individual reach), superseding the 2026-07-22 possible.",
+    "reviewer": "Kimi T38 unknown-reduction wave 2",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

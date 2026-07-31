@@ -257,17 +257,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-09",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-06",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "reviewer": "Kimi T42 unknown-reduction wave-2",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Aura Partners AUDX Limited Assurance Report - May 2026",
-          "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
+          "label": "Aura Partners AUDX Limited Assurance Report - June 2026",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf"
         }
       ]
     }

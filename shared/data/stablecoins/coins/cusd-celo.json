@@ -93,25 +93,34 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Mento Reserve documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        "label": "Mento StableTokenV3 official source (burn(account) / sendToPool)",
+        "url": "https://github.com/mento-protocol/mento-core/blob/main/contracts/tokens/StableTokenV3.sol"
       },
       {
-        "label": "Mento USDm owner Safe",
+        "label": "Sourcify exact-match StableTokenV3 implementation on Celo",
+        "url": "https://sourcify.dev/server/v2/contract/42220/0x815795c30d0758a297b08cd4e0643620c974c318"
+      },
+      {
+        "label": "Celo Ankr RPC observation block 73547284",
+        "url": "https://rpc.ankr.com/celo"
+      },
+      {
+        "label": "Monad public RPC observation block 91740878",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "Mento USDm owner Safe (Celo)",
         "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
-      },
-      {
-        "label": "Mento USDm documentation",
-        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
-    "evidence": "Mento documents USDm as Reserve-backed by fiat-backed collateral including USDC, USDT, and USDS, with reserve composition and liquidity strategy controlled by MENTO governance. The reviewed Celo and Monad token owner is a Mento Safe, while the NEAR bridge deployment is controlled by the parent account a11bd.near. No single holder-freeze function is established for every material deployment, so inherited upstream exposure is retained rather than asserting a direct token blacklist.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-30. Material supply is Celo (~87%) plus Monad (~12%). On Celo at block 73547284 the USDm proxy 0x765d…282a resolves via Celo Proxy _getImplementation() and EIP-1967 to StableTokenV3 0x8157…c318 (Sourcify exact-match), owner/_getOwner 0x5809…Ba458 (Mento Safe). StableTokenV3 exposes owner-gated setOperator/setBurner and onlyBurner burn(address,uint256) which destroys an arbitrary holder balance without allowance, plus onlyOperator sendToPool/returnFromPool which transfer arbitrary holder balances without allowance — direct individual freeze/seize reach on the canonical deployment. Ordinary transfer/transferFrom remain unmodified ERC-20; no pause/isBlacklisted selectors. On Monad at block 91740878 proxy 0xbc69…0115 uses StableTokenSpoke impl 0x6a8f…e62e with owner the same Safe, setBurner present, and live EIP-1967 admin 0x97b2…5ef5 (upgrade path under the same control domain). Peripheral bridge rows (Ethereum Moss, Solana/NEAR Allbridge, Klaytn Orbit dust) are separate failure domains and not required for the material freeze verdict. Reserve USDC/USDT exposure is additional upstream risk, not the token-level control path.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

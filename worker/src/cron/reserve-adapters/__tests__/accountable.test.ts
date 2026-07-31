@@ -1009,3 +1009,189 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 });
+
+describe("adaptAccountableDashboard collateralization reconciliation", () => {
+  /** Verbatim Apyx dashboard scalars captured at 2026-07-27T22:45:43Z (payload ts 1785192343737).
+   *  This is the snapshot behind the reported 0.922477 vs reserves/supply 0.9435191072 contradiction. */
+  const APYX_2026_07_27_PAYLOAD = {
+    res: "ok",
+    data: {
+      collateralization: 0.922477,
+      ts: "1785192343737",
+      reserves: {
+        interval: "live",
+        verifiability: "100",
+        total_reserves: { name: "Total Reserves", value: 308_600_110.7 },
+        total_supply: { name: "Total Supply", fx: 1, value: 327_073_514.82 },
+        inventory: 39_967_447.71,
+        pol: 48_810_415.17,
+        reserves_split: [
+          { name: "STRC", value: 189_087_988.65 },
+          { name: "Protocol Owned Liquidity", value: 48_810_415.17 },
+          { name: "Inventory", value: 39_967_447.71 },
+          { name: "Cash & Equivalents", value: 30_725_438.26 },
+          { name: "Other", value: 8_820.91 },
+        ],
+      },
+    },
+  } as const;
+
+  const apxusdParams = {
+    bucket: "reserves_split",
+    riskMap: {
+      STRC: "high",
+      "Cash & Equivalents": "very-low",
+      "Protocol Owned Liquidity": "high",
+      Inventory: "high",
+      Other: "high",
+    },
+  } as const;
+
+  it("reconciles the contradicted Apyx snapshot to a net-of-protocol-owned denominator", () => {
+    const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...apxusdParams });
+
+    // The gross ratio the prior review derived, and the ratio the dashboard actually reports.
+    expect(308_600_110.7 / 327_073_514.82).toBeCloseTo(0.943519, 6);
+    expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
+    expect(result.metadata?.collateralizationReconciliation).toMatchObject({
+      basis: "net-of-protocol-owned",
+      reportedRatio: 0.922477,
+      supplyUsd: 327_073_514.82,
+      totalReservesUsd: 308_600_110.7,
+      protocolOwnedUsd: 88_777_862.88,
+    });
+
+    const reconciliation = result.metadata?.collateralizationReconciliation as {
+      grossRatio: number;
+      netRatio: number;
+    };
+    expect(reconciliation.grossRatio).toBeCloseTo(0.9435191072, 9);
+    expect(reconciliation.netRatio).toBeCloseTo(0.922477, 6);
+    expect(result.metadata?.supplyUsd).toBe(327_073_514.82);
+    expect(result.metadata?.protocolOwnedUsd).toBe(88_777_862.88);
+  });
+
+  it("states the denominator basis on the undercollateralization warning and flags protocol-owned reserves", () => {
+    const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...apxusdParams });
+
+    expect(result.warnings?.map((warning) => warning.code).sort()).toEqual([
+      "protocol-owned-bucket",
+      "reserve-undercollateralized",
+    ]);
+    expect(result.warnings).toContainEqual({
+      code: "reserve-undercollateralized",
+      message:
+        "Accountable dashboard reports 92.25% collateralization net of protocol-owned reserves (gross reserves/supply 94.35%)",
+      severity: "warning",
+      effect: "degraded",
+    });
+
+    // 28.77% of reserves is issuer-held; it must never read as itemized third-party composition.
+    const protocolOwned = result.warnings?.find((warning) => warning.code === "protocol-owned-bucket");
+    expect(protocolOwned).toMatchObject({ severity: "warning", effect: "degraded" });
+    expect(protocolOwned?.message).toContain("not itemized third-party backing");
+    expect(result.metadata?.protocolOwnedPctOfReserves).toBeCloseTo(28.77, 2);
+  });
+
+  it("keeps the gross basis for feeds that report gross collateralization despite publishing protocol-owned liquidity", () => {
+    // Verbatim Neutrl dashboard scalars: pol is published, but collateralization is the gross ratio.
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1.033906,
+          ts: "1785450200998",
+          reserves: {
+            total_reserves: { name: "Total Reserves", value: 60_607_322.11 },
+            total_supply: { name: "Total Supply", value: 58_619_735.19 },
+            pol: 1_996_688.4539363272,
+            type_split: { Stablecoin: 60_607_322.11 },
+          },
+        },
+      },
+      { bucket: "type_split", riskMap: { Stablecoin: "very-low" } },
+    );
+
+    expect(result.metadata?.collateralizationBasis).toBe("gross");
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["protocol-owned-bucket"]);
+    expect(result.metadata?.collateralizationReconciliation).toMatchObject({
+      basis: "gross",
+      netRatio: expect.any(Number),
+    });
+  });
+
+  it("fails closed with a degraded warning when the reported ratio matches no derivable denominator", () => {
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 0.75,
+          ts: "1785192343737",
+          reserves: {
+            total_reserves: { name: "Total Reserves", value: 1_000 },
+            total_supply: { name: "Total Supply", value: 1_000 },
+            inventory: 100,
+            pol: 50,
+            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
+          },
+        },
+      },
+      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
+    );
+
+    expect(result.metadata?.collateralizationBasis).toBe("unreconciled");
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "collateralization-unreconciled",
+      effect: "degraded",
+    }));
+    expect(
+      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
+    ).toBe(
+      "Accountable dashboard reports 75.00% collateralization on an unreconciled denominator (gross reserves/supply 100.00%)",
+    );
+  });
+
+  it("leaves the basis underived when the feed publishes no total_supply", () => {
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 0.9,
+          ts: "1785192343737",
+          reserves: {
+            total_reserves: 1_000,
+            reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
+          },
+        },
+      },
+      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
+    );
+
+    expect(result.metadata?.collateralizationBasis).toBe("underived");
+    expect(result.metadata?.supplyUsd).toBeUndefined();
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["reserve-undercollateralized"]);
+    expect(
+      result.warnings?.find((warning) => warning.code === "reserve-undercollateralized")?.message,
+    ).toBe("Accountable dashboard reports 90.00% collateralization");
+  });
+
+  it("rejects a malformed total_supply instead of silently dropping the denominator", () => {
+    expect(() =>
+      adaptAccountableDashboard(
+        {
+          res: "ok",
+          data: {
+            collateralization: 1,
+            ts: "1785192343737",
+            reserves: {
+              total_reserves: 1_000,
+              total_supply: { name: "Total Supply", value: "n/a" },
+              reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }],
+            },
+          },
+        },
+        { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
+      ),
+    ).toThrow(/total_supply has invalid value/);
+  });
+});

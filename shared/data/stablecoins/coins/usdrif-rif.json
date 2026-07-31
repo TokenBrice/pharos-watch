@@ -237,7 +237,7 @@
       {
         "label": "USDRIF Arbitrum LayerZero OFT inbound minter",
         "role": "direct-minter",
-        "authorityType": "bridge",
+        "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
@@ -253,7 +253,7 @@
           "trustedPeerOrRemote": "The OFT is peered only to Rootstock EID 30333 and mints only after verified LayerZero V2 messages.",
           "lockboxOrEscrow": "The route evidence identifies a Rootstock OFT adapter lockbox that locks native USDRIF and matched the Arbitrum OFT supply 1:1 at review."
         },
-        "evidence": "At Arbitrum block 486369748 (2026-07-22T01:25:29Z), this OFT returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and owner 0xb2395E...6305. It mints only on verified messages against native USDRIF locked by the Rootstock adapter.",
+        "evidence": "At Arbitrum block 486369748 (2026-07-22T01:25:29Z), this OFT returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and owner 0xb2395E...6305. It mints only on verified messages against native USDRIF locked by the Rootstock adapter, so the mint authority is the OFT contract itself (authorityType contract). Re-confirmed 2026-07-30 at Arbitrum block 490995736: the address still holds contract bytecode and owner() still returns 0xb2395Eaaeb03fb1F46647C423378B24f2E906305.",
         "sources": [
           {
             "label": "USDRIF token on Arbiscan",
@@ -262,6 +262,10 @@
           {
             "label": "Arbitrum block 486369748",
             "url": "https://arbiscan.io/block/486369748"
+          },
+          {
+            "label": "Arbitrum block 490995736",
+            "url": "https://arbiscan.io/block/490995736"
           }
         ]
       },

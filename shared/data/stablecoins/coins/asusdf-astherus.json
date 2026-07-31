@@ -80,20 +80,20 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Aster asUSDF contract inventory",
         "url": "https://docs.asterdex.com/overview/smart-contracts"
       },
       {
-        "label": "Sourcify exact-match asUSDF source",
-        "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb?fields=sources"
+        "label": "Sourcify exact-match asUSDF ABI and source (chain 56)",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb"
       },
       {
-        "label": "Pinned Aster asUSDF source",
+        "label": "Pinned Aster asUSDF source (ERC20Pausable + ADMIN_ROLE pause)",
         "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/oft/asUSDF.sol"
       },
       {
@@ -101,9 +101,9 @@
         "url": "https://bsc-dataseed.bnbchain.org"
       }
     ],
-    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) has a direct, contract-wide pause surface: its exact-match source gives ADMIN_ROLE pause() and unpause() access and routes _update through ERC20Pausable, which blocks ordinary transfers, transferFrom, minting, and burning while paused. At the 2026-07-15 BSC head snapshot (block 110054844), paused() was false; follow-up control reads found the Astherus timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 held DEFAULT_ADMIN_ROLE but not ADMIN_ROLE, and getMinDelay() returned 21600 seconds. DEFAULT_ADMIN_ROLE administers ADMIN_ROLE, so the timelock can grant pause authority after its six-hour delay, but no current pause executor was demonstrated. The current MINTER_AND_BURN_ROLE grantee was official AsterEarn 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695; its role alone is not treated as a demonstrated FreezeWatch controller. No holder-specific blacklist mapping was identified. This is a direct possible transfer-freeze exposure; the upstream USDF exposure remains additional.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) is a direct non-proxy AccessControl + ERC20Pausable token. Verified source and Sourcify ABI expose ADMIN_ROLE pause()/unpause() and route _update through ERC20Pausable, so a privileged pause freezes ordinary transfer, transferFrom, mint, and burn for every holder (global transfer restriction). The ABI has no blacklist/freeze/blocklist mapping and no holder-selective allowlist; the only holder-affecting privilege beyond pause is MINTER_AND_BURN_ROLE burn(address from,uint256 amount), which destroys an arbitrary balance without allowance. Re-checked 2026-07-30 at BSC block 113073068: paused() was false; hasRole(ADMIN_ROLE) was false for both the Astherus timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 and the asUSDFEarn wrapper 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695. DEFAULT_ADMIN_ROLE still administers ADMIN_ROLE, so the six-hour timelock can re-grant pause authority. Global pause freeze is therefore a known direct access surface; holder-specific blacklist is absent. Upstream USDF freeze exposure remains additional via variantOf usdf-astherus.",
+    "reviewer": "Grok T01 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

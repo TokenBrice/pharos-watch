@@ -47,9 +47,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Polygon, XDC, Algorand, and Stellar (STASIS's published issuance chains; Ethereum delegate/owner verified on-chain). Arbitrum EURS is a Multichain representation (AnyswapV4Router owner, mint simulation verified) and Gnosis EURS is the OmniBridge representation (mediator owner verified).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Polygon, XDC, Algorand, and Stellar (STASIS's published issuance chains; Ethereum delegate/owner verified on-chain). Arbitrum EURS is a Multichain representation (AnyswapV4Router owner, mint simulation verified) and Gnosis EURS is the OmniBridge representation (mediator owner verified). DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Kimi T57 wave-2 label-pool verification",
     "confidence": "probable",
     "sources": [
       {
@@ -59,6 +59,10 @@
       {
         "label": "STASIS EURS token repository",
         "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+      },
+      {
+        "label": "DefiLlama EURS chain balances (Everscale label pool)",
+        "url": "https://stablecoins.llama.fi/stablecoin/51"
       }
     ],
     "routes": [

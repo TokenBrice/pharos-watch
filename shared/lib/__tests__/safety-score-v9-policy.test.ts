@@ -34,8 +34,15 @@ describe("Safety Score v9 methodology policy", () => {
     // dispositions, and peg-supply-floor-withheld (same peg-unverified
     // ceiling as missing-peg-input) for deviations withheld by the $1M
     // supply floor - both measured-structural, both score-neutral clones.
+    // 2026-07-31 owner ruling: unresolved-control-identity also admits the
+    // deployment-control path kind. Gap-accounting only - the queue stops
+    // filing 62 deployment-scoped control gaps as reconcile-policy-binding
+    // work; scores, grades, pillars and binding caps are unchanged across all
+    // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
+    // including the 28 USDT bridge-control rows) was explicitly acknowledged:
+    // pathKinds is per-reason-code, so the rows cannot be admitted separately.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "c61656e68732b3b045b23a750025e23e6f7fce09ab97b516fe1f941701525082",
+      "764921f88470ffee28198f4b541c91cd2f953170324d417c277baa9022b0fc78",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

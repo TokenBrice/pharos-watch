@@ -77,37 +77,27 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Cod3x cdxUSD technical overview",
+        "label": "Sourcify exact-match Base CdxUSD ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=abi,compilation,metadata"
+      },
+      {
+        "label": "Cod3x cdxUSD technical overview (facilitator mint/burn design)",
         "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
       },
       {
-        "label": "Base Blockscout verified CdxUSD source and ABI",
-        "url": "https://base.blockscout.com/address/0xc0d3700000987c99b3c9009069e4f8413fd22330"
-      },
-      {
-        "label": "Cod3x Terms of Use",
-        "url": "https://www.cod3x.org/terms-of-use/"
-      },
-      {
-        "label": "Archived Cod3x cdxUSD technical overview",
-        "url": "https://web.archive.org/web/20240925205114/https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
-      },
-      {
-        "label": "Base PublicNode RPC",
+        "label": "Base PublicNode RPC calls at block 49332025",
         "url": "https://base-rpc.publicnode.com"
-      },
-      {
-        "label": "Cod3x-Labs official GitHub organization",
-        "url": "https://github.com/Cod3x-Labs"
       }
     ],
-    "evidence": "The verified Base source and ABI for the sole tracked CdxUSD deployment expose standard ERC-20 transfer/transferFrom plus facilitator mint/burn, but no holder blacklist, freeze, seizure, or global ERC-20 pause path. Live latest-state reads from Base PublicNode during review returned owner=0xc0D3700924301AC384E5Eae3272E08220752DE3D, guardian=0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba, lzPause=false, one facilitator, and a 24-hour owner TimelockController; a 1-wei transfer simulation from the funded facilitator returned true. These are current live observations, not a claimed archival replay. The guardian can call pauseBridge(), but source confines that switch to LayerZero _debit/send(), not ordinary ERC-20 transfers; the owner can adjust facilitator/OFT parameters but cannot add holder-freeze logic to this deployed code. Cod3x Terms reserve Application access only, not token-balance control. Inherited: issuer materials describe facilitator credit against stablecoin collateral, but neither current nor archived disclosures identify its current collateral or custodian composition. The Upstream status records that unresolved collateral exposure without naming an issuer or asserting it can directly freeze cdxUSD holders.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "Write-time re-review on 2026-07-31 of the sole tracked Base deployment 0xc0d3700000987c99b3c9009069e4f8413fd22330. Sourcify's exact-match ABI exposes ERC-20 transfer/transferFrom, facilitator mint/burn, owner/guardian administration, and pauseBridge/unpauseBridge/lzPause, but no isBlacklisted, blacklist, freeze, seize, pause(), or paused() surface. At Base block 49332025 (timestamp 2026-07-30T23:16:33Z), live eth_call returned owner=0xc0D3700924301AC384E5Eae3272E08220752DE3D, guardian=0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba, lzPause=false, and totalSupply=6,150,000e18; paused() reverted. The deployed ABI/bytecode exposes pauseBridge (0x7dd0480f) and lzPause (0x3771e259) while the blacklist/freeze selectors isBlacklisted (0xfe575a87), blacklist (0xf9f92be4), pause (0x8456cb59), and paused (0x5c975abb) are absent. Cod3x's current technical overview describes facilitator credit mint/burn under protocol limits, not holder freeze. Bridge pause is confined to LayerZero OFT paths, not ordinary ERC-20 transfers. Conclusion: no direct holder freeze/blacklist; canBeBlacklisted=false.",
+    "upstreamSuppressionRationale": "Facilitator strategies may hold freezable third-party stablecoins or crypto collateral, which can impair redemption value, but those issuers have no holder-level freeze path on the cdxUSD ERC-20 itself. That exposure remains reserve/dependency risk, not cdxUSD token blacklistability.",
+    "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",

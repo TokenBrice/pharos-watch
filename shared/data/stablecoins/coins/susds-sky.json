@@ -127,6 +127,10 @@
         "url": "https://github.com/sky-ecosystem/usds"
       },
       {
+        "label": "Sky USDS token documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+      },
+      {
         "label": "Sky savings transparency dashboard",
         "url": "https://financial.skyeco.com/usds/savings"
       },
@@ -155,9 +159,9 @@
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "evidence": "All four tracked routes were reviewed separately. Ethereum 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd is an EIP-1967 UUPS proxy: at block 25535646 it returned implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, with wards(MCD_PAUSE_PROXY 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1 and wards(0x36b072ed8afe665e3aa6daba79decbec63752b22)=1. The verified current ERC-4626 source has ordinary transfer and transferFrom paths, no blacklist, pause, seizure, or transfer hook, and burns another holder's shares only with that holder's allowance; pinned zero-value transfer and transferFrom simulations returned true. Base 0x5875eee11cf8398102fdad704c9e96607675467a and OP Mainnet 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 are separately verified UUPS representations: their current sources also have ordinary ERC-20 transfer paths, while their active ward pairs respectively include 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 and 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 on Base, and 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 on OP. At pinned blocks 48650092 and 154245377, their implementation and zero-value transfer/transferFrom calls succeeded. Arbitrum 0xddb46999f8891663a8f2828d25298f70416d7610 returned implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 at current head 483995500; its two active wards are 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x13f7f24ca959359a4d710d32c715d4bce273c793, and current zero-value transfer paths returned true. The free Arbitrum endpoint rejected later fixed-block simulations as archive-only. No active deployment currently exposes a holder blacklist, pause, seizure, or global transfer stop. Ward-gated upgrade authority remains a Mint Authority fact and does not establish direct freeze reach. Possible is retained as the prior bounded posture pending primary evidence of an active holder-facing freeze surface.",
-    "reviewer": "GPT SOL-BIND wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Fresh current-head replay on 2026-07-30 found the four tracked EVM routes unchanged: Ethereum 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd at block 25648886 (2026-07-30T23:14:59Z) resolved EIP-1967 implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base 0x5875eee11cf8398102fdad704c9e96607675467a at block 49331989 (23:15:25Z) resolved 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; OP Mainnet 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 at block 154927274 (23:15:25Z) resolved 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum 0xddb46999f8891663a8f2828d25298f70416d7610 at block 489446439 (23:15:31Z) resolved 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. The verified SUsds source exposes standard ERC-20 transfer/transferFrom and ERC-4626 deposit/withdraw paths plus UUPS _authorizeUpgrade auth; it contains no holder blacklist, pause, seizure, or transfer hook. Sky's current token documentation confirms those transfer and vault interfaces. The four routes therefore have no current direct holder-facing freeze path, but ward-gated UUPS upgrade authority and inherited USDS governance remain shared failure domains that could change transfer logic or the underlying exit path. Possible is retained rather than claiming false certainty.",
+    "reviewer": "Codex T37 access replay",
+    "reviewedAt": "2026-07-31"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

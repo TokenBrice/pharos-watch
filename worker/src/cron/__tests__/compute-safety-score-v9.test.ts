@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
   parsePegSeed: vi.fn(),
   parseSupplyGeneration: vi.fn(),
   supplyGenerationCadenceDeferred: vi.fn(),
+  applySupplyGeneration: vi.fn(),
+  loadEvidenceJournalById: vi.fn(),
+  loadSupplyAttributionJournalById: vi.fn(),
   runPublication: vi.fn(),
 }));
 
@@ -53,6 +56,8 @@ vi.mock(
       >();
     return {
       ...original,
+      applySafetyScoreV9SupplyAttributionGeneration:
+        mocks.applySupplyGeneration,
       parseSafetyScoreV9SupplyAttributionGeneration:
         mocks.parseSupplyGeneration,
       isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred:
@@ -60,6 +65,16 @@ vi.mock(
     };
   },
 );
+
+vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+  loadReportCardEvidenceJournalByIdV1:
+    mocks.loadEvidenceJournalById,
+}));
+
+vi.mock("../../lib/safety-score-v9-supply-attribution-journal-store", () => ({
+  loadSupplyAttributionJournalByIdV1:
+    mocks.loadSupplyAttributionJournalById,
+}));
 
 vi.mock("../../lib/safety-score-v9-publication-runner", () => ({
   runSafetyScoreV9Publication: mocks.runPublication,
@@ -120,6 +135,22 @@ describe("computeSafetyScoreV9", () => {
     mocks.supplyGenerationCadenceDeferred
       .mockReset()
       .mockReturnValue(true);
+    mocks.applySupplyGeneration
+      .mockReset()
+      .mockReturnValue({
+        status: "applied",
+        generationId: generation.generationId,
+        fixedInput,
+        acceptedAssetIds: ["xaut-tether"],
+        rejectedAssetIds: [],
+        invalidAssetIds: [],
+      });
+    mocks.loadEvidenceJournalById
+      .mockReset()
+      .mockResolvedValue({});
+    mocks.loadSupplyAttributionJournalById
+      .mockReset()
+      .mockResolvedValue({});
     mocks.runPublication.mockReset();
   });
 
@@ -141,5 +172,88 @@ describe("computeSafetyScoreV9", () => {
       rejectedCount: 0,
     });
     expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("keeps tolerated partial V9 publications green when supply attribution applied", async () => {
+    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: unknown;
+      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+    }) => {
+      await input.prepareFixedInput?.(
+        input.fixedInput,
+        new AbortController().signal,
+      );
+      return {
+        status: "published",
+        attemptId: "attempt",
+        publicationGenerationId: "report-cards:v9:test",
+        candidateId: "candidate",
+        outcome: "partial",
+        quarantines: [],
+        affectedAssetIds: ["wm-m0"],
+      };
+    });
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("ok");
+    expect(result.productivity?.reason).toBe(
+      "v9-publication-published-partial",
+    );
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      supplyAttributionGeneration: {
+        status: "applied",
+        acceptedCount: 1,
+        rejectedCount: 0,
+      },
+      publication: {
+        status: "published",
+        outcome: "partial",
+      },
+    });
+  });
+
+  it("degrades a published V9 attempt when supply attribution is incompatible", async () => {
+    mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
+    mocks.applySupplyGeneration.mockReturnValueOnce({
+      status: "incompatible",
+      generationId:
+        `safety-score-v9-supply-attribution:v1:${"a".repeat(64)}`,
+      fixedInput: createSafetyScoreV9FullRegistryInput(),
+      reason: "generation-stale",
+    });
+    mocks.runPublication.mockImplementationOnce(async (input: {
+      fixedInput: unknown;
+      prepareFixedInput?: (fixedInput: unknown, signal: AbortSignal) => Promise<unknown>;
+    }) => {
+      await input.prepareFixedInput?.(
+        input.fixedInput,
+        new AbortController().signal,
+      );
+      return {
+        status: "published",
+        attemptId: "attempt",
+        publicationGenerationId: "report-cards:v9:test",
+        candidateId: "candidate",
+        outcome: "clean",
+        quarantines: [],
+        affectedAssetIds: [],
+      };
+    });
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      supplyAttributionGeneration: {
+        status: "incompatible",
+        reason: "generation-stale",
+      },
+      publication: {
+        status: "published",
+        outcome: "clean",
+      },
+    });
   });
 });

@@ -338,6 +338,7 @@ const WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingDataWorkType>> = {
   "missing-oracle-profile": "ORACLE_PROFILE",
   "missing-peg-input": "PEG_INPUT",
   "missing-reserve-composition": "RESERVE_COMPOSITION",
+  "peg-price-unavailable-adverse-history": "PEG_INPUT",
   "peg-supply-floor-withheld": "PEG_INPUT",
   "missing-runtime-route-evidence": "EXIT_RUNTIME_ROUTE",
   "missing-upgradeability-review": "DEPLOYMENT_CONTROLS",

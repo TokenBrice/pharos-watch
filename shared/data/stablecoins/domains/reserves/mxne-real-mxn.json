@@ -2,12 +2,12 @@
   "id": "mxne-real-mxn",
   "reserves": [
     {
-      "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
+      "name": "Etherfuse CETES Stablebond (Mexican federal CETES exposure)",
       "pct": 100,
       "risk": "low",
       "coinId": "cetes-etherfuse",
       "assetClass": "tokenized-security",
-      "issuerOrObligor": "Etherfuse CETES and Mexican federal government",
+      "issuerOrObligor": "Etherfuse MX, S.A. de C.V. and the Mexican federal government",
       "riskFactors": [
         "credit",
         "duration",
@@ -21,59 +21,72 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T46 live reserve re-verification",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Etherfuse CETES stablebond page",
+        "label": "BHR México reasonable-assurance report dated June 26, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+      },
+      {
+        "label": "Etherfuse CETES Stablebond disclosure (current maturity and INDEVAL custody)",
         "url": "https://app.etherfuse.com/bonds/cetes"
       },
       {
-        "label": "Brale MXNe",
-        "url": "https://brale.xyz/stablecoins/MXNe"
-      },
-      {
-        "label": "Brale Introducing MXNe",
+        "label": "Brale MXNe launch disclosure (Etherfuse partnership)",
         "url": "https://brale.xyz/blog/introducing-mxne"
       }
     ],
-    "rationale": "Brale identifies MXNe as an Etherfuse partnership stablecoin backed by Etherfuse CETES Stablebonds. Etherfuse describes CETES as Mexican federal Treasury bills, held through participating brokerages and INDEVAL, and publishes a current CETES reserve/attestation page. The public evidence supports the full tracked CETES dependency but does not publish an MXNe-specific reserve balance or liability reconciliation.",
-    "compositionBasis": "Brale MXNe disclosure and Etherfuse CETES stablebond reserve and custody disclosure",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Brale's MXNe launch disclosure identifies the Etherfuse partnership; Etherfuse's current CETES page identifies the token as Mexican federal CETES with approximately seven-day maturities and INDEVAL custody; and BHR México's June 26, 2026 reasonable-assurance examination reconciles Etherfuse token commitments to bank/investment assets, including the CETES program at MXN 98,013,671 against MXN 92,643,402.94 token value (105.80%). The report names BBVA México, Casa de Bolsa BASE, and Actinver as reserve institutions. MXNe-specific liability and sub-portfolio balances remain undisclosed, so the 100% slice is a category/dependency classification, not an MXNe balance claim.",
+    "compositionBasis": "Brale MXNe product disclosure plus Etherfuse CETES disclosure and BHR México assets-and-liabilities reasonable-assurance examination",
+    "compositionAsOf": "2026-06-26",
     "scope": "full-composition",
-    "knownUnknownExposure": "The tracked CETES reserve dependency is identified at 100%; MXNe-specific reserve balances and provider allocations are not separately disclosed.",
+    "knownUnknownExposure": "The tracked CETES reserve dependency is identified at 100%; MXNe-specific reserve balances, liability reconciliation, and the MXNe sub-portfolio split within Etherfuse are not separately disclosed.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "INDEVAL",
+        "name": "Banco Bilbao Vizcaya Argentaria, S.A. / Grupo Financiero BBVA México",
         "role": "custodian",
+        "sharePct": 92.5059,
         "jurisdiction": "Mexico"
       },
       {
-        "name": "Undisclosed Mexican brokerages participating in Etherfuse custody",
+        "name": "Casa de Bolsa BASE",
         "role": "custodian",
+        "sharePct": 4.7465,
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "Grupo Financiero Actinver, S.A. de C.V.",
+        "role": "custodian",
+        "sharePct": 2.7476,
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "INDEVAL (Instituto para el Depósito de Valores)",
+        "role": "other",
         "jurisdiction": "Mexico"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T46 live reserve re-verification",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Etherfuse CETES stablebond page",
-        "url": "https://app.etherfuse.com/bonds/cetes"
+        "label": "BHR México reasonable-assurance report dated June 26, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
       },
       {
-        "label": "Brale MXNe",
-        "url": "https://brale.xyz/stablecoins/MXNe"
+        "label": "Etherfuse CETES Stablebond disclosure",
+        "url": "https://app.etherfuse.com/bonds/cetes"
       }
     ],
-    "uncertainty": "Etherfuse describes INDEVAL and participating brokerage custody for CETES, but the public sources do not identify the MXNe-specific broker allocation, legal insolvency treatment, or rehypothecation terms."
+    "uncertainty": "The BHR report names and allocates the Etherfuse CETES program's three reserve institutions; Etherfuse separately identifies INDEVAL as the securities depository. The public sources do not identify the MXNe-specific sub-portfolio allocation, legal insolvency treatment, or rehypothecation terms."
   }
 }

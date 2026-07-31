@@ -79,13 +79,21 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       },
       {
+        "label": "Verified WPEN LatamStable implementation source",
+        "url": "https://eth.blockscout.com/address/0x9d6266a9167f17ff3dd20f63a474812d0cd47969?tab=contract"
+      },
+      {
         "label": "WPEN Ethereum deployment",
         "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (fresh hasRole/paused/implementation-slot reads at block 25648202)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Ripio wPEN is centrally issued across six tracked EVM routes under the wFIAT framework. The current public issuer material and verified Ethereum deployment confirm issuer-managed minting and pausing surfaces but do not provide a complete deployment-wide holder blacklist or freeze inventory, so possible is retained.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Reviewed 2026-07-30. Fresh re-derivation across two independent surfaces: the verified LatamStable implementation source (Blockscout) is a plain OpenZeppelin v5 ERC-20 with Burnable, Pausable, AccessControl, Permit, and UUPS modules and exposes no per-address blacklist or freeze function; the only transfer-stop surface is the global pause() gated by PAUSER_ROLE. On-chain reads on Ethereum at block 25648202 confirmed paused() = false, the EIP-1967 implementation slot unchanged at 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, and PAUSER_ROLE, MINTER_ROLE, UPGRADER_ROLE, and DEFAULT_ADMIN_ROLE held by the Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b, with the 4-of-7 Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holding DEFAULT_ADMIN_ROLE. All six tracked deployments (Ethereum, Base, World Chain, BSC, Polygon, Gnosis) are EIP-1167 clones of this same implementation. A live issuer-controlled global pause exists and the UUPS upgrade path could add a holder-selective freeze later, so possible is retained; no current per-holder blacklist or freeze function exists in the deployed code.",
+    "reviewer": "Kimi T18 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
