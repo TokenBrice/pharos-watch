@@ -150,12 +150,6 @@ The Cloudflare credentials authorize Worker/D1 and Pages deployment. Re-enter th
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
 
-The zone's free plan provides a single rate-limiting slot, held by the
-deliberately disabled `api-rate-limit-ip` rule; per-endpoint ingress limiting
-(API-key rates, self-serve issuance fencing, Telegram webhook dedup and
-mini-app quotas) is enforced in the Worker application layer, so the drift
-manifest requires exactly that one edge rule.
-
 The scheduled Cloudflare account-state drift workflow uses the separate
 repository secret `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. It is a dedicated
 read-only credential and is not attached to the production environment; see

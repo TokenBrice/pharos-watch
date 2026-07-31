@@ -134,6 +134,7 @@ describe("Cloudflare account-state drift comparison", () => {
         'accessApplications.operator-ui.sessionDuration: expected "12h", found "24h"',
         'workerCustomDomains.ops-api.pharos.watch.service: expected "stablecoin-api", found "other-service"',
         'rateLimitRules.api-rate-limit-ip.action: expected "block", found "managed_challenge"',
+        "rateLimitOrdering: api-self-serve-key-intake-limit must be evaluated before api-rate-limit-ip",
       ]),
     );
   });
