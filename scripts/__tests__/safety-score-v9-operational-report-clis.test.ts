@@ -5,7 +5,7 @@ import { compileV9FactSetV2, compileV9FactSetV3 } from "../../shared/lib/safety-
 import { computeV9CoverageEvaluationProjectionDigest } from "../../shared/lib/safety-score-v9/coverage";
 import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "../../shared/lib/safety-score-v9/evidence-gap-queue";
 import { upgradeCompiledV9FactSetV2 } from "../../shared/lib/safety-score-v9/facts";
-import { loadV9MethodologyPolicy } from "../../shared/lib/safety-score-v9/policy";
+import { loadV9MethodologyPolicy, resolveV9ReasonPolicy } from "../../shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "../../shared/lib/sha256";
 import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
 import {
@@ -213,6 +213,67 @@ function factSetCore(message = "Launch date evidence has not been established.")
       },
     ],
   };
+}
+
+/**
+ * One asset whose only gap is a deployment-scoped control identity gap, as the
+ * fact-set builder emits it for a bridge control with unresolved authority or
+ * economic semantics. A null materialSupplyShare models the unmatched targets
+ * whose deployment share cannot be attributed.
+ */
+function deploymentControlFactSetCore(
+  deploymentKey: string,
+  materialSupplyShare: number | null,
+): V9FactSetCoreV2 {
+  const core = factSetCore();
+  const asset = core.assets[0]!;
+  const controlKey = `bridge-supply:${asset.assetId}`;
+  const gapId = `${asset.assetId}:gap:deployment-control:${controlKey}`;
+  asset.gaps = [
+    {
+      gapId,
+      reasonCode: "unresolved-control-identity",
+      ownerDomain: "control",
+      policyRuleId: "v9.control.review",
+      observationState: "bounded-unknown",
+      path: { kind: "deployment-control", deploymentKey, controlKey },
+      message: "The control inventory is known, but this control's authority remains unresolved.",
+      evidenceRefIds: [EVIDENCE.evidenceId],
+    },
+  ];
+  asset.implementation.status = knownStatus("v9.implementation.launch-date");
+  asset.implementation.launchedAtSec = 500;
+  asset.controlStatus = knownStatus("v9.control.review");
+  asset.controls = [
+    {
+      controlKey,
+      deploymentKey,
+      sourceGenerationId: SOURCES.researchOverlays.generationId,
+      controlKind: "bridge",
+      scope: "deployment",
+      status: {
+        applicability: {
+          state: "required" as const,
+          policyRuleId: "v9.control.review",
+          rationale: null,
+          gapId: null,
+        },
+        observationState: "bounded-unknown" as const,
+        evidenceRefIds: [EVIDENCE.evidenceId],
+        gapIds: [gapId],
+      },
+      capabilities: [],
+      capSemantics: { kind: "unknown", bound: null },
+      claimImpairment: "unknown",
+      economicLossScope: "deployment",
+      authority: { authorityKey: `bridge-route:${deploymentKey}`, model: "unknown", threshold: null },
+      delaySec: null,
+      materialSupplyShare,
+      incidentState: "unknown",
+      failureDomains: [{ kind: "bridge-route", key: deploymentKey }],
+    },
+  ];
+  return core;
 }
 
 function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
@@ -475,6 +536,54 @@ describe("Safety Score v9 evidence-gap queue", () => {
       policyBindingIssues: ["path-kind-not-permitted"],
       action: "reconcile-policy-binding",
     });
+  });
+
+  it.each([
+    ["registered chain/address", "eip155:1:0x0000000000000000000000000000000000000001", 0.25],
+    ["unmatched chain", "unmatched-chain:asset-001", 0.25],
+    ["unmatched chain/label/pool", "unmatched-chain-label-pool:asset-001", null],
+  ] as const)(
+    "admits a %s deployment-control target as a closure path without closing the fact",
+    (_label, deploymentKey, materialSupplyShare) => {
+      const core = deploymentControlFactSetCore(deploymentKey, materialSupplyShare);
+      const queue = buildV9EvidenceGapQueue({
+        factSet: compileV9FactSetV2(core),
+        policy: loadV9MethodologyPolicy(policyAsset),
+      });
+
+      expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
+      expect(queue.entries[0]).toMatchObject({
+        reasonCode: "unresolved-control-identity",
+        ownerDomain: "control",
+        factOwnerDomain: "control",
+        path: { kind: "deployment-control", deploymentKey },
+        policyBindingIssues: [],
+      });
+      // Admitting the path kind decides where the fact may close, not that it
+      // has closed: the row keeps its unresolved observation state and gains no
+      // evidence beyond what the unresolved control already carried.
+      expect(queue.entries[0]).toMatchObject({
+        observationState: "bounded-unknown",
+        action: "adjudicate-bounded-unknown",
+        evidenceRefIds: [EVIDENCE.evidenceId],
+      });
+      expect(queue.entries[0]!.materiality).toEqual(
+        materialSupplyShare === null
+          ? { basis: "unresolved", fractionOfAsset: null }
+          : { basis: "deployment-supply-share", fractionOfAsset: materialSupplyShare },
+      );
+    },
+  );
+
+  it("keeps unresolved-control-identity admitting both control path kinds", () => {
+    // Owner ruling 2026-07-31. A future policy edit that drops either kind
+    // would silently reroute deployment-scoped control gaps back to
+    // reconcile-policy-binding, so pin the admitted set.
+    const policy = loadV9MethodologyPolicy(policyAsset);
+    expect(resolveV9ReasonPolicy(policy, "unresolved-control-identity").reason.pathKinds).toEqual([
+      "deployment-control",
+      "local-component",
+    ]);
   });
 
   it("surfaces fact-to-policy archetype drift as reconciliation work", () => {
