@@ -184,12 +184,19 @@ The barrel's `.sort()` handles runtime ordering; the chronological layout exists
 
 #### 13. Verify
 
-Run the relevant gates locally:
+First regenerate the markdown-export snapshot fixture — every new changelog entry changes the rendered changelog index, and the snapshot test fails on the next PR if the fixture is stale. Stage the refreshed fixture with the entry:
+
+```bash
+npm run refresh:markdown-fixtures          # Rewrites scripts/__tests__/fixtures/markdown/ from the live renderers
+```
+
+Then run the relevant gates locally:
 
 ```bash
 npm run typecheck                          # Catches bad tag enum, missing fields
 npm run lint
 npm test -- src/data/changelogs/           # Type + barrel tests
+npm test -- scripts/__tests__/generate-markdown-exports.test.ts  # Confirms the refreshed fixture matches
 npm run check:stablecoin-data              # If the summary cites a coin count
 ```
 
@@ -213,7 +220,7 @@ Then stop. Wait for review.
 **With `--commit`**: stage and commit only after all hard checks in step 10 pass:
 
 ```bash
-git add src/data/changelogs/<to>.ts src/data/changelogs/index.ts
+git add src/data/changelogs/<to>.ts src/data/changelogs/index.ts scripts/__tests__/fixtures/markdown/changelog-index.md
 git commit -m "docs(changelog): add changelog for <from> to <to>"
 ```
 
