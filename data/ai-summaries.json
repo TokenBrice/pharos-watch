@@ -127,23 +127,19 @@
   },
   "gusd-gemini": {
     "title": "Pristine Reserves, Ghost Town Liquidity",
-    "text": "GUSD is Gemini Trust's NYDFS-chartered dollar redeemable 1:1 against State Street/Western Alliance cash and short {{term:treasury}}T-bills{{/term}} — pristine compliance, almost no users. Gemini Dollar's reserve is impeccable: 62% T-bills and 38% cash at State Street and Western Alliance Bank, NYDFS trust charter, and zero {{term:redemption}}redemption{{/term}} fees. The problem is that nobody uses it, and that gap now drags the overall safety grade down to B- — the spotless backing simply cannot offset a market that won't trade the thing. At $44M circulating — down from a peak well above $300M — GUSD has become a regulatory trophy collecting dust, with a D liquidity grade that makes on-chain exit a theoretical exercise. Its hundreds of brief price blips are the signature of an asset so thinly traded that any flow nudges the quote, with the sharpest excursions skewing negative even as the peg recovers each time. Gemini built the compliance-first stablecoin that regulators asked for, and the market responded with a collective shrug.",
-    "updatedAt": "2026-06-03",
+    "text": "GUSD is Gemini Trust's NYDFS-chartered dollar redeemable 1:1 against State Street/Western Alliance cash and short {{term:treasury}}T-bills{{/term}} — pristine compliance, almost no users. Gemini Dollar's reserve is impeccable: T-bills and cash at State Street and Western Alliance Bank, NYDFS trust charter, and zero {{term:redemption}}redemption{{/term}} fees. The problem is that nobody uses it, and the v9 report card renders the split with unusual clarity: a B+ backing pillar and an A on economic control — one of the cleanest control rooms on the dashboard — dragged to a C+ overall by an exit pillar scraping along at C-, because on-chain exit remains a mostly theoretical exercise. With circulating supply down more than 80% from its peak, GUSD has become a regulatory trophy collecting dust. Its hundreds of brief price blips are the signature of an asset so thinly traded that any flow nudges the quote, with the sharpest excursions skewing negative even as the peg recovers each time. Gemini built the compliance-first stablecoin that regulators asked for, and the market responded with a collective shrug.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "alusd-alchemix": {
     "title": "Time Pays Your Debt",
-    "text": "alUSD is Alchemix's self-repaying {{term:cdp}}CDP{{/term}} stablecoin: deposit DAI, USDC, or USDT into Yearn and Aave yield strategies, borrow up to roughly 50% against it, and let the yield slowly erase your debt with no interest and no {{term:liquidation}}liquidation{{/term}} risk. The mechanism remains DeFi's most patient financial product, and the Transmuter still backstops 1:1 {{term:redemption}}redemption{{/term}} on a queue that settles over days. But the elegance has a price the report card now spells out plainly: an overall F, a peg that grades D and an active depeg in progress, because self-repaying loans strip out the debt-repayment urgency that normally generates buying pressure to defend the peg. The peg has logged over a thousand brief deviations across its history and rarely sits comfortably at the calm end of the stress scale, so holders are effectively trading away peg discipline for the no-liquidation guarantee. Liquidity is the other casualty, grading F as exit routes have thinned, and only the structurally sturdy parts of the design hold up: resilience earns a B+ on its battle-tested architecture and dependency a B, which together make this a stress-prone instrument that only makes sense if you value never being liquidated above all else.",
-    "updatedAt": "2026-07-15",
+    "text": "alUSD is Alchemix's self-repaying {{term:cdp}}CDP{{/term}} stablecoin: deposit DAI, USDC, or USDT into Yearn and Aave yield strategies, borrow up to roughly 50% against it, and let the yield slowly erase your debt with no interest and no {{term:liquidation}}liquidation{{/term}} risk. The mechanism remains DeFi's most patient financial product, and the Transmuter still backstops 1:1 {{term:redemption}}redemption{{/term}} on a queue that settles over days. But the elegance has a price the report card spells out plainly: an overall F, driven by a peg record so poor that the v9 peg multiplier does most of the damage — self-repaying loans strip out the debt-repayment urgency that normally generates buying pressure to defend the peg. The peg has logged over a thousand brief deviations across its history and rarely sits comfortably at the calm end of the stress scale, so holders are effectively trading away peg discipline for the no-liquidation guarantee. Exit routes have thinned to a D-grade pillar, and even backing is held back by stale evidence — no current reserve composition on file — leaving economic control, at a respectable B-, as the only part of this battle-tested architecture v9 still likes. A stress-prone instrument that only makes sense if you value never being liquidated above all else.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "gpt-5.6-sol",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-15",
-    "factsAsOf": "2026-07-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "susd-synthetix": {
     "title": "Retired Below Par",
@@ -307,13 +303,11 @@
   },
   "usdy-ondo-finance": {
     "title": "Two Billion Reasons to Notice",
-    "text": "Ondo's USDY carries a C+ safety grade, and the spread of its sub-scores explains the discount better than any headline figure: pristine, very-low-risk collateral on one side, a centralized governance posture and thin tradeable depth on the other. The backing is about as clean as tokenized {{term:treasury}}Treasury{{/term}} exposure gets — short-term U.S. Treasuries, iShares short Treasury ETF shares, and bank demand deposits, with daily NAV {{term:attestation}}attestation{{/term}} from Ankura Trust — which earns USDY strong resilience and dependency marks. What drags the grade down is everything around that collateral: a failing decentralization score reflecting the BVI-domiciled, issuer-controlled structure with a multi-day {{term:redemption}}redemption{{/term}} window, plus weak on-chain liquidity despite a footprint spanning roughly a dozen networks from Ethereum and Solana through Cosmos chains like Noble and Mantra. The peg itself stays unremarkable — no depeg events on record and nothing flagging stress — which is the point of a {{term:yield-bearing}}yield-bearing{{/term}} NAV token that accrues value rather than chasing a hard dollar. USDY remains a clean way to hold American government debt for the non-U.S. investors that American regulators won't let buy it directly; the grade simply prices in that you're trusting Ondo's plumbing, not a market, to get your money back.",
-    "updatedAt": "2026-06-03",
+    "text": "Ondo's USDY carries a C- safety grade, and the spread of its pillars explains the discount better than any headline figure. The backing is about as clean as tokenized {{term:treasury}}Treasury{{/term}} exposure gets on paper — short-term U.S. Treasuries, iShares short Treasury ETF shares, and bank demand deposits, with daily NAV {{term:attestation}}attestation{{/term}} from Ankura Trust — yet the backing pillar only manages a C-, because v9 grades the mechanism wrapped around the assets, not just their quality on paper. The exit pillar grades D on weak on-chain liquidity and a multi-day {{term:redemption}}redemption{{/term}} window through the BVI-domiciled, issuer-controlled structure, despite a footprint spanning roughly a dozen networks from Ethereum and Solana through Cosmos chains like Noble and Mantra — while economic control at B- is, a little ironically, the strongest thing on the card. The peg itself stays unremarkable — no depeg events on record and nothing flagging stress — which is the point of a {{term:yield-bearing}}yield-bearing{{/term}} NAV token that accrues value rather than chasing a hard dollar. USDY remains a clean way to hold American government debt for the non-U.S. investors that American regulators won't let buy it directly; the grade simply prices in that you're trusting Ondo's plumbing, not a market, to get your money back.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "cadc-cad-coin": {
     "title": "Canada's Lonely Loonie",
@@ -337,13 +331,11 @@
   },
   "usde-ethena": {
     "title": "The Basis Trade, Tokenized",
-    "text": "Ethena's USDe is still the tokenized basis trade, but the current reserve mix is more conservative and more complicated than the original pitch: roughly three quarters liquid stablecoins, about 16% BTC delta-neutral exposure, and about 8% ETH or LST delta-neutral exposure. The liquid-stable sleeve leans heavily on USDtb and therefore BlackRock BUIDL, while the hedged crypto sleeve still depends on off-exchange custody and CEX perpetual markets through venues such as Binance, Bybit, and OKX. Pharos captures the contradiction cleanly: an A+ peg record sitting beside F resilience and D decentralization, which is what happens when the price behaves beautifully but the machinery remains a stack of counterparties. Real-time transparency from Ethena's dashboard helps, but it does not turn CEX custody, backend-signed mint flows, or USDtb-to-BUIDL dependency into neutral facts. The institutional surface area keeps growing regardless — Robinhood's new chain launched with USDe as a primary collateral asset in its Earn program, curated by Steakhouse Financial. USDe's trick is making a risky institutional trade look calm at the token level; the dashboard's job is to keep pointing at the machinery underneath.",
-    "updatedAt": "2026-07-08",
+    "text": "Ethena's USDe is still the tokenized basis trade, but the current reserve mix is more conservative and more complicated than the original pitch: roughly three quarters liquid stablecoins, about 16% BTC delta-neutral exposure, and about 8% ETH or LST delta-neutral exposure. The liquid-stable sleeve leans heavily on USDtb and therefore BlackRock BUIDL, while the hedged crypto sleeve still depends on off-exchange custody and CEX perpetual markets through venues such as Binance, Bybit, and OKX. Under Safety Score v9 the old contradiction has softened into a B- with every pillar currently in B territory — a flawless peg record, solid backing and exit marks, and an economic-control pillar that passes now that scoring measures how mint, oracle, and bridge authority are actually bounded rather than ideological decentralization. That evenness is worth reading carefully: real-time transparency from Ethena's dashboard helps, but it does not turn CEX custody, backend-signed mint flows, or USDtb-to-BUIDL dependency into neutral facts — it just means the machinery is well-run machinery. The institutional surface area keeps growing regardless — Robinhood's new chain launched with USDe as a primary collateral asset in its Earn program, curated by Steakhouse Financial. USDe's trick is making a risky institutional trade look calm at the token level; the dashboard's job is to keep pointing at the machinery underneath.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "factsAsOf": "2026-08-05"
   },
   "aeur-anchored-coins": {
     "title": "Death of a Swiss Euro",
@@ -357,13 +349,11 @@
   },
   "buck-bucket-protocol": {
     "title": "Sui's CDP Experiment",
-    "text": "BUCK is Bucket Protocol's {{term:overcollateralization}}overcollateralized{{/term}} Sui-native dollar stablecoin minted from SUI, BTC, ETH, and LSTs through {{term:cdp}}CDP{{/term}} vaults with {{term:psm}}PSM{{/term}} stablecoin swaps. Bucket Protocol brings the MakerDAO playbook to Sui: deposit SUI (45%), USDC/USDT via PSM (25%), wrapped BTC (15%), or ETH/LSTs (15%), mint BUCK at zero interest, get liquidated at 110% collateral ratio. The 90-rated backstop with direct BUCK {{term:redemption}}redemption{{/term}} for collateral provides a strong structural floor, but the 553 depeg events including one that cratered 7,505 basis points below peg reveal what happens when the primary collateral is a volatile L1 token. The F in decentralization at 15 reflects the established-alt-L1 chain penalty, and the PSM module accepting USDC and USDT is a polite way of saying the decentralized stablecoin ultimately leans on centralized ones when it matters. A DEWS score of 2 — among the lowest on the dashboard — suggests the current period is unusually calm for a product whose history includes some of the most severe depegs of any surviving CDP.",
-    "updatedAt": "2026-05-15",
+    "text": "BUCK is Bucket Protocol's {{term:overcollateralization}}overcollateralized{{/term}} Sui-native dollar stablecoin minted from SUI, BTC, ETH, and LSTs through {{term:cdp}}CDP{{/term}} vaults with {{term:psm}}PSM{{/term}} stablecoin swaps. Bucket Protocol brings the MakerDAO playbook to Sui: deposit SUI, USDC/USDT via PSM, wrapped BTC, or ETH/LSTs, mint BUCK at zero interest, get liquidated at 110% collateral ratio. The strong redemption backstop — direct BUCK {{term:redemption}}redemption{{/term}} for collateral — earns the exit pillar a passing mark and provides a real structural floor, but hundreds of depeg events, including one that cratered some 7,500 basis points below peg, reveal what happens when the primary collateral is a volatile L1 token. The overall F grade, though, is pinned in place by something more specific: a binding critical cap for a weak oracle branch — v9's way of saying the control topology of the price feeds BUCK depends on is opaque, and a CDP that liquidates at 110% is only as honest as the oracle nobody can inspect. The PSM module accepting USDC and USDT remains a polite way of saying the decentralized stablecoin ultimately leans on centralized ones when it matters, and the currently placid stress reading sits oddly on a product whose history includes some of the most severe depegs of any surviving CDP.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "vchf-vnx": {
     "title": "Liechtenstein's Franc Experiment",
@@ -387,13 +377,11 @@
   },
   "audd-novatti": {
     "title": "Australia's Compliance Play",
-    "text": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by AUD cash and {{term:treasury}}Treasury bills{{/term}} at regulated Australian banks. AUDD is what happens when a publicly listed fintech (Novatti, on the ASX) builds a stablecoin the way regulators wish everyone would: 100% AUD cash and Treasury bills at Authorised Deposit-taking Institutions, AFSL No. 700123 from ASIC, monthly independent {{term:attestation}}attestations{{/term}} by William Buck, and selection for the Reserve Bank of Australia's Project Acacia pilot. The C+ safety grade reflects solid fundamentals — a B+ peg, B+ resilience, and a stress profile that rarely leaves the calm end of the scale — dragged down by genuinely thin DEX liquidity, where a shallow pool footprint would struggle to absorb any meaningful sell pressure. The dozens of recorded depeg events, with a worst downside near 3,000 basis points, speak to the realities of pricing an AUD-pegged asset against dollar-dominated crypto markets, where FX volatility does the damage that reserve quality cannot prevent. AUDD's challenge was never product quality; it is whether Australia's on-chain economy grows large enough to sustain a domestic stablecoin alternative.",
-    "updatedAt": "2026-06-03",
+    "text": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by AUD cash and {{term:treasury}}Treasury bills{{/term}} at regulated Australian banks. AUDD is what happens when a publicly listed fintech (Novatti, on the ASX) builds a stablecoin the way regulators wish everyone would: AUD cash and Treasury bills at Authorised Deposit-taking Institutions, AFSL No. 700123 from ASIC, monthly independent {{term:attestation}}attestations{{/term}} by William Buck, and selection for the Reserve Bank of Australia's Project Acacia pilot. Yet the C- safety grade shows v9 is unmoved by credentials: economic control earns a solid B, but the exit pillar grades D on genuinely thin DEX liquidity, and backing sits at a middling C because no current reserve composition is on file — attestations regulators like are not the same as evidence a scoring engine can consume. The dozens of recorded depeg events, with a worst downside near 3,000 basis points, speak to the realities of pricing an AUD-pegged asset against dollar-dominated crypto markets, where FX volatility does the damage that reserve quality cannot prevent. AUDD's challenge was never product quality; it is whether Australia's on-chain economy grows large enough to sustain a domestic stablecoin alternative.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "cgusd-cygnus-finance": {
     "title": "Base's Treasury Wrapper",
@@ -427,13 +415,11 @@
   },
   "buidl-blackrock": {
     "title": "The Stablecoin's Stablecoin",
-    "text": "BUIDL is BlackRock's tokenized institutional {{term:money-market-fund}}money-market fund{{/term}}, NAV-pegged to $1 and backed by U.S. {{term:treasury}}Treasuries{{/term}}, repos, and cash custodied by BNY Mellon. It has become the largest tokenized money market fund and the asset that a growing list of stablecoins (USDe, USDtb, frxUSD, USD0, CASH) hold in their own reserves rather than managing T-bill {{term:custody}}custody{{/term}} directly. Its B-minus report card is a reminder that Pharos measures structural risk, not brand prestige: institutional-top custody at BNY Mellon and all-very-low-risk reserves earn A+ resilience, but zero DEX liquidity, no recorded depeg events, and Reg D access restrictions confine BUIDL to a world invisible to retail. The roughly 3.5% NAV-appreciation yield net of 20 bps fees is T-bill rate pass-through, unremarkable on its own but compelling when you consider it comes with BlackRock counterparty risk rather than crypto-native smart contract risk. Eight chain deployments via Securitize are expanding the footprint, but BUIDL's true significance is infrastructural — it is the plumbing layer where TradFi yield enters crypto's reserve stacks, not an asset most humans will ever hold directly.",
-    "updatedAt": "2026-06-03",
+    "text": "BUIDL is BlackRock's tokenized institutional {{term:money-market-fund}}money-market fund{{/term}}, NAV-pegged to $1 and backed by U.S. {{term:treasury}}Treasuries{{/term}}, repos, and cash custodied by BNY Mellon. It has become the largest tokenized money market fund and the asset that a growing list of stablecoins (USDe, USDtb, frxUSD, USD0, CASH) hold in their own reserves rather than managing T-bill {{term:custody}}custody{{/term}} directly. Its C+ report card is a reminder that Pharos measures structural risk, not brand prestige: institutional-top custody at BNY Mellon and all-very-low-risk reserves earn a B+ backing pillar, but the exit pillar grades D — zero DEX liquidity and Reg D access restrictions confine BUIDL to a world invisible to retail, where exit means a transfer agent, not a market. The roughly 3.5% NAV-appreciation yield net of 20 bps fees is T-bill rate pass-through, unremarkable on its own but compelling when you consider it comes with BlackRock counterparty risk rather than crypto-native smart contract risk. Eight chain deployments via Securitize are expanding the footprint, but BUIDL's true significance is infrastructural — it is the plumbing layer where TradFi yield enters crypto's reserve stacks, not an asset most humans will ever hold directly.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "btcusd-btcfi": {
     "title": "Bitcoin's CDP Outpost",
@@ -627,23 +613,19 @@
   },
   "honey-berachain": {
     "title": "Proof of Liquidity's Dollar",
-    "text": "1:1 basket-backed dollar on Berachain (USDC/USDT0/pyUSD/USDe) with atomic basket unwind; chain immaturity and dependency drag the grade into D territory. HONEY is Berachain's native stablecoin, minted 1:1 against a basket of USDC, USDT0, pyUSD, and USDe through permissionless on-chain vaults governed by BGT holders. The redemption backstop with atomic settlement is the headline: you can always unwind HONEY into its constituent stablecoins, which is more than most basket tokens offer, and the peg itself has held tight enough to stay at the calm end of the stress scale. But the D safety grade is no accident — a fully centralized-dependent governance posture, reliance on those upstream issuers, and Berachain's unproven status all compound, and the dozens of brief sub-50-bps blips plus one absurd +4,981 bps upward spike show the chaos beneath the surface in the ecosystem's early days. That kind of upward deviation points to thin two-sided liquidity rather than a backing failure, and the modest effective depth relative to headline TVL confirms much of the on-chain liquidity is shallow. The underlying basket architecture would score meaningfully higher on an established chain with less concentrated control; here it reads as a sound mechanism wearing its host's risks. Structurally, HONEY's basket mint and Basket Mode work like a multi-asset {{term:psm}}PSM{{/term}}, with permissionless atomic {{term:redemption}}redemption{{/term}} into its underlying stablecoin reserves.",
-    "updatedAt": "2026-06-03",
+    "text": "1:1 basket-backed dollar on Berachain (USDC/USDT0/pyUSD/USDe) with atomic basket unwind; shallow liquidity and chain immaturity now hold the grade at C. HONEY is Berachain's native stablecoin, minted 1:1 against a basket of USDC, USDT0, pyUSD, and USDe through permissionless on-chain vaults governed by BGT holders. The redemption backstop with atomic settlement is the headline: you can always unwind HONEY into its constituent stablecoins, which is more than most basket tokens offer, and the peg itself has held tight enough to stay at the calm end of the stress scale. The C safety grade marks real progress from its D-territory days — v9 credits the basket architecture with a solid backing pillar and gives the control surface a passing mark — but exit is now the weak pillar: much of the on-chain liquidity is shallow, and modest effective depth relative to headline TVL means unwinding through the basket beats trusting the order books. The early-days chaos — dozens of brief sub-50-bps blips and one absurd upward spike near +5,000 bps — pointed to thin two-sided liquidity rather than backing failure, and that diagnosis still holds. Structurally, HONEY's basket mint and Basket Mode work like a multi-asset {{term:psm}}PSM{{/term}}, with permissionless atomic {{term:redemption}}redemption{{/term}} into its underlying stablecoin reserves — a sound mechanism still wearing some of its host chain's risks.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "wusd-worldwide": {
     "title": "Enterprise Rails, Empty Station",
-    "text": "WSPN's white-label dollar pairs conservative T-bill reserves with a C+ grade and thin DEX liquidity that betrays missing on-chain demand.\n\nWSPN's Worldwide USD pairs a conservative reserve — {{term:treasury}}T-bills{{/term}} and cash with a Basel III-inspired 6% liquidity buffer — against a C+ safety grade that reflects the gap between institutional ambition and on-chain traction. The peg itself holds clean and rarely strays from the calm end of the stress scale, but liquidity is the soft spot: the DEX float across Ethereum, Polygon, and Viction is too thin to absorb size, and a couple of shallow sub-200-bps wobbles suggest the peg holds because almost nothing tests it. The BVI domicile with FinCEN MSB registration is regulatory limbo: enough paperwork to look legitimate, not enough to satisfy institutional compliance departments shopping for USDC alternatives. WUSD's white-label infrastructure for enterprise stablecoin issuance is the real product pitch, but a payments network needs volume, and volume needs liquidity that isn't here yet — and the {{term:custody}}custody{{/term}} story alone won't fix that.",
-    "updatedAt": "2026-06-03",
+    "text": "WSPN's white-label dollar pairs conservative T-bill claims with a failing grade and thin DEX liquidity that betrays missing on-chain demand.\n\nWSPN's Worldwide USD pitches a conservative reserve — {{term:treasury}}T-bills{{/term}} and cash with a Basel III-inspired 6% liquidity buffer — yet carries an F safety grade, because v9 scores evidence and market structure rather than brochures: no current reserve composition is on file for the backing pillar, and economic control fails on effectively unbounded mint authority. The peg itself holds clean and rarely strays from the calm end of the stress scale, but liquidity is the soft spot: the DEX float across Ethereum, Polygon, and Viction is too thin to absorb size, and a couple of shallow sub-200-bps wobbles suggest the peg holds because almost nothing tests it. The BVI domicile with FinCEN MSB registration is regulatory limbo: enough paperwork to look legitimate, not enough to satisfy institutional compliance departments shopping for USDC alternatives. WUSD's white-label infrastructure for enterprise stablecoin issuance is the real product pitch, but a payments network needs volume, and volume needs liquidity that isn't here yet — and the {{term:custody}}custody{{/term}} story alone won't fix that.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "frxusd-frax": {
     "title": "Frax's Clean Slate",
@@ -697,13 +679,11 @@
   },
   "usda-anzens": {
     "title": "Cardano's Lonely Dollar",
-    "text": "Cardano's only MSB-licensed dollar pairs clean BitGo-custodied reserves with one of the worst peg records on Pharos, dragged down by absent DeFi depth. Anzens USDA offers the cleanest backing on Cardano — 60% USD cash, 40% U.S. {{term:treasury}}Treasury{{/term}} bills, all {{term:custody}}custody{{/term}}-managed by BitGo Trust under a FinCEN MSB license — yet it has logged hundreds of recorded depeg events, with deviations spiking as far as +2558 bps. The problem isn't the backing; it's the chain. A single thin DEX pool and Cardano-only deployment mean there is no meaningful arbitrage infrastructure to enforce the peg, producing a C- safety grade despite reserves that would earn a much higher mark on any chain with real DeFi depth. The only exit is KYC-verified bank transfers through Anzens for {{term:redemption}}redemption{{/term}}, with multi-day settlement and no quick on-chain escape hatch. Supply has drained by nearly half over the past month, suggesting holders have reached the same conclusion. USDA is proof that sound reserves are necessary but nowhere near sufficient — you also need a market that can actually trade the thing.",
-    "updatedAt": "2026-07-08",
+    "text": "Cardano's only MSB-licensed dollar pairs BitGo-custodied reserves with one of the worst peg records on Pharos, dragged to a failing grade by absent DeFi depth and thin evidence. Anzens USDA claims the cleanest backing on Cardano — USD cash and U.S. {{term:treasury}}Treasury{{/term}} bills {{term:custody}}custody{{/term}}-managed by BitGo Trust under a FinCEN MSB license — yet it has logged hundreds of recorded depeg events, with deviations spiking past +2,500 bps. The problem starts with the chain and ends with the paperwork: a single thin DEX pool and Cardano-only deployment mean there is no meaningful arbitrage infrastructure to enforce the peg, the exit pillar fails outright, and the backing pillar cannot compensate because no current reserve composition is on file for v9 to score. The result is an F safety grade for reserves that might earn a respectable mark on any chain with real DeFi depth and an issuer that kept its evidence current. The only exit is KYC-verified bank transfers through Anzens for {{term:redemption}}redemption{{/term}}, with multi-day settlement and no quick on-chain escape hatch. USDA is proof that sound reserves are necessary but nowhere near sufficient — you also need a market that can actually trade the thing.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "factsAsOf": "2026-08-05"
   },
   "usdf-falcon": {
     "title": "Ethena's Wilder Cousin",
@@ -727,13 +707,11 @@
   },
   "brz-transfero": {
     "title": "Pegged to Volatility Itself",
-    "text": "BRZ is Transfero's centralized Brazilian real stablecoin, redeemable 1:1 by KYC'd users against BRL cash held in regulated {{term:custody}}custody{{/term}} at a Brazilian institution — its depeg history is FX volatility, not reserve failure. The dozens of recorded depeg events, including swings approaching 10,000 basis points below peg, are not evidence of product failure but of what happens when you peg a token to the Brazilian real and price it against dollar-denominated markets. The D safety grade is largely a function of that FX-driven peg volatility rather than reserve inadequacy, since BRZ is backed 100% by BRL cash at a Central Bank of Brazil-authorized institution with Swiss VQF registration. The exit story has improved but remains the binding constraint: DEX depth now scores in the C range rather than the basement, yet a 1% {{term:redemption}}redemption{{/term}} fee through Transfero's offchain issuer path still means the cleanest way out of any sizable position is the issuer window, not the secondary market. Deployed across multiple chains with hundreds of millions of reais in circulation, BRZ serves a genuine need in Latin America's largest crypto market — and while it tends to sit at the calm end of the stress scale day to day, thin-by-major-stablecoin-standards liquidity and the underlying FX exposure are a standing reminder that non-USD stablecoins carry risks no reserve structure can hedge away.",
-    "updatedAt": "2026-06-03",
+    "text": "BRZ is Transfero's centralized Brazilian real stablecoin, redeemable 1:1 by KYC'd users against BRL cash held in regulated {{term:custody}}custody{{/term}} at a Brazilian institution — its depeg history is FX volatility, not reserve failure. The dozens of recorded depeg events, including swings approaching 10,000 basis points below peg, are not evidence of product failure but of what happens when you peg a token to the Brazilian real and price it against dollar-denominated markets. The F safety grade is what that FX-driven peg record does to a score once the v9 peg multiplier gets involved — and the backing pillar cannot ride to the rescue, because Pharos scores current reserve evidence rather than issuer claims, and BRZ's reserve composition simply isn't on file. The exit story has improved from the basement but remains the standing constraint: a 1% {{term:redemption}}redemption{{/term}} fee through Transfero's offchain issuer path still means the cleanest way out of any sizable position is the issuer window, not the secondary market. Deployed across multiple chains with hundreds of millions of reais in circulation, BRZ serves a genuine need in Latin America's largest crypto market — and while it tends to sit at the calm end of the stress scale day to day, thin liquidity and the underlying FX exposure are a standing reminder that non-USD stablecoins carry risks no reserve structure can hedge away.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "rlusd-ripple": {
     "title": "The Institutional On-Ramp",
@@ -747,13 +725,11 @@
   },
   "feusd-felix": {
     "title": "Liquity Fork on Hyperliquid",
-    "text": "feUSD is a Liquity-v2-fork {{term:cdp}}CDP{{/term}} dollar on Hyperliquid, {{term:overcollateralization}}overcollateralized{{/term}} by HYPE ecosystem tokens — concentrated chain risk, sturdy redemption mechanics. Felix Protocol cloned Liquity V2 onto Hyperliquid's unproven L1 and loaded the CDPs with HYPE and its liquid-staking derivatives — an asset class Pharos rates very-high risk — alongside bridged Bitcoin. The {{term:redemption}}redemption{{/term}} backstop is genuinely strong for a DeFi-native coin, with zero-fee atomic collateral redemption and an interest-rate-sorted queue, and the peg itself has held tight, rarely drifting from the calm end of the stress scale despite a long tail of brief blips. But the C safety grade tells the real story, and it is not about the peg: when your primary collateral is the native token of the chain you live on, a single ecosystem shock hits both your backing and your exit {{term:liquidation}}liquidity simultaneously{{/term}}. That structural fragility shows up as a weak resilience grade and a failing decentralization score — a multisig still holds the admin keys, caps, and pause — which is what drags an otherwise well-pegged coin down to a middling overall mark.",
-    "updatedAt": "2026-06-03",
+    "text": "feUSD is a Liquity-v2-fork {{term:cdp}}CDP{{/term}} dollar on Hyperliquid, {{term:overcollateralization}}overcollateralized{{/term}} by HYPE ecosystem tokens — concentrated chain risk, sturdy redemption mechanics. Felix Protocol cloned Liquity V2 onto Hyperliquid's unproven L1 and loaded the CDPs with HYPE and its liquid-staking derivatives — an asset class Pharos rates very-high risk — alongside bridged Bitcoin. The v9 report card renders a cleaner verdict than any blended score could: backing earns a B+ and the exit pillar an A, thanks to zero-fee atomic collateral {{term:redemption}}redemption{{/term}} and an interest-rate-sorted queue, yet the overall grade sits at D because economic control fails outright — a multisig still holds the admin keys, caps, and pause, and v9 treats that kind of mint authority as a first-class risk rather than a footnote. The peg itself has held tight, rarely drifting from the calm end of the stress scale despite a long tail of brief blips. The structural caveat remains: when your primary collateral is the native token of the chain you live on, a single ecosystem shock hits both your backing and your exit {{term:liquidation}}liquidity simultaneously{{/term}} — good pillar grades measure the machinery, not the correlation.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "dusd-standx": {
     "title": "The Quiet Basis Trader",
@@ -767,13 +743,11 @@
   },
   "eurcv-societe-generale-forge": {
     "title": "SocGen’s Blockchain Experiment",
-    "text": "EURCV is SG-FORGE's MiCA EUR stablecoin; reserves held in EUR cash at SocGen itself, top institutional safety with thin DEX liquidity. EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale itself — institutional-top {{term:custody}}custody{{/term}} that earns the highest marks available in both resilience and dependency risk. The B safety grade makes EURCV one of the highest-rated euro stablecoins on Pharos, held back primarily by the expected F in decentralization — an inevitable trade-off when a 160-year-old bank decides to issue tokens on public blockchains. The DEWS stress reading is among the lowest on the entire dashboard, suggesting the product is operationally serene despite the thin DEX liquidity that plagues most euro stablecoins. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France’s ACPR, whether EURCV is the future of tokenized money or a corporate innovation lab’s pet project depends on whether SocGen commits distribution resources that match its regulatory credentials. Direct 1:1 {{term:redemption}}redemption{{/term}} runs through SG-FORGE.",
-    "updatedAt": "2026-05-15",
+    "text": "EURCV is SG-FORGE's MiCA EUR stablecoin; reserves held in EUR cash at SocGen itself, top institutional safety with thin DEX liquidity. EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale — institutional-grade {{term:custody}}custody{{/term}} that earns solid B marks on both the backing and exit pillars. The C+ overall grade is a story about concentration rather than quality: the score sits under a binding critical-dependency cap because reviewed reserve paths share a single upgrade-control key — v9's way of saying that one Ethereum contract admin stands between EURCV and its collateral. The DEWS stress reading is among the lowest on the entire dashboard, suggesting the product is operationally serene despite the thin DEX liquidity that plagues most euro stablecoins. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France's ACPR, whether EURCV is the future of tokenized money or a corporate innovation lab's pet project depends on whether SocGen commits distribution resources that match its regulatory credentials. Direct 1:1 {{term:redemption}}redemption{{/term}} runs through SG-FORGE.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "yusd-aegis": {
     "title": "Funding Rate Roulette",
@@ -827,13 +801,11 @@
   },
   "usdx-hex-trust": {
     "title": "Institutional Backing, Amateur Plumbing",
-    "text": "Hex Trust's USDX has 80% T-bills and 20% cash at global tier-1 banks under a Hong Kong TCSP license, which makes its D safety grade a case study in how clean reserves mean nothing without functional market infrastructure. Supply sits across three chains (Ethereum, Flare, Songbird), but the single DEX pool holding the float with a few hundred dollars in effective TVL is not a liquidity profile — it's a rounding error, and the F liquidity grade says as much. Hundreds of recorded depeg events and a worst deviation past 7,000 basis points tell the story of a stablecoin that periodically trades around 28 cents on the dollar despite holding Treasuries at par. The stress engine reads USDX as sitting at the calm end of the scale, but that placidity is itself the tell: there is no two-sided market thrashing the price back, so nothing registers as stress. {{term:attestation}}attestation{{/term}} from a Hong Kong TCSP-licensed {{term:custody}}custody{{/term}} provider and 270+ institutional clients haven't translated into the on-chain arbitrage loops that keep prices honest, and same-day issuer {{term:redemption}}redemption{{/term}} cannot substitute for the missing secondary market — leaving USDX as expensive proof that custodial credibility and stablecoin stability are entirely different problems.",
-    "updatedAt": "2026-06-03",
+    "text": "Hex Trust's USDX advertises T-bill and cash reserves at global tier-1 banks under a Hong Kong TCSP license, which makes its F safety grade a case study in how clean-sounding reserves mean nothing without functional market infrastructure. Supply sits across three chains (Ethereum, Flare, Songbird), but the exit pillar scores a literal zero — a single DEX pool with a few hundred dollars in effective TVL is not a liquidity profile, it's a rounding error. Hundreds of recorded depeg events and a worst deviation past 7,000 basis points tell the story of a stablecoin that periodically trades around 28 cents on the dollar despite claiming Treasuries at par — and claiming is the operative word, since no current reserve composition is on file for the backing pillar to score. The stress engine reads USDX as sitting at the calm end of the scale, but that placidity is itself the tell: there is no two-sided market thrashing the price back, so nothing registers as stress. {{term:attestation}}Attestation{{/term}} from a Hong Kong TCSP-licensed {{term:custody}}custody{{/term}} provider and 270+ institutional clients haven't translated into the on-chain arbitrage loops that keep prices honest, and same-day issuer {{term:redemption}}redemption{{/term}} cannot substitute for the missing secondary market — leaving USDX as expensive proof that custodial credibility and stablecoin stability are entirely different problems.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "pusd-plume": {
     "title": "USDC With a Detour",
@@ -917,13 +889,11 @@
   },
   "usdg-paxos": {
     "title": "Paxos's Singapore Sequel",
-    "text": "Paxos's USDG is the Singapore sequel under MAS supervision, with all-very-low-risk reserves at DBS and Standard Chartered and a dual-jurisdiction MiCA EU issuance no competitor matches. After Binance's BUSD died under regulatory fire, Paxos relocated its stablecoin ambitions to Singapore, where USDG now sits under a MAS Major Payment Institution license with reserves split between DBS Bank and Standard Chartered — institutional-top {{term:custody}}custody{{/term}} that matches Circle and exceeds Tether. The all-very-low-risk reserve composition and A resilience grade make USDG structurally one of the safest stablecoins in existence, which makes the lowest peg score among rated top-ten coins a curious anomaly — a brief tracking history with early growing pains rather than structural fragility. The zero-fee {{term:redemption}}redemption{{/term}} and additional EU issuance via a MiCA-compliant Finnish entity give USDG a dual-jurisdiction strategy that no competitor currently matches. The pedigree now includes card rails: Mastercard's June settlement expansion put USDG — alongside its Paxos siblings PYUSD and USDP — into the set of regulated stablecoins eligible to settle card obligations across its network. The catch is on-chain presence: concentrated on just a few chains with modest DEX depth, USDG's institutional pedigree still outpaces its DeFi footprint.",
-    "updatedAt": "2026-07-15",
+    "text": "Paxos's USDG is the Singapore sequel under MAS supervision, with all-very-low-risk reserves at DBS and Standard Chartered and a dual-jurisdiction MiCA EU issuance no competitor matches. After Binance's BUSD died under regulatory fire, Paxos relocated its stablecoin ambitions to Singapore, where USDG now sits under a MAS Major Payment Institution license with reserves split between DBS Bank and Standard Chartered — institutional-top {{term:custody}}custody{{/term}} that matches Circle and exceeds Tether. The v9 report card is close to a clean sweep — top marks on both the backing and exit pillars and an A- on economic control — which leaves the peg multiplier as the only thing between USDG and the top of the leaderboard: a brief tracking history with early growing pains rather than structural fragility, still discounting an otherwise excellent score. The zero-fee {{term:redemption}}redemption{{/term}} and additional EU issuance via a MiCA-compliant Finnish entity give USDG a dual-jurisdiction strategy that no competitor currently matches. The pedigree now includes card rails: Mastercard's June settlement expansion put USDG — alongside its Paxos siblings PYUSD and USDP — into the set of regulated stablecoins eligible to settle card obligations across its network. The catch is on-chain presence: concentrated on just a few chains with modest DEX depth, USDG's institutional pedigree still outpaces its DeFi footprint.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "gpt-5.6-sol",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-15",
-    "factsAsOf": "2026-07-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "xsgd-straitsx": {
     "title": "Southeast Asia's FX Shortcut",
@@ -1007,33 +977,27 @@
   },
   "meusd-mezo": {
     "title": "Bitcoin Maxis Get CDPs",
-    "text": "Liquity-style BTC-backed CDP stablecoin on Mezo's Bitcoin L2, with sound redemption mechanics now dragged into D-grade territory by thin liquidity and concentrated control; persistent above-peg drift from defensive overcollateralization. Mezo's meUSD applies Liquity-style {{term:cdp}}CDP{{/term}} mechanics to Bitcoin collateral — 110% minimum ratio, permissionless {{term:redemption}}redemption{{/term}} at 75 bps, atomic settlement — across native and wrapped BTC variants on a Bitcoin L2 that Pharos classifies as unproven. The headline D grade tells a split story: peg health is genuinely strong at A-, but it sits next to a D liquidity score and an F on decentralization, and those two drag the overall down to where the design no longer rescues it. The peg drifts above par in the way BTC-backed CDPs tend to — borrowers overcollateralize defensively when Bitcoin volatility spikes — and meUSD has logged hundreds of brief deviation events with a worst-case push to roughly +591 bps. The decentralization mark is earned: the Ethereum surface runs through a 5/9 Safe and a Wormhole NTT manager that can raise its own mint cap, so \"permissionless borrowing on Mezo\" coexists with very real admin keys off-chain. DEWS has lately drifted toward the watchful end of the stress scale rather than sitting calm, which fits a thin two-chain deployment where DEX liquidity remains shallow for any serious exit scenario.",
-    "updatedAt": "2026-06-03",
+    "text": "Liquity-style BTC-backed CDP stablecoin on Mezo's Bitcoin L2 with genuinely sound redemption mechanics, held in D-grade territory by a failing economic-control pillar; persistent above-peg drift from defensive overcollateralization. Mezo's meUSD applies Liquity-style {{term:cdp}}CDP{{/term}} mechanics to Bitcoin collateral — 110% minimum ratio, permissionless {{term:redemption}}redemption{{/term}} at 75 bps, atomic settlement — across native and wrapped BTC variants on a Bitcoin L2 that Pharos classifies as unproven. The v9 headline D grade tells a lopsided story: the exit pillar earns a strong B+ on those redemption mechanics and backing holds a middling C, but economic control fails outright — the Ethereum surface runs through a 5/9 Safe and a Wormhole NTT manager that can raise its own mint cap, so permissionless borrowing on Mezo coexists with very real admin keys off-chain, and v9 prices that mint authority as the dominant risk. The peg drifts above par in the way BTC-backed CDPs tend to — borrowers overcollateralize defensively when Bitcoin volatility spikes — and meUSD has logged hundreds of brief deviation events, nearly all skewing upward. A design this sturdy deserves a better control room than it currently has.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "usdu-usdu-finance": {
     "title": "Undercollateralized by Design",
-    "text": "USDU Finance was refreshingly honest about what it was: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who could price the risk. Apparently they priced it — supply has since been all but wound down in a sharp, near-total contraction, and the issuer's transparency endpoint now reports backing roughly equal to the little that remains outstanding. The C+ safety grade is less a vote of confidence than arithmetic: a nearly empty book is easy to cover one-for-one, and thin, single-venue exit liquidity matters less when there is almost nothing left to exit. The modular adapter architecture — dynamic Curve liquidity management, fixed-rate TermMax lending, Morpho vault integration — was genuinely interesting engineering, but building sophisticated infrastructure around a product that deliberately skipped the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't. USDU's distinction is ending in the rare exit lane: wound down in orderly fashion before the market could write the depeg headline.",
-    "updatedAt": "2026-07-08",
+    "text": "USDU Finance was refreshingly honest about what it was: an intentionally undercollateralized stablecoin at roughly 40% backing, minted through DAO-approved adapters connected to Curve, TermMax, and Morpho vault positions, designed explicitly for professional market participants who could price the risk. Apparently they priced it — supply has since been all but wound down in a sharp, near-total contraction, and the issuer's transparency endpoint now reports backing roughly equal to the little that remains outstanding. The D safety grade is the sound of v9 refusing to grade on a curve: a nearly empty book is easy to cover one-for-one, but a failing economic-control pillar — effectively unbounded mint authority, with no applicable peg or supply floor on record — keeps the arithmetic from flattering anyone. The modular adapter architecture — dynamic Curve liquidity management, fixed-rate TermMax lending, Morpho vault integration — was genuinely interesting engineering, but building sophisticated infrastructure around a product that deliberately skipped the {{term:overcollateralization}}overcollateralization{{/term}} step is the kind of experiment that works until it doesn't. USDU's distinction is ending in the rare exit lane: wound down in orderly fashion before the market could write the depeg headline.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "factsAsOf": "2026-08-05"
   },
   "uty-xsy": {
     "title": "Frozen on the Avalanche",
-    "text": "XSY's UTY is an AVAX-hedged {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar custodied at Ceffu and Copper with a 7-day unbonding, and it reads less like an operating product than a locked vault on a quiet mountain. Supply has the look of something in stasis rather than active use, and the F safety grade reflects that: an F on liquidity and an F on resilience drag the composite down regardless of how tidily the peg itself behaves. The {{term:delta-neutral}}delta-neutral{{/term}} AVAX {{term:basis-trade}}basis trade{{/term}} (35% long spot, 35% short perps, 30% USDC) is custodied at Ceffu and Copper {{term:custody}}custody{{/term}} with Accountable attestations, but the 7-day unbonding period and thin, fallback-class DEX coverage make exit an exercise in patience. On the actual peg, UTY barely registers stress — it sits at the calm end of the stress scale, and its dozens of recorded deviations are brief blips that never crested 300 basis points, which is unusually contained for an F-rated coin. The peg mechanism evidently works when anyone bothers to test it; the problem is that almost nobody does.",
-    "updatedAt": "2026-06-03",
+    "text": "XSY's UTY is an AVAX-hedged {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar custodied at Ceffu and Copper with a 7-day unbonding, and it reads less like an operating product than a locked vault on a quiet mountain. The scoreboard has caught up with the stasis: under Safety Score v9, UTY carries no letter grade at all — NR, not rated — which for a product this dormant is arguably the most honest verdict a scoreboard can render. The {{term:delta-neutral}}delta-neutral{{/term}} AVAX {{term:basis-trade}}basis trade{{/term}} (35% long spot, 35% short perps, 30% USDC) is custodied at Ceffu and Copper {{term:custody}}custody{{/term}} with Accountable attestations, but the 7-day unbonding period and thin, fallback-class DEX coverage make exit an exercise in patience. On the actual peg, UTY barely registers stress — it sits at the calm end of the stress scale, and its recorded deviations are brief blips that never crested 300 basis points, which is unusually contained for a coin nobody trades. The peg mechanism evidently works when anyone bothers to test it; the problem is that almost nobody does.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "gusd-gate": {
     "title": "Exchange Scrip, Treasury Wrapper",
@@ -1097,13 +1061,11 @@
   },
   "musd-metamask": {
     "title": "Distribution as Moat",
-    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The B- safety grade reflects a split decision: near-flawless peg behavior and institutional-regulated {{term:custody}}custody{{/term}} that rarely leaves the calm end of the stress scale, dragged down by a wholly centralized control model and liquidity that earns no better than a passing grade. The reserve composition reads like a compliance team's wishlist, but the secondary market hasn't fully caught up with primary-market confidence — a few dozen brief depeg blips, including a 557-bps positive spike, show that arbitrage works in theory while DEX liquidity stays spread wide and shallow. The funnel switched on at the end of June: MetaMask's new Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert those tens of millions of users into float. The moat narrative is still more aspiration than balance sheet — but the plumbing to realize it now exists.",
-    "updatedAt": "2026-07-08",
+    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The C safety grade is a split decision: a solid B backing pillar and near-flawless peg behavior that rarely leaves the calm end of the stress scale, dragged down by an exit pillar that grades D — the secondary market hasn't caught up with primary-market confidence, and DEX liquidity stays spread wide and shallow. The reserve composition reads like a compliance team's wishlist, but a few dozen brief depeg blips, including a sharp positive spike, show that arbitrage works in theory while depth stays thin in practice. The funnel switched on at the end of June: MetaMask's Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert those tens of millions of users into float. The moat narrative is still more aspiration than balance sheet — but the plumbing to realize it now exists.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "factsAsOf": "2026-08-05"
   },
   "cash-phantom": {
     "title": "The Wallet's Dollar",
@@ -1247,13 +1209,11 @@
   },
   "rwausdi-multipli": {
     "title": "The RWA Middleware Layer",
-    "text": "A KYB-gated UAE wrapper aggregating 100+ tokenized T-bills, gold, and market-neutral funds — with a Lloyd's de-pegging insurance policy that's a genuinely novel backstop.\n\nMultipli's rwaUSDi wraps 100+ tokenized treasury products, gold tokens, and market-neutral fund units into a single mintable stablecoin — 50% in tokenized {{term:treasury}}T-bills{{/term}} (BUIDL, USDY, OUSG), 25% in aggregated treasury-backed stablecoins, 15% in tokenized gold, and 10% in institutional fund units from Nomura, Fasanara, and Edge Capital. The pitch is that lending protocols can't individually underwrite hundreds of {{term:rwa}}RWA{{/term}} tokens, so rwaUSDi does the aggregation and due diligence — backed by a Lloyd's insurance policy covering de-pegging risk, which is a genuinely novel backstop for a stablecoin. UAE-domiciled with AFI-audited on-chain reserves, it has spread from Ethereum across Base, Arbitrum, and Monad while keeping KYB-gated institutional minting, making it less a retail product and more a composable RWA building block. The elegant abstraction adds a trust layer between holder and underlying assets, but with 99 peg score and only two depeg events on record, the machinery has functioned as designed.",
-    "updatedAt": "2026-07-08",
+    "text": "A KYB-gated UAE wrapper aggregating 100+ tokenized T-bills, gold, and market-neutral funds — with a Lloyd's de-pegging insurance policy that's a genuinely novel backstop.\n\nMultipli's rwaUSDi wraps 100+ tokenized treasury products, gold tokens, and market-neutral fund units into a single mintable stablecoin — tokenized {{term:treasury}}T-bills{{/term}} (BUIDL, USDY, OUSG), aggregated treasury-backed stablecoins, tokenized gold, and institutional fund units from Nomura, Fasanara, and Edge Capital. The pitch is that lending protocols can't individually underwrite hundreds of {{term:rwa}}RWA{{/term}} tokens, so rwaUSDi does the aggregation and due diligence — backed by a Lloyd's insurance policy covering de-pegging risk, which is a genuinely novel backstop for a stablecoin. UAE-domiciled with AFI-audited on-chain reserves, it has spread from Ethereum across Base, Arbitrum, and Monad while keeping KYB-gated institutional minting, making it less a retail product and more a composable RWA building block. The peg record is clean — no depeg events on file — but the report card is not: the backing pillar fails under v9 because the elegant abstraction is exactly what a scoring engine cannot see through, with no current reserve composition on file and the mechanism reviews unconfirmed. A trust layer between holder and underlying assets works beautifully until someone asks to inspect the trust.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-07-08",
-    "factsAsOf": "2026-07-08"
+    "factsAsOf": "2026-08-05"
   },
   "usdm-mega": {
     "title": "Funding the Sequencer",
@@ -1577,13 +1537,11 @@
   },
   "dusd-dtrinity": {
     "title": "Post-Exploit Purgatory",
-    "text": "dUSD is dTRINITY's reserve-backed dollar with Curve AMOs; post-exploit trust rebuild on a Frax-heavy reserve. The March 17 exploit hit dTRINITY at the worst possible moment — a protocol with genuinely novel economics (subsidized borrowing funded by reserve {{term:yield-bearing}}yield{{/term}}) now carries a danger notice that overshadows everything else on the page. Supply has contracted to roughly $1.5M from $1.8M a month prior, Sonic deployment is paused, and the C overall grade reflects a protocol where the safety floor has cracked. The reserve composition tells the dependency story: 42% sfrxUSD and 35% Curve {{term:amo}}AMO{{/term}} positions mean dUSD is overwhelmingly a bet on Frax infrastructure, with chain-isolated reserves that at least prevent cross-chain contagion. Stress monitoring now sits firmly at the calm end of the scale, suggesting the acute crisis has stabilized, but the 84-rated backstop with 40% immediate capacity is doing the heavy lifting to keep this from unwinding further. An elegant flywheel that proved fragile under pressure — the borrower subsidy model deserves a second chance, but this protocol needs to earn it. The 84-rated {{term:redemption}}redemption{{/term}} backstop is currently doing most of the peg-defense work.",
-    "updatedAt": "2026-06-03",
+    "text": "dUSD is dTRINITY's reserve-backed dollar with Curve AMOs; post-exploit trust rebuild on a Frax-heavy reserve. The March 17 exploit hit dTRINITY at the worst possible moment — a protocol with genuinely novel economics (subsidized borrowing funded by reserve {{term:yield-bearing}}yield{{/term}}) now carries a danger notice that overshadows everything else on the page. Supply has contracted to the low single-digit millions, Sonic deployment is paused, and the F overall grade reflects a protocol where the safety floor has given way entirely — v9 fails both the backing pillar, where no current reserve composition is on file, and economic control. The reserve story tells the dependency tale: heavy sfrxUSD and Curve {{term:amo}}AMO{{/term}} positions mean dUSD is overwhelmingly a bet on Frax infrastructure, with chain-isolated reserves that at least prevent cross-chain contagion. Stress monitoring sits at the calm end of the scale, suggesting the acute crisis has stabilized, and the {{term:redemption}}redemption{{/term}} backstop — anchoring the one pillar still earning a passing mark — is doing most of the peg-defense work. An elegant flywheel that proved fragile under pressure — the borrower subsidy model deserves a second chance, but this protocol needs to earn it.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-06-03",
-    "factsAsOf": "2026-06-03"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "sdusd-dtrinity": {
     "title": "The dUSD Lender Receipt",
