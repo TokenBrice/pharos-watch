@@ -45,9 +45,14 @@
   },
   "status": "pre-launch",
   "announcedDate": "2026-01",
-  "expectedLaunchDate": "2026-Q4",
+  "dateHistory": [
+    {
+      "date": "2026-Q4",
+      "setOn": "2026-08-05"
+    }
+  ],
   "launchPhase": "testnet",
-  "launchPhaseDetail": "Public testnet now open on Sepolia (connect via app.testnet.polarisfinance.io); security review and audit-preparation phase underway with professional audits upcoming; mainnet date uncommitted (issuer prioritising security over speed; 2026-Q4 target still cited)",
+  "launchPhaseDetail": "Public testnet open on Sepolia (connect via app.testnet.polarisfinance.io); security review in progress with professional audits upcoming per the site roadmap; mainnet date uncommitted — polarisfinance.io explicitly states no date is set and prioritises security over speed, so the earlier 2026-Q4 expectation was retired on 2026-08-05. Public comms (blog and press) quiet since late April 2026 while testnet infrastructure remains live.",
   "featuredContent": [
     {
       "type": "tweet",

@@ -102,8 +102,15 @@
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-H2",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token. On July 21 2026 Caixin reported, citing people familiar with the plans, that Anchorpoint will launch HKDAP within the month with distribution through licensed exchanges OSL and HashKey, which are already testing payment and fund use cases. Anchorpoint has issued no confirming press release and no deployment contract address is public, so Pharos keeps the H2 2026 window and treats the July date as unofficial.",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token. On July 21 2026 Caixin reported, citing people familiar with the plans, that Anchorpoint will launch HKDAP within the month with distribution through licensed exchanges OSL and HashKey, which are already testing payment and fund use cases. The July window then closed without a launch: on August 3 2026 Standard Chartered CEO (HK) Mary Huen said work continues since the April licence, public-blockchain testing is ongoing, and the HKDAP launch announcement is now expected within August 2026, with a B2B2C distributor model whose distributor list follows the formal launch. Pharos keeps the H2 2026 window; the August date remains issuer-adjacent but unconfirmed by an Anchorpoint press release.",
   "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://crypto.news/standard-chartered-backed-anchorpoint-eyes-august-hkdap-stablecoin-rollout/",
+      "title": "Standard Chartered-backed Anchorpoint eyes August HKDAP stablecoin rollout",
+      "description": "After missing the end-of-July window, Standard Chartered says the HKDAP launch announcement is expected within August 2026, with public-blockchain testing ongoing and a B2B2C distributor model.",
+      "source": "crypto.news"
+    },
     {
       "type": "article",
       "url": "https://crypto.news/animoca-backed-anchorpoint-to-launch-regulated-hkd-stablecoin-hkdap-in-hong-kong/",
@@ -153,6 +160,13 @@
       "title": "Caixin reports HKDAP launch planned within July, distributed via OSL and HashKey",
       "description": "Citing people familiar with the matter, Caixin reports Anchorpoint will launch HKDAP this month, with licensed exchanges OSL Group and HashKey Exchange distributing it and already testing online-payment and digital-asset-fund use cases. A joint Standard Chartered / Anchorpoint announcement is said to be roughly two weeks out. No official issuer confirmation and no deployment contract address published.",
       "sourceUrl": "https://www.caixinglobal.com/2026-07-21/standard-chartered-backed-venture-said-to-launch-hong-kong-stablecoin-this-month-102466664.html"
+    },
+    {
+      "date": "2026-08-03",
+      "type": "delay",
+      "title": "End-of-July window missed; Standard Chartered expects HKDAP launch announcement within August",
+      "description": "Standard Chartered Hong Kong CEO Mary Huen confirms work has continued since the April licence with public-blockchain testing ongoing; the launch announcement is now expected within August 2026 under a B2B2C distributor model, with the distributor list to follow the formal launch.",
+      "sourceUrl": "https://crypto.news/standard-chartered-backed-anchorpoint-eyes-august-hkdap-stablecoin-rollout/"
     }
   ],
   "dateHistory": [
