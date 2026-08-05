@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 335 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 337 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -465,6 +465,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Ripio wCOP (WCOP)](https://pharos.watch/stablecoin/wcop-ripio/): centralized stablecoin backed by real-world assets pegged to Colombian Peso.
 - [Ripio wPEN (WPEN)](https://pharos.watch/stablecoin/wpen-ripio/): centralized stablecoin backed by real-world assets pegged to Peruvian Sol.
 - [Convertible JPY Token (CJPY)](https://pharos.watch/stablecoin/cjpy-yamato/): decentralized stablecoin collateralized by crypto assets pegged to Japanese Yen.
+- [Tori trUSD (trUSD)](https://pharos.watch/stablecoin/trusd-tori/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [JPYSC (JPYSC)](https://pharos.watch/stablecoin/jpysc-sbi-startale/): centralized stablecoin backed by real-world assets pegged to Japanese Yen.
 - [MYRC (MYRC)](https://pharos.watch/stablecoin/myrc-blox/): centralized stablecoin backed by real-world assets pegged to Malaysian Ringgit.
 - [KRWQ (KRWQ)](https://pharos.watch/stablecoin/krwq-iq/): centralized stablecoin backed by real-world assets pegged to Korean Won.
 - [Usual EUR (EUR0)](https://pharos.watch/stablecoin/eur0-usual/): CeFi-dependent stablecoin backed by real-world assets pegged to Euro.

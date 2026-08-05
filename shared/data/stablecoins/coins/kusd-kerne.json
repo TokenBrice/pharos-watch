@@ -163,14 +163,21 @@
     {
       "type": "info",
       "title": "Hedge vault degraded; backing is currently 100% USDC",
-      "message": "The v1 WETH vault and its Hyperliquid short hedge are in a disclosed degraded state and are excluded from published reserves pending a v2 redeploy, so live backing is presently the USDC Peg Stability Module reserve 1:1. The delta-neutral hedge is operated off-chain by a single operator. There is no third-party security audit yet; an independent researcher review is published at kerne.fi/security/audits. Disambiguation: this is Kerne Protocol's Base-native kUSD (0x5c2efdf0...), independent of Kernel Protocol's kUSD on Ethereum mainnet and KernelDAO's KUSD on BNB Chain."
+      "message": "The v1 WETH vault and its Hyperliquid short hedge are in a disclosed degraded state and are excluded from published reserves pending a v2 redeploy, so live backing is presently the USDC Peg Stability Module reserve 1:1. The delta-neutral hedge is operated off-chain by a single operator. A first external audit by Hexens (final report 2026-07-31: 10 findings, 0 critical, 2 high; 8 fixed, 2 acknowledged, all in KerneVault) is published at kerne.fi/security/audits; the live KerneVault still runs pre-audit bytecode with deposits closed pending remediated redeploy. Disambiguation: this is Kerne Protocol's Base-native kUSD (0x5c2efdf0...), independent of Kernel Protocol's kUSD on Ethereum mainnet and KernelDAO's KUSD on BNB Chain."
     }
   ],
   "status": "pre-launch",
   "announcedDate": "2026-04",
-  "launchPhase": "beta",
+  "launchPhase": "launching-soon",
   "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
   "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://hexens.io/audit-reports/kerne-protocol-july-2026",
+      "title": "Hexens final audit report for Kerne Protocol (July 2026)",
+      "description": "First external audit covering kUSD, skUSD, KUSDPSM, KerneVault, and esKERNE: 10 findings, 0 critical, 2 high; 8 fixed and 2 acknowledged, all 10 in KerneVault.",
+      "source": "Hexens"
+    },
     {
       "type": "article",
       "url": "https://kerne.fi/security/audits",
@@ -199,6 +206,20 @@
       "title": "Independent researcher review published",
       "description": "Anonymized independent researcher review published at kerne.fi/security/audits; not a formal third-party audit.",
       "sourceUrl": "https://kerne.fi/security/audits"
+    },
+    {
+      "date": "2026-07-10",
+      "type": "milestone",
+      "title": "Patched Peg Stability Module cutover completed; minting open on Base",
+      "description": "The patched KUSDPSM completed cutover and is live with open 1:1 USDC minting (10 bps fee) in the protocol's Genesis Phase.",
+      "sourceUrl": "https://kerne.fi"
+    },
+    {
+      "date": "2026-07-31",
+      "type": "audit",
+      "title": "Hexens publishes final external audit report",
+      "description": "First external audit covering kUSD, skUSD, KUSDPSM, KerneVault, and esKERNE: 10 findings, 0 critical, 2 high; 8 fixed and 2 acknowledged, all 10 in KerneVault. The live KerneVault runs pre-audit bytecode with deposits closed pending a remediated redeploy.",
+      "sourceUrl": "https://hexens.io/audit-reports/kerne-protocol-july-2026"
     }
   ]
 }

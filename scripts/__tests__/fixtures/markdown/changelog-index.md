@@ -6,6 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-07-27 to 2026-08-02
+
+Safety Score V9 goes live with mechanism-backed coin pages, a wave-7/8 evidence drain, and five new FX pegs.
+
+- **V9 goes live**: Safety Score V9 is now the active production model. Shadow scoring is retired, the frontend reads the typed V9 payload, and the V9.0 release ships with published V9.02 responsibility rules for evidence ownership.
+- **Explainable coin pages**: Coin pages now justify each score with causal attribution and evidence ownership, surface mechanism-review findings inline, and give pillar breakdowns clearer hierarchy plus a new collateralization module.
+- **Mechanism evidence drain**: Wave-7 and wave-8 research landed 42 new mechanism overlays and drained a 41-item integration tail, each cross-verified across vendors (GROK, KIMI) and ratified against a documented mechanism-overlay evidence standard.
+- **DEX execution reliability**: Exact-exit measurement expanded to Optimism, Balancer, and pinned Solana CLMM, while DEX staging was bounded to its memory budget via chunked transactions, amortized persistence, and recovered UniV4 and SunSwap batches.
+- **Fail-closed publication**: Publication now holds rather than guesses — V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset.
+- **Wider coverage**: The FX peg feed added KES, GHS, COP, CLP, and PEN; DDRv4 shipped for depeg-duration resolution; and coverage grew with the XOFm Mento redemption backstop, DUSD Makina reserves, and CHFAU aggregate on-chain supply.
+- **Pipeline hardening**: CI moved from exhaustive PR validation to adaptive checks, 156 D1 migrations were squashed into the baseline, drift checks were calibrated against live Cloudflare, and the new Pharos logo rolled to production.
+
 ## 2026-07-27 to 2026-07-27
 
 Safety Score V9 becomes the active model with fail-closed publication and held-rating continuity.

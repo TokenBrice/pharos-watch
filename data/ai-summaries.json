@@ -8,14 +8,12 @@
     "factsAsOf": "2026-07-13"
   },
   "kusd-kerne": {
-    "title": "Genesis Beta, USDC-Backed Today",
-    "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale but still pre-active in Pharos because the runtime price path is not ready. DefiLlama now indexes Kerne USD supply as stablecoin id 402, but the row reports price=null and CoinGecko does not yet resolve a Kerne USD coin, so Pharos keeps it on the upcoming tracker rather than the active dashboard. Current backing is simple: combined USDC reserves in the mint and redeem Peg Stability Module contracts cover outstanding kUSD slightly above 1:1. The more ambitious delta-neutral design, with a WETH vault and Hyperliquid short hedge, is documented as degraded and excluded from reserves pending a v2 redeploy. Admin authority sits with a 2-of-3 Gnosis Safe, and Kerne publishes hourly signed proof-of-reserves data at kerne.fi/verify.",
-    "updatedAt": "2026-07-11",
+    "title": "Audited, Live, and Empty",
+    "text": "kUSD is Kerne Protocol's Base-native synthetic dollar, and it now has the paperwork most projects its size skip: a first external audit from Hexens landed in late July with zero criticals and every finding confined to the yield vault, following a patched Peg Stability Module cutover that opened permissionless 1:1 USDC minting. What it doesn't have is users — circulating supply remains genesis-scale dust across a handful of holders, DefiLlama indexes the supply with no usable price, and CoinGecko still doesn't resolve the coin, so Pharos keeps it on the upcoming tracker. The irony of the audit is on-chain: the live KerneVault still runs pre-audit bytecode with deposits closed until the remediated version deploys, so the audited code and the deployed code are not yet the same thing. Current backing is accordingly simple — USDC in the PSM contracts covering outstanding kUSD slightly above 1:1 — while the ambitious delta-neutral design (WETH vault, Hyperliquid short) stays degraded and excluded from reserves. Admin authority sits with a 2-of-3 Gnosis Safe, hourly signed proof-of-reserves is published at kerne.fi/verify, and development velocity is the healthiest signal here: the protocol keeps shipping to an audience that hasn't shown up yet.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "gpt-5.6-sol",
-    "reviewedBy": "Codex issue #468 verification",
-    "reviewedAt": "2026-07-11",
-    "factsAsOf": "2026-07-11"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "usdt-tether": {
     "title": "Treasury-Heavy Dollar Base",
@@ -1708,14 +1706,12 @@
     "factsAsOf": "2026-05-15"
   },
   "trusd-tori": {
-    "title": "Ethena's Mirror, Three Days Old",
-    "text": "Tori Finance's soft-launched synthetic dollar copying Ethena's delta-neutral playbook, with TBA contracts and a controlled beta marketed as launch. Tori Finance soft-launched trUSD on Ethereum on March 24 with the same playbook Ethena popularized: a synthetic dollar backed by {{term:delta-neutral}}delta-neutral{{/term}} trading positions ({{term:basis-trade}}basis trade{{/term}} arbitrage, calendar spreads, hedged money markets) capturing {{term:funding-rate}}funding rate{{/term}} on {{term:perpetual}}perpetual{{/term}} hedges, with a {{term:yield-bearing}}yield-bearing{{/term}} staked wrapper (strUSD, ~15% APY advertised). Delphi Ventures led the seed round alongside QInvest, CMCC Global, and Bering Waters. Accountable provides real-time proof of reserves via its DVN as an {{term:attestation}}attestation{{/term}} layer, and two audits are complete (Sherlock Jan 2026, Nethermind Mar 2026). The bull case writes itself — institutional yield strategies democratized at $1 minimums. The bear case is equally obvious: contract addresses are still listed as 'TBA' in the docs, the app endpoint refused connections during our research, TVL shows N/A on their own site, and the Nethermind audit was completed the same day as the 'launch.' Not on DefiLlama, not on CoinGecko, 17 total tweets. This is a controlled beta marketed as a mainnet launch, and the 0.1% mint/redeem fee plus 10% performance fee structure means Tori needs meaningful AUM before the economics work. Watch for contract publication and aggregator listings before treating this as anything more than a proof of concept.",
-    "updatedAt": "2026-05-15",
+    "title": "Ethena's Playbook, Politely Executed",
+    "text": "trUSD is Tori Finance's run at the playbook Ethena popularized: a synthetic dollar backed by {{term:delta-neutral}}delta-neutral{{/term}} trading positions ({{term:basis-trade}}basis trade{{/term}} arbitrage, calendar spreads, hedged money markets) with a {{term:yield-bearing}}yield-bearing{{/term}} staked wrapper (strUSD), and the launch sequencing was unusually disciplined — Sherlock and Nethermind audits before deployment, Accountable's real-time proof-of-solvency from day one, Nexus Mutual cover on the pre-deposit vault. The market noticed: the $50M pre-deposit cap filled in seven days and supply has kept growing past it, with a Curve trUSD-USDC pool now doing seven-figure daily volume as the main exit. What Pharos flagged as a controlled beta in May graduated to the active dashboard in August, which is the fastest rehabilitation arc in the upcoming tracker's short history. The open questions are the classic synthetic-dollar ones, and Pharos's on-chain review sharpened them: primary NAV mint/redeem is KYC-whitelisted in the contract itself (the 'no verification' marketing refers to secondary swaps), the custodian banks holding ~90% of attested backing are unnamed by policy, and independent tracing of the sole custodian wallet shows collateral flowing to exchange deposit addresses rather than anything resembling a bank. Delphi-backed, Ethereum-only, and single-entity operated: the peg has behaved so far, but this is a trading desk wearing a stablecoin's clothing, and the track record is measured in weeks.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "ussd-sonic-labs": {
     "title": "Yield Without the Yield",
@@ -1969,13 +1965,11 @@
   },
   "bd-basedollar": {
     "title": "Liquity's Fork, Aerodrome's Yield",
-    "text": "BD is a pre-launch Liquity V2 fork on Base, designed as an {{term:overcollateralization}}overcollateralized{{/term}} dollar stablecoin minted against LP token collateral and earning AERO yield. Base Dollar takes Liquity V2's battle-tested {{term:cdp}}CDP{{/term}} architecture and replants it on Base with a twist: instead of ETH collateral, borrowers deposit LP tokens — routing the stablecoin's security model through Aerodrome's liquidity layer and harvesting AERO farming rewards as the yield engine. Revenue splits three ways between users, a protocol-owned liquidity treasury, and BD stakers, a design that ties the protocol's survival to the depth of Base's DEX ecosystem rather than ETH price alone. The project recently completed an external audit that surfaced a high-severity LP token price manipulation vulnerability and a medium-severity timelock bypass, both now remediated with fuzz testing added — the kind of findings that are routine for a Liquity fork adapting to exotic collateral types but worth watching post-launch. Still in the auditing phase with a Q2 2026 target, Base Dollar is betting that LP-collateralized debt positions can offer better capital efficiency than vanilla ETH CDPs, though the trade-off is inheriting every smart contract risk in the Aerodrome stack on top of its own.",
-    "updatedAt": "2026-05-15",
+    "text": "BD is a pre-launch Liquity V2 fork on Base, designed as an {{term:overcollateralization}}overcollateralized{{/term}} dollar stablecoin minted against LP token collateral and earning AERO yield. Base Dollar takes Liquity V2's battle-tested {{term:cdp}}CDP{{/term}} architecture and replants it on Base with a twist: instead of ETH collateral, borrowers deposit LP tokens — routing the stablecoin's security model through Aerodrome's liquidity layer and harvesting AERO farming rewards as the yield engine. Revenue splits three ways between users, a protocol-owned liquidity treasury, and BD stakers, a design that ties the protocol's survival to the depth of Base's DEX ecosystem rather than ETH price alone. The external audit surfaced a high-severity LP token price manipulation vulnerability and a medium-severity timelock bypass, both remediated with fuzz testing added — the kind of findings that are routine for a Liquity fork adapting to exotic collateral types but worth watching post-launch. The launch itself happened the way engineers launch and marketers don't: production contracts quietly deployed to Base mainnet on August 1, 2026 with a token-seeded dust supply and a production frontend two days later, while the docs still say audits are in progress and publish no contract addresses. Base Dollar is betting that LP-collateralized debt positions can offer better capital efficiency than vanilla ETH CDPs, though the trade-off is inheriting every smart contract risk in the Aerodrome stack on top of its own — and until the team actually announces the launch it has already shipped, Pharos treats BD as launching-soon rather than live.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "wm-m0": {
     "title": "The Plumbing's Plumbing",
@@ -2019,13 +2013,11 @@
   },
   "jpysc-sbi-startale": {
     "title": "Japan's Trust-Bank Yen Goes Live",
-    "text": "JPYSC went live on June 24, 2026 — Japan's first stablecoin issued through a trust bank rather than under JPYC's prepaid-instrument workaround, and that distinction is still the entire product. Shinsei Trust & Banking issues, SBI VC Trade distributes, and Startale Group (the Astar Network operator and Sony's Soneium co-developer) built the rails, with roughly $63M of cash-and-JGB reserves segregated in trust accounts on day one. The Type III electronic payment instrument classification gives JPYSC what JPYC spent three years negotiating around: trust-law redemption rights, asset segregation, exemption from the ¥1M transfer cap, and permission to park up to 50% of reserves in Japanese government bonds — yield the prepaid model legally can't touch. The catch is that 'launch' means a closed loop. For now only verified SBI VC Trade account holders can hold JPYSC, with no external-wallet withdrawals and no public-chain circulation; Startale insists the on-chain plumbing is built and merely waiting on legal and tax clarity, not technology. So JPYSC is live and untradeable at the same time — a regulated yen token that exists on-chain but can't yet leave the building, which is precisely the bet: that Japan's stablecoin market was gated on legal infrastructure, and SBI's institutional book plus Startale's stack is the right hand to play the moment the gate opens. The trust-bank framework legalizes up to 50% JGB {{term:treasury}}treasury bonds{{/term}} in reserves, trust-segregated {{term:custody}}custody{{/term}}, FSA-grade {{term:attestation}}attestation{{/term}}, and statutory {{term:redemption}}redemption{{/term}} rights.",
-    "updatedAt": "2026-06-28",
+    "text": "JPYSC went live on June 24, 2026 — Japan's first stablecoin issued through a trust bank rather than under JPYC's prepaid-instrument workaround, and that distinction is still the entire product. Shinsei Trust & Banking issues, SBI VC Trade distributes, and Startale Group (the Astar Network operator and Sony's Soneium co-developer) built the rails, with roughly $63M of cash-and-JGB reserves segregated in trust accounts on day one. The Type III electronic payment instrument classification gives JPYSC what JPYC spent three years negotiating around: trust-law redemption rights, asset segregation, exemption from the ¥1M transfer cap, and permission to park up to 50% of reserves in Japanese government bonds — yield the prepaid model legally can't touch. The catch is that 'launch' means a closed loop. For now only verified SBI VC Trade account holders can hold JPYSC, with no external-wallet withdrawals and no public-chain circulation; Startale insists the on-chain plumbing is built and merely waiting on legal and tax clarity, not technology. So JPYSC is live and untradeable at the same time — a regulated yen token that exists on-chain but can't yet leave the building — and the building is filling up fast: supply has grown more than fivefold since launch to north of ¥20 billion, a lending product went live inside SBI VC Trade in July, and a DigiFT partnership is wiring JPYSC into tokenized capital-markets settlement, all with zero secondary-market volume because there is no secondary market. That is precisely the bet: Japan's stablecoin market was gated on legal infrastructure, and SBI's institutional book plus Startale's stack is the right hand to play the moment the gate opens. The trust-bank framework legalizes up to 50% JGB {{term:treasury}}treasury bonds{{/term}} in reserves, trust-segregated {{term:custody}}custody{{/term}}, FSA-grade {{term:attestation}}attestation{{/term}}, and statutory {{term:redemption}}redemption{{/term}} rights.",
+    "updatedAt": "2026-08-05",
     "authoredBy": "ai",
-    "model": "claude-opus-4-8",
-    "reviewedBy": "Pharos pre-launch update",
-    "reviewedAt": "2026-06-28",
-    "factsAsOf": "2026-06-28"
+    "model": "claude-fable-5",
+    "factsAsOf": "2026-08-05"
   },
   "rgbp-revolut": {
     "title": "13 Million Users, One Brand Ban Away",

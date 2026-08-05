@@ -15,10 +15,15 @@
   "pegMechanism": "Regulator-approved shekel stablecoin on Solana (token extensions) issued by Bits of Gold under the Capital Market, Insurance and Savings Authority framework; redeemable 1:1 for shekels from segregated Israeli reserves, with QEDIT zero-knowledge privacy and a deliberately gradual, limited initial rollout",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
+  "geckoId": "bils",
   "links": [
     {
       "label": "Website",
       "url": "https://bitsofgold.co.il"
+    },
+    {
+      "label": "BILS site",
+      "url": "https://www.bils.co.il/en"
     },
     {
       "label": "Twitter",
@@ -101,6 +106,12 @@
   "launchPhaseDetail": "Bits of Gold, a Tel Aviv-based licensed crypto broker/custodian operating since 2013, received full regulatory approval on April 28 2026 from Israel's Capital Market, Insurance and Savings Authority (CMISA) to issue BILS, the first regulated shekel-pegged stablecoin, following a two-year sandbox pilot approved in March 2024. Backed 1:1 by New Israeli Shekels held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with Fireblocks custody/issuance infrastructure and QEDIT zero-knowledge privacy, issued on Solana via token extensions. The regulator mandates a deliberately gradual, small-scale rollout (likely institutional/qualified participants first) before wide availability; no firm public-launch date set. Distinct from Israel's broader Stablecoin Law, which remains in draft/public-comment stage. Pharos tracks the ILS peg as OTHER until shekel peg support is built.",
   "featuredContent": [
     {
+      "type": "blog",
+      "url": "https://blog.bitsofgold.co.il/bils/",
+      "title": "Bits of Gold announces move to wide distribution of BILS",
+      "source": "Bits of Gold"
+    },
+    {
       "type": "article",
       "url": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin",
       "title": "A digital shekel is here: Israel approves its first-ever regulated stablecoin",
@@ -127,6 +138,13 @@
       "title": "CMISA grants full approval for BILS limited launch",
       "description": "After a two-year pilot, the Capital Market, Insurance and Savings Authority grants Bits of Gold full approval to issue BILS under conditions including 1:1 backing, segregated Israeli reserves, and an EY audit, with a gradual small-scale rollout.",
       "sourceUrl": "https://www.coindesk.com/policy/2026/04/28/a-digital-shekel-is-here-israel-approves-its-first-regulated-stablecoin"
+    },
+    {
+      "date": "2026-07-01",
+      "type": "milestone",
+      "title": "Bits of Gold announces move to wide distribution of BILS",
+      "description": "Official blog post states the sandbox pilot is complete and BILS is moving to wide distribution, with a live purchase and transparency site at bils.co.il; roughly 100,000 BILS minted on Solana as of early August 2026.",
+      "sourceUrl": "https://blog.bitsofgold.co.il/bils/"
     }
   ]
 }
