@@ -3,7 +3,7 @@ import {
   safetyScoreV9InputIdentitiesMatch,
 } from "@shared/lib/safety-score-v9-input-identity";
 import { throwIfAborted } from "../lib/abort";
-import { getCaches } from "../lib/db-cache";
+import { getCaches, getCacheUpdatedAt } from "../lib/db-cache";
 import type {
   CronProgressReporter,
   CronResult,
@@ -99,6 +99,26 @@ export async function computeSafetyScoreV9(
   }
 
   const fixedInput = baseArtifact.input;
+  let latestStablecoinsUpdatedAt: number | null;
+  try {
+    latestStablecoinsUpdatedAt = await getCacheUpdatedAt(
+      db,
+      "stablecoins",
+    );
+  } catch (error) {
+    return unavailable("latest-stablecoins-generation-unavailable", {
+      code: error instanceof Error ? error.name : "Error",
+    });
+  }
+  if (latestStablecoinsUpdatedAt === null) {
+    return unavailable("latest-stablecoins-generation-unavailable");
+  }
+  if (fixedInput.updatedAt !== latestStablecoinsUpdatedAt) {
+    return unavailable("stablecoins-generation-mismatch", {
+      fixedInputStablecoinsUpdatedAt: fixedInput.updatedAt,
+      latestStablecoinsUpdatedAt,
+    });
+  }
   let latestDexGenerationId: string;
   try {
     latestDexGenerationId = (

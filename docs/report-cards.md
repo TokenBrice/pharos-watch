@@ -54,7 +54,7 @@ The private upstream input remains encoded in the exact V8-shaped fixed-input sc
 - `report-cards:v9-peg-provenance-seed:exact`
 - the V8 evaluation-build identity required to verify that exact input
 
-V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation. The producer due interval is shorter than the compiler's freshness window so the existing 15-minute trigger grid lands healthy captures roughly every 30 minutes; stale, future, registry, and inventory mismatches are reported with clause-specific reason codes.
+V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation. The producer due interval is shorter than the compiler's freshness window so the existing 15-minute trigger grid lands healthy captures roughly every 30 minutes. Compilation normally follows an `ok` same-version core slot. A degraded core slot can proceed only when the durable publication ledger proves a same-slot, same-Worker `stablecoins` cache generation, and the compiler rejects a fixed input whose stablecoin timestamp no longer matches the live cache. Stale, future, registry, and inventory mismatches are reported with clause-specific reason codes.
 
 Canonical accepted state is stored in:
 

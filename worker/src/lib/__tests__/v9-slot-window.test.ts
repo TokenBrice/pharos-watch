@@ -23,11 +23,15 @@ interface CoreSlotFixture {
   worker_version: string | null;
 }
 
-function dbWithCoreSlot(row: CoreSlotFixture | null) {
-  const first = vi
-    .fn()
-    .mockResolvedValueOnce(row)
-    .mockResolvedValue(null);
+function dbWithCoreSlot(
+  row: CoreSlotFixture | null,
+  stablecoinsPublication: { published_at: number } | null = null,
+) {
+  const first = vi.fn().mockResolvedValueOnce(row);
+  if (row?.result_status === "degraded") {
+    first.mockResolvedValueOnce(stablecoinsPublication);
+  }
+  first.mockResolvedValue(null);
   const bind = vi.fn(() => ({ first }));
   const prepare = vi.fn((_sql?: string) => ({ bind }));
   return {
@@ -115,15 +119,22 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
-  it("skips V9 after a degraded same-version core slot", async () => {
+  it("admits V9 after a degraded same-version core slot with a current stablecoin publication", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
-    const fixture = dbWithCoreSlot({
-      state: "finished",
-      result_status: "degraded",
-      worker_version: "worker-v2",
-    });
+    const fixture = dbWithCoreSlot(
+      {
+        state: "finished",
+        result_status: "degraded",
+        worker_version: "worker-v2",
+      },
+      {
+        published_at: Math.floor(
+          Date.parse("2026-07-26T12:15:30Z") / 1_000,
+        ),
+      },
+    );
     const run = vi.fn(async () => ({
       status: "ok" as const,
       itemCount: 335,
@@ -134,12 +145,46 @@ describe("runV9AfterCoreWithinWindow", () => {
       run,
     );
 
-    expect(result.status).toBe("skipped_neutral");
-    expect(result.productivity?.reason).toBe("v9-core-slot-not-ready");
-    expect(run).not.toHaveBeenCalled();
-    expect(fixture.bind).toHaveBeenCalledWith(
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(335);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(fixture.bind).toHaveBeenNthCalledWith(
+      1,
       Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
     );
+    expect(fixture.bind).toHaveBeenNthCalledWith(
+      2,
+      "worker-v2",
+      Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
+      Math.floor(Date.parse("2026-07-26T12:30:00Z") / 1_000),
+      Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
+      Math.floor(Date.parse("2026-07-26T12:30:00Z") / 1_000),
+    );
+  });
+
+  it("skips V9 after a degraded core slot without a matching stablecoin publication", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({
+      state: "finished",
+      result_status: "degraded",
+      worker_version: "worker-v2",
+    });
+    const run = vi.fn();
+
+    const result = await runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs),
+      run,
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(result.productivity?.reason).toBe("v9-core-slot-not-ready");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      coreResultStatus: "degraded",
+      degradedCorePublicationMatched: false,
+    });
+    expect(run).not.toHaveBeenCalled();
   });
 
   it("skips neutrally when the core slot is incomplete or from another Worker version", async () => {
