@@ -112,3 +112,20 @@ export const SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE: MethodologyChangelo
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
+  version: "9.06",
+  title: "Exit backup credit scales with route quality",
+  date: "2026-08-06",
+  effectiveAt: 1786027489,
+  summary:
+    "V9 Exit now scales its bounded backup-route credit by the backup route's own score and presents primary-route, backup, and completion measurements separately.",
+  impact: [
+    "Backup credit is min(10, 100 - primary route score) multiplied by backup route score / 100",
+    "A primary route below 100 can no longer reach 100 from backup-route credit alone",
+    "The Exit card names the selected primary route, identifies the backup credit, and shows actual stress-request completion separately from its capacity component score",
+    "The Exit pillar name, aggregation weight, route components, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

@@ -4312,10 +4312,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Shared exit-route capacity source changes rotate the historical V8
-    // evaluation build even though V8 scoring behavior is frozen.
+    // Shared methodology identity changes rotate the historical V8 evaluation
+    // build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "ed448a6fc3584be3b2c6129a709a045476178be90fc8501a38e67dac2812495a",
+      "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
     );
   });
 

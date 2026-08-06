@@ -919,9 +919,18 @@ export function evaluateV9Exit(
   const undisclosedFeeInvolved =
     primary.route.feeEvidence === "undisclosed-reviewed" ||
     independent?.route.feeEvidence === "undisclosed-reviewed";
+  // Redundancy can improve a strong primary route, but a merely adequate
+  // backup must not automatically fill all remaining headroom. Scale the
+  // bounded redundancy allowance by the backup route's own quality. Because
+  // `independent` cannot outscore the selected primary, a sub-100 primary can
+  // no longer become a perfect Exit score solely through redundancy.
+  const redundancyHeadroom = Math.min(
+    100 - primary.score,
+    100 * envelope.policy.semantic.exit.independentRouteBenefitLimit,
+  );
   const diversificationBonus =
     independent && !undisclosedFeeInvolved
-      ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)
+      ? redundancyHeadroom * (independent.score / 100)
       : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   return {
