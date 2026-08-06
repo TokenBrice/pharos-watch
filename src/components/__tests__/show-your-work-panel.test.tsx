@@ -37,14 +37,14 @@ describe("ShowYourWorkPanel", () => {
         stablecoinName="USDC"
       />,
     );
-    expect(screen.getByText(/Inputs · Liquidity Score/i)).toBeTruthy();
+    expect(screen.getByText(/Inputs · DEX Market Liquidity/i)).toBeTruthy();
     expect(screen.getByText("TVL Depth")).toBeTruthy();
     expect(screen.getByText("80.0")).toBeTruthy();
     // 30% weight column visible.
     expect(screen.getAllByText("30%").length).toBeGreaterThan(0);
 
     const shell = screen.getByTestId("show-your-work-liquidityScore-table");
-    const table = screen.getByRole("table", { name: /liquidity score inputs/i });
+    const table = screen.getByRole("table", { name: /DEX market liquidity inputs/i });
     expect(shell.getAttribute("data-table-id")).toBe("show-your-work-liquidityScore");
     expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
   });

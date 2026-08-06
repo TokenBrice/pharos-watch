@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -410,8 +411,13 @@ describe("hard-block hook outputs", () => {
 
 describe("repo Codex hook config", () => {
   it("keeps Codex hook configuration user-local instead of tracked", () => {
-    expect(existsSync(resolve(process.cwd(), ".codex/config.toml"))).toBe(false);
-    expect(existsSync(resolve(process.cwd(), ".codex/hooks.json"))).toBe(false);
+    const trackedConfig = execFileSync(
+      "git",
+      ["ls-files", "--", ".codex/config.toml", ".codex/hooks.json"],
+      { encoding: "utf8" },
+    ).trim();
+
+    expect(trackedConfig).toBe("");
   });
 });
 
