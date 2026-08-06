@@ -40,14 +40,20 @@ A held V9 publication is shown with the shared status notice. Missing or invalid
 
 V9 dependency edges are serial or basket, and each carries a `materiality` disposition. The graph colors, filters, and legends by that disposition — the retired V8 `collateral` / `mechanism` / `wrapper` triple no longer exists in the data model.
 
-| Materiality | Legend label | Stroke |
-| --- | --- | --- |
-| `serial` | Serial | solid violet |
-| `basket-weighted` | Basket weighted | solid slate |
-| `serial-blocked` | Serial blocked | dashed red |
-| `basket-bounded-unknown` | Basket unbounded | dotted amber |
+The engine's terms describe the traversal, not the relationship, so the UI publishes the reader-facing vocabulary the methodology page already uses ("a serial wrapper cannot escape its parent; basket exposure is weighted"). There are two relationships, each in a scored and an unscored form:
 
-Solid strokes carry a quantified magnitude; dashed strokes flag a disposition whose magnitude the engine could not bound.
+| Materiality | Legend label | Stroke | Meaning |
+| --- | --- | --- | --- |
+| `serial` | Wrapper | solid violet | Full pass-through claim; inherits the upstream's risk in full |
+| `basket-weighted` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
+| `serial-blocked` | Wrapper · unscored | dashed violet | Same claim, upstream score unresolvable |
+| `basket-bounded-unknown` | Collateral · unscored | dotted slate | Same share, upstream score unresolvable |
+
+Hue encodes the relationship and a broken stroke encodes the unscored upstream. Both `blocked` and `boundedUnknown` come from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated.
+
+Only `basket-weighted` sets `showWeight`, so only a weighted collateral share renders a percentage. A wrapper is a full claim by definition and an unscored edge has no modeled size, so a "100%" or "0%" on either would mislead.
+
+`DEPENDENCY_TYPE_PRESENTATION[type].description` carries the plain-English meaning and is surfaced as the `title` on both the legend swatches and the type-filter pills.
 
 `contagionEdgeWeight()` derives the dimensionless exposure magnitude used for stroke weight, link force, and hub scoring, matching `buildDependencyHubsModel`:
 

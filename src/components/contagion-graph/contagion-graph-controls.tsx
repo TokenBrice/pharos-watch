@@ -28,11 +28,13 @@ function ControlPill({
   isActive,
   ariaLabel,
   onClick,
+  title,
   children,
 }: {
   isActive: boolean;
   ariaLabel?: string;
   onClick: () => void;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -41,6 +43,7 @@ function ControlPill({
       onClick={onClick}
       aria-pressed={isActive}
       aria-label={ariaLabel}
+      title={title}
       className={cn(
         "pharos-focus-ring pharos-control-pill px-3 py-1",
         isActive ? "pharos-control-pill-active" : "",
@@ -91,6 +94,7 @@ export function ContagionGraphControls({
                 key={filter.value}
                 isActive={edgeTypeFilter === filter.value}
                 onClick={() => onEdgeTypeFilterChange(filter.value)}
+                title={filter.description}
               >
                 {filter.label}
               </ControlPill>

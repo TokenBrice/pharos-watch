@@ -27,11 +27,34 @@ describe("contagion graph dependency type presentation", () => {
     ]);
   });
 
-  it("dashes exactly the dispositions whose magnitude is unknown", () => {
+  it("names relationships in reader-facing terms rather than engine terms", () => {
+    expect(DEPENDENCY_TYPE_ORDER.map((type) => DEPENDENCY_TYPE_PRESENTATION[type].label)).toEqual([
+      "Wrapper",
+      "Collateral",
+      "Wrapper · unscored",
+      "Collateral · unscored",
+    ]);
+    for (const type of DEPENDENCY_TYPE_ORDER) {
+      expect(DEPENDENCY_TYPE_PRESENTATION[type].description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps hue on the relationship and the broken stroke on the unscored upstream", () => {
+    expect(DEPENDENCY_TYPE_PRESENTATION.serial.color).toBe(DEPENDENCY_TYPE_PRESENTATION["serial-blocked"].color);
+    expect(DEPENDENCY_TYPE_PRESENTATION["basket-weighted"].color).toBe(
+      DEPENDENCY_TYPE_PRESENTATION["basket-bounded-unknown"].color,
+    );
     expect(DEPENDENCY_TYPE_PRESENTATION.serial.dash).toBeUndefined();
     expect(DEPENDENCY_TYPE_PRESENTATION["basket-weighted"].dash).toBeUndefined();
     expect(DEPENDENCY_TYPE_PRESENTATION["serial-blocked"].dash).toBeDefined();
     expect(DEPENDENCY_TYPE_PRESENTATION["basket-bounded-unknown"].dash).toBeDefined();
+  });
+
+  it("shows a percentage only for a weighted collateral share", () => {
+    expect(DEPENDENCY_TYPE_PRESENTATION["basket-weighted"].showWeight).toBe(true);
+    expect(DEPENDENCY_TYPE_PRESENTATION.serial.showWeight).toBeFalsy();
+    expect(DEPENDENCY_TYPE_PRESENTATION["serial-blocked"].showWeight).toBeFalsy();
+    expect(DEPENDENCY_TYPE_PRESENTATION["basket-bounded-unknown"].showWeight).toBeFalsy();
   });
 
   it("sorts dependency types by the shared presentation order", () => {

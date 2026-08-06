@@ -36,13 +36,13 @@ interface TooltipContext {
 }
 
 /**
- * A bounded-unknown basket edge resolves to weight 0, which is the honest
- * modeled magnitude but not a meaningful "0%" reading — label those by
- * disposition alone.
+ * Only a weighted collateral share has a percentage worth reading. A wrapper is
+ * a full claim by definition, and an unscored edge has no modeled size — a
+ * "100%" or "0%" on either would be noise at best and misleading at worst.
  */
 function describeLinkMateriality(link: ResolvedLink): string {
-  const label = DEPENDENCY_TYPE_PRESENTATION[link.type].label;
-  return link.weight > 0 ? `${label} · ${Math.round(link.weight * 100)}%` : label;
+  const { label, showWeight } = DEPENDENCY_TYPE_PRESENTATION[link.type];
+  return showWeight && link.weight > 0 ? `${label} · ${Math.round(link.weight * 100)}%` : label;
 }
 
 export function buildTooltipAnnouncement({

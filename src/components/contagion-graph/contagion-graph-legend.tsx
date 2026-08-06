@@ -25,7 +25,13 @@ export function ContagionGraphLegend() {
       ))}
       <span className="mx-1 text-border">|</span>
       {DEPENDENCY_TYPE_ORDER.map((type) => (
-        <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        // The relationship names are short by necessity; the description carries
+        // the plain-English meaning on hover, on both the map and detail pages.
+        <span
+          key={type}
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+          title={DEPENDENCY_TYPE_PRESENTATION[type].description}
+        >
           <svg width="16" height="6" className="shrink-0">
             <line x1="0" y1="3" x2="16" y2="3" stroke={TYPE_COLORS[type]} strokeWidth={2} strokeDasharray={TYPE_DASH[type]} />
           </svg>

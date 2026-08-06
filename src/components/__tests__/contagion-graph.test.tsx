@@ -191,7 +191,7 @@ describe("ContagionGraph", () => {
 
     await waitFor(() => {
       expect(container.textContent).toContain("USDTB");
-      expect(container.textContent).toContain("Serial · 100% dependency");
+      expect(container.textContent).toContain("Wrapper dependency");
     });
   });
 
@@ -208,7 +208,7 @@ describe("ContagionGraph", () => {
   it("filters visible edges by dependency materiality", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Serial" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));
 
     expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 1 visible edges\./)).toBeTruthy();
   });
