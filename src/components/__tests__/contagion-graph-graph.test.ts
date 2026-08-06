@@ -17,9 +17,9 @@ const NODES: GraphNode[] = [
 ];
 
 const LINKS: GraphLink[] = [
-  { source: "usdt", target: "usdc", weight: 0.8, type: "basket-weighted" },
-  { source: "usde", target: "usdt", weight: 0.6, type: "basket-bounded-unknown" },
-  { source: "susde", target: "usde", weight: 1, type: "serial" },
+  { source: "usdt", target: "usdc", weight: 0.8, type: "collateral" },
+  { source: "usde", target: "usdt", weight: 0.6, type: "collateral" },
+  { source: "susde", target: "usde", weight: 1, type: "wrapper" },
 ];
 
 function makeResolvedLinks(): ResolvedLink[] {
@@ -42,7 +42,7 @@ describe("contagion graph helpers", () => {
         srcId: "usdt",
         tgtId: "usdc",
         weight: 0.8,
-        type: "basket-weighted",
+        type: "collateral",
         srcTier: 1,
         tgtTier: 2,
       },
@@ -51,7 +51,7 @@ describe("contagion graph helpers", () => {
         srcId: "usde",
         tgtId: "usdt",
         weight: 0.6,
-        type: "basket-bounded-unknown",
+        type: "collateral",
         srcTier: 0,
         tgtTier: 1,
       },
@@ -60,7 +60,7 @@ describe("contagion graph helpers", () => {
         srcId: "susde",
         tgtId: "usde",
         weight: 1,
-        type: "serial",
+        type: "wrapper",
         srcTier: 0,
         tgtTier: 0,
       },
@@ -82,11 +82,11 @@ describe("contagion graph helpers", () => {
     expect(result.visibleLinkIndices).toEqual(new Set([0, 1]));
   });
 
-  it("filters visible links by dependency materiality", () => {
+  it("filters visible links by relationship", () => {
     const result = computeVisibleGraph({
       resolvedLinks: makeResolvedLinks(),
       focusMode: "all",
-      edgeTypeFilter: "serial",
+      edgeTypeFilter: "wrapper",
       neighborhoodFocusId: null,
       nodes: NODES,
       hubIdsByScore: ["usdc", "usdt"],

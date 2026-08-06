@@ -179,7 +179,7 @@ describe("ContagionGraph", () => {
     expect(nodePicker.value).toBe(initialValue);
   });
 
-  it("shows an edge tooltip labelled by V9 materiality on edge hover", async () => {
+  it("shows an edge tooltip labelled by relationship on edge hover", async () => {
     const { container } = render(
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
     );
@@ -205,7 +205,7 @@ describe("ContagionGraph", () => {
     expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
   });
 
-  it("filters visible edges by dependency materiality", () => {
+  it("filters visible edges by relationship", () => {
     render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Wrapper" }));

@@ -187,7 +187,7 @@ describe("buildGraphData", () => {
     expect(result.links).toEqual([]);
   });
 
-  it("projects V9 materiality onto the drawn link type", () => {
+  it("collapses V9 materiality onto the drawn relationship", () => {
     const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
     const mcapMap = new Map<string, number>([
       ["usds-sky", 5_000_000_000],
@@ -201,9 +201,21 @@ describe("buildGraphData", () => {
         source: "susds-sky",
         target: "usds-sky",
         weight: 1,
-        type: "serial",
+        type: "wrapper",
       }),
     ]);
+  });
+
+  it("draws an unresolvable upstream as its plain relationship", () => {
+    const cards = [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")];
+    const mcapMap = new Map<string, number>([["a", 3], ["b", 2], ["c", 1]]);
+
+    const result = buildGraphData(cards, mcapMap, [
+      serialEdge("a", "b", true),
+      basketEdge("a", "c", null),
+    ]);
+
+    expect(result.links.map((link) => link.type).sort()).toEqual(["collateral", "wrapper"]);
   });
 
   it("does not include defunct stablecoins", () => {
@@ -408,7 +420,7 @@ describe("runSimulation", () => {
       source: `n${i}`,
       target: `n${i + 1}`,
       weight: 1,
-      type: "basket-weighted",
+      type: "collateral",
     }));
     return { nodes, links };
   }

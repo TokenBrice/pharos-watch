@@ -18,11 +18,12 @@ import { deterministicHash } from "@/lib/layout-utils";
 // ---------------------------------------------------------------------------
 
 /**
- * Canonical V9 relationship label carried by every drawn edge. V9 dependency
- * semantics are serial/basket, not the retired V8 collateral/mechanism/wrapper
- * triple, so the map colors, filters, and legends by materiality.
+ * The relationship an edge draws. V9 carries a four-value `materiality` that
+ * also encodes whether the upstream score resolved, but that is a data-quality
+ * fact the detail modules report — the map's job is showing the relationships,
+ * so it collapses materiality onto the two structural kinds.
  */
-export type ContagionEdgeMateriality = ReportCardsV9DependencyEdge["materiality"];
+export type ContagionEdgeRelationship = "collateral" | "wrapper";
 
 /** Minimal per-asset projection the graph needs; callers resolve names from the client registry. */
 export interface ContagionGraphCard {
@@ -42,14 +43,14 @@ export interface GraphNode extends SimulationNodeDatum {
 
 export interface GraphLink extends SimulationLinkDatum<GraphNode> {
   weight: number;
-  type: ContagionEdgeMateriality;
+  type: ContagionEdgeRelationship;
 }
 
 export interface RawGraphLink {
   source: string;
   target: string;
   weight: number;
-  type: ContagionEdgeMateriality;
+  type: ContagionEdgeRelationship;
 }
 
 export type HubTier = 0 | 1 | 2;
@@ -224,6 +225,16 @@ export function contagionEdgeWeight(edge: ReportCardsV9DependencyEdge): number {
   return edge.kind === "serial" ? 1 : edge.weight ?? 0;
 }
 
+/**
+ * Collapses V9 `materiality` onto the drawn relationship. The disposition also
+ * records whether the upstream score resolved (`serial-blocked`,
+ * `basket-bounded-unknown`), which the map deliberately discards — see
+ * `ContagionEdgeRelationship`.
+ */
+export function contagionEdgeRelationship(edge: ReportCardsV9DependencyEdge): ContagionEdgeRelationship {
+  return edge.kind === "serial" ? "wrapper" : "collateral";
+}
+
 export function buildGraphData(
   cards: readonly ContagionGraphCard[],
   mcapMap: Map<string, number>,
@@ -246,7 +257,7 @@ export function buildGraphData(
       source: edge.to,
       target: edge.from,
       weight: contagionEdgeWeight(edge),
-      type: edge.materiality,
+      type: contagionEdgeRelationship(edge),
     });
   }
 

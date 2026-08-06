@@ -14,7 +14,7 @@ Primary files:
 - `src/components/dependency-map-mobile-summary.tsx`
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout
 - `src/components/contagion-graph.tsx` — graph shell and shared interaction state
-- `src/components/contagion-graph-model.ts` — materiality presentation tokens and grade colors
+- `src/components/contagion-graph-model.ts` — relationship presentation tokens and grade colors
 - `src/components/contagion-graph-graph.ts` — pure visibility, ripple, and navigation algorithms
 - `src/components/contagion-graph-tooltips.tsx` — node/edge tooltips and the live-region announcement
 - `src/components/contagion-graph/use-contagion-graph-model.ts` — graph view-model hook
@@ -38,20 +38,20 @@ A held V9 publication is shown with the shared status notice. Missing or invalid
 
 ## Dependency Semantics
 
-V9 dependency edges are serial or basket, and each carries a `materiality` disposition. The graph colors, filters, and legends by that disposition — the retired V8 `collateral` / `mechanism` / `wrapper` triple no longer exists in the data model.
+V9 dependency edges are serial or basket, and each carries a four-value `materiality` that also records whether the upstream score resolved (`serial-blocked`, `basket-bounded-unknown`).
 
-The engine's terms describe the traversal, not the relationship, so the UI publishes the reader-facing vocabulary the methodology page already uses ("a serial wrapper cannot escape its parent; basket exposure is weighted"). There are two relationships, each in a scored and an unscored form:
+**The map draws two relationships, not four.** `contagionEdgeRelationship()` collapses `materiality` onto `edge.kind`, using the reader-facing vocabulary the methodology page already publishes ("a serial wrapper cannot escape its parent; basket exposure is weighted") and the V8 stroke encoding readers already know:
 
-| Materiality | Legend label | Stroke | Meaning |
+| V9 `kind` | Legend label | Stroke | Meaning |
 | --- | --- | --- | --- |
-| `serial` | Wrapper | solid violet | Full pass-through claim; inherits the upstream's risk in full |
-| `basket-weighted` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
-| `serial-blocked` | Wrapper · unscored | dashed violet | Same claim, upstream score unresolvable |
-| `basket-bounded-unknown` | Collateral · unscored | dotted slate | Same share, upstream score unresolvable |
+| `basket` | Collateral | solid slate | Weighted share of backing; risk inherited in proportion |
+| `serial` | Wrapper | dotted violet | Full pass-through claim; inherits the upstream's risk in full |
 
-Hue encodes the relationship and a broken stroke encodes the unscored upstream. Both `blocked` and `boundedUnknown` come from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated.
+Whether the upstream score resolved is **deliberately discarded here**. It is a data-quality fact, and the detail modules that exist to report it already do. Encoding it in the legend split two relationships into four categories and made the map harder to read for no structural gain — the map's job is showing the relationships.
 
-Only `basket-weighted` sets `showWeight`, so only a weighted collateral share renders a percentage. A wrapper is a full claim by definition and an unscored edge has no modeled size, so a "100%" or "0%" on either would mislead.
+For reference, that discarded distinction comes from one condition in `resolveV9DependencyInputs` — `cycleBlocked || unavailableDimensions.length > 0` — so an unscored edge means either a circular dependency or an upstream that is itself unrated. Both `blocked` (serial) and `boundedUnknown` (basket) are that same flag.
+
+Only `collateral` sets `showWeight`, so only a weighted backing share renders a percentage. A wrapper is a full claim by definition, so a "100%" on one would be noise.
 
 `DEPENDENCY_TYPE_PRESENTATION[type].description` carries the plain-English meaning and is surfaced as the `title` on both the legend swatches and the type-filter pills.
 
@@ -61,7 +61,7 @@ Only `basket-weighted` sets `showWeight`, so only a weighted collateral share re
 - a weighted basket dependency carries its published weight
 - a bounded-unknown basket dependency contributes `0`
 
-Because a bounded-unknown edge models to `0`, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip labels it by disposition alone rather than showing a misleading `0%`.
+Because a bounded-unknown edge models to `0`, `contagion-graph-svg.tsx` floors stroke geometry at `MIN_EDGE_DISPLAY_WEIGHT` so the relationship still reads as a drawn edge, and the tooltip omits the percentage rather than showing a misleading `0%`.
 
 ## Graph Construction
 
@@ -86,7 +86,7 @@ The model reports:
 - direct dependent market-cap context, deduplicated per hub
 - the hub's own market cap
 - up to three direct dependent examples
-- direct edge counts and weights per V9 materiality
+- direct edge counts and weights per V9 materiality (the hub board keeps the full four-value disposition; only the graph collapses it)
 
 The market-cap figure is descriptive context, not a transitive loss estimate. Duplicate direct edges to the same dependent count once for dependent count and market-cap context, while each edge still contributes to summed relationship weight.
 
@@ -112,7 +112,7 @@ Layout anchors Tier 1 near center, Tier 2 on an inner ring, and remaining nodes 
 The graph header exposes a single wrapping control row — Focus, Type, Limit, and the trace-coin picker share one line so the controls cost at most two lines above the canvas:
 
 - **Focus mode**: `All` (full graph), `Hub dependencies` (only edges touching Tier 1/Tier 2 hubs), `Selected neighborhood` (only edges adjacent to the selected trace coin).
-- **Type filter**: `All` plus one pill per V9 materiality, filtering which edges are drawn while preserving the active focus mode.
+- **Type filter**: `All`, `Collateral`, or `Wrapper`, filtering which edges are drawn while preserving the active focus mode.
 - **Node limit toggle**: `50`, `100`, `200` (default), or `All` top-mcap coins enter the map before isolated-node pruning.
 - **Trace coin picker**: always visible. Selecting a coin sets the neighborhood root and switches to `Selected neighborhood`. Clicking a node pins the same trace target without changing the active focus mode.
 - **Selection overlay**: renders only when a node is hovered or pinned, in the top-right of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`). It surfaces direct dependent count, upstream link count, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action. It does not list systemic hubs — that surface belongs to the Dependency Hubs Board.

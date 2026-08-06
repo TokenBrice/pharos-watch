@@ -1,17 +1,17 @@
-import type { ContagionEdgeMateriality, GraphLink, GraphNode, HubTier } from "@/lib/contagion-layout";
+import type { ContagionEdgeRelationship, GraphLink, GraphNode, HubTier } from "@/lib/contagion-layout";
 
 export interface ResolvedLink {
   index: number;
   srcId: string;
   tgtId: string;
   weight: number;
-  type: ContagionEdgeMateriality;
+  type: ContagionEdgeRelationship;
   srcTier: HubTier;
   tgtTier: HubTier;
 }
 
 export type FocusMode = "all" | "hub" | "neighborhood";
-export type EdgeTypeFilter = "all" | ContagionEdgeMateriality;
+export type EdgeTypeFilter = "all" | ContagionEdgeRelationship;
 
 export interface RippleState {
   connectedNodes: Set<string>;
