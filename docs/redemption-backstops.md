@@ -105,7 +105,9 @@ Some route families are intentionally capped even when their component mix score
 
 An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
-### Effective Exit Score
+### Legacy Effective Exit Score (compatibility only)
+
+`effectiveExitScore` is retained in stored rows and the API for historical consumers, but the detail-page redemption module no longer presents it and Safety Score V9 does not consume it. The current UI presents the standalone redemption route score only.
 
 `computeEffectiveExitScore()` uses a capacity-aware best-path model to combine modeled redemption quality with observable DEX liquidity:
 
@@ -420,11 +422,11 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops` in `src/lib/api-query-descriptors.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders the detail-page card (score badges, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions)
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with a route-specific title (`Issuer redemption route` or `Redemption route`), source freshness, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions. It does not render the legacy `effectiveExitScore`.
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `worker/src/lib/report-cards-snapshot-card.ts` injects `redemptionBackstopScore`, `redemptionRouteFamily`, and immediate-capacity fields into `rawInputs`, and `shared/lib/report-cards.ts` consumes the score in `scoreLiquidity()`
 - `/coverage` consumes `useRedemptionBackstops()` through `src/lib/coverage/redemption.ts`. It distinguishes scored route-family states from low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, impaired routes, no route, and `Data n/a` feed-unavailable states, so unresolved, eventual-only, impaired, or weakly evidenced rows do not inflate public strong-coverage counts. The Redemption quick filter includes configured/resolved route states but excludes `Data n/a`.
 
 The maintenance coverage audit requires a durable reviewed disposition for every active asset without a route config. `scripts/lib/redemption-coverage-dispositions.ts` records evidence URLs, reviewer/date, rationale, the exact blocker and evidence still needed, and a route family only when official evidence proves that family. `add` means the holder route is evidenced but configuration still needs the listed capacity/status inputs; `needs-research`, `defer`, and `hard-reject` remain legitimate coverage outcomes and do not create a scoreable route. The audit rejects stale registry rows and keeps heuristic configured routes visible until hard capacity evidence replaces them.
 
-There is currently no dedicated list page or standalone public methodology section for redemption backstops; the primary user-facing surface is the stablecoin detail page plus the report-card liquidity dimension. Contextual hints on those surfaces currently deep-link into the Safety Scores methodology section where effective-exit logic is documented.
+There is currently no dedicated list page or standalone public methodology section for redemption routes; the primary user-facing surface is the stablecoin detail page. Contextual hints identify the route score as standalone and link to the Safety Scores methodology section for the separate V9 Exit model.
