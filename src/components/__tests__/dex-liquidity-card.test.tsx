@@ -97,6 +97,11 @@ describe("DexLiquidityCard", () => {
 
     render(<DexLiquidityCard stablecoinId="usdc-circle" />);
 
+    expect(screen.getAllByText("DEX market liquidity").length).toBeGreaterThan(0);
+    expect(screen.getByText("Mixed coverage")).toBeTruthy();
+    expect(
+      screen.getByText("Aggregate DEX market score; not a single-route execution test."),
+    ).toBeTruthy();
     const effectiveLabel = screen.getByText("Effective Liquidity");
     const effectiveValue = screen.getByText("$910.71K");
     const totalAmmLabel = screen.getByText("Total AMM Liquidity TVL");

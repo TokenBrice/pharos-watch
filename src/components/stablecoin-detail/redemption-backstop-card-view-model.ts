@@ -361,10 +361,9 @@ function feeBpsBreakdownSuffix(entry: RedemptionBackstopEntry): string {
 export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEntry) {
   const docs = entry.docs ?? null;
   return {
+    title: entry.routeFamily === "offchain-issuer" ? "Issuer redemption route" : "Redemption route",
     scoreToneClass: scoreToneClass(entry.score),
     heroScoreLabel: entry.score != null ? `${entry.score}/100` : "NR",
-    showExitScore: entry.effectiveExitScore != null,
-    exitScoreLabel: entry.effectiveExitScore != null ? `${entry.effectiveExitScore}/100` : null,
     routeFamilyLabel: formatRedemptionRouteFamily(entry.routeFamily),
     sourceModeLabel: entry.sourceMode,
     showResolutionStateBadge: entry.resolutionState !== "resolved",
