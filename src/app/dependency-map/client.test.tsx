@@ -58,7 +58,17 @@ describe("DependencyMapClient", () => {
         cards: [
           makeV9Card({ id: "usdc-circle" }),
           makeV9Card({ id: "usdt-tether" }),
-          makeV9Card({ id: "dai-makerdao" }),
+          makeV9Card({
+            id: "dai-makerdao",
+            dependencies: {
+              serial: [],
+              basket: [
+                { upstreamAssetId: "usdc-circle", weight: 0.4, score: 84, boundedUnknown: false },
+              ],
+              cycleBlocked: false,
+              reasonCodes: [],
+            },
+          }),
         ],
       })) as unknown as ReturnType<typeof useReportCardsV9>,
     );
@@ -74,10 +84,12 @@ describe("DependencyMapClient", () => {
     mockUseLogos.mockReturnValue({ data: logosById });
   });
 
-  it("renders the V9 dependency summaries without the legacy V8 graph", () => {
+  it("renders the dependency graph alongside the V9 hub summaries", () => {
     const { container } = render(<DependencyMapClient />);
 
-    expect(screen.queryByTestId("dependency-graph")).toBeNull();
+    expect(screen.getByRole("figure", { name: /Dependency graph showing/ })).toBeTruthy();
+    // Only the two dependency-linked cards enter the map; the isolated one is pruned.
+    expect(screen.getAllByRole("button", { name: /market cap/i })).toHaveLength(2);
     expect(screen.getByTestId("dependency-hubs-board")).toBeTruthy();
     expect(screen.getByTestId("mobile-summary")).toBeTruthy();
     expect(container.querySelector(".hidden.md\\:block")).toBeNull();

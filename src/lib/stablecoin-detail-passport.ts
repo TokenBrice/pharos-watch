@@ -223,7 +223,7 @@ export function buildHeroPassportItems({
       category: "Redeemability",
       value: REDEMPTION_ACCESS_PASSPORT_LABELS[redemptionBackstop.accessModel],
       href: "#redemption",
-      ariaLabel: `Redeemability: ${accessLabel} — jump to Redemption Backstop`,
+      ariaLabel: `Redeemability: ${accessLabel} — jump to redemption route`,
     });
   }
 

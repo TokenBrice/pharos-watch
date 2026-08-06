@@ -21,7 +21,7 @@ describe("ScoreBadgeWrapper", () => {
 
     // Badge content reaches the DOM (rendered through Sheet + Tooltip triggers).
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
-    const trigger = screen.getAllByRole("button", { name: /explain liquidity score/i })[0];
+    const trigger = screen.getAllByRole("button", { name: /explain DEX market liquidity/i })[0];
     expect(trigger).toBeTruthy();
     expect(trigger.className).toContain("min-h-11");
     expect(trigger.className).toContain("min-w-11");
@@ -41,7 +41,7 @@ describe("ScoreBadgeWrapper", () => {
     expect(versionLabel).toBeTruthy();
 
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /explain liquidity score/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /explain DEX market liquidity/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText(versionLabel as string)).toBeNull();
   });
 

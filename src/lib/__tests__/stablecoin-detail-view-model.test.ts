@@ -1414,7 +1414,7 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(hero.passportItems.find((item) => item.key === "redeemability")).toMatchObject({
       value: "Institutional",
       href: "#redemption",
-      ariaLabel: "Redeemability: Issuer / institutional — jump to Redemption Backstop",
+      ariaLabel: "Redeemability: Issuer / institutional — jump to redemption route",
     });
     expect(hero.passportItems.find((item) => item.key === "minting")).toMatchObject({
       value: "Issuer direct",

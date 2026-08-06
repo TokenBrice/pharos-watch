@@ -31,7 +31,7 @@ describe("SafetyGradeBadge", () => {
     const versionLabel = METHODOLOGY_CONTEXT.liquidityScore.versionLabel as string;
     expect(versionLabel).toBeTruthy();
     expect(screen.getByText(versionLabel)).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: /explain liquidity score/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /explain DEX market liquidity/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Safety grade B+, score 78").every((badge) => !badge.hasAttribute("tabindex"))).toBe(true);
   });
 
@@ -46,7 +46,7 @@ describe("SafetyGradeBadge", () => {
     );
     const versionLabel = METHODOLOGY_CONTEXT.liquidityScore.versionLabel as string;
     expect(screen.queryByText(versionLabel)).toBeNull();
-    expect(screen.getAllByRole("button", { name: /explain liquidity score/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /explain DEX market liquidity/i }).length).toBeGreaterThan(0);
   });
 
   it("can suppress methodology triggers inside link-wrapped cards", () => {
@@ -59,7 +59,7 @@ describe("SafetyGradeBadge", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: /explain liquidity score/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /explain DEX market liquidity/i })).toBeNull();
     expect(screen.getByText(METHODOLOGY_CONTEXT.liquidityScore.versionLabel as string)).toBeTruthy();
   });
 

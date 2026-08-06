@@ -38,21 +38,27 @@ export function DependencyMapClient() {
     return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]));
   }, [stablecoinsData]);
 
-  const dependencyHubsModel = useMemo(() => {
-    const cards = (reportData?.cards ?? []).map((card) => {
-      const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
-      return {
-        id: card.id,
-        name: meta?.name ?? card.id,
-        symbol: meta?.symbol ?? card.id,
-      };
-    });
-    return buildDependencyHubsModel({
-      cards,
-      edges: reportData?.dependencyGraph?.edges ?? [],
-      mcapMap,
-    });
-  }, [mcapMap, reportData]);
+  const dependencyEdges = useMemo(() => reportData?.dependencyGraph?.edges ?? [], [reportData]);
+
+  // One projection feeds both the hub board (name/symbol) and the graph (symbol/grade).
+  const cards = useMemo(
+    () =>
+      (reportData?.cards ?? []).map((card) => {
+        const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+        return {
+          id: card.id,
+          name: meta?.name ?? card.id,
+          symbol: meta?.symbol ?? card.id,
+          grade: card.grade,
+        };
+      }),
+    [reportData],
+  );
+
+  const dependencyHubsModel = useMemo(
+    () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap }),
+    [cards, dependencyEdges, mcapMap],
+  );
 
   if (isLoadingCards || isLoadingCoins) {
     return (
@@ -94,6 +100,10 @@ export function DependencyMapClient() {
       <SafetyScoreV9StatusNotice response={reportData} />
       <DependencyHero
         model={dependencyHubsModel}
+        cards={cards}
+        dependencyEdges={dependencyEdges}
+        mcapMap={mcapMap}
+        logos={logos}
       />
       <DependencyHubsBoard model={dependencyHubsModel} logos={logos} />
       <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} />

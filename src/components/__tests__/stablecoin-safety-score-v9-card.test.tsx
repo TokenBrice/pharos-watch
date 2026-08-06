@@ -163,8 +163,8 @@ describe("StablecoinSafetyScoreV9Card", () => {
       />,
     );
 
-    expect(screen.getByText("Route components")).toBeTruthy();
-    expect(screen.getByText("Direct redemption")).toBeTruthy();
+    expect(screen.getByText("Primary route components — Direct redemption")).toBeTruthy();
+    expect(screen.getByText(/Primary V9 route: Direct redemption 84\.0/)).toBeTruthy();
     expect(screen.getByRole("img", { name: "Access: 90 out of 100, 20% weight" })).toBeTruthy();
     expect(screen.getByRole("img", {
       name: "Capacity score — selected route: 78 out of 100, 25% weight",
@@ -178,7 +178,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Economic Control/ }));
     expect(screen.getByText("Control components")).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Mint authority: 86 out of 100" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Mint control posture: 86 out of 100" })).toBeTruthy();
     expect(screen.getByText("Binding")).toBeTruthy();
     expect(screen.getByText("Diagnostic")).toBeTruthy();
     expect(screen.queryByText("Scored inputs")).toBeNull();

@@ -32,6 +32,8 @@ import {
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { cn } from "@/lib/utils";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 /**
  * A coin has "meaningful" DEX data only when at least one observed pool or
@@ -71,7 +73,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
           <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
+            <MethodologyLabel topic="liquidityScore">DEX market liquidity</MethodologyLabel>
           </DetailSectionTitle>
         </CardHeader>
         <CardContent className={DETAIL_MODULE_BODY_CLASS}>
@@ -100,29 +102,40 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
-              <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
+              <MethodologyLabel topic="liquidityScore">DEX market liquidity</MethodologyLabel>
             </DetailSectionTitle>
             <Badge
               variant="outline"
               className={`text-[11px] ${coverageBadge.className}`}
               title={formatLiquiditySourceMix(liq.sourceMix)}
             >
-              {coverageBadge.label}
+              {coverageBadge.label} coverage
             </Badge>
           </div>
-          {isRated ? (
-            <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
-              <span className={cn("pharos-numeric text-sm font-semibold", TIER_TEXT[tier])}>
-                {score}
-                <span className="text-muted-foreground">/100</span>
-              </span>
-            </ScoreBadgeWrapper>
-          ) : (
-            <div className="pharos-numeric text-sm font-semibold text-muted-foreground">NR</div>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isRated ? (
+              <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
+                <span className={cn("pharos-numeric text-sm font-semibold", TIER_TEXT[tier])}>
+                  {score}
+                  <span className="text-muted-foreground">/100</span>
+                </span>
+              </ScoreBadgeWrapper>
+            ) : (
+              <div className="pharos-numeric text-sm font-semibold text-muted-foreground">NR</div>
+            )}
+            <FreshnessIndicator
+              compact
+              updatedAtMs={liq.updatedAt * 1000}
+              staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.dexLiquidity * 1000}
+              labelPrefix="Updated"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-6")}>
+        <p className="text-xs text-muted-foreground">
+          Aggregate DEX market score; not a single-route execution test.
+        </p>
         {query.error ? (
           <QueryStateNotice
             state="stale-with-data"

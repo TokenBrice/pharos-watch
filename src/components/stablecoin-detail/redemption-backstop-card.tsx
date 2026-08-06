@@ -16,6 +16,8 @@ import { MethodologyCardActions, MethodologyLabel } from "@/components/methodolo
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
 const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
@@ -42,24 +44,27 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
   return (
     <Card id="redemption" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
-          <MethodologyLabel topic="redemptionBackstop">Redemption Backstop</MethodologyLabel>
-        </DetailSectionTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+            <MethodologyLabel topic="redemptionBackstop">{viewModel.title}</MethodologyLabel>
+          </DetailSectionTitle>
+          <FreshnessIndicator
+            compact
+            updatedAtMs={entry.updatedAt * 1000}
+            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 1000}
+            labelPrefix="Updated"
+          />
+        </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        {/* ── arrange: Hero score + Exit, separated from metadata ── */}
+        {/* ── arrange: standalone route score, separated from metadata ── */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+          <span className="text-sm text-muted-foreground">Standalone route score</span>
           <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
             <Badge variant="outline" className={cn("px-2.5 py-1 pharos-numeric text-lg", viewModel.scoreToneClass)}>
               {viewModel.heroScoreLabel}
             </Badge>
           </ScoreBadgeWrapper>
-          {viewModel.showExitScore && (
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel>
-              <span className="pharos-numeric text-foreground">{viewModel.exitScoreLabel}</span>
-            </span>
-          )}
         </div>
 
         {/* ── arrange: Classification + metadata badges (secondary) ── */}
