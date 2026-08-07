@@ -72,6 +72,60 @@ function failedDexPublication(): PublicationHealth {
 }
 
 describe("buildDependencyHealth", () => {
+  it.each([
+    { ageSeconds: 700, healthy: true, expectedStatus: "healthy" },
+    { ageSeconds: 8 * 600 + 1, healthy: true, expectedStatus: "degraded" },
+    { ageSeconds: 12 * 600 + 1, healthy: false, expectedStatus: "stale" },
+  ] as const)(
+    "classifies a stablecoins cache at $ageSeconds seconds as $expectedStatus using availability ratios",
+    ({ ageSeconds, healthy, expectedStatus }) => {
+      const dependencyHealth = buildDependencyHealth({
+        now: NOW,
+        publicationHealth: null,
+        caches: {
+          stablecoins: cache({ ageSeconds, healthy }),
+        },
+        crons: {
+          "sync-stablecoins": cron({ expectedIntervalSec: 900 }),
+        },
+      });
+
+      expect(dependencyHealth.dependencies.stablecoins.status).toBe(expectedStatus);
+      if (expectedStatus === "healthy") {
+        expect(
+          dependencyHealth.rootCauseGroups.some((group) => group.rootDependencyId === "stablecoins"),
+        ).toBe(false);
+      }
+    },
+  );
+
+  it.each([
+    { ageSeconds: 2 * 3_600 + 1, expectedStatus: "degraded" },
+    { ageSeconds: 4 * 3_600 + 1, expectedStatus: "stale" },
+  ] as const)(
+    "honors the yield cache override at $ageSeconds seconds",
+    ({ ageSeconds, expectedStatus }) => {
+      const dependencyHealth = buildDependencyHealth({
+        now: NOW,
+        publicationHealth: null,
+        caches: {
+          "yield-data": cache({
+            ageSeconds,
+            maxAge: 3_600,
+            healthy: false,
+            producerJob: "sync-yield-data",
+            producerIntervalSec: 3_600,
+          }),
+        },
+        crons: {
+          "sync-yield-data": cron({ expectedIntervalSec: 3_600 }),
+        },
+      });
+
+      expect(dependencyHealth.dependencies["yield-rankings"].status).toBe(expectedStatus);
+    },
+  );
+
   it("surfaces failed publication metadata as a degraded dependency signal", () => {
     const dependencyHealth = buildDependencyHealth({
       now: NOW,
@@ -122,7 +176,7 @@ describe("buildDependencyHealth", () => {
       caches: {
         stablecoins: cache(),
         "dex-liquidity": cache({
-          ageSeconds: 50_000,
+          ageSeconds: 13 * 43_200,
           maxAge: 43_200,
           healthy: false,
           producerJob: "sync-dex-liquidity",
@@ -133,7 +187,7 @@ describe("buildDependencyHealth", () => {
           producerIntervalSec: 3_600,
         }),
         dews: cache({
-          ageSeconds: 7_200,
+          ageSeconds: 13 * 1_800,
           maxAge: 1_800,
           healthy: false,
           producerJob: "compute-dews",
