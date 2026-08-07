@@ -20,6 +20,7 @@ import {
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { createBinanceFetchSession } from "../lib/cex-tickers";
+import { createNativePegQuoteSession } from "../lib/native-peg-quotes";
 import {
   evaluateStablecoinActivePriceCoverage,
   loadPreviousStablecoinActivePriceCoverage,
@@ -51,6 +52,9 @@ export async function syncStablecoins(
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
   const binanceSession = createBinanceFetchSession();
+  // Shared across native-peg hardening, depeg detection, and pending-depeg
+  // confirmation so their overlapping fiat-peg batches cost one fetch, not three.
+  const nativePegSession = createNativePegQuoteSession();
   const intake = await runStablecoinsIntakeStage({
     db,
     syncStartSec,
@@ -91,6 +95,7 @@ export async function syncStablecoins(
     addressPriceProvider,
     reportProgress,
     binanceSession,
+    nativePegSession,
   });
   if ("enrichStats" in pricingStage === false) return pricingStage;
   const {
@@ -167,6 +172,7 @@ export async function syncStablecoins(
     abortResult,
     reportProgress,
     binanceSession,
+    nativePegSession,
   });
   if (isAbortResult(publication)) return publication;
   if (!("cacheResult" in publication)) return publication;

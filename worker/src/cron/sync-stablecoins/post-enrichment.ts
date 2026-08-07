@@ -43,6 +43,7 @@ import {
   fetchCurrentNativePegImpliedUsdQuotes,
   NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS,
 } from "../../lib/native-peg-implied-prices";
+import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import {
   clearPriceMetadata,
   stampPriceMetadata,
@@ -78,6 +79,7 @@ export interface PostEnrichmentInput {
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+  nativePegSession?: NativePegQuoteSession;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
@@ -149,6 +151,7 @@ export async function runPostEnrichmentPricePipeline(
     validationReferences,
     validationContexts,
     previousTrustedPrices,
+    nativePegSession,
     returnIfAborted,
   } = input;
 
@@ -198,6 +201,7 @@ export async function runPostEnrichmentPricePipeline(
     signal,
     coingeckoApiKey,
     { diagnostics: providerDiagnostics, stage: "fallback" },
+    nativePegSession,
   );
 
   // --- Reject unreasonable prices BEFORE caching ---
@@ -507,6 +511,7 @@ export async function runDepegPipeline(
   abortStagePrefix: string,
   logContext: string,
   binanceSession?: BinanceFetchSession,
+  nativePegSession?: NativePegQuoteSession,
 ): Promise<DepegPipelineResult | CronResult> {
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
@@ -515,7 +520,7 @@ export async function runDepegPipeline(
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
     if (depegAbort) return depegAbort;
-    await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey);
+    await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-detection`);
     console.error(`[sync-stablecoins] Depeg detection failed${logContext}:`, err);
@@ -533,6 +538,7 @@ export async function runDepegPipeline(
       signal,
       coingeckoApiKey,
       binanceSession,
+      nativePegSession,
     );
     if (confirmation?.providerDiagnostics?.length) {
       providerDiagnostics.push(...confirmation.providerDiagnostics);

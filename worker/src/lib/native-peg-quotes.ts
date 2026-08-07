@@ -115,6 +115,86 @@ export interface NativePegQuoteFetchOptions {
   stage?: PricingProviderAttemptDiagnostic["stage"];
 }
 
+/** Normalized result of one CoinGecko `simple/price` batch attempt. */
+interface NativePegBatchOutcome {
+  status: number | null;
+  ok: boolean;
+  payload?: unknown;
+  snippet?: string;
+}
+
+interface NativePegSessionEntry {
+  geckoIds: Set<string>;
+  outcome: Promise<NativePegBatchOutcome>;
+}
+
+/**
+ * Per-run memo of CoinGecko native-peg batch responses.
+ *
+ * The quarter-hourly sync calls `fetchCurrentNativePegQuotes` from three
+ * independent stages (post-enrichment native-peg hardening, depeg detection
+ * hydration, pending-depeg confirmation) with overlapping — but rarely
+ * identical — request sets.  Memoizing whole call results would therefore
+ * almost never hit, so the session caches the underlying batch responses
+ * keyed by CoinGecko `vs_currencies` value, and a later caller reuses a
+ * cached batch whenever that batch already covers every geckoId it needs.
+ *
+ * Each caller still derives its own quotes and diagnostics from the payload,
+ * so staleness/skew filtering and provider diagnostics stay per-caller.
+ * Only reusable responses are memoized: transport failures, non-2xx
+ * responses and malformed payloads are evicted so they never suppress a
+ * later caller's independent attempt.
+ */
+export interface NativePegQuoteSession {
+  batches: Map<string, NativePegSessionEntry[]>;
+}
+
+export function createNativePegQuoteSession(): NativePegQuoteSession {
+  return { batches: new Map() };
+}
+
+function findCachedNativePegBatch(
+  session: NativePegQuoteSession,
+  vsCurrency: string,
+  geckoIds: string[],
+): Promise<NativePegBatchOutcome> | null {
+  const entries = session.batches.get(vsCurrency);
+  if (!entries) return null;
+  for (const entry of entries) {
+    if (geckoIds.every((geckoId) => entry.geckoIds.has(geckoId))) return entry.outcome;
+  }
+  return null;
+}
+
+function rememberNativePegBatch(
+  session: NativePegQuoteSession,
+  vsCurrency: string,
+  geckoIds: string[],
+  outcome: Promise<NativePegBatchOutcome>,
+): void {
+  const entry: NativePegSessionEntry = { geckoIds: new Set(geckoIds), outcome };
+  const entries = session.batches.get(vsCurrency);
+  if (entries) entries.push(entry);
+  else session.batches.set(vsCurrency, [entry]);
+
+  const forget = (): void => {
+    const current = session.batches.get(vsCurrency);
+    if (!current) return;
+    const index = current.indexOf(entry);
+    if (index >= 0) current.splice(index, 1);
+    if (current.length === 0) session.batches.delete(vsCurrency);
+  };
+
+  outcome.then(
+    (value) => {
+      if (!value.ok || !isRecord(value.payload)) forget();
+    },
+    () => {
+      forget();
+    },
+  );
+}
+
 export function normalizeSupportedPegCurrency(pegCurrency: string | null | undefined): string | null {
   if (!pegCurrency) return null;
   const normalized = pegCurrency.trim().toUpperCase();
@@ -132,6 +212,7 @@ export async function fetchCurrentNativePegQuotes(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   options?: NativePegQuoteFetchOptions,
+  session?: NativePegQuoteSession,
 ): Promise<Map<string, NativePegQuote>> {
   const supportedRequests = requests
     .map((request) => ({
@@ -193,7 +274,7 @@ export async function fetchCurrentNativePegQuotes(
           candidateCount: pendingRequests.length,
         };
 
-        try {
+        const fetchBatch = async (): Promise<NativePegBatchOutcome> => {
           const response = await fetchWithRetry(
             url,
             {
@@ -203,16 +284,38 @@ export async function fetchCurrentNativePegQuotes(
             1,
             { timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS },
           );
-          diagnostic.status = response?.status ?? null;
-          diagnostic.ok = response?.ok === true;
           if (!response?.ok) {
-            diagnostic.snippet = response ? await readNativePegResponseSnippet(response, signal) : undefined;
+            return {
+              status: response?.status ?? null,
+              ok: false,
+              snippet: response ? await readNativePegResponseSnippet(response, signal) : undefined,
+            };
+          }
+          return {
+            status: response.status,
+            ok: true,
+            payload: JSON.parse(await readNativePegResponseText(response, signal)) as unknown,
+          };
+        };
+
+        try {
+          let outcomePromise = session ? findCachedNativePegBatch(session, vsCurrency, uniqueGeckoIds) : null;
+          if (!outcomePromise) {
+            outcomePromise = fetchBatch();
+            if (session) rememberNativePegBatch(session, vsCurrency, uniqueGeckoIds, outcomePromise);
+          }
+          const outcome = await outcomePromise;
+
+          diagnostic.status = outcome.status;
+          diagnostic.ok = outcome.ok;
+          if (!outcome.ok) {
+            diagnostic.snippet = outcome.snippet;
             diagnostic.rejectionReasonCounts = { "non-ok": 1 };
             options?.diagnostics?.push(diagnostic);
             continue;
           }
 
-          const payload = JSON.parse(await readNativePegResponseText(response, signal)) as unknown;
+          const payload = outcome.payload;
           if (!isRecord(payload)) {
             options?.diagnostics?.push({
               ...diagnostic,

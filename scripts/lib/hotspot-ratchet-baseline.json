@@ -100,8 +100,8 @@
     "branchCount": 50
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 234,
-    "maxFunctionLines": 197,
+    "fileLines": 240,
+    "maxFunctionLines": 202,
     "branchCount": 9
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {

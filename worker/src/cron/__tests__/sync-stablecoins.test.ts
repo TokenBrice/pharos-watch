@@ -535,13 +535,14 @@ describe("syncStablecoins", () => {
       expect.any(Function),
       expect.any(Map),
     );
-    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
     expect(confirmPendingDepegs).toHaveBeenCalledWith(
       db,
       expect.any(Array),
       undefined,
       undefined,
       undefined,
+      expect.any(Object),
       expect.any(Object),
     );
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
@@ -2630,6 +2631,7 @@ describe("syncStablecoins", () => {
       undefined,
       undefined,
       undefined,
+      undefined,
     );
 
     const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
@@ -3008,7 +3010,7 @@ describe("syncStablecoins", () => {
     expect(payload).toBeDefined();
     const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
     expect(usdtCopies).toBe(1);
-    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined, expect.any(Object));
   });
 
   it("retries DL response body parse failure before falling back", async () => {

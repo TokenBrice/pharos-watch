@@ -25,7 +25,10 @@ import {
   type BinanceFetchSession,
 } from "../lib/cex-tickers";
 import { isSuccessfulOutcome } from "../lib/fetcher-result";
-import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
+import {
+  fetchCurrentNativePegQuotes,
+  type NativePegQuoteSession,
+} from "../lib/native-peg-quotes";
 import type { PricingProviderAttemptDiagnostic } from "../lib/pricing-provider-diagnostics";
 import {
   buildConfirmationPlan,
@@ -54,6 +57,7 @@ export async function confirmPendingDepegs(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   binanceSession?: BinanceFetchSession,
+  nativePegSession?: NativePegQuoteSession,
 ): Promise<{ providerDiagnostics: PricingProviderAttemptDiagnostic[] }> {
   throwIfAborted(signal);
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -77,6 +81,8 @@ export async function confirmPendingDepegs(
     }),
     signal,
     coingeckoApiKey,
+    undefined,
+    nativePegSession,
   );
 
   const {
