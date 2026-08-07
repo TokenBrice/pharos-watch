@@ -9,7 +9,7 @@ vi.mock("../abort", () => ({
 }));
 
 import { fetchWithRetry } from "../fetch-retry";
-import { fetchDsTokenPoolsWithStatus } from "../dexscreener";
+import { fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../dexscreener";
 
 describe("dexscreener", () => {
   afterEach(() => {
@@ -39,6 +39,28 @@ describe("dexscreener", () => {
       }),
       2,
       { timeoutMs: 10_000, returnFinalResponse: true },
+    );
+  });
+
+  it("uses the all-pairs endpoint for single-token discovery", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), { status: 200 }),
+    );
+
+    await expect(fetchDsTokenPairsWithStatus("blast", "0xabc", undefined, 8_000, 0)).resolves.toEqual({
+      ok: true,
+      pairs: [],
+    });
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://api.dexscreener.com/token-pairs/v1/blast/0xabc",
+      expect.objectContaining({
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Pharos/1.0 (stablecoin analytics)",
+        },
+      }),
+      0,
+      { timeoutMs: 8_000, returnFinalResponse: true },
     );
   });
 

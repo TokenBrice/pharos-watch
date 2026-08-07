@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.207",
+    title: "DEX discovery and guarded-quote circuit alignment",
+    date: "2026-08-07",
+    effectiveAt: 1786085786,
+    summary:
+      "DexScreener discovery now uses the provider's complete single-token pool endpoint, while guarded AZND no-quote results no longer count as provider outages.",
+    impact: [
+      "The isolated DEX discovery crawl uses `/token-pairs/v1/{chainId}/{tokenAddress}` so one-token discovery receives the complete advertised pool set; batched price lookup remains on `/tokens/v1/{chainId}/{addresses}`",
+      "Existing DexScreener pacing, no-retry discovery policy, hard-refusal containment, pool validation, and run-level circuit accounting remain unchanged",
+      "AZND still requires the exact reviewed Curve pool identity, fresh block, minimum balances, and bounded quote impact; a guard rejection remains an explicit missing price instead of incrementing the provider circuit",
+      "Thrown, timed-out, or aborted AZND provider requests still record circuit failures, and the route remains fallback-confidence, non-replay-safe, and non-depeg-authoritative",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.206",
     title: "DexScreener WAF refusal containment",
     date: "2026-07-27",

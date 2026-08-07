@@ -703,8 +703,8 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
 | `CG_ONCHAIN`                         | `coingecko-onchain`           | `enrich-prices` CoinGecko Pro onchain exact-address augmentation plus `dex-discovery` Stage 1 onchain pool crawl          |
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
-| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
-| `DEXSCREENER_LIQUIDITY`              | `dexscreener-liquidity`       | Optional DexScreener DEX liquidity/discovery pool lookups; excluded from public-impact breaker counts                     |
+| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` batched `/tokens/v1` exact-address DexScreener fallback                                                   |
+| `DEXSCREENER_LIQUIDITY`              | `dexscreener-liquidity`       | Optional `/token-pairs/v1` DexScreener discovery pool lookups; excluded from public-impact breaker counts                 |
 | `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | Legacy `enrich-prices` addressless unique-symbol DexScreener search fallback; retired for new sync runs                   |
 | `DEXSCREENER_ADDRESS_PRICES`         | `dexscreener-address-prices`  | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `DEXPAPRIKA_PRICES`                  | `dexpaprika-prices`           | `enrich-prices` targeted exact-address primary augmentation                                                               |
@@ -723,7 +723,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `KAVA_PRICEFEED`                     | `kava-pricefeed`              | `enrich-prices` exact Kava USDX oracle route                                                                              |
 | `JUSD_CITREA_BRIDGE`                 | `jusd-citrea-bridge`          | `enrich-prices` exact Citrea JUSD bridge route                                                                            |
-| `AZND_CURVE_POOL`                    | `aznd-curve-pool`             | `enrich-prices` exact thin AZND Curve route                                                                               |
+| `AZND_CURVE_POOL`                    | `aznd-curve-pool`             | `enrich-prices` exact thin AZND Curve route; thrown provider work fails the circuit, guarded no-quote results stay neutral |
 | `PROTOCOL_REDEEM`                    | `protocol-redeem`             | External live RPC-backed authoritative `protocol-redeem` overrides                                                        |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ORACLE`                       | `curve-oracle`                | `enrich-prices` crvUSD Curve oracle consensus                                                                             |

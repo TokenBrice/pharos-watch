@@ -14,6 +14,7 @@ import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from ".
 
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
+const DS_TOKEN_PAIRS_API = "https://api.dexscreener.com/token-pairs/v1";
 const DEXSCREENER_API_HEADERS = {
   Accept: "application/json",
   "User-Agent": USER_AGENT,
@@ -176,13 +177,8 @@ export function getDsTrackedTokenPriceUsd(
   };
 }
 
-/**
- * Fetch all pools for a token on a specific chain from DexScreener.
- * Returns `{ ok, pairs }` so callers can distinguish "no pools" (200 with empty
- * array) from "fetch failed" (timeout, non-OK status, parse error) for circuit
- * breaker accounting.
- */
-export async function fetchDsTokenPoolsWithStatus(
+async function fetchDsPoolsWithStatus(
+  apiBase: string,
   chain: string,
   tokenAddress: string,
   signal?: AbortSignal,
@@ -192,7 +188,7 @@ export async function fetchDsTokenPoolsWithStatus(
   const dsChain = DS_CHAIN_MAP[chain];
   if (!dsChain) return { ok: false, pairs: [] };
 
-  const url = `${DS_TOKEN_API}/${dsChain}/${tokenAddress}`;
+  const url = `${apiBase}/${dsChain}/${tokenAddress}`;
   // Per-request timeout is handled by fetchWithRetry; adding a second outer
   // timeout here caused retries to be silently killed (the outer fired during
   // retry waits, producing an AbortError that callers swallowed as a failure).
@@ -243,6 +239,33 @@ export async function fetchDsTokenPoolsWithStatus(
       error: `DexScreener JSON parse failed: ${toErrorMessage(error)}`,
     };
   }
+}
+
+/**
+ * Fetch token lookup rows from DexScreener's batched token endpoint.
+ * Pricing uses this path because one request may include multiple addresses.
+ */
+export function fetchDsTokenPoolsWithStatus(
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
+): Promise<DsFetchPoolsResult> {
+  return fetchDsPoolsWithStatus(DS_TOKEN_API, chain, tokenAddress, signal, timeoutMs, maxRetries);
+}
+
+/**
+ * Fetch every advertised pool for one token from DexScreener's discovery endpoint.
+ */
+export function fetchDsTokenPairsWithStatus(
+  chain: string,
+  tokenAddress: string,
+  signal?: AbortSignal,
+  timeoutMs = 10_000,
+  maxRetries = 2,
+): Promise<DsFetchPoolsResult> {
+  return fetchDsPoolsWithStatus(DS_TOKEN_PAIRS_API, chain, tokenAddress, signal, timeoutMs, maxRetries);
 }
 
 /** Rate-limit sleep between DexScreener calls */
