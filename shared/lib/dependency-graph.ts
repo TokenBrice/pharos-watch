@@ -203,27 +203,6 @@ export function buildDependencyGraphEdges(
   return edges;
 }
 
-export function buildDependencyGraphEdgesFromDependencies(
-  metas: readonly Pick<StablecoinMeta, "id">[],
-  dependenciesById: ReadonlyMap<string, readonly DependencyWeight[]>,
-): DependencyGraphEdge[] {
-  const edges: DependencyGraphEdge[] = [];
-
-  for (const meta of metas) {
-    for (const dep of dependenciesById.get(meta.id) ?? []) {
-      if (dep.id === meta.id) continue;
-      edges.push({
-        from: dep.id,
-        to: meta.id,
-        weight: dep.weight,
-        type: dep.type ?? "collateral",
-      });
-    }
-  }
-
-  return edges;
-}
-
 export function filterDependencyGraphEdgesToLive(
   edges: readonly DependencyGraphEdge[],
   liveIds: ReadonlySet<string>,

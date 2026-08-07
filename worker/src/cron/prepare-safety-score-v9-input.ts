@@ -88,7 +88,6 @@ export async function prepareSafetyScoreV9Input(
       updatedAt: input.updatedAt,
       activeAssets: input.activeAssetIds.length,
       activeCards: capture.completeness.expectedCount,
-      missingActiveAssets: capture.completeness.missing,
       publicationGenerationId,
       pegAnalyticsPublished: capture.pegAnalyticsPublished,
       dexGenerationId: input.dexGenerationId,

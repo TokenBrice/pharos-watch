@@ -14,10 +14,7 @@
  */
 
 /** `YieldRankingProvenance["safetyProvenance"]` value that marks the substitution. */
-export const YIELD_OPPORTUNITY_SAFETY_PROVENANCE = "opportunity-safety" as const;
-
-/** Short badge-adjacent label. */
-export const YIELD_OPPORTUNITY_SAFETY_LABEL = "Opportunity-derived";
+const YIELD_OPPORTUNITY_SAFETY_PROVENANCE = "opportunity-safety";
 
 /** One-line explanation for tooltips, screen-reader labels, and authored prose. */
 export const YIELD_OPPORTUNITY_SAFETY_DESCRIPTION =

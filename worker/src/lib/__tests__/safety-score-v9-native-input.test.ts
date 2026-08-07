@@ -251,4 +251,213 @@ describe("native Safety Score V9 input", () => {
     expect(parsed.schemaVersion).toBe(3);
     expect(parsed.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
   });
+  describe("fail-closed consistency guards", () => {
+    // The native capture is the deterministic-replay contract's payload: every
+    // guard below is the only thing standing between a mis-assembled capture
+    // and a published score derived from it. They were the module's largest
+    // untested surface after the Wave-1 cutover.
+
+    it("rejects duplicate active asset identities", () => {
+      expect(() =>
+        normalizeNativeV9Input(nativeDraft({ activeAssetIds: ["usdc-circle", "usdc-circle", "usdt-tether"] })),
+      ).toThrow(/active asset identities contain duplicates/);
+    });
+
+    it("rejects a NAV price row on a non-NAV asset", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            navPriceById: {
+              "usdc-circle": {
+                priceUsd: 1,
+                sourceId: "test",
+                observedAtSec: CLOCK_SEC,
+                confidence: "high",
+              },
+            },
+          }),
+        ),
+      ).toThrow(/NAV price rows target non-NAV assets/);
+    });
+
+    it("rejects a DEX row set that does not cover exactly the active assets", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            dexLiqMap: { "usdc-circle": { updatedAt: DEX_UPDATED_AT } },
+            dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(
+              { "usdc-circle": { updatedAt: DEX_UPDATED_AT } },
+              `dex-liquidity-${DEX_UPDATED_AT}`,
+            ),
+          }),
+        ),
+      ).toThrow(/DEX active rows mismatch/);
+    });
+
+    it("rejects a DEX payload fingerprint that does not match the payload", () => {
+      expect(() =>
+        normalizeNativeV9Input(nativeDraft({ dexPayloadFingerprint: "a".repeat(64) })),
+      ).toThrow(/DEX payload fingerprint .* does not match payload/);
+    });
+
+    it("rejects a redemption payload fingerprint that does not match the payload", () => {
+      expect(() =>
+        normalizeNativeV9Input(nativeDraft({ redemptionPayloadFingerprint: "a".repeat(64) })),
+      ).toThrow(/redemption payload fingerprint .* does not match payload/);
+    });
+
+    it("rejects an evidence journal record newer than the scoring clock", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            evidenceJournalById: {
+              "usdc-circle": [
+                {
+                  assetId: "usdc-circle",
+                  taskKey: "reserve-review",
+                  completedAtSec: CLOCK_SEC + 60,
+                  evidenceRefIds: [],
+                },
+              ],
+            },
+          }),
+        ),
+      ).toThrow(/Malformed native V9 input|later than the scoring clock/);
+    });
+
+    it("rejects an evidence journal keyed to an inactive asset", () => {
+      expect(() =>
+        normalizeNativeV9Input(nativeDraft({ evidenceJournalById: { "not-tracked": [] } })),
+      ).toThrow(/Evidence journal targets inactive asset/);
+    });
+
+    it("rejects a supply-attribution journal keyed to an inactive asset", () => {
+      expect(() =>
+        normalizeNativeV9Input(nativeDraft({ supplyAttributionJournalById: { "not-tracked": [] } })),
+      ).toThrow(/Supply attribution journal targets inactive asset/);
+    });
+
+    it("rejects a base generation id that does not match the payload", () => {
+      const draft = nativeDraft();
+      expect(() =>
+        normalizeNativeV9Input({ ...draft, baseInputGenerationId: "report-cards-input:v1:" + "0".repeat(64) }),
+      ).toThrow(/Malformed native V9 input|does not match payload/);
+    });
+
+    it("rejects DEX rows whose timestamps disagree with the DEX freshness generation", () => {
+      const dexLiqMap = {
+        "usdc-circle": { updatedAt: DEX_UPDATED_AT },
+        "usdt-tether": { updatedAt: DEX_UPDATED_AT - 10 },
+      };
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            dexLiqMap,
+            dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(
+              dexLiqMap,
+              `dex-liquidity-${DEX_UPDATED_AT}`,
+            ),
+          }),
+        ),
+      ).toThrow(/DEX rows do not match the DEX freshness generation/);
+    });
+
+    it("rejects a DEX generation id that does not match the active-row generation", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            dexGenerationId: `dex-liquidity-${DEX_UPDATED_AT - 1}`,
+            dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(
+              { "usdc-circle": { updatedAt: DEX_UPDATED_AT }, "usdt-tether": { updatedAt: DEX_UPDATED_AT } },
+              `dex-liquidity-${DEX_UPDATED_AT - 1}`,
+            ),
+          }),
+        ),
+      ).toThrow(/DEX generation .* does not match active-row generation/);
+    });
+
+    it("rejects an empty redemption map that claims current freshness", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            redemptionStale: false,
+            inputFreshness: {
+              dexLiquidity: { updatedAt: DEX_UPDATED_AT, ageSeconds: CLOCK_SEC - DEX_UPDATED_AT, stale: false },
+              redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: false },
+            },
+          }),
+        ),
+      ).toThrow(/no redemption rows but marks redemption freshness as current/);
+    });
+
+    it("rejects a redemption generation id that is not producer-bound", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            redemptionGenerationId: "whatever",
+            redemptionPayloadFingerprint: computeRedemptionPayloadFingerprint({}, "whatever"),
+          }),
+        ),
+      ).toThrow(/redemption generation .* is not producer-bound/);
+    });
+
+    it("rejects top-level freshness flags that disagree with their lanes", () => {
+      expect(() => normalizeNativeV9Input(nativeDraft({ liquidityStale: true }))).toThrow(
+        /top-level freshness flags do not match lane freshness/,
+      );
+    });
+
+    it("rejects a producer timestamp later than the scoring clock", () => {
+      const updatedAt = CLOCK_SEC + 60;
+      const dexLiqMap = {
+        "usdc-circle": { updatedAt },
+        "usdt-tether": { updatedAt },
+      };
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            dexLiqMap,
+            dexGenerationId: `dex-liquidity-${updatedAt}`,
+            dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(
+              dexLiqMap,
+              `dex-liquidity-${updatedAt}`,
+            ),
+            inputFreshness: {
+              dexLiquidity: { updatedAt, ageSeconds: CLOCK_SEC - updatedAt, stale: false },
+              redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+            },
+          }),
+        ),
+      ).toThrow(/Malformed native V9 input|later than scoring clock/);
+    });
+
+    it("rejects a lane age that does not match the clock-derived age", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            inputFreshness: {
+              dexLiquidity: { updatedAt: DEX_UPDATED_AT, ageSeconds: 1, stale: false },
+              redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+            },
+          }),
+        ),
+      ).toThrow(/does not match clock-derived age/);
+    });
+
+    it("rejects supply attribution that targets an inactive asset", () => {
+      expect(() =>
+        normalizeNativeV9Input(
+          nativeDraft({
+            safetyScoreV9SupplyAttributionById: {
+              "not-tracked": {
+                model: "canonical-lock-mint-partition-v1",
+                observedAtSec: CLOCK_SEC,
+                currentSupplyUsdByChain: { ethereum: 1 },
+              },
+            },
+          }),
+        ),
+      ).toThrow(/Malformed native V9 input|targets inactive asset/);
+    });
+  });
 });

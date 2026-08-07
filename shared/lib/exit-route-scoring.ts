@@ -231,7 +231,7 @@ export const EXIT_ROUTE_SCORING_TABLES = {
 };
 
 /** Share of the capacity component carried by completion coverage rather than absolute size. */
-export const EXIT_COVERAGE_SHARE_OF_CAPACITY = 0.6;
+const EXIT_COVERAGE_SHARE_OF_CAPACITY = 0.6;
 
 /**
  * The two exit requests the one engine answers.
