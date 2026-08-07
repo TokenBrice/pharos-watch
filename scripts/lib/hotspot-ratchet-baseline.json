@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 31,
+    "fileLines": 30,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
@@ -10,9 +10,9 @@
     "branchCount": 87
   },
   "shared/lib/redemption-backstop-scoring.ts": {
-    "fileLines": 1102,
-    "maxFunctionLines": 124,
-    "branchCount": 113
+    "fileLines": 357,
+    "maxFunctionLines": 57,
+    "branchCount": 19
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
     "fileLines": 927,
@@ -25,9 +25,9 @@
     "branchCount": 102
   },
   "shared/lib/safety-score-v9/control.ts": {
-    "fileLines": 1159,
-    "maxFunctionLines": 646,
-    "branchCount": 167
+    "fileLines": 1333,
+    "maxFunctionLines": 656,
+    "branchCount": 186
   },
   "shared/lib/safety-score-v9/coverage.ts": {
     "fileLines": 923,
@@ -35,9 +35,9 @@
     "branchCount": 45
   },
   "shared/lib/safety-score-v9/evaluate-asset.ts": {
-    "fileLines": 1662,
-    "maxFunctionLines": 217,
-    "branchCount": 159
+    "fileLines": 1682,
+    "maxFunctionLines": 224,
+    "branchCount": 161
   },
   "shared/lib/safety-score-v9/formula.ts": {
     "fileLines": 1374,
@@ -45,12 +45,12 @@
     "branchCount": 128
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1836,
+    "fileLines": 1906,
     "maxFunctionLines": 434,
-    "branchCount": 82
+    "branchCount": 84
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1914,
+    "fileLines": 1929,
     "maxFunctionLines": 239,
     "branchCount": 204
   },
@@ -170,9 +170,9 @@
     "branchCount": 12
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 149,
-    "maxFunctionLines": 93,
-    "branchCount": 6
+    "fileLines": 155,
+    "maxFunctionLines": 98,
+    "branchCount": 7
   },
   "worker/src/api/api-key-requests.ts": {
     "fileLines": 9,
@@ -340,9 +340,9 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2361,
+    "fileLines": 2396,
     "maxFunctionLines": 252,
-    "branchCount": 273
+    "branchCount": 277
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,
