@@ -380,10 +380,6 @@ function formatModulesOrGuardsLabel(authorityType: unknown, modulesOrGuardsStatu
   return labelFromMap(modulesOrGuardsStatusKey, MODULES_OR_GUARDS_LABELS);
 }
 
-function formatMintAuthorityScoreValue(score: number | null): string {
-  return score != null ? `${score}/100` : "NR";
-}
-
 function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel[] {
   if (!Array.isArray(value)) return [];
   const incidents: MintAuthorityDetailIncidentViewModel[] = [];
@@ -555,16 +551,6 @@ export function buildMintAuthorityDetailViewModel(
   const controlViewModels = controls
     .map(buildMintAuthorityControlViewModel)
     .filter((control): control is MintAuthorityDetailControlViewModel => control !== null);
-  const scoreCandidate: MintAuthorityClientSummary = {
-    ...candidate,
-    summary,
-    mintPath: stringValue(candidate.mintPath) ?? "unknown",
-    authorityPosture: stringValue(candidate.authorityPosture) ?? "unknown",
-    confidence: stringValue(candidate.confidence) ?? "unknown",
-    inheritedFrom: stringValue(candidate.inheritedFrom) ?? undefined,
-    mintIncidents,
-    controls,
-  } as MintAuthorityClientSummary;
   const score = buildMintAuthorityScoreViewModel(
     resolveMintAuthorityScoreDisplay(published?.mint),
     published?.caps ?? [],

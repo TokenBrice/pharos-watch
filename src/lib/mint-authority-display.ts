@@ -1,5 +1,4 @@
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   V9_MINT_POSTURE_BANDS,
   resolveV9MintPostureBand,
