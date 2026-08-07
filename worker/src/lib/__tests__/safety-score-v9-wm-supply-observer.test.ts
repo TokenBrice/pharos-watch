@@ -331,7 +331,7 @@ describe("wM reviewed deployment observer", () => {
   it("rejects a runtime-code or controller identity change", async () => {
     const wrongCode = dependencies();
     wrongCode.fetchEvmCodeAtBlock.mockImplementation(async (chainId, address) =>
-      chainId === "base" && address.toLowerCase() !== "0x813b926b1d096e117721bd1eb017fba122302da0"
+      chainId === "base" && address.toLowerCase() !== evmImplementationAddress("base")
         ? "0x6000"
         : evmCodeAtBlock(chainId, address),
     );
@@ -366,10 +366,12 @@ describe("wM reviewed deployment observer", () => {
   });
 
   it("rejects implementation bytecode drift at the pinned block", async () => {
+    const baseImplementation = evmImplementationAddress("base");
+    if (!baseImplementation) throw new Error("Missing Base implementation identity");
     const drifted = dependencies();
     drifted.fetchEvmCodeAtBlock.mockImplementation(async (chainId, address) =>
       chainId === "base" &&
-      address.toLowerCase() === "0x813b926b1d096e117721bd1eb017fba122302da0"
+      address.toLowerCase() === baseImplementation
         ? "0x6000"
         : evmCodeAtBlock(chainId, address),
     );
@@ -377,22 +379,38 @@ describe("wM reviewed deployment observer", () => {
     await expect(observe(drifted)).resolves.toBeNull();
     expect(drifted.fetchEvmCodeAtBlock).toHaveBeenCalledWith(
       "base",
-      "0x813b926b1d096e117721bd1eb017fba122302da0",
+      baseImplementation,
       expect.any(Number),
       expect.any(Object),
     );
   });
 
-  it("rejects the retired Arbitrum implementation", async () => {
-    const outdated = dependencies();
-    outdated.fetchEvmStorageAtBlock.mockImplementation(async (chainId) => {
-      const implementationAddress = chainId === "arbitrum"
-        ? "0x813b926b1d096e117721bd1eb017fba122302da0"
-        : evmImplementationAddress(chainId);
-      return implementationAddress ? addressWord(implementationAddress) : null;
-    });
+  it("rejects the retired V1 implementation on every migrated chain", async () => {
+    for (const migratedChain of ["arbitrum", "base", "ethereum"]) {
+      const outdated = dependencies();
+      outdated.fetchEvmStorageAtBlock.mockImplementation(async (chainId) => {
+        const implementationAddress = chainId === migratedChain
+          ? "0x813b926b1d096e117721bd1eb017fba122302da0"
+          : evmImplementationAddress(chainId);
+        return implementationAddress ? addressWord(implementationAddress) : null;
+      });
 
-    await expect(observe(outdated)).resolves.toBeNull();
+      await expect(
+        observeWmReviewedDeploymentUnitPartitionAttempt(
+          {
+            aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+            registryFingerprint: REGISTRY_FINGERPRINT,
+            scoringClockSec: CLOCK_SEC,
+            chainRpcs: chainRpcs(),
+          },
+          outdated,
+        ),
+      ).resolves.toEqual({
+        status: "rejected",
+        rejectionCode: "deployment-identity-mismatch",
+        failedRouteId: `${migratedChain}:0x437cc33344a0b27a429f795ff6b469c72698b291`,
+      });
+    }
   });
 
   it("reads Solana mint and controller from one finalized context and binds its block hash", async () => {
