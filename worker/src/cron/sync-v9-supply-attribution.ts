@@ -53,8 +53,27 @@ export async function syncSafetyScoreV9SupplyAttribution(
     };
   }
 
-  const sourceArtifact =
-    await parseNativeV9InputCacheArtifact(sourceCache.value);
+  let sourceArtifact: Awaited<ReturnType<typeof parseNativeV9InputCacheArtifact>>;
+  try {
+    sourceArtifact = await parseNativeV9InputCacheArtifact(sourceCache.value);
+  } catch (error) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        stage: "source-fixed-input",
+        reason: "source-fixed-input-invalid",
+        code:
+          error instanceof Error && error.name
+            ? error.name.slice(0, 160)
+            : "Error",
+      }),
+      productivity: {
+        productive: false,
+        reason: "source-fixed-input-invalid",
+      },
+    };
+  }
   const fixedInput = sourceArtifact.input;
   if (
     fixedInput.clockSec > startedAtSec ||

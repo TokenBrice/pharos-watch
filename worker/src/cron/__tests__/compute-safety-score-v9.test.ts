@@ -204,6 +204,54 @@ describe("computeSafetyScoreV9", () => {
     expect(mocks.runPublication).not.toHaveBeenCalled();
   });
 
+  it("degrades without publishing when the fixed-input cache row is still a v1 envelope (deploy-window overlap)", async () => {
+    const actualNativeInput = await vi.importActual<
+      typeof import("../../lib/safety-score-v9-native-input")
+    >("../../lib/safety-score-v9-native-input");
+    mocks.parseFixedInput.mockImplementationOnce(
+      actualNativeInput.parseNativeV9InputCacheArtifact,
+    );
+    mocks.getCaches.mockResolvedValueOnce(
+      new Map([
+        [
+          "report-cards:fixed-input:exact",
+          {
+            value: JSON.stringify({
+              schemaVersion: 1,
+              kind: "report-cards-fixed-input-exact",
+              encoding: "gzip-base64",
+              sourceGeneration: "report-cards:9.06:1783891200",
+              payloadSha256: "a".repeat(64),
+              uncompressedBytes: 1,
+              payload: "x",
+            }),
+          },
+        ],
+        [
+          "report-cards:v9-peg-provenance-seed:exact",
+          { value: "peg-seed" },
+        ],
+        [
+          "safety-score-v9:supply-attribution-generation:v1",
+          { value: "supply-generation" },
+        ],
+      ]),
+    );
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("degraded");
+    expect(result.productivity).toMatchObject({
+      productive: false,
+      reason: "v9-publication-source-unavailable",
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stage: "input-load",
+      reason: "exact-input-invalid",
+    });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
   it("keeps tolerated partial V9 publications green when supply attribution applied", async () => {
     mocks.supplyGenerationCadenceDeferred.mockReturnValue(false);
     mocks.runPublication.mockImplementationOnce(async (input: {

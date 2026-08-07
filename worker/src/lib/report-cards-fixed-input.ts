@@ -254,6 +254,11 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
 }
 
+// Definition site for the shared D1 row key; safety-score-v9-native-input.ts's
+// NATIVE_V9_INPUT_CACHE_KEY re-exports this constant (only the envelope version
+// differs between the two lanes). Owned here rather than there so the existing
+// one-directional native-input -> report-cards-fixed-input module edge stays
+// intact instead of introducing a cycle.
 export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 

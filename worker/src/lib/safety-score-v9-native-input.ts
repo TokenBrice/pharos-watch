@@ -26,6 +26,7 @@ import {
   DexDeploymentSupplyCoverageSchema,
   FreshnessEntrySchema,
   NavPriceObservationSchema,
+  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
   SafetyScoreV9SupplyAttributionSchema,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
@@ -192,7 +193,9 @@ export type SafetyScoreV9CompilerInput = Omit<
   captureKind: "exact-publication-inputs" | "public-reconstruction" | "native-v9-inputs";
 };
 
-export const NATIVE_V9_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
+// Same D1 row key as report-cards-fixed-input.ts's REPORT_CARDS_FIXED_INPUT_CACHE_KEY
+// (the definition site); only the envelope version differs between the two lanes.
+export const NATIVE_V9_INPUT_CACHE_KEY = REPORT_CARDS_FIXED_INPUT_CACHE_KEY;
 const NATIVE_V9_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 // The prefix is a published format namespace (public fact-set schemas, OpenAPI,
