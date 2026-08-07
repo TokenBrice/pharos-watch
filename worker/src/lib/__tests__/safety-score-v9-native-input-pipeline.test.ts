@@ -5,9 +5,13 @@ import {
 } from "./fixtures/safety-score-v9-full-registry-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 
-// Two full-registry compile+evaluate passes; matches the budget the other
-// full-pipeline V9 suites use.
-const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+// Double the 30s budget the other full-pipeline V9 suites use. Those run one
+// full-registry compile+evaluate pass per test; the equivalence test below runs
+// two (legacy and native) in a single test, and under the v8 instrumentation in
+// `coverage:critical` that doubled work measured 40.3s on a CI runner. The
+// uninstrumented lane is comfortably inside 30s, so this budget covers the
+// coverage lane rather than a real slowdown.
+const V9_EVALUATION_TEST_TIMEOUT_MS = 60_000;
 
 function cardsById(candidate: { cards: readonly { id: string; grade: string; score: number | null }[] }) {
   return new Map(candidate.cards.map((card) => [card.id, { grade: card.grade, score: card.score }]));
