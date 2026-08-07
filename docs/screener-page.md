@@ -51,7 +51,7 @@ Retained data can remain visible with stale/error notices according to the share
 
 ## Sorting And Export
 
-The default sort is Safety Score descending. Sortable keys are name, supply, Peg Score, DEWS, Liquidity Score, Safety Score, and Mint Authority Score. `useSort()` owns direction and `aria-sort`; unrated handling comes from the shared table comparator.
+The default sort is Safety Score descending. Sortable keys are name, supply, Peg Score, DEWS, Liquidity Score, Safety Score, and the mint control score (the published V9 mint component). `useSort()` owns direction and `aria-sort`; unrated handling comes from the shared table comparator.
 
 `TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, supply, score fields, blacklistability, and Mint Authority route/score/band. Export stays disabled while an active score filter is waiting on source data and includes methodology labels for the score families.
 

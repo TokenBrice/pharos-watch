@@ -101,9 +101,9 @@ For `YYYY`, `YYYY-MM`, `YYYY-Qn`, and `YYYY-Hn`, track-record age uses the inclu
 
 ### Mint Authority Taxonomy
 
-Mint Authority is a reviewed mint-control taxonomy plus a standalone display score. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Safety Score V9 consumes the reviewed control evidence directly in Economic Control rather than blending the standalone score. Missing data produces explicit V9 evidence gaps and an `NR` Mint Authority display state; it never implies safety.
+Mint Authority is a reviewed mint-control taxonomy. It focuses on who can create durable supply or alter minting paths through direct minters, minter admins, proxy/cap admins, facilitators, bridges, off-chain signer systems, governance, or wrapper inheritance. Since safety `9.1` the taxonomy has no score of its own: Safety Score V9 compiles the reviewed control evidence into the Economic Control pillar's mint component, and that component is the mint score every surface shows. Missing data produces explicit V9 evidence gaps and an `NR` mint state; it never implies safety.
 
-Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into display/filter labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`) and may show the standalone Mint Authority Score/band. The display buckets themselves do not feed report-card methodology; the underlying Mint Authority Score feeds only the Decentralization blend (v8.0).
+Compact `mintAuthoritySummary` projections can appear in structural/user-facing tables, including `/coverage/`, the homepage stablecoin table, and `/screener/`. Those surfaces bucket the reviewed data into review-route labels (`No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, `Unknown`), which describe which curation route an asset is on and carry no score. The mint score and band beside them are the published V9 mint component and its posture band.
 
 Mint path labels:
 

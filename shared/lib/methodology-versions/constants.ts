@@ -24,7 +24,7 @@ export const LIQUIDITY_METHODOLOGY_VERSION = "5.98";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
-export const MINT_AUTHORITY_METHODOLOGY_VERSION = "1.2";
+export const MINT_AUTHORITY_METHODOLOGY_VERSION = "1.3";
 export const MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_AUTHORITY_METHODOLOGY_VERSION);
 export const MINT_AUTHORITY_METHODOLOGY_PATH = "/methodology/#mint-authority-score";
 
