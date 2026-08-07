@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.06`
+- **Current methodology version:** `v9.07`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -50,11 +50,13 @@ The publication pipeline has two active stages:
 1. `prepare-safety-score-v9-input` runs immediately after each successful half-hourly DEX publication. It captures the publication-exact base input and peg-provenance seed and binds them to that exact DEX generation.
 2. `compute-safety-score-v9` runs at minutes 22 and 52. It rejects an input whose DEX dependency no longer matches the latest accepted generation, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
 
-The private upstream input remains encoded in the exact V8-shaped fixed-input schema because the V9 compiler and deterministic replay contract consume that structure. This is a narrow internal bridge, not an active V8 rating publication. The bridge owns:
+Since methodology `9.07` the private upstream input is a native V9 capture. Schema v4 carries exactly the fields the V9 compiler reads and drops everything the retired V8 report-card projection needed: bluechip ratings, resolved blacklist statuses, collateral-drift diagnostics, the non-current chain-circulating buckets, and every DEX row field outside the exit-route observations. Its capture identity is `model: "v9-input"`, bound to the V9 evaluation build; the retired V8 evaluation-build identity is gone with the engine. Base-input generation ids keep the `report-cards-input:v1:` prefix, which is a published format namespace pinned by the public fact-set schemas, the OpenAPI spec, the publication codec, and the `safety_score_history_v2` CHECK constraint — not a projection version. Which projection minted an id is carried by the input identity.
 
-- `report-cards:fixed-input:exact`
+The prepare cron owns:
+
+- `report-cards:fixed-input:exact` (cache envelope v2, carrying the v4 capture)
 - `report-cards:v9-peg-provenance-seed:exact`
-- the V8 evaluation-build identity required to verify that exact input
+- publishing the peg-analytics aggregate cache, now an explicit producer step rather than a side effect of building V8 cards. Content and cadence are unchanged: one publish per capture, at the half-hourly chart slot.
 
 V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation. The producer due interval is shorter than the compiler's freshness window so the existing 15-minute trigger grid lands healthy captures roughly every 30 minutes. Compilation normally follows an `ok` same-version core slot. A degraded core slot can proceed only when the durable publication ledger proves a same-slot, same-Worker `stablecoins` cache generation, and the compiler rejects a fixed input whose stablecoin timestamp no longer matches the live cache. Stale, future, registry, and inventory mismatches are reported with clause-specific reason codes.
 
@@ -67,7 +69,7 @@ Both rows carry matching model, schema, methodology, policy, evaluation-build, b
 
 Publication is fail-closed at the identity and system level. Missing, malformed, stale, or incompatible score-bearing inputs hold the last accepted ratings. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected. A held attempt updates publication health only; it does not rewrite the accepted ratings or their timestamp.
 
-The legacy shadow cache keys are read only by migration `0226_safety_score_v9_canonical_cache.sql`, which copies existing accepted state into the canonical keys during rollout. Runtime code does not publish or consume shadow keys. Deleting the old D1 keys requires a later coordinated cleanup migration because migrations run before the new Worker is active.
+Deleting the superseded D1 cache keys still requires a coordinated cleanup migration, because migrations run before the new Worker is active.
 
 ## API
 
@@ -106,9 +108,13 @@ Selector creation recomputes against the live V9 publication (`functions/lib/sel
 
 ## History
 
-The compiler validates each asset's facts independently. An attributable asset-local build or schema failure publishes that asset as a producer-failed NR result while unaffected assets continue, provided at least 90% of active assets remain unaffected. Dependency, aggregate, evaluator, identity, and other global failures still hold the whole publication.
+The compiler validates each asset's facts independently (unchanged by 9.07). An attributable asset-local build or schema failure publishes that asset as a producer-failed NR result while unaffected assets continue, provided at least 90% of active assets remain unaffected. Dependency, aggregate, evaluator, identity, and other global failures still hold the whole publication.
+
+Replay captures taken before 9.07 carry the retired v3 exact fixed input in cache envelope v1. `npm run safety-score-v9:replay` still accepts them, read-only: nothing writes that shape any more, but frozen operator captures must keep replaying byte-for-byte through the same compiler. `--input` therefore accepts both the native v4 capture and a pre-9.07 v3 capture, in raw or envelope form.
 
 `snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. During a partial publication it also suppresses transitions for quarantined assets and their affected dependents, so operational NR and recovery edges are not recorded as organic rating changes. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
+
+The writer compares *publication* identities. The capture's `v9-input` identity never reaches it, so the 9.07 producer change cannot manufacture a boundary or an organic transition by itself. The evaluation build is part of publication-identity comparability, so the first publication after an evaluation-build rotation writes one `methodology-boundary-baseline` per asset rather than organic grade changes.
 
 `GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
 

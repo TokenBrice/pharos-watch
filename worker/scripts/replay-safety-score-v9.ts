@@ -24,7 +24,10 @@ import {
 const USAGE = `Usage: npm run safety-score-v9:replay -- --input <path> --output <path> [options]
 
 Options:
-  --input <path>                  Exact fixed-input JSON or compressed cache envelope (required)
+  --input <path>                  V9 input capture, raw JSON or compressed cache envelope (required).
+                                  Accepts the native v4 capture (envelope v2) and, read-only, the
+                                  retired v3 exact fixed input (envelope v1) so frozen pre-9.07
+                                  operator captures keep replaying byte-for-byte.
   --output <path>                 Canonical V9 replay JSON (required)
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
@@ -58,9 +61,15 @@ function isFixedInputCacheEnvelope(value: unknown): boolean {
 }
 
 /**
- * Parse either normalized fixed-input JSON or the exact compressed cache
- * envelope. Cache envelopes deliberately go through the production checksum,
- * byte-length, generation, and exact-capture parser.
+ * Parse either normalized capture JSON or a compressed cache envelope. Cache
+ * envelopes deliberately go through the production checksum, byte-length,
+ * generation, and exact-capture parsers.
+ *
+ * Both capture generations are admissible. `parseSafetyScoreV9InputCacheValue`
+ * routes envelope v2 to the native v4 parser and envelope v1 to the untouched
+ * legacy v3 parser; `normalizeSafetyScoreV9CompilerInput` makes the same split
+ * on raw JSON by `schemaVersion`. The v3 lane is read-only: nothing writes it
+ * any more, but frozen captures must keep replaying byte-for-byte.
  */
 export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promise<SafetyScoreV9CompilerInput> {
   if (isFixedInputCacheEnvelope(value)) return parseSafetyScoreV9InputCacheValue(value);
