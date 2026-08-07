@@ -1141,7 +1141,13 @@
       "primary": {
         "kind": "http-json",
         "url": "https://app.reservoir.xyz/api/reserves/raw"
-      }
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
+        }
+      ]
     }
   },
   "yieldConfig": {
