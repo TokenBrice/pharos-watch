@@ -138,6 +138,7 @@
     "check:dependency-coverage": "tsx scripts/maintenance/generate-dependency-coverage-audit.ts --check",
     "report-cards:capture-fixed-input": "tsx worker/scripts/capture-report-cards-fixed-input.ts",
     "safety-score-v9:replay": "tsx worker/scripts/replay-safety-score-v9.ts",
+    "safety-score-v9:diff": "tsx worker/scripts/diff-safety-score-v9-replays.ts",
     "safety-score-v9:replay-summary": "node scripts/maintenance/summarize-safety-score-v9-replay.mjs",
     "safety-score-v9:b1-root-ledger": "tsx worker/scripts/generate-safety-score-v9-b1-root-ledger.ts",
     "safety-score-v9:calibration-analysis": "tsx scripts/maintenance/analyze-safety-score-v9-calibration.mjs",
