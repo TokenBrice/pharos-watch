@@ -70,6 +70,14 @@ function chainRpcs(): Map<string, ChainRpcConfig> {
   );
 }
 
+function evmImplementationAddress(chainId: string | undefined): string | null {
+  if (!chainId) return null;
+  const identity = expectedWmDeploymentIdentity(
+    `${chainId}:0x437cc33344a0b27a429f795ff6b469c72698b291`,
+  );
+  return identity?.runtime === "evm" ? identity.implementationAddress : null;
+}
+
 function evmCodeAtBlock(
   chainId: string | undefined,
   address: string,
@@ -144,9 +152,10 @@ function dependencies() {
       async (chainId: string | undefined, address: string) =>
         evmCodeAtBlock(chainId, address),
     ),
-    fetchEvmStorageAtBlock: vi.fn(async () =>
-      addressWord("0x813b926b1d096e117721bd1eb017fba122302da0"),
-    ),
+    fetchEvmStorageAtBlock: vi.fn(async (chainId: string | undefined) => {
+      const implementationAddress = evmImplementationAddress(chainId);
+      return implementationAddress ? addressWord(implementationAddress) : null;
+    }),
     fetchEvmMulticall3Aggregate3AtBlock: vi.fn(
       async (
         chainId: string | undefined,
@@ -372,6 +381,18 @@ describe("wM reviewed deployment observer", () => {
       expect.any(Number),
       expect.any(Object),
     );
+  });
+
+  it("rejects the retired Arbitrum implementation", async () => {
+    const outdated = dependencies();
+    outdated.fetchEvmStorageAtBlock.mockImplementation(async (chainId) => {
+      const implementationAddress = chainId === "arbitrum"
+        ? "0x813b926b1d096e117721bd1eb017fba122302da0"
+        : evmImplementationAddress(chainId);
+      return implementationAddress ? addressWord(implementationAddress) : null;
+    });
+
+    await expect(observe(outdated)).resolves.toBeNull();
   });
 
   it("reads Solana mint and controller from one finalized context and binds its block hash", async () => {

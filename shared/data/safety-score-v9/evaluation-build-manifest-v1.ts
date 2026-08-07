@@ -470,7 +470,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
-      "sha256": "fe38e7f76678a4eabc765f7eece1f6bd2bb2c4fc387db6ef045b106cf991f9e7"
+      "sha256": "d9b228286a10ac5da7719ba97b4cbe1897d2e207d346c87f9cf44e98cd883701"
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution.ts",
@@ -489,7 +489,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "6ad3ed7485efc04bd0d46d6ae60362a47cdc576a8b54e180944c28922414be23"
+  "digest": "d94579c30f469f1e5e55ee92fd31536ce7925ccab7469a39fae998b434be22d6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

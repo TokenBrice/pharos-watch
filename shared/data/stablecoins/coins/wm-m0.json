@@ -288,8 +288,8 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "wM is Ethereum-native (M0 WrappedM) and reaches Arbitrum, Base, and Solana through M0's own Wormhole-NTT Portal (hub lock/release, spoke mint/burn) and Plume through the Hyperlane-based M0 Portal Lite — all issuer-operated routes with the portal contracts verified on-chain 2026-07-20.",
-    "reviewedAt": "2026-07-20",
+    "summary": "wM is Ethereum-native (M0 WrappedM) and reaches Arbitrum, Base, and Solana through M0's own Wormhole-NTT Portal (hub lock/release, spoke mint/burn) and Plume through the Hyperlane-based M0 Portal Lite — all issuer-operated routes with the portal contracts verified on-chain 2026-07-20; Arbitrum's audited Wrapped M V2 migration was verified 2026-08-07.",
+    "reviewedAt": "2026-08-07",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "protocols": [
@@ -349,9 +349,9 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "wM reaches arbitrum through M0's own Portal — a Wormhole-NTT-derived hub-and-spoke bridge (hub lock/release on Ethereum, spoke mint/burn); the arbitrum wM token is an M0 clone of the shared WrappedM implementation 0x813b926b1d096e117721bd1eb017fba122302da0 (eth_getCode 2026-07-20), and the M0 Spoke Portal 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd (M0 platform addresses doc; code verified 2026-07-20) holds the mint authority on this deployment.",
+        "reviewNote": "wM reaches arbitrum through M0's own Portal — a Wormhole-NTT-derived hub-and-spoke bridge (hub lock/release on Ethereum, spoke mint/burn). The proxy migrated to M0's audited Wrapped M V2 implementation 0x3bb83030f5f784b3dc2c6af5d7e77f7c39d65804 on 2026-07-30; the proxy runtime, underlying M, and M0 Spoke Portal controller 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd remained unchanged (verified 2026-08-07).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-07",
         "sourceChain": "ethereum",
         "controllerChain": "arbitrum",
         "controllerAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
@@ -367,6 +367,14 @@
           {
             "label": "M0 Spoke Portal on arbitrum (code verified 2026-07-20)",
             "url": "https://arbiscan.io/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          },
+          {
+            "label": "Arbitrum Wrapped M V2 implementation (code verified 2026-08-07)",
+            "url": "https://arbitrum.blockscout.com/address/0x3BB83030F5f784B3dc2C6af5d7E77f7c39D65804?tab=contract"
+          },
+          {
+            "label": "Arbitrum Wrapped M V2 migration transaction",
+            "url": "https://arbiscan.io/tx/0x059a0c1d725a41b412947afcd3c127254e12822bd15cb81dcb39cb78211f57d8"
           }
         ]
       },

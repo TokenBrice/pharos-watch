@@ -2832,7 +2832,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
-    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const clockSec = Date.parse("2026-08-07T09:00:00Z") / 1_000;
     const fixed = withWmReviewedDeploymentAttribution(
       exactFixedInput({
         assetId: "wm-m0",
@@ -3230,7 +3230,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   it("restores the bridge-materiality cap when the wM packet is absent", () => {
     const fixed = exactFixedInput({
       assetId: "wm-m0",
-      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      clockSec: Date.parse("2026-08-07T09:00:00Z") / 1_000,
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
       omitLiveReserve: true,
