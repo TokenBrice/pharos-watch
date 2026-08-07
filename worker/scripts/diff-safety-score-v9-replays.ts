@@ -147,11 +147,15 @@ export function diffReplayArtifacts(baseline: unknown, candidate: unknown): Repl
   return { equal: entries.length === 0, entries };
 }
 
-/** Grade/score projection used by the grade-stability gate. */
+/**
+ * Grade/score projection used by the grade-stability gate. The card path and
+ * the three read fields are never volatile, so this reads the artifact
+ * directly instead of copying a multi-megabyte tree through `stripVolatile`.
+ */
 export function extractCardGrades(
   artifactValue: unknown,
 ): Map<string, { grade: string; score: number | null }> {
-  const cards = resolvePath(stripVolatile(artifactValue), CARD_ARRAY_PATH);
+  const cards = resolvePath(artifactValue, CARD_ARRAY_PATH);
   const out = new Map<string, { grade: string; score: number | null }>();
   if (!Array.isArray(cards)) return out;
   for (const card of cards) {
