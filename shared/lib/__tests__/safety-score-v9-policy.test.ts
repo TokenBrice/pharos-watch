@@ -24,7 +24,7 @@ describe("Safety Score v9 methodology policy", () => {
   it("loads the committed V9 policy with a frozen semantic digest", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.07");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.1");
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the
@@ -41,8 +41,13 @@ describe("Safety Score v9 methodology policy", () => {
     // 335 assets. The full 62-row scope (22 owner-gate rows plus 40 beyond it,
     // including the 28 USDT bridge-control rows) was explicitly acknowledged:
     // pathKinds is per-reason-code, so the rows cannot be admitted separately.
+    // 9.1 (2026-08-08): semantic.control gains `mintMergedSignals` — the merged
+    // mint grader's resolved-incident decay caps, key-custody reclassification,
+    // fine multisig quorum ladder, and Safe module modifier. Calibrated against
+    // the Wave-1 release baseline to zero letter-grade flips; see the drift
+    // report attached to the 9.1 changelog entry.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "764921f88470ffee28198f4b541c91cd2f953170324d417c277baa9022b0fc78",
+      "01e81cdcc4925f3af8057ac3e5e595dfdbb00396decc1ddc2b6b015d187c5be7",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

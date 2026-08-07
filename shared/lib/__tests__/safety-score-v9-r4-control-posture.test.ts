@@ -14,6 +14,9 @@ import {
 } from "../safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
+const UNATTESTED_EOA_PENALTY =
+  V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintMergedSignals.unattestedEoaPenalty;
+
 /**
  * STAGE A pin for owner ruling R4 (2026-07-17, provisional pending the V8
  * counterfactual-matrix review): graded control posture replaces the flat 55
@@ -153,7 +156,10 @@ describe("R4 conservative fallback — active (TUSD/USDD shapes must NOT lift)",
     const unknownCap = mintControl({ capSemantics: { kind: "unknown", bound: null } });
     const result = mintComponentScore(unknownCap, "attestation-only", "periodic");
     expect(result.posture).toBe("unknown");
-    expect(result.score).toBe(45);
+    // 9.1: the fixture's mint key is an unattested EOA, so the merged grader's
+    // key-custody penalty applies on top of the unknown floor. The pin's intent
+    // is unchanged — an unresolved posture must never lift above the floor.
+    expect(result.score).toBe(45 - UNATTESTED_EOA_PENALTY);
   });
 
   it("keeps unreconciled/self-reported unbounded mints at 25 (USDD-shaped)", () => {
@@ -168,7 +174,7 @@ describe("R4 conservative fallback — active (TUSD/USDD shapes must NOT lift)",
     for (const supervision of ["none", "unknown"] as const) {
       const result = mintComponentScore(mintControl(), supervision, "periodic");
       expect(result.posture, supervision).toBe("unbounded-reconciled");
-      expect(result.score, supervision).toBe(55);
+      expect(result.score, supervision).toBe(55 - UNATTESTED_EOA_PENALTY);
     }
   });
 
@@ -179,7 +185,7 @@ describe("R4 conservative fallback — active (TUSD/USDD shapes must NOT lift)",
     });
     const result = mintComponentScore(concentrated, "attestation-only", "not-applicable");
     expect(result.posture).toBe("concentrated-admin");
-    expect(result.score).toBe(55);
+    expect(result.score).toBe(55 - UNATTESTED_EOA_PENALTY);
   });
 
   it("never ranks a weaker supervision class above a stronger one for the same posture", () => {

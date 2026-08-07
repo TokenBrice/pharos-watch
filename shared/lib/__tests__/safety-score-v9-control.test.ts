@@ -14,6 +14,16 @@ import {
 } from "../safety-score-v9/control";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
+const CONTROL_POLICY = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
+const MERGED_MINT_SIGNALS = CONTROL_POLICY.mintMergedSignals;
+const UNATTESTED_EOA_PENALTY = MERGED_MINT_SIGNALS.unattestedEoaPenalty;
+/** Fine-ladder grade for the fixtures' default timelocked 2-of-3 multisig. */
+const TIMELOCKED_TWO_OF_THREE_QUALITY =
+  CONTROL_POLICY.mintPostureQuality["concentrated-admin"] +
+  MERGED_MINT_SIGNALS.multisigQuorumAdjustment.twoSigner +
+  MERGED_MINT_SIGNALS.multisigQuorumAdjustment.majorityThresholdCredit +
+  MERGED_MINT_SIGNALS.multisigQuorumAdjustment.timelockCredit;
+
 function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
     applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
@@ -540,10 +550,13 @@ describe("Safety Score v9 economic control", () => {
 
     // R3/R4 keep unknown supervision conservative while grading reviewed
     // supervision inside the control pillar.
+    // 9.1: the fixture's mint key is an unattested EOA, so every rung below
+    // carries the merged grader's key-custody penalty. The R3 ordering the pin
+    // guards (prudential > attestation-only > unknown/none) is unchanged.
     const unknownResult = resultFor("unknown");
     expect(unknownResult.components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
-      score: 55,
+      score: 55 - UNATTESTED_EOA_PENALTY,
     });
 
     // Inertness proof: default/unknown supervision keeps today's "high" rung and reason.
@@ -557,11 +570,99 @@ describe("Safety Score v9 economic control", () => {
     expect(severityFor("prudential")).toBeUndefined();
     expect(resultFor("prudential").components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
-      score: 80,
+      score: 80 - UNATTESTED_EOA_PENALTY,
     });
     expect(resultFor("attestation-only").components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
-      score: 70,
+      score: 70 - UNATTESTED_EOA_PENALTY,
+    });
+  });
+
+  describe("9.1 merged mint grader", () => {
+    const boundedAdminMint = (overrides: Partial<V9DeploymentControlFactV2> = {}) =>
+      control("mint:safe", "mint", {
+        authority: { authorityKey: "authority:safe", model: "multisig", threshold: { required: 3, total: 5 } },
+        capSemantics: { kind: "bounded", bound: { amount: 0.1, unit: "supply-fraction" } },
+        claimImpairment: "bounded",
+        delaySec: null,
+        ...overrides,
+      });
+    const scoreOf = (mintControl: V9DeploymentControlFactV2, extra: Partial<EvaluateV9EconomicControlArgs> = {}) => {
+      const result = evaluateV9EconomicControl(
+        args({
+          facts: facts([mintControl]),
+          mint: { ...boundedMint(mintControl.controlKey), reconciliation: "not-applicable" },
+          ...extra,
+        }),
+      );
+      const component = result.components.find((entry) => entry.kind === "mint");
+      if (!component) throw new Error("mint component missing");
+      return component.score;
+    };
+
+    it("decays a resolved mint incident by age instead of ignoring it", () => {
+      const resolved = boundedAdminMint({ incidentState: "resolved" });
+      const caps = MERGED_MINT_SIGNALS.resolvedIncidentQualityCaps;
+      const tiers = MERGED_MINT_SIGNALS.resolvedIncidentDecayMinMonths;
+      const clean = scoreOf(boundedAdminMint());
+
+      expect(scoreOf(resolved, { resolvedIncidentAgeMonths: 0 })).toBe(Math.min(clean, caps.recent));
+      expect(scoreOf(resolved, { resolvedIncidentAgeMonths: tiers.aging })).toBe(Math.min(clean, caps.aging));
+      expect(scoreOf(resolved, { resolvedIncidentAgeMonths: tiers.dated })).toBe(Math.min(clean, caps.dated));
+      // An unmeasured age fails conservative onto the strictest rung.
+      expect(scoreOf(resolved)).toBe(Math.min(clean, caps.recent));
+      // The cap never reaches the clean-record ladder.
+      expect(caps.dated).toBeLessThan(CONTROL_POLICY.mintPostureQuality["none-resolved"]);
+    });
+
+    it("leaves a clean-record mint component untouched by the incident ladder", () => {
+      expect(scoreOf(boundedAdminMint({ incidentState: "none" }), { resolvedIncidentAgeMonths: 0 })).toBe(
+        scoreOf(boundedAdminMint()),
+      );
+    });
+
+    it("waives the externally-owned-key penalty for reviewed MPC or HSM custody", () => {
+      const eoaMint = (keyCustody: V9DeploymentControlFactV2["keyCustody"]) =>
+        boundedAdminMint({
+          authority: { authorityKey: "authority:eoa", model: "eoa", threshold: null },
+          keyCustody,
+        });
+      const attested = scoreOf(eoaMint("mpc"));
+      expect(scoreOf(eoaMint("hsm"))).toBe(attested);
+      expect(scoreOf(eoaMint("unknown"))).toBe(attested - UNATTESTED_EOA_PENALTY);
+    });
+
+    it("grades multisig quorum granularity instead of a binary strong-quorum test", () => {
+      const quorum = (required: number, total: number, delaySec: number | null = null) =>
+        scoreOf(
+          boundedAdminMint({
+            authority: { authorityKey: "authority:safe", model: "multisig", threshold: { required, total } },
+            delaySec,
+          }),
+        );
+      // A single-signer Safe is strictly weaker than a two-signer one, which is
+      // strictly weaker than a healthy three-of-five.
+      expect(quorum(1, 3)).toBeLessThan(quorum(2, 5));
+      expect(quorum(2, 5)).toBeLessThan(quorum(3, 5));
+      // Unreviewed topology fails conservative, below the reviewed healthy set.
+      expect(scoreOf(boundedAdminMint({ authority: { authorityKey: "a", model: "multisig", threshold: null } })))
+        .toBeLessThan(quorum(3, 5));
+      // Relief may cancel a penalty but never lifts a published component.
+      expect(quorum(2, 3, 86_400)).toBeLessThanOrEqual(quorum(3, 5));
+      expect(quorum(3, 5, 86_400)).toBe(quorum(3, 5));
+      // The ladder never invents a posture worse than the adverse rung.
+      expect(quorum(1, 31)).toBeGreaterThanOrEqual(CONTROL_POLICY.mintPostureQuality["unbounded-or-compromised"]);
+    });
+
+    it("applies the Safe module surface as a small modifier", () => {
+      const neutral = scoreOf(boundedAdminMint({ modulesOrGuards: "unknown" }));
+      expect(scoreOf(boundedAdminMint({ modulesOrGuards: "not-applicable" }))).toBe(neutral);
+      expect(scoreOf(boundedAdminMint({ modulesOrGuards: "none-detected" }))).toBe(
+        neutral + MERGED_MINT_SIGNALS.modulesOrGuardsAdjustment.noneDetectedCredit,
+      );
+      expect(scoreOf(boundedAdminMint({ modulesOrGuards: "present" }))).toBe(
+        neutral - MERGED_MINT_SIGNALS.modulesOrGuardsAdjustment.presentPenalty,
+      );
     });
   });
 
@@ -1347,18 +1448,20 @@ describe("Safety Score v9 economic control", () => {
     const knownBridge: V9BridgeControlReview = { status: requiredKnown("bridge"), routes: [] };
 
     it("grades a verified-authority bridge-materiality gap ABOVE the 45 default", () => {
-      // Default authority is a timelocked 2/3 multisig -> partially-bounded-admin (70).
+      // Default authority is a timelocked 2/3 multisig. 9.1 grades it on the fine
+      // quorum ladder (concentrated rung + two-signer penalty + majority and
+      // timelock relief) instead of jumping a whole rung on a binary test.
       const result = evaluateV9EconomicControl(
         args({ facts: materialityGappedBridgeFacts(), bridge: knownBridge }),
       );
 
       expect(result.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
       const bridgeFallback = result.components.find((component) => component.componentKey === "bridge:unverified");
-      expect(bridgeFallback).toMatchObject({ binding: true, score: 70 });
+      expect(bridgeFallback).toMatchObject({ binding: true, score: TIMELOCKED_TWO_OF_THREE_QUALITY });
       expect(bridgeFallback?.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
       expect(bridgeFallback?.controlKeys).toEqual(["bridge:materiality-gap"]);
-      // Pillar grades on the real facts (70), not the flat 45 default.
-      expect(result.score).toBe(70);
+      // Pillar grades on the real facts, not the flat 45 default.
+      expect(result.score).toBe(TIMELOCKED_TWO_OF_THREE_QUALITY);
     });
 
     it("grades a weak verified-authority bridge-materiality gap BELOW the 45 default", () => {

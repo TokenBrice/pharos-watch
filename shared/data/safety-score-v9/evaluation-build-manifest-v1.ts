@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "d1d95c56baf64ac9c0cd55e41270f7344c8062d5912c3adbadb6486221d037fc"
+      "sha256": "dc1313a6e540d5fed3caafb13668bf26f70c5174a011a1f7719c7cb2f1a95fd3"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -214,7 +214,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/control.ts",
-      "sha256": "bb7eae418225d01622c2ec806145d07720f9609df17b1f5b1fc165b56b4552f7"
+      "sha256": "90741f5a7678b56193151d7f8dc53084fba0c5ad610121e50ae0392136c0ad4d"
     },
     {
       "path": "shared/lib/safety-score-v9/dependencies.ts",
@@ -370,7 +370,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "fc49dda77ee3419411a0892e7c4694d1b2d33ead427ccc9bea19cbfa79e856d8"
+      "sha256": "e4eb2925c1b824b038e5ae7e588ec627f213e225ab1c6e23336454bb1207fd7f"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -493,7 +493,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "c3b99a74b1f9c03dc833ec0ea692274773c8fdf2f7308b8d4d03fcc52249a970"
+  "digest": "938b30e041960bb3b19be4172bca3b697ac80cb7028cf5933c64b647788789a6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
