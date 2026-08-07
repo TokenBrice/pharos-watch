@@ -170,8 +170,8 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
   return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
 }
 
-const V9_DEX_STRESS_NOTIONAL_USD = 25_000_000;
-const V9_DEX_STRESS_MAX_COST_BPS = 200;
+export const V9_DEX_STRESS_NOTIONAL_USD = 25_000_000;
+export const V9_DEX_STRESS_MAX_COST_BPS = 200;
 const MAX_ROUTES_PER_CHAIN = 6;
 const MAX_ROUTES_PER_PROTOCOL = 3;
 const MAX_ROUTES_PER_ADAPTER = 3;

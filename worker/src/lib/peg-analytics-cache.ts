@@ -1,5 +1,9 @@
 import { getCache, setCache } from "./db-cache";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { PegSummaryCoin } from "@shared/types/market";
+import type { PegAnalyticsSnapshot } from "./peg-analytics";
+import { toErrorMessage } from "./error-utils";
 
 const PEG_ANALYTICS_CACHE_KEY = "peg-analytics";
 
@@ -35,6 +39,44 @@ function isValidPayload(value: unknown): value is PegAnalyticsCachePayload {
 
 export async function writePegAnalyticsCache(db: D1Database, payload: PegAnalyticsCachePayload): Promise<void> {
   await setCache(db, PEG_ANALYTICS_CACHE_KEY, JSON.stringify(payload));
+}
+
+/**
+ * Publishes the request-hot aggregate at producer cadence: peg-summary and the
+ * per-coin OG renderer would otherwise re-scan ~21K depeg_events rows per edge
+ * miss to rebuild this exact snapshot.
+ *
+ * Read paths fall back to direct compute, so a failed publish degrades latency
+ * and never correctness — it is reported, not thrown.
+ */
+export async function publishPegAnalyticsCache(
+  db: D1Database,
+  pegAnalytics: Pick<PegAnalyticsSnapshot, "nowSec" | "allEvents" | "pegDataById">,
+): Promise<boolean> {
+  const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+  const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+  let depegEventsToday = 0;
+  let depegEventsYesterday = 0;
+  for (const event of pegAnalytics.allEvents ?? []) {
+    if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
+    if (event.startedAt >= todayStartSec) depegEventsToday += 1;
+    else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
+  }
+  try {
+    await writePegAnalyticsCache(db, {
+      computedAtSec: pegAnalytics.nowSec,
+      depegEventsToday,
+      depegEventsYesterday,
+      pegData: [...pegAnalytics.pegDataById.values()],
+    });
+    return true;
+  } catch (error) {
+    console.warn(
+      "[peg-analytics-cache] publish failed (read paths fall back to direct compute):",
+      toErrorMessage(error),
+    );
+    return false;
+  }
 }
 
 export async function loadPegAnalyticsCache(

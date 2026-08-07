@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
@@ -4333,11 +4332,6 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Shared methodology identity changes rotate the historical V8 evaluation
-    // build even though V8 scoring behavior is frozen.
-    expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
-    );
   });
 
   it("derives reviewed bridge/mint/oracle research freshness on the D11 review cadence", () => {

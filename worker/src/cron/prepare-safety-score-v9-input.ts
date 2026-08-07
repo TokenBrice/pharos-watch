@@ -1,17 +1,23 @@
-import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { setCacheMany } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
-import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
-import {
-  buildReportCardsFixedInputCacheEntry,
-} from "../lib/report-cards-fixed-input";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9-capture";
+import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9-native-input";
 import {
   buildSafetyScoreV9PegProvenanceSeedCacheEntry,
   captureSafetyScoreV9PegProvenanceById,
 } from "../lib/safety-score-v9-peg-provenance";
 
+/**
+ * Captures the native V9 scoring input and its ephemeral peg-provenance seed.
+ *
+ * The cron writes exactly two cache rows, both bound to the same `v9-input`
+ * identity: the envelope-v2 capture and the peg-provenance seed. It no longer
+ * builds V8 report cards on the way — publishing the peg-analytics aggregate is
+ * now an explicit step inside the capture rather than a side effect of the
+ * report-card snapshot builder.
+ */
 export async function prepareSafetyScoreV9Input(
   db: D1Database,
   signal?: AbortSignal,
@@ -19,58 +25,33 @@ export async function prepareSafetyScoreV9Input(
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
-  const snapshot = await buildReportCardsSnapshot(db, {
-    publishPegAnalytics: true,
-    captureFixedInput: true,
+  const capture = await buildNativeSafetyScoreV9Capture(db, {
+    ...(expectedDexGenerationId === undefined ? {} : { expectedDexGenerationId }),
   });
 
   throwIfAborted(signal);
 
-  const publication = buildReportCardPublicationPlan(snapshot.cards, snapshot.methodology.version, snapshot.updatedAt);
-  const {
-    fixedInput,
-    v9PegProvenanceSource,
-  } = snapshot;
-  if (!fixedInput) {
-    throw new Error("Report-card publication did not produce its exact fixed-input artifact");
-  }
-  if (
-    expectedDexGenerationId !== undefined &&
-    fixedInput.dexGenerationId !== expectedDexGenerationId
-  ) {
-    throw new Error(
-      `V9 input captured DEX generation ${fixedInput.dexGenerationId}; expected ${expectedDexGenerationId}`,
-    );
-  }
-  if (fixedInput.sourceGeneration !== publication.completeness.generationId) {
-    throw new Error(
-      `Report-card fixed-input generation ${fixedInput.sourceGeneration} does not match publication ${publication.completeness.generationId}`,
-    );
-  }
+  const input = capture.input;
+  const publicationGenerationId = input.sourceGeneration;
   const safetyScoreIdentity = buildSafetyScoreV9InputIdentity({
-    methodologyVersion: snapshot.methodology.version,
-    baseInputGenerationId: fixedInput.baseInputGenerationId,
-    publicationGenerationId: publication.completeness.generationId,
+    methodologyVersion: input.methodologyVersion,
+    baseInputGenerationId: input.baseInputGenerationId,
+    publicationGenerationId,
   });
-  const fixedInputEntry = await buildReportCardsFixedInputCacheEntry(fixedInput, safetyScoreIdentity);
+  const inputEntry = await buildNativeV9InputCacheEntry(input, safetyScoreIdentity);
   let v9SeedEntry:
     ReturnType<typeof buildSafetyScoreV9PegProvenanceSeedCacheEntry> | null =
     null;
   let v9ExactSeed: Record<string, unknown>;
   try {
-    if (!v9PegProvenanceSource) {
-      throw new Error(
-        "Report-card publication did not retain its ephemeral V9 peg evidence source",
-      );
-    }
     const pegProvenanceById =
       captureSafetyScoreV9PegProvenanceById(
-        fixedInput,
-        v9PegProvenanceSource,
+        input,
+        capture.v9PegProvenanceSource,
       );
     v9SeedEntry = buildSafetyScoreV9PegProvenanceSeedCacheEntry({
-      sourceGeneration: fixedInput.sourceGeneration,
-      clockSec: fixedInput.clockSec,
+      sourceGeneration: input.sourceGeneration,
+      clockSec: input.clockSec,
       safetyScoreIdentity,
       pegProvenanceById,
     });
@@ -91,35 +72,35 @@ export async function prepareSafetyScoreV9Input(
   await setCacheMany(
     db,
     [
-      fixedInputEntry,
+      inputEntry,
       ...(v9SeedEntry ? [v9SeedEntry] : []),
     ],
     signal,
   );
 
   return {
-    itemCount: publication.completeness.expectedCount,
+    itemCount: capture.completeness.expectedCount,
     productivity: {
       productive: true,
       reason: "safety-score-v9-input-published",
     },
     metadata: JSON.stringify({
-      updatedAt: snapshot.updatedAt,
-      snapshotCards: snapshot.cards.length,
-      activeCards: publication.completeness.expectedCount,
-      scoredCards: publication.completeness.scoredCount,
-      notRatedCards: publication.completeness.notRatedCount,
-      publicationGenerationId: publication.completeness.generationId,
-      dexGenerationId: fixedInput.dexGenerationId,
+      updatedAt: input.updatedAt,
+      activeAssets: input.activeAssetIds.length,
+      activeCards: capture.completeness.expectedCount,
+      missingActiveAssets: capture.completeness.missing,
+      publicationGenerationId,
+      pegAnalyticsPublished: capture.pegAnalyticsPublished,
+      dexGenerationId: input.dexGenerationId,
       dexGenerationLagSec: Math.max(
         0,
-        fixedInput.clockSec -
-          (fixedInput.inputFreshness?.dexLiquidity.updatedAt ?? fixedInput.clockSec),
+        input.clockSec -
+          (input.inputFreshness?.dexLiquidity.updatedAt ?? input.clockSec),
       ),
-      liquidityStale: snapshot.liquidityStale,
-      redemptionStale: snapshot.redemptionStale,
-      fixedInputCacheBytes: fixedInputEntry.storedBytes,
-      fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
+      liquidityStale: input.liquidityStale,
+      redemptionStale: input.redemptionStale,
+      fixedInputCacheBytes: inputEntry.storedBytes,
+      fixedInputUncompressedBytes: inputEntry.uncompressedBytes,
       safetyScoreIdentity,
       v9ExactSeed,
     }),

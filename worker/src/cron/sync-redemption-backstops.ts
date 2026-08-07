@@ -147,7 +147,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   // Staleness is tracked for operational visibility (degraded-run signal +
   // metadata) but no longer suppresses effectiveExitScore. Aligns with the
   // report-card path, which also uses the last-known DEX score when stale —
-  // see `worker/src/lib/report-cards-snapshot-card.ts`.
+  // see the native capture at `worker/src/lib/safety-score-v9-capture.ts`.
   let liquidityStale = false;
   if (latestUpdatedAt == null) {
     console.warn("[sync-redemption-backstops] Liquidity data is missing");

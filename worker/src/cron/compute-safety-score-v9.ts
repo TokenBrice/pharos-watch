@@ -10,10 +10,10 @@ import type {
 } from "../lib/cron-logger";
 import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
 import {
-  parseReportCardsFixedInputCacheArtifact,
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-  type ReportCardsFixedInputCacheArtifact,
-} from "../lib/report-cards-fixed-input";
+  NATIVE_V9_INPUT_CACHE_KEY,
+  parseNativeV9InputCacheArtifact,
+  type NativeV9InputCacheArtifact,
+} from "../lib/safety-score-v9-native-input";
 import {
   parseSafetyScoreV9PegProvenanceSeed,
   SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
@@ -63,20 +63,20 @@ export async function computeSafetyScoreV9(
     message: "Loading publication-exact base and V9 seed inputs",
   });
   const caches = await getCaches(db, [
-    REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+    NATIVE_V9_INPUT_CACHE_KEY,
     SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   ]);
   throwIfAborted(signal);
 
-  if (!caches.has(REPORT_CARDS_FIXED_INPUT_CACHE_KEY)) {
+  if (!caches.has(NATIVE_V9_INPUT_CACHE_KEY)) {
     return unavailable("fixed-input-missing");
   }
   if (!caches.has(SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY)) {
     return unavailable("v9-exact-seed-missing");
   }
 
-  let baseArtifact: ReportCardsFixedInputCacheArtifact;
+  let baseArtifact: NativeV9InputCacheArtifact;
   let v9Seed: SafetyScoreV9PegProvenanceSeed;
   try {
     v9Seed = parseSafetyScoreV9PegProvenanceSeed(
@@ -85,10 +85,10 @@ export async function computeSafetyScoreV9(
       )!.value,
     );
     caches.delete(SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY);
-    baseArtifact = await parseReportCardsFixedInputCacheArtifact(
-      caches.get(REPORT_CARDS_FIXED_INPUT_CACHE_KEY)!.value,
+    baseArtifact = await parseNativeV9InputCacheArtifact(
+      caches.get(NATIVE_V9_INPUT_CACHE_KEY)!.value,
     );
-    caches.delete(REPORT_CARDS_FIXED_INPUT_CACHE_KEY);
+    caches.delete(NATIVE_V9_INPUT_CACHE_KEY);
   } catch (error) {
     return unavailable("exact-input-invalid", {
       code:
@@ -145,7 +145,6 @@ export async function computeSafetyScoreV9(
     publicationGenerationId: fixedInput.sourceGeneration,
   });
   if (
-    !baseArtifact.safetyScoreIdentity ||
     !safetyScoreV9InputIdentitiesMatch(
       baseArtifact.safetyScoreIdentity,
       expectedIdentity,

@@ -1,5 +1,6 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
+import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
@@ -155,6 +156,7 @@ interface StablecoinsPricingStageOptions extends CronStageContext {
   addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
   binanceSession?: BinanceFetchSession;
+  nativePegSession?: NativePegQuoteSession;
 }
 
 export async function runStablecoinsPricingStage(
@@ -366,6 +368,7 @@ export async function runStablecoinsPricingStage(
     authoritativeOverrides,
     authoritativeOverrideStats,
     previousMissingGenerationsById: options.previousMissingGenerationsById,
+    nativePegSession: options.nativePegSession,
     returnIfAborted,
     abortResult,
   }, "");

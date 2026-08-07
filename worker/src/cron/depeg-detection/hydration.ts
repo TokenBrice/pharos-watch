@@ -13,7 +13,10 @@ import {
   loadDexPriceSources,
   type DepegRow,
 } from "../../lib/depeg-helpers";
-import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
+import {
+  fetchCurrentNativePegQuotes,
+  type NativePegQuoteSession,
+} from "../../lib/native-peg-quotes";
 import type { HydratedDepegDetection } from "./types";
 
 export async function hydrateDepegDetection(
@@ -22,6 +25,7 @@ export async function hydrateDepegDetection(
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  nativePegSession?: NativePegQuoteSession,
 ): Promise<HydratedDepegDetection> {
   const {
     rates: pegRates,
@@ -49,6 +53,8 @@ export async function hydrateDepegDetection(
     }),
     signal,
     coingeckoApiKey,
+    undefined,
+    nativePegSession,
   );
 
   throwIfAborted(signal);

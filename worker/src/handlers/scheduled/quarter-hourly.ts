@@ -1,13 +1,16 @@
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
- *   -> report-card publication (0) -> depeg resolver (0)
+ *   -> depeg resolver (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
  * Private V9 attribution and compilation use their own fenced +8 and +22/+52
- * triggers. V9 input preparation follows DEX publication in the half-hour lane.
+ * triggers. The V9 fixed input (report-cards snapshot + peg-analytics
+ * publish) is prepared on the half-hourly 16,46 chart slot
+ * (`prepare-safety-score-v9-input`, after DEX publication), not in this
+ * quarter-hourly slot.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";

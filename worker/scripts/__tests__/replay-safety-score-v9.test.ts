@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { describe, expect, it } from "vitest";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9-extension";
+import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9-native-input";
+import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import {
   buildReportCardsFixedInputCacheEntry,
   createReportCardsFixedInput,
@@ -96,6 +99,49 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(parseSafetyScoreV9ReplayFixedInput(fixedInput)).resolves.toEqual(fixedInput);
     await expect(parseSafetyScoreV9ReplayFixedInput(JSON.parse(cacheEntry.value))).resolves.toEqual(fixedInput);
     await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(fixedInput);
+  });
+
+  it("parses the native v4 capture and its v2 cache envelope through equivalent paths", async () => {
+    const native = createNativeSafetyScoreV9FullRegistryInput();
+    const cacheEntry = await buildNativeV9InputCacheEntry(
+      native,
+      buildSafetyScoreV9InputIdentity({
+        methodologyVersion: native.methodologyVersion,
+        baseInputGenerationId: native.baseInputGenerationId,
+        publicationGenerationId: native.sourceGeneration,
+      }),
+    );
+
+    await expect(parseSafetyScoreV9ReplayFixedInput(native)).resolves.toEqual(native);
+    await expect(parseSafetyScoreV9ReplayFixedInput(JSON.parse(cacheEntry.value))).resolves.toEqual(native);
+    await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(native);
+  });
+
+  it("keeps the two capture generations on their own parsers", async () => {
+    const legacy = exactFixedInput();
+    const native = createNativeSafetyScoreV9FullRegistryInput();
+    const legacyEnvelope = JSON.parse((await buildReportCardsFixedInputCacheEntry(legacy)).value) as {
+      schemaVersion: number;
+    };
+    const nativeEnvelope = JSON.parse(
+      (
+        await buildNativeV9InputCacheEntry(
+          native,
+          buildSafetyScoreV9InputIdentity({
+            methodologyVersion: native.methodologyVersion,
+            baseInputGenerationId: native.baseInputGenerationId,
+            publicationGenerationId: native.sourceGeneration,
+          }),
+        )
+      ).value,
+    ) as { schemaVersion: number };
+
+    expect(legacyEnvelope.schemaVersion).toBe(1);
+    expect(nativeEnvelope.schemaVersion).toBe(2);
+    expect((await parseSafetyScoreV9ReplayFixedInput(legacy)).schemaVersion).toBe(3);
+    expect((await parseSafetyScoreV9ReplayFixedInput(native)).schemaVersion).toBe(4);
+    // A v2 envelope can never carry a V8-shaped capture.
+    await expect(parseSafetyScoreV9ReplayFixedInput({ ...nativeEnvelope, schemaVersion: 1 })).rejects.toThrow();
   });
 
   it("serializes a byte-identical V9 replay artifact from explicit clocks", () => {

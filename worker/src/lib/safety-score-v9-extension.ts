@@ -73,7 +73,10 @@ import {
   V9_UNMATCHED_CHAIN_ROUTE_PREFIX,
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import {
+  normalizeSafetyScoreV9CompilerInput,
+  type SafetyScoreV9CompilerInput,
+} from "./safety-score-v9-native-input";
 import {
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplySourceGenerationId,
@@ -1184,7 +1187,7 @@ function researchReviewObservationState(reviewedAt: string, clockSec: number): "
 }
 
 function transferMaterialScope(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   meta: V9ExtensionRegistryMeta,
 ): SafetyScoreV9TransferMaterialScope {
@@ -2096,7 +2099,7 @@ export function buildSafetyScoreV9BaselineExtension(
   fixedInputValue: unknown,
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
-  return buildSafetyScoreV9BaselineExtensionFromNormalizedInput(normalizeFixedInput(fixedInputValue), options);
+  return buildSafetyScoreV9BaselineExtensionFromNormalizedInput(normalizeSafetyScoreV9CompilerInput(fixedInputValue), options);
 }
 
 /**
@@ -2104,7 +2107,7 @@ export function buildSafetyScoreV9BaselineExtension(
  * input parse cost at their storage boundary.
  */
 export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;

@@ -1,7 +1,7 @@
 import {
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-  parseReportCardsFixedInputCacheArtifact,
-} from "../lib/report-cards-fixed-input";
+  NATIVE_V9_INPUT_CACHE_KEY,
+  parseNativeV9InputCacheArtifact,
+} from "../lib/safety-score-v9-native-input";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -34,10 +34,10 @@ export async function syncSafetyScoreV9SupplyAttribution(
   const startedAtSec = Math.floor(Date.now() / 1_000);
   throwIfAborted(signal);
   const caches = await getCaches(db, [
-    REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+    NATIVE_V9_INPUT_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   ]);
-  const sourceCache = caches.get(REPORT_CARDS_FIXED_INPUT_CACHE_KEY);
+  const sourceCache = caches.get(NATIVE_V9_INPUT_CACHE_KEY);
   if (!sourceCache) {
     return {
       status: "degraded",
@@ -53,8 +53,27 @@ export async function syncSafetyScoreV9SupplyAttribution(
     };
   }
 
-  const sourceArtifact =
-    await parseReportCardsFixedInputCacheArtifact(sourceCache.value);
+  let sourceArtifact: Awaited<ReturnType<typeof parseNativeV9InputCacheArtifact>>;
+  try {
+    sourceArtifact = await parseNativeV9InputCacheArtifact(sourceCache.value);
+  } catch (error) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        stage: "source-fixed-input",
+        reason: "source-fixed-input-invalid",
+        code:
+          error instanceof Error && error.name
+            ? error.name.slice(0, 160)
+            : "Error",
+      }),
+      productivity: {
+        productive: false,
+        reason: "source-fixed-input-invalid",
+      },
+    };
+  }
   const fixedInput = sourceArtifact.input;
   if (
     fixedInput.clockSec > startedAtSec ||

@@ -1,30 +1,7 @@
-import type { DimensionKey, ReportCardGrade } from "../types";
+import type { ReportCardGrade } from "../types";
 import { bandFromThresholds, clampScore } from "./math";
 
 export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
-
-export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
-  pegStability: 0,
-  liquidity: 0.3,
-  resilience: 0.2,
-  decentralization: 0.15,
-  dependencyRisk: 0.25,
-};
-
-/**
- * The four dimensions that carry weight in the base mean. `pegStability` is
- * excluded because it applies as a multiplier (weight 0), so weighted-mean
- * iterators iterate this list instead of skipping `pegStability` mid-loop.
- */
-export const WEIGHTED_DIMENSION_KEYS: DimensionKey[] = [
-  "liquidity",
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-];
-
-export const PEG_MULTIPLIER_EXPONENT = 0.4;
-export const NO_LIQUIDITY_PENALTY = 0.9;
 
 export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
   { grade: "A+", min: 87 },

@@ -88,7 +88,7 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 - Stablecoin detail pages show the score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data exists.
 - The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes status, score, and band. Compact client projections include cap-mutability evidence needed to keep aggregate Mint Authority Scores equivalent to full metadata.
 - `/coverage/` counts curated review breadth by route bucket and also exposes score-band breakdown chips.
-- Safety Score report cards: the Decentralization dimension applies the penalty-only blend (v8.0) and shows a `Mint authority` detail row when the drag binds; raw inputs expose `mintAuthorityScore`.
+- Safety Score V9 does not blend this display score; it compiles the underlying reviewed control evidence into Economic Control facts (see `docs/report-cards.md`). Raw inputs expose `mintAuthorityScore`.
 
 ## Maintenance Checklist
 

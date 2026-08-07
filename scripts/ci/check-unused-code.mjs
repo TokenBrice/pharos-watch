@@ -124,16 +124,11 @@ const EXPORT_ALLOWLIST = new Set([
   // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
   "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
-  // Safety Score methodology constants are imported by calibration/advisory
-  // scripts outside this runtime-only scan and are kept public for review work.
-  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_BLEND_WEIGHT",
-  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_LABEL",
-  "shared/lib/report-cards.ts::BRIDGE_ROUTE_RISK_SCORE",
-  "shared/lib/report-cards.ts::ORACLE_RISK_BLEND_WEIGHT",
-  "shared/lib/report-cards.ts::ORACLE_RISK_LABEL",
-  "shared/lib/report-cards.ts::isOracleRiskApplicable",
-  "shared/lib/report-cards.ts::chainInfraLabel",
+  // Report-card survivors of the retired V8 engine. `inferResilienceDefaults` is
+  // consumed through `report-card-policy.ts` directly; `resolveResilienceFactors`
+  // is the reviewed-override resolver kept for the V9 research/calibration CLIs.
   "shared/lib/report-cards.ts::inferResilienceDefaults",
+  "shared/lib/report-cards.ts::resolveResilienceFactors",
   // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
   // outside the runtime source graph scanned by this checker.
   "shared/lib/site-csp.ts::buildStaticContentSecurityPolicy",

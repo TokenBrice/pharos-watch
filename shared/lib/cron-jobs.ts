@@ -417,7 +417,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "hourly",
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
-    maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity (sequential)
+    maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity-stage (sequential)
   },
   {
     job: "sync-yield-supplemental",

@@ -17,7 +17,10 @@ import {
   type V9AssetQuarantine,
 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import {
+  normalizeSafetyScoreV9CompilerInput,
+  type SafetyScoreV9CompilerInput,
+} from "./safety-score-v9-native-input";
 
 const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
 const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
@@ -37,7 +40,10 @@ const CanonicalStringArraySchema = z.array(z.string().min(1)).superRefine((value
 const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
   .object({
     schemaVersion: z.literal(1),
-    fixedInputSchemaVersion: z.literal(3),
+    // 3 = retained exact fixed input (frozen-capture replay); 4 = native V9
+    // capture. The digest is unchanged for a v3 input, so historical replays
+    // keep their candidate identity byte-for-byte.
+    fixedInputSchemaVersion: z.union([z.literal(3), z.literal(4)]),
     factExtensionSchemaVersion: z.literal(2),
     compiledFactSchemaVersion: z.literal(3),
     compiledFactSchemaCapabilities: z.tuple([
@@ -61,7 +67,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
     schemaVersion: z.literal(1),
     inputContractVersions: z
       .object({
-        fixedInput: z.literal(3),
+        fixedInput: z.union([z.literal(3), z.literal(4)]),
         factExtension: z.literal(2),
       })
       .strict(),
@@ -125,11 +131,11 @@ export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
   BuildSafetyScoreV9CandidateInput,
   "fixedInput"
 > {
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
 }
 
 export interface SafetyScoreV9CandidatePipelineResult {
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   extension: Readonly<SafetyScoreV9FactSetExtensionV2>;
   compiledFacts: Readonly<CompiledV9FactSetV3>;
   evaluatedSet: Readonly<V9EvaluatedSet>;
@@ -343,7 +349,7 @@ export function computeSafetyScoreV9CandidateId(identityValue: SafetyScoreV9Cand
 }
 
 function compilerFactSchemaIdentity(
-  fixedInput: ReportCardsFixedInput,
+  fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
   compiledFacts: CompiledV9FactSetV3,
 ): SafetyScoreV9CompilerFactSchemaIdentityV1 {
@@ -368,7 +374,7 @@ function compilerFactSchemaIdentity(
 }
 
 function producerCapabilityIdentity(
-  fixedInput: ReportCardsFixedInput,
+  fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
 ): SafetyScoreV9ProducerCapabilityIdentityV1 {
   return SafetyScoreV9ProducerCapabilityIdentityV1Schema.parse({
@@ -432,7 +438,7 @@ export function buildSafetyScoreV9Candidate(
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
   return buildSafetyScoreV9CandidateFromNormalizedInput({
     ...input,
-    fixedInput: normalizeFixedInput(input.fixedInput),
+    fixedInput: normalizeSafetyScoreV9CompilerInput(input.fixedInput),
   });
 }
 
@@ -470,7 +476,10 @@ function buildSafetyScoreV9CandidatePipeline(
   }
 
   const fixedInput = input.fixedInput;
-  if (fixedInput.captureKind !== "exact-publication-inputs") {
+  if (
+    fixedInput.captureKind !== "native-v9-inputs" &&
+    fixedInput.captureKind !== "exact-publication-inputs"
+  ) {
     throw new Error("Safety Score v9 publication evaluation requires exact publication inputs");
   }
   if (input.publishedAtSec < fixedInput.clockSec) {

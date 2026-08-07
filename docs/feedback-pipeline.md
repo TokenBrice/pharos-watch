@@ -93,7 +93,7 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
 
-**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; historical migration `worker/migrations/0078_feedback_submissions.sql` added `feedback_submissions`, but production D1 removed that unused table during the 2026-07-29 operated cleanup):
+**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; pre-squash migration `0078_feedback_submissions.sql` added `feedback_submissions` and the squashed baseline still creates it for fresh databases, but production D1 removed that unused table during the 2026-07-29 operated cleanup):
 
 ```sql
 CREATE TABLE IF NOT EXISTS feedback_rate_limit (

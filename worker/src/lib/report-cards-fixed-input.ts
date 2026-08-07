@@ -3,7 +3,6 @@ import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
-import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import {
@@ -14,22 +13,18 @@ import {
   computeReportCardsRegistryFingerprint,
   normalizeFixedDexLiquidityMap,
   normalizeFixedRedemptionBackstopMap,
-  normalizeReportCardsReplayPayload,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectFixedDexLiquidityMap,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { sha256Hex } from "@shared/lib/sha256";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
 import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import {
   projectSafetyScoreV9PegScoreResult,
   projectSafetyScoreV9PegSummary,
@@ -45,18 +40,12 @@ import {
   XautRepresentationGroupSupplyAttributionV2Schema,
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
-import { buildLiveReportCards } from "./report-cards-snapshot-card";
-import {
-  buildDefunctReportCards,
-  buildReportCardsSnapshotEnvelope,
-  sortReportCards,
-} from "./report-cards-snapshot-finalize";
 import { parseJson } from "./json-parse";
 import {
   V9PublicationInputHealthSchema,
 } from "./safety-score-v9-publication-assessment";
 
-const FreshnessEntrySchema = z.object({
+export const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
   ageSeconds: z.number().finite().nonnegative().nullable(),
   stale: z.boolean(),
@@ -64,7 +53,7 @@ const FreshnessEntrySchema = z.object({
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
 
-const NavPriceObservationSchema = z.strictObject({
+export const NavPriceObservationSchema = z.strictObject({
   priceUsd: z.number().finite().positive(),
   sourceId: z.string().min(1),
   observedAtSec: z.number().int().nonnegative(),
@@ -118,7 +107,13 @@ export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model"
   ReviewedDeploymentUnitPartitionSchema,
 ]);
 
-const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
+/**
+ * Per-asset DEX pool coverage of circulating supply, produced by
+ * `report-cards-snapshot-inputs.ts`. The schema is the canonical contract:
+ * the interface it used to be declared against lived in the deleted V8
+ * `report-card-peg-liquidity` module.
+ */
+export const DexDeploymentSupplyCoverageSchema = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
   observedSupplyUsd: z.number().finite().nonnegative(),
   verifiedNoPoolsSupplyUsd: z.number().finite().nonnegative(),
@@ -131,12 +126,12 @@ const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> 
   unknownChains: z.array(z.string().min(1)),
 });
 
+export type DexDeploymentSupplyCoverage = z.infer<typeof DexDeploymentSupplyCoverageSchema>;
+
 export {
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
-  computeReportCardsReplayPayloadFingerprint,
   computeReportCardsRegistryFingerprint,
-  normalizeReportCardsReplayPayload,
   type FixedDexLiquidityRow,
 } from "@shared/lib/report-cards-fixed-input-identity";
 
@@ -255,22 +250,15 @@ const ReportCardsFixedInputSchema = LegacyReportCardsFixedInputV3Schema.extend({
 export type ReportCardsFixedInput = z.infer<typeof ReportCardsFixedInputSchema>;
 type LegacyReportCardsFixedInputV3 = z.infer<typeof LegacyReportCardsFixedInputV3Schema>;
 
-export interface FixedReplayOptions {
-  allowMethodologyMismatch?: boolean;
-  allowRegistryMismatch?: boolean;
-  sameNotionalScoringMode?: "legacy" | "active";
-  dexExitObservationMaxAgeSec?: number;
-  liveRedemptionExitObservationMaxAgeSec?: number;
-}
-
-function recordToMap<T>(record: Record<string, T>): Map<string, T> {
-  return new Map(Object.entries(record));
-}
-
 function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
 }
 
+// Definition site for the shared D1 row key; safety-score-v9-native-input.ts's
+// NATIVE_V9_INPUT_CACHE_KEY re-exports this constant (only the envelope version
+// differs between the two lanes). Owned here rather than there so the existing
+// one-directional native-input -> report-cards-fixed-input module edge stays
+// intact instead of introducing a cycle.
 export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
@@ -709,86 +697,6 @@ function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | Leg
   if (v3.success) return v3.data;
   const issue = parsed.error.issues[0];
   throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
-}
-
-export function buildReportCardsSnapshotFromFixedInput(
-  value: unknown,
-  options: FixedReplayOptions = {},
-): ReportCardsResponse {
-  const input = normalizeFixedInput(value);
-  if (!options.allowMethodologyMismatch && input.methodologyVersion !== SAFETY_SCORE_METHODOLOGY_VERSION) {
-    throw new Error(
-      `Fixed input methodology v${input.methodologyVersion} does not match current v${SAFETY_SCORE_METHODOLOGY_VERSION}`,
-    );
-  }
-  const currentRegistryFingerprint = computeReportCardsRegistryFingerprint();
-  if (!options.allowRegistryMismatch && input.registryFingerprint !== currentRegistryFingerprint) {
-    throw new Error(
-      `Fixed input registry fingerprint ${input.registryFingerprint} does not match current ${currentRegistryFingerprint}`,
-    );
-  }
-  if (!options.allowRegistryMismatch) {
-    assertSameIds(
-      input.activeAssetIds,
-      ACTIVE_STABLECOINS.map((coin) => coin.id),
-      "Fixed input active registry",
-    );
-  }
-  const currentDexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(input.dexLiqMap, input.dexGenerationId);
-  if (input.dexPayloadFingerprint !== currentDexPayloadFingerprint) {
-    throw new Error(
-      `Fixed input DEX payload fingerprint ${input.dexPayloadFingerprint} does not match payload ${currentDexPayloadFingerprint}`,
-    );
-  }
-  const currentRedemptionPayloadFingerprint = computeRedemptionPayloadFingerprint(
-    input.redemptionBackstopMap,
-    input.redemptionGenerationId,
-  );
-  if (input.redemptionPayloadFingerprint !== currentRedemptionPayloadFingerprint) {
-    throw new Error(
-      `Fixed input redemption payload fingerprint ${input.redemptionPayloadFingerprint} does not match payload ${currentRedemptionPayloadFingerprint}`,
-    );
-  }
-
-  const dexLiqMap = Object.fromEntries(
-    Object.entries(input.dexLiqMap).map(([stablecoinId, row]) => {
-      const deploymentSupplyCoverage = input.dexDeploymentSupplyCoverageById[stablecoinId];
-      return [stablecoinId, deploymentSupplyCoverage ? { ...row, deploymentSupplyCoverage } : row];
-    }),
-  );
-  const live = buildLiveReportCards({
-    pegDataById: recordToMap(input.pegDataById),
-    activeDepegPeakBpsById: recordToMap(input.activeDepegPeakBpsById),
-    dexLiqMap,
-    redemptionBackstopMap: input.redemptionBackstopMap,
-    bluechipMap: input.bluechipMap,
-    resolvedBlacklistStatuses: recordToMap(input.resolvedBlacklistStatuses),
-    liveReserveMap: recordToMap(input.liveReserveMap),
-    liveReserveProvenanceMap: recordToMap(input.liveReserveProvenanceMap),
-    chainCirculatingById: recordToMap(input.chainCirculatingById),
-    sameNotionalScoringMode: options.sameNotionalScoringMode,
-    exitObservationAsOfSec: input.clockSec,
-    dexExitObservationMaxAgeSec: options.dexExitObservationMaxAgeSec ?? CRON_INTERVALS["sync-dex-liquidity"] * 2,
-    liveRedemptionExitObservationMaxAgeSec:
-      options.liveRedemptionExitObservationMaxAgeSec ?? CRON_INTERVALS["sync-redemption-backstops"] * 2,
-  });
-
-  return ReportCardsResponseSchema.parse(
-    buildReportCardsSnapshotEnvelope({
-      cards: sortReportCards([...live.cards, ...buildDefunctReportCards()]),
-      updatedAt: input.updatedAt,
-      liquidityStale: input.liquidityStale,
-      redemptionStale: input.redemptionStale,
-      inputFreshness: input.inputFreshness,
-      collateralDriftCoins: input.collateralDriftCoins,
-      liveToFallbackCoins: input.liveToFallbackCoins,
-      dependencyGraphEdges: live.dependencyGraphEdges,
-    }),
-  );
-}
-
-export function serializeNormalizedReportCardsReplay(value: unknown): string {
-  return `${JSON.stringify(normalizeReportCardsReplayPayload(value), null, 2)}\n`;
 }
 
 export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {

@@ -129,3 +129,21 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_NATIVE_INPUT: MethodologyChangelogEntry = {
+  version: "9.07",
+  title: "Native input pipeline replaces the V8-shaped bridge",
+  date: "2026-08-07",
+  effectiveAt: 1786116293,
+  summary:
+    "The V9 compiler now captures a native input schema; the retired V8 scoring engine no longer executes, and no published score, grade, pillar, breakdown, or reason changes.",
+  impact: [
+    "Input identity is bound to the V9 evaluation build instead of the retired V8 digest",
+    "The V8 dimension engine, penalty blends, and evaluation-build manifest are deleted",
+    "Peg-analytics publication is an explicit producer step with unchanged content and cadence",
+    "Captures taken before 9.07 remain replayable read-only through the retained v3 parser",
+    "Backing, Exit, and Economic Control weights, score aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

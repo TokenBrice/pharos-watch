@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 51,
+    "fileLines": 31,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
@@ -100,8 +100,8 @@
     "branchCount": 50
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 234,
-    "maxFunctionLines": 197,
+    "fileLines": 240,
+    "maxFunctionLines": 202,
     "branchCount": 9
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
@@ -340,7 +340,7 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2358,
+    "fileLines": 2361,
     "maxFunctionLines": 252,
     "branchCount": 273
   },

@@ -17,7 +17,7 @@ import {
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
+import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
@@ -52,6 +52,12 @@ export interface ReportCardsSnapshotInputs {
 
 export interface LoadReportCardsSnapshotInputsOptions {
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
+  /**
+   * Bluechip ratings feed the V8 report-card projection only. The native V9
+   * capture never reads them, so it skips the load rather than spending one of
+   * the six connections a cron trigger gets from Cloudflare's pool.
+   */
+  includeBluechipRatings?: boolean;
 }
 
 const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
@@ -331,7 +337,7 @@ export async function loadReportCardsSnapshotInputs(
     options.preloadedStablecoinsCache
       ? Promise.resolve(options.preloadedStablecoinsCache)
       : loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
-    getCache(db, "bluechip-ratings"),
+    options.includeBluechipRatings === false ? Promise.resolve(null) : getCache(db, "bluechip-ratings"),
     loadDexLiquiditySnapshot(db),
     loadDexDeploymentSupplyJoin(db),
     loadRedemptionBackstopSnapshot(db),

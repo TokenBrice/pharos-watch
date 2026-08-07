@@ -42,6 +42,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/wait-pages-release-marker.mjs"),
     strict("worker/scripts/capture-report-cards-fixed-input.ts"),
     strict("worker/scripts/check-safety-score-v9-anchor-gate.ts"),
+    strict("worker/scripts/diff-safety-score-v9-replays.ts"),
     strict("worker/scripts/generate-safety-score-v9-b1-root-ledger.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict(
@@ -121,7 +122,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/build-og-editorial.mjs", "build"),
     exempt("scripts/maintenance/build-og-learn-images.ts", "build"),
     exempt("scripts/maintenance/build-world-map-svg.ts", "build"),
-    exempt("scripts/maintenance/calibrate-oracle-risk-score.ts", "build"),
     exempt("scripts/maintenance/capture-d1-insights.mjs", "build"),
     exempt("scripts/maintenance/check-safety-score-v9-composite-ceiling.mjs", "read-only"),
     exempt("scripts/maintenance/explain-build-chunks.mjs", "build"),
@@ -145,7 +145,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/generate-public-datasets.ts", "build"),
     exempt("scripts/maintenance/generate-redemption-coverage-audit.ts", "build"),
     exempt("scripts/maintenance/generate-reserve-coverage-audit.ts", "build"),
-    exempt("scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts", "build"),
     exempt("scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs", "build"),
     exempt("scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts", "build"),
     exempt("scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts", "build"),

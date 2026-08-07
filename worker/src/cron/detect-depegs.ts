@@ -1,6 +1,7 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { throwIfAborted } from "../lib/abort";
+import type { NativePegQuoteSession } from "../lib/native-peg-quotes";
 import { decideDepegAsset, emitDepegDiagnostics } from "./depeg-detection/decision-engine";
 import { hydrateDepegDetection } from "./depeg-detection/hydration";
 import { persistDepegCommands } from "./depeg-detection/persistence";
@@ -21,9 +22,17 @@ export async function detectDepegEvents(
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
+  nativePegSession?: NativePegQuoteSession,
 ): Promise<void> {
   throwIfAborted(signal);
-  const hydrated = await hydrateDepegDetection(db, assets, fxFallbackRates, signal, coingeckoApiKey);
+  const hydrated = await hydrateDepegDetection(
+    db,
+    assets,
+    fxFallbackRates,
+    signal,
+    coingeckoApiKey,
+    nativePegSession,
+  );
 
   const duplicateRepair = buildDuplicateOpenEventRepair(hydrated.openRows);
   if (duplicateRepair.commands.length > 0) {

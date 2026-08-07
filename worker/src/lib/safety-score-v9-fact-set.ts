@@ -19,7 +19,10 @@ import {
   type V9WrapperLocalDimensionFact,
   type V9WrapperLocalFacts,
 } from "@shared/types/safety-score-v9-wrapper";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import {
+  normalizeSafetyScoreV9CompilerInput,
+  type SafetyScoreV9CompilerInput,
+} from "./safety-score-v9-native-input";
 import { assertSafetyScoreV9ExactExtensionAssets } from "./safety-score-v9-fact-set-boundary";
 import { hydrateSafetyScoreV9ShockCoverageExtension } from "./safety-score-v9-extension-shock";
 import { safetyScoreV9ChainSupplySourcePayload } from "./safety-score-v9-supply-attribution";
@@ -79,7 +82,7 @@ export interface SafetyScoreV9FactCompilationResult {
 const materializedExtensions = new WeakSet<object>();
 
 export function materializeSafetyScoreV9FactSetExtension(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extensionValue: unknown,
 ): Readonly<SafetyScoreV9FactSetExtensionV2> {
   const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(
@@ -365,7 +368,7 @@ function buildQuarantinedAssetFacts(
 }
 
 function compileAssetOutcome(
-  fixedInput: ReportCardsFixedInput,
+  fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
@@ -434,12 +437,12 @@ export function compileSafetyScoreV9FactSetFromFixedInput(
   fixedInputValue: unknown,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV3> {
-  return compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(fixedInputValue), extensionValue);
+  return compileSafetyScoreV9FactSetFromNormalizedInput(normalizeSafetyScoreV9CompilerInput(fixedInputValue), extensionValue);
 }
 
 /** Trusted runtime entrypoint for already validated publication inputs. */
 export function compileSafetyScoreV9FactSetFromNormalizedInput(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV3> {
   return compileSafetyScoreV9FactSetFromValidatedExtension(
@@ -453,7 +456,7 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
  * materializeSafetyScoreV9FactSetExtension().
  */
 export function compileSafetyScoreV9FactSetFromValidatedExtension(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: SafetyScoreV9FactSetExtensionV2,
 ): Readonly<CompiledV9FactSetV3> {
   return compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
@@ -463,13 +466,16 @@ export function compileSafetyScoreV9FactSetFromValidatedExtension(
 }
 
 export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: SafetyScoreV9FactSetExtensionV2,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
   }
-  if (fixedInput.captureKind !== "exact-publication-inputs") {
+  if (
+    fixedInput.captureKind !== "native-v9-inputs" &&
+    fixedInput.captureKind !== "exact-publication-inputs"
+  ) {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
   if (extension.registryFingerprint !== fixedInput.registryFingerprint) {

@@ -2366,12 +2366,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.06",
+    "methodologyVersion": "9.07",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.06",
+    "version": "9.07",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2675,7 +2675,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.06",
+      "methodologyVersion": "9.07",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2686,7 +2686,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.06",
+      "methodologyVersion": "9.07",
       "publishedAt": 1772000700
     }
   },
@@ -3667,7 +3667,7 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. New selector creation currently returns `503` because the recommendation policy has not been reviewed for canonical V9 inputs. Existing signed selector snapshots remain readable through their historical contract; the service does not silently run the retired V8 adapter.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. Selector creation recomputes against the live V9 publication (`functions/lib/selector-canonical-snapshot.ts`); a `503` now indicates canonical-source or schema failure, not a policy hold. Existing signed selector snapshots remain readable through their historical contract; the service does not silently run the retired V8 adapter.
 
 New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 3` in the body and `pharos-server-recomputed-v1` trust metadata in KV. GET trusts only the KV metadata, validates the exact body binding, recomputes the canonical sid, and returns `502` on mismatch or tampering. A body that merely self-claims verified provenance without trusted KV metadata is normalized to the historical `client-unverified` schema-v2 projection and must use the unverified UI banner. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
 

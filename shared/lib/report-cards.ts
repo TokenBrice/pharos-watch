@@ -1,44 +1,24 @@
 /**
- * Report Card grading engine.
+ * Report Card grade presentation and the shared survivors of the retired
+ * Safety Score V8 engine.
  *
- * Public export surface only. Scoring families live in focused internal modules
- * so callers keep a single import path while hotspot pressure stays contained.
+ * The V8 dimension scorers, penalty blends, and overall-grade aggregation were
+ * deleted with the engine; Safety Score V9 owns scoring end to end. What
+ * remains here is the grade scale used by every consumer surface, plus the two
+ * non-scoring helpers (blacklist resolution and collateral-quality rollup) that
+ * live producer paths still call.
  */
 
 export {
-  DIMENSION_WEIGHTS,
-  PEG_MULTIPLIER_EXPONENT,
-  NO_LIQUIDITY_PENALTY,
   GRADE_THRESHOLDS, REPORT_CARD_GRADE_RANK, UNKNOWN_REPORT_CARD_GRADE_RANK,
   getReportCardGradeRank, REPORT_CARD_GRADE_COLORS, GRADE_RADAR_COLORS,
   scoreToGrade, gradeRange, type ReportCardGradeRange,
 } from "./report-card-core";
-export { scorePegStability, scoreLiquidity } from "./report-card-peg-liquidity";
 export {
   computeCollateralQualityFromReserves,
-  chainInfraScore,
-  chainInfraLabel,
   inferResilienceDefaults,
   resolveResilienceFactors,
-  scoreResilience,
 } from "./report-card-resilience";
-export {
-  GOVERNANCE_QUALITY_SCORE,
-  BRIDGE_ROUTE_RISK_BLEND_WEIGHT,
-  BRIDGE_ROUTE_RISK_LABEL,
-  BRIDGE_ROUTE_RISK_SCORE,
-  ORACLE_RISK_BLEND_WEIGHT,
-  ORACLE_RISK_LABEL,
-  ORACLE_RISK_SCORE,
-  isOracleRiskApplicable,
-  resolveBridgeRouteRiskScore,
-  resolveGovernanceQuality,
-  resolveOracleRiskScore,
-  scoreDecentralization,
-  scoreDecentralizationBreakdown,
-} from "./report-card-governance";
-export { scoreDependencyRisk } from "./report-card-dependency";
-export { applyVariantOverallCap, computeOverallGrade, computeStressedGrades } from "./report-card-overall";
 export {
   createBlacklistResolutionContext,
   enrichLiveSlicesForBlacklist,

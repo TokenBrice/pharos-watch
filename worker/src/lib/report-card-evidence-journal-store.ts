@@ -9,7 +9,6 @@ import {
 import {
   BOUNDED_JOURNAL_MAX_ROWS_PER_ASSET,
   BOUNDED_JOURNAL_RETENTION_SEC,
-  appendBoundedJournal,
   loadBoundedJournal,
   type BoundedJournalStoreConfig,
 } from "./bounded-journal-store";
@@ -67,15 +66,6 @@ const config: BoundedJournalStoreConfig<
     malformedStoredJson: (message) => `Malformed stored report-card evidence journal JSON: ${message}`,
   },
 };
-
-export async function appendReportCardEvidenceJournalV1(
-  db: D1Database,
-  records: readonly ReportCardEvidenceJournalV1[],
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<{ accepted: number; assets: number }> {
-  return appendBoundedJournal(config, db, records, nowSec, signal);
-}
 
 export async function loadReportCardEvidenceJournalByIdV1(
   db: D1Database,

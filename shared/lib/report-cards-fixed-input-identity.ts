@@ -5,7 +5,6 @@ import {
   type ExitRouteObservation,
 } from "../types/market";
 import type { RedemptionBackstopMap } from "../types/redemption";
-import { ReportCardsResponseSchema, type ReportCard, type ReportCardsResponse } from "../types/report-cards";
 import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
@@ -122,7 +121,7 @@ function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>
   } as T;
 }
 
-function normalizeFixedInputExitRouteObservations<T extends ExitRouteObservation>(
+export function normalizeFixedInputExitRouteObservations<T extends ExitRouteObservation>(
   observations: readonly T[] | null | undefined,
 ): T[] | null | undefined {
   if (observations == null) return observations;
@@ -208,71 +207,6 @@ export function computeRedemptionPayloadFingerprint(
       domain: "report-cards.fixed-input.redemption-payload.v1",
       redemptionGenerationId,
       redemptionBackstopMap: normalizeFixedRedemptionBackstopMap(redemptionBackstopMap),
-    }),
-  );
-}
-
-function normalizeReportCardForReplay(card: ReportCard): ReportCard {
-  return {
-    ...card,
-    dimensions: Object.fromEntries(
-      Object.entries(card.dimensions).map(([key, dimension]) => [
-        key,
-        {
-          ...dimension,
-          ...(dimension.detailItems
-            ? { detailItems: [...dimension.detailItems].sort((left, right) => left.label.localeCompare(right.label)) }
-            : {}),
-        },
-      ]),
-    ) as ReportCard["dimensions"],
-    rawInputs: {
-      ...card.rawInputs,
-      dependencies: [...card.rawInputs.dependencies].sort(
-        (left, right) =>
-          left.id.localeCompare(right.id) ||
-          (left.type ?? "collateral").localeCompare(right.type ?? "collateral") ||
-          left.weight - right.weight,
-      ),
-    },
-  };
-}
-
-/** Removes publication-envelope ordering so fixed-input replay output is byte-comparable. */
-export function normalizeReportCardsReplayPayload(value: unknown): ReportCardsResponse {
-  const snapshot = ReportCardsResponseSchema.parse(value);
-  return {
-    cards: [...snapshot.cards].map(normalizeReportCardForReplay).sort((left, right) => left.id.localeCompare(right.id)),
-    methodology: snapshot.methodology,
-    dependencyGraph: {
-      edges: [...snapshot.dependencyGraph.edges].sort(
-        (left, right) =>
-          left.from.localeCompare(right.from) ||
-          left.to.localeCompare(right.to) ||
-          left.type.localeCompare(right.type) ||
-          left.weight - right.weight,
-      ),
-    },
-    updatedAt: snapshot.updatedAt,
-    ...(snapshot.liquidityStale != null ? { liquidityStale: snapshot.liquidityStale } : {}),
-    ...(snapshot.redemptionStale != null ? { redemptionStale: snapshot.redemptionStale } : {}),
-    ...(snapshot.inputFreshness ? { inputFreshness: snapshot.inputFreshness } : {}),
-    ...(snapshot.collateralDriftCoins
-      ? {
-          collateralDriftCoins: [...snapshot.collateralDriftCoins].sort((left, right) =>
-            left.id.localeCompare(right.id),
-          ),
-        }
-      : {}),
-    ...(snapshot.liveToFallbackCoins ? { liveToFallbackCoins: [...snapshot.liveToFallbackCoins].sort() } : {}),
-  };
-}
-
-export function computeReportCardsReplayPayloadFingerprint(value: unknown): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.replay-payload.v1",
-      payload: normalizeReportCardsReplayPayload(value),
     }),
   );
 }

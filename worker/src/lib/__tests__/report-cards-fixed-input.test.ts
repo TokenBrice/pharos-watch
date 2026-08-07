@@ -6,26 +6,20 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
   computeDexLiquidityPayloadFingerprint as computeSharedDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint as computeSharedRedemptionPayloadFingerprint,
-  computeReportCardsReplayPayloadFingerprint as computeSharedReportCardsReplayPayloadFingerprint,
   computeReportCardsRegistryFingerprint as computeSharedReportCardsRegistryFingerprint,
   normalizeFixedRedemptionBackstopMap,
-  normalizeReportCardsReplayPayload as normalizeSharedReportCardsReplayPayload,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import {
-  buildReportCardsSnapshotFromFixedInput,
   buildReportCardsFixedInputCacheEntry,
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
-  computeReportCardsReplayPayloadFingerprint,
   computeReportCardsRegistryFingerprint,
   createReportCardsFixedInput,
   normalizeFixedInput,
-  normalizeReportCardsReplayPayload,
   parseReportCardsFixedInputCacheArtifact,
   parseReportCardsFixedInputCacheValue,
-  serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
 import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9-supply-attribution";
 import {
@@ -311,40 +305,8 @@ function exactFixedInput() {
   });
 }
 
-describe("fixed report-card input replay", () => {
-  it("replays byte-stably without network, D1, or wall-clock reads", () => {
-    const input = fixedInput();
-    const snapshot = buildReportCardsSnapshotFromFixedInput(input);
-    const first = serializeNormalizedReportCardsReplay(snapshot);
-    const second = serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(input));
-    expect(first).toBe(second);
-    expect(first).toBe(`${JSON.stringify(normalizeSharedReportCardsReplayPayload(snapshot), null, 2)}\n`);
-    expect(JSON.parse(first).cards.length).toBeGreaterThan(300);
-  });
-
-  it("keeps the V8 replay byte-identical when measured points add realized cost", () => {
-    const legacyRoute = {
-      ...route("dex:usdt:measured", ["chain:ethereum"], ["ethereum:0xa0b8"]),
-      evidenceKind: "measured-executable-depth" as const,
-    };
-    const realizedRoute = {
-      ...legacyRoute,
-      capacityCurve: legacyRoute.capacityCurve?.map((point) => ({
-        ...point,
-        executionCostBps: 20,
-      })),
-    };
-    const legacy = fixedInput({ "usdt-tether": dexRow([legacyRoute]) });
-    const realized = fixedInput({ "usdt-tether": dexRow([realizedRoute]) });
-
-    expect(
-      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(realized)),
-    ).toBe(
-      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(legacy)),
-    );
-  });
-
-  it("persists V9-only legacy supply attribution without changing V8 replay or base identity", async () => {
+describe("retained v3 fixed report-card input", () => {
+  it("persists V9-only legacy supply attribution without changing the base identity", async () => {
     const assetId = "usdt-tether";
     const aggregateSupplyUsd = 2_480_000_000;
     const aggregateInput = normalizeFixedInput(
@@ -375,9 +337,6 @@ describe("fixed report-card input replay", () => {
     expect(attributedInput.baseInputGenerationId).toBe(aggregateInput.baseInputGenerationId);
     expect(safetyScoreV9ChainSupplySourceGenerationId(attributedInput)).not.toBe(
       safetyScoreV9ChainSupplySourceGenerationId(aggregateInput),
-    );
-    expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(attributedInput))).toBe(
-      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(aggregateInput)),
     );
     expect(Object.keys(attributedInput.chainCirculatingById[assetId] ?? {})).toEqual([]);
 
@@ -568,9 +527,6 @@ describe("fixed report-card input replay", () => {
     expect(safetyScoreV9ChainSupplySourceGenerationId(attributedInput)).not.toBe(
       safetyScoreV9ChainSupplySourceGenerationId(aggregateInput),
     );
-    expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(attributedInput))).toBe(
-      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(aggregateInput)),
-    );
     const direct = attributedInput.safetyScoreV9SupplyAttributionById["wm-m0"]!;
     expect(direct.model).toBe("reviewed-deployment-unit-partition-v1");
     if (direct.model !== "reviewed-deployment-unit-partition-v1") {
@@ -619,39 +575,9 @@ describe("fixed report-card input replay", () => {
       resolvedBlacklistStatuses: Object.fromEntries(Object.entries(input.resolvedBlacklistStatuses).reverse()),
     };
     expect(JSON.stringify(normalizeFixedInput(permuted))).toBe(JSON.stringify(normalizeFixedInput(input)));
-    expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(permuted))).toBe(
-      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(input)),
+    expect(normalizeFixedInput(permuted).baseInputGenerationId).toBe(
+      normalizeFixedInput(input).baseInputGenerationId,
     );
-  });
-
-  it("rejects malformed inputs and unapproved methodology mismatches", () => {
-    expect(() => buildReportCardsSnapshotFromFixedInput({ ...fixedInput(), clockSec: Number.NaN })).toThrow(
-      "Malformed fixed report-card input",
-    );
-    const mismatched = { ...fixedInput(), methodologyVersion: "0.0" };
-    expect(() => buildReportCardsSnapshotFromFixedInput(mismatched)).toThrow("does not match current");
-    expect(() => buildReportCardsSnapshotFromFixedInput(mismatched, { allowMethodologyMismatch: true })).not.toThrow();
-
-    const registryMismatched = withoutBaseInputGenerationId({
-      ...fixedInput(),
-      registryFingerprint: "0".repeat(64),
-    });
-    expect(() => buildReportCardsSnapshotFromFixedInput(registryMismatched)).toThrow("registry fingerprint");
-    expect(() =>
-      buildReportCardsSnapshotFromFixedInput(registryMismatched, { allowRegistryMismatch: true }),
-    ).not.toThrow();
-
-    expect(() =>
-      buildReportCardsSnapshotFromFixedInput(
-        withoutBaseInputGenerationId({ ...fixedInput(), dexPayloadFingerprint: "0".repeat(64) }),
-      ),
-    ).toThrow("DEX payload fingerprint");
-
-    expect(() =>
-      buildReportCardsSnapshotFromFixedInput(
-        withoutBaseInputGenerationId({ ...fixedInput(), dexGenerationId: "different-generation" }),
-      ),
-    ).toThrow("DEX payload fingerprint");
   });
 
   it("normalizes nested route, key, output, and capacity-curve ordering", () => {
@@ -677,36 +603,13 @@ describe("fixed report-card input replay", () => {
   it("keeps canonical identity exports and digest vectors stable", () => {
     expect(computeDexLiquidityPayloadFingerprint).toBe(computeSharedDexLiquidityPayloadFingerprint);
     expect(computeRedemptionPayloadFingerprint).toBe(computeSharedRedemptionPayloadFingerprint);
-    expect(computeReportCardsReplayPayloadFingerprint).toBe(computeSharedReportCardsReplayPayloadFingerprint);
     expect(computeReportCardsRegistryFingerprint).toBe(computeSharedReportCardsRegistryFingerprint);
-    expect(normalizeReportCardsReplayPayload).toBe(normalizeSharedReportCardsReplayPayload);
     expect(computeDexLiquidityPayloadFingerprint({}, "dex-test")).toBe(
       "eb15cc883287b8a986bb2aa451706ec9f882059876b78aef35c9c0c0ab071937",
     );
     expect(computeRedemptionPayloadFingerprint({}, "redemption-test")).toBe(
       "e4410ccc7fda2f9d507e84f421d1a1ff937353ca153d930b3089ad7c5b9f93e3",
     );
-    expect(
-      computeReportCardsReplayPayloadFingerprint({
-        cards: [],
-        methodology: {
-          version: "test",
-          weights: {
-            pegStability: 0.25,
-            liquidity: 0.25,
-            resilience: 0.2,
-            decentralization: 0.15,
-            dependencyRisk: 0.15,
-          },
-          pegMultiplierExponent: 1,
-          thresholds: [],
-        },
-        dependencyGraph: { edges: [] },
-        updatedAt: 1,
-      }),
-    ).toBe("d7af69822f28633a7d49c927604fbd7c83577cb9a330282a7e1aee85be5a8b63");
-    const replay = buildReportCardsSnapshotFromFixedInput(fixedInput());
-    expect(computeReportCardsReplayPayloadFingerprint(replay)).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("normalizes redemption payload identity and producer methodology versions", () => {

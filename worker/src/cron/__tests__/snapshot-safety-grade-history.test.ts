@@ -234,4 +234,120 @@ describe("snapshotSafetyGradeHistory", () => {
       "safety-score-history:v2:operationally-affected",
     );
   });
+
+  /**
+   * 9.07 native-input boundary. The writer keys comparability on the
+   * *publication* identity; the capture's `model: "v9-input"` identity never
+   * reaches it, because `safetyScoreHistoryIdentityFromV2Row` reconstructs the
+   * predecessor from V2 row columns and no column carries the input model. So
+   * moving the producer to the native capture cannot manufacture a boundary or
+   * an organic transition on its own.
+   */
+  it("does not treat the native-input projection change as a history boundary", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [
+        makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 }),
+        makeWorkerV9Card({ id: "usdt-tether", grade: "B", score: 72 }),
+      ],
+    });
+    const identity = current.safetyScoreIdentity;
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      snapshot: current,
+    });
+    // The predecessor row was written by the pre-cutover producer: the same V9
+    // publication identity, but a different base-input generation id, which is
+    // exactly what a projection change moves.
+    mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue(
+      current.cards.map((card, index) => ({
+        history_id: `history:${card.id}`,
+        stablecoin_id: card.id,
+        recorded_at: current.updatedAt - 86_400,
+        model: identity.model,
+        identity_schema_version: identity.schemaVersion,
+        methodology_version: identity.methodologyVersion,
+        policy_id: identity.policyId,
+        policy_digest: identity.policyDigest,
+        evaluation_build_digest: identity.evaluationBuildDigest,
+        base_input_generation_id: `report-cards-input:v1:${String(index).repeat(64).slice(0, 64)}`,
+        model_publication_generation_id: `${identity.publicationGenerationId}-previous`,
+        transition_kind: "initial-baseline",
+        grade: card.grade,
+        score: card.score,
+        prev_grade: null,
+        prev_score: null,
+      })),
+    );
+    const all = vi.fn().mockResolvedValue({ results: [] });
+    const db = { prepare: vi.fn(() => ({ all })) } as unknown as D1Database;
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      skipped: 2,
+      changed: 0,
+      identityBoundaryBaselines: 0,
+      suppressedIdentityTransitions: 0,
+      v2RowsWritten: 0,
+    });
+  });
+
+  /**
+   * The counter-case that keeps the assertion above honest: the evaluation
+   * build IS part of publication-identity comparability, so the 9.07 deploy —
+   * which rotates `evaluationBuildDigest` because the V8 engine deletion
+   * changed pinned files — writes one boundary baseline per asset instead of
+   * organic transitions.
+   */
+  it("writes a boundary baseline when the evaluation build rotates", async () => {
+    const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
+    });
+    const identity = current.safetyScoreIdentity;
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      snapshot: current,
+    });
+    mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue([
+      {
+        history_id: "history:usdc-circle",
+        stablecoin_id: "usdc-circle",
+        recorded_at: current.updatedAt - 86_400,
+        model: identity.model,
+        identity_schema_version: identity.schemaVersion,
+        methodology_version: identity.methodologyVersion,
+        policy_id: identity.policyId,
+        policy_digest: identity.policyDigest,
+        evaluation_build_digest: "c".repeat(64),
+        base_input_generation_id: identity.baseInputGenerationId,
+        model_publication_generation_id: `${identity.publicationGenerationId}-previous`,
+        transition_kind: "initial-baseline",
+        grade: "B",
+        score: 72,
+        prev_grade: null,
+        prev_score: null,
+      },
+    ]);
+    const all = vi.fn().mockResolvedValue({ results: [] });
+    const bind = vi.fn(() => ({ statement: true }));
+    const batch = vi.fn().mockResolvedValue([]);
+    const db = {
+      prepare: vi.fn(() => ({ all, bind })),
+      batch,
+    } as unknown as D1Database;
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      changed: 0,
+      identityBoundaryBaselines: 1,
+      skipped: 0,
+    });
+    expect(batch).toHaveBeenCalledTimes(1);
+  });
 });

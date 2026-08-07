@@ -18,6 +18,7 @@ import type { PeggedAsset } from "./enrich-prices";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
+import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 
 export interface MainPublicationInput {
   assets: PeggedAsset[];
@@ -34,6 +35,7 @@ export interface MainPublicationInput {
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
   reportProgress?: CronProgressReporter;
   binanceSession?: BinanceFetchSession;
+  nativePegSession?: NativePegQuoteSession;
 }
 
 export interface MainPublicationResult {
@@ -106,6 +108,7 @@ export async function publishMainStablecoinsAndRunFollowThrough(
     "",
     "",
     input.binanceSession,
+    input.nativePegSession,
   );
   if (isAbortResult(depegResult)) return depegResult;
   return {

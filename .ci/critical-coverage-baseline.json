@@ -77,7 +77,6 @@
     "worker/src/lib/pricing-source-freshness.ts": 100,
     "worker/src/lib/primary-price-collector.ts": 94.9,
     "worker/src/lib/dex-price-estimators.ts": 97,
-    "worker/src/lib/geckoterminal-price-probe.ts": 88.6,
     "worker/src/lib/geckoterminal-price-probe-stats.ts": 100,
     "worker/src/lib/address-price-providers/dexpaprika.ts": 90.4,
     "worker/src/lib/address-price-providers/dexscreener.ts": 98.6,
@@ -105,7 +104,6 @@
     "worker/src/lib/live-reserves-store-views.ts": 89.6,
     "worker/src/lib/live-reserves-store-write.ts": 97.4,
     "worker/src/lib/publication-contract.ts": 85.8,
-    "worker/src/lib/report-card-publication.ts": 96,
     "shared/lib/safety-score-publication.ts": 100,
     "shared/lib/safety-score-v9-input-identity.ts": 100,
     "worker/src/lib/identified-active-safety-score-source.ts": 100,
@@ -224,6 +222,8 @@
     "functions/lib/pages-proxy-harness.ts": 100,
     "functions/lib/proxy-paths.ts": 100,
     "functions/lib/proxy-utils.ts": 95.7,
-    "functions/lib/upstream-proxy.ts": 98
+    "functions/lib/upstream-proxy.ts": 98,
+    "worker/src/lib/safety-score-v9-capture.ts": 85.2,
+    "worker/src/lib/safety-score-v9-native-input.ts": 58.4
   }
 }

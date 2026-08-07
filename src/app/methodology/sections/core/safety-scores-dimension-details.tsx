@@ -130,9 +130,8 @@ export function SafetyScoresDimensionDetails() {
           A rated Mint Authority Score applies as the final stage:{" "}
           <span className="pharos-numeric">min(score, round(score &times; 0.65 + MAS &times; 0.35))</span>. The blend
           only drags the dimension down &mdash; a weak privileged-mint path undermines a decentralization claim, while a
-          strong one never lifts it. Coins without a rated Mint Authority Score are unchanged, wrappers take the drag
-          once on their inherited pre-blend score (capped at the parent&apos;s blended score), and a{" "}
-          <span className="text-foreground">Mint authority</span> detail row appears when the drag binds.
+          strong one never lifts it. Coins without a rated Mint Authority Score are unchanged, and wrappers take the
+          drag once on their inherited pre-blend score (capped at the parent&apos;s blended score).
         </p>
         <p className="font-medium text-foreground mt-2">
           Chain-risk penalty (DAO and multisig governance &mdash; exempt for immutable-code, wrapper, regulated-entity,

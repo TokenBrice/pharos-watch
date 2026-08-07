@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSafetyScoreV9InputIdentity,
 } from "@shared/lib/safety-score-v9-input-identity";
-import { createSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
@@ -27,14 +27,14 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
   loadExactDexPublicationGeneration: mocks.loadDexGeneration,
 }));
 
-vi.mock("../../lib/report-cards-fixed-input", async (importOriginal) => {
+vi.mock("../../lib/safety-score-v9-native-input", async (importOriginal) => {
   const original =
     await importOriginal<
-      typeof import("../../lib/report-cards-fixed-input")
+      typeof import("../../lib/safety-score-v9-native-input")
     >();
   return {
     ...original,
-    parseReportCardsFixedInputCacheArtifact: mocks.parseFixedInput,
+    parseNativeV9InputCacheArtifact: mocks.parseFixedInput,
   };
 });
 
@@ -87,7 +87,7 @@ const { computeSafetyScoreV9 } = await import("../compute-safety-score-v9");
 describe("computeSafetyScoreV9", () => {
   beforeEach(() => {
     const fixedInput = {
-      ...createSafetyScoreV9FullRegistryInput(),
+      ...createNativeSafetyScoreV9FullRegistryInput(),
       pegDataById: {},
     };
     const safetyScoreIdentity = buildSafetyScoreV9InputIdentity({
@@ -181,7 +181,7 @@ describe("computeSafetyScoreV9", () => {
 
   it("rejects a fixed input captured from an older stablecoin cache generation", async () => {
     mocks.getCacheUpdatedAt.mockResolvedValueOnce(
-      createSafetyScoreV9FullRegistryInput().updatedAt + 900,
+      createNativeSafetyScoreV9FullRegistryInput().updatedAt + 900,
     );
 
     const result = await computeSafetyScoreV9({} as D1Database);
@@ -198,9 +198,57 @@ describe("computeSafetyScoreV9", () => {
       stage: "input-load",
       reason: "stablecoins-generation-mismatch",
       latestStablecoinsUpdatedAt:
-        createSafetyScoreV9FullRegistryInput().updatedAt + 900,
+        createNativeSafetyScoreV9FullRegistryInput().updatedAt + 900,
     });
     expect(mocks.loadDexGeneration).not.toHaveBeenCalled();
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("degrades without publishing when the fixed-input cache row is still a v1 envelope (deploy-window overlap)", async () => {
+    const actualNativeInput = await vi.importActual<
+      typeof import("../../lib/safety-score-v9-native-input")
+    >("../../lib/safety-score-v9-native-input");
+    mocks.parseFixedInput.mockImplementationOnce(
+      actualNativeInput.parseNativeV9InputCacheArtifact,
+    );
+    mocks.getCaches.mockResolvedValueOnce(
+      new Map([
+        [
+          "report-cards:fixed-input:exact",
+          {
+            value: JSON.stringify({
+              schemaVersion: 1,
+              kind: "report-cards-fixed-input-exact",
+              encoding: "gzip-base64",
+              sourceGeneration: "report-cards:9.06:1783891200",
+              payloadSha256: "a".repeat(64),
+              uncompressedBytes: 1,
+              payload: "x",
+            }),
+          },
+        ],
+        [
+          "report-cards:v9-peg-provenance-seed:exact",
+          { value: "peg-seed" },
+        ],
+        [
+          "safety-score-v9:supply-attribution-generation:v1",
+          { value: "supply-generation" },
+        ],
+      ]),
+    );
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result.status).toBe("degraded");
+    expect(result.productivity).toMatchObject({
+      productive: false,
+      reason: "v9-publication-source-unavailable",
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stage: "input-load",
+      reason: "exact-input-invalid",
+    });
     expect(mocks.runPublication).not.toHaveBeenCalled();
   });
 
@@ -250,7 +298,7 @@ describe("computeSafetyScoreV9", () => {
       status: "incompatible",
       generationId:
         `safety-score-v9-supply-attribution:v1:${"a".repeat(64)}`,
-      fixedInput: createSafetyScoreV9FullRegistryInput(),
+      fixedInput: createNativeSafetyScoreV9FullRegistryInput(),
       reason: "generation-stale",
     });
     mocks.runPublication.mockImplementationOnce(async (input: {

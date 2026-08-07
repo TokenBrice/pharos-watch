@@ -7,11 +7,11 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { z } from "zod";
+import { SafetyScoreV9SupplyAttributionSchema } from "./report-cards-fixed-input";
 import {
-  normalizeFixedInput,
-  SafetyScoreV9SupplyAttributionSchema,
-  type ReportCardsFixedInput,
-} from "./report-cards-fixed-input";
+  normalizeSafetyScoreV9CompilerInput,
+  type SafetyScoreV9CompilerInput,
+} from "./safety-score-v9-native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   deriveReviewedDeploymentUnitPartition,
@@ -251,7 +251,7 @@ function exactStrings(
 }
 
 function aggregateSupplyUsd(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): number {
   return Object.values(
@@ -288,7 +288,7 @@ function journalRecordsByAsset(
 
 function expectedJournalSourceId(
   assetId: string,
-  attribution: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"][string],
+  attribution: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"][string],
 ): SupplyAttributionJournalV1["sourceId"] | null {
   if (attribution.model === "canonical-lock-mint-group-partition-v2") {
     return "xaut.canonical-lock-mint-group-partition.v2";
@@ -318,7 +318,7 @@ function expectedJournalSourceIdForAsset(
 }
 
 function assertCaptureBindings(input: {
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   capture: SafetyScoreV9SupplyAttributionCapture;
   capturedAtSec: number;
   recordsByAsset: ReadonlyMap<string, SupplyAttributionJournalV1>;
@@ -390,7 +390,7 @@ function assertCaptureBindings(input: {
 }
 
 export function createSafetyScoreV9SupplyAttributionGeneration(input: {
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   capture: SafetyScoreV9SupplyAttributionCapture;
   capturedAtSec: number;
 }): SafetyScoreV9SupplyAttributionGeneration {
@@ -491,7 +491,7 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
   | {
       status: "applied";
       generationId: string;
-      fixedInput: ReportCardsFixedInput;
+      fixedInput: SafetyScoreV9CompilerInput;
       acceptedAssetIds: string[];
       rejectedAssetIds: string[];
       invalidAssetIds: string[];
@@ -499,7 +499,7 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
   | {
       status: "unavailable" | "incompatible";
       generationId: string | null;
-      fixedInput: ReportCardsFixedInput;
+      fixedInput: SafetyScoreV9CompilerInput;
       reason: string;
     };
 
@@ -512,16 +512,16 @@ type SupplyAttributionGenerationCompatibilityReason =
   | "generation-stale";
 
 function withoutSupplyAttribution(
-  fixedInput: Readonly<ReportCardsFixedInput>,
-): ReportCardsFixedInput {
-  return normalizeFixedInput({
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+): SafetyScoreV9CompilerInput {
+  return normalizeSafetyScoreV9CompilerInput({
     ...fixedInput,
     safetyScoreV9SupplyAttributionById: {},
   });
 }
 
 export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): SupplyAttributionGenerationCompatibilityReason | null {
@@ -553,7 +553,7 @@ export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
 }
 
 export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
   consumerClockSec = fixedInput.clockSec,
 ): boolean {
@@ -565,7 +565,7 @@ export function isSafetyScoreV9SupplyAttributionGenerationCompatible(
 }
 
 export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   generation: SafetyScoreV9SupplyAttributionGeneration,
 ): boolean {
   const expectedAssetIds = uniqueSorted(
@@ -592,7 +592,7 @@ export function isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
 }
 
 export function applySafetyScoreV9SupplyAttributionGeneration(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   generation:
     | SafetyScoreV9SupplyAttributionGeneration
     | null,
@@ -620,7 +620,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   }
 
   const attributionById:
-    ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"] = {};
+    SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"] = {};
   const appliedAssetIds: string[] = [];
   const invalidAssetIds: string[] = [];
   for (const assetId of generation.acceptedAssetIds) {
@@ -658,7 +658,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   return {
     status: "applied",
     generationId: generation.generationId,
-    fixedInput: normalizeFixedInput({
+    fixedInput: normalizeSafetyScoreV9CompilerInput({
       ...fixedInput,
       safetyScoreV9SupplyAttributionById: attributionById,
     }),

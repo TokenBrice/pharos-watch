@@ -1,6 +1,12 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createReportCardsFixedInput } from "../../report-cards-fixed-input";
+import {
+  computeNativeDexLiquidityPayloadFingerprint,
+  normalizeNativeV9Input,
+  type NativeDexLiquidityRow,
+  type NativeSafetyScoreV9Input,
+} from "../../safety-score-v9-native-input";
 
 // Keep reviewed registry evidence current at this deterministic V9 calibration snapshot.
 const CLOCK_SEC = 1_786_060_800;
@@ -169,5 +175,53 @@ export function createSafetyScoreV9FullRegistryInput() {
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
+  });
+}
+
+/**
+ * The same production-scale capture in the native v4 shape. It is projected
+ * from the v3 fixture rather than duplicated so both stay in lockstep while the
+ * retained v3 lane still has V8-bound consumers.
+ */
+export function createNativeSafetyScoreV9FullRegistryInput(): NativeSafetyScoreV9Input {
+  const legacy = createSafetyScoreV9FullRegistryInput();
+  const {
+    schemaVersion: _schemaVersion,
+    captureKind: _captureKind,
+    baseInputGenerationId: _baseInputGenerationId,
+    bluechipMap: _bluechipMap,
+    resolvedBlacklistStatuses: _resolvedBlacklistStatuses,
+    collateralDriftCoins: _collateralDriftCoins,
+    dexLiqMap: legacyDexLiqMap,
+    chainCirculatingById: legacyChainCirculatingById,
+    dexPayloadFingerprint: _dexPayloadFingerprint,
+    ...rest
+  } = legacy;
+  const dexLiqMap: Record<string, NativeDexLiquidityRow> = Object.fromEntries(
+    Object.entries(legacyDexLiqMap).map(([assetId, row]) => [
+      assetId,
+      {
+        updatedAt: row.updatedAt,
+        ...(row.exitRouteObservations !== undefined
+          ? { exitRouteObservations: row.exitRouteObservations }
+          : {}),
+        ...(row.exitRouteObservationCoverage !== undefined
+          ? { exitRouteObservationCoverage: row.exitRouteObservationCoverage }
+          : {}),
+      },
+    ]),
+  );
+  return normalizeNativeV9Input({
+    ...rest,
+    schemaVersion: 4,
+    captureKind: "native-v9-inputs",
+    dexLiqMap,
+    chainCirculatingById: Object.fromEntries(
+      Object.entries(legacyChainCirculatingById).map(([assetId, chains]) => [
+        assetId,
+        Object.fromEntries(Object.entries(chains).map(([chain, bucket]) => [chain, { current: bucket.current }])),
+      ]),
+    ),
+    dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, legacy.dexGenerationId),
   });
 }

@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   buildReviewedDeploymentRouteInventory,
@@ -42,7 +42,7 @@ export interface LockMintSupplyPartition {
   pooledRepresentationSupplyUsd: number;
 }
 
-type V9SupplyAttributionById = ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
+type V9SupplyAttributionById = SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"];
 type V9CurrentChainRows = Record<string, { current: number }>;
 
 export interface SafetyScoreV9SupplyAttributionCapture {
@@ -58,7 +58,7 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
 }
 
 function aggregateSupplyUsd(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): number {
   return Object.values(
@@ -67,7 +67,7 @@ function aggregateSupplyUsd(
 }
 
 function hasUpstreamChainSupply(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): boolean {
   return Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(
@@ -76,7 +76,7 @@ function hasUpstreamChainSupply(
 }
 
 export function safetyScoreV9SupplyAttributionExpectedAssetIds(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): string[] {
   const activeAssetIds = new Set(fixedInput.activeAssetIds);
   return SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
@@ -204,7 +204,7 @@ function supplyAttributionAssetDescriptors():
 
 function buildSupplyAttributionJournalRecord(input: {
   descriptor: SupplyAttributionAssetDescriptor;
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
@@ -258,7 +258,7 @@ function buildSupplyAttributionJournalRecord(input: {
 
 async function runSupplyAttributionAssetCapture(input: {
   descriptor: SupplyAttributionAssetDescriptor;
-  fixedInput: Readonly<ReportCardsFixedInput>;
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   observationClockSec: (attemptedAtSec: number) => number;
@@ -323,7 +323,7 @@ async function runSupplyAttributionAssetCapture(input: {
  * row or the V8 chain map used by exact replay.
  */
 export async function captureSafetyScoreV9SupplyAttribution(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   options: SafetyScoreV9SupplyAttributionCaptureOptions = {
@@ -380,7 +380,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
 }
 
 export function safetyScoreV9ChainRows(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): V9CurrentChainRows {
   const attribution = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
@@ -413,7 +413,7 @@ export function safetyScoreV9ChainRows(
 }
 
 export function safetyScoreV9ChainSupplyObservedAtSec(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   fallbackObservedAtSec: number,
 ): number {
@@ -429,7 +429,7 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
 }
 
 export function safetyScoreV9ChainSupplyMaxAgeSec(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   fallbackMaxAgeSec: number | null,
 ): number | null {
@@ -445,7 +445,7 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
     : fallbackMaxAgeSec;
 }
 
-export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<ReportCardsFixedInput>) {
+export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
   const attributionById = fixedInput.safetyScoreV9SupplyAttributionById ?? {};
   return {
     chainCirculatingById: fixedInput.chainCirculatingById,
@@ -457,7 +457,7 @@ export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<Repor
 }
 
 export function safetyScoreV9ChainSupplySourceGenerationId(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): string {
   const digest = sha256Hex(
     stableJsonStringifyV1({

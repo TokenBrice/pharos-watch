@@ -14,14 +14,14 @@ import type {
   V9FactStatusV2,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 import type {
   AssetExtension,
   SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set-schema";
 
 export interface AssetBuildContext {
-  readonly fixedInput: ReportCardsFixedInput;
+  readonly fixedInput: SafetyScoreV9CompilerInput;
   readonly extension: SafetyScoreV9FactSetExtensionV2;
   readonly asset: AssetExtension;
   readonly researchPayloadSha256: string;
@@ -224,7 +224,7 @@ export function missingLocalFact(
 }
 
 export function createAssetBuildContext(
-  fixedInput: ReportCardsFixedInput,
+  fixedInput: SafetyScoreV9CompilerInput,
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
