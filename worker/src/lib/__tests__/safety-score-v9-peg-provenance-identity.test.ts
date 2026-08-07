@@ -186,11 +186,14 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
       [ASSET_ID]: summary(events, fixedInput),
     };
     const safetyScoreIdentity = {
-      model: "v8" as const,
+      model: "v9-input" as const,
       schemaVersion: 1 as const,
       methodologyVersion: fixedInput.methodologyVersion,
       evaluationBuildDigest: DIGEST,
-      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      baseInputGenerationId: fixedInput.baseInputGenerationId.replace(
+        "report-cards-input:v1:",
+        "report-cards-input:v2:",
+      ),
       publicationGenerationId: fixedInput.sourceGeneration,
     };
     const entry =

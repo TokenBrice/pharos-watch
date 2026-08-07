@@ -1,8 +1,6 @@
-import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
-import { writePegAnalyticsCache } from "./peg-analytics-cache";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { toErrorMessage } from "./error-utils";
+import { publishPegAnalyticsCache } from "./peg-analytics-cache";
 import { summarizeCollateralDriftFromLiveReserveMap, type CollateralDriftEntry } from "./collateral-drift";
 import { parseBluechipRatingsCache } from "./bluechip-cache";
 import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
@@ -247,28 +245,7 @@ export async function buildReportCardsSnapshot(
   // per-coin OG renderer previously re-scanned ~21K depeg_events rows per edge
   // miss to rebuild this exact snapshot.
   if (publishPegAnalytics) {
-    const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
-    const yesterdayStartSec = todayStartSec - DAY_SECONDS;
-    let depegEventsToday = 0;
-    let depegEventsYesterday = 0;
-    for (const event of pegAnalytics.allEvents ?? []) {
-      if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
-      if (event.startedAt >= todayStartSec) depegEventsToday += 1;
-      else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
-    }
-    try {
-      await writePegAnalyticsCache(db, {
-        computedAtSec: pegAnalytics.nowSec,
-        depegEventsToday,
-        depegEventsYesterday,
-        pegData: [...pegAnalytics.pegDataById.values()],
-      });
-    } catch (error) {
-      console.warn(
-        "[report-cards-snapshot] peg-analytics cache publish failed (read paths fall back to direct compute):",
-        toErrorMessage(error),
-      );
-    }
+    await publishPegAnalyticsCache(db, pegAnalytics);
   }
 
   const nonNavPegDataById = new Map(

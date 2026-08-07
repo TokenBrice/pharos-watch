@@ -22,12 +22,14 @@ const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() => vi.fn());
 const derivePegAnalyticsSnapshotMock = vi.hoisted(() => vi.fn());
 
 const writePegAnalyticsCacheMock = vi.hoisted(() => vi.fn());
+const publishPegAnalyticsCacheMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../peg-analytics-cache", async (importOriginal) => {
   const original = await importOriginal<typeof import("../peg-analytics-cache")>();
   return {
     ...original,
     writePegAnalyticsCache: writePegAnalyticsCacheMock,
+    publishPegAnalyticsCache: publishPegAnalyticsCacheMock,
   };
 });
 
@@ -233,6 +235,8 @@ describe("buildReportCardsSnapshot", () => {
     loadFreshIndependentLiveReserveMapMock.mockResolvedValue(new Map());
     writePegAnalyticsCacheMock.mockReset();
     writePegAnalyticsCacheMock.mockResolvedValue(undefined);
+    publishPegAnalyticsCacheMock.mockReset();
+    publishPegAnalyticsCacheMock.mockResolvedValue(true);
     derivePegAnalyticsSnapshotMock.mockReset();
     derivePegAnalyticsSnapshotMock.mockResolvedValue({
       pegDataById: new Map(),
@@ -1226,7 +1230,7 @@ describe("buildReportCardsSnapshot", () => {
     const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
 
     await buildReportCardsSnapshot(db);
-    expect(writePegAnalyticsCacheMock).not.toHaveBeenCalled();
+    expect(publishPegAnalyticsCacheMock).not.toHaveBeenCalled();
 
     const todayStartSec = Math.floor(nowSec / 86_400) * 86_400;
     const pegSummary = makePegSummary({});
@@ -1249,11 +1253,10 @@ describe("buildReportCardsSnapshot", () => {
     });
 
     await buildReportCardsSnapshot(db, { publishPegAnalytics: true });
-    expect(writePegAnalyticsCacheMock).toHaveBeenCalledWith(db, {
-      computedAtSec: nowSec,
-      depegEventsToday: 1,
-      depegEventsYesterday: 1,
-      pegData: [pegSummary],
+    expect(publishPegAnalyticsCacheMock).toHaveBeenCalledTimes(1);
+    expect(publishPegAnalyticsCacheMock.mock.calls[0]![1]).toMatchObject({
+      nowSec,
+      pegDataById: new Map([["usdt-tether", pegSummary]]),
     });
   });
 

@@ -7,8 +7,8 @@ import {
   type PegSummaryCoin,
 } from "@shared/types/market";
 import {
-  SafetyScoreV8PublicationIdentitySchema,
-  type SafetyScoreV8PublicationIdentity,
+  SafetyScoreV9InputIdentitySchema,
+  type SafetyScoreV9InputIdentity,
 } from "@shared/types/safety-score-publication";
 import { z } from "zod";
 import { parseJson } from "./json-parse";
@@ -370,7 +370,7 @@ const SafetyScoreV9PegProvenanceSeedSchema = z
     kind: z.literal("safety-score-v9-peg-provenance-exact-seed"),
     sourceGeneration: z.string().min(1),
     clockSec: SafeTimestampSchema,
-    safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema,
+    safetyScoreIdentity: SafetyScoreV9InputIdentitySchema,
     pegProvenanceById: SafetyScoreV9PegProvenanceByIdSchema,
     contentSha256: Sha256Schema,
   })
@@ -842,7 +842,7 @@ export function captureSafetyScoreV9PegProvenanceById(
 export function buildSafetyScoreV9PegProvenanceSeedCacheEntry(input: {
   sourceGeneration: string;
   clockSec: number;
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+  safetyScoreIdentity: SafetyScoreV9InputIdentity;
   pegProvenanceById: SafetyScoreV9PegProvenanceById;
 }): {
   key: string;
@@ -850,7 +850,7 @@ export function buildSafetyScoreV9PegProvenanceSeedCacheEntry(input: {
   storedBytes: number;
 } {
   const safetyScoreIdentity =
-    SafetyScoreV8PublicationIdentitySchema.parse(
+    SafetyScoreV9InputIdentitySchema.parse(
       input.safetyScoreIdentity,
     );
   const pegProvenanceById =
