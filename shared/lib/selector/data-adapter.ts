@@ -11,7 +11,6 @@ import type {
   BluechipRatingsMap,
   DexLiquidityMap,
   PegSummaryResponse,
-  RedemptionBackstopsResponse,
   ReportCardsV9CurrentResponse,
   StablecoinListResponse,
   StressSignalsAllResponse,
@@ -35,7 +34,6 @@ export interface BuildSelectorRowsArgs {
   dexData: DexLiquidityMap | null;
   yieldData: YieldRankingsResponse | null;
   bluechipData: BluechipRatingsMap | null;
-  redemptionData?: RedemptionBackstopsResponse | null;
   /** `Date.now()`-style milliseconds or Unix seconds. */
   now: number;
 }
@@ -79,7 +77,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyGrade != null
         ? yieldEntry.safetyGrade
         : (safety?.grade ?? null);
-    const redemption = args.redemptionData?.coins?.[id];
     const bluechip = args.bluechipData?.[id];
     const currentDeviationBps = peg?.currentDeviationBps ?? dex?.dexDeviationBps ?? null;
 
@@ -120,7 +117,13 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
       concentrationHhi: dex?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},
-      effectiveExitScore: redemption?.effectiveExitScore ?? safety?.pillars.exit.score ?? null,
+      // The published V9 Exit pillar is the exit read. It used to prefer the
+      // redemption snapshot's legacy `effectiveExitScore` — a
+      // max(DEX, redemption) blend over a supply denominator — and fall back to
+      // the pillar, treating two answers to two different questions as
+      // interchangeable. The pillar is the one that measures same-notional exit
+      // capacity, so it is the only one consulted.
+      effectiveExitScore: safety?.pillars.exit.score ?? null,
 
       pharosYieldScore: yieldEntry?.pharosYieldScore ?? null,
       apy30d: yieldEntry?.apy30d ?? null,

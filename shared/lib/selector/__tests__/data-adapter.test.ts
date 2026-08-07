@@ -4,7 +4,6 @@ import type {
   BluechipRatingsMap,
   DexLiquidityMap,
   PegSummaryResponse,
-  RedemptionBackstopsResponse,
   ReportCardsV9CurrentResponse,
   StablecoinListResponse,
   StressSignalsAllResponse,
@@ -82,11 +81,6 @@ describe("buildSelectorRows", () => {
       } as unknown as DexLiquidityMap,
       yieldData: null,
       bluechipData: { "usdc-circle": { grade: "A" } } as unknown as BluechipRatingsMap,
-      redemptionData: {
-        coins: { "usdc-circle": { effectiveExitScore: 79 } },
-        methodology: { version: "redemption-v1" },
-        updatedAt: NOW / 1000,
-      } as unknown as RedemptionBackstopsResponse,
       now: NOW,
     });
 
@@ -103,7 +97,9 @@ describe("buildSelectorRows", () => {
       pegStabilityScore: 96,
       dewsScore: 42,
       liquidityScore: 88,
-      effectiveExitScore: 79,
+      // The exit read now comes from the published V9 Exit pillar, not the
+      // retired redemption blend, so it matches `safetyLiquidityScore`.
+      effectiveExitScore: 77,
       canBeBlacklisted: true,
       collateralQuality: 50,
       custodyModel: "institutional-regulated",

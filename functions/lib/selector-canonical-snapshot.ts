@@ -16,7 +16,6 @@ import {
   type StablecoinListResponse,
   type StressSignalsAllResponse,
 } from "@shared/types/market";
-import { RedemptionBackstopsResponseSchema, type RedemptionBackstopsResponse } from "@shared/types/redemption";
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
@@ -93,18 +92,12 @@ async function loadCanonicalSelectorSources(request: Request, env: SelectorCanon
       StressSignalsAllResponseSchema,
     ),
   ]);
-  const [dexData, yieldData, bluechipData, redemptionData] = await Promise.all([
+  const [dexData, yieldData, bluechipData] = await Promise.all([
     fetchCanonicalSource<DexLiquidityMap>(request, env, API_PATHS.dexLiquidity(), DexLiquidityMapSchema),
     fetchCanonicalSource<YieldRankingsResponse>(request, env, API_PATHS.yieldRankings(), YieldRankingsResponseSchema),
     fetchCanonicalSource<BluechipRatingsMap>(request, env, API_PATHS.bluechipRatings(), BluechipRatingsMapSchema),
-    fetchCanonicalSource<RedemptionBackstopsResponse>(
-      request,
-      env,
-      API_PATHS.redemptionBackstops(),
-      RedemptionBackstopsResponseSchema,
-    ),
   ]);
-  return { stablecoinsData, pegData, reportData, stressData, dexData, yieldData, bluechipData, redemptionData };
+  return { stablecoinsData, pegData, reportData, stressData, dexData, yieldData, bluechipData };
 }
 
 export async function recomputeVerifiedSelectorSnapshot(

@@ -9,7 +9,6 @@ import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
-  useRedemptionBackstops,
   useReportCardsV9,
   useStressSignals,
   useYieldRankings,
@@ -87,7 +86,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
   const dexLiquidity = useDexLiquidity();
   const yieldRankings = useYieldRankings();
   const bluechipRatings = useBluechipRatings();
-  const redemptionBackstops = useRedemptionBackstops();
   const snapshotRequests = useRef(new RequestSequence());
 
   const [snapshotState, setSnapshotState] = useState<
@@ -140,7 +138,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     queryDataOrErrorSettled(stressSignals) &&
     queryDataOrErrorSettled(dexLiquidity) &&
     queryDataOrErrorSettled(bluechipRatings) &&
-    queryDataOrErrorSettled(redemptionBackstops) &&
     (liveInput?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
   const selectorTimestamp = Math.max(
@@ -151,7 +148,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     dexLiquidity.dataUpdatedAt ?? 0,
     yieldRankings.dataUpdatedAt ?? 0,
     bluechipRatings.dataUpdatedAt ?? 0,
-    redemptionBackstops.dataUpdatedAt ?? 0,
   );
 
   const engineResult = useMemo<SelectorEngineResult>(() => {
@@ -166,7 +162,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
       dexData: dexLiquidity.data ?? null,
       yieldData: yieldRankings.data ?? null,
       bluechipData: bluechipRatings.data ?? null,
-      redemptionData: redemptionBackstops.data ?? null,
       now: selectorTimestamp,
     });
 
@@ -193,7 +188,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     dexLiquidity.data,
     liveInput,
     pegSummary.data,
-    redemptionBackstops.data,
     reportCards.data,
     selectorTimestamp,
     stablecoins.data,
