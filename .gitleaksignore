@@ -84,6 +84,7 @@
 3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:339
 3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:340
 46b937d767b61b7dc39d11dcb272c4b80cccfbf6:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:765
+4b93ee6535f204d3d1bedb74e98f25d3395339ce:shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-08-04T12-03-01.000Z-f8167e8aaa52-protocol-api.json:generic-api-key:1
 4fd14411b571a949c4720c02bb7fb3c509916fdf:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:100
 4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:421
 4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:430
