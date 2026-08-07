@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/dependency-graph.ts",
-      "sha256": "8446d1084a6249b9747d337c7a4993d22401dff4912c734166c6e59d44c9b1c0"
+      "sha256": "2118230dc3423e59e27f83441ed0d57e6126190683a878c30166e9166e3ae2a9"
     },
     {
       "path": "shared/lib/exit-route-identity.ts",
@@ -493,7 +493,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "7a68b0d7b546d759808f498b26baeec36ef3b4bd4e734f15bf86155f659a6579"
+  "digest": "55d3f2c8d84acb4f67becbd74cae209f7123953631ee3e013e1c5fea0ac6d52f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -1,5 +1,5 @@
 import { deriveEffectiveDependencies } from "./dependency-derivation";
-import type { DependencyType, DependencyWeight, ReserveSlice, StablecoinMeta } from "../types/core";
+import type { DependencyType, ReserveSlice, StablecoinMeta } from "../types/core";
 
 export interface DependencyGraphEdge {
   from: string;

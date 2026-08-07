@@ -15,7 +15,6 @@ import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
-  type StablecoinClientMeta,
 } from "../../shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
