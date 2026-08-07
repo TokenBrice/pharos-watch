@@ -102,7 +102,7 @@ All active safety consumers resolve the canonical V9 publication:
 
 Consumers that require current ratings reject held publications. Display surfaces may show the held accepted snapshot with an explicit notice. No active consumer uses the V8 compact score cache or computes V8 cards on request.
 
-Selector creation currently fails closed with `503` because its recommendation policy has not been approved for V9. Existing signed selector snapshots remain readable through their historical contract.
+Selector creation recomputes against the live V9 publication (`functions/lib/selector-canonical-snapshot.ts`); a `503` now indicates canonical-source or schema failure, not a policy hold. Existing signed selector snapshots remain readable through their historical contract.
 
 ## History
 

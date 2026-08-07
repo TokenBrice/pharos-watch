@@ -64,8 +64,9 @@ export interface ReportCardsSnapshot {
 export interface BuildReportCardsSnapshotOptions {
   /**
    * Publish the peg-analytics aggregate cache as a side effect. Only the
-   * quarter-hourly report-card publish cron should set this; the builder is
-   * also invoked from several read paths that must not perform D1 writes.
+   * prepare-safety-score-v9-input cron (half-hourly 16,46 chart slot) should
+   * set this; the builder is also invoked from several read paths that must
+   * not perform D1 writes.
    */
   publishPegAnalytics?: boolean;
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
