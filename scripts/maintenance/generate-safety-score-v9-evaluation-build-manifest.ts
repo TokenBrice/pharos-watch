@@ -17,6 +17,7 @@ const OUTPUT_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts
 export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
   "shared/lib/dependency-graph.ts",
+  "shared/lib/exit-route-scoring.ts",
   "shared/lib/sha256.ts",
   "shared/lib/stable-json.ts",
   "shared/lib/safety-score-v9/access-posture.ts",

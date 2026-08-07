@@ -342,6 +342,10 @@ export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/lib/psi-history-universe.ts": "2026-09-05",
   "worker/src/lib/psi-recompute.ts": "2026-09-05",
   "worker/src/lib/psi-replay.ts": "2026-09-05",
+  // Extracted from the already-waived shared/lib/redemption-backstop-scoring.ts
+  // and carries the same review deadline; the extraction did not change what is
+  // covered on either side of it.
+  "shared/lib/exit-route-scoring.ts": "2026-09-05",
   "shared/lib/psi-contribution.ts": "2026-09-05",
   "shared/lib/psi-eligible-client.ts": "2026-09-05",
   "shared/lib/psi-view-model.ts": "2026-09-05",
