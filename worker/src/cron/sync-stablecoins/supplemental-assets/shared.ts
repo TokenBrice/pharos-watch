@@ -185,7 +185,7 @@ export function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
 
 export function buildSupplementalAsset(input: {
   meta: StablecoinMeta;
-  priceResolution: SupplementalPriceResolution;
+  priceResolution: SupplementalPriceResolution | null;
   mcap: number;
   supplySource: string;
   chainCirculating?: PeggedAsset["chainCirculating"];
@@ -195,6 +195,7 @@ export function buildSupplementalAsset(input: {
 }): PeggedAsset {
   const nowSec = Math.floor(Date.now() / 1000);
   const pKey = pegTypeKey(input.meta);
+  const priceResolution = input.priceResolution;
   return {
     id: input.meta.id,
     name: input.meta.name,
@@ -202,13 +203,13 @@ export function buildSupplementalAsset(input: {
     geckoId: input.meta.geckoId,
     pegType: pKey,
     pegMechanism: input.meta.flags.backing,
-    price: input.priceResolution.price,
-    priceSource: input.priceResolution.source,
-    priceConfidence: "single-source",
-    priceUpdatedAt: input.priceResolution.observedAt ?? nowSec,
-    priceObservedAt: input.priceResolution.observedAt ?? nowSec,
-    priceObservedAtMode: input.priceResolution.observedAtMode ?? "local_fetch",
-    priceSyncedAt: nowSec,
+    price: priceResolution?.price ?? null,
+    priceSource: priceResolution?.source,
+    priceConfidence: priceResolution ? "single-source" : null,
+    priceUpdatedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
+    priceObservedAt: priceResolution ? (priceResolution.observedAt ?? nowSec) : null,
+    priceObservedAtMode: priceResolution ? (priceResolution.observedAtMode ?? "local_fetch") : null,
+    priceSyncedAt: priceResolution ? nowSec : null,
     supplySource: input.supplySource,
     circulating: { [pKey]: input.mcap },
     circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
@@ -270,7 +271,9 @@ export function buildPricedSupplementalAsset(
   },
 ): PeggedAsset | null {
   const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-  if (!priceResolution) return null;
+  // Price coverage is independent from row publication: positive upstream
+  // market cap stays publishable with null price, while empty rows fail closed.
+  if (!priceResolution && !(Number.isFinite(input.mcap) && input.mcap > 0)) return null;
 
   return buildSupplementalAsset({
     meta,
