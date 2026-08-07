@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseReportCardsFixedInputCacheValue } from "../src/lib/report-cards-fixed-input";
+import { parseSafetyScoreV9InputCacheValue } from "../src/lib/safety-score-v9-native-input";
 
 const USAGE = `Usage: npx tsx worker/scripts/capture-report-cards-fixed-input.ts [options]
 
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   if (raw && typeof raw === "object" && "results" in raw) {
     raw = (raw as { results?: Array<{ value?: unknown }> }).results?.[0]?.value;
   }
-  const fixedInput = await parseReportCardsFixedInputCacheValue(raw);
+  const fixedInput = await parseSafetyScoreV9InputCacheValue(raw);
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, `${JSON.stringify(fixedInput, null, 2)}\n`, "utf8");
 }

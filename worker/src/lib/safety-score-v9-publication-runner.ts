@@ -4,9 +4,9 @@ import type {
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 import {
-  normalizeFixedInput,
-  type ReportCardsFixedInput,
-} from "./report-cards-fixed-input";
+  normalizeSafetyScoreV9CompilerInput,
+  type SafetyScoreV9CompilerInput,
+} from "./safety-score-v9-native-input";
 import {
   buildSafetyScoreV9PublicationFromNormalizedInput,
 } from "./safety-score-v9-candidate";
@@ -40,7 +40,7 @@ export interface RunSafetyScoreV9PublicationInput {
   db: D1Database;
   fixedInput: unknown;
   prepareFixedInput?: (
-    fixedInput: Readonly<ReportCardsFixedInput>,
+    fixedInput: Readonly<SafetyScoreV9CompilerInput>,
     signal: AbortSignal,
   ) => Promise<unknown>;
   signal?: AbortSignal;
@@ -74,7 +74,7 @@ export type SafetyScoreV9PublicationRunResult =
     };
 
 function fixedInputWithoutV9Enrichment(
-  input: Readonly<ReportCardsFixedInput>,
+  input: Readonly<SafetyScoreV9CompilerInput>,
 ) {
   const {
     safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
@@ -87,8 +87,8 @@ function fixedInputWithoutV9Enrichment(
 }
 
 function sameBaseInput(
-  left: Readonly<ReportCardsFixedInput>,
-  right: Readonly<ReportCardsFixedInput>,
+  left: Readonly<SafetyScoreV9CompilerInput>,
+  right: Readonly<SafetyScoreV9CompilerInput>,
 ): boolean {
   return (
     left.baseInputGenerationId === right.baseInputGenerationId &&
@@ -366,13 +366,13 @@ export async function runSafetyScoreV9Publication(
         "Safety Score v9 publication clock must be epoch seconds",
       );
     }
-    let fixedInput = normalizeFixedInput(input.fixedInput);
+    let fixedInput = normalizeSafetyScoreV9CompilerInput(input.fixedInput);
     attemptedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
 
     stage = "v9-enrichment";
     if (input.prepareFixedInput) {
-      const preparedFixedInput = normalizeFixedInput(
+      const preparedFixedInput = normalizeSafetyScoreV9CompilerInput(
         await input.prepareFixedInput(fixedInput, publicationSignal),
       );
       if (!sameBaseInput(preparedFixedInput, fixedInput)) {

@@ -7,14 +7,15 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
-  buildReportCardsFixedInputCacheEntry,
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-} from "../../lib/report-cards-fixed-input";
+  buildNativeV9InputCacheEntry,
+  NATIVE_V9_INPUT_CACHE_KEY,
+} from "../../lib/safety-score-v9-native-input";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9-supply-attribution-generation";
-import { createSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
@@ -67,17 +68,23 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it("publishes one exact degraded generation and retries only after the producer cooldown", async () => {
     const { sqlite, db } = openDb();
     try {
-      const fixedInput = createSafetyScoreV9FullRegistryInput();
+      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
       const nowSec = fixedInput.clockSec + 15 * 60;
       vi.setSystemTime(nowSec * 1_000);
-      const cacheEntry =
-        await buildReportCardsFixedInputCacheEntry(fixedInput);
+      const cacheEntry = await buildNativeV9InputCacheEntry(
+        fixedInput,
+        buildSafetyScoreV9InputIdentity({
+          methodologyVersion: fixedInput.methodologyVersion,
+          baseInputGenerationId: fixedInput.baseInputGenerationId,
+          publicationGenerationId: fixedInput.sourceGeneration,
+        }),
+      );
       sqlite
         .prepare(
           "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         )
         .run(
-          REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+          NATIVE_V9_INPUT_CACHE_KEY,
           cacheEntry.value,
           fixedInput.clockSec,
         );
@@ -175,16 +182,22 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it("fails closed before capture when the source fixed input is stale", async () => {
     const { sqlite, db } = openDb();
     try {
-      const fixedInput = createSafetyScoreV9FullRegistryInput();
+      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
       vi.setSystemTime((fixedInput.clockSec + 30 * 60 + 1) * 1_000);
-      const cacheEntry =
-        await buildReportCardsFixedInputCacheEntry(fixedInput);
+      const cacheEntry = await buildNativeV9InputCacheEntry(
+        fixedInput,
+        buildSafetyScoreV9InputIdentity({
+          methodologyVersion: fixedInput.methodologyVersion,
+          baseInputGenerationId: fixedInput.baseInputGenerationId,
+          publicationGenerationId: fixedInput.sourceGeneration,
+        }),
+      );
       sqlite
         .prepare(
           "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         )
         .run(
-          REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+          NATIVE_V9_INPUT_CACHE_KEY,
           cacheEntry.value,
           fixedInput.clockSec,
         );

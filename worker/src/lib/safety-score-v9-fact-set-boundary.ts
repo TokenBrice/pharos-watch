@@ -1,12 +1,12 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 
 interface SafetyScoreV9ExtensionAssetSet {
   readonly assets: readonly Readonly<{ assetId: string }>[];
 }
 
 export function assertSafetyScoreV9ExactExtensionAssets(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: Readonly<SafetyScoreV9ExtensionAssetSet>,
 ): void {
   const expected = fixedInput.activeAssetIds;

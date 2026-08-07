@@ -28,7 +28,7 @@ import {
   NavPriceObservationSchema,
   SafetyScoreV9SupplyAttributionSchema,
   normalizeFixedInput,
-  type ReportCardsFixedInput,
+  parseReportCardsFixedInputCacheValue,
 } from "./report-cards-fixed-input";
 import {
   projectSafetyScoreV9PegScoreResult,
@@ -663,4 +663,21 @@ export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<N
 
 export async function parseNativeV9InputCacheValue(value: unknown): Promise<NativeSafetyScoreV9Input> {
   return (await parseNativeV9InputCacheArtifact(value)).input;
+}
+
+/**
+ * Parses either cache envelope version. v2 carries the native v4 capture; v1
+ * carries a retained v3 exact fixed input and is routed to the untouched legacy
+ * parser so frozen operator captures keep replaying byte-for-byte.
+ */
+export async function parseSafetyScoreV9InputCacheValue(value: unknown): Promise<SafetyScoreV9CompilerInput> {
+  const parsedEnvelope = typeof value === "string" ? parseJson(value) : null;
+  if (parsedEnvelope && !parsedEnvelope.ok) {
+    throw new Error(`Malformed V9 input cache envelope: ${parsedEnvelope.message}`);
+  }
+  const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
+  const schemaVersion =
+    raw !== null && typeof raw === "object" ? (raw as { schemaVersion?: unknown }).schemaVersion : undefined;
+  if (schemaVersion === 1) return parseReportCardsFixedInputCacheValue(raw);
+  return parseNativeV9InputCacheValue(raw);
 }

@@ -10,10 +10,10 @@ import {
   writeCliHelpIfRequested,
 } from "../../scripts/lib/cli-args.mjs";
 import {
-  normalizeFixedInput,
-  parseReportCardsFixedInputCacheValue,
-  type ReportCardsFixedInput,
-} from "../src/lib/report-cards-fixed-input";
+  normalizeSafetyScoreV9CompilerInput,
+  parseSafetyScoreV9InputCacheValue,
+  type SafetyScoreV9CompilerInput,
+} from "../src/lib/safety-score-v9-native-input";
 import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
@@ -62,9 +62,9 @@ function isFixedInputCacheEnvelope(value: unknown): boolean {
  * envelope. Cache envelopes deliberately go through the production checksum,
  * byte-length, generation, and exact-capture parser.
  */
-export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promise<ReportCardsFixedInput> {
-  if (isFixedInputCacheEnvelope(value)) return parseReportCardsFixedInputCacheValue(value);
-  return normalizeFixedInput(value);
+export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promise<SafetyScoreV9CompilerInput> {
+  if (isFixedInputCacheEnvelope(value)) return parseSafetyScoreV9InputCacheValue(value);
+  return normalizeSafetyScoreV9CompilerInput(value);
 }
 
 /**
@@ -77,9 +77,9 @@ export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promis
  * captured observation byte-for-byte.
  */
 function rederiveUndisclosedFeeObservations(
-  fixedInput: ReportCardsFixedInput,
-): ReportCardsFixedInput | Omit<ReportCardsFixedInput, "baseInputGenerationId"> {
-  const map: ReportCardsFixedInput["redemptionBackstopMap"] = { ...fixedInput.redemptionBackstopMap };
+  fixedInput: SafetyScoreV9CompilerInput,
+): SafetyScoreV9CompilerInput | Omit<SafetyScoreV9CompilerInput, "baseInputGenerationId"> {
+  const map: SafetyScoreV9CompilerInput["redemptionBackstopMap"] = { ...fixedInput.redemptionBackstopMap };
   let changed = false;
   for (const [assetId, entry] of Object.entries(map)) {
     if (!entry || entry.feeModelKind !== "undisclosed-reviewed") continue;

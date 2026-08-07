@@ -7,7 +7,7 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
 import { normalizeReviewedDeploymentAddress } from "./safety-score-v9-supply-attribution-contract";
 import {
@@ -46,7 +46,7 @@ function unmatchedRouteKey(assetId: string, chain: string, routeCount: number): 
 }
 
 function buildReviewedDeploymentSupplyReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {
@@ -124,7 +124,7 @@ function buildReviewedDeploymentSupplyReview(
 }
 
 function buildRepresentationGroupSupplyReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {
@@ -248,7 +248,7 @@ function buildRepresentationGroupSupplyReview(
  * in the unknown share instead of being attributed to any route.
  */
 export function buildSafetyScoreV9SupplyReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {

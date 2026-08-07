@@ -19,7 +19,7 @@ import {
   REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
 } from "./redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type RetainedRoute = ExtensionAsset["retainedRoutes"][number];
@@ -79,7 +79,7 @@ const REVIEWED_FIXED_RATE_RECEIPT_UNDERLYING: Readonly<Record<string, string>> =
 };
 
 function trackedStablecoinValuation(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   trackedAssetId: string,
   observedAtSec: number,
 ): Pick<
@@ -137,7 +137,7 @@ function trackedStablecoinValuation(
  * unpriced so its basket cannot be valued from the priced legs alone.
  */
 function outputIdentityValuation(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetKey: string,
   observedAtSec: number,
 ): ReturnType<typeof trackedStablecoinValuation> {
@@ -153,7 +153,7 @@ function outputIdentityValuation(
 }
 
 function buildOutputReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   observation: ExitRouteObservation,
   sourceGenerationId: string,
 ): RouteOutputReview | null {
@@ -331,7 +331,7 @@ function dexPhysicalResourceKeys(observation: ExitRouteObservation): string[] {
   return [`issuer:${scope.issuerId}`];
 }
 
-function dexCoverageClass(fixedInput: Readonly<ReportCardsFixedInput>, assetId: string): RouteReview["coverageClass"] {
+function dexCoverageClass(fixedInput: Readonly<SafetyScoreV9CompilerInput>, assetId: string): RouteReview["coverageClass"] {
   const coverage = fixedInput.dexLiqMap[assetId]?.exitRouteObservationCoverage;
   if (isDexExitRouteCoverageComplete(coverage)) {
     return "exact-complete";
@@ -340,7 +340,7 @@ function dexCoverageClass(fixedInput: Readonly<ReportCardsFixedInput>, assetId: 
 }
 
 function buildDexRouteReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   observation: ExitRouteObservation,
   composedExit?: ComposedDexExit,
@@ -395,7 +395,7 @@ function composedDexRouteId(assetId: string, observation: ExitRouteObservation):
 }
 
 function buildSafetyScoreV9ComposedDexRoutes(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): RetainedRoute[] {
   const composedExit = getRedemptionBackstopConfig(assetId)?.v9ComposedDexExit;
@@ -550,7 +550,7 @@ function redemptionExecutionCosts(
 }
 
 function buildRedemptionRouteReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview {
@@ -606,7 +606,7 @@ function buildRedemptionRouteReview(
  * what the observation source states.
  */
 export function buildSafetyScoreV9RouteReviews(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): RouteReview[] {
   const reviews: RouteReview[] = [];
@@ -649,7 +649,7 @@ export function buildSafetyScoreV9RouteReviews(
  * byte-for-byte and the derivation no-ops.
  */
 export function buildSafetyScoreV9RetainedRedemptionRoutes(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): RetainedRoute[] {
   const redemption = fixedInput.redemptionBackstopMap[assetId];
@@ -660,7 +660,7 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
 }
 
 export function buildSafetyScoreV9RetainedRoutes(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): RetainedRoute[] {
   return [

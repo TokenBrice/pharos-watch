@@ -18,7 +18,7 @@ import {
   type V9TbillMechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
@@ -102,7 +102,7 @@ function assuranceFact(meta: MechanismMeta): V9MechanismFactV1 {
   return boundedFact("assurance-and-reconciliation", meta.proofOfReserves !== undefined);
 }
 
-function hasReserveEvidence(fixedInput: Readonly<ReportCardsFixedInput>, meta: MechanismMeta): boolean {
+function hasReserveEvidence(fixedInput: Readonly<SafetyScoreV9CompilerInput>, meta: MechanismMeta): boolean {
   return (
     (fixedInput.liveReserveMap[meta.id] ?? []).length > 0 ||
     (meta.reserves?.length ?? 0) > 0 ||
@@ -111,7 +111,7 @@ function hasReserveEvidence(fixedInput: Readonly<ReportCardsFixedInput>, meta: M
 }
 
 function buildFiatCashReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
 ): V9FiatCashMechanismRiskReview | null {
   const reserves = hasReserveEvidence(fixedInput, meta);
@@ -126,7 +126,7 @@ function buildFiatCashReview(
 }
 
 function buildTbillReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
 ): V9TbillMechanismRiskReview | null {
   const reserves = hasReserveEvidence(fixedInput, meta);
@@ -581,7 +581,7 @@ export function getSafetyScoreV9MechanismExitFacts(
  * restated from the recorded proof-of-reserves report.
  */
 export function buildSafetyScoreV9MechanismReview(
-  fixedInput: Readonly<ReportCardsFixedInput>,
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
   archetype: string,
 ): V9MechanismRiskReview | null {
