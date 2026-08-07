@@ -3,7 +3,19 @@ import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
 export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve";
 
-const CURVE_NATIVE_DISCOVERY_CHAINS = new Set([
+/**
+ * The chains on which Curve counts as a registered token-pool discovery
+ * provider. This is the single definition: `getDexDiscoveryProviders()` names
+ * it in the persisted `providers` array that the deployment census validates
+ * against, and the discovery crawl queries exactly these chains.
+ *
+ * Querying Curve outside this set produced evidence the census could not
+ * attribute — a Curve `success` could flip a deployment to `verified_no_pools`
+ * while the recorded provider list named only the providers that failed, which
+ * is how a known-empty exit surface got certified on evidence no named provider
+ * produced.
+ */
+export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
   "ethereum",
   "base",
   "arbitrum",
