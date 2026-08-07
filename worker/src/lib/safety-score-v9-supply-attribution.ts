@@ -22,6 +22,7 @@ import {
 import {
   buildXautRepresentationGroupInventory,
   XAUT_ASSET_ID,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
@@ -425,6 +426,23 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
     attribution.observedAtSec,
     aggregateObservedAtSec ?? fallbackObservedAtSec,
   );
+}
+
+export function safetyScoreV9ChainSupplyMaxAgeSec(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+  fallbackMaxAgeSec: number | null,
+): number | null {
+  const attribution =
+    fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
+  // XAUT's finalized Ethereum observation has an explicit one-hour window.
+  // Preserve that same bound when the accepted packet becomes fact evidence;
+  // otherwise the generic chain-supply window would immediately contradict
+  // the per-asset admission contract.
+  return assetId === XAUT_ASSET_ID &&
+    attribution?.model === "canonical-lock-mint-group-partition-v2"
+    ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
+    : fallbackMaxAgeSec;
 }
 
 export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<ReportCardsFixedInput>) {

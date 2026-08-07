@@ -14,6 +14,7 @@ This skill does **not** touch `shared/data/funding/costs.json`. Cost line items 
 
 - **Six chains:** Ethereum, Base, Optimism, Arbitrum, Polygon, Gnosis.
 - **Wallet:** `0x5d698362edb8aea1c2b2483096bdee3265d860db` (ENS: `pharos-watch.eth`). Same address on every EVM chain.
+- **The wallet is a Gnosis Safe, not an EOA.** It swaps and bridges its own holdings, and every one of those shows up in `alchemy_getAssetTransfers` as an inbound transfer that looks exactly like a donation. Treating one as a donation double-counts money already in the ledger. Step 3a exists solely to catch this and is not optional.
 
 ### Prerequisites
 
@@ -30,6 +31,8 @@ Extended reference (edge cases, history, examples): read ./reference.md when nee
 #### Step 1 — Read current state
 
 1. Read `shared/data/funding/donations.json`. For each of the 6 chains, record the highest `block_timestamp` seen on that chain (or `0` if the chain has no rows). Call this map `cursorsByChain`.
+
+   The cursor is per-chain and only moves forward, so **anything a past run missed below the cursor is invisible forever** — widening coverage later (a new category, a new endpoint) will not surface it. When you widen coverage on a chain, scan that chain's full history once and report any pre-cursor rows you find instead of filtering them out silently. See the open backfill note in `./reference.md`.
 2. Read `shared/data/funding/costs.json` only to display the current monthly cost total to the user for context ("costs are $X/m; $Y covered so far this month") — do not edit it.
 
 #### Step 2 — Fetch new transfers on every chain
@@ -46,10 +49,10 @@ Run the six calls in parallel (or sequentially — it's one curl per chain, the 
 | arbitrum | `arb-mainnet.g.alchemy.com` |
 | polygon | `polygon-mainnet.g.alchemy.com` |
 
-**Category support differs by chain:** Alchemy's `internal` category is only supported on **ethereum and polygon**. On base, optimism, and arbitrum, pass `["external","erc20"]` only.
+**Category support differs by chain.** Alchemy accepts `internal` on **ethereum, polygon, and base**; **optimism and arbitrum reject it** with `{"code":-32602}`. Verified 2026-08-05 — re-test before assuming, Alchemy has expanded this list before.
 
 ```bash
-# Ethereum / Polygon (include "internal")
+# Ethereum / Polygon / Base (include "internal")
 curl -s "https://eth-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"alchemy_getAssetTransfers","params":[{
@@ -58,8 +61,8 @@ curl -s "https://eth-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
     "withMetadata":true,"excludeZeroValue":true,"order":"asc"
   }]}'
 
-# Base / Optimism / Arbitrum (drop "internal")
-curl -s "https://base-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
+# Optimism / Arbitrum (drop "internal")
+curl -s "https://opt-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"alchemy_getAssetTransfers","params":[{
     "toAddress":"0x5d698362edb8aea1c2b2483096bdee3265d860db",
@@ -67,6 +70,14 @@ curl -s "https://base-mainnet.g.alchemy.com/v2/$ALCHEMY_API_KEY" \
     "withMetadata":true,"excludeZeroValue":true,"order":"asc"
   }]}'
 ```
+
+**Native ETH arriving through a bridge or router is an internal trace, not an `external` transfer.** Dropping `internal` on optimism/arbitrum therefore drops real donations — most arbitrum ETH in the current ledger arrived this way. Cover arbitrum with Etherscan V2 `txlistinternal` (`chainid=42161`), same shape as the Gnosis calls below:
+
+| Chain | Native ETH coverage |
+|---|---|
+| ethereum, polygon, base | Alchemy `internal` ✅ |
+| arbitrum | Alchemy ✗ → Etherscan V2 `chainid=42161` `txlistinternal` ✅ |
+| optimism | **Blind spot.** Alchemy rejects `internal`; Etherscan free tier returns `NOTOK` ("Free API access is not supported for this chain") for `chainid=10`; Blockscout reports its index incomplete. Direct EOA sends still land via `external`. Say so plainly when reporting rather than implying full coverage. |
 
 `fromBlock` can be omitted for low-volume wallets — Alchemy returns everything from genesis and we filter by `cursorsByChain[chain]` after.
 
@@ -93,19 +104,42 @@ For every row collected across all six chains, filter: keep only rows where `blo
 
 If the combined list is empty after filtering, report "No new donations since last run" and exit. No file edits.
 
-#### Step 3 — Filter obvious spam
+#### Step 3a — Reject the wallet's own Safe activity
 
-For each candidate, present to the user:
+Do this **before** showing anything to the user. It needs no user input — it is a mechanical check, and the user cannot be expected to spot a self-swap from a summary line.
+
+For every candidate, fetch the transaction and its receipt on that chain. Reject the candidate if **either** holds:
+
+1. **Safe `execTransaction`** — `tx.to == wallet` and `tx.input` starts with `0x6a761202`. The Safe executed this itself; nobody sent us anything.
+2. **An outbound leg in the same receipt** — any ERC-20 `Transfer` log (topic0 `0xddf252ad...b3ef`) whose `from` is the wallet, or native value leaving the wallet. Value going out means this is a swap or bridge of our own holdings, not a gift.
+
+```bash
+# both checks, per candidate tx
+cast tx   <hash> --rpc-url <chain-rpc>   # inspect .to and .input[:10]
+cast receipt <hash> --rpc-url <chain-rpc> # look for Transfer logs with from == wallet
+```
+
+Equivalent via `eth_getTransactionByHash` + `eth_getTransactionReceipt` on the Alchemy host for that chain. Decode the receipt yourself; do not infer from the transfer summary alone.
+
+A rejected candidate is **not** spam and **not** a donation — it is our own money moving. Report it separately with the offsetting ledger row it converts, so the user can see nothing was lost. Worked examples of both patterns are in `./reference.md`.
+
+Sender-is-a-contract is a **hint**, not a verdict: legitimate donations do arrive from bridges, routers, and Safes. Only the two conditions above are decisive.
+
+#### Step 3b — Filter obvious spam
+
+For each surviving candidate, present to the user:
 
 - `chain`, short `tx_hash`, `asset_symbol`, `amount_decimal`, short `from_address`
 
 The user confirms which rows are real donations. Rows marked spam are discarded (not written anywhere — the skill is memoryless across runs). If the user marks every candidate spam, report that and stop — no file edits. Real rows proceed to Step 4.
 
+**Watch for address-poisoning clones.** Spammers mint a token whose ticker is a homoglyph of a real one (`USḌC` with a dotted D) and send it from an address whose first and last four hex digits match a genuine recent donor, mimicking that donor's exact amount. Compare the *full* sender address against recent rows, not the truncated form, and always run the Step 4 contract check.
+
 #### Step 4 — Price each donation in USD at receipt
 
 For each approved row:
 
-- **Stablecoins** (USDC, USDT, DAI, xDAI, FRAX, LUSD): `usd_at_receipt = amount_decimal`, `price_note = "stablecoin-1-to-1"`. **Contract check first:** for ERC-20 rows, the captured `asset_address` must match that stablecoin's canonical contract on that chain (compare against `contracts[]` in `shared/data/stablecoins/coins/<id>.json`). A familiar ticker at an unknown address is a spoofed token — send it back to Step 3 as spam, never price it 1:1.
+- **Stablecoins** (USDC, USDT, DAI, xDAI, FRAX, LUSD): `usd_at_receipt = amount_decimal`, `price_note = "stablecoin-1-to-1"`. **Contract check first:** for ERC-20 rows, the captured `asset_address` must match that stablecoin's canonical contract on that chain (compare against `contracts[]` in `shared/data/stablecoins/coins/<id>.json`). A familiar ticker at an unknown address is a spoofed token — send it back to Step 3b as spam, never price it 1:1.
 - **Native ETH / WETH:** CoinGecko `/coins/ethereum/history?date=DD-MM-YYYY` for the transfer's UTC date, read `market_data.current_price.usd`. `price_note = "coingecko-historical-YYYY-MM-DD"`.
 - **Native MATIC:** CoinGecko `/coins/matic-network/history?date=DD-MM-YYYY`. `price_note = "coingecko-historical-YYYY-MM-DD"`.
 - **WBTC:** CoinGecko `/coins/wrapped-bitcoin/history?date=DD-MM-YYYY`.
@@ -143,8 +177,12 @@ Flag anything uncertain:
 - A `community` row with `usd > $500` — ask whether this might be the founder subsidy instead.
 - An asset that required manual pricing — show the source the user gave.
 - A sender with no resolved ENS — confirm it'll render as a truncated address.
+- Anything Step 3a rejected — list it with the ledger row it converts, so the exclusion is auditable.
+- Any chain whose native coverage was incomplete this run (see the Step 2 matrix) — name it rather than letting silence imply full coverage.
 
 If any assumption is unsafe (e.g. no confirmed founder address yet and inbound is $5k), stop and ask before writing.
+
+**If Step 3a or the contract check disqualifies a row the user already approved, drop it and say so in the final report.** New evidence outranks a stale approval; appending a self-swap because it was approved before the decode is a double-count. Re-ask only if the correct action is genuinely ambiguous.
 
 #### Step 7 — Write the file
 
@@ -174,6 +212,7 @@ git commit -m "data(funding): add {N} new donation(s) via funding-update" \
 ### Quality Standards
 
 - Never append a row you haven't personally verified on the right explorer (Etherscan, Basescan, Polygonscan, Arbiscan, Optimism explorer, or Gnosisscan depending on chain).
+- Never append a row without running the Step 3a decode on it. "It looks like a donation" is exactly what a Safe self-swap looks like.
 - `usd_at_receipt` is priced at the **transfer's block date**, not current spot — that's what makes historical coverage % meaningful.
 - ENS names must be forward-verified; an un-verified reverse record is a spoofing vector.
 - Spam rows are discarded, not recorded. No denylist file to maintain.
@@ -187,3 +226,5 @@ git commit -m "data(funding): add {N} new donation(s) via funding-update" \
 - Do **NOT** re-resolve ENS for addresses already in the file unless the user asks.
 - Do **NOT** price unknown tokens via CoinGecko contract-lookup — ask for a manual USD value instead.
 - Do **NOT** retry a rate-limited Gnosisscan response by treating it as empty — wait and retry.
+- Do **NOT** treat "sender is a contract" as proof of a self-swap, or "sender is an EOA" as proof of a donation. Decode the transaction (Step 3a).
+- Do **NOT** report a clean run without naming the chains whose native coverage is incomplete. Partial coverage reported as full is worse than a gap you flagged.

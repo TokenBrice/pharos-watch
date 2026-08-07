@@ -139,7 +139,7 @@ describe("stablecoin V9 safety presentation", () => {
         category: "Redemption",
       },
       { key: "bridge:arbitrum:0x123:bridge-meta:asset:key", label: "Arbitrum bridge", category: "Bridge" },
-      { key: "mint", label: "Mint authority", category: "Authority" },
+      { key: "mint", label: "Mint control posture", category: "Authority" },
       { key: "oracle", label: "Oracle design", category: "Oracle" },
     ]);
   });
@@ -314,11 +314,18 @@ describe("stablecoin V9 safety presentation", () => {
       value: "+2.0 to 88.0",
     });
     expect(presentation.pillars[1].breakdown).toMatchObject({
-      sectionLabel: "Route components",
+      sectionLabel: "Primary route components — Direct redemption",
+      exitHighlight: {
+        primaryRouteLabel: "Direct redemption",
+        primaryRouteScore: 84,
+        redundancyCredit: 0,
+        capacityLine: "<1% of $25m executable within 10m · 74 bps",
+      },
       alternatives: [{
         label: "Curve liquidity",
         score: 77,
         included: true,
+        redundancyCredit: null,
         detail: "$24,580,000 of $25,000,000 executable · confidence 0.75x",
       }],
     });
@@ -334,7 +341,6 @@ describe("stablecoin V9 safety presentation", () => {
       }),
     ]));
     expect(presentation.pillars[1].breakdown?.context).toEqual(expect.arrayContaining([
-      { key: "primary-route", label: "Primary route", value: "Direct redemption" },
       { key: "stress-request", label: "Stress request", value: "$25m / 200 bps / 1d" },
       {
         key: "selected-route-capacity",
@@ -354,6 +360,9 @@ describe("stablecoin V9 safety presentation", () => {
     // One loose bridge is below the composite threshold, so it stays a row.
     expect(presentation.pillars[2].breakdown?.groups[0].rows.map((row) => row.key))
       .toEqual(["mint", "oracle", "abstract"]);
+    expect(presentation.pillars[2].breakdown?.groups[0].rows[0]).toMatchObject({
+      label: "Mint control posture",
+    });
   });
 
   it("rolls loose bridges into one composite carrying the cohort's worst score", () => {

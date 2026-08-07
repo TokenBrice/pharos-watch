@@ -61,12 +61,14 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
 
 import { fetchGoldTokens } from "../gold";
 
-function stubGoldUpstreams(protocolMcap: number | null): void {
-  const nowSec = Math.floor(Date.now() / 1000);
+function stubGoldUpstreams(
+  protocolMcap: number | null,
+  priceObservedAt: number = Math.floor(Date.now() / 1000),
+): void {
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
     if (String(url).includes("/prices/current/")) {
       return new Response(
-        JSON.stringify({ coins: { "coingecko:pleasing-gold": { price: PGOLD_PRICE, timestamp: nowSec } } }),
+        JSON.stringify({ coins: { "coingecko:pleasing-gold": { price: PGOLD_PRICE, timestamp: priceObservedAt } } }),
         { status: 200 },
       );
     }
@@ -148,5 +150,48 @@ describe("fetchGoldTokens curated aggregate supply", () => {
     expect(asset?.supplySource).toBe("defillama");
     expect(asset?.circulating?.peggedGOLD).toBe(78_852_290);
     expect(asset?.chainCirculating).toEqual({});
+  });
+
+  it("keeps positive upstream market cap when price evidence is stale", async () => {
+    const staleAt = Math.floor(Date.now() / 1000) - 9 * 86400;
+    selectCuratedAggregateContractsMock.mockReturnValue(null);
+    stubGoldUpstreams(null, staleAt);
+
+    const [asset] = await fetchGoldTokens({
+      "pleasing-gold": {
+        usd: PGOLD_PRICE,
+        usd_market_cap: 78_852_290,
+        last_updated_at: staleAt,
+      },
+    });
+
+    expect(asset).toMatchObject({
+      id: "pgold-pleasing",
+      price: null,
+      priceConfidence: null,
+      priceUpdatedAt: null,
+      priceObservedAt: null,
+      priceObservedAtMode: null,
+      priceSyncedAt: null,
+      supplySource: "coingecko-fallback",
+      circulating: { peggedGOLD: 78_852_290 },
+    });
+    expect(asset?.priceSource).toBeUndefined();
+  });
+
+  it("still drops a commodity row without trusted price or positive market cap", async () => {
+    const staleAt = Math.floor(Date.now() / 1000) - 9 * 86400;
+    selectCuratedAggregateContractsMock.mockReturnValue(null);
+    stubGoldUpstreams(null, staleAt);
+
+    const assets = await fetchGoldTokens({
+      "pleasing-gold": {
+        usd: PGOLD_PRICE,
+        usd_market_cap: 0,
+        last_updated_at: staleAt,
+      },
+    });
+
+    expect(assets).toEqual([]);
   });
 });

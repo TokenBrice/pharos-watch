@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/home-alt-hero-chart";
 import { CHART_SLATE_SOFT, CHART_SLATE_STRONG } from "@/lib/chart-colors";
@@ -80,6 +80,38 @@ describe("HomeAltHeroChart", () => {
 
     expect(lastTick?.getAttribute("text-anchor")).toBe("middle");
     expect(900 - lastTickX).toBeGreaterThanOrEqual(32);
+  });
+
+  it("reveals a dated cohort readout while the pointer is over the plot", () => {
+    const { container } = render(<HomeAltHeroChart rows={rows} />);
+    const svg = container.querySelector("svg")!;
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+
+    // jsdom reports a zero-origin bounding box, so clientX maps straight onto
+    // chart coordinates: 868 is the right plot edge (width 900 - right margin).
+    fireEvent.pointerMove(svg, { clientX: 868, clientY: 100 });
+
+    const readout = screen.getByRole("tooltip");
+    expect(readout.textContent).toContain("Jun 1, 2026");
+    expect(readout.textContent).toContain("Total market cap");
+    expect(readout.textContent).toContain("Non-USD share");
+    // Crosshair marker per plotted series at the hovered date.
+    expect(container.querySelectorAll("circle")).toHaveLength(6);
+
+    fireEvent.pointerLeave(svg);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("flips the readout to the left of the crosshair near the right edge", () => {
+    const { container } = render(<HomeAltHeroChart rows={rows} />);
+    const svg = container.querySelector("svg")!;
+
+    fireEvent.pointerMove(svg, { clientX: 868, clientY: 100 });
+    expect(screen.getByRole("tooltip").style.right).not.toBe("");
+
+    fireEvent.pointerMove(svg, { clientX: 100, clientY: 100 });
+    expect(screen.getByRole("tooltip").style.left).not.toBe("");
   });
 
   it("keeps the top y-axis label clear of the SVG edge", () => {

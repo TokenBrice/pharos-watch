@@ -6,6 +6,7 @@ import { createSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtur
 
 const mocks = vi.hoisted(() => ({
   getCaches: vi.fn(),
+  getCacheUpdatedAt: vi.fn(),
   loadDexGeneration: vi.fn(),
   parseFixedInput: vi.fn(),
   parsePegSeed: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../lib/db-cache", () => ({
   getCaches: mocks.getCaches,
+  getCacheUpdatedAt: mocks.getCacheUpdatedAt,
 }));
 
 vi.mock("../../lib/report-cards-snapshot", () => ({
@@ -116,6 +118,9 @@ describe("computeSafetyScoreV9", () => {
         ],
       ]),
     );
+    mocks.getCacheUpdatedAt
+      .mockReset()
+      .mockResolvedValue(fixedInput.updatedAt);
     mocks.loadDexGeneration
       .mockReset()
       .mockResolvedValue({ generationId: fixedInput.dexGenerationId });
@@ -171,6 +176,31 @@ describe("computeSafetyScoreV9", () => {
       acceptedCount: 1,
       rejectedCount: 0,
     });
+    expect(mocks.runPublication).not.toHaveBeenCalled();
+  });
+
+  it("rejects a fixed input captured from an older stablecoin cache generation", async () => {
+    mocks.getCacheUpdatedAt.mockResolvedValueOnce(
+      createSafetyScoreV9FullRegistryInput().updatedAt + 900,
+    );
+
+    const result = await computeSafetyScoreV9({} as D1Database);
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+      productivity: {
+        productive: false,
+        reason: "v9-publication-source-unavailable",
+      },
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stage: "input-load",
+      reason: "stablecoins-generation-mismatch",
+      latestStablecoinsUpdatedAt:
+        createSafetyScoreV9FullRegistryInput().updatedAt + 900,
+    });
+    expect(mocks.loadDexGeneration).not.toHaveBeenCalled();
     expect(mocks.runPublication).not.toHaveBeenCalled();
   });
 

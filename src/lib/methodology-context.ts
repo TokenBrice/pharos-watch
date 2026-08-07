@@ -177,11 +177,11 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   redemptionBackstop: {
-    title: "Redemption Backstop",
+    title: "Redemption Route",
     summary:
-      "Modeled issuer or protocol exit path scored across access, settlement, execution certainty, capacity, output quality, and cost.",
+      "Standalone issuer or protocol route scored across access, settlement, execution certainty, capacity, output quality, and cost.",
     detail:
-      "This is currently documented under the Safety Scores methodology because it feeds the Liquidity / Exit dimension rather than having a standalone public section.",
+      "This route score is separate from Safety Score V9 Exit, which re-evaluates exact same-notional route evidence under the V9 policy.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   },
@@ -287,11 +287,11 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     changelogPath: DDR_METHODOLOGY_CHANGELOG_PATH,
   },
   liquidityScore: {
-    title: "Liquidity Score",
+    title: "DEX Market Liquidity",
     summary:
       "0-100 DEX liquidity composite built from effective TVL, volume activity, pool quality, durability, and pair diversity.",
     detail:
-      "This score stays purely market-based. Safety Scores use a separate exit-liquidity blend that can also incorporate redemption backstops.",
+      "This aggregate market score is not a single-route execution test. Safety Score V9 Exit separately evaluates exact same-notional routes and independent backup credit.",
     methodologyPath: "/methodology/#liquidity-methodology",
     versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,

@@ -1,8 +1,10 @@
 {
   "id": "trusd-tori",
+  "llamaId": "401",
+  "geckoId": "tori-trusd",
   "name": "Tori trUSD",
   "symbol": "trUSD",
-  "oneLiner": "trUSD is Tori Finance's pre-launch synthetic dollar wrapping delta-neutral institutional trading strategies, mintable 1:1 against USDC or USDT.",
+  "oneLiner": "trUSD is Tori Finance's synthetic dollar wrapping delta-neutral institutional trading strategies, mintable 1:1 against USDC or USDT.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -50,11 +52,29 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "status": "pre-launch",
+  "status": "active",
   "announcedDate": "2026-03",
-  "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live with the pre-deposit vault filled to its $50M cap (~$50.2M circulating listed on DefiLlama stablecoins as of Jul 26, 2026); DefiLlama's stablecoin price feed now carries trUSD at an exact 1.00, which may be a peg default rather than a traded quote, while CoinGecko still returns null price and market cap with zero circulating supply, so it stays pre-launch until the runtime price and market-cap gate accepts a path; the pre-deposit phase remains active, and Tori's official app says withdrawals enable after the protocol launches without providing a public launch date",
+  "launchDate": "2026-06-24",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Primary mint/redeem is KYC-whitelisted",
+      "message": "The verified ToriMinting contract (0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E) gates every mint and redeem on both a role-held executor and an on-chain participant whitelist, so NAV mint/redeem requires completing Tori's KYC/AML verification (open application, 10 bps fee). The docs' 'no verification required' language refers only to swapping into trUSD at market rates on secondary liquidity such as Curve."
+    },
+    {
+      "type": "warning",
+      "title": "Custodian identities undisclosed; on-chain flows reach exchanges",
+      "message": "Tori's Accountable dashboard attributes ~90% of backing to unnamed 'regulated custodian banks' and ~10% to 'regulated investment banks', with names withheld for operational security. Independent on-chain tracing of the sole minting custodian wallet shows collateral flowing to BiLira Pro and Binance deposit addresses and a large USDT balance in an unlabeled externally owned account, so Pharos classifies custody as CEX/off-exchange rather than accepting the custodian-bank framing at face value."
+    }
+  ],
   "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://thedefiant.io/news/press-releases/tori-brings-institutional-trades-on-chain-fills-50m-before-launch",
+      "title": "Tori brings institutional trades on-chain, fills $50M before launch",
+      "description": "The $50M pre-deposit cap filled in seven days; the protocol is described as live on Ethereum with Accountable proof-of-solvency and Curve liquidity.",
+      "source": "The Defiant"
+    },
     {
       "type": "tweet",
       "url": "https://x.com/tori_finance/status/2036533806774231309",
@@ -70,9 +90,80 @@
       "source": "Cryip"
     }
   ],
-  "custodyModel": "onchain",
+  "custodyModel": "cex",
   "collateralQuality": "exotic",
   "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
+      "pct": 60.93,
+      "risk": "medium",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Undisclosed regulated custodian banks under Tori's mandate (identities withheld; verified by Accountable and HT Digital)",
+      "liquidityHorizon": "unknown",
+      "riskFactors": ["counterparty", "custody", "concentration", "liquidity"]
+    },
+    {
+      "name": "Delta-neutral futures arbitrage and calendar-spread positions",
+      "pct": 27.52,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed regulated investment banks and execution venues; on-chain tracing shows exchange deposit flows",
+      "liquidityHorizon": "unknown",
+      "riskFactors": ["basis", "counterparty", "custody", "market"]
+    },
+    {
+      "name": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
+      "pct": 10.25,
+      "risk": "medium",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed regulated investment banks; Accountable data connectors include a CEX feed for this bucket",
+      "liquidityHorizon": "one-day",
+      "riskFactors": ["counterparty", "market", "custody"]
+    },
+    {
+      "name": "On-chain stablecoin buffer in the minting custodian wallet",
+      "pct": 1.3,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC and Tether USDT held in Tori's on-chain custodian wallet",
+      "liquidityHorizon": "immediate",
+      "riskFactors": ["custody", "concentration"]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-05",
+    "reviewer": "Pharos reserve research (trUSD promotion follow-up)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification; composition and custody figures as of 2026-08-05 09:15 UTC)",
+        "url": "https://tori.accountable.capital"
+      },
+      {
+        "label": "Tori docs — backing and strategy overview (money markets typically the largest allocation; TradFi futures examples)",
+        "url": "https://docs.tori.finance/strategy/overview.md"
+      },
+      {
+        "label": "Tori docs — institutional minting and redemption (KYC/AML whitelisting for NAV mint/redeem)",
+        "url": "https://docs.tori.finance/resources/institutional.md"
+      },
+      {
+        "label": "Tori docs — reserve fund (protocol-managed buffer, not third-party insurance)",
+        "url": "https://docs.tori.finance/solution/reserve-fund.md"
+      },
+      {
+        "label": "ToriMinting verified contract source on Blockscout (whitelist-gated mint/redeem; single on-chain custodian address)",
+        "url": "https://eth.blockscout.com/address/0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E"
+      }
+    ],
+    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable reads liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence with Merkle-root, enclave, and zero-knowledge verification. Custodian and venue identities are withheld. Independent on-chain tracing of the sole minting custodian wallet (0x63392EaB47926f6Ee3E6ACA285B367A952001CC7) shows roughly $54M of USDC/USDT outflows reaching a BiLira Pro hot wallet and a Binance deposit address, with about 28.2M USDT sitting in an unlabeled externally owned account as of the review date — so the dashboard's regulated-bank custody framing is attested but not independently verifiable, and custody is classified as CEX/off-exchange. A protocol reserve fund (funded from the 10% performance fee, size undisclosed) exists as a first-loss buffer; trUSD is uninsured.",
+    "compositionBasis": "Accountable attested asset-distribution and custody tables dated 2026-08-05; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
+    "compositionAsOf": "2026-08-05",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet.",
+    "knownUnknownExposurePct": 0
+  },
   "milestones": [
     {
       "date": "2026-01-22",
@@ -142,6 +233,13 @@
       "title": "DefiLlama stablecoin price feed now carries trUSD at $1.00",
       "description": "DefiLlama's stablecoinprices endpoint returns tori-trusd = 1.00 for the 2026-07-26 snapshot, alongside ~$50.23M circulating on Ethereum. CoinGecko (tori-trusd) still returns null price, null market cap, and zero circulating supply against a 47.2M total supply, so the only price path is DefiLlama's, whose exact-1.00 value may be a peg default rather than a traded quote. Date reflects observation, not a stated listing date.",
       "sourceUrl": "https://stablecoins.llama.fi/stablecoinprices"
+    },
+    {
+      "date": "2026-07-27",
+      "type": "milestone",
+      "title": "$50M pre-deposit cap reported filled in seven days",
+      "description": "The Defiant reports the pre-deposit cap filled within a week of opening; DefiLlama-tracked supply subsequently grew past the cap to ~$55.2M by August 5, and CoinGecko's tori-trusd listing went fully live with price, market cap, and ~$1.25M daily Curve-led volume.",
+      "sourceUrl": "https://thedefiant.io/news/press-releases/tori-brings-institutional-trades-on-chain-fills-50m-before-launch"
     }
   ],
   "yieldConfig": {

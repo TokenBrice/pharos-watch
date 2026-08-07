@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1784810583,
+  "last_updated_at": 1785911421,
   "donations": [
     {
       "chain": "ethereum",
@@ -708,6 +708,18 @@
       "amount_decimal": 0.030198631603724473,
       "usd_at_receipt": 57.46,
       "price_note": "coingecko-historical-2026-07-21"
+    },
+    {
+      "chain": "gnosis",
+      "tx_hash": "0xff98ef093c888196d464d607be7720a18dd4e3dde1fdfb3b98aebd825371b498",
+      "block_timestamp": 1785493455,
+      "from_address": "0x5417b2ef14b774c3ccbfd742a6634690117616b9",
+      "display": "0x5417b2...16b9",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 10,
+      "usd_at_receipt": 10,
+      "price_note": "stablecoin-1-to-1"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { DATA_DEPENDENCY_REGISTRY, type DataDependencyDefinition } from "@shared/lib/data-dependency-registry";
+import { getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import type {
   CacheStatus,
   CronStatus,
@@ -52,7 +53,7 @@ function worseSignal(left: DependencySignal | null, right: DependencySignal | nu
   return right.updatedAt >= left.updatedAt ? right : left;
 }
 
-function cacheSignal(cache: CacheStatus | undefined, now: number): DependencySignal {
+function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: string): DependencySignal {
   if (!cache) {
     return {
       status: "unknown",
@@ -92,16 +93,17 @@ function cacheSignal(cache: CacheStatus | undefined, now: number): DependencySig
       reason: cache.warning ?? "Freshness timestamp unavailable.",
     };
   }
-  if (cache.ageSeconds > maxAgeSec) {
+  const freshnessStatus = getCacheFreshnessStatus(cache, cacheKey);
+  if (freshnessStatus === "stale") {
     return {
       status: "stale",
       updatedAt,
       ageSeconds: cache.ageSeconds,
       maxAgeSec,
-      reason: cache.warning ?? `Freshness age ${cache.ageSeconds}s exceeds ${maxAgeSec}s.`,
+      reason: cache.warning ?? `Freshness age ${cache.ageSeconds}s exceeds the stale availability budget.`,
     };
   }
-  if (!cache.healthy) {
+  if (freshnessStatus === "degraded" || !cache.healthy) {
     return {
       status: "degraded",
       updatedAt,
@@ -247,7 +249,7 @@ function signalForDefinition(
   let signal: DependencySignal | null = null;
 
   if (definition.cacheKey) {
-    signal = worseSignal(signal, cacheSignal(input.caches[definition.cacheKey], input.now));
+    signal = worseSignal(signal, cacheSignal(input.caches[definition.cacheKey], input.now, definition.cacheKey));
   }
   if (definition.publicationSurface) {
     signal = worseSignal(

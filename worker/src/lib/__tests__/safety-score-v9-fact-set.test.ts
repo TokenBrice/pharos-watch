@@ -67,6 +67,7 @@ import {
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
   XAUT_CANONICAL_RUNTIME_CODE_SHA256,
   XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
 } from "../safety-score-v9-xaut-supply-attribution-contract";
@@ -2832,7 +2833,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
-    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const clockSec = Date.parse("2026-08-07T09:00:00Z") / 1_000;
     const fixed = withWmReviewedDeploymentAttribution(
       exactFixedInput({
         assetId: "wm-m0",
@@ -2860,7 +2861,12 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     );
     expect(
       wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply"),
-    ).toMatchObject({ sourceId: "safety-score-v9-reviewed-deployment-attribution" });
+    ).toMatchObject({
+      sourceId: "safety-score-v9-reviewed-deployment-attribution",
+      freshness: {
+        maxAgeSec: baseline.sources.chainSupply.maxAgeSec,
+      },
+    });
 
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
@@ -2893,7 +2899,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           treasuryBalanceRaw: "94923429468",
           adapterLockedSupplyRaw: "29720802896",
           blockNumber: 25_601_844,
-          blockTimeSec: clockSec - 100,
+          // Production-shaped consumer age: finalized-block lag plus the
+          // healthy 30-minute capture cadence exceeds the generic 1800s
+          // chain-supply window while remaining inside XAUT's explicit hour.
+          blockTimeSec: clockSec - 2_800,
           blockHash: `0x${"ab".repeat(32)}`,
           canonicalRuntimeCodeSha256:
             XAUT_CANONICAL_RUNTIME_CODE_SHA256,
@@ -2914,7 +2923,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
             sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
             sourceConfigDigest:
               buildXautTransparencySource()!.configDigest,
-            sourceTimestampSec: clockSec - 200,
+            sourceTimestampSec: clockSec - 2_900,
             responseSha256: "e".repeat(64),
             totalAuthorizedRaw: "707747089000",
             notIssuedRaw: "94923429468",
@@ -2940,6 +2949,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const compiled =
       compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const xaut = compiled.assets[0]!;
+    const supplyEvidence = xaut.evidence.find(
+      (evidence) => evidence.evidenceId === "xaut-tether:chain-supply",
+    );
     const groupRow = xaut.supply.selectedBridgeRoutes.find((route) =>
       route.deploymentRouteKey.startsWith("representation-group:"),
     );
@@ -2947,6 +2959,15 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       (control) => control.controlKind === "bridge",
     );
 
+    expect(xaut.supply.status.observationState).toBe("known");
+    expect(supplyEvidence).toMatchObject({
+      observedAtSec: clockSec - 2_800,
+      freshness: {
+        state: "current",
+        ageSec: 2_800,
+        maxAgeSec: XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+      },
+    });
     expect(xaut.supply.selectedBridgeRoutes).toHaveLength(2);
     expect(groupRow).toMatchObject({
       reviewState: "selected-reviewed",
@@ -3230,7 +3251,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   it("restores the bridge-materiality cap when the wM packet is absent", () => {
     const fixed = exactFixedInput({
       assetId: "wm-m0",
-      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      clockSec: Date.parse("2026-08-07T09:00:00Z") / 1_000,
       chainSupplyByChain: {},
       aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
       omitLiveReserve: true,
@@ -4312,10 +4333,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Shared exit-route capacity source changes rotate the historical V8
-    // evaluation build even though V8 scoring behavior is frozen.
+    // Shared methodology identity changes rotate the historical V8 evaluation
+    // build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "ed448a6fc3584be3b2c6129a709a045476178be90fc8501a38e67dac2812495a",
+      "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
     );
   });
 

@@ -111,7 +111,10 @@ export type CentrifugeDeploymentIdentity =
   | CentrifugeEvmDeploymentIdentity
   | CentrifugeSolanaDeploymentIdentity;
 
-const WM_IMPLEMENTATION = "0x813b926b1d096e117721bd1eb017fba122302da0";
+const WM_V1_IMPLEMENTATION = "0x813b926b1d096e117721bd1eb017fba122302da0";
+const WM_ARBITRUM_V2_IMPLEMENTATION = "0x3bb83030f5f784b3dc2c6af5d7e77f7c39d65804";
+const WM_BASE_V2_IMPLEMENTATION = "0xb1bb9f97af604385eb69212f34d986073ac6693c";
+const WM_ETHEREUM_V2_IMPLEMENTATION = "0x6d9db63afccf515f393d5e65be69d38bb3b29d13";
 const WM_UNDERLYING_M = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
 const M0_PORTAL = "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd";
 
@@ -119,8 +122,8 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
   "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291": {
     runtime: "evm",
     runtimeCodeSha256: "ef515e6adf8e4349bd060bbfe7472b8cb69b4ca89db7f94af138a0c82cfaa63a",
-    implementationAddress: WM_IMPLEMENTATION,
-    implementationCodeSha256: "5120fd4e1b25e5b1e0822a332d5c67d11093d7af243ba0cb6b0ebb2bcfd5fcc5",
+    implementationAddress: WM_ETHEREUM_V2_IMPLEMENTATION,
+    implementationCodeSha256: "a70202e1437227a8f6229324cffdde3375eb31d2b2231a90e55ea01c58aeac8e",
     underlyingTokenAddress: WM_UNDERLYING_M,
     controllerAddress: "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e",
     controllerRead: "minter-gateway",
@@ -128,8 +131,8 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
   "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291": {
     runtime: "evm",
     runtimeCodeSha256: "5c1fe46e765b84b11e490af16edddffaa6a162eac8bf26e7a0449cfaa42bceae",
-    implementationAddress: WM_IMPLEMENTATION,
-    implementationCodeSha256: "dae6453930cd04bafe4264f917790c05723583be42ee44324d5c4514456fda65",
+    implementationAddress: WM_ARBITRUM_V2_IMPLEMENTATION,
+    implementationCodeSha256: "92b85ef0789e99456c8326dcff26c19e179adab47a71c2ca13179274d26e278c",
     underlyingTokenAddress: WM_UNDERLYING_M,
     controllerAddress: M0_PORTAL,
     controllerRead: "portal",
@@ -137,8 +140,8 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
   "base:0x437cc33344a0b27a429f795ff6b469c72698b291": {
     runtime: "evm",
     runtimeCodeSha256: "961610d5a1d1ddab57ececfd095b6fd6a1a0c8d3026f9af70759196f1dffa9d2",
-    implementationAddress: WM_IMPLEMENTATION,
-    implementationCodeSha256: "cf480dfabed7c96872ef9aa2af6e9f78c2b0184210c8440a97cb129741d5af88",
+    implementationAddress: WM_BASE_V2_IMPLEMENTATION,
+    implementationCodeSha256: "c8a546e7bad03f58acf5e982738bb07ebb24b9774b9a69515e41012fd51d61b1",
     underlyingTokenAddress: WM_UNDERLYING_M,
     controllerAddress: M0_PORTAL,
     controllerRead: "portal",
@@ -146,7 +149,7 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
   "plume:0x437cc33344a0b27a429f795ff6b469c72698b291": {
     runtime: "evm",
     runtimeCodeSha256: "692615a84165d49ceb5c60125c65d21c1d379d3d1da7b03c984d6f9951094f58",
-    implementationAddress: WM_IMPLEMENTATION,
+    implementationAddress: WM_V1_IMPLEMENTATION,
     implementationCodeSha256: "8a3f761b3d5fde864819ce415092d2f8127ee002813ce83a341a053202eb16a0",
     underlyingTokenAddress: WM_UNDERLYING_M,
     controllerAddress: "0x36f586a30502ae3afb555b8aa4dcc05d233c2ece",

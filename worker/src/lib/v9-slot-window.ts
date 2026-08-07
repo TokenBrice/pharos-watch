@@ -12,6 +12,10 @@ interface CoreSlotRow {
   worker_version: string | null;
 }
 
+interface StablecoinsPublicationRow {
+  published_at: number;
+}
+
 interface ActiveV9SlotRow {
   slot_key: string;
   slot_started_at: number;
@@ -88,6 +92,45 @@ async function hasActiveV9MemoryLane(
   return row != null;
 }
 
+async function hasMatchingCoreStablecoinsPublication(
+  db: D1Database,
+  coreSlotStartedAt: number,
+  workerVersion: string,
+): Promise<boolean> {
+  const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT publication.published_at
+           FROM surface_publication_generations publication
+           JOIN cache stablecoins_cache
+             ON stablecoins_cache.key = 'stablecoins'
+            AND stablecoins_cache.updated_at = publication.published_at
+          WHERE publication.surface = 'stablecoins'
+            AND publication.state = 'published'
+            AND publication.producer_schedule_key = 'quarterHourly'
+            AND publication.producer_job = 'sync-stablecoins'
+            AND publication.artifact_cache_key = 'stablecoins'
+            AND publication.worker_version = ?
+            AND publication.started_at >= ?
+            AND publication.started_at < ?
+            AND publication.published_at >= ?
+            AND publication.published_at < ?
+          ORDER BY publication.started_at DESC
+          LIMIT 1`,
+      )
+      .bind(
+        workerVersion,
+        coreSlotStartedAt,
+        nextCoreSlotStartedAt,
+        coreSlotStartedAt,
+        nextCoreSlotStartedAt,
+      )
+      .first<StablecoinsPublicationRow>(),
+  );
+  return row != null;
+}
+
 /**
  * Keeps later scheduled triggers from loading their runner graphs while a
  * memory-intensive V9 slot owns the shared Worker heap lane.
@@ -104,12 +147,14 @@ export async function waitForV9MemoryLaneRelease(
 /**
  * Admits canonical V9 work only after the matching public quarter-hour slot
  * has completed on the active Worker version and while an absolute pre-quarter
- * execution window remains. Requiring a successful core slot prevents V9 from
- * publishing current-clock generations from stale stablecoin data after the
- * core producer degrades. The shared V9 lane lease serializes V9 work and keeps
- * later triggers from loading their job graphs. A prior active invocation of
- * the same V9 schedule lane still fails closed, while unrelated scheduled slots
- * cannot suppress canonical publication.
+ * execution window remains. A degraded core slot is admitted only when its
+ * durable publication ledger proves that the same Worker published the current
+ * stablecoins cache during that slot. This keeps an isolated coverage gap from
+ * starving V9 without allowing a stale/no-write stablecoin run through. The
+ * shared V9 lane lease serializes V9 work and keeps later triggers from loading
+ * their job graphs. A prior active invocation of the same V9 schedule lane still
+ * fails closed, while unrelated scheduled slots cannot suppress canonical
+ * publication.
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
@@ -137,6 +182,7 @@ export async function runV9AfterCoreWithinWindow(
       coreSlotStartedAt,
     });
   }
+  const workerVersion = options.workerVersion;
 
   const timeout = createTimeoutSignal({
     timeoutMs: initialRemainingMs,
@@ -161,10 +207,38 @@ export async function runV9AfterCoreWithinWindow(
           .bind(coreSlotStartedAt)
           .first<CoreSlotRow>();
 
+        let degradedCorePublicationMatched = false;
+        if (
+          coreSlot?.state === "finished" &&
+          coreSlot.result_status === "degraded" &&
+          coreSlot.worker_version === workerVersion
+        ) {
+          try {
+            degradedCorePublicationMatched =
+              await hasMatchingCoreStablecoinsPublication(
+                options.db,
+                coreSlotStartedAt,
+                workerVersion,
+              );
+          } catch (error) {
+            return degradedAdmission(
+              "v9-core-publication-evidence-unavailable",
+              {
+                lane: options.lane,
+                coreSlotStartedAt,
+                code: error instanceof Error ? error.name : "Error",
+              },
+            );
+          }
+        }
+
         if (
           coreSlot?.state !== "finished" ||
-          coreSlot.result_status !== "ok" ||
-          coreSlot.worker_version !== options.workerVersion
+          (
+            coreSlot.result_status !== "ok" &&
+            !degradedCorePublicationMatched
+          ) ||
+          coreSlot.worker_version !== workerVersion
         ) {
           return neutralSkip("v9-core-slot-not-ready", {
             lane: options.lane,
@@ -172,7 +246,8 @@ export async function runV9AfterCoreWithinWindow(
             coreState: coreSlot?.state ?? null,
             coreResultStatus: coreSlot?.result_status ?? null,
             coreWorkerVersion: coreSlot?.worker_version ?? null,
-            expectedWorkerVersion: options.workerVersion,
+            expectedWorkerVersion: workerVersion,
+            degradedCorePublicationMatched,
           });
         }
 

@@ -203,7 +203,15 @@ export interface StablecoinSafetyScoreV9Alternative {
   label: string;
   score: number | null;
   included: boolean;
+  redundancyCredit: number | null;
   detail: string | null;
+}
+
+export interface StablecoinSafetyScoreV9ExitHighlight {
+  primaryRouteLabel: string;
+  primaryRouteScore: number;
+  redundancyCredit: number;
+  capacityLine: string | null;
 }
 
 export interface StablecoinSafetyScoreV9PillarBreakdown {
@@ -212,6 +220,7 @@ export interface StablecoinSafetyScoreV9PillarBreakdown {
   publishedScore: number | null;
   sectionLabel: string;
   context: StablecoinSafetyScoreV9BreakdownMeta[];
+  exitHighlight: StablecoinSafetyScoreV9ExitHighlight | null;
   /** One entry when the pillar has no sub-structure; labelled groups otherwise. */
   groups: StablecoinSafetyScoreV9BreakdownGroup[];
   alternatives: StablecoinSafetyScoreV9Alternative[];
@@ -251,6 +260,7 @@ function parseBackingBreakdown(
     // The group scores and weights now head their own sections, so repeating
     // them as context rows would say the same thing twice.
     context: adjustmentContext(breakdown.adjustments),
+    exitHighlight: null,
     groups: backingGroups(breakdown),
     alternatives: [],
   };
@@ -321,16 +331,19 @@ function compactDuration(valueSec: number): string {
   return `${Math.round(valueSec / 60)}m`;
 }
 
+function completionLabel(ratio: number): string {
+  const percent = ratio * 100;
+  if (percent > 0 && percent < 1) return "<1%";
+  return `${percent.toFixed(percent < 10 ? 1 : 0)}%`;
+}
+
 function parseExitBreakdown(
   breakdown: SafetyScoreV9ExitBreakdown,
 ): StablecoinSafetyScoreV9PillarBreakdown {
   const primaryRoute = breakdown.primaryRoute;
   const context: StablecoinSafetyScoreV9BreakdownMeta[] = primaryRoute === null
     ? [{ key: "primary-route", label: "Primary route", value: "No eligible route" }]
-    : [
-        { key: "primary-route", label: "Primary route", value: primaryRoute.label },
-        { key: "route-score", label: "Route score", value: `${primaryRoute.score.toFixed(0)} / 100` },
-      ];
+    : [];
   if (primaryRoute !== null && Math.abs(primaryRoute.confidenceFactor - 1) >= 0.005) {
     context.push({
       key: "confidence",
@@ -343,13 +356,6 @@ function parseExitBreakdown(
       key: "eligibility",
       label: "Eligibility",
       value: `${multiplierLabel(primaryRoute.eligibilityMultiplier)}x`,
-    });
-  }
-  if (breakdown.diversification !== null && breakdown.diversification.bonus > 0) {
-    context.push({
-      key: "diversification",
-      label: "Diversification",
-      value: `+${breakdown.diversification.bonus.toFixed(1)}`,
     });
   }
   if (breakdown.stressRequest !== null) {
@@ -400,12 +406,31 @@ function parseExitBreakdown(
   }
   context.push(...adjustmentContext(breakdown.adjustments));
 
+  const redundancyCredit = breakdown.diversification?.bonus ?? 0;
+  const exitHighlight: StablecoinSafetyScoreV9ExitHighlight | null = primaryRoute === null
+    ? null
+    : {
+        primaryRouteLabel: primaryRoute.label,
+        primaryRouteScore: primaryRoute.score,
+        redundancyCredit,
+        capacityLine: primaryRoute.capacity === undefined || primaryRoute.capacity === null
+          ? null
+          : `${completionLabel(primaryRoute.capacity.completionRatio)} of ${compactUsd(primaryRoute.capacity.requestedNotionalUsd)} executable ${
+              primaryRoute.capacity.settlementDelaySec === 0
+                ? "immediately"
+                : `within ${compactDuration(primaryRoute.capacity.settlementDelaySec)}`
+            } · ${primaryRoute.capacity.executionCostBps.toFixed(0)} bps`,
+      };
+
   return {
     aggregationWeight: breakdown.aggregationWeight,
     evaluatedScore: breakdown.evaluatedScore,
     publishedScore: breakdown.publishedScore,
-    sectionLabel: "Route components",
+    sectionLabel: primaryRoute === null
+      ? "Route components"
+      : `Primary route components — ${primaryRoute.label}`,
     context,
+    exitHighlight,
     // The route's components are few and already ordered meaningfully, so exit
     // keeps a single unlabelled group and its producer order.
     groups: [{
@@ -444,6 +469,10 @@ function parseExitBreakdown(
         label: alternative.label,
         score: alternative.score,
         included: alternative.included,
+        redundancyCredit:
+          breakdown.diversification?.routeKey === alternative.key
+            ? breakdown.diversification.bonus
+            : null,
         detail: alternative.exclusionReason === null
           ? alternative.capacity
             ? `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable${
@@ -463,7 +492,7 @@ function parseControlBreakdown(
 ): StablecoinSafetyScoreV9PillarBreakdown {
   const toRow = (component: SafetyScoreV9ControlBreakdown["components"][number]) => makeRow({
     key: component.key,
-    label: component.label,
+    label: component.kind === "mint" ? "Mint control posture" : component.label,
     score: component.score,
     status: component.binding ? "Binding" : "Diagnostic",
   });
@@ -515,6 +544,7 @@ function parseControlBreakdown(
       label: "Pillar rule",
       value: "Lowest binding control",
     }, ...adjustmentContext(breakdown.adjustments)],
+    exitHighlight: null,
     groups: [{ key: "control", label: null, score: null, weight: null, rows, tail: null }],
     alternatives: [],
   };
@@ -536,7 +566,7 @@ function pillarBreakdown(
 }
 
 function componentBaseLabel(component: string): { label: string; category: string } {
-  if (component === "mint") return { label: "Mint authority", category: "Authority" };
+  if (component === "mint") return { label: "Mint control posture", category: "Authority" };
   if (component === "oracle") return { label: "Oracle design", category: "Oracle" };
   if (component.startsWith("mechanism:")) {
     return {
@@ -705,14 +735,22 @@ export interface StablecoinSafetyScoreV9Presentation {
 export function buildStablecoinSafetyScoreV9Presentation(
   card: StablecoinSafetyScoreV9Card,
 ): StablecoinSafetyScoreV9Presentation {
+  const hasIncompleteDexCoverage = card.scoreTrace.evidenceResponsibility.summaries.some(
+    (summary) => summary.reasonCodes.includes("incomplete-dex-route-coverage"),
+  );
   return {
     traceParts: traceParts(card),
     ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
-      const evidenceSummary = isUnknown(pillar.freshness)
+      const baseEvidenceSummary = isUnknown(pillar.freshness)
         ? `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence`
         : `${humanizeSafetyScoreV9Value(pillar.evidenceLevel)} evidence · ${humanizeSafetyScoreV9Value(pillar.freshness)}`;
+      const evidenceSummary = key === "exit"
+        ? `${baseEvidenceSummary.replace(" evidence", " selected-route evidence")}${
+            hasIncompleteDexCoverage ? " · partial DEX coverage" : ""
+          }`
+        : baseEvidenceSummary;
       return {
         key,
         label,

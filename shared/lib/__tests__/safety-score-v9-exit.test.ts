@@ -259,7 +259,7 @@ describe("evaluateV9Exit", () => {
     expect(withWeak.reasons).toContain("correlated-exit-routes");
   });
 
-  it("adds only a bounded benefit for a disjoint independent route", () => {
+  it("scales bounded redundancy credit by the independent route's own quality", () => {
     const result = evaluateV9Exit(
       {
         circulatingUsd: 20_000_000,
@@ -279,7 +279,16 @@ describe("evaluateV9Exit", () => {
     );
     expect(result.diversificationRouteKey).not.toBeNull();
     expect(result.diversificationBonus).toBeGreaterThan(0);
-    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.score).toBeLessThan(100);
+    const primaryScore = result.routes.find((entry) => entry.routeKey === result.primaryRouteKey)?.score;
+    const backupScore = result.routes.find((entry) => entry.routeKey === result.diversificationRouteKey)?.score;
+    expect(result.diversificationBonus).toBeCloseTo(
+      Math.min(
+        100 - primaryScore!,
+        100 * V9_CANDIDATE_POLICY_V1.policy.semantic.exit.independentRouteBenefitLimit,
+      ) * (backupScore! / 100),
+      2,
+    );
   });
 
   it("accepts a conservative exact lower bound and excludes diagnostic coverage", () => {
