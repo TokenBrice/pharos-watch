@@ -6,6 +6,7 @@ import {
   diffReplayArtifacts,
   extractCardGrades,
   runSafetyScoreV9DiffCli,
+  VERSION_ACTIVATION_KEYS,
   VOLATILE_KEYS,
 } from "../diff-safety-score-v9-replays";
 
@@ -102,6 +103,71 @@ describe("diffReplayArtifacts", () => {
     ]) {
       expect(VOLATILE_KEYS.has(key)).toBe(true);
     }
+  });
+
+  it("VERSION_ACTIVATION_KEYS covers the pinned-build and methodology-identity family", () => {
+    for (const key of [
+      "stressStateDigest",
+      "stateDigest",
+      "resultDigest",
+      "scoreResultDigest",
+      "evaluatedSetDigest",
+      "candidateId",
+      "compilerFactSchemaDigest",
+      "policyVersion",
+    ]) {
+      expect(VERSION_ACTIVATION_KEYS.has(key)).toBe(true);
+    }
+  });
+
+  it("keeps the two stripped families disjoint", () => {
+    const overlap = [...VERSION_ACTIVATION_KEYS].filter((key) => VOLATILE_KEYS.has(key));
+    expect(overlap).toEqual([]);
+  });
+
+  it("strips version-activation digests at every depth without hiding scored drift", () => {
+    const card = (overrides: Record<string, unknown> = {}) => ({
+      id: "usdc-circle",
+      grade: "A",
+      score: 85,
+      stressStateDigest: "a".repeat(64),
+      ...overrides,
+    });
+    // A pure version activation: every VERSION_ACTIVATION_KEYS value moves,
+    // nested and top level, and nothing scored does.
+    const baseline = artifact([card()], {
+      policyVersion: "9.06",
+      candidateId: "safety-score-v9:v1:aaaa",
+      resultDigest: "a".repeat(64),
+      evaluatedSet: {
+        evaluatedSetDigest: "a".repeat(64),
+        scoreResultDigest: "a".repeat(64),
+        assets: [{ id: "usdc-circle", stressState: { stateDigest: "a".repeat(64), request: 100 } }],
+      },
+      compilerFactSchemaDigest: "a".repeat(64),
+    });
+    const activated = artifact([card({ stressStateDigest: "b".repeat(64) })], {
+      policyVersion: "9.07",
+      candidateId: "safety-score-v9:v1:bbbb",
+      resultDigest: "b".repeat(64),
+      evaluatedSet: {
+        evaluatedSetDigest: "b".repeat(64),
+        scoreResultDigest: "b".repeat(64),
+        assets: [{ id: "usdc-circle", stressState: { stateDigest: "b".repeat(64), request: 100 } }],
+      },
+      compilerFactSchemaDigest: "b".repeat(64),
+    });
+
+    expect(diffReplayArtifacts(baseline, activated)).toEqual({ equal: true, entries: [] });
+
+    // The same activation, but one scored value moved: still reported.
+    const drifted = structuredClone(activated) as typeof activated & {
+      pipeline: { candidate: { cards: { grade: string }[] } };
+    };
+    drifted.pipeline.candidate.cards[0]!.grade = "B";
+    const result = diffReplayArtifacts(baseline, drifted);
+    expect(result.equal).toBe(false);
+    expect(result.entries.some((entry) => entry.path.includes("grade"))).toBe(true);
   });
 });
 

@@ -24,6 +24,10 @@ const CARD_SCORE_FIELD = "score";
  * Keys stripped at every depth before comparing. These carry publication
  * identity or capture timing, so they legitimately differ between two replays
  * of the same scored output and would otherwise drown the real drift.
+ *
+ * This is the **per-run** family: values that move on every capture or
+ * publication attempt even when nothing about the build or the methodology
+ * changed. Contrast `VERSION_ACTIVATION_KEYS` below.
  */
 export const VOLATILE_KEYS = new Set([
   "publishedAt",
@@ -37,6 +41,40 @@ export const VOLATILE_KEYS = new Set([
   "contentSha256",
   "generationId",
   "releaseCandidateId",
+]);
+
+/**
+ * Also stripped at every depth, but for a different reason, so it is a
+ * separate set.
+ *
+ * These are digests and version strings derived from the pinned evaluation
+ * build and the methodology identity. They are stable across ordinary runs —
+ * unlike `VOLATILE_KEYS` — and change only on a deliberate version activation:
+ * regenerating the V9 evaluation-build manifest, or bumping the methodology
+ * version and the active policy asset's release version.
+ *
+ * `evaluationBuildDigest` and `policyDigest` are already governed elsewhere
+ * (`VOLATILE_KEYS` strips the former as a leaf), but the digests below are
+ * sha256 *over* content that includes them, so a legitimate activation
+ * rewrites all of them without moving a single scored value. Comparing them
+ * here would report one entry per asset and hide real drift underneath.
+ *
+ * Their correctness is owned by the changelog and version tests — the
+ * methodology changelog entry, `current-version.json`, the policy asset's
+ * `releaseVersion`, and the generated-artifact check on the evaluation-build
+ * manifest — not by this diff. This tool's job is the scored output: grades,
+ * scores, pillars, breakdowns, reasons, evidence, and coverage, all of which
+ * remain compared in full.
+ */
+export const VERSION_ACTIVATION_KEYS = new Set([
+  "stressStateDigest",
+  "stateDigest",
+  "resultDigest",
+  "scoreResultDigest",
+  "evaluatedSetDigest",
+  "candidateId",
+  "compilerFactSchemaDigest",
+  "policyVersion",
 ]);
 
 export interface ReplayDiffEntry {
@@ -56,7 +94,7 @@ function stripVolatile(value: unknown): unknown {
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      if (VOLATILE_KEYS.has(key)) continue;
+      if (VOLATILE_KEYS.has(key) || VERSION_ACTIVATION_KEYS.has(key)) continue;
       out[key] = stripVolatile(entry);
     }
     return out;
