@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.21`
+- **Current methodology version:** `v4.3`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.21` update: `dusd-dialectic` now uses same-block Makina AsyncRedeemer telemetry for live queue capacity. Usable capacity is limited to `max(0, Machine idle Ethereum USDC - convertToAssets(DUSD.balanceOf(AsyncRedeemer)))` after validating the AsyncRedeemer beacon implementation, Machine `accountingToken()` / `shareToken()` wiring, and redeemer `machine()` binding at the pinned block. The route remains `open` with `holderEligibility: issuer-discretionary` when the whitelist is enabled, and the 12-hour minimum finalization floor is stored as non-scoring queue detail rather than `settlementDelaySec`. If the on-chain proof is unavailable or fails validation, DUSD has no fallback capacity from AUM, supply, reserve weights, deployed positions, or a static ratio.
+Latest `v4.3` update: exit is scored by one engine. The route-scoring tables the redemption backstop score and the Safety Score V9 Exit pillar each carried a copy of are now a single definition in `shared/lib/exit-route-scoring.ts`, with the V9 policy artifact validated against that source in CI. The legacy `effectiveExitScore` blend, its `methodology.effectiveExitModel` envelope, and the unshipped same-notional shadow engine are removed; same-notional exit is published by the V9 Exit pillar alone. Redemption route scores and every component subscore are unchanged.
 
 Previous `v4.20` update: `sbold-k3-capital` now measures same-run BOLD withdrawability from the vault's Liquity V2 Stability Pool positions via `calcFragments()` instead of treating the vault's near-zero idle BOLD balance as its executable buffer. The route uses documented-bound confidence and a strategy-buffer basis because the read excludes unswapped collateral gains and K3 can temporarily restrict withdrawals at its collateral-exposure threshold. Reviewed full-supply routes with an `undisclosed-reviewed` fee can now publish their modeled capacity in `exitRouteObservations` with bounded-unknown fee evidence, but remain non-score-eligible for current redemption scoring until a numeric cost bound exists.
 
