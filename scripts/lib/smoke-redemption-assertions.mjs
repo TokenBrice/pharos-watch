@@ -147,7 +147,6 @@ export function assertRedemptionEntry(key, entry) {
   assert(entry && typeof entry === "object" && !Array.isArray(entry), `${pathPrefix} is invalid`);
   assert(entry.stablecoinId === key, `${pathPrefix}.stablecoinId does not match map key`);
   assertOptionalScore(entry.score, `${pathPrefix}.score`);
-  assertOptionalScore(entry.effectiveExitScore, `${pathPrefix}.effectiveExitScore`);
   assertOptionalScore(entry.dexLiquidityScore, `${pathPrefix}.dexLiquidityScore`);
   assertOptionalScore(entry.accessScore, `${pathPrefix}.accessScore`);
   assertOptionalScore(entry.settlementScore, `${pathPrefix}.settlementScore`);

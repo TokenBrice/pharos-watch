@@ -17,7 +17,6 @@ function supplyFullRow(overrides: Partial<RedemptionBackstopEntry> = {}): Redemp
   return {
     stablecoinId: "usdc-circle",
     score: null,
-    effectiveExitScore: null,
     dexLiquidityScore: null,
     accessScore: 40,
     settlementScore: 65,

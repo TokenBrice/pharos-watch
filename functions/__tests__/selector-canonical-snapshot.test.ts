@@ -42,10 +42,6 @@ function redemptionMethodology() {
       outputAssetQuality: 0.15,
       cost: 0.1,
     },
-    effectiveExitModel: {
-      model: "test",
-      diversificationFactor: 1,
-    },
     routeFamilyCaps: {
       queueRedeem: 80,
       offchainIssuer: 100,

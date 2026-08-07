@@ -8,7 +8,6 @@ import {
 import {
   applyCapacityConstraintScoreEffects,
   computeCapacityScore,
-  computeEffectiveExitScore,
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
@@ -268,15 +267,6 @@ export async function buildRedemptionBackstopEntry(
     now,
   });
   const modelConfidence = confidence.modelConfidence;
-  const effectiveExitScore =
-    resolutionState === "resolved"
-      ? computeEffectiveExitScore(dexLiquidityScore, score, {
-          circulatingSupplyUsd: supplyUsd,
-          currentExecutableCapacityUsd: capacity.scoringCapacityUsd,
-          routeExitCorrelation,
-          modelConfidence,
-        })
-      : null;
   const notes = dedupNotes([
     ...(config.notes ?? []),
     ...capacity.notes,
@@ -287,7 +277,6 @@ export async function buildRedemptionBackstopEntry(
   const entry: RedemptionBackstopEntry = {
     stablecoinId,
     score,
-    effectiveExitScore,
     dexLiquidityScore,
     accessScore: staticFields.accessScore,
     settlementScore: staticFields.settlementScore,
@@ -391,7 +380,6 @@ export function buildFailedRedemptionBackstopEntry(
   return {
     stablecoinId,
     score: null,
-    effectiveExitScore: null,
     dexLiquidityScore: null,
     accessScore: staticFields.accessScore,
     settlementScore: staticFields.settlementScore,

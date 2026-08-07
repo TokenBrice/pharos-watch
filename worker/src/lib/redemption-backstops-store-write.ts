@@ -24,7 +24,6 @@ const REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE = 500;
 export const SNAPSHOT_ROW_COLUMNS = [
   "stablecoin_id",
   "score",
-  "effective_exit_score",
   "dex_liquidity_score",
   "access_score",
   "settlement_score",
@@ -111,7 +110,6 @@ function buildSnapshotRowValues(record: RedemptionBackstopSnapshotRecord): unkno
   return [
     record.stablecoinId,
     record.score,
-    record.effectiveExitScore,
     record.dexLiquidityScore,
     record.accessScore,
     record.settlementScore,
@@ -165,19 +163,17 @@ function buildHistoryUpsert(
          stablecoin_id,
          snapshot_date,
          score,
-         effective_exit_score,
          dex_liquidity_score,
          updated_at,
          methodology_version,
          details_json,
          snapshot_run_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       record.stablecoinId,
       snapshotDate,
       record.score,
-      record.effectiveExitScore,
       record.dexLiquidityScore,
       record.updatedAt,
       record.methodologyVersion,

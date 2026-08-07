@@ -197,7 +197,6 @@ const donorFixed = {
     "dai-makerdao": {
       stablecoinId: "dai-makerdao",
       score: 100,
-      effectiveExitScore: 100,
       dexLiquidityScore: 54,
       accessScore: 100,
       settlementScore: 100,

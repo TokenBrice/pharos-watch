@@ -24,18 +24,16 @@ import { roundScore } from "./math";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = EXIT_ROUTE_SCORING_TABLES.componentWeights;
 
-const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.1;
-
-const REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE = {
+/**
+ * The redemption view's supply-denominator request. Named after the modeled
+ * exit size it produces, which the capacity profile publishes so a route's
+ * capacity can be read against the notional it was measured for.
+ */
+const REDEMPTION_MODELED_EXIT_SIZE_REQUEST = {
   supplyRatio: EXIT_ROUTE_SCORING_TABLES.request.supplyRatio,
   floorUsd: EXIT_ROUTE_SCORING_TABLES.request.floorUsd,
   capUsd: EXIT_ROUTE_SCORING_TABLES.request.capUsd,
 } as const;
-
-const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = EXIT_ROUTE_SCORING_TABLES.modeledConfidenceFactors satisfies Record<
-  RedemptionModelConfidence,
-  number
->;
 
 /**
  * Common-request policy for the exit-route observations both producers emit.
@@ -51,55 +49,13 @@ export const SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY = {
   documentedTermsMaxAgeSec: EXIT_ROUTE_SCORING_TABLES.documentedTermsMaxAgeSec,
 } as const;
 
-export interface EffectiveExitScoreOptions {
-  circulatingSupplyUsd?: number | null;
-  modeledExitSizeUsd?: number | null;
-  currentExecutableCapacityUsd?: number | null;
-  routeExitCorrelation?: RedemptionRouteExitCorrelation;
-  modelConfidence?: RedemptionModelConfidence;
-}
-
-export interface EffectiveExitScoreDiagnostics {
-  score: number | null;
-  modeledExitSizeUsd: number | null;
-  dexRouteScore: number | null;
-  redemptionRouteScore: number | null;
-  diversificationBonusApplied: boolean;
-  correlationReason: string | null;
-}
-
-/**
- * `missingCapacityBehavior: "unbounded"` is intentional and load-bearing:
- * eventual-only routes (null scoring capacity) rely on it for the DEX-gated
- * documented offchain-issuer primary-market bonus, and bounded
- * (`immediate-bounded`) worker rows can never reach the blend with a non-null
- * redemption score and unknown capacity because every capacity resolver either
- * sets `scoringCapacityUsd` or fails the row to `missing-capacity` /
- * `missing-cache` before scoring. Do not gate unknown capacity here without
- * threading `capacitySemantics` through both blend callers.
- */
-const REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR = {
-  formula: "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
-  missingCapacityBehavior: "unbounded",
-} as const;
-
-export const REDEMPTION_EFFECTIVE_EXIT_MODEL = {
-  model: "best-path",
-  diversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
-  modeledExitSize: REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE,
-  capacityFactor: REDEMPTION_EFFECTIVE_EXIT_CAPACITY_FACTOR,
-  confidenceFactors: REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS,
-  diversificationPolicy:
-    "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots.",
-} as const;
-
 /**
  * Route-family score ceilings applied after the weighted component score.
  *
  * - `queueRedeem` (70): queued redemption inherently involves multi-hour or
  *   multi-day settlement friction plus FIFO processing. Even a perfect
  *   component mix stays below 70/100 so queued rails never match permissionless
- *   atomic rails in the effective-exit blend. See v3.7 methodology changelog.
+ *   atomic rails. See v3.7 methodology changelog.
  *
  * - `offchainIssuer` (65): offchain institutional redemption is gated by KYC,
  *   primary-market access, and banking-hour settlement. The 65 ceiling reflects
@@ -348,106 +304,13 @@ export function computeRedemptionBackstopScore(args: {
   };
 }
 
-export function computeEffectiveExitScore(
-  liquidityScore: number | null | undefined,
-  redemptionBackstopScore: number | null | undefined,
-  options?: EffectiveExitScoreOptions,
-): number | null {
-  return computeEffectiveExitScoreDiagnostics(liquidityScore, redemptionBackstopScore, options).score;
-}
-
-export function computeEffectiveExitScoreDiagnostics(
-  liquidityScore: number | null | undefined,
-  redemptionBackstopScore: number | null | undefined,
-  options?: EffectiveExitScoreOptions,
-): EffectiveExitScoreDiagnostics {
-  const liquidity =
-    liquidityScore != null && Number.isFinite(liquidityScore) ? Math.max(0, Math.min(100, liquidityScore)) : null;
-  const rawRedemption =
-    redemptionBackstopScore != null && Number.isFinite(redemptionBackstopScore)
-      ? Math.max(0, Math.min(100, redemptionBackstopScore))
-      : null;
-
-  const modeledExitSizeUsd = resolveModeledExitSizeUsd(options);
-  const redemption =
-    rawRedemption != null && options
-      ? rawRedemption *
-        resolveEffectiveExitCapacityFactor(options) *
-        resolveEffectiveExitConfidenceFactor(options.modelConfidence)
-      : rawRedemption;
-  const roundedRedemption = redemption != null ? roundScore(redemption) : null;
-
-  if (liquidity != null && roundedRedemption != null) {
-    const bestPath = Math.max(liquidity, roundedRedemption);
-    const applyDiversificationBonus = !options || options.routeExitCorrelation === "independent-issuer-rail";
-    const bonus = applyDiversificationBonus
-      ? Math.min(liquidity, roundedRedemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
-      : 0;
-    return {
-      score: Math.round(Math.min(100, bestPath + bonus)),
-      modeledExitSizeUsd,
-      dexRouteScore: Math.round(liquidity),
-      redemptionRouteScore: roundedRedemption,
-      diversificationBonusApplied: bonus > 0,
-      correlationReason: bonus > 0 ? "legacy-independent-issuer-rail" : "legacy-correlation-not-independent",
-    };
-  }
-
-  const score = liquidity != null ? Math.round(liquidity) : roundedRedemption;
-  return {
-    score,
-    modeledExitSizeUsd,
-    dexRouteScore: liquidity != null ? Math.round(liquidity) : null,
-    redemptionRouteScore: roundedRedemption,
-    diversificationBonusApplied: false,
-    correlationReason: null,
-  };
-}
-
-function resolveModeledExitSizeUsd(options: EffectiveExitScoreOptions | undefined): number | null {
-  if (
-    options?.modeledExitSizeUsd != null &&
-    Number.isFinite(options.modeledExitSizeUsd) &&
-    options.modeledExitSizeUsd > 0
-  ) {
-    return options.modeledExitSizeUsd;
-  }
-  return computeModeledExitSizeUsd(options?.circulatingSupplyUsd);
-}
-
 /**
  * The redemption view's request: the supply-denominator notional, taken
  * straight off the shared clamped supply share without the V9 pillar's
  * notional-grid snap.
  */
 export function computeModeledExitSizeUsd(circulatingSupplyUsd: number | null | undefined): number | null {
-  return resolveExitRequestSupplyNotionalUsd(circulatingSupplyUsd, REDEMPTION_EFFECTIVE_EXIT_MODELED_EXIT_SIZE);
-}
-
-function resolveEffectiveExitCapacityFactor(options: {
-  circulatingSupplyUsd?: number | null;
-  modeledExitSizeUsd?: number | null;
-  currentExecutableCapacityUsd?: number | null;
-}): number {
-  const modeledExitSizeUsd =
-    options.modeledExitSizeUsd != null && Number.isFinite(options.modeledExitSizeUsd) && options.modeledExitSizeUsd > 0
-      ? options.modeledExitSizeUsd
-      : computeModeledExitSizeUsd(options.circulatingSupplyUsd);
-  if (
-    modeledExitSizeUsd == null ||
-    options.currentExecutableCapacityUsd == null ||
-    !Number.isFinite(options.currentExecutableCapacityUsd)
-  ) {
-    return 1;
-  }
-  return Math.max(0, Math.min(1, options.currentExecutableCapacityUsd / modeledExitSizeUsd));
-}
-
-function resolveEffectiveExitConfidenceFactor(modelConfidence: RedemptionModelConfidence | undefined): number {
-  // Fail conservative: a v4 blend without model confidence gets the "low"
-  // factor instead of full redemption weight. All current runtime callers pass
-  // a derived rollup, so this only guards untyped or future call sites.
-  return REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS[modelConfidence ?? "low"];
+  return resolveExitRequestSupplyNotionalUsd(circulatingSupplyUsd, REDEMPTION_MODELED_EXIT_SIZE_REQUEST);
 }
 
 export const REDEMPTION_ROUTE_FAMILY_LABELS: Record<RedemptionRouteFamily, string> = {

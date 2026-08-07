@@ -215,7 +215,6 @@ describe("show-your-work formatters", () => {
     const table = formatRedemption({
       stablecoinId: "test",
       score: 70,
-      effectiveExitScore: 65,
       dexLiquidityScore: null,
       accessScore: 80,
       settlementScore: 75,

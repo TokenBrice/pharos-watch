@@ -5,7 +5,6 @@ import type { RedemptionBackstopEntry } from "@shared/types";
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "test-usd",
   score: 72,
-  effectiveExitScore: 64,
   dexLiquidityScore: 51,
   accessScore: 70,
   settlementScore: 80,
@@ -315,7 +314,6 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     const missingCache = buildRedemptionBackstopCardViewModel(
       entry({
         score: null,
-        effectiveExitScore: null,
         resolutionState: "missing-cache",
         sourceMode: "static",
         modelConfidence: "low",

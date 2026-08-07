@@ -1,110 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   applyCapacityConstraintScoreEffects,
-  computeEffectiveExitScore,
   computeCapacityScore,
   computeModeledExitSizeUsd,
   computeRedemptionBackstopScore,
   isStrongLiveDirectRoute,
-  REDEMPTION_EFFECTIVE_EXIT_MODEL,
 } from "../redemption-backstop-scoring";
 
-describe("computeEffectiveExitScore", () => {
-  it("returns null when both inputs are null", () => {
-    expect(computeEffectiveExitScore(null, null)).toBeNull();
-  });
-
-  it("returns liquidity score when only liquidity available", () => {
-    expect(computeEffectiveExitScore(80, null)).toBe(80);
-    expect(computeEffectiveExitScore(0, null)).toBe(0);
-  });
-
-  it("returns redemption score directly when only redemption available (no cap)", () => {
-    expect(computeEffectiveExitScore(null, 90)).toBe(90);
-    expect(computeEffectiveExitScore(null, 100)).toBe(100);
-    expect(computeEffectiveExitScore(null, 40)).toBe(40);
-    // Route family caps (65/70) are applied upstream, not here
-    expect(computeEffectiveExitScore(null, 70)).toBe(70);
-  });
-
-  it("uses best path + diversification bonus when both exist", () => {
-    // dex=80, redemption=60 → best=80, bonus=60*0.10=6 → 86
-    expect(computeEffectiveExitScore(80, 60)).toBe(86);
-    // dex=40, redemption=90 → best=90, bonus=40*0.10=4 → 94
-    expect(computeEffectiveExitScore(40, 90)).toBe(94);
-    // dex=51, redemption=90 → best=90, bonus=51*0.10=5.1 → 95
-    expect(computeEffectiveExitScore(51, 90)).toBe(95);
-  });
-
-  it("preserves legacy diversification without options but requires independent correlation with v4 options", () => {
-    expect(computeEffectiveExitScore(40, 90)).toBe(94);
-    expect(
-      computeEffectiveExitScore(40, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: 25_000_000,
-        modelConfidence: "high",
-      }),
-    ).toBe(90);
-  });
-
-  it("caps effective score at 100", () => {
-    // dex=95, redemption=98 → best=98, bonus=95*0.10=9.5 → 107.5 → capped at 100
-    expect(computeEffectiveExitScore(95, 98)).toBe(100);
-    expect(computeEffectiveExitScore(100, 100)).toBe(100);
-  });
-
-  it("is monotonic — adding any path never lowers the score", () => {
-    // Strong redemption, adding weak DEX should only help
-    const redeemOnly = computeEffectiveExitScore(null, 80)!;
-    const withWeakDex = computeEffectiveExitScore(15, 80)!;
-    expect(withWeakDex).toBeGreaterThanOrEqual(redeemOnly);
-
-    // Strong DEX, adding weak redemption should only help
-    const dexOnly = computeEffectiveExitScore(70, null)!;
-    const withWeakRedeem = computeEffectiveExitScore(70, 20)!;
-    expect(withWeakRedeem).toBeGreaterThanOrEqual(dexOnly);
-  });
-
-  it("clamps inputs to 0-100", () => {
-    expect(computeEffectiveExitScore(150, null)).toBe(100);
-    expect(computeEffectiveExitScore(-10, null)).toBe(0);
-  });
-
-  it("handles non-finite inputs as null", () => {
-    expect(computeEffectiveExitScore(NaN, null)).toBeNull();
-    expect(computeEffectiveExitScore(null, Infinity)).toBeNull();
-    expect(computeEffectiveExitScore(undefined, undefined)).toBeNull();
-  });
-
-  it("scales redemption contribution by executable capacity and confidence", () => {
-    expect(
-      computeEffectiveExitScore(40, 90, {
-        circulatingSupplyUsd: 1_000_000_000,
-        currentExecutableCapacityUsd: 1_000_000,
-        routeExitCorrelation: "unknown",
-        modelConfidence: "medium",
-      }),
-    ).toBe(40);
-  });
-
-  it("applies diversification bonus only for independent issuer rails", () => {
-    const sharedBacking = computeEffectiveExitScore(70, 80, {
-      circulatingSupplyUsd: 100_000_000,
-      currentExecutableCapacityUsd: 25_000_000,
-      routeExitCorrelation: "same-stablecoin-pool-backing",
-      modelConfidence: "high",
-    });
-    const independent = computeEffectiveExitScore(70, 80, {
-      circulatingSupplyUsd: 100_000_000,
-      currentExecutableCapacityUsd: 25_000_000,
-      routeExitCorrelation: "independent-issuer-rail",
-      modelConfidence: "high",
-    });
-
-    expect(sharedBacking).toBe(80);
-    expect(independent).toBe(87);
-  });
-
+describe("computeModeledExitSizeUsd", () => {
   it("models exit size as five percent of supply with floor and cap", () => {
     expect(computeModeledExitSizeUsd(1_000_000)).toBe(100_000);
     expect(computeModeledExitSizeUsd(100_000_000)).toBe(5_000_000);
@@ -117,68 +20,6 @@ describe("computeEffectiveExitScore", () => {
     expect(computeModeledExitSizeUsd(-1)).toBeNull();
     expect(computeModeledExitSizeUsd(Number.POSITIVE_INFINITY)).toBeNull();
   });
-
-  it("defaults missing model confidence to the low factor when v4 options are present", () => {
-    // Full capacity, no modelConfidence → redemption discounted by the low factor: 90 * 0.35 → 31
-    expect(
-      computeEffectiveExitScore(null, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: 25_000_000,
-      }),
-    ).toBe(31);
-    // Identical to passing explicit low confidence
-    expect(
-      computeEffectiveExitScore(null, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: 25_000_000,
-        modelConfidence: "low",
-      }),
-    ).toBe(31);
-    // Best-path: discounted redemption (31) loses to DEX (40), no bonus without independent correlation
-    expect(
-      computeEffectiveExitScore(40, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: 25_000_000,
-      }),
-    ).toBe(40);
-    // Legacy two-arg call (no v4 options) keeps full passthrough — the blend is not applied at all
-    expect(computeEffectiveExitScore(null, 90)).toBe(90);
-  });
-
-  it("treats invalid executable capacity as unbounded and clamps negative executable capacity to zero", () => {
-    expect(
-      computeEffectiveExitScore(null, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: Number.NaN,
-        modelConfidence: "high",
-      }),
-    ).toBe(90);
-    expect(
-      computeEffectiveExitScore(null, 90, {
-        modeledExitSizeUsd: 25_000_000,
-        currentExecutableCapacityUsd: -1,
-        modelConfidence: "high",
-      }),
-    ).toBe(0);
-  });
-
-  it("exports the effective-exit model parameters used by scoring and cron metadata", () => {
-    expect(REDEMPTION_EFFECTIVE_EXIT_MODEL).toMatchObject({
-      model: "best-path",
-      diversificationFactor: 0.1,
-      modeledExitSize: {
-        supplyRatio: 0.05,
-        floorUsd: 100_000,
-        capUsd: 25_000_000,
-      },
-      confidenceFactors: {
-        high: 1,
-        medium: 0.75,
-        low: 0.35,
-      },
-    });
-  });
-
 });
 
 describe("isStrongLiveDirectRoute", () => {

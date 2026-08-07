@@ -585,7 +585,6 @@ function queuedRedemptionFixedInput(
   const redemption: RedemptionBackstopEntry = {
     stablecoinId: "alpha",
     score: null,
-    effectiveExitScore: null,
     dexLiquidityScore: null,
     accessScore: 40,
     settlementScore: 20,
@@ -664,7 +663,6 @@ function boundedUnknownFeeRedemptionFixedInput() {
   const redemption: RedemptionBackstopEntry = {
     stablecoinId: "usdc-circle",
     score: null,
-    effectiveExitScore: null,
     dexLiquidityScore: null,
     accessScore: 40,
     settlementScore: 65,

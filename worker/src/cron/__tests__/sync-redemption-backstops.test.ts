@@ -16,7 +16,6 @@ function makeResolvedSnapshot(stablecoinId: string, now: number, overrides: Reco
   return {
     stablecoinId,
     score: 88,
-    effectiveExitScore: 56,
     dexLiquidityScore: 29,
     accessScore: 100,
     settlementScore: 100,
@@ -116,7 +115,6 @@ describe("syncRedemptionBackstops", () => {
     buildRedemptionBackstopEntryMock.mockResolvedValue({
       stablecoinId: "iusd-infinifi",
       score: null,
-      effectiveExitScore: null,
       dexLiquidityScore: 47,
       accessScore: 100,
       settlementScore: 100,
@@ -149,7 +147,6 @@ describe("syncRedemptionBackstops", () => {
       (stablecoinId: string, _config: unknown, failedAt: number) => ({
         stablecoinId,
         score: null,
-        effectiveExitScore: null,
         dexLiquidityScore: null,
         accessScore: 100,
         settlementScore: 100,
@@ -260,7 +257,6 @@ describe("syncRedemptionBackstops", () => {
       .mockResolvedValueOnce(
         makeResolvedSnapshot("iusd-infinifi", 1_700_000_000, {
           score: 70,
-          effectiveExitScore: 57,
           dexLiquidityScore: 47,
           settlementScore: 20,
           executionCertaintyScore: 60,
@@ -388,7 +384,6 @@ describe("syncRedemptionBackstops", () => {
       .mockResolvedValueOnce(
         makeResolvedSnapshot("cusd-cap", now, {
           score: null,
-          effectiveExitScore: null,
           resolutionState: "impaired",
           routeStatus: "degraded",
           routeStatusSource: "market-implied",
@@ -450,7 +445,6 @@ describe("syncRedemptionBackstops", () => {
     resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
       makeResolvedSnapshot("cusd-cap", now, {
         score: null,
-        effectiveExitScore: null,
         resolutionState: "impaired",
         routeStatus: "degraded",
         routeStatusSource: "market-implied",
@@ -491,7 +485,6 @@ describe("syncRedemptionBackstops", () => {
       Promise.resolve(
         makeResolvedSnapshot(asset.id, now, {
           score: null,
-          effectiveExitScore: null,
           resolutionState: "impaired",
           routeStatus: "degraded",
           routeStatusSource: "market-implied",
@@ -521,7 +514,6 @@ describe("syncRedemptionBackstops", () => {
     resolveRedemptionBackstopEntryMock.mockResolvedValueOnce({
       stablecoinId: "cusd-cap",
       score: 88,
-      effectiveExitScore: 56,
       dexLiquidityScore: 29,
       accessScore: 100,
       settlementScore: 100,
@@ -632,7 +624,6 @@ describe("syncRedemptionBackstops", () => {
         Promise.resolve({
           ...makeResolvedSnapshot(stablecoinId, now, {
             score: null,
-            effectiveExitScore: null,
             dexLiquidityScore,
             sourceMode: "static",
             resolutionState: "missing-cache",
@@ -670,7 +661,6 @@ describe("syncRedemptionBackstops", () => {
       .mockResolvedValueOnce({
         stablecoinId: "iusd-infinifi",
         score: null,
-        effectiveExitScore: null,
         dexLiquidityScore: 47,
         accessScore: 100,
         settlementScore: 100,
@@ -729,7 +719,6 @@ describe("syncRedemptionBackstops", () => {
     resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(
       makeResolvedSnapshot("cusd-cap", now, {
         score: null,
-        effectiveExitScore: null,
         capacityScore: null,
         provider: "reserve-sync-metadata",
         sourceMode: "static",
@@ -777,7 +766,6 @@ describe("syncRedemptionBackstops", () => {
         unresolvedIds.has(asset.id)
           ? makeResolvedSnapshot(asset.id, now, {
               score: null,
-              effectiveExitScore: null,
               capacityScore: null,
               provider: "reserve-sync-metadata",
               sourceMode: "static",

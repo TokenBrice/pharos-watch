@@ -105,29 +105,11 @@ Some route families are intentionally capped even when their component mix score
 
 An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
-### Legacy Effective Exit Score (compatibility only)
-
-`effectiveExitScore` is retained in stored rows and the API for historical consumers, but the detail-page redemption module no longer presents it and Safety Score V9 does not consume it. The current UI presents the standalone redemption route score only.
-
-`computeEffectiveExitScore()` uses a capacity-aware best-path model to combine modeled redemption quality with observable DEX liquidity:
-
-- Model exit size defaults to `min(max(circulatingSupplyUsd × 0.05, 100_000), 25_000_000)`.
-- Redemption contribution is multiplied by `min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)` when current capacity is known.
-- Redemption contribution is also discounted by model confidence (`high = 1`, `medium = 0.75`, `low = 0.35`) when v4 options are present.
-- If both DEX and redemption exist, the best path wins. The `0.10` diversification bonus applies only when `routeExitCorrelation = independent-issuer-rail`.
-- If only DEX liquidity exists: passthrough DEX liquidity
-- If only redemption exists: passthrough the capacity/confidence-adjusted redemption score
-- If neither exists: `null`
-
-The redemption-backstop cron materializes raw `effectiveExitScore` on every resolved row using the last-known DEX liquidity input, even when that input is stale relative to the `CRON_INTERVALS["sync-dex-liquidity"] * 2` freshness budget. Stale or missing DEX input still marks the cron run `degraded` and flips `metadata.liquidityStale = true` for operational visibility. Report cards then apply their own confidence and availability gating on top, so stale redemption snapshots and low-confidence redemption routes stay visible on redemption surfaces but do not uplift Safety Score liquidity. In v4, eventual-only routes expose `eventualRedeemabilityScore` for route-quality context but do not create redemption-only Safety liquidity uplift without current executable capacity. Documented offchain issuer eventual routes can contribute only a DEX-gated primary-market bonus, using `eventualRedeemabilityScore` as the route-quality ceiling while requiring a current DEX liquidity floor.
-
-The shadow P4 same-notional envelope is stricter than the legacy blend. Redemption observations accept only `issuer-redemption` and `protocol-redemption` as potentially scoreable families; `eventual-redemption` must be diagnostic-only. Explicit active replay rejects future observations and live redemption evidence older than twice the 4-hour producer interval (8 hours). Reviewed `documented-terms` evidence uses a separate one-year review window. Missing modeled request, fixed clock, or eligible modeled-request observations returns an active `null` diagnostic instead of restoring legacy scores. Reviewed opaque-fee observations can carry modeled capacity tagged with `feeEvidence: "undisclosed-reviewed"` while remaining producer-level non-score-eligible; a consumer must apply an explicit bounded-unknown fee policy rather than treating the route as cost-bounded. Curated `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, and `unknown` correlation states veto the diversification bonus; `independent-issuer-rail` only allows the structural output and failure-domain checks to decide independence.
+The exit-route observation envelope this producer emits is consumed by the Safety Score V9 Exit pillar, which is the only same-notional route grader. Redemption observations accept only `issuer-redemption` and `protocol-redemption` as potentially scoreable families; `eventual-redemption` is diagnostic-only. Reviewed `documented-terms` evidence uses a one-year review window. Reviewed opaque-fee observations can carry modeled capacity tagged with `feeEvidence: "undisclosed-reviewed"` while remaining producer-level non-score-eligible; a consumer must apply an explicit bounded-unknown fee policy rather than treating the route as cost-bounded. Route independence — and with it the pillar's bounded redundancy credit — is decided by the V9 Exit pillar from enumerated failure domains and physical resource keys.
 
 The V9-only FPI path observes its Controller Pool, FRAX and FPI price feeds, and CPI tracker at one Ethereum block. Admission pins every dependency address and runtime hash, verifies current oracle rounds and controller/feed agreement, rejects paused or out-of-band state, and measures the live fee, quote, FRAX balance, and maximum redeemable FPI. Capacity is denominated as input FPI at the CPI peg; execution cost and the pinned FRAX output value remain separate so the all-in loss must satisfy the modeled-request ceiling. The configured CPI update bounds admit observations up to 62 days old at high model confidence, downgrade observations from 62 through 366 days to medium, and reject older state. The issuer collateral response and the nested route attempt publish through the same reserve-adapter result, so a failed issuer request cannot leave a new route attempt attached to stale composition. This evidence is consumed only by explicit V9 replay and does not alter public V8 redemption rows or scores.
 
 Severe active downside depegs add a current-exercisability gate on top of the static route score. When an open `depeg_events` row is directionally below peg with `abs(peak_deviation_bps) >= 2500`, a static, estimated, live-proxy, issuer/API, queue, or documented-bound redemption route is marked `impaired` unless it has live-direct dynamic permissionless redemption capacity with atomic or immediate settlement. Severe upside events do not automatically impair a route whose redemption still clears at par into a non-impaired output asset. For configured tracked wrappers, downside impairment now also propagates from the parent stablecoin (the coin's `variantOf`, or its `pegReferenceId` when set) as output-asset impairment when that parent has an open severe-depeg row. This prevents stale route documentation from producing a strong par-exit score while the market is indicating that broad redemption is not currently clearing.
-
-The effective exit model parameters are surfaced by the `methodology.effectiveExitModel` field on `GET /api/redemption-backstops` and reused by report cards.
 
 ---
 
@@ -251,7 +233,7 @@ Each row also carries:
   - `missing-cache` when the stablecoins snapshot did not contain the asset or its current supply
   - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
   - `failed` when a route-specific resolver failed
-  - `impaired` when the route shape is known but current market or route-availability evidence contradicts broad par redemption; impaired rows have `score = null`, `effectiveExitScore = null`, and `modelConfidence = low`
+  - `impaired` when the route shape is known but current market or route-availability evidence contradicts broad par redemption; impaired rows have `score = null` and `modelConfidence = low`
 - `routeStatus`:
   - `open` for normal resolved routes without current impairment evidence
   - `degraded` when the route is currently impaired by market-implied evidence such as a severe active depeg
@@ -422,7 +404,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 - `src/hooks/api-hooks.ts` exports `useRedemptionBackstops()`, wired through `FRONTEND_API_QUERY_DESCRIPTORS.redemptionBackstops` in `src/lib/api-query-descriptors.ts` with the `CRON_RESERVE_SYNC` producer interval (4-hour reserve lane cadence)
 - `src/hooks/use-stablecoin-detail-view-model.ts` fetches the map and passes the coin-specific entry into the stablecoin detail view model
-- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with a route-specific title (`Issuer redemption route` or `Redemption route`), source freshness, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions. It does not render the legacy `effectiveExitScore`.
+- `src/components/stablecoin-detail/redemption-backstop-card.tsx` renders one `Standalone route score` with a route-specific title (`Issuer redemption route` or `Redemption route`), source freshness, route family, source mode, resolution state, route status, model confidence, access/settlement/output/capacity blocks, eventual-only vs immediate-bounded capacity messaging, explicit redemption-fee summaries keyed off `feeModelKind`, reviewed docs/source context, component subscores, and contextual methodology hint / footer actions.
 - `src/lib/stablecoin-detail-view-model.ts` includes redemption freshness in the detail-page stale-query rail
 - `/coverage` consumes `useRedemptionBackstops()` through `src/lib/coverage/redemption.ts`. It distinguishes scored route-family states from low-confidence heuristic routes, resolved-but-unscored routes, configured-but-unrated routes, impaired routes, no route, and `Data n/a` feed-unavailable states, so unresolved, eventual-only, impaired, or weakly evidenced rows do not inflate public strong-coverage counts. The Redemption quick filter includes configured/resolved route states but excludes `Data n/a`.
 

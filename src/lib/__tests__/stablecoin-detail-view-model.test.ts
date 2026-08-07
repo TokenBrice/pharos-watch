@@ -762,7 +762,6 @@ describe("stablecoin detail view-model builder", () => {
                 "usdc-circle": {
                   stablecoinId: "usdc-circle",
                   score: 80,
-                  effectiveExitScore: 80,
                   resolutionState: "resolved",
                   routeFamily: "stablecoin-redeem",
                 },
@@ -770,7 +769,6 @@ describe("stablecoin detail view-model builder", () => {
                   stablecoinId: "usdt-tether",
                   score: null,
                   eventualRedeemabilityScore: 65,
-                  effectiveExitScore: 72,
                   resolutionState: "resolved",
                   routeFamily: "offchain-issuer",
                 },
@@ -788,7 +786,6 @@ describe("stablecoin detail view-model builder", () => {
     if (viewModel.status !== "ready") return;
 
     expect(viewModel.redemptionBackstop?.stablecoinId).toBe("usdt-tether");
-    expect(viewModel.redemptionBackstop?.effectiveExitScore).toBe(72);
     expect(viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")).toMatchObject({
       dataUpdatedAt: 12_345,
       hasData: true,

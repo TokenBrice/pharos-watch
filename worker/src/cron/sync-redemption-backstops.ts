@@ -5,7 +5,6 @@ import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confi
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
 import { toErrorMessage } from "../lib/error-utils";
 import {
-  REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
@@ -89,7 +88,6 @@ function buildRegistryMetadata(
     v4ScoringParametersHash: stableHash({
       componentWeights: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
       routeFamilyCaps: REDEMPTION_ROUTE_FAMILY_CAPS,
-      effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
     }),
   };
 }
@@ -145,7 +143,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const registryMetadata = buildRegistryMetadata(configuredIds, configById);
 
   // Staleness is tracked for operational visibility (degraded-run signal +
-  // metadata) but no longer suppresses effectiveExitScore. Aligns with the
+  // metadata) and does not suppress the route score. Aligns with the
   // report-card path, which also uses the last-known DEX score when stale —
   // see the native capture at `worker/src/lib/safety-score-v9-capture.ts`.
   let liquidityStale = false;

@@ -150,7 +150,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-scoring.ts",
-      "sha256": "ab6db043e3d5514e12c3bba41b612c3d636992ee0a0453e0c0fb0ef1496b1636"
+      "sha256": "db09360d2a9b70092e96671d6bc4fcaa513fff58883811475628797c82f50e6d"
     },
     {
       "path": "shared/lib/redemption-backstop-version.ts",
@@ -322,7 +322,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/redemption.ts",
-      "sha256": "5301b83bf93444b268b24e80abf355ee92cc5c1e1746d520bf2508f483090970"
+      "sha256": "3356757ef6dd9ba5d0a30dc5e90a638e827c1e97b33e18e4a6f96e8c99b0f14c"
     },
     {
       "path": "shared/types/report-cards-base-input.ts",
@@ -493,7 +493,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "be204abc9c11164b11fa13af56b95dfe16c4aacd9246f521e256451be719f48f"
+  "digest": "917d6e24a70fbfebf5490fb84a7433c3c71e3a87429f8cb91f08c2d94f0db602"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
