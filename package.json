@@ -241,7 +241,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "16.2.11",
     "eslint-plugin-security": "^4.0.1",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "madge": "8.0.0",
     "tailwindcss": "4.3.3",
     "topojson-client": "3.1.0",
