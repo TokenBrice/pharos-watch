@@ -147,6 +147,7 @@ describe("runSelector — Treasury happy path", () => {
       depegEventCount: 4,
       pegScore: 95,
       safetyScore: 92,
+      safetyProvenance: "safety-score-v9",
       safetyResilienceScore: 91,
       safetyDecentralizationScore: 92,
       safetyLiquidityScore: 88,

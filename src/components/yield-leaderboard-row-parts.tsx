@@ -17,6 +17,10 @@ import {
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import {
+  YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
+  isOpportunityDerivedSafety,
+} from "@shared/lib/yield-opportunity-provenance";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
@@ -206,20 +210,36 @@ export function YieldSafetyBadge({
   grade,
   safetyScore,
   safetySrLabel,
+  opportunityDerived = false,
 }: {
   grade: YieldViewModelRow["safetyGrade"];
   safetyScore: number | null;
   safetySrLabel: string;
+  /** True when the yield model produced this grade instead of Safety Score V9. */
+  opportunityDerived?: boolean;
 }) {
+  // A Royco Dawn tranche grade and an external-opportunity grade publish into
+  // the same field as the underlying card and render in the same visual
+  // language. The marker keeps them from reading as the stablecoin's Safety
+  // Score.
+  const marker = opportunityDerived ? (
+    <span aria-hidden="true" className="ml-0.5 align-super text-[9px] leading-none">
+      {"\u2020"}
+    </span>
+  ) : null;
+  const describe = (base: string) =>
+    opportunityDerived ? `${base} — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}` : base;
+
   if (grade && grade !== "NR") {
     return (
       <Badge
         variant="outline"
         className={`px-1 py-0 text-sm font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
-        title={safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade}
-        aria-label={safetySrLabel}
+        title={describe(safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade)}
+        aria-label={describe(safetySrLabel)}
       >
         {grade}
+        {marker}
       </Badge>
     );
   }
@@ -228,10 +248,11 @@ export function YieldSafetyBadge({
       <Badge
         variant="outline"
         className="px-1 py-0 text-sm font-mono text-muted-foreground"
-        title={`Safety score: ${Math.round(safetyScore)}/100 (grade unavailable)`}
-        aria-label={safetySrLabel}
+        title={describe(`Safety score: ${Math.round(safetyScore)}/100 (grade unavailable)`)}
+        aria-label={describe(safetySrLabel)}
       >
         {Math.round(safetyScore)}
+        {marker}
       </Badge>
     );
   }
@@ -521,6 +542,10 @@ export function YieldExpandedDetails({
       </div>
     </div>
   );
+}
+
+export function isOpportunityDerivedYieldRow(row: YieldViewModelRow): boolean {
+  return isOpportunityDerivedSafety(row.provenance?.safetyProvenance);
 }
 
 export function formatYieldRowLabels(row: YieldViewModelRow) {

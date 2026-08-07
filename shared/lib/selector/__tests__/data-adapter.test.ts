@@ -88,6 +88,7 @@ describe("buildSelectorRows", () => {
     expect(row).toBeDefined();
     expect(row).toMatchObject({
       safetyScore: 91,
+      safetyProvenance: "safety-score-v9",
       safetyGrade: "A+",
       safetyResilienceScore: 82,
       safetyLiquidityScore: 77,

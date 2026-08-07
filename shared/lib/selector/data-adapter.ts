@@ -6,6 +6,7 @@ import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
 import { inferResilienceDefaults } from "../report-card-policy";
+import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
 import type {
   AltYieldSource,
   BluechipRatingsMap,
@@ -69,14 +70,24 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     const dex = args.dexData?.[id];
     const yieldEntry = yieldById.get(id);
     const yieldRisk = yieldEntry?.sourceRisk ?? null;
-    const rowSafetyScore =
-      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyScore != null
-        ? yieldEntry.safetyScore
-        : (safety?.score ?? null);
-    const rowSafetyGrade =
-      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyGrade != null
-        ? yieldEntry.safetyGrade
-        : (safety?.grade ?? null);
+    // Structured-tranche rows carry a grade the yield model minted, not the
+    // stablecoin's V9 card. The substitution stays, but it is recorded rather
+    // than silent: `safetyProvenance` travels with the row, into the dataset
+    // hash, and into the authored explanation.
+    const usesOpportunitySafety =
+      yieldEntry?.yieldType === "structured-tranche" &&
+      yieldEntry.safetyScore != null &&
+      yieldEntry.safetyGrade != null;
+    const rowSafetyScore = usesOpportunitySafety
+      ? yieldEntry.safetyScore
+      : (safety?.score ?? null);
+    const rowSafetyGrade = usesOpportunitySafety
+      ? yieldEntry.safetyGrade
+      : (safety?.grade ?? null);
+    const rowSafetyProvenance: MergedRow["safetyProvenance"] =
+      usesOpportunitySafety || isOpportunityDerivedSafety(yieldEntry?.provenance?.safetyProvenance)
+        ? "yield-opportunity"
+        : "safety-score-v9";
     const bluechip = args.bluechipData?.[id];
     const currentDeviationBps = peg?.currentDeviationBps ?? dex?.dexDeviationBps ?? null;
 
@@ -104,6 +115,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       dewsScore: stress?.score ?? null,
       safetyGrade: rowSafetyGrade,
       safetyScore: rowSafetyScore,
+      safetyProvenance: rowSafetyProvenance,
       safetyResilienceScore: safety?.pillars.backing.score ?? null,
       safetyDecentralizationScore: safety?.pillars.control.score ?? null,
       safetyLiquidityScore: safety?.pillars.exit.score ?? null,
@@ -176,6 +188,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         pegCurrency: row.pegCurrency,
         safetyGrade: row.safetyGrade,
         overallScore: row.safetyScore,
+        safetyProvenance: row.safetyProvenance,
         pegScore: row.pegScore,
         dewsScore: row.dewsScore,
         liquidityScore: row.liquidityScore,

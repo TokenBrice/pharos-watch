@@ -29,6 +29,7 @@ function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
     dewsScore: 25,
     safetyGrade: "A",
     safetyScore: 80,
+    safetyProvenance: "safety-score-v9",
     safetyResilienceScore: 80,
     safetyDecentralizationScore: 80,
     safetyLiquidityScore: 80,

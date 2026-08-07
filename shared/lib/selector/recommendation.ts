@@ -14,6 +14,7 @@ import type {
   YieldRecommendation,
 } from "./types";
 import { renderWatchText } from "./what-to-watch-templates";
+import { YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "../yield-opportunity-provenance";
 import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
 
 function pickWhyKeys(
@@ -137,6 +138,10 @@ function buildChainHints(
 }
 
 function buildWhyText(entry: ScoredEntry, profile: SelectorProfile): string {
+  const provenanceNote =
+    entry.row.safetyProvenance === "yield-opportunity"
+      ? ` ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}`
+      : "";
   const anchors = entry.components
     .filter((component) => component.normalizedValue != null && component.weight > 0)
     .sort((a, b) => b.contribution - a.contribution)
@@ -146,9 +151,9 @@ function buildWhyText(entry: ScoredEntry, profile: SelectorProfile): string {
         `${selectorComponentProseLabel(component.key)} ${Math.round(component.normalizedValue ?? 0)}`,
     );
   if (anchors.length === 0) {
-    return `Score ${round1(entry.score)} under the ${profile} weight set; live coverage is limited.`;
+    return `Score ${round1(entry.score)} under the ${profile} weight set; live coverage is limited.${provenanceNote}`;
   }
-  return `Score ${round1(entry.score)} is driven by ${anchors.join(" and ")} under the ${profile} weights.`;
+  return `Score ${round1(entry.score)} is driven by ${anchors.join(" and ")} under the ${profile} weights.${provenanceNote}`;
 }
 
 export function buildRecommendation(

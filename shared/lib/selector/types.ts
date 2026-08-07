@@ -563,6 +563,12 @@ export interface MergedRow {
   safetyGrade: ReportCardGrade | null;
   safetyScore: number | null;
   /**
+   * Where `safetyScore` / `safetyGrade` came from. Structured-tranche rows are
+   * graded by the yield model, not by Safety Score V9, and that substitution
+   * must never reach a shortlist card unlabelled.
+   */
+  safetyProvenance: "safety-score-v9" | "yield-opportunity";
+  /**
    * Published V9 pillars. They are read by exclusion gates, why-keys, and the
    * "what to watch" axis — surfaces that re-bin a published output — and are
    * deliberately absent from the weight vectors, which already carry the
