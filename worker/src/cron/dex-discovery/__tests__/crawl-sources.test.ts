@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 
+const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
+
 vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../dex-liquidity/crawl-helpers")>();
   return {
@@ -32,7 +34,8 @@ vi.mock("../../../lib/fetch-retry", () => ({
 }));
 
 vi.mock("../../../lib/dexscreener", () => ({
-  fetchDsTokenPoolsWithStatus: vi.fn(),
+  fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
+  fetchDsTokenPairsWithStatus: fetchDsTokenPoolsWithStatusMock,
   dsRateLimit: vi.fn().mockResolvedValue(undefined),
   getDsTrackedTokenPriceUsd: vi.fn(
     (pair: { baseToken: { address: string }; priceUsd: string | null }, trackedAddress: string) => ({

@@ -150,6 +150,19 @@ describe("adapter registry completeness", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("pins the reviewed issuer-host fallbacks for FDUSD and the Reservoir cohort", () => {
+    const configsById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.liveReservesConfig]));
+
+    expect(configsById.get("fdusd-first-digital")?.inputs.fallbacks).toEqual([
+      { kind: "http-html", url: "https://firstdigitallabs.webflow.io/transparency" },
+    ]);
+    for (const id of ["rusd-reservoir", "srusd-reservoir", "wsrusd-reservoir"]) {
+      expect(configsById.get(id)?.inputs.fallbacks).toEqual([
+        { kind: "http-json", url: "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw" },
+      ]);
+    }
+  });
+
   it("LiveReservesConfigSchema rejects unsupported primary input kinds", () => {
     const parsed = LiveReservesConfigSchema.safeParse({
       adapter: "ethena",

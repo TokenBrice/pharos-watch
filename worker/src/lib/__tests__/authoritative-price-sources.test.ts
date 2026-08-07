@@ -220,6 +220,23 @@ describe("authoritative-price-sources", () => {
   it("enqueues a missing-only AZND fallback when a numeric incumbent lacks publishable provenance", async () => {
     const nowSec = Math.floor(Date.now() / 1_000);
     const stats = createAuthoritativeLivePriceOverrideStats();
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const addressWord = (address: string) => `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
+    const uintWord = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
+    fetchEvmCallHexAtBlockMock
+      .mockResolvedValueOnce(addressWord("0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"))
+      .mockResolvedValueOnce(addressWord("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"))
+      .mockResolvedValueOnce(uintWord(22_000n * 10n ** 18n))
+      .mockResolvedValueOnce(uintWord(99n * 10n ** 6n))
+      .mockResolvedValueOnce(uintWord(220_000n))
+      .mockResolvedValueOnce(uintWord(2_180_000n));
     const overrides = await fetchAuthoritativeLivePriceOverrides(
       [
         { id: "aznd-mu-digital", price: 0.31 } as PeggedAsset,
@@ -234,7 +251,7 @@ describe("authoritative-price-sources", () => {
       ],
       undefined,
       undefined,
-      { stats },
+      { db, stats },
     );
 
     expect(overrides.size).toBe(0);
@@ -251,6 +268,51 @@ describe("authoritative-price-sources", () => {
       }),
     ]);
     expect(fetchEvmBlockNumberMock).toHaveBeenCalledTimes(1);
+    expect(db.getHistory().some(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+        && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`,
+    )).toBe(false);
+  });
+
+  it("still records thrown AZND pool requests as circuit failures", async () => {
+    fetchEvmBlockNumberMock.mockRejectedValue(new Error("rpc down"));
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        { id: "aznd-mu-digital" } as PeggedAsset,
+        {
+          id: "usdc-circle",
+          price: 1,
+          priceSource: "coingecko",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        } as PeggedAsset,
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({ attemptedCount: 1, failedCount: 1 });
+    const circuitWrite = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache")
+        && entry.binds[0] === `circuit:${CIRCUIT_SOURCE.AZND_CURVE_POOL}`,
+    );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
+      consecutiveFailures: 1,
+    });
   });
 
   it("excludes frozen assets before authoritative candidate accounting and still processes active assets", async () => {

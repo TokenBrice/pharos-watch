@@ -142,7 +142,6 @@ export const azndCurvePoolProvider: PriceSourceProvider = {
   liveCircuitSource: CIRCUIT_SOURCE.AZND_CURVE_POOL,
   livePriority: 1,
   liveTimeoutMs: 6_000,
-  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === AZND_ID;
   },

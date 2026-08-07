@@ -45,6 +45,7 @@ jobs:
         with:
           tooling-cache: "true"
           tooling-cache-save: "true"
+          install-playwright-firefox: "true"
       - name: Run surface-aware static checks
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

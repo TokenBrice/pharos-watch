@@ -718,7 +718,13 @@
       "primary": {
         "kind": "http-html",
         "url": "https://www.firstdigitallabs.com/transparency"
-      }
+      },
+      "fallbacks": [
+        {
+          "kind": "http-html",
+          "url": "https://firstdigitallabs.webflow.io/transparency"
+        }
+      ]
     }
   },
   "launchDate": "2023-04-28",

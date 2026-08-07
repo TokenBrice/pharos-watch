@@ -767,6 +767,54 @@ describe("adaptAccountableDashboard", () => {
     }).valid).toBe(true);
   });
 
+  it("keeps current-shaped Yuzu mGLO exposure unlinked while preserving the reviewed risk label", async () => {
+    const config = yzusd.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Yuzu Accountable primary input to be http-json");
+    }
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${primary.url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1,
+              ts: "2026-08-07T05:13:55.000Z",
+              reserves: {
+                exposure_split: {
+                  "[Fasanara]_mGLOBAL_Loop": { "": 60 },
+                  "[Fasanara]_mGLO_Loop": { "": 40 },
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Fasanara mGLOBAL loop",
+      pct: 60,
+      risk: "high",
+      coinId: "mglobal-midas-fasanara",
+      depType: "collateral",
+    }));
+    expect(result.slices).toContainEqual({
+      name: "Fasanara mGLO loop",
+      pct: 40,
+      risk: "high",
+    });
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("accountable") ?? undefined,
+      now: Date.UTC(2026, 7, 7, 6) / 1000,
+    }).valid).toBe(true);
+  });
+
   it("records signed Yuzu Accountable exposure buckets as degraded warnings instead of failing the adapter", async () => {
     const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const primary = config.inputs.primary;

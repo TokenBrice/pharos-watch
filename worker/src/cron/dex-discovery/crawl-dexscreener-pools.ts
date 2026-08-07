@@ -5,7 +5,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
-import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPairsWithStatus } from "../../lib/dexscreener";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { getChainAwareDsTrackedTokenPriceUsd } from "../dex-liquidity/crawl-helpers";
@@ -37,14 +37,14 @@ export interface DexScreenerPoolsStageDependencies {
   shouldAttemptFetch: typeof shouldAttemptFetch;
   recordOutcome: typeof recordOutcome;
   dsRateLimit: typeof dsRateLimit;
-  fetchDsTokenPoolsWithStatus: typeof fetchDsTokenPoolsWithStatus;
+  fetchDsTokenPoolsWithStatus: typeof fetchDsTokenPairsWithStatus;
 }
 
 const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencies = {
   shouldAttemptFetch,
   recordOutcome,
   dsRateLimit,
-  fetchDsTokenPoolsWithStatus,
+  fetchDsTokenPoolsWithStatus: fetchDsTokenPairsWithStatus,
 };
 
 interface SelectDexScreenerTargetsOptions {
