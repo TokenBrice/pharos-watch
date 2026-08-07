@@ -6,6 +6,7 @@ import type {
   SafetyScoreV9CurrentCard,
   V9Grade,
 } from "@shared/types";
+import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
@@ -26,21 +27,6 @@ export type V9ConsumerUnavailableReason =
 export type V9ConsumerResult<T> =
   | { status: "available"; identity: V9ConsumerIdentity; value: T }
   | { status: "unavailable"; reason: V9ConsumerUnavailableReason };
-
-const V9_GRADE_RANK: Record<V9Grade, number> = {
-  "A+": 11,
-  A: 10,
-  "A-": 9,
-  "B+": 8,
-  B: 7,
-  "B-": 6,
-  "C+": 5,
-  C: 4,
-  "C-": 3,
-  D: 2,
-  F: 1,
-  NR: 0,
-};
 
 function canonicalIdentity(identity: SafetyScorePublicationIdentity): string {
   if (identity.model !== "v9") return "not-v9";
@@ -88,14 +74,11 @@ function selectV9Card(
     : { status: "unavailable", reason: "card-unavailable" };
 }
 
-export type V9GradeRiskBucket = "safe" | "neutral" | "risky" | "unavailable";
-
-export function getV9GradeRiskBucket(grade: V9Grade): V9GradeRiskBucket {
-  if (grade === "NR") return "unavailable";
-  if (V9_GRADE_RANK[grade] >= V9_GRADE_RANK["B-"]) return "safe";
-  if (V9_GRADE_RANK[grade] >= V9_GRADE_RANK["C-"]) return "neutral";
-  return "risky";
-}
+// Re-exported so existing imports of `V9GradeRiskBucket` / `getV9GradeRiskBucket`
+// from this module keep compiling unchanged; the shared bucket rule now lives
+// in @shared/lib/safety-grade-buckets (also consumed by the worker's
+// flight-to-quality classification).
+export { getV9GradeRiskBucket, type V9GradeRiskBucket };
 
 export interface V9SafetyTableRow {
   id: string;
