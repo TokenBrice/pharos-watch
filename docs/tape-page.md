@@ -111,7 +111,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 
 Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) for the filter chip set, but `hasProjector: false` keeps them subdued in the UI and out of the `ItemList` JSON-LD until their projector implementations land.
 
-`tape_events` schema lives in `worker/migrations/0129_tape_events.sql`. The wire `event_id` is `${ts_ms}-${type}-${hash8}` and is reused as the `?event=<id>` permalink.
+`tape_events` schema lives in `worker/migrations/0000_baseline.sql`, which absorbed the pre-squash `0129_tape_events.sql`. The wire `event_id` is `${ts_ms}-${type}-${hash8}` and is reused as the `?event=<id>` permalink.
 
 Retention policy: `tape_events` is a product timeline archive kept forever. The page can bound reads by filters, windows, cursors, and severity, but all-time browsing, permalinks, homepage event reads, and DDRR review evidence depend on historical projected events remaining available.
 
