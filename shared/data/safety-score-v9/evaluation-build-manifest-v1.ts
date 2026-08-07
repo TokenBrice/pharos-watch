@@ -150,7 +150,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-scoring.ts",
-      "sha256": "eaa63320a202c0a1ce3e181dc1038ff12643c69987ebca17492ff3e7eba290ed"
+      "sha256": "ab6db043e3d5514e12c3bba41b612c3d636992ee0a0453e0c0fb0ef1496b1636"
     },
     {
       "path": "shared/lib/redemption-backstop-version.ts",
@@ -493,7 +493,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "8367ce1b157b40688f59131ab83a04d9ecf87f4c4d98d3759e3ef063b4fb0ddc"
+  "digest": "be204abc9c11164b11fa13af56b95dfe16c4aacd9246f521e256451be719f48f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

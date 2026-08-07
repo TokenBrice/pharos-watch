@@ -11,7 +11,6 @@ import type {
   RedemptionSettlementModel,
   RedemptionSourceMode,
 } from "../types";
-import type { ExitRouteObservation, ExitRouteObservationCoverage, ExitRouteOutput } from "../types/exit-route";
 import {
   EXIT_ROUTE_SCORING_TABLES,
   blendExitCapacityComponent,
@@ -21,9 +20,7 @@ import {
   resolveExitRequestSupplyNotionalUsd,
   resolveExitThresholdBandMultiplier,
 } from "./exit-route-scoring";
-import { normalizeExitRouteCorrelationKey } from "./exit-route-identity";
 import { roundScore } from "./math";
-import { validateExitRouteCapacityCurve } from "./p4-exit-route-capacity";
 
 export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = EXIT_ROUTE_SCORING_TABLES.componentWeights;
 
@@ -40,21 +37,10 @@ const REDEMPTION_EFFECTIVE_EXIT_CONFIDENCE_FACTORS = EXIT_ROUTE_SCORING_TABLES.m
   number
 >;
 
-const EXIT_ROUTE_OBSERVATION_CONFIDENCE_FACTORS =
-  EXIT_ROUTE_SCORING_TABLES.observationConfidenceFactors satisfies Record<ExitRouteObservation["confidence"], number>;
-
-const DEX_SCOREABLE_EXIT_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>(
-  EXIT_ROUTE_SCORING_TABLES.scoreableEvidenceKinds.dex as readonly ExitRouteObservation["evidenceKind"][],
-);
-
-const REDEMPTION_SCOREABLE_EXIT_EVIDENCE = new Set<ExitRouteObservation["evidenceKind"]>(
-  EXIT_ROUTE_SCORING_TABLES.scoreableEvidenceKinds.redemption as readonly ExitRouteObservation["evidenceKind"][],
-);
-
 /**
- * Shadow P4 common-request policy. Both producers must encode this requested
- * bound and horizon; actual route fees/delays belong in route evidence and do
- * not redefine the comparison request.
+ * Common-request policy for the exit-route observations both producers emit.
+ * Both must encode this requested bound and horizon; actual route fees and
+ * delays belong in route evidence and do not redefine the comparison request.
  */
 export const SAME_NOTIONAL_EXIT_REQUEST_POLICY = {
   maxCostBps: EXIT_ROUTE_SCORING_TABLES.request.maxCostBps,
@@ -65,48 +51,21 @@ export const SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY = {
   documentedTermsMaxAgeSec: EXIT_ROUTE_SCORING_TABLES.documentedTermsMaxAgeSec,
 } as const;
 
-export type SameNotionalExitScoringMode = "legacy" | "active";
-export type ExitRouteObservationLane = "dex" | "redemption";
-
-export interface SameNotionalExitObservationEligibilityOptions {
-  /** Fixed scoring clock. Required before route observations can be consumed. */
-  exitObservationAsOfSec?: number | null;
-  /** Live DEX observations expire independently at the DEX producer cadence. */
-  dexExitObservationMaxAgeSec?: number | null;
-  /** Live redemption observations expire independently at the redemption producer cadence. */
-  liveRedemptionExitObservationMaxAgeSec?: number | null;
-}
-
-export interface EffectiveExitScoreOptions extends SameNotionalExitObservationEligibilityOptions {
+export interface EffectiveExitScoreOptions {
   circulatingSupplyUsd?: number | null;
   modeledExitSizeUsd?: number | null;
   currentExecutableCapacityUsd?: number | null;
   routeExitCorrelation?: RedemptionRouteExitCorrelation;
   modelConfidence?: RedemptionModelConfidence;
-  dexExitRouteObservations?: readonly ExitRouteObservation[] | null;
-  redemptionExitRouteObservations?: readonly ExitRouteObservation[] | null;
-  /** False when modeled DEX observations do not cover every retained pool. */
-  dexExitRouteCoverageComplete?: boolean;
-  dexExitRouteCoverageStatus?: ExitRouteObservationCoverage["status"];
-  dexExitRouteRetainedPoolCount?: number;
-  sameNotionalScoringMode?: SameNotionalExitScoringMode;
-  impairedOutputAssetIds?: readonly string[];
 }
 
 export interface EffectiveExitScoreDiagnostics {
   score: number | null;
-  scoringMode: SameNotionalExitScoringMode;
   modeledExitSizeUsd: number | null;
   dexRouteScore: number | null;
   redemptionRouteScore: number | null;
-  comparedRouteIds: { dex: string; redemption: string } | null;
   diversificationBonusApplied: boolean;
   correlationReason: string | null;
-}
-
-interface EvaluatedExitRoute {
-  observation: ExitRouteObservation;
-  score: number;
 }
 
 /**
@@ -410,21 +369,6 @@ export function computeEffectiveExitScoreDiagnostics(
       : null;
 
   const modeledExitSizeUsd = resolveModeledExitSizeUsd(options);
-  if (options?.sameNotionalScoringMode === "active") {
-    if (modeledExitSizeUsd == null) {
-      return activeNullExitScoreDiagnostic(null, "missing-modeled-exit-size");
-    }
-    if (!isValidObservationClock(options.exitObservationAsOfSec)) {
-      return activeNullExitScoreDiagnostic(modeledExitSizeUsd, "missing-observation-clock");
-    }
-    return computeSameNotionalEffectiveExitScore({
-      liquidity,
-      rawRedemption,
-      modeledExitSizeUsd,
-      options,
-    });
-  }
-
   const redemption =
     rawRedemption != null && options
       ? rawRedemption *
@@ -441,11 +385,9 @@ export function computeEffectiveExitScoreDiagnostics(
       : 0;
     return {
       score: Math.round(Math.min(100, bestPath + bonus)),
-      scoringMode: "legacy",
       modeledExitSizeUsd,
       dexRouteScore: Math.round(liquidity),
       redemptionRouteScore: roundedRedemption,
-      comparedRouteIds: null,
       diversificationBonusApplied: bonus > 0,
       correlationReason: bonus > 0 ? "legacy-independent-issuer-rail" : "legacy-correlation-not-independent",
     };
@@ -454,482 +396,12 @@ export function computeEffectiveExitScoreDiagnostics(
   const score = liquidity != null ? Math.round(liquidity) : roundedRedemption;
   return {
     score,
-    scoringMode: "legacy",
     modeledExitSizeUsd,
     dexRouteScore: liquidity != null ? Math.round(liquidity) : null,
     redemptionRouteScore: roundedRedemption,
-    comparedRouteIds: null,
     diversificationBonusApplied: false,
     correlationReason: null,
   };
-}
-
-function activeNullExitScoreDiagnostic(
-  modeledExitSizeUsd: number | null,
-  reason: string,
-): EffectiveExitScoreDiagnostics {
-  return {
-    score: null,
-    scoringMode: "active",
-    modeledExitSizeUsd,
-    dexRouteScore: null,
-    redemptionRouteScore: null,
-    comparedRouteIds: null,
-    diversificationBonusApplied: false,
-    correlationReason: reason,
-  };
-}
-
-function computeSameNotionalEffectiveExitScore(args: {
-  liquidity: number | null;
-  rawRedemption: number | null;
-  modeledExitSizeUsd: number;
-  options: EffectiveExitScoreOptions;
-}): EffectiveExitScoreDiagnostics {
-  const dexRoutes = evaluateExitRoutes(
-    args.options.dexExitRouteObservations,
-    args.modeledExitSizeUsd,
-    args.liquidity,
-    undefined,
-    "dex",
-    args.options,
-  );
-  const redemptionRoutes = evaluateExitRoutes(
-    args.options.redemptionExitRouteObservations,
-    args.modeledExitSizeUsd,
-    args.rawRedemption,
-    args.options.modelConfidence,
-    "redemption",
-    args.options,
-  );
-
-  if (dexRoutes.length === 0 && redemptionRoutes.length === 0) {
-    return activeNullExitScoreDiagnostic(
-      args.modeledExitSizeUsd,
-      resolveNoEligibleRouteDiagnostic(args.options, args.liquidity, args.rawRedemption),
-    );
-  }
-
-  const bestDexRoute = maxRouteByScore(dexRoutes);
-  const bestRedemptionRoute = maxRouteByScore(redemptionRoutes);
-  const incompleteDexCoverageFloor =
-    args.options.dexExitRouteCoverageComplete === false &&
-    args.options.dexExitRouteCoverageStatus === "populated" &&
-    (args.options.dexExitRouteRetainedPoolCount ?? 0) > 0
-      ? args.liquidity
-      : null;
-  let bestScore = Math.max(
-    bestDexRoute?.score ?? Number.NEGATIVE_INFINITY,
-    bestRedemptionRoute?.score ?? Number.NEGATIVE_INFINITY,
-    incompleteDexCoverageFloor ?? Number.NEGATIVE_INFINITY,
-  );
-  let winningPair: {
-    dexRoute: EvaluatedExitRoute;
-    redemptionRoute: EvaluatedExitRoute;
-    score: number;
-    bonus: number;
-    correlationReason: string;
-  } | null = null;
-
-  for (const dexRoute of dexRoutes) {
-    for (const redemptionRoute of redemptionRoutes) {
-      if (!haveIdenticalExitRequest(dexRoute.observation, redemptionRoute.observation)) continue;
-      const correlation = classifyExitRouteCorrelation(
-        dexRoute.observation,
-        redemptionRoute.observation,
-        args.options.routeExitCorrelation,
-        args.options.impairedOutputAssetIds,
-      );
-      const bestPath = Math.max(dexRoute.score, redemptionRoute.score);
-      const bonus = correlation.independent
-        ? Math.min(dexRoute.score, redemptionRoute.score) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR
-        : 0;
-      const combined = Math.min(100, bestPath + bonus);
-      if (
-        winningPair == null ||
-        combined > winningPair.score ||
-        (combined === winningPair.score && compareRoutePairIds(dexRoute, redemptionRoute, winningPair) < 0)
-      ) {
-        winningPair = {
-          dexRoute,
-          redemptionRoute,
-          score: combined,
-          bonus,
-          correlationReason: correlation.reason,
-        };
-      }
-    }
-  }
-
-  const selectedPair = winningPair && winningPair.score >= bestScore ? winningPair : null;
-  if (selectedPair) bestScore = selectedPair.score;
-  const incompleteCoverageFloorApplied =
-    incompleteDexCoverageFloor != null &&
-    !selectedPair &&
-    incompleteDexCoverageFloor >= (bestDexRoute?.score ?? Number.NEGATIVE_INFINITY) &&
-    incompleteDexCoverageFloor >= (bestRedemptionRoute?.score ?? Number.NEGATIVE_INFINITY);
-
-  const comparedRouteIds = selectedPair
-    ? {
-        dex: selectedPair.dexRoute.observation.routeId,
-        redemption: selectedPair.redemptionRoute.observation.routeId,
-      }
-    : null;
-  const correlationReason = selectedPair
-    ? selectedPair.correlationReason
-    : incompleteCoverageFloorApplied
-      ? "incomplete-dex-route-coverage-legacy-floor"
-      : dexRoutes.length > 0 && redemptionRoutes.length > 0
-        ? "no-identical-cost-and-horizon-observation"
-        : "single-observed-route";
-
-  return {
-    score: Math.round(bestScore),
-    scoringMode: "active",
-    modeledExitSizeUsd: args.modeledExitSizeUsd,
-    dexRouteScore: selectedPair
-      ? selectedPair.dexRoute.score
-      : Math.max(
-            bestDexRoute?.score ?? Number.NEGATIVE_INFINITY,
-            incompleteDexCoverageFloor ?? Number.NEGATIVE_INFINITY,
-          ) === Number.NEGATIVE_INFINITY
-        ? null
-        : Math.max(
-            bestDexRoute?.score ?? Number.NEGATIVE_INFINITY,
-            incompleteDexCoverageFloor ?? Number.NEGATIVE_INFINITY,
-          ),
-    redemptionRouteScore: selectedPair ? selectedPair.redemptionRoute.score : (bestRedemptionRoute?.score ?? null),
-    comparedRouteIds,
-    diversificationBonusApplied: (selectedPair?.bonus ?? 0) > 0,
-    correlationReason,
-  };
-}
-
-function compareRoutePairIds(
-  dexRoute: EvaluatedExitRoute,
-  redemptionRoute: EvaluatedExitRoute,
-  current: { dexRoute: EvaluatedExitRoute; redemptionRoute: EvaluatedExitRoute },
-): number {
-  const candidate = `${dexRoute.observation.routeId}\u0000${redemptionRoute.observation.routeId}`;
-  const incumbent = `${current.dexRoute.observation.routeId}\u0000${current.redemptionRoute.observation.routeId}`;
-  return candidate < incumbent ? -1 : candidate > incumbent ? 1 : 0;
-}
-
-function resolveNoEligibleRouteDiagnostic(
-  options: EffectiveExitScoreOptions,
-  liquidityScore: number | null,
-  redemptionScore: number | null,
-): string {
-  const observations = [
-    ...(options.dexExitRouteObservations ?? []).map((observation) => ({ observation, lane: "dex" as const })),
-    ...(options.redemptionExitRouteObservations ?? []).map((observation) => ({
-      observation,
-      lane: "redemption" as const,
-    })),
-  ];
-  if (observations.length === 0) return "no-route-observations";
-
-  const eligibility = observations.map(({ observation, lane }) =>
-    evaluateExitRouteObservationEligibility(observation, lane, options),
-  );
-  if (eligibility.includes("missing-dex-observation-max-age")) return "missing-dex-observation-max-age";
-  if (eligibility.includes("missing-live-redemption-observation-max-age")) {
-    return "missing-live-redemption-observation-max-age";
-  }
-  const hasEligibleDex = observations.some(
-    ({ observation, lane }) => lane === "dex" && isExitRouteObservationScoreEligible(observation, lane, options),
-  );
-  const hasEligibleRedemption = observations.some(
-    ({ observation, lane }) => lane === "redemption" && isExitRouteObservationScoreEligible(observation, lane, options),
-  );
-  if ((hasEligibleDex && liquidityScore == null) || (hasEligibleRedemption && redemptionScore == null)) {
-    return "missing-route-base-score";
-  }
-  if (hasEligibleDex || hasEligibleRedemption) return "no-modeled-capacity-point";
-  return "no-eligible-route-observations";
-}
-
-function evaluateExitRoutes(
-  observations: readonly ExitRouteObservation[] | null | undefined,
-  modeledExitSizeUsd: number,
-  baseScore: number | null,
-  redemptionModelConfidence: RedemptionModelConfidence | undefined,
-  lane: ExitRouteObservationLane,
-  options: EffectiveExitScoreOptions,
-): EvaluatedExitRoute[] {
-  if (baseScore == null) return [];
-  const evaluated: EvaluatedExitRoute[] = [];
-  for (const observation of observations ?? []) {
-    if (!isExitRouteObservationScoreEligible(observation, lane, options)) continue;
-    const point = resolveObservationCapacityPoint(observation, modeledExitSizeUsd);
-    if (!point) continue;
-    const evidenceFactor = EXIT_ROUTE_OBSERVATION_CONFIDENCE_FACTORS[observation.confidence];
-    const confidenceFactor = redemptionModelConfidence
-      ? Math.min(evidenceFactor, resolveEffectiveExitConfidenceFactor(redemptionModelConfidence))
-      : evidenceFactor;
-    const executableRatio = Math.max(
-      0,
-      Math.min(1, point.completionRatio, point.executableUsd / point.requestedNotionalUsd),
-    );
-    evaluated.push({
-      observation: {
-        ...observation,
-        requestedNotionalUsd: point.requestedNotionalUsd,
-        maxCostBps: point.maxCostBps,
-        executableUsd: point.executableUsd,
-        completionRatio: point.completionRatio,
-      },
-      score: roundScore(baseScore * executableRatio * confidenceFactor),
-    });
-  }
-  return evaluated;
-}
-
-export type ExitRouteObservationEligibilityReason =
-  | "eligible"
-  | "score-ineligible"
-  | "lane-route-family-mismatch"
-  | "eventual-redemption-diagnostic-only"
-  | "request-horizon-mismatch"
-  | "inconsistent-capacity-point"
-  | "invalid-capacity-curve"
-  | "lane-evidence-mismatch"
-  | "missing-observation-clock"
-  | "missing-dex-observation-max-age"
-  | "missing-live-redemption-observation-max-age"
-  | "future-observation"
-  | "stale-observation";
-
-export function isExitRouteObservationScoreEligible(
-  observation: ExitRouteObservation,
-  lane: ExitRouteObservationLane,
-  options: SameNotionalExitObservationEligibilityOptions,
-): boolean {
-  return evaluateExitRouteObservationEligibility(observation, lane, options) === "eligible";
-}
-
-export function evaluateExitRouteObservationEligibility(
-  observation: ExitRouteObservation,
-  lane: ExitRouteObservationLane,
-  options: SameNotionalExitObservationEligibilityOptions,
-): ExitRouteObservationEligibilityReason {
-  if (lane === "dex" && observation.routeFamily !== "dex-amm" && observation.routeFamily !== "dex-orderbook") {
-    return "lane-route-family-mismatch";
-  }
-  if (lane === "redemption" && observation.routeFamily === "eventual-redemption") {
-    return "eventual-redemption-diagnostic-only";
-  }
-  if (
-    lane === "redemption" &&
-    observation.routeFamily !== "issuer-redemption" &&
-    observation.routeFamily !== "protocol-redemption"
-  ) {
-    return "lane-route-family-mismatch";
-  }
-  if (!observation.scoreEligible) return "score-ineligible";
-  if (observation.settlementHorizonSec !== SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec) {
-    return "request-horizon-mismatch";
-  }
-  if (!isCapacityPointConsistent(observation)) return "inconsistent-capacity-point";
-  if (
-    observation.capacityCurve &&
-    (validateExitRouteCapacityCurve(observation.capacityCurve).length > 0 ||
-      observation.capacityCurve.some((point) => !isCapacityPointConsistent(point)))
-  ) {
-    return "invalid-capacity-curve";
-  }
-  const allowedEvidence = lane === "dex" ? DEX_SCOREABLE_EXIT_EVIDENCE : REDEMPTION_SCOREABLE_EXIT_EVIDENCE;
-  if (!allowedEvidence.has(observation.evidenceKind)) return "lane-evidence-mismatch";
-  const asOfSec = options.exitObservationAsOfSec;
-  if (!isValidObservationClock(asOfSec)) return "missing-observation-clock";
-  if (observation.observedAt > asOfSec) return "future-observation";
-
-  let maxAgeSec: number | null | undefined;
-  if (observation.evidenceKind === "documented-terms") {
-    maxAgeSec = SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec;
-  } else if (lane === "dex") {
-    maxAgeSec = options.dexExitObservationMaxAgeSec;
-    if (!isValidMaxObservationAge(maxAgeSec)) return "missing-dex-observation-max-age";
-  } else {
-    maxAgeSec = options.liveRedemptionExitObservationMaxAgeSec;
-    if (!isValidMaxObservationAge(maxAgeSec)) return "missing-live-redemption-observation-max-age";
-  }
-  const ageSec = Math.max(0, asOfSec - observation.observedAt, observation.freshnessSeconds);
-  return ageSec <= maxAgeSec ? "eligible" : "stale-observation";
-}
-
-function isValidObservationClock(value: number | null | undefined): value is number {
-  return value != null && Number.isFinite(value) && value >= 0;
-}
-
-function isValidMaxObservationAge(value: number | null | undefined): value is number {
-  return value != null && Number.isFinite(value) && value >= 0;
-}
-
-function isCapacityPointConsistent(point: {
-  requestedNotionalUsd: number;
-  executableUsd: number;
-  completionRatio: number;
-}): boolean {
-  if (point.executableUsd > point.requestedNotionalUsd + 0.01) return false;
-  return Math.abs(point.completionRatio - point.executableUsd / point.requestedNotionalUsd) <= 0.00001;
-}
-
-function resolveObservationCapacityPoint(
-  observation: ExitRouteObservation,
-  modeledExitSizeUsd: number,
-): {
-  requestedNotionalUsd: number;
-  maxCostBps: number;
-  executableUsd: number;
-  completionRatio: number;
-} | null {
-  const points = [observation, ...(observation.capacityCurve ?? [])].filter(
-    (point) => Math.abs(point.maxCostBps - SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) <= 1e-9,
-  );
-  const byCost = new Map<number, typeof points>();
-  for (const point of points) {
-    byCost.set(point.maxCostBps, [...(byCost.get(point.maxCostBps) ?? []), point]);
-  }
-
-  const derived = [...byCost.entries()].flatMap(([maxCostBps, costPoints]) => {
-    const sorted = [...costPoints].sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
-    const exact = sorted.find((point) => approximatelyEqualNotional(point.requestedNotionalUsd, modeledExitSizeUsd));
-    if (exact) return [exact];
-
-    // A validated monotonic curve proves only a lower bound between retained
-    // grid points. Reuse the executable amount from the greatest smaller
-    // request; for a smaller-than-grid request, cap the first point's capacity
-    // at the requested amount. This never invents capacity by interpolation.
-    const lower = [...sorted].reverse().find((point) => point.requestedNotionalUsd < modeledExitSizeUsd);
-    const capacityLowerBound = lower?.executableUsd ?? Math.min(modeledExitSizeUsd, sorted[0]?.executableUsd ?? 0);
-    const executableUsd = Math.min(modeledExitSizeUsd, Math.max(0, capacityLowerBound));
-    return [
-      {
-        requestedNotionalUsd: modeledExitSizeUsd,
-        maxCostBps,
-        executableUsd,
-        completionRatio: executableUsd / modeledExitSizeUsd,
-      },
-    ];
-  });
-  if (derived.length === 0) return null;
-  return derived.reduce((best, point) => {
-    const bestExecutable = Math.min(best.completionRatio, best.executableUsd / best.requestedNotionalUsd);
-    const pointExecutable = Math.min(point.completionRatio, point.executableUsd / point.requestedNotionalUsd);
-    if (pointExecutable !== bestExecutable) return pointExecutable > bestExecutable ? point : best;
-    return point.maxCostBps < best.maxCostBps ? point : best;
-  });
-}
-
-function maxRouteByScore(routes: readonly EvaluatedExitRoute[]): EvaluatedExitRoute | null {
-  return routes.reduce<EvaluatedExitRoute | null>((best, route) => {
-    if (!best || route.score > best.score) return route;
-    if (route.score < best.score) return best;
-    return route.observation.routeId < best.observation.routeId ? route : best;
-  }, null);
-}
-
-function approximatelyEqualNotional(left: number, right: number): boolean {
-  return Math.abs(left - right) <= Math.max(0.01, Math.abs(right) * 1e-9);
-}
-
-function haveIdenticalExitRequest(left: ExitRouteObservation, right: ExitRouteObservation): boolean {
-  return (
-    approximatelyEqualNotional(left.requestedNotionalUsd, right.requestedNotionalUsd) &&
-    left.settlementHorizonSec === right.settlementHorizonSec &&
-    Math.abs(left.maxCostBps - right.maxCostBps) <= 1e-9
-  );
-}
-
-export function classifyExitRouteCorrelation(
-  dexRoute: ExitRouteObservation,
-  redemptionRoute: ExitRouteObservation,
-  curatedCorrelation?: RedemptionRouteExitCorrelation,
-  impairedOutputAssetIds: readonly string[] = [],
-): { independent: boolean; reason: string } {
-  if (curatedCorrelation && curatedCorrelation !== "independent-issuer-rail") {
-    return { independent: false, reason: `curated-correlation-veto:${curatedCorrelation}` };
-  }
-
-  const impairedOutputs = new Set(impairedOutputAssetIds.map(normalizeExitRouteCorrelationKey));
-  const routeOutputIds = [
-    ...collectImpairmentOutputIds(dexRoute.output),
-    ...collectImpairmentOutputIds(redemptionRoute.output),
-  ].map(normalizeExitRouteCorrelationKey);
-  const impairedRouteOutputs = [...new Set(routeOutputIds.filter((id) => impairedOutputs.has(id)))].sort();
-  if (impairedRouteOutputs.length > 0) {
-    return { independent: false, reason: `impaired-output:${impairedRouteOutputs.join(",")}` };
-  }
-  const sharedCommonModeKeys = intersectNormalized(dexRoute.commonModeKeys, redemptionRoute.commonModeKeys);
-  if (sharedCommonModeKeys.length > 0) {
-    return { independent: false, reason: `shared-common-mode:${sharedCommonModeKeys.join(",")}` };
-  }
-
-  const sharedOutputIds = intersectNormalized(
-    collectOutputIdentityKeys(dexRoute.output),
-    collectOutputIdentityKeys(redemptionRoute.output),
-  );
-  if (sharedOutputIds.length > 0) {
-    return { independent: false, reason: `shared-output:${sharedOutputIds.join(",")}` };
-  }
-
-  const hasReviewedRouteKeys =
-    hasFailureDomainKey(dexRoute.commonModeKeys) && hasFailureDomainKey(redemptionRoute.commonModeKeys);
-  const hasResolvedOutputs =
-    hasResolvedOutputIdentity(dexRoute.output) && hasResolvedOutputIdentity(redemptionRoute.output);
-  if (hasReviewedRouteKeys && hasResolvedOutputs) {
-    if (curatedCorrelation !== "independent-issuer-rail") {
-      return { independent: false, reason: "missing-curated-correlation" };
-    }
-    return { independent: true, reason: "reviewed-disjoint-failure-domains" };
-  }
-  if (!hasResolvedOutputs) {
-    return { independent: false, reason: "unresolved-output-correlation" };
-  }
-  return { independent: false, reason: "insufficient-correlation-evidence" };
-}
-
-function hasFailureDomainKey(keys: readonly string[]): boolean {
-  return keys.some((key) => /^(issuer|parent|protocol|custodian|oracle|chain|bridge):/i.test(key.trim()));
-}
-
-function collectTrackedOutputIds(output: ExitRouteOutput): string[] {
-  return [
-    ...(output.trackedAssetIds ?? []),
-    ...(output.basketWeights ?? []).flatMap((slice) => (slice.assetId ? [slice.assetId] : [])),
-  ];
-}
-
-function collectImpairmentOutputIds(output: ExitRouteOutput): string[] {
-  return [...collectTrackedOutputIds(output), ...(output.assetKeys ?? [])];
-}
-
-function collectOutputIdentityKeys(output: ExitRouteOutput): string[] {
-  return [
-    ...collectTrackedOutputIds(output).map((id) => `asset:${id}`),
-    ...(output.assetKeys ?? []).map((key) => `asset-key:${key}`),
-    ...(output.currency?.trim() ? [`currency:${output.currency}`] : []),
-  ];
-}
-
-function hasResolvedOutputIdentity(output: ExitRouteOutput): boolean {
-  if (output.kind === "fiat") return !!output.currency?.trim();
-  if (output.kind === "tracked-stablecoin") {
-    return collectTrackedOutputIds(output).length > 0 || (output.assetKeys?.length ?? 0) > 0;
-  }
-  if (output.kind === "collateral") {
-    return (
-      collectTrackedOutputIds(output).length > 0 || (output.assetKeys?.length ?? 0) > 0 || !!output.currency?.trim()
-    );
-  }
-  if (output.kind === "unresolved-asset") return (output.assetKeys?.length ?? 0) > 0;
-  return false;
-}
-
-function intersectNormalized(left: readonly string[], right: readonly string[]): string[] {
-  const rightKeys = new Set(right.map(normalizeExitRouteCorrelationKey).filter(Boolean));
-  return [...new Set(left.map(normalizeExitRouteCorrelationKey).filter((key) => key && rightKeys.has(key)))].sort();
 }
 
 function resolveModeledExitSizeUsd(options: EffectiveExitScoreOptions | undefined): number | null {
