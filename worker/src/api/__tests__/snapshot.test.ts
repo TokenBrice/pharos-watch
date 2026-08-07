@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -12,7 +11,7 @@ const ISO_DATE = "2026-05-16";
 const V8_SAFETY_SCORE_IDENTITY = ({
   model: "v8" as const,
   schemaVersion: 1 as const,
-  evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+  evaluationBuildDigest: "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
   methodologyVersion: "7.25",
   baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
   publicationGenerationId: "report-cards:7.25:1779105600",

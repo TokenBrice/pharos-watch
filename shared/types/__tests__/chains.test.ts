@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { ChainsResponseSchema } from "../chains";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v8/evaluation-build-manifest-v1";
 
 const validChainsPayload = {
   chains: [
@@ -58,7 +57,7 @@ const validChainsPayload = {
   safetyScoreIdentity: ({
     model: "v8" as const,
     schemaVersion: 1 as const,
-    evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+    evaluationBuildDigest: "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
     methodologyVersion: "v8-test",
     baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
     publicationGenerationId: "report-cards:v8-test:1777555000",

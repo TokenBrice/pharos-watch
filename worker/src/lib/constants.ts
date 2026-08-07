@@ -245,20 +245,6 @@ export const BACKTEST_LOOKBACK_DAYS = 14;
 /** Maximum accepted block-timestamp staleness for the Curve PriceAggregator EMA oracle (seconds). */
 export const CURVE_ORACLE_MAX_STALENESS_SEC = 300;
 
-/** Minimum TVL for a GeckoTerminal pool to be used as a price cross-check */
-export const GT_PROBE_MIN_TVL_USD = 10_000;
-
-/** Maximum time (ms) for a single GT probe request */
-export const GT_PROBE_TIMEOUT_MS = 5_000;
-
-/** Retries for the serialized GT probe path. */
-export const GT_PROBE_MAX_RETRIES = 1;
-
-/** Shared wall-clock budget when the serialized GT probe is run in an isolated context. */
-export const GT_PROBE_RUN_BUDGET_MS = 90_000;
-/** Maximum retained response body for any GeckoTerminal probe request. */
-export const GT_PROBE_RESPONSE_MAX_BYTES = 1_000_000;
-
 /**
  * Anthropic digest generation request timeout.
  * Sized under the 15-min Cloudflare scheduled-event ceiling with ~3 min of

@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 51,
+    "fileLines": 31,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
@@ -340,7 +340,7 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2358,
+    "fileLines": 2361,
     "maxFunctionLines": 252,
     "branchCount": 273
   },

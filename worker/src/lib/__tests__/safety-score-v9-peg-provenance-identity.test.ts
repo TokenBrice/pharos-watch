@@ -4,10 +4,8 @@ import type { DepegEvent, PegSummaryCoin } from "@shared/types/market";
 import { describe, expect, it } from "vitest";
 import {
   buildReportCardsFixedInputCacheEntry,
-  buildReportCardsSnapshotFromFixedInput,
   createReportCardsFixedInput,
   normalizeFixedInput,
-  serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
@@ -247,25 +245,6 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
     expect(verifiedSummary.contentSha256).not.toBe(legacySummary.contentSha256);
     expect(legacyDiagnostic.baseInputGenerationId).toBe(base.baseInputGenerationId);
     expect(verifiedDiagnostic.baseInputGenerationId).toBe(base.baseInputGenerationId);
-
-    const publicBase = serializeNormalizedReportCardsReplay(
-      buildReportCardsSnapshotFromFixedInput(base, { allowRegistryMismatch: true }),
-    );
-    const publicLegacy = serializeNormalizedReportCardsReplay(
-      buildReportCardsSnapshotFromFixedInput(legacyDiagnostic, {
-        allowRegistryMismatch: true,
-      }),
-    );
-    const publicVerified = serializeNormalizedReportCardsReplay(
-      buildReportCardsSnapshotFromFixedInput(verifiedDiagnostic, {
-        allowRegistryMismatch: true,
-      }),
-    );
-    expect(publicLegacy).toBe(publicBase);
-    expect(publicVerified).toBe(publicBase);
-    expect(publicVerified).not.toContain("pegProvenanceById");
-    expect(publicVerified).not.toContain("startPrice");
-    expect(publicVerified).not.toContain("provider-a");
 
     const publishedAtSec = base.clockSec + 1;
     const pipelines = [base, legacyDiagnostic, verifiedDiagnostic].map(

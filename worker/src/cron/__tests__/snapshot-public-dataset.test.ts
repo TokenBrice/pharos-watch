@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -49,7 +48,7 @@ const REPORT_CARD_CACHE_PAYLOAD = {
   safetyScoreIdentity: ({
     model: "v8" as const,
     schemaVersion: 1 as const,
-    evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+    evaluationBuildDigest: "38477f3ae65a8e0a553b4e9648dd3f8c808c18b1af63e9901bd324b995daafea",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
     publicationGenerationId: REPORT_CARD_PUBLICATION_GENERATION_ID,

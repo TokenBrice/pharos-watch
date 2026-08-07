@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   getReportCardGradeRank,
   GRADE_THRESHOLDS,
-  PEG_MULTIPLIER_EXPONENT,
   REPORT_CARD_GRADE_RANK,
   scoreToGrade,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
@@ -32,12 +31,6 @@ describe("scoreToGrade", () => {
 
   it("returns F for score 0", () => {
     expect(scoreToGrade(0)).toBe("F");
-  });
-});
-
-describe("PEG_MULTIPLIER_EXPONENT", () => {
-  it("is 0.4", () => {
-    expect(PEG_MULTIPLIER_EXPONENT).toBe(0.4);
   });
 });
 

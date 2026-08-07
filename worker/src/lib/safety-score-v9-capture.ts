@@ -5,7 +5,7 @@ import {
   computeRedemptionPayloadFingerprint,
   projectReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
-import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
+import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { StablecoinData } from "@shared/types/market";
 import { summarizeCollateralDriftFromLiveReserveMap } from "./collateral-drift";
 import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";

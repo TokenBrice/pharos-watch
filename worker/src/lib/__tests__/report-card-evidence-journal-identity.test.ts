@@ -6,11 +6,9 @@ import {
 } from "@shared/lib/report-card-evidence-journal";
 import {
   buildReportCardsFixedInputCacheEntry,
-  buildReportCardsSnapshotFromFixedInput,
   createReportCardsFixedInput,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
-  serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
@@ -98,16 +96,6 @@ describe("diagnostic reserve evidence journal identity boundary", () => {
 
     expect(journaled.baseInputGenerationId).toBe(base.baseInputGenerationId);
 
-    const basePublic = serializeNormalizedReportCardsReplay(
-      buildReportCardsSnapshotFromFixedInput(base, { allowRegistryMismatch: true }),
-    );
-    const journaledPublic = serializeNormalizedReportCardsReplay(
-      buildReportCardsSnapshotFromFixedInput(journaled, { allowRegistryMismatch: true }),
-    );
-    expect(journaledPublic).toBe(basePublic);
-    expect(journaledPublic).not.toContain("evidenceJournalById");
-    expect(journaledPublic).not.toContain("reserve-fixture:accepted");
-
     const publishedAtSec = base.clockSec + 1;
     const basePipeline = buildSafetyScoreV9Candidate({
       fixedInput: base,
@@ -133,6 +121,7 @@ describe("diagnostic reserve evidence journal identity boundary", () => {
     expect(stableJsonStringifyV1(journaledPipeline.candidate)).not.toContain(
       "reserve-fixture:accepted",
     );
+    expect(stableJsonStringifyV1(journaledPipeline.candidate)).not.toContain("evidenceJournalById");
 
     const identity = {
       model: "v8" as const,
@@ -171,15 +160,6 @@ describe("diagnostic reserve evidence journal identity boundary", () => {
       onchain.evidenceJournalById[ASSET_ID]?.[0]?.journalId,
     );
     expect(issuer.baseInputGenerationId).toBe(onchain.baseInputGenerationId);
-    expect(
-      serializeNormalizedReportCardsReplay(
-        buildReportCardsSnapshotFromFixedInput(issuer, { allowRegistryMismatch: true }),
-      ),
-    ).toBe(
-      serializeNormalizedReportCardsReplay(
-        buildReportCardsSnapshotFromFixedInput(onchain, { allowRegistryMismatch: true }),
-      ),
-    );
 
     const publishedAtSec = base.clockSec + 1;
     const issuerPipeline = buildSafetyScoreV9Candidate({

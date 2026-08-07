@@ -91,7 +91,6 @@
   "worker/src/lib/dews-publication-pointer.ts": 1,
   "worker/src/lib/dexscreener.ts": 1,
   "worker/src/lib/freshness-sentinels.ts": 1,
-  "worker/src/lib/geckoterminal-price-probe.ts": 1,
   "worker/src/lib/json-metadata.ts": 1,
   "worker/src/lib/live-reserves-store-overview.ts": 1,
   "worker/src/lib/live-reserves-store-row-decoding.ts": 1,

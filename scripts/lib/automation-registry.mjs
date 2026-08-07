@@ -238,21 +238,6 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["scripts/data/m49-to-iso2.ts", "scripts/data/world-countries-110m.json"],
   }),
   generatedArtifact({
-    id: "safety-score-v8-evaluation-build",
-    checkCommand: "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts --check",
-    command: "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts",
-    bootstrap: true,
-    outputPaths: ["shared/data/safety-score-v8/evaluation-build-manifest-v1.ts"],
-    phase: 0,
-    reproducibility: "deterministic",
-    script: "scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts",
-    sourcePaths: [
-      "shared/lib/report-card*.ts",
-      "shared/lib/safety-score-version.ts",
-      "worker/src/lib/report-cards-snapshot-card.ts",
-    ],
-  }),
-  generatedArtifact({
     id: "safety-score-v9-shock-coverage-registry",
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",

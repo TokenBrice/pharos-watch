@@ -17,7 +17,7 @@ import {
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
+import type { DexDeploymentSupplyCoverage } from "./report-cards-fixed-input";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
