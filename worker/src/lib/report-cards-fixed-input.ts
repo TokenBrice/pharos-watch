@@ -56,7 +56,7 @@ import {
   V9PublicationInputHealthSchema,
 } from "./safety-score-v9-publication-assessment";
 
-const FreshnessEntrySchema = z.object({
+export const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
   ageSeconds: z.number().finite().nonnegative().nullable(),
   stale: z.boolean(),
@@ -64,7 +64,7 @@ const FreshnessEntrySchema = z.object({
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
 
-const NavPriceObservationSchema = z.strictObject({
+export const NavPriceObservationSchema = z.strictObject({
   priceUsd: z.number().finite().positive(),
   sourceId: z.string().min(1),
   observedAtSec: z.number().int().nonnegative(),
@@ -118,7 +118,7 @@ export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model"
   ReviewedDeploymentUnitPartitionSchema,
 ]);
 
-const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
+export const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
   observedSupplyUsd: z.number().finite().nonnegative(),
   verifiedNoPoolsSupplyUsd: z.number().finite().nonnegative(),
