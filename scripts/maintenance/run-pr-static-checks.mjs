@@ -53,10 +53,18 @@ export function buildPrStaticCheckPlan(changedFiles) {
       { name: "check:site-csp-sync" },
       { name: "check:stablecoin-data" },
     );
-    const artifactIds = selectChangedGeneratedArtifactIds(changedFiles);
-    if (artifactIds.length > 0) {
-      commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
-    }
+  }
+
+  // A generated artifact must be regenerated in the same commit as the source
+  // it is derived from, whatever lane that source lives in. This selection used
+  // to sit inside the `pagesChanged` branch, so a commit that only touched
+  // `shared/lib/safety-score-v9/**` or `worker/src/lib/safety-score-v9*.ts`
+  // could leave the V9 evaluation-build manifest stale and still pass the PR
+  // gate — the Wave-1 fix wave did exactly that, and only the release discovery
+  // gate caught it.
+  const artifactIds = selectChangedGeneratedArtifactIds(changedFiles);
+  if (artifactIds.length > 0) {
+    commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
   }
 
   if (classification.workerChanged) {
