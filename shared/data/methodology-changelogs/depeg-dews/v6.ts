@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.1",
+    title: "One deviation formula for DEWS and the depeg detector",
+    date: "2026-08-08",
+    effectiveAt: 1786190400,
+    summary:
+      "The DEWS divergence sub-signal now measures distance from peg with the same canonical derivation the depeg detector uses, instead of its own inline basis-point arithmetic.",
+    impact: [
+      "Primary deviation, DEX deviation, and cross-source spread are read from the canonical depeg signal, so DEWS and the detector can no longer drift apart on the same price pair",
+      "The three sub-signal readings are now canonical whole basis points rather than unrounded values truncated to two decimals; sub-bps differences no longer move the divergence curve",
+      "A non-positive price or DEX price now yields no deviation instead of a nonsense magnitude from the inline arithmetic",
+      "The divergence curve, the non-USD dampening, the previous-reading smoothing, and every other sub-signal family are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.098",
     title: "Depeg onset and recovery require persistent confirmation",
     date: "2026-07-20",
