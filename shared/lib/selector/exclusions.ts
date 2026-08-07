@@ -194,9 +194,6 @@ function treasuryExclusions(row: MergedRow, input: SelectorInput): ExclusionReco
   if (row.safetyResilienceScore != null && row.safetyResilienceScore < 50) {
     return fail(row.id, "safety-resilience-floor");
   }
-  if (row.safetyDependencyRiskScore != null && row.safetyDependencyRiskScore < 50) {
-    return fail(row.id, "safety-dependency-risk-floor");
-  }
   if (row.dewsScore != null && row.dewsScore > 60) {
     return fail(row.id, "dews-ceiling");
   }
@@ -338,7 +335,6 @@ export const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyo
   treasury: [
     "safetyGrade",
     "safetyResilienceScore",
-    "safetyDependencyRiskScore",
     "dewsScore",
     "pegScore",
   ],
@@ -385,7 +381,6 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
   treasury: [
     "safety-grade-floor",
     "safety-resilience-floor",
-    "safety-dependency-risk-floor",
     "dews-ceiling",
     "peg-score-floor",
     "bluechip-d-or-f",

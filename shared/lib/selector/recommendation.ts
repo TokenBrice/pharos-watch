@@ -52,8 +52,8 @@ function whyKeyTriggers(
     case "clean-peg-history":
       return (
         row.depegEventCount === 0 &&
-        row.pegStabilityScore != null &&
-        row.pegStabilityScore >= 80
+        row.pegScore != null &&
+        row.pegScore >= 80
       );
     case "strong-resilience":
       return row.safetyResilienceScore != null && row.safetyResilienceScore >= 80;
@@ -65,11 +65,6 @@ function whyKeyTriggers(
       return (
         row.custodyModel === "institutional-top" ||
         row.custodyModel === "institutional-regulated"
-      );
-    case "low-dependency-risk":
-      return (
-        row.safetyDependencyRiskScore != null &&
-        row.safetyDependencyRiskScore >= 80
       );
     case "dao-governance":
       return (

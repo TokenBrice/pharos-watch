@@ -44,7 +44,8 @@ export function userEmphasizedDimension(input: SelectorInput): WeightKey | null 
   if (input.composability === "high") return "liquidity";
   if (input.exitSpeed === "1h") return "liquidity";
   if (input.profile === "treasury" && input.horizon === "6mplus") {
-    return "dependencyRisk";
+    // The long-horizon overlay now moves weight onto the composite itself.
+    return "safetyOverall";
   }
   if (input.profile === "yield" && input.minApy != null) return "pharosYieldScore";
   return "safetyOverall";

@@ -92,16 +92,13 @@ describe("buildSelectorRows", () => {
       safetyResilienceScore: 82,
       safetyLiquidityScore: 77,
       safetyDecentralizationScore: 64,
-      safetyDependencyRiskScore: 70,
       pegScore: 96,
-      pegStabilityScore: 96,
       dewsScore: 42,
       liquidityScore: 88,
       // The exit read now comes from the published V9 Exit pillar, not the
       // retired redemption blend, so it matches `safetyLiquidityScore`.
       effectiveExitScore: 77,
       canBeBlacklisted: true,
-      collateralQuality: 50,
       custodyModel: "institutional-regulated",
       bluechipGrade: "A",
       currentDeviationBps: 4,

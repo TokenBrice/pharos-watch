@@ -39,13 +39,7 @@ const KNOWN_MISSING_SIGNALS = new Set([
   "recommendedSource",
 ]);
 const CRITICAL_COMPONENTS_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
-  treasury: new Set([
-    "safetyOverall",
-    "resilience",
-    "dependencyRisk",
-    "pegStabilityHistory",
-    "dewsInverted",
-  ]),
+  treasury: new Set(["safetyOverall", "pegStabilityHistory", "dewsInverted"]),
   yield: new Set([
     "pharosYieldScore",
     "yieldVariance",
@@ -54,7 +48,7 @@ const CRITICAL_COMPONENTS_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlyS
     "pegStabilityLive",
     "liquidity",
   ]),
-  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"]),
+  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
 };
 
 function hasDuplicates(values: readonly string[]): boolean {

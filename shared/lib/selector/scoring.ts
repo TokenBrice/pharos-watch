@@ -56,13 +56,7 @@ export interface ScoreRowResult {
 type MissingPolicy = "penalty" | "ignore";
 
 const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
-  treasury: new Set([
-    "safetyOverall",
-    "resilience",
-    "dependencyRisk",
-    "pegStabilityHistory",
-    "dewsInverted",
-  ]),
+  treasury: new Set(["safetyOverall", "pegStabilityHistory", "dewsInverted"]),
   yield: new Set([
     "pharosYieldScore",
     "yieldVariance",
@@ -71,7 +65,7 @@ const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlyS
     "pegStabilityLive",
     "liquidity",
   ]),
-  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"]),
+  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
 };
 
 function rawValueFor(
@@ -81,17 +75,10 @@ function rawValueFor(
   switch (key) {
     case "safetyOverall":
       return row.safetyScore;
-    case "resilience":
-      return row.safetyResilienceScore;
-    case "dependencyRisk":
-      return row.safetyDependencyRiskScore;
     case "pegStabilityHistory":
     case "pegStabilityLive":
-      return row.pegStabilityScore;
     case "pegScoreNow":
       return row.pegScore;
-    case "decentralization":
-      return row.safetyDecentralizationScore;
     case "dewsInverted":
       return row.dewsScore;
     case "bluechip":
@@ -109,8 +96,6 @@ function rawValueFor(
       return row.liquidityScore;
     case "sourceRiskInverted":
       return row.sourceRiskScore;
-    case "effectiveExit":
-      return row.effectiveExitScore;
     case "liquidityDiversification":
       return row.concentrationHhi;
   }
@@ -123,14 +108,10 @@ export function normalizeSelectorComponentValue(
 ): number | null {
   switch (key) {
     case "safetyOverall":
-    case "resilience":
-    case "dependencyRisk":
     case "pegStabilityHistory":
     case "pegStabilityLive":
     case "pegScoreNow":
-    case "decentralization":
     case "liquidity":
-    case "effectiveExit":
       return identity(raw);
     case "dewsInverted":
       return invert100(raw);
@@ -148,6 +129,14 @@ export function normalizeSelectorComponentValue(
       return sourceRiskInverted(raw);
     case "liquidityDiversification":
       return hhiToDiversity(raw);
+    // Retired slots. They stay in `WEIGHT_KEYS` so stored snapshots keep
+    // validating, but no current vector allocates them, so normalizing one
+    // yields nothing rather than reviving the double count.
+    case "resilience":
+    case "dependencyRisk":
+    case "decentralization":
+    case "effectiveExit":
+      return null;
   }
 }
 

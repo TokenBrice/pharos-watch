@@ -1,7 +1,4 @@
-import {
-  excessApyConcave,
-  sourceRiskInverted,
-} from "./normalization";
+import { sourceRiskInverted } from "./normalization";
 import { clamp } from "../math";
 import type {
   MergedRow,
@@ -10,9 +7,10 @@ import type {
   YieldSourceCandidate,
 } from "./types";
 
-interface ScoredYieldSourceCandidate {
+interface RankedYieldSourceCandidate {
   candidate: YieldSourceCandidate;
-  score: number;
+  /** 1 when the candidate satisfies the user's venue answer, 0 otherwise. */
+  venueMatch: number;
   risk: number;
   depth: number;
   freshness: number;
@@ -72,36 +70,32 @@ function sourceFreshnessScore(candidate: YieldSourceCandidate): number {
   return clamp(100 - (age / 172_800) * 100, 0, 100);
 }
 
-function yieldSourceScore(
+/**
+ * Rank one candidate rail against the user's venue answer and the yield
+ * domain's published readings.
+ *
+ * `selector-v2.0` deleted the weighted venue formula that used to sit here
+ * (venue 0.35 / risk 0.25 / depth 0.20 / freshness 0.15 / excess APY 0.05). It
+ * was a second yield model: it re-priced APY that the Pharos Yield Score
+ * already prices, and it blended the published `sourceRiskScore` into a number
+ * only the Selector understood. Selection is now a lexicographic ordering over
+ * the user's preference and the published readings, so every field that
+ * decides a rail is one a reader can look up.
+ */
+function rankYieldSourceCandidate(
   candidate: YieldSourceCandidate,
   input: SelectorInput,
-  benchmarkRate: number | null,
-  depth: number,
-  freshness: number,
-): number {
-  const venue = venueMatchesPreference(candidate, input) ? 100 : 35;
-  const risk =
-    candidate.sourceRiskScore != null
-      ? sourceRiskInverted(candidate.sourceRiskScore)
-      : riskTierScore(candidate.venueRiskTier);
-  // Match the main scorer's excess-APY definition (scoring.ts excessApy):
-  // measure against the per-coin benchmarkRate so non-USD pegs use the
-  // peg-appropriate benchmark instead of a flat 4% floor. Fall back to 4
-  // only when the row has no benchmark.
-  const apy = excessApyConcave(candidate.apy30d - (benchmarkRate ?? 4)) ?? 0;
-  return venue * 0.35 + risk * 0.25 + depth * 0.2 + freshness * 0.15 + apy * 0.05;
-}
-
-function scoreYieldSourceCandidate(
-  candidate: YieldSourceCandidate,
-  input: SelectorInput,
-  benchmarkRate: number | null,
-): ScoredYieldSourceCandidate {
-  const risk = riskTierScore(candidate.venueRiskTier);
-  const depth = sourceDepthScore(candidate);
-  const freshness = sourceFreshnessScore(candidate);
-  const score = yieldSourceScore(candidate, input, benchmarkRate, depth, freshness);
-  return { candidate, score, risk, depth, freshness };
+): RankedYieldSourceCandidate {
+  return {
+    candidate,
+    venueMatch: venueMatchesPreference(candidate, input) ? 1 : 0,
+    risk:
+      candidate.sourceRiskScore != null
+        ? sourceRiskInverted(candidate.sourceRiskScore)
+        : riskTierScore(candidate.venueRiskTier),
+    depth: sourceDepthScore(candidate),
+    freshness: sourceFreshnessScore(candidate),
+  };
 }
 
 function fallbackYieldSources(row: MergedRow): YieldSourceCandidate[] {
@@ -140,21 +134,19 @@ export function selectYieldSource(row: MergedRow, input: SelectorInput): Recomme
   if (candidates.length === 0) {
     return null;
   }
-  const scoredCandidates = candidates.map((candidate) =>
-    scoreYieldSourceCandidate(candidate, input, row.benchmarkRate),
-  );
-  scoredCandidates.sort((a, b) => {
-    const scoreDiff = b.score - a.score;
-    if (Math.abs(scoreDiff) > 0.0001) return scoreDiff;
+  const rankedCandidates = candidates.map((candidate) => rankYieldSourceCandidate(candidate, input));
+  rankedCandidates.sort((a, b) => {
+    const venueDiff = b.venueMatch - a.venueMatch;
+    if (venueDiff !== 0) return venueDiff;
     const riskDiff = b.risk - a.risk;
-    if (riskDiff !== 0) return riskDiff;
+    if (Math.abs(riskDiff) > 0.0001) return riskDiff;
     const depthDiff = b.depth - a.depth;
     if (Math.abs(depthDiff) > 0.0001) return depthDiff;
     const freshDiff = b.freshness - a.freshness;
     if (Math.abs(freshDiff) > 0.0001) return freshDiff;
     return a.candidate.sourceKey.localeCompare(b.candidate.sourceKey);
   });
-  const selected = scoredCandidates[0]!.candidate;
+  const selected = rankedCandidates[0]!.candidate;
   if (selected.chain == null) return null;
   return {
     sourceKey: selected.sourceKey,

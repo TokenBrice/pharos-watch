@@ -21,6 +21,11 @@ export const WHY_KEYS_SET: ReadonlySet<WhyKey> = new Set(WHY_KEYS);
 /**
  * Per-profile applicability. The engine evaluates only the keys listed here
  * for the given profile, in declaration order.
+ *
+ * `low-dependency-risk` left the Treasury list at `selector-v2.0`: it graded a
+ * dependency scalar the Selector re-derived from V9's raw graph, and that
+ * re-derivation is gone. `WHY_KEYS` still lists the key so stored snapshots
+ * that recorded it stay readable and renderable.
  */
 export const whyKeysByProfile: Readonly<Record<SelectorProfile, readonly WhyKey[]>> = {
   treasury: [
@@ -32,7 +37,6 @@ export const whyKeysByProfile: Readonly<Record<SelectorProfile, readonly WhyKey[
     "wide-chain-presence",
     "recent-listing",
     "regulated-custody",
-    "low-dependency-risk",
     "dao-governance",
     "long-tracking-span",
   ],

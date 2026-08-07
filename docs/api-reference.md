@@ -3604,12 +3604,12 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
   "profile": "treasury",
   "provenance": "pharos-verified",
   "snapshotSchemaVersion": 3,
-  "engineVersion": "selector-v1.92",
+  "engineVersion": "selector-v2.0",
   "datasetHash": "<64-character canonical dataset hash>",
   "verification": {
     "kind": "pharos-server-recomputed-v1",
     "datasetHash": "<same 64-character canonical dataset hash>",
-    "engineVersion": "selector-v1.92"
+    "engineVersion": "selector-v2.0"
   },
   "timestamp": 1715000000000,
   "input": {

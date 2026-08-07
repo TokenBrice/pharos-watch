@@ -27,7 +27,6 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     mechanismArchetype: "cdp",
     supplyUsd: 1_000_000_000,
     pegScore: 95,
-    pegStabilityScore: 85,
     activeDepeg: false,
     currentDeviationBps: 10,
     depegEventCount: 0,
@@ -36,10 +35,8 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     safetyGrade: "A",
     safetyScore: 90,
     safetyResilienceScore: 80,
-    safetyDependencyRiskScore: 80,
     safetyDecentralizationScore: 70,
     safetyLiquidityScore: 75,
-    collateralQuality: 80,
     custodyModel: "onchain",
     bluechipGrade: "A",
     liquidityScore: 80,
@@ -210,7 +207,6 @@ describe("treasury exclusions", () => {
           custodyModel: "onchain",
           canBeBlacklisted: false,
           depegEventCount: 4,
-          pegStabilityScore: 82,
           pegScore: 93,
           safetyDecentralizationScore: 88,
         }),
@@ -226,7 +222,6 @@ describe("treasury exclusions", () => {
           custodyModel: "onchain",
           canBeBlacklisted: false,
           depegEventCount: 565,
-          pegStabilityScore: 76,
           pegScore: 76,
           safetyDecentralizationScore: 90,
         }),
@@ -242,25 +237,25 @@ describe("treasury exclusions", () => {
   it("weak PegScore fails Treasury by tolerance", () => {
     expect(
       evaluateExclusions(
-        makeRow({ pegStabilityScore: 40, pegScore: 95, depegEventCount: 2 }),
+        makeRow({ pegScore: 95, depegEventCount: 2 }),
         input,
       ),
     ).toBeNull();
     expect(
       evaluateExclusions(
-        makeRow({ pegStabilityScore: 85, pegScore: 69, depegEventCount: 2 }),
+        makeRow({ pegScore: 69, depegEventCount: 2 }),
         input,
       ),
     ).toEqual(expect.objectContaining({ reason: "peg-score-floor" }));
     expect(
       evaluateExclusions(
-        makeRow({ pegStabilityScore: 61, pegScore: 59 }),
+        makeRow({ pegScore: 59 }),
         makeInput({ profile: "treasury", depegTolerance: "moderate" }),
       ),
     ).toEqual(expect.objectContaining({ reason: "peg-score-floor" }));
     expect(
       evaluateExclusions(
-        makeRow({ pegStabilityScore: 61, pegScore: 60 }),
+        makeRow({ pegScore: 60 }),
         makeInput({ profile: "treasury", depegTolerance: "moderate" }),
       ),
     ).toBeNull();
@@ -327,15 +322,12 @@ describe("yield exclusions", () => {
     ).toBeNull();
   });
 
-  it("Yield depeg tolerance uses PegScore, not peg-stability history or event count", () => {
+  it("Yield depeg tolerance uses PegScore, not depeg event count", () => {
     const tight = makeInput({ profile: "yield", depegTolerance: "tight" });
     expect(
-      evaluateExclusions(
-        makeRow({ depegEventCount: 6, pegScore: 100, pegStabilityScore: 40 }),
-        tight,
-      ),
+      evaluateExclusions(makeRow({ depegEventCount: 6, pegScore: 100 }), tight),
     ).toBeNull();
-    expect(evaluateExclusions(makeRow({ pegScore: 54, pegStabilityScore: 90 }), tight)).toEqual(
+    expect(evaluateExclusions(makeRow({ pegScore: 54 }), tight)).toEqual(
       expect.objectContaining({ reason: "peg-score-floor" }),
     );
   });
@@ -375,11 +367,11 @@ describe("trading exclusions", () => {
     expect(evaluateExclusions(makeRow({ liquidityScore: 55 }), input)).toBeNull();
   });
 
-  it("Trading depeg tolerance uses PegScore, not peg-stability history", () => {
-    expect(evaluateExclusions(makeRow({ pegScore: 79, pegStabilityScore: 100 }), input)).toEqual(
+  it("Trading depeg tolerance uses PegScore", () => {
+    expect(evaluateExclusions(makeRow({ pegScore: 79 }), input)).toEqual(
       expect.objectContaining({ reason: "peg-score-floor" }),
     );
-    expect(evaluateExclusions(makeRow({ pegScore: 80, pegStabilityScore: 40 }), input)).toBeNull();
+    expect(evaluateExclusions(makeRow({ pegScore: 80 }), input)).toBeNull();
   });
 
   it("dews-ceiling × 1h: 36 excluded, 30 passes", () => {
@@ -514,7 +506,7 @@ describe("hasRequiredSignals", () => {
   });
 
   it("PegScore coverage does not require peg-stability history", () => {
-    const row = makeRow({ pegStabilityScore: null, pegScore: 95 });
+    const row = makeRow({ pegScore: 95 });
     expect(hasRequiredSignals(row, "treasury")).toEqual({ ok: true, missing: [] });
     expect(hasRequiredSignals(row, "yield")).toEqual({ ok: true, missing: [] });
     expect(hasRequiredSignals(row, "trading")).toEqual({ ok: true, missing: [] });
