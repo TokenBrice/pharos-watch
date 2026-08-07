@@ -26,6 +26,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-coverage-report.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
+    strict("scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts"),
     strict("scripts/maintenance/generate-yield-outcome-validation.ts"),
