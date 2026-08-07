@@ -1,33 +1,36 @@
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "../data/safety-score-v8/evaluation-build-manifest-v1";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../data/safety-score-v9/evaluation-build-manifest-v1";
 import {
-  SafetyScoreV8PublicationIdentitySchema,
-  type SafetyScoreV8PublicationIdentity,
+  SafetyScoreV9InputIdentitySchema,
+  type SafetyScoreV9InputIdentity,
 } from "../types/safety-score-publication";
 
 /**
- * Builds the identity for the private fixed input consumed by the V9 compiler.
+ * Builds the identity for the private native input consumed by the V9 compiler.
  *
- * The persisted discriminator remains `v8` because the fixed-input schema and
- * evaluator digest are rollout-compatible with the retired V8 pipeline.
+ * The discriminator is `v9-input` because this identity describes an input
+ * capture, never a publication: it is bound to the pinned V9 evaluation build
+ * (`SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST`) and therefore breaks intentionally
+ * whenever the evaluator changes, so a capture prepared under one evaluator can
+ * never be scored by another.
  */
 export function buildSafetyScoreV9InputIdentity(input: {
   methodologyVersion: string;
   baseInputGenerationId: string;
   publicationGenerationId: string;
-}): SafetyScoreV8PublicationIdentity {
-  return SafetyScoreV8PublicationIdentitySchema.parse({
-    model: "v8",
+}): SafetyScoreV9InputIdentity {
+  return SafetyScoreV9InputIdentitySchema.parse({
+    model: "v9-input",
     schemaVersion: 1,
     methodologyVersion: input.methodologyVersion,
-    evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+    evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
     baseInputGenerationId: input.baseInputGenerationId,
     publicationGenerationId: input.publicationGenerationId,
   });
 }
 
 export function safetyScoreV9InputIdentitiesMatch(
-  left: SafetyScoreV8PublicationIdentity,
-  right: SafetyScoreV8PublicationIdentity,
+  left: SafetyScoreV9InputIdentity,
+  right: SafetyScoreV9InputIdentity,
 ): boolean {
   return (
     left.model === right.model &&
