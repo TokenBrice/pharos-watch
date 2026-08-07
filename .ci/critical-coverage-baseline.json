@@ -204,7 +204,6 @@
     "worker/src/cron/sync-blacklist.ts": 92.3,
     "shared/lib/api-freshness.ts": 100,
     "shared/lib/liquidity-score-weights.ts": 100,
-    "shared/lib/mint-authority-scoring.ts": 89.9,
     "shared/lib/peg-score.ts": 92.1,
     "shared/lib/psi-eligible.ts": 100,
     "shared/lib/safety-score-v9-research.ts": 98.3,

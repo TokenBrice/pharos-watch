@@ -25,7 +25,7 @@ The historical description follows.
 - **Current methodology version:** `v1.3` (terminal — lane closed)
 - **Runtime/version source:** `shared/lib/methodology-versions/mint-authority.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-authority/`
-- **Scoring source:** `shared/lib/mint-authority-scoring.ts`
+- **Scoring source:** none — the retired engine module was deleted with the lane; the live mint component lives in `shared/lib/safety-score-v9/control.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
 
 ## Purpose

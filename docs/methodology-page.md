@@ -34,7 +34,7 @@
 | Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
 | Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
-| Mint Authority Score  | `shared/lib/mint-authority-scoring.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/mint-authority-version.ts`, `shared/data/stablecoins/coins/*.json`                                                                          |
+| Mint Authority Score  | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/mint-authority-version.ts`, `shared/data/stablecoins/coins/*.json`                                                                          |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/liquidity-score-version.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
@@ -147,7 +147,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
 - **Safety score base weights / peg multiplier:** `shared/lib/report-cards.ts`
-- **Mint Authority Score weights / caps / inheritance:** `shared/lib/mint-authority-scoring.ts`
+- **Mint component weights / caps / posture bands:** `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`
 - **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`

@@ -10,22 +10,13 @@ import {
   readGeniusComplianceFields,
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
-import {
-  computeMintAuthorityScore,
-  stablecoinToMintAuthorityScoringInput,
-} from "../../shared/lib/mint-authority-scoring";
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
   type StablecoinClientMeta,
 } from "../../shared/types/stablecoin-client-meta";
-
-function projectedMintAuthorityInput(projected: Partial<StablecoinClientMeta> | undefined) {
-  if (typeof projected?.id !== "string" || !projected.mintAuthoritySummary) return null;
-  return { id: projected.id, ...projected.mintAuthoritySummary };
-}
 
 describe("client registry field contract", () => {
   it("projects only the compact listing class from the decision ledger", () => {
@@ -317,28 +308,5 @@ describe("client registry field contract", () => {
 
   it("returns no mint-authority summary when the source profile is absent", () => {
     expect(projectMintAuthoritySummary({ id: "unknown" })).toBeUndefined();
-  });
-
-  it("keeps projected mint-authority summaries score-equivalent with full metadata", () => {
-    const clientFields = readCanonicalClientFields();
-    const projectedById = new Map(
-      TRACKED_STABLECOINS.map((coin) => [coin.id, projectCoin(coin, clientFields)] as const),
-    );
-    const fullResolver = (id: string) => stablecoinToMintAuthorityScoringInput(TRACKED_META_BY_ID.get(id));
-    const projectedResolver = (id: string) => {
-      const projected = projectedById.get(id);
-      return projectedMintAuthorityInput(projected);
-    };
-
-    for (const coin of TRACKED_STABLECOINS) {
-      const full = computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(coin), fullResolver);
-      const projected = projectedById.get(coin.id);
-      const compact = computeMintAuthorityScore(projectedMintAuthorityInput(projected), projectedResolver);
-
-      expect(compact.score, coin.id).toBe(full.score);
-      expect(compact.rawScore, coin.id).toBe(full.rawScore);
-      expect(compact.capsApplied, coin.id).toEqual(full.capsApplied);
-      expect(compact.unresolvedReason, coin.id).toBe(full.unresolvedReason);
-    }
   });
 });

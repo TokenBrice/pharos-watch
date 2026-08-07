@@ -99,7 +99,6 @@ describe("mint-authority-review-audit", () => {
       activeCoins: 4,
       reviewedProfiles: 3,
       activeMissingReviews: 1,
-      reviewedButUnscoreable: 1,
       routeCheckQueue: 1,
       capDescriptionQueue: 1,
       unresolvedQuestionProfiles: 1,
@@ -113,7 +112,6 @@ describe("mint-authority-review-audit", () => {
       },
     });
     expect(audit.activeMissingReviews.map((row) => row.coinId)).toEqual(["missing"]);
-    expect(audit.reviewedButUnscoreable).toMatchObject([{ coinId: "unknown", unresolvedReason: "unknown-mint-path" }]);
     expect(audit.routeCheckQueue[0]).toMatchObject({
       coinId: "bridge",
       controlLabel: "Bridge admin key",

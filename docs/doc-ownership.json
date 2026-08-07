@@ -201,13 +201,13 @@
     },
     {
       "name": "methodology",
-      "sources": ["shared/data/methodology-changelogs/**", "shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/mint-authority-scoring.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
+      "sources": ["shared/data/methodology-changelogs/**", "shared/lib/*-version.ts", "shared/lib/methodology-versions/**", "shared/lib/report-card*.ts", "shared/lib/peg-score.ts", "shared/lib/dews-config.ts", "shared/lib/liquidity-score-weights.ts", "shared/lib/depeg-resolver/**", "worker/src/lib/stability-index.ts", "worker/src/lib/mint-burn-scoring.ts", "worker/src/lib/dews.ts", "worker/src/cron/compute-depeg-resolver.ts", "worker/src/api/depeg-resolver.ts", "src/app/methodology/**"],
       "docs": ["docs/methodology-page.md", "docs/report-cards.md", "docs/depeg-detection.md", "docs/dews.md", "docs/depeg-resolver.md", "docs/dex-liquidity.md", "docs/mint-authority-scoring.md", "docs/stability-index.md", "docs/mint-burn-flows.md", "docs/yield-intelligence.md", "docs/pricing-pipeline.md", "docs/blacklist-tracker.md", "docs/chain-health.md", "shared/data/methodology-changelogs/**"],
       "notes": ["Versioned methodology changes update the structured changelog source; public pages and Markdown exports render from that registry."]
     },
     {
       "name": "mint-authority-score",
-      "sources": ["shared/lib/mint-authority-scoring.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
+      "sources": ["shared/lib/safety-score-v9/control.ts", "shared/lib/safety-score-v9/mint-posture.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
       "docs": ["docs/mint-authority-scoring.md", "docs/stablecoin-data.md", "docs/stablecoin-detail-page.md", "docs/homepage.md", "docs/coverage-page.md", "docs/report-cards.md", "docs/methodology-page.md", "docs/classification.md"],
       "notes": ["Standalone Mint Authority Score; Safety Score V9 evaluates the underlying reviewed control facts directly."]
     },

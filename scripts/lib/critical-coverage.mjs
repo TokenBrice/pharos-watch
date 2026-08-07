@@ -208,7 +208,6 @@ export const CRITICAL_FILES = [
   "worker/src/cron/sync-blacklist.ts",
   "shared/lib/api-freshness.ts",
   "shared/lib/liquidity-score-weights.ts",
-  "shared/lib/mint-authority-scoring.ts",
   "shared/lib/peg-score.ts",
   "shared/lib/psi-eligible.ts",
   "shared/lib/safety-score-v9-research.ts",
