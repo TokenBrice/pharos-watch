@@ -103,6 +103,8 @@ function control(
     },
     delaySec: 86_400,
     materialSupplyShare: null,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: "none",
     failureDomains: [failureDomain(domainKind[controlKind], controlKey)],
     ...overrides,

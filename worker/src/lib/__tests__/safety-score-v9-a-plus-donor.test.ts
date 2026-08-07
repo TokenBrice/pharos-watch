@@ -754,6 +754,8 @@ const donorReplay = {
                   kind: "mint-control",
                 },
               ],
+              keyCustody: "unknown",
+              modulesOrGuards: "unknown",
               incidentState: "none",
               materialSupplyShare: null,
               scope: "global",
@@ -798,6 +800,7 @@ const donorReplay = {
               observationState: "known",
             },
             supervision: "unknown",
+            latestResolvedIncidentAtSec: null,
             upgrade: {
               controlKey: null,
               state: "immutable",

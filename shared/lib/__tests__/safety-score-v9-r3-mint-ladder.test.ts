@@ -76,6 +76,8 @@ function unboundedMintControl(controlKey = "mint:issuer-eoa"): V9DeploymentContr
     authority: { authorityKey: `authority:${controlKey}`, model: "eoa", threshold: null },
     delaySec: 86_400,
     materialSupplyShare: null,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: "none",
     failureDomains: [{ kind: "mint-control", key: controlKey }],
   };

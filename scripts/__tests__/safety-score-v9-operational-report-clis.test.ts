@@ -165,6 +165,7 @@ function factSetCore(message = "Launch date evidence has not been established.")
             controlKey: null,
             reconciliation: "not-applicable",
             supervision: "unknown",
+            latestResolvedIncidentAtSec: null,
             upgrade: { state: "not-applicable", controlKey: null },
           },
           oracle: {
@@ -269,6 +270,8 @@ function deploymentControlFactSetCore(
       authority: { authorityKey: `bridge-route:${deploymentKey}`, model: "unknown", threshold: null },
       delaySec: null,
       materialSupplyShare,
+      keyCustody: "unknown",
+      modulesOrGuards: "unknown",
       incidentState: "unknown",
       failureDomains: [{ kind: "bridge-route", key: deploymentKey }],
     },

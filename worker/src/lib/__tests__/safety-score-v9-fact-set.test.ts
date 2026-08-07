@@ -774,6 +774,7 @@ function extension(): SafetyScoreV9FactSetExtensionV2 {
             controlKey: null,
             reconciliation: "not-applicable",
             supervision: "unknown",
+            latestResolvedIncidentAtSec: null,
             upgrade: { state: "not-applicable", controlKey: null },
           },
           oracle: {
@@ -1862,6 +1863,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         controlKey: null,
         reconciliation: "not-applicable",
         supervision: "none",
+        latestResolvedIncidentAtSec: null,
         upgrade: { state: "not-applicable", controlKey: null },
       },
       oracle: {
@@ -4680,6 +4682,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       capSemantics: { kind: "unbounded", bound: null },
       claimImpairment: "unbounded",
       economicLossScope: "global-claim",
+      keyCustody: "unknown",
+      modulesOrGuards: "unknown",
       incidentState: "unknown",
     });
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
@@ -4706,6 +4710,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           authority: null,
           delaySec: null,
           materialSupplyShare: 1,
+          keyCustody: "unknown",
+          modulesOrGuards: "unknown",
           incidentState: "unknown",
           failureDomains: [{ kind: "bridge-route", key: "ethereum:0x3333333333333333333333333333333333333333" }],
         },
@@ -4725,6 +4731,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           },
           delaySec: 86_400,
           materialSupplyShare: null,
+          keyCustody: "unknown",
+          modulesOrGuards: "unknown",
           incidentState: "none",
           failureDomains: [{ kind: "reserve-custodian", key: "issuer:alpha" }],
         },
@@ -4780,6 +4788,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           authority: { authorityKey: `bridge-route:${bridgeDeploymentKey}`, model: "unknown", threshold: null },
           delaySec: null,
           materialSupplyShare: 1,
+          keyCustody: "unknown",
+          modulesOrGuards: "unknown",
           incidentState: "none",
           failureDomains: [{ kind: "bridge-route", key: bridgeDeploymentKey }],
         },
@@ -4795,6 +4805,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           authority: null,
           delaySec: null,
           materialSupplyShare: null,
+          keyCustody: "unknown",
+          modulesOrGuards: "unknown",
           incidentState: "none",
           failureDomains: [],
         },
@@ -4814,6 +4826,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
           },
           delaySec: null,
           materialSupplyShare: null,
+          keyCustody: "unknown",
+          modulesOrGuards: "unknown",
           incidentState: "none",
           failureDomains: [{ kind: "upgrade-control", key: "ethereum:0x4444444444444444444444444444444444444444" }],
         },
@@ -4826,6 +4840,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         controlKey: mintControlKey,
         reconciliation: "not-applicable",
         supervision: "unknown",
+        latestResolvedIncidentAtSec: null,
         upgrade: { state: "reviewed", controlKey: upgradeControlKey },
       },
       bridge: {
@@ -5117,6 +5132,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       authority: { model: "unknown" },
       capSemantics: { kind: "unbounded" },
       claimImpairment: "unbounded",
+      keyCustody: "unknown",
+      modulesOrGuards: "unknown",
       incidentState: "none",
     });
   });
@@ -5265,6 +5282,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       materialSupplyShare: threshold - 0.001,
       capSemantics: { kind: "unknown" },
       claimImpairment: "unknown",
+      keyCustody: "unknown",
+      modulesOrGuards: "unknown",
       incidentState: "unknown",
     });
     const compiledPeripheral = compileSafetyScoreV9FactSetFromFixedInput(

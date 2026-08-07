@@ -58,6 +58,13 @@ export interface V9MintMechanismReview {
   controlKey: string | null;
   reconciliation: V9MintReconciliation;
   supervision: V9MintSupervision;
+  /**
+   * Epoch second of the most recent resolved mint incident, or null when the
+   * review records none. Absolute rather than an age so the fact is stable
+   * between compilation cycles; the evaluator converts it against its own
+   * clock (see {@link EvaluateV9EconomicControlArgs.resolvedIncidentAgeMonths}).
+   */
+  latestResolvedIncidentAtSec?: number | null;
   upgrade: V9UpgradeControlReview;
 }
 
@@ -151,6 +158,8 @@ export interface EvaluateV9EconomicControlArgs {
   bridge: V9BridgeControlReview;
   /** See {@link V9EconomicControlReviewExtension.trackRecordMonths}. */
   trackRecordMonths?: number;
+  /** See {@link V9EconomicControlReviewExtension.resolvedIncidentAgeMonths}. */
+  resolvedIncidentAgeMonths?: number;
 }
 
 export type V9EconomicControlAssetSource = V9EconomicControlAssetFacts;
@@ -166,6 +175,12 @@ export interface V9EconomicControlReviewExtension {
    * no seasoning credit (unit callers, unknown launch dates fail conservative).
    */
   trackRecordMonths?: number;
+  /**
+   * Conservative measured age (months, floor) of the mint review's most recent
+   * resolved incident. Absent → the decay ladder holds its strictest rung when
+   * a resolved incident is nonetheless recorded on the control row.
+   */
+  resolvedIncidentAgeMonths?: number;
 }
 
 export interface V9ControlComponent {
@@ -486,6 +501,9 @@ export function projectV9EconomicControlEvaluation(
       upgrade: { ...review.mint.upgrade },
     },
     ...(review.trackRecordMonths !== undefined ? { trackRecordMonths: review.trackRecordMonths } : {}),
+    ...(review.resolvedIncidentAgeMonths !== undefined
+      ? { resolvedIncidentAgeMonths: review.resolvedIncidentAgeMonths }
+      : {}),
     oracle: {
       ...review.oracle,
       branches: [...review.oracle.branches].sort(

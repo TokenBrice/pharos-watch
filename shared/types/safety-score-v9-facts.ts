@@ -730,6 +730,14 @@ const V9DeploymentControlFactV2Schema = z
       .nullable(),
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
+    // Reviewed key-custody attestation for the authority holding this control.
+    // An attested MPC/HSM key is an operationally different object from a bare
+    // externally-owned key even though both present as one address on chain.
+    keyCustody: z.enum(["mpc", "hsm", "unknown"]).default("unknown"),
+    // Reviewed Safe module/guard surface. "none-detected" is positive evidence
+    // that no side-door module bypasses the quorum; "present" is a reviewed
+    // extension surface; "unknown" fails conservative.
+    modulesOrGuards: z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown"),
     incidentState: z.enum(["none", "active", "resolved", "unknown"]),
     failureDomains: CanonicalFailureDomainsSchema,
   })
@@ -817,6 +825,13 @@ const V9MintMechanismReviewV2Schema = z
     // per-coin review establishes a prudential supervisory regime; unknown
     // supervision remains on the fail-closed high rung.
     supervision: z.enum(["prudential", "attestation-only", "none", "unknown"]).default("unknown"),
+    // Epoch second of the most recent *resolved* mint incident, or null when the
+    // review records none. Active incidents keep their own critical path via the
+    // control row's `incidentState`; this carries only the resolved history so a
+    // resolved exploit can decay rather than disappear. Absolute (not an age) so
+    // the fact stays byte-stable between compilation cycles; the evaluator
+    // converts it to an age against the evaluation clock.
+    latestResolvedIncidentAtSec: z.number().int().nonnegative().nullable().default(null),
     upgrade: V9UpgradeControlReviewV2Schema,
   })
   .strict()

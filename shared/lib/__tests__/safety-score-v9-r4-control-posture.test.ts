@@ -98,6 +98,8 @@ function mintControl(overrides: Partial<V9DeploymentControlFactV2> = {}): V9Depl
     authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
     delaySec: 86_400,
     materialSupplyShare: null,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: "none",
     failureDomains: [{ kind: "mint-control", key: "mint:issuer-eoa" }],
     ...overrides,

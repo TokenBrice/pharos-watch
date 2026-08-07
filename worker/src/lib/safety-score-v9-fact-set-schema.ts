@@ -340,6 +340,11 @@ const ControlOverlaySchema = z
       .nullable(),
     delaySec: z.number().int().nonnegative().nullable(),
     materialSupplyShare: FractionSchema.nullable(),
+    // Reviewed key-custody attestation and Safe module/guard surface. Both
+    // mirror the compiled control fact (`V9DeploymentControlFactV2`); see the
+    // field comments there.
+    keyCustody: z.enum(["mpc", "hsm", "unknown"]).default("unknown"),
+    modulesOrGuards: z.enum(["present", "none-detected", "not-applicable", "unknown"]).default("unknown"),
     incidentState: z.enum(["none", "active", "resolved", "unknown"]),
     failureDomains: FailureDomainsSchema,
   })

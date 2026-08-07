@@ -295,6 +295,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
       controlKey: null,
       reconciliation: "not-applicable",
       supervision: "unknown",
+      latestResolvedIncidentAtSec: null,
       upgrade: { state: "not-applicable", controlKey: null },
     },
     oracle: {

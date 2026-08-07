@@ -917,6 +917,8 @@ function adaptMintControl(
     authority: canonicalAuthorityType(assetId, control),
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
+    keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
+    modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     incidentState,
     failureDomains: controlFailureDomains(assetId, control, controlKind),
   };
@@ -1568,6 +1570,10 @@ function bridgeControl(
     authority: { authorityKey, model: route.controllerAddress ? "contract" : "unknown", threshold: null },
     delaySec: null,
     materialSupplyShare,
+    // Bridge-route controls carry no reviewed key-custody or Safe-module facts;
+    // the mint-authority review owns both vocabularies.
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: reviewed ? "none" : "unknown",
     failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id])
       .map((key) => ({ kind: "bridge-route" as const, key }))
@@ -1595,6 +1601,8 @@ function unmatchedBridgeControl(
     },
     delaySec: null,
     materialSupplyShare: route.supplyShare,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: "unknown",
     failureDomains: [{ kind: "bridge-route", key: route.deploymentRouteKey }],
   };
@@ -1650,6 +1658,8 @@ function representationGroupBridgeControl(
     },
     delaySec: null,
     materialSupplyShare: route.supplyShare,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: reviewed ? "none" : "unknown",
     failureDomains: [...failureDomains].sort((left, right) =>
       compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
@@ -1924,6 +1934,28 @@ function adaptBridgeReview(
   };
 }
 
+/**
+ * Epoch second of the most recent *resolved* mint incident, bounded by the
+ * evaluation clock. Active incidents are excluded: they drive the existing
+ * critical `active-control-incident` path and must not also feed the decay
+ * ladder. An unparseable date is retained as the clock itself so an
+ * undatable resolved incident decays from "now" (strictest tier), matching
+ * the retired Mint Authority engine's fail-conservative treatment.
+ */
+function latestResolvedMintIncidentAtSec(
+  incidents: MintAuthorityProfile["mintIncidents"],
+  clockSec: number,
+): number | null {
+  let latest: number | null = null;
+  for (const incident of incidents ?? []) {
+    if (incident.status !== "resolved") continue;
+    const parsed = Date.parse(`${incident.date}T00:00:00Z`);
+    const atSec = Number.isFinite(parsed) ? Math.min(clockSec, Math.max(0, Math.floor(parsed / 1_000))) : clockSec;
+    if (latest === null || atSec > latest) latest = atSec;
+  }
+  return latest;
+}
+
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   dependencies: PreparedDependency["dependency"],
@@ -1941,6 +1973,7 @@ function adaptMintReview(
         controlKey: null,
         reconciliation: "unknown",
         supervision: "unknown",
+        latestResolvedIncidentAtSec: null,
         upgrade: { state: "unknown", controlKey: null },
       },
       controls: [],
@@ -1966,6 +1999,7 @@ function adaptMintReview(
         controlKey: null,
         reconciliation: "unknown",
         supervision: "unknown",
+        latestResolvedIncidentAtSec: null,
         upgrade: { state: "unknown", controlKey: null },
       },
       controls: [],
@@ -2083,6 +2117,7 @@ function adaptMintReview(
       // A reviewed prudential-supervision fact graduates the reconciled mint
       // rung; absent or "unknown" stays fail-closed at "unknown".
       supervision: profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
+      latestResolvedIncidentAtSec: latestResolvedMintIncidentAtSec(profile.mintIncidents, clockSec),
       upgrade,
     },
     controls,
