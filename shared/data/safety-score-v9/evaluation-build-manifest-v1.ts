@@ -390,7 +390,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input.ts",
-      "sha256": "a0e9a9abc1b1f91d7689d0ea9532d7ba090dc9ddfce23b5d0c6d892680b1d571"
+      "sha256": "9db1b0ee5aea21ac63cc024ee04ffcb6621b7cc5727a15bf6ff24c5fdea5c385"
     },
     {
       "path": "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts",
@@ -489,7 +489,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "34c0398fda4e16dc98828d8d1d972243dbe3a121201d8249822bc2b5bc6d78b7"
+  "digest": "90623220659cbe997810c922d8807929ba3e334abbfd25819c033ad69ebaefe2"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
