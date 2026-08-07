@@ -190,7 +190,7 @@ describe("prepareSafetyScoreV9Input", () => {
       publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:${STABLECOINS_UPDATED_AT}`,
     });
     expect((envelope.safetyScoreIdentity as { baseInputGenerationId: string }).baseInputGenerationId).toMatch(
-      /^report-cards-input:v2:[a-f0-9]{64}$/,
+      /^report-cards-input:v1:[a-f0-9]{64}$/,
     );
 
     // The seed carries the same identity object, so both rows are one capture.

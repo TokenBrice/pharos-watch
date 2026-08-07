@@ -172,7 +172,7 @@ export const NativeSafetyScoreV9InputSchema = z
     registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), NativeDexLiquidityRowSchema),
-    baseInputGenerationId: z.string().regex(/^report-cards-input:v2:[a-f0-9]{64}$/),
+    baseInputGenerationId: z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
   })
   .strict();
 
@@ -195,7 +195,10 @@ export type SafetyScoreV9CompilerInput = Omit<
 export const NATIVE_V9_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
 const NATIVE_V9_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
-export const NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX = "report-cards-input:v2:";
+// The prefix is a published format namespace (public fact-set schemas, OpenAPI,
+// the publication codec, and the `safety_score_history_v2` CHECK all pin it),
+// not a projection version — see `SafetyScoreV9InputIdentitySchema`.
+export const NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX = "report-cards-input:v1:";
 const NATIVE_V9_BASE_INPUT_DIGEST_DOMAIN = "report-cards.native-v9-base-input.v2";
 
 /**
@@ -221,8 +224,13 @@ type NativeV9BaseInputDigestSource = Omit<
 > & { baseInputGenerationId?: string };
 
 /**
- * `report-cards-input:v2:<sha256>` over the canonicalized payload minus the
+ * `report-cards-input:v1:<sha256>` over the canonicalized payload minus the
  * generation id itself and minus every V9-enrichment field.
+ *
+ * The digest domain (`report-cards.native-v9-base-input.v2`) is what separates
+ * this projection from the v1 lane's structured projection; the id prefix is a
+ * format namespace shared by both and cannot collide, since both sides are
+ * sha256 over their own canonical content.
  *
  * The four enrichment fields are excluded for the same reason the v1 lane
  * excluded them: the compute cron layers supply attribution, both journals, and

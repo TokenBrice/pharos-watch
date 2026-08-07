@@ -190,10 +190,7 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
       schemaVersion: 1 as const,
       methodologyVersion: fixedInput.methodologyVersion,
       evaluationBuildDigest: DIGEST,
-      baseInputGenerationId: fixedInput.baseInputGenerationId.replace(
-        "report-cards-input:v1:",
-        "report-cards-input:v2:",
-      ),
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
       publicationGenerationId: fixedInput.sourceGeneration,
     };
     const entry =

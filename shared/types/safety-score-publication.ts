@@ -2,7 +2,6 @@ import { z } from "zod";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
-const NativeBaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v2:[a-f0-9]{64}$/);
 
 /**
  * Persisted identity for the retired V8 projection and the compatible private
@@ -28,6 +27,13 @@ export type SafetyScoreV8PublicationIdentity = z.infer<typeof SafetyScoreV8Publi
  *
  * `evaluationBuildDigest` binds the capture to the pinned V9 evaluation build,
  * so a capture prepared under one evaluator can never be consumed by another.
+ *
+ * `baseInputGenerationId` keeps the `report-cards-input:v1:` prefix. That prefix
+ * is a published format namespace — the public fact-set schemas, the OpenAPI
+ * spec, the publication codec, and the `safety_score_history_v2` CHECK all pin
+ * it — not a projection version. Which projection produced an id is carried by
+ * this identity (`model` + `schemaVersion` + `evaluationBuildDigest`), and ids
+ * cannot collide across projections because they are sha256 over content.
  */
 export const SafetyScoreV9InputIdentitySchema = z
   .object({
@@ -35,7 +41,7 @@ export const SafetyScoreV9InputIdentitySchema = z
     schemaVersion: z.literal(1),
     methodologyVersion: z.string().trim().min(1),
     evaluationBuildDigest: Sha256Schema,
-    baseInputGenerationId: NativeBaseInputGenerationIdSchema,
+    baseInputGenerationId: BaseInputGenerationIdSchema,
     publicationGenerationId: z.string().trim().min(1),
   })
   .strict();

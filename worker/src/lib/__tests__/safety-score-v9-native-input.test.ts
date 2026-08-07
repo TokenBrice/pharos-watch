@@ -161,9 +161,9 @@ describe("native Safety Score V9 input", () => {
     ).toThrow(/Malformed native V9 input/);
   });
 
-  it("derives one v2 generation id per payload regardless of field order", () => {
+  it("derives one generation id per payload regardless of field order", () => {
     const input = nativeInput();
-    expect(input.baseInputGenerationId).toMatch(/^report-cards-input:v2:[a-f0-9]{64}$/);
+    expect(input.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
 
     const permuted = Object.fromEntries(
       Object.entries(input as unknown as Record<string, unknown>).reverse(),

@@ -7,7 +7,7 @@ import {
 
 const input = {
   methodologyVersion: "9.0",
-  baseInputGenerationId: `report-cards-input:v2:${"a".repeat(64)}`,
+  baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
   publicationGenerationId: "report-cards:9.0:1785168000",
 };
 
@@ -23,13 +23,16 @@ describe("Safety Score V9 input identity", () => {
     });
   });
 
-  it("rejects a base input generation that is not the native v2 lane", () => {
-    expect(() =>
-      buildSafetyScoreV9InputIdentity({
-        ...input,
-        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      }),
-    ).toThrow();
+  it("rejects a base input generation outside the published id format", () => {
+    for (const badId of [
+      `report-cards-input:v2:${"a".repeat(64)}`,
+      `report-cards-input:v1:${"a".repeat(63)}`,
+      "report-cards-input:v1:NOTHEX",
+    ]) {
+      expect(() =>
+        buildSafetyScoreV9InputIdentity({ ...input, baseInputGenerationId: badId }),
+      ).toThrow();
+    }
   });
 
   it("requires every persisted identity field to match", () => {

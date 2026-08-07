@@ -70,11 +70,9 @@ const SupplyAttributionGenerationPayloadSchema = z
   .object({
     schemaVersion: z.literal(1),
     kind: z.literal("safety-score-v9-supply-attribution-generation"),
-    // v1 = retained exact fixed input; v2 = native V9 capture. This is a
-    // private cache payload, so both lanes are admissible here.
     sourceBaseInputGenerationId: z
       .string()
-      .regex(/^report-cards-input:v[12]:[a-f0-9]{64}$/),
+      .regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
     sourceGeneration: z.string().min(1),
     registryFingerprint: Sha256Schema,
     sourceClockSec: z.number().int().nonnegative(),

@@ -1,0 +1,51 @@
+import { describe, expect, it } from "vitest";
+import {
+  createNativeSafetyScoreV9FullRegistryInput,
+  createSafetyScoreV9FullRegistryInput,
+} from "./fixtures/safety-score-v9-full-registry-input";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
+
+// Two full-registry compile+evaluate passes; matches the budget the other
+// full-pipeline V9 suites use.
+const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
+
+function cardsById(candidate: { cards: readonly { id: string; grade: string; score: number | null }[] }) {
+  return new Map(candidate.cards.map((card) => [card.id, { grade: card.grade, score: card.score }]));
+}
+
+describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("compiles, evaluates, and projects a full publication end to end", () => {
+    const input = createNativeSafetyScoreV9FullRegistryInput();
+
+    const pipeline = buildSafetyScoreV9Candidate({
+      fixedInput: input,
+      publishedAtSec: input.clockSec,
+    });
+
+    expect(pipeline.compiledFacts.assets.length).toBe(input.activeAssetIds.length);
+    expect(pipeline.candidate.cards.length).toBe(input.activeAssetIds.length);
+    // The published id format is a namespace shared with the retained v3 lane.
+    expect(pipeline.compiledFacts.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
+    expect(pipeline.compiledFacts.baseInputGenerationId).toBe(input.baseInputGenerationId);
+    expect(pipeline.compilerFactSchemaIdentity.fixedInputSchemaVersion).toBe(4);
+    expect(pipeline.producerCapabilityIdentity.inputContractVersions.fixedInput).toBe(4);
+  });
+
+  it("scores the native projection identically to the exact input it projects from", () => {
+    const legacy = createSafetyScoreV9FullRegistryInput();
+    const native = createNativeSafetyScoreV9FullRegistryInput();
+
+    const legacyCandidate = buildSafetyScoreV9Candidate({
+      fixedInput: legacy,
+      publishedAtSec: legacy.clockSec,
+    }).candidate;
+    const nativeCandidate = buildSafetyScoreV9Candidate({
+      fixedInput: native,
+      publishedAtSec: native.clockSec,
+    }).candidate;
+
+    // Dropping bluechip, blacklist, drift, the non-current chain buckets, and
+    // the V8 DEX row fields must not move a single grade or score.
+    expect(cardsById(nativeCandidate)).toEqual(cardsById(legacyCandidate));
+  });
+});
