@@ -187,7 +187,19 @@ describe("deriveMintSurge", () => {
 });
 
 describe("toStructural", () => {
-  it("projects the scoreable Mint Authority Score band and incident status", () => {
+  it("projects the published V9 mint posture band and incident status", () => {
+    // 9.1: the band is hydrated from the V9 publication, not recomputed from
+    // curated metadata. Without a publication it stays null and K1 falls back
+    // to its posture and mint-path legs.
+    hydrateV9DependencyImpairment([
+      {
+        id: "fixture-k1",
+        dependencies: { serial: [] },
+        breakdowns: {
+          control: { components: [{ kind: "mint", posture: "concentrated-admin" }] },
+        },
+      },
+    ]);
     const structural = toStructural({
       id: "fixture-k1",
       symbol: "FK1",
@@ -225,6 +237,7 @@ describe("toStructural", () => {
     expect(structural.mintIncidents).toEqual([
       { date: "2026-05-24", status: "active", resolvedAt: null },
     ]);
+    clearV9DependencyImpairment();
   });
 
   it("keeps a wrapper healthy when the V9 serial parent is tracked and non-terminal", () => {
