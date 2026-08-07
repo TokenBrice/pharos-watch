@@ -41,6 +41,15 @@ const BASE_ENTRY: RedemptionBackstopEntry = {
 };
 
 describe("RedemptionBackstopCard", () => {
+  it("presents one standalone route score without the legacy effective exit score", () => {
+    const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
+
+    expect(html).toContain("Issuer redemption route");
+    expect(html).toContain("Standalone route score");
+    expect(html).toContain("65/100");
+    expect(html).not.toContain("58/100");
+  });
+
   it("renders explicit fixed-fee copy when fee bps are available", () => {
     const html = renderToStaticMarkup(
       <RedemptionBackstopCard

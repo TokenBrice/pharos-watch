@@ -65,9 +65,10 @@
     },
     {
       "type": "article",
-      "url": "https://brazilcrypto.substack.com/p/230-b3-to-launch-tokenized-stocks",
-      "title": "B3 to launch tokenized stocks, stablecoin in 2026",
-      "source": "Brazil Crypto Report"
+      "url": "https://cointelegraph.com.br/news/expert-xp-2026-tokenization",
+      "title": "Expert XP 2026: B3 confirms B3RL stablecoin launch in the coming months",
+      "description": "B3 director Felipe Paiva confirms the B3RL launch window and an early-2027 tokenization follow-up at Expert XP 2026.",
+      "source": "Cointelegraph Brasil"
     },
     {
       "type": "article",
@@ -98,6 +99,13 @@
       "title": "B3 clarifies B3RL settlement stablecoin targets H1 2026 on Polygon; tokenization platform follows in H2",
       "description": "At Tokenization Day, B3 OTC and digital-assets director Humberto Costa said the B3RL settlement stablecoin — backed by cash and government bonds, built on Polygon — is expected in the first half of 2026, while the tokenized-share registry/tokenizer advances in the second half, disentangling the two timelines that earlier coverage had merged.",
       "sourceUrl": "https://investnews.com.br/investimentos/b3-lancara-stablecoin-em-reais-ainda-neste-semestre/"
+    },
+    {
+      "date": "2026-07-23",
+      "type": "milestone",
+      "title": "B3 director confirms B3RL launches \"in the coming months\" at Expert XP 2026",
+      "description": "Director Felipe Paiva said B3 launches B3RL in the coming months, with asset tokenization to follow in early 2027; corroborated by Jornal do Comércio on July 24.",
+      "sourceUrl": "https://cointelegraph.com.br/news/expert-xp-2026-tokenization"
     }
   ]
 }

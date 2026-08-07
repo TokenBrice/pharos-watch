@@ -35,8 +35,8 @@
   "status": "pre-launch",
   "announcedDate": "2026-05",
   "expectedLaunchDate": "2026",
-  "launchPhase": "announced",
-  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. Pilot announced May 2026; symbol and ticker not yet confirmed",
+  "launchPhase": "testnet",
+  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. A real token (iMKRW) has now been issued and transacted on Kaia across two closed pilots — the OpenAsset full-lifecycle PoC (May 2026) and the Coocon/Beatoz payment-ecosystem PoC (July 2026) — so Pharos marks the phase testnet; these are private pilots, not a public testnet, commercialization remains gated on Korean stablecoin legislation, and the production symbol/ticker is not yet confirmed",
   "featuredContent": [
     {
       "type": "article",
@@ -60,6 +60,13 @@
       "title": "iM Bank and OpenAsset complete technical PoC issuing 'iMKRW' on Kaia",
       "description": "Controlled-environment proof-of-concept with OpenAsset's OpenMint solution demonstrated the full token lifecycle — issuance, top-up, QR payment, merchant settlement, and burn — across 80+ scenarios. A separate partner track from the Finger/BTQ post-quantum security pilot.",
       "sourceUrl": "https://zdnet.co.kr/view/?no=20260520163613"
+    },
+    {
+      "date": "2026-07-07",
+      "type": "milestone",
+      "title": "Coocon, iM Bank, and Beatoz complete stablecoin issuance and payment-ecosystem PoC",
+      "description": "Payment APIs bridged bank infrastructure and the Beatoz CPG blockchain, covering policy-fund execution via smart contracts and regional payment infrastructure. No commercialization timeline given.",
+      "sourceUrl": "https://www.newswire.co.kr/newsRead.php?no=1038033"
     }
   ]
 }

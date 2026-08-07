@@ -41,8 +41,8 @@
     "reviewedAt": "2026-05-12"
   },
   "status": "pre-launch",
-  "launchPhase": "auditing",
-  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit completed; high and medium severity fixes merged. Post-audit remediation continued through mid-May 2026 (oracle staleness-check, TWAP/slippage, and sAMM-overflow fixes merged via GitHub); GitHub shows an expanded multi-collateral scope (ETH, wstETH, rETH, cbETH, cbBTC, AERO, and LP tokens) with launch parameters updated for safety. The prior Q2 2026 target window ended on June 30, 2026 without a public mainnet deployment or sourced replacement launch window.",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "Fork of Liquity V2 on Base; external security audit remediation merged through May 2026, with docs still describing audits as in progress. Deployed to Base Sepolia testnet in June 2026, then production contracts deployed to Base mainnet on August 1 2026 (BoldToken 0x252d36f435582ecb01686448d21e8c9ea0b2ca65, ~2,500 BD seeded) with the production frontend live at app.basedollar.org from August 3. No public launch announcement yet, docs do not yet publish contract addresses, and supply is team-seeded dust, so Pharos holds BD at launching-soon until a public launch is communicated.",
   "milestones": [
     {
       "date": "2026-04-03",
@@ -64,6 +64,20 @@
       "title": "Post-audit remediation ongoing — oracle staleness, TWAP/slippage, and sAMM-overflow fixes merged",
       "description": "GitHub activity through May 21 2026 shows continued audit-finding remediation (oracle staleness-check, TWAP/slippage handling, and sAMM overflow fixes) merged into the main branch; no mainnet deployment yet.",
       "sourceUrl": "https://github.com/basedollar/basedollar"
+    },
+    {
+      "date": "2026-06-12",
+      "type": "testnet",
+      "title": "Deployed to Base Sepolia testnet",
+      "description": "Testnet deployment and subgraph merged via PR #139.",
+      "sourceUrl": "https://github.com/basedollar/basedollar/pull/139"
+    },
+    {
+      "date": "2026-08-01",
+      "type": "milestone",
+      "title": "Production contracts deployed to Base mainnet",
+      "description": "PR #160 merged with broadcast artifacts for chain 8453; BoldToken live at 0x252d36f435582ecb01686448d21e8c9ea0b2ca65 with ~2,500 BD seeded. Production frontend deployed August 3. No public launch announcement yet.",
+      "sourceUrl": "https://github.com/basedollar/basedollar/pull/160"
     }
   ]
 }

@@ -22,7 +22,20 @@ type AuditReport = {
   vulnerabilities: Record<string, AuditVulnerability>;
 };
 
-const exception = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY.exceptions[0];
+const exception = {
+  advisoryId: "GHSA-reviewed-fixture",
+  source: 1,
+  dependency: "brace-expansion",
+  severity: "high",
+  range: "<1.1.18",
+  expiresOn: "2026-08-15",
+  nodes: [
+    "node_modules/@eslint/config-array/node_modules/brace-expansion",
+    "node_modules/@eslint/eslintrc/node_modules/brace-expansion",
+  ],
+  affectedPackages: ["brace-expansion", "minimatch"],
+} as const;
+const reviewedRegistry = { version: 1, exceptions: [exception] };
 const reviewedNow = new Date("2026-07-29T12:00:00.000Z");
 
 function reviewedReport(): AuditReport {
@@ -57,14 +70,21 @@ function reviewedReport(): AuditReport {
 }
 
 describe("dependency-audit exceptions", () => {
+  it("keeps the live registry empty after the reviewed advisories are patched", () => {
+    expect(DEPENDENCY_AUDIT_EXCEPTION_REGISTRY).toEqual({ version: 1, exceptions: [] });
+    expect(verifyDependencyAuditReport({ auditReportVersion: 2, vulnerabilities: {} }, { now: reviewedNow })).toEqual({
+      acceptedExceptionIds: [],
+    });
+  });
+
   it("suppresses only the exact reviewed advisory and dependency nodes", () => {
-    expect(verifyDependencyAuditReport(reviewedReport(), { now: reviewedNow })).toEqual({
+    expect(verifyDependencyAuditReport(reviewedReport(), { registry: reviewedRegistry, now: reviewedNow })).toEqual({
       acceptedExceptionIds: [exception.advisoryId],
     });
 
     const changedPath = reviewedReport();
     changedPath.vulnerabilities["brace-expansion"].nodes.push("node_modules/unreviewed/node_modules/brace-expansion");
-    expect(() => verifyDependencyAuditReport(changedPath, { now: reviewedNow })).toThrow(
+    expect(() => verifyDependencyAuditReport(changedPath, { registry: reviewedRegistry, now: reviewedNow })).toThrow(
       "Unreviewed high/critical advisory affects brace-expansion.",
     );
   });
@@ -88,15 +108,18 @@ describe("dependency-audit exceptions", () => {
       nodes: ["node_modules/new-risk"],
     };
 
-    expect(() => verifyDependencyAuditReport(report, { now: reviewedNow })).toThrow(
+    expect(() => verifyDependencyAuditReport(report, { registry: reviewedRegistry, now: reviewedNow })).toThrow(
       "Unreviewed high/critical advisory affects new-risk.",
     );
   });
 
   it("fails closed after the exception expiry date", () => {
-    expect(() => verifyDependencyAuditReport(reviewedReport(), { now: new Date("2026-08-16T00:00:00.000Z") })).toThrow(
-      "Dependency-audit exception expired on 2026-08-15.",
-    );
+    expect(() =>
+      verifyDependencyAuditReport(reviewedReport(), {
+        registry: reviewedRegistry,
+        now: new Date("2026-08-16T00:00:00.000Z"),
+      }),
+    ).toThrow("Dependency-audit exception expired on 2026-08-15.");
   });
 
   it("processes npm audit's expected finding exit code before applying exceptions", () => {
@@ -110,7 +133,7 @@ describe("dependency-audit exceptions", () => {
       signal: null,
     }));
 
-    expect(runFullLockfileDependencyAudit({ now: reviewedNow, spawn })).toEqual({
+    expect(runFullLockfileDependencyAudit({ now: reviewedNow, registry: reviewedRegistry, spawn })).toEqual({
       acceptedExceptionIds: [exception.advisoryId],
     });
     expect(spawn).toHaveBeenCalledWith(

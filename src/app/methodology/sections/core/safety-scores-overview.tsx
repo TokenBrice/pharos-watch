@@ -14,6 +14,12 @@ export function SafetyScoresOverview() {
         failure path.
       </p>
       <p>
+        Exit selects the strongest exact same-notional route and may add a bounded independent-backup credit:
+        {" "}<span className="font-mono">min(10, 100 - primary) × backup / 100</span>. The score card shows the
+        selected route, backup credit, and actual stress-request completion separately. The standalone DEX market
+        score and redemption route score describe their own modules; neither is the V9 Exit score.
+      </p>
+      <p>
         V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
         integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
         unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires

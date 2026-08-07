@@ -573,6 +573,7 @@ DEX price median weighting uses canonical source families rather than the normal
 
 **Frontend:**
 
+- `dex-liquidity-card.tsx`: labels the detail module `DEX market liquidity`, describes its score as an aggregate market measurement rather than a single-route execution test, and shows source freshness beside the score
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available plus coverage badges (`Primary`, `Mixed`, `Fallback`, `NR`)
 - `dex-liquidity-card.tsx`: surfaces whether liquidity is measured, partially measured, or only observed without measured pool balances
 - `dex-liquidity-card.tsx`: for `unobserved` rows, the detail page now says no direct-token DEX market is observed and renders an explicit unobserved-history state instead of hiding history or plotting placeholder zeros as a market chart

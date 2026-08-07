@@ -173,6 +173,13 @@
       "title": "BDACS and Aptos Foundation partner to bring KRW1 to Aptos",
       "description": "First deployment of KRW1 outside EVM-compatible chains; aims to accelerate practical stablecoin use cases across domestic and global markets via Aptos's low-fee payment infrastructure for remittances and real-world asset tokenisation.",
       "sourceUrl": "https://www.cryptotimes.io/2026/05/13/bdacs-and-aptos-team-up-to-expand-krw1-stablecoin-ecosystem/"
+    },
+    {
+      "date": "2026-07-10",
+      "type": "milestone",
+      "title": "BDACS publishes institutional KRW1 whitepaper",
+      "description": "Institutional whitepaper published on the BDACS newsroom; krw1.kr now describes commercialization of issuance and circulation for select KYC/AML-vetted institutions, while aggregator-tracked supply remains proof-of-concept scale pending Korea's Digital Asset Basic Act (bills introduced July 28 2026).",
+      "sourceUrl": "https://newsroom.bdacs.co.kr"
     }
   ]
 }

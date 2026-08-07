@@ -285,7 +285,7 @@ function PillarBreakdownDetails({
           </div>
         ) : null}
       </dl>
-      {breakdown.sectionLabel === "Route components" ? (
+      {breakdown.exitHighlight !== null ? (
         <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
           Route capacity is specific to the selected executable path. Exchange-wide volume,
           aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
@@ -327,10 +327,7 @@ function PillarBreakdownDetails({
       {breakdown.alternatives.length > 0 ? (
         <details className="group mt-3 border-t border-border/30 pt-2">
           <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
-            <span>
-              Alternative {breakdown.alternatives.length === 1 ? "route" : "routes"}
-              {" "}({breakdown.alternatives.length})
-            </span>
+            <span>Other evaluated routes ({breakdown.alternatives.length})</span>
             <ChevronDown
               className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
               aria-hidden="true"
@@ -338,13 +335,20 @@ function PillarBreakdownDetails({
           </summary>
           <ul className="divide-y divide-border/30">
             {breakdown.alternatives.map((route) => (
-              <li key={route.key} className="flex min-w-0 items-baseline justify-between gap-3 py-1.5">
+              <li key={route.key} className="flex min-w-0 items-start justify-between gap-3 py-1.5">
                 <span className="min-w-0 break-words text-[11px] leading-[1.35] text-foreground/85">
-                  {route.label}
+                  <span className="block">{route.label}</span>
+                  {route.detail !== null ? (
+                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{route.detail}</span>
+                  ) : null}
                 </span>
                 <span className="shrink-0 text-right font-mono text-[10px] text-muted-foreground">
-                  {route.score === null ? "Not scored" : `${route.score.toFixed(0)} / 100`}
-                  {route.included ? " · included" : route.detail === null ? "" : ` · ${route.detail}`}
+                  {route.score === null ? "Not scored" : `V9 route ${route.score.toFixed(0)} / 100`}
+                  {route.redundancyCredit !== null
+                    ? ` · backup +${route.redundancyCredit.toFixed(1)}`
+                    : route.included
+                      ? " · evaluated"
+                      : ""}
                 </span>
               </li>
             ))}
@@ -427,6 +431,22 @@ function PillarRow({
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-foreground">{pillar.label}</span>
             <span className="mt-0.5 block text-[11px] text-muted-foreground">{pillar.evidenceSummary}</span>
+            {pillar.breakdown?.exitHighlight ? (
+              <>
+                <span className="mt-1 block font-mono text-[10px] text-foreground/85">
+                  Primary V9 route: {pillar.breakdown.exitHighlight.primaryRouteLabel}{" "}
+                  {pillar.breakdown.exitHighlight.primaryRouteScore.toFixed(1)}
+                  {pillar.breakdown.exitHighlight.redundancyCredit > 0
+                    ? ` · backup +${pillar.breakdown.exitHighlight.redundancyCredit.toFixed(1)}`
+                    : ""}
+                </span>
+                {pillar.breakdown.exitHighlight.capacityLine !== null ? (
+                  <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                    {pillar.breakdown.exitHighlight.capacityLine}
+                  </span>
+                ) : null}
+              </>
+            ) : null}
           </span>
           <span className="whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-foreground">
             {pillar.score === null ? "NR" : `${pillar.score.toFixed(0)} / 100`}

@@ -1,5 +1,7 @@
 {
   "id": "jpysc-sbi-startale",
+  "llamaId": "427",
+  "geckoId": "jpysc",
   "name": "JPYSC",
   "symbol": "JPYSC",
   "oneLiner": "JPYSC is Shinsei Trust & Banking's closed-loop yen stablecoin for verified SBI VC Trade users, awaiting public-chain circulation.",
@@ -41,11 +43,60 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
-  "status": "pre-launch",
+  "reserves": [
+    {
+      "name": "Yen demand deposits in segregated SBI Shinsei Trust Bank trust accounts",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "SBI Shinsei Trust & Banking (trustee); underlying deposit banks undisclosed",
+      "liquidityHorizon": "immediate",
+      "riskFactors": ["counterparty", "concentration", "legal"]
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-05",
+    "reviewer": "Pharos reserve research (JPYSC promotion follow-up)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SBI Shinsei Trust statutory issuance/deposit-balance disclosure (geo-restricted to Japan; figures via search-engine crawl of the page)",
+        "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
+      },
+      {
+        "label": "SBI Group JPYSC launch press release (trust-asset management, planned JGB allocation)",
+        "url": "https://www.sbigroup.co.jp/news/2026/0624_16425.html"
+      },
+      {
+        "label": "CoinPost JPYSC explainer (trust structure, launch reserve figures, no-attestation note)",
+        "url": "https://coinpost.jp/crypto/stablecoin/jpysc/"
+      },
+      {
+        "label": "FSA 2025 Payment Services Act amendment explainer (trust-type reserve rules: up to 50% JGB/UST with remaining maturity of 3 months or less)",
+        "url": "https://www.fsa.go.jp/common/diet/217/02/setsumei.pdf"
+      },
+      {
+        "label": "SBI VC Trade JPYSC product page (redemption terms, no deposit insurance)",
+        "url": "https://www.sbivc.co.jp/jpysc"
+      }
+    ],
+    "rationale": "The trustee's statutory disclosure as of 2026-06-30 showed deposit balances (¥10,008,304,794) at or slightly above the issued amount (¥10,008,294,794) with no JGB line item, i.e. effectively 100% yen demand deposits at that date. The issuer's launch release says a portion is planned to be invested in JGBs, and the amended PSA trust-type framework permits up to 50% in JGB/UST with remaining maturity of 3 months or less (or principal-protected time deposits) with issuer top-up obligations. No cash/JGB percentage split, reserve report, or third-party attestation is published; the statutory disclosure page is unreachable outside Japan.",
+    "compositionBasis": "Trustee statutory issuance/deposit-balance disclosure dated 2026-06-30; issuer launch release; CoinPost trust-structure explainer; FSA framework rules bounding permissible JGB allocation.",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Supply has roughly doubled (to about ¥20.6B) since the last retrievable composition disclosure, and the issuer may shift up to 50% of reserves into JGBs/USTs with remaining maturity of 3 months or less without granular public disclosure; there is no independent attestation program, only trustee statutory disclosure under FSA supervision.",
+    "knownUnknownExposurePct": 0
+  },
+  "status": "active",
   "announcedDate": "2026-02",
   "launchDate": "2026-06-24",
-  "launchPhase": "beta",
-  "launchPhaseDetail": "JPYSC went live June 24, 2026 with Shinsei Trust & Banking as issuer and cash-plus-JGB reserves held in segregated trust accounts. The initial phase is closed-loop for verified SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet; Startale says public-chain use is technically ready but awaiting further legal and tax clarity.",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Walled-garden circulation; peg-derived price",
+      "message": "JPYSC circulates only inside verified SBI VC Trade accounts — no external-wallet withdrawals and no public-chain secondary market yet. There are zero trading venues, so the tracked price is peg-derived (¥1.00) rather than market-discovered and cannot reflect market stress; supply and market cap come from the DefiLlama path, as CoinGecko's circulating-supply field is inconsistent with its own market cap. Startale says public-chain circulation is technically ready but awaiting legal and tax clarity."
+    }
+  ],
   "featuredContent": [
     {
       "type": "blog",
@@ -111,6 +162,13 @@
       "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
       "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
       "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
+    },
+    {
+      "date": "2026-07-15",
+      "type": "partnership",
+      "title": "SBI, DigiFT, and Startale partner on JPYSC-powered settlement for tokenized capital markets",
+      "description": "Partnership covers JPYSC-powered settlement and on-chain dividend distribution for tokenized capital-markets products.",
+      "sourceUrl": "https://startale.com/en"
     },
     {
       "date": "2026-07-16",

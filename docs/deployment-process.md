@@ -203,9 +203,7 @@ Current explicitly deferred major cohort:
 - `@types/node@25` — next review: 2026-08-15
 - `typescript@6` — next review: 2026-08-15
 
-Current risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale:
-
-- `brace-expansion` / `GHSA-mh99-v99m-4gvg` (accepted 2026-07-25; review by 2026-08-15): the affected v1 copies are dev-only transitive dependencies of ESLint through `minimatch@3`. They process repository-owned lint/config patterns, are absent from production installs, and are not reachable from user input or a deployed request path. The patched `brace-expansion@5` export is not compatible with these parents, and npm currently offers only breaking parent upgrades; retain this exception until the lint toolchain adopts a compatible patched dependency.
+Risk-accepted transitive advisories are machine-readable in `scripts/ci/dependency-audit-exceptions.json`; the verifier rejects malformed, expired, or widened entries. The registry is the weekly workflow's authority, while this section records the review rationale. There are currently no active exceptions.
 
 The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Root manifest or lockfile PRs run it through `check:pr:static`. The weekly `dependency-audit.yml` job runs the broader full-lockfile audit through `scripts/ci/verify-dependency-audit.mjs`; it passes only when every high/critical finding is the exact, unexpired reviewed exception.
 

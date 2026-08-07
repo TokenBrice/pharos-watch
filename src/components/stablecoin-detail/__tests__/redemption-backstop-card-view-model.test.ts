@@ -324,7 +324,8 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     );
 
     expect(missingCache.heroScoreLabel).toBe("NR");
-    expect(missingCache.showExitScore).toBe(false);
+    expect(missingCache.title).toBe("Redemption route");
+    expect("showExitScore" in missingCache).toBe(false);
     expect(missingCache.showResolutionStateBadge).toBe(true);
     expect(missingCache.resolutionStateLabel).toBe("missing cache");
     expect(missingCache.modelConfidenceLabel).toBe("confidence: low");

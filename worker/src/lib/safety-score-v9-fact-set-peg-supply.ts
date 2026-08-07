@@ -24,6 +24,7 @@ import {
 } from "./safety-score-v9-fact-set-context";
 import {
   safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyMaxAgeSec,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "./safety-score-v9-supply-attribution";
 
@@ -352,7 +353,11 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
           source.observedAtSec,
         ),
         contentSha256: domainDigest("safety-score-v9.chain-supply.v1", chainRows),
-        maxAgeSec: source.maxAgeSec,
+        maxAgeSec: safetyScoreV9ChainSupplyMaxAgeSec(
+          context.fixedInput,
+          context.asset.assetId,
+          source.maxAgeSec,
+        ),
       },
       context.fixedInput.clockSec,
     ),

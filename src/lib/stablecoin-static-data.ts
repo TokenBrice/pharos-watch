@@ -3,15 +3,15 @@ import type { PegCurrency } from "@shared/types";
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 404;
-export const ACTIVE_STABLECOIN_COUNT = 335;
-export const CORE_AGGREGATE_STABLECOIN_COUNT = 256;
+export const ACTIVE_STABLECOIN_COUNT = 337;
+export const CORE_AGGREGATE_STABLECOIN_COUNT = 258;
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = 50;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
-export const PRE_LAUNCH_STABLECOIN_COUNT = 31;
+export const PRE_LAUNCH_STABLECOIN_COUNT = 29;
 export const DEAD_STABLECOIN_COUNT = 89;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 246,
+  USD: 247,
   RUB: 1,
   EUR: 17,
   BRL: 6,
@@ -19,7 +19,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   CHF: 5,
   GBP: 5,
   SGD: 1,
-  JPY: 4,
+  JPY: 5,
   AUD: 5,
   CNH: 1,
   IDR: 2,
@@ -525,10 +525,8 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "pgold-polaris",
   "klarnausd-klarna",
   "bd-basedollar",
-  "trusd-tori",
   "buck-buck-assets",
   "rgbp-revolut",
-  "jpysc-sbi-startale",
   "usdb-bridge",
   "hkdap-anchorpoint",
   "hkd-hsbc",
