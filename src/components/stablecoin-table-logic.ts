@@ -194,10 +194,7 @@ export function sortStablecoins({
       if (status === "possible" || status === "inherited") return 1;
       return 0;
     },
-    mintAuthority: (r) => {
-      const meta = metaById.get(r.id);
-      return resolveMintAuthorityScoreDisplay(r.id, meta?.mintAuthoritySummary).result.score;
-    },
+    mintAuthority: (r) => resolveMintAuthorityScoreDisplay(reportCards?.[r.id]?.mint).score,
     peg: (r) => {
       const meta = metaById.get(r.id);
       if (meta?.flags.navToken) return null;
@@ -268,18 +265,12 @@ export function exportStablecoinsCsv(
         },
       },
       {
-        header: "Mint Authority Score",
-        accessor: (row) => {
-          const meta = TRACKED_META_BY_ID.get(row.id);
-          return resolveMintAuthorityScoreDisplay(row.id, meta?.mintAuthoritySummary).result.score ?? null;
-        },
+        header: "Mint Control Score",
+        accessor: (row) => resolveMintAuthorityScoreDisplay(reportCards?.[row.id]?.mint).score ?? null,
       },
       {
-        header: "Mint Authority Band",
-        accessor: (row) => {
-          const meta = TRACKED_META_BY_ID.get(row.id);
-          return resolveMintAuthorityScoreDisplay(row.id, meta?.mintAuthoritySummary).bandLabel;
-        },
+        header: "Mint Control Band",
+        accessor: (row) => resolveMintAuthorityScoreDisplay(reportCards?.[row.id]?.mint).bandLabel,
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.grade ?? null },
     ],

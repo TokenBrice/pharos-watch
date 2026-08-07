@@ -7,6 +7,7 @@ import type {
   V9Grade,
 } from "@shared/types";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
+import type { PublishedMintComponent } from "@/lib/mint-authority-display";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
@@ -88,6 +89,20 @@ export interface V9SafetyTableRow {
   pillars: SafetyScoreV9Card["pillars"];
   accessPosture: SafetyScoreV9Card["accessPosture"];
   freezeStatus: V9FreezeStatus;
+  /**
+   * Published Economic Control mint component. Safety 9.1 made this the single
+   * source for the public mint score and band, so the cross-coin projection
+   * carries it. `breakdowns` is nullable on older publications, so an absent
+   * component projects as a not-rated mint cell rather than failing the row.
+   */
+  mint: PublishedMintComponent | null;
+}
+
+/** Read the mint component off a card's control breakdown, null-safe. */
+export function readV9CardMintComponent(card: SafetyScoreV9Card): PublishedMintComponent | null {
+  const breakdowns = "breakdowns" in card ? card.breakdowns : null;
+  const component = breakdowns?.control?.components.find((entry) => entry.kind === "mint");
+  return component ? { score: component.score, posture: component.posture } : null;
 }
 
 export function buildV9SafetyTableRows(
@@ -106,6 +121,7 @@ export function buildV9SafetyTableRows(
       pillars: card.pillars,
       accessPosture: card.accessPosture,
       freezeStatus: mapV9FreezeStatus(card),
+      mint: readV9CardMintComponent(card),
     }))
     .filter((row) => riskFilter === "all" || row.riskBucket === riskFilter)
     .sort((left, right) => {

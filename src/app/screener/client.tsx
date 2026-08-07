@@ -39,7 +39,9 @@ import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_STATUS_CONFIG,
   resolveMintAuthorityScoreDisplay,
+  type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
+import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import {
   MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
@@ -205,6 +207,7 @@ export function ScreenerClient() {
         backing: number | null;
         exit: number | null;
         control: number | null;
+        mint: PublishedMintComponent | null;
       }
     >();
     for (const card of reportData?.cards ?? []) {
@@ -214,6 +217,7 @@ export function ScreenerClient() {
         backing: card.pillars.backing.score,
         exit: card.pillars.exit.score,
         control: card.pillars.control.score,
+        mint: readV9CardMintComponent(card),
       });
     }
     const dewsById = new Map<string, number>();
@@ -231,7 +235,7 @@ export function ScreenerClient() {
       const lifecycle = meta.status ?? "active";
       const safety = reportById.get(meta.id) ?? null;
       const pegCoin = pegById.get(meta.id);
-      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(meta.id, meta.mintAuthoritySummary);
+      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -251,7 +255,7 @@ export function ScreenerClient() {
         safetyControlScore: safety?.control ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
-        mintAuthorityScore: mintAuthorityScore.result.score,
+        mintAuthorityScore: mintAuthorityScore.score,
         mintAuthorityScoreBand: mintAuthorityScore.bandKey,
         mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,
         mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,

@@ -14,18 +14,18 @@ import {
   MINT_AUTHORITY_TYPE_VALUES,
 } from "@shared/types/core";
 import {
-  mintAuthorityScoreTextClassName,
   resolveMintAuthorityScoreDisplay,
   type MintAuthorityScoreDisplay,
+  type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
-import {
-  EOA_UNVERIFIED_CUSTODY_LABEL,
-  type MintAuthorityCapKind,
-  type MintAuthorityCapTrace,
-  type MintAuthorityParentResolver,
-} from "@shared/lib/mint-authority-scoring";
+/**
+ * A single externally-owned key is presented as unverifiable custody unless the
+ * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
+ * it is a description of the curated control row, not a score input.
+ */
+export const EOA_UNVERIFIED_CUSTODY_LABEL = "Single-key address - custody unverifiable";
 
 export type MintAuthorityDetailStatus = "reviewed" | "not-reviewed";
 
@@ -53,12 +53,11 @@ export interface MintAuthorityDetailControlViewModel {
   custodyLabel: string | null;
 }
 
-export interface MintAuthorityDetailScoreComponentViewModel {
-  key: "route" | "controller" | "bounds" | "posture";
+export interface MintAuthorityDetailScoreCapViewModel {
+  kind: string;
   label: string;
-  scoreLabel: string;
-  weightLabel: string;
-  textClassName: string;
+  limitLabel: string;
+  reason: string;
 }
 
 export interface MintAuthorityDetailIncidentViewModel {
@@ -69,22 +68,23 @@ export interface MintAuthorityDetailIncidentViewModel {
   sources: MintAuthorityDetailSourceViewModel[];
 }
 
+/**
+ * Safety 9.1: the detail card renders the published V9 mint component. The
+ * retired standalone engine's route/controller/bounds/posture decomposition,
+ * confidence cap and weakest-control trace have no counterpart in the control
+ * pillar, so the card shows what the pillar actually publishes: the graded
+ * component, its posture band, and the structural caps the posture raised.
+ */
 export interface MintAuthorityDetailScoreViewModel {
   score: number | null;
   scoreLabel: string;
   compactLabel: string;
   bandLabel: string;
+  postureLabel: string;
   badgeClassName: string;
   textClassName: string;
   detail: string;
-  components: MintAuthorityDetailScoreComponentViewModel[];
-  rawScoreLabel: string | null;
-  confidenceCapLabel: string | null;
-  weakestControlLabel: string | null;
-  weakestControlScoreLabel: string | null;
-  weakestControlCustodyLabel: string | null;
-  capsApplied: string[];
-  unresolvedReasonLabel: string | null;
+  caps: MintAuthorityDetailScoreCapViewModel[];
 }
 
 export interface MintAuthorityDetailViewModel {
@@ -303,44 +303,6 @@ const MODULES_OR_GUARDS_LABELS: Record<string, string> = {
 
 const MODULES_OR_GUARDS_AUTHORITY_TYPES = new Set(["safe", "multisig", "unknown"]);
 
-const MINT_AUTHORITY_SCORE_COMPONENT_KEYS = ["route", "controller", "bounds", "posture"] as const;
-
-const MINT_AUTHORITY_SCORE_COMPONENT_LABELS: Record<MintAuthorityDetailScoreComponentViewModel["key"], string> = {
-  route: "Route",
-  controller: "Controller",
-  bounds: "Bounds",
-  posture: "Posture",
-};
-
-const MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS: Record<MintAuthorityDetailScoreComponentViewModel["key"], string> = {
-  route: "30%",
-  controller: "40%",
-  bounds: "15%",
-  posture: "15%",
-};
-
-const MINT_AUTHORITY_CAP_LABELS: Record<MintAuthorityCapKind, string> = {
-  "incident-cap": "Incident cap",
-  "unbounded-cap": "Unbounded cap",
-  "eoa-cap": "EOA cap",
-  "confidence-cap": "Confidence cap",
-};
-
-const MINT_AUTHORITY_UNRESOLVED_REASON_LABELS: Record<string, string> = {
-  "not-reviewed": "Not reviewed",
-  "unknown-mint-path": "Unknown mint path",
-  "unknown-posture": "Unknown posture",
-  "unknown-confidence": "Unknown confidence",
-  "missing-parent": "Missing inherited parent",
-  "parent-resolver-missing": "Parent resolver unavailable",
-  "inheritance-depth-limit": "Inheritance depth limit",
-  "inheritance-cycle": "Inheritance cycle",
-  "parent-not-found": "Parent not found",
-  "parent-not-scoreable": "Parent not scoreable",
-  "unscored-route": "Unscored mint route",
-  "unscored-posture": "Unscored posture",
-};
-
 function labelFromMap(value: unknown, labels: Readonly<Record<string, string>>): string {
   const key = stringValue(value);
   if (!key) return "Unknown";
@@ -422,19 +384,6 @@ function formatMintAuthorityScoreValue(score: number | null): string {
   return score != null ? `${score}/100` : "NR";
 }
 
-function formatMintAuthorityCap(cap: MintAuthorityCapKind): string {
-  return MINT_AUTHORITY_CAP_LABELS[cap] ?? cap.replaceAll("-", " ");
-}
-
-function formatMintAuthorityCapTrace(trace: MintAuthorityCapTrace): string {
-  return `${formatMintAuthorityCap(trace.kind)} <= ${trace.limit}`;
-}
-
-function formatMintAuthorityUnresolvedReason(reason: string | null): string | null {
-  if (!reason) return null;
-  return MINT_AUTHORITY_UNRESOLVED_REASON_LABELS[reason] ?? reason.replaceAll("-", " ");
-}
-
 function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel[] {
   if (!Array.isArray(value)) return [];
   const incidents: MintAuthorityDetailIncidentViewModel[] = [];
@@ -457,57 +406,43 @@ function readMintIncidents(value: unknown): MintAuthorityDetailIncidentViewModel
   return incidents.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function buildMintAuthorityParentResolver(
-  parentSummaries: StablecoinDetailCoinMeta["mintAuthorityParentSummaries"],
-): MintAuthorityParentResolver | undefined {
-  if (!parentSummaries) return undefined;
-  return (id) => {
-    const parent = parentSummaries[id];
-    if (!isRecord(parent)) return null;
-    return {
-      id,
-      mintPath: parent.mintPath,
-      authorityPosture: parent.authorityPosture,
-      confidence: parent.confidence,
-      inheritedFrom: parent.inheritedFrom,
-      mintIncidents: parent.mintIncidents,
-      controls: parent.controls,
-    };
-  };
+/** Mint-relevant structural caps published on the V9 card. */
+const MINT_CAP_KIND_LABELS: Record<string, string> = {
+  "signal:centralized-mint:critical": "Centralized mint (critical)",
+  "signal:centralized-mint:high": "Centralized mint (high)",
+  "signal:centralized-mint:moderate": "Centralized mint (moderate)",
+  "signal:centralized-mint:low": "Centralized mint (low)",
+  "signal:active-control-incident:critical": "Active control incident",
+  "signal:unreviewed-upgrade:high": "Unreviewed upgrade authority",
+};
+
+export interface PublishedMintCap {
+  kind: string;
+  limit: number;
+  reason: string;
 }
 
-function buildMintAuthorityScoreViewModel(display: MintAuthorityScoreDisplay): MintAuthorityDetailScoreViewModel {
-  const result = display.result;
-  const components = MINT_AUTHORITY_SCORE_COMPONENT_KEYS.map((key) => {
-    const score = result.components[key];
-    return {
-      key,
-      label: MINT_AUTHORITY_SCORE_COMPONENT_LABELS[key],
-      scoreLabel: formatMintAuthorityScoreValue(score),
-      weightLabel: MINT_AUTHORITY_SCORE_COMPONENT_WEIGHTS[key],
-      textClassName: mintAuthorityScoreTextClassName(score),
-    };
-  });
-
+function buildMintAuthorityScoreViewModel(
+  display: MintAuthorityScoreDisplay,
+  caps: readonly PublishedMintCap[],
+): MintAuthorityDetailScoreViewModel {
   return {
-    score: result.score,
+    score: display.score,
     scoreLabel: display.scoreLabel,
     compactLabel: display.compactLabel,
     bandLabel: display.bandLabel,
+    postureLabel: labelFromMap(display.posture, AUTHORITY_POSTURE_LABELS),
     badgeClassName: display.badgeClassName,
     textClassName: display.textClassName,
     detail: display.detail,
-    components,
-    rawScoreLabel: result.rawScore != null ? formatMintAuthorityScoreValue(result.rawScore) : null,
-    confidenceCapLabel: result.confidenceCap != null ? `<= ${result.confidenceCap}` : null,
-    weakestControlLabel: result.weakestControl?.label ?? null,
-    weakestControlScoreLabel: result.weakestControl ? formatMintAuthorityScoreValue(result.weakestControl.score) : null,
-    weakestControlCustodyLabel: result.weakestControl?.custodyLabel ?? null,
-    capsApplied:
-      result.capTraces.length > 0
-        ? result.capTraces.map(formatMintAuthorityCapTrace)
-        : result.capsApplied.map(formatMintAuthorityCap),
-    unresolvedReasonLabel: formatMintAuthorityUnresolvedReason(result.unresolvedReason),
+    caps: caps
+      .filter((cap) => Object.hasOwn(MINT_CAP_KIND_LABELS, cap.kind))
+      .map((cap) => ({
+        kind: cap.kind,
+        label: MINT_CAP_KIND_LABELS[cap.kind]!,
+        limitLabel: `<= ${cap.limit}`,
+        reason: cap.reason,
+      })),
   };
 }
 
@@ -593,7 +528,16 @@ function readMintAuthorityControl(value: unknown): MintAuthorityClientControlSum
   return control;
 }
 
-export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta): MintAuthorityDetailViewModel {
+/** The published V9 mint projection the detail card renders. */
+export interface PublishedMintProjection {
+  mint: PublishedMintComponent | null;
+  caps: readonly PublishedMintCap[];
+}
+
+export function buildMintAuthorityDetailViewModel(
+  coin: StablecoinDetailCoinMeta,
+  published?: PublishedMintProjection | null,
+): MintAuthorityDetailViewModel {
   const candidate = readMintAuthorityCandidate(coin);
   if (!candidate) return NOT_REVIEWED_MINT_AUTHORITY;
 
@@ -621,9 +565,9 @@ export function buildMintAuthorityDetailViewModel(coin: StablecoinDetailCoinMeta
     mintIncidents,
     controls,
   } as MintAuthorityClientSummary;
-  const parentResolver = buildMintAuthorityParentResolver(coin.mintAuthorityParentSummaries);
   const score = buildMintAuthorityScoreViewModel(
-    resolveMintAuthorityScoreDisplay(coin.id, scoreCandidate, parentResolver),
+    resolveMintAuthorityScoreDisplay(published?.mint),
+    published?.caps ?? [],
   );
 
   return {

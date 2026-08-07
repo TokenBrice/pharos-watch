@@ -248,23 +248,24 @@ describe("stablecoin detail view-model builder", () => {
     expect(buildMintAuthorityDetailViewModel(clientCoin).status).toBe("reviewed");
   });
 
-  it("keeps inherited mint-authority weakest-control labels on detail pages", () => {
+  it("renders the published V9 mint component instead of a curated recomputation", () => {
     const coin = TRACKED_META_BY_ID.get("steakusdt-steakhouse");
     expect(coin).toBeDefined();
 
-    const withoutRichParent = buildMintAuthorityDetailViewModel(buildStablecoinDetailClientCoin(coin!));
+    // 9.1: curated parent metadata no longer changes the mint score — the
+    // inheritance blend lived in the retired standalone engine.
+    const published = { mint: { score: 70, posture: "partially-bounded-admin" }, caps: [] };
+    const withoutRichParent = buildMintAuthorityDetailViewModel(
+      buildStablecoinDetailClientCoin(coin!),
+      published,
+    );
     const withRichParent = buildMintAuthorityDetailViewModel(
       buildStablecoinDetailClientCoin(coin!, { parentById: TRACKED_META_BY_ID }),
+      published,
     );
 
-    expect(withoutRichParent.score).toMatchObject({
-      score: 48,
-      weakestControlLabel: null,
-    });
-    expect(withRichParent.score).toMatchObject({
-      score: 48,
-      weakestControlLabel: "Ethereum USDT token owner multisig",
-    });
+    expect(withoutRichParent.score).toMatchObject({ score: 70, bandLabel: "Governed" });
+    expect(withRichParent.score).toEqual(withoutRichParent.score);
   });
 
   it("projects mint-authority review gaps into the detail view model", () => {
@@ -318,13 +319,7 @@ describe("stablecoin detail view-model builder", () => {
       modulesOrGuardsLabel: "No modules or guards detected",
       custodyLabel: null,
     });
-    expect(viewModel.score).toMatchObject({
-      score: 54,
-      bandLabel: "Managed",
-      rawScoreLabel: "54/100",
-      weakestControlLabel: "Issuer Safe",
-      weakestControlScoreLabel: "55/100",
-    });
+    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
   });
 
   it("labels single-key mint authority custody and exposes EOA caps", () => {
@@ -351,15 +346,12 @@ describe("stablecoin detail view-model builder", () => {
       securitySetupLabel: "Externally owned account",
       custodyLabel: "Single-key address - custody unverifiable",
     });
-    expect(viewModel.score).toMatchObject({
-      score: 31,
-      weakestControlLabel: "Operator key",
-      weakestControlCustodyLabel: "Single-key address - custody unverifiable",
-      capsApplied: ["EOA cap <= 40"],
-    });
+    // The custody label is a description of the curated control row; the score
+    // and band come from the publication, which this fixture does not carry.
+    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
   });
 
-  it("applies mint-incident caps from compact client metadata", () => {
+  it("keeps the mint-incident callout on the detail card", () => {
     const coin = TRACKED_META_BY_ID.get("usr-resolv");
     expect(coin).toBeDefined();
 
@@ -377,13 +369,7 @@ describe("stablecoin detail view-model builder", () => {
         }),
       ]),
     });
-    expect(viewModel.score).toMatchObject({
-      score: 10,
-      bandLabel: "Exposed",
-      rawScoreLabel: "32/100",
-      weakestControlLabel: "Resolv SERVICE_ROLE off-chain minting signer",
-      capsApplied: ["Incident cap <= 10"],
-    });
+    expect(viewModel.score).toMatchObject({ score: null, bandLabel: "NR" });
   });
 
   it("dedupes mint-authority sources and sorts incident callouts", () => {

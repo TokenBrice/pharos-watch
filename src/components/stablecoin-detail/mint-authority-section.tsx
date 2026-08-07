@@ -128,43 +128,30 @@ function MintAuthorityIncidentSources({
 }
 
 function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScoreViewModel }) {
-  const controlSummary = [score.weakestControlLabel, score.weakestControlScoreLabel, score.weakestControlCustodyLabel]
-    .filter(Boolean)
-    .join(" / ");
-
   return (
     <ScoringBreakdownDisclosure>
-      <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-        {score.components.map((component) => (
-          <div key={component.key} className="rounded-lg border border-border/60 px-3 py-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium text-foreground">{component.label}</span>
-              <span className="text-[10px] uppercase tracking-[0.12em]">{component.weightLabel}</span>
-            </div>
-            <p className={cn("mt-1 pharos-numeric text-sm", component.textClassName)}>{component.scoreLabel}</p>
-          </div>
-        ))}
-      </div>
       <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
         <div className="rounded-lg border border-border/60 px-3 py-2">
-          <span className="font-medium text-foreground">Raw score</span>{" "}
-          <span className="pharos-numeric">{score.rawScoreLabel ?? "NR"}</span>
-          {score.confidenceCapLabel ? <span className="ml-2">Confidence cap {score.confidenceCapLabel}</span> : null}
+          <span className="font-medium text-foreground">Derived posture</span>{" "}
+          <span className={score.textClassName}>{score.postureLabel}</span>
         </div>
         <div className="rounded-lg border border-border/60 px-3 py-2">
-          <span className="font-medium text-foreground">Caps</span>{" "}
-          {score.capsApplied.length > 0 ? score.capsApplied.join(", ") : "No caps applied"}
+          <span className="font-medium text-foreground">Component score</span>{" "}
+          <span className="pharos-numeric">{score.scoreLabel}</span>
         </div>
-        {controlSummary ? (
+        {score.caps.length > 0 ? (
           <div className="rounded-lg border border-border/60 px-3 py-2 sm:col-span-2">
-            <span className="font-medium text-foreground">Weakest mint-capable control</span> {controlSummary}
+            <span className="font-medium text-foreground">Structural caps</span>
+            <ul className="mt-1 space-y-1">
+              {score.caps.map((cap) => (
+                <li key={cap.kind}>
+                  {cap.label} <span className="pharos-numeric">{cap.limitLabel}</span> — {cap.reason}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
-        {score.unresolvedReasonLabel ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-300 sm:col-span-2">
-            Not rated: {score.unresolvedReasonLabel}
-          </div>
-        ) : null}
+        <p className="sm:col-span-2">{score.detail}</p>
       </div>
     </ScoringBreakdownDisclosure>
   );
@@ -205,7 +192,7 @@ export function MintAuthoritySection({
             <Badge
               variant="outline"
               className="border-border/60 bg-muted/30 px-2 py-0.5 pharos-numeric text-sm text-muted-foreground"
-              title="Mint Authority Score is not rated."
+              title="The mint control posture is not rated."
             >
               NR
             </Badge>
@@ -217,7 +204,7 @@ export function MintAuthoritySection({
           <>
             <div className="flex flex-wrap gap-1.5">
               <DetailBadge>{profile.reviewLabel}</DetailBadge>
-              <DetailBadge>Mint Authority Score: NR</DetailBadge>
+              <DetailBadge>Mint control posture: NR</DetailBadge>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
             <MethodologyCardActions topic="mintAuthorityScore" />
@@ -227,10 +214,9 @@ export function MintAuthoritySection({
             {score ? (
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
                 <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
-                <DetailBadge>Standalone score</DetailBadge>
-                <span className="text-xs text-muted-foreground">MAS v1.2; V9 evaluates the reviewed control facts</span>
-                {score.capsApplied.map((cap) => (
-                  <DetailBadge key={cap}>{cap}</DetailBadge>
+                <DetailBadge>Safety Score V9 mint component</DetailBadge>
+                {score.caps.map((cap) => (
+                  <DetailBadge key={cap.kind}>{`${cap.label} ${cap.limitLabel}`}</DetailBadge>
                 ))}
               </div>
             ) : null}

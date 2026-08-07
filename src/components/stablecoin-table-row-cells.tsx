@@ -120,7 +120,7 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
       >
         Mint{" "}
         <span className={`ml-1 pharos-numeric ${model.mintAuthorityScore.textClassName}`}>
-          {model.mintAuthorityScore.result.score != null ? model.mintAuthorityScore.result.score : "NR"}
+          {model.mintAuthorityScore.score != null ? model.mintAuthorityScore.score : "NR"}
         </span>
       </span>
     </span>

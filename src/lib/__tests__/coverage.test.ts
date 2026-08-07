@@ -604,9 +604,11 @@ describe("coverage helpers", () => {
       count: 1,
     });
     expect(summary.breakdown).toContainEqual({ key: "unknown", label: "unknown", count: 1 });
-    expect(rows[0].statuses.mintAuthority).toMatchObject({ score: 39, scoreBand: "concentrated" });
-    expect(summary.breakdown).toContainEqual({ key: "score-concentrated", label: "Concentrated", count: 1 });
-    expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 1 });
+    // 9.1: the score buckets read the published V9 mint component. These rows
+    // carry no publication, so both land in the not-rated bucket while the
+    // curation-route buckets above stay curated.
+    expect(rows[0].statuses.mintAuthority).toMatchObject({ score: null, scoreBand: "nr" });
+    expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 2 });
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {

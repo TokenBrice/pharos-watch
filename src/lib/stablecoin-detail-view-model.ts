@@ -6,6 +6,7 @@ import {
 import {
   buildMintAuthorityDetailViewModel,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import {
   buildDetailFeatureAvailability,
   buildDetailFeatureStates,
@@ -86,7 +87,12 @@ export function buildStablecoinDetailViewModel({
   const variantRelationship = getClientVariantRelationship(id);
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);
-  const mintAuthority = buildMintAuthorityDetailViewModel(coin);
+  const mintAuthority = buildMintAuthorityDetailViewModel(
+    coin,
+    reportCard
+      ? { mint: readV9CardMintComponent(reportCard), caps: reportCard.caps }
+      : { mint: null, caps: [] },
+  );
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band
     : null;

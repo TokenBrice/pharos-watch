@@ -14,7 +14,7 @@ import type {
   YieldRankingsResponse,
 } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
-import { getV9ResolvedBlacklistStatus } from "@/lib/safety-score-v9-consumers";
+import { getV9ResolvedBlacklistStatus, readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
@@ -142,6 +142,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
       dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
       blacklistStatus: getV9ResolvedBlacklistStatus(reportCard),
+      publishedMint: reportCard ? readV9CardMintComponent(reportCard) : null,
       liveReserveFresh: null,
       dataAvailability: queryAvailability,
     });

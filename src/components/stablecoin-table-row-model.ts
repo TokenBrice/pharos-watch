@@ -53,7 +53,7 @@ export function buildStablecoinTableRowModel({
     variantContext: meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null,
     blacklistStatus: getV9ResolvedBlacklistStatus(reportCards?.[coin.id]),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
-    mintAuthorityScore: resolveMintAuthorityScoreDisplay(meta?.id, meta?.mintAuthoritySummary),
+    mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
     change24h: prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0,
     change7d: prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0,
     supplySparklineValues: [prevWeek, prevDay, circulating],
