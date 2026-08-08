@@ -1183,16 +1183,23 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("attributes a same-day mechanism admission wait to the exact policy", () => {
+    // Anchored on btcusd-btcfi: its committed cdp mechanism overlay is reviewed
+    // 2026-08-08 and it carries no transfer-review overlay row, so the clock can
+    // sit inside the overlay's UTC day without tripping the access-review
+    // future-dated guard (safety-score-v9-extension-transfer.ts:121). The former
+    // ybold-yearn anchor cannot host this case any more: its mechanism overlay is
+    // still 2026-07-28 while its transfer review moved to 2026-08-08, so no clock
+    // satisfies both gates at once.
     const fixed = exactFixedInput({
-      assetId: "ybold-yearn",
-      clockSec: Date.parse("2026-07-28T09:17:27.000Z") / 1_000,
+      assetId: "btcusd-btcfi",
+      clockSec: Date.parse("2026-08-08T09:17:27.000Z") / 1_000,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
         [
-          "ybold-yearn",
+          "btcusd-btcfi",
           {
-            id: "ybold-yearn",
+            id: "btcusd-btcfi",
             mechanismArchetype: "cdp",
             launchDate: "2025-01-01",
           },

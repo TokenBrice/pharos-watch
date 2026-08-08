@@ -184,14 +184,29 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
       assessment: "high",
       signals: expect.arrayContaining(["wrapper-leverage-factor:leverage"]),
     });
+    // The 2026-08-08 control review resolved DUSD's two open mint-authority
+    // questions, so the compiled control status is `known` and the loss-control
+    // fact no longer carries `wrapper-local-controls-partial-review`. What it
+    // carries instead is one risk signal per curated control — the five
+    // `mint-meta:dusd-dialectic:<index>:<digest>` keys, whose controls array is
+    // unchanged by that review — so the fact is now an exhaustive read of the
+    // control set rather than a partial one.
     expect(wrapper.facts.lossAbsorptionEmergencyControls).toMatchObject({
       disposition: "reviewed",
       assessment: "high",
       signals: expect.arrayContaining([
-        "wrapper-local-controls-partial-review",
+        "non-claim-control:mint-meta:dusd-dialectic:0:0753a29722c02f5eb3f2",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:1:53c5cf56b4e8d9e0facf",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:2:8a504a683206276bfc65",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:3:1e5d1009d534d5ffa1b9",
+        "unbounded-claim-control:mint-meta:dusd-dialectic:4:307f52514a8019019079",
         "strategy-vault-holder-loss-controls-reviewed",
       ]),
     });
+    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).toHaveLength(6);
+    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).not.toContain(
+      "wrapper-local-controls-partial-review",
+    );
     expect(wrapper.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
     expect(wrapper.riskTransfer).toMatchObject({
       disposition: "not-applicable",

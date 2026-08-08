@@ -63,6 +63,125 @@
     "reviewedAt": "2026-08-08"
   },
   "canBeBlacklisted": true,
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "JPYSC is a trust-bank-issued yen instrument sold and repurchased at a fixed 1 JPYSC = 1 JPY par through SBI VC Trade against segregated trust assets (yen demand deposits, with JGBs permitted up to 50%). The verified StablecoinV1 implementation exposes no oracle or price-feed surface, and no CDP or lending branch prices JPYSC or any collateral against it; the tracked price is peg-derived, not oracle- or market-discovered.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "wave3-longtail-l01 (research agent)",
+      "rationale": "JPYSC is a fiat-cash, Type III trust-bank instrument: SBI VC Trade's product page fixes purchase and repurchase at 1 JPYSC = 1 yen with zero spread and no price deviating from par inside the account environment, and reserves sit in segregated Shinsei Trust & Banking trust accounts (yen demand deposits; short-term JGBs permitted up to 50% under the amended PSA trust-type rules). The verified StablecoinV1 implementation ABI (Blockscout, fetched 2026-08-08) contains no oracle, price, feed, or rate function. Circulation is closed-loop inside verified SBI VC Trade accounts with external-wallet withdrawals disabled, so no DeFi lending market or CDP branch consumes a JPYSC price feed; SBI VC Trade's own JPYSC Lending is an off-chain consumer-loan product, not an oracle-liquidated borrowing branch. There is no borrower debt, collateral ratio, liquidation mechanism, backstop, or bad-debt surface to model — branch knowability surfaces do not apply.",
+      "sources": [
+        {
+          "label": "SBI VC Trade JPYSC product page (fixed 1:1 yen par, zero spread, Ethereum-only, withdrawals disabled)",
+          "url": "https://www.sbivc.co.jp/jpysc"
+        },
+        {
+          "label": "Startale Group JPYSC announcement (Type III trust-based electronic payment instrument)",
+          "url": "https://startale.com/en/blog/jpysc"
+        },
+        {
+          "label": "Blockscout verified JPYSC StablecoinV1 implementation (no oracle/price/feed surface in ABI)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+        },
+        {
+          "label": "CoinPost JPYSC explainer (trust scheme, deposit/JGB reserves, par purchase and redemption flow)",
+          "url": "https://coinpost.jp/crypto/stablecoin/jpysc/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SBI VC Trade JPYSC product page (fixed 1:1 yen par, zero spread, Ethereum-only, withdrawals disabled)",
+        "url": "https://www.sbivc.co.jp/jpysc"
+      },
+      {
+        "label": "Startale Group JPYSC announcement (Type III trust-based electronic payment instrument)",
+        "url": "https://startale.com/en/blog/jpysc"
+      },
+      {
+        "label": "Blockscout verified JPYSC StablecoinV1 implementation (no oracle/price/feed surface in ABI)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+      },
+      {
+        "label": "CoinPost JPYSC explainer (trust scheme, deposit/JGB reserves, par purchase and redemption flow)",
+        "url": "https://coinpost.jp/crypto/stablecoin/jpysc/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "JPYSC has one tracked deployment: the Ethereum ERC1967 UUPS proxy 0x6781d5631bfe47432b089e64e3eab3b6edd26177 resolving to the verified StablecoinV1 implementation. SBI VC Trade lists Ethereum as its only supported network, and JPYSC currently circulates closed-loop inside verified SBI VC Trade accounts with external-wallet withdrawals disabled, so no bridge carries durable supply. Announced Strium and Soneium expansions were not live as of this review.",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "SBI VC Trade JPYSC product page — supported network: Ethereum only; deposits/withdrawals currently disabled",
+        "url": "https://www.sbivc.co.jp/jpysc",
+        "bridgeTypes": [
+          "native-mint"
+        ],
+        "note": "Closed-loop phase: no external-wallet withdrawals, so no cross-chain supply route exists today."
+      },
+      {
+        "source": "docs",
+        "name": "Strium / Soneium deployments — announced as future expansion, not live as of 2026-06-24",
+        "url": "https://coinpost.jp/crypto/stablecoin/jpysc/",
+        "bridgeTypes": [
+          "planned-expansion"
+        ],
+        "note": "Future chains only; no deployed contract or bridge route exists to review yet."
+      }
+    ],
+    "sources": [
+      {
+        "label": "SBI VC Trade JPYSC product page (supported network: Ethereum; withdrawals disabled)",
+        "url": "https://www.sbivc.co.jp/jpysc"
+      },
+      {
+        "label": "Blockscout JPYSC ERC1967 UUPS proxy (resolves to verified StablecoinV1 implementation)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6781d5631bfe47432b089e64e3eab3b6edd26177"
+      },
+      {
+        "label": "CoinPost JPYSC explainer (Ethereum ERC-20 only; Strium/Soneium not yet supported as of 2026-06-24)",
+        "url": "https://coinpost.jp/crypto/stablecoin/jpysc/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6781d5631bfe47432b089e64e3eab3b6edd26177",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6781d5631bfe47432b089e64e3eab3b6edd26177",
+        "protocol": "SBI Shinsei Trust Bank native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Home chain and sole tracked deployment: JPYSC is minted natively on Ethereum behind an ERC1967 UUPS proxy that Blockscout resolves to the verified StablecoinV1 implementation 0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e (fetched 2026-08-08). Minting is permissioned via renewable minter allowances plus a per-minter destination whitelist (registry mint-authority review), and circulation is closed-loop inside SBI VC Trade accounts, so no bridge minter or bridged representation carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "Blockscout JPYSC ERC1967 UUPS proxy (resolves to verified StablecoinV1 implementation)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6781d5631bfe47432b089e64e3eab3b6edd26177"
+          },
+          {
+            "label": "SBI VC Trade JPYSC product page (supported network: Ethereum; withdrawals disabled)",
+            "url": "https://www.sbivc.co.jp/jpysc"
+          }
+        ]
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",

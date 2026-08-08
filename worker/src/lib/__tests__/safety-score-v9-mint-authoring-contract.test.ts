@@ -25,6 +25,34 @@ const UNRESOLVED_INHERITED_WRAPPER = {
 } as const;
 
 /**
+ * AUTHORING-CONTRACT REFERENCE — an explicit *unresolved* inherited mint path.
+ *
+ * A wrapper whose reviewer records the parent's permissioned issuer mint as a
+ * local control, without establishing a reconciliation cadence for it. The V9
+ * mint selector must prefer this control over the wrapper's zero-capability
+ * share-accounting control, and grading must raise `mint-control-question`
+ * (`shared/lib/safety-score-v9/control.ts:801-808`: claim-affecting control +
+ * `issuer-backend` authority + unresolved reconciliation).
+ *
+ * Authored here rather than borrowed from a coin file on purpose. This shape is
+ * transcribed from the control `syzusd-yuzu` carried until `d4efe6c59`, which
+ * removed it as a duplicate of the exact yzUSD dependency edge — the second time
+ * curation moved this test's anchor. No active coin reproduces the shape today
+ * (scan of all 404 registry entries, 2026-08-08: 30 wrappers pair share
+ * accounting with a mint-capable control, none of them unresolved), so pinning
+ * the invariant to authored facts is what keeps it exercised at all.
+ */
+const UNRESOLVED_INHERITED_MINT_CONTROL = {
+  label: "Inherited parent permissioned mint authority",
+  role: "direct-minter",
+  authorityType: "issuer-backend",
+  directMintAbility: "direct",
+  canRaiseCap: "unknown",
+  evidence:
+    "Underlying parent primary mint/redeem is gated to KYC'ed eligible investors 1:1 with the reserve asset, with collateral managed in an MPC workspace. The wrapper inherits this concentrated-admin posture from the parent, and no reconciliation cadence is established for it.",
+} as const satisfies NonNullable<MintAuthorityProfile["controls"]>[number];
+
+/**
  * AUTHORING-CONTRACT REFERENCE — copy this field shape verbatim.
  *
  * Reviewed economic-control facts the Safety Score v9 engine consumes, authored
@@ -250,7 +278,17 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
   });
 
-  it("keeps DUSD's reviewed control facts bounded until the module path and incident review are explicit", () => {
+  // Premise rewritten, not re-valued: the 2026-08-08 C-wave review resolved both
+  // questions this test used to hold open (the RecoveryModeTriggerModule
+  // representation and the scoped historical mint-incident review), so DUSD's
+  // profile is now `confidence: "probable"` / `disposition: "scoreable"` and the
+  // compiled control facts are `known` with no gap IDs. The invariant worth
+  // guarding moved with it: the curated five-control array must compile to the
+  // same five keys, and the recovery module must stay represented as a narrow
+  // bypass surface on the governance control rather than as a mint-capable one —
+  // which the review evidence states explicitly ("adding it as an economically
+  // mint-capable control would overstate its scope").
+  it("compiles DUSD's resolved control review with the recovery module as a bypass surface, not a mint path", () => {
     const assetId = "dusd-dialectic";
     const activeAssetIds = [assetId, "usdc-circle"];
     const metaById = new Map(
@@ -285,18 +323,16 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     ];
 
     expect(profile).toMatchObject({
-      confidence: "unknown",
+      confidence: "probable",
       upgradeability: {
         controlRef: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
       },
       review: {
-        disposition: "unresolved",
-        unresolvedQuestions: [
-          expect.stringContaining("RecoveryModeTriggerModule"),
-          expect.stringContaining("historical review"),
-        ],
+        disposition: "scoreable",
+        evidence: expect.stringContaining("RecoveryModeTriggerModule"),
       },
     });
+    expect(profile.review.unresolvedQuestions).toBeUndefined();
     expect(profile.controls?.[3]).toMatchObject({
       label: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
       timelockDelaySec: 172800,
@@ -311,12 +347,25 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       ],
       bypassSurfaces: [expect.stringContaining("only to request setRecoveryMode(true)")],
     });
-    expect(controlReview.state).toBe("partially-reviewed-controls");
+    expect(controlReview.state).toBe("reviewed-controls");
     expect(mintControls.map((control) => control.controlKey)).toEqual(expectedControlKeys);
+    // The scoped historical review establishes incident absence positively, so no
+    // control is left at the fail-closed "unknown" incident state.
     expect(mintControls.map((control) => control.incidentState)).toEqual(
-      Array.from({ length: expectedControlKeys.length }, () => "unknown"),
+      Array.from({ length: expectedControlKeys.length }, () => "none"),
     );
-    expect(asset.economicControlReview?.mint.status.observationState).toBe("bounded-unknown");
+    expect(asset.economicControlReview?.mint.status.observationState).toBe("known");
+    // Mint selection lands on the fee-share dilution control (index 1) and the
+    // upgrade path on the DAO proxy admin (index 3); the Security Council's
+    // recovery-module control (index 4) carries only parameter-change capability.
+    expect(asset.economicControlReview?.mint.controlKey).toBe(expectedControlKeys[1]);
+    expect(asset.economicControlReview?.mint.upgrade).toMatchObject({
+      state: "reviewed",
+      controlKey: expectedControlKeys[3],
+    });
+    const councilControl = mintControls.find((control) => control.controlKey === expectedControlKeys[4])!;
+    expect(councilControl.capabilities).toEqual(["parameter-change"]);
+    expect(councilControl.capabilities).not.toContain("mint");
 
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
     const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
@@ -324,14 +373,14 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
     );
     expect(compiledAsset.controlStatus).toMatchObject({
-      observationState: "bounded-unknown",
-      gapIds: [`${assetId}:gap:deployment-controls`],
+      observationState: "known",
+      gapIds: [],
     });
     expect(compiledMintControls.map((control) => control.status)).toEqual(
-      expectedControlKeys.map((controlKey) =>
+      expectedControlKeys.map(() =>
         expect.objectContaining({
-          observationState: "bounded-unknown",
-          gapIds: [`${assetId}:gap:deployment-control:${controlKey}`],
+          observationState: "known",
+          gapIds: [],
         }),
       ),
     );
@@ -535,6 +584,14 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         return [id, meta] as const;
       }),
     );
+    // The wrapper's real variant graph and share-accounting control stay
+    // registry-derived; only the inherited mint path is authored, appended after
+    // the curated controls so no existing control key shifts index.
+    const anchorMeta = structuredClone(metaById.get(assetId)!);
+    const anchorProfile = anchorMeta.mintAuthority;
+    if (!anchorProfile?.controls) throw new Error(`expected reviewed mint controls for ${assetId}`);
+    anchorProfile.controls = [...anchorProfile.controls, UNRESOLVED_INHERITED_MINT_CONTROL];
+    metaById.set(assetId, anchorMeta);
     const input = fixedInput(activeAssetIds, {}, {
       clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
       capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,

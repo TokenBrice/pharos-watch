@@ -70,6 +70,113 @@
     "reviewedAt": "2026-08-08"
   },
   "canBeBlacklisted": true,
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "trUSD is minted and redeemed through ToriMinting signed orders whose collateral and trUSD amounts are fixed off-chain by Tori's pricing system and co-signed by a live operator; the verified TrUSD, ToriMinting, StakedTrUSD, and StakingRewardsDistributor contract sources contain no price-feed, oracle, or exchange-rate oracle call. Accepted collateral is confined to USDC and USDT, so the signed-order rate only spans stablecoin quotes, and Tori publishes no oracle provider, feed, or failover documentation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "wave3-longtail-l01 (research agent)",
+      "rationale": "trUSD is issued and redeemed through KYC-whitelisted signed orders against USDC or USDT at Tori's off-chain quoted rate, while backing sits in a centrally managed delta-neutral portfolio verified in real time by Accountable. The protocol exposes no user CDP markets with per-collateral on-chain liquidation thresholds, liquidation auctions, backstops, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "sources": [
+        {
+          "label": "Tori docs — institutional minting and redemption (signed-order mint/redeem at quoted rate)",
+          "url": "https://docs.tori.finance/resources/institutional"
+        },
+        {
+          "label": "Blockscout verified ToriMinting (no oracle consumer; order carries fixed collateral_amount/trusd_amount)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+        },
+        {
+          "label": "Tori docs — introduction (delta-neutral strategies, Accountable proof of reserves)",
+          "url": "https://docs.tori.finance/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blockscout verified ToriMinting (signed-order mint/redeem; no oracle or price-feed reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+      },
+      {
+        "label": "Blockscout verified TrUSD implementation (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+      },
+      {
+        "label": "Blockscout verified StakedTrUSD implementation (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x521e98Ba48e58D34293d9628E76C1b6E366906fF"
+      },
+      {
+        "label": "Blockscout verified StakingRewardsDistributor (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa0C49fFa4B7941830235cde974d9B2a8420CD375"
+      },
+      {
+        "label": "Tori docs — institutional minting and redemption",
+        "url": "https://docs.tori.finance/resources/institutional"
+      },
+      {
+        "label": "Tori docs — contract addresses (full deployed contract inventory, Ethereum mainnet)",
+        "url": "https://docs.tori.finance/resources/contracts"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "trUSD supply is confined to its canonical Ethereum deployment; the single reviewed route is native issuance through the whitelist-gated ToriMinting contract. Tori documents Chainlink CCIP (CCT) cross-chain support as planned only — a Lock & Release pool on Ethereum with Burn & Mint pools elsewhere — with no other live chain deployment, so no bridge route carries the claim.",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tori docs — contract addresses (Ethereum mainnet primary; other EVM chains planned/TBA; CCIP CCT planned)",
+        "url": "https://docs.tori.finance/resources/contracts"
+      },
+      {
+        "label": "DefiLlama stablecoin 401 (chainBalances: Ethereum only)",
+        "url": "https://stablecoins.llama.fi/stablecoin/401"
+      },
+      {
+        "label": "CoinGecko tori-trusd (platforms: ethereum only)",
+        "url": "https://api.coingecko.com/api/v3/coins/tori-trusd"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+        "protocol": "Tori Finance trUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "trUSD is issued only on Ethereum mainnet through the whitelist-gated ToriMinting contract; the entire captured supply is the canonical Ethereum deployment (0xd0580192e98ea6ceb9c7b6191ed2e27560911697), matching the coin's sole contracts entry. DefiLlama chainBalances and CoinGecko platforms show Ethereum only, and Tori's contracts page lists other EVM chains as planned/TBA. No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "Tori docs — contract addresses",
+            "url": "https://docs.tori.finance/resources/contracts"
+          },
+          {
+            "label": "Blockscout trUSD UUPS proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+          },
+          {
+            "label": "DefiLlama stablecoin 401",
+            "url": "https://stablecoins.llama.fi/stablecoin/401"
+          }
+        ]
+      }
+    ]
+  },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
