@@ -31,8 +31,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve research; Kimi R05 underbacking disclosure re-verify",
     "confidence": "probable",
     "sources": [
       {
@@ -46,13 +46,17 @@
       {
         "label": "Metronome Synth supported assets",
         "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
+      },
+      {
+        "label": "Metronome post-mortem: msETH/msUSD underbacking",
+        "url": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking"
       }
     ],
-    "rationale": "Re-opened Metronome primary docs on 2026-07-28. Deposit/mintage caps still enumerate eligible msUSD collateral (USDC, DAI, FRAX, ETH, WBTC, sfrxETH, and Vesper va-tokens) with per-asset caps and CF-based mintage formula; liquidation docs still describe multi-collateral health-factor CDP mechanics without any published live allocation. Supported-assets independently lists the same multi-collateral, multi-synth (msUSD/msETH/msBTC) envelope across Ethereum, Optimism, and Base. Because pools are cross-margin multi-synth, DepositToken balances cannot be attributed solely to msUSD without debt-side attribution the issuer does not publish. No public dashboard, attestation, or dual-source on-chain snapshot of current weights was found, so the documented eligible envelope is retained as one 100% basket-needs-split row rather than a fabricated allocation.",
-    "compositionBasis": "Metronome Synth collateral-cap, supported-assets, and liquidation documentation (re-opened 2026-07-28)",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-opened Metronome primary docs and the 2026-07-30 post-mortem on 2026-08-08. Deposit/mintage caps still enumerate eligible msUSD collateral (USDC, DAI, FRAX, ETH, WBTC, sfrxETH, and Vesper va-tokens) with per-asset caps and CF-based mintage formula. The post-mortem discloses that the synth swap module accumulated unbacked float, leaving ~4.57 million msUSD (and ~6,367 msETH) in circulation without matching debt positions at the time of disclosure; the protocol has deployed protocol-owned liquidity and defensive positions sized to close the gap if msUSD/msETH depeg by roughly 30%. Because pools are cross-margin multi-synth, DepositToken balances still cannot be attributed solely to msUSD without debt-side attribution the issuer does not publish. No public dashboard, attestation, or dual-source on-chain snapshot of current msUSD-specific weights was found, so the documented eligible envelope is retained as one 100% basket-needs-split row rather than a fabricated allocation.",
+    "compositionBasis": "Metronome Synth collateral-cap, supported-assets, liquidation documentation, and July 2026 underbacking post-mortem (re-opened 2026-08-08)",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, and cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition.",
+    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition, and the July 2026 post-mortem confirms a period of underbacking in the synth swap module that left approximately 4.57 million msUSD without matching debt positions.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

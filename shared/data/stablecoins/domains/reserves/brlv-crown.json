@@ -21,24 +21,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Fact Finance BRLV proof-of-reserves report - May 2026 (re-opened 2026-07-28)",
-        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
+        "label": "Fact Finance BRLV proof-of-reserves report - May 2026 (re-opened 2026-08-08)",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_af8cfa373d.pdf"
       },
       {
-        "label": "Crown BRLV reserve transparency (re-opened 2026-07-28)",
+        "label": "Crown BRLV reserve transparency (re-opened 2026-08-08)",
         "url": "https://www.crown-brlv.com/en/transparency/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: Fact Finance May 31, 2026 PoR PDF still returns HTTP 200 and still records Cash and equivalents R$593.72 (0.00%), Brazilian Treasury Bonds R$373,246,013.59 (99.99%), and ETFs – Brazilian Treasury R$34,130.28 (0.01%) against R$373,280,737.59 total collateral (~100.20% of R$372,522,515.00 circulating). Cash rounded to 0.00% is omitted as a positive slice. Crown EN transparency page independently restates 1:1 backing in federal government bonds under legally segregated custody at Brazilian Central Bank-regulated institutions, with live dashboard figures ~R$375.57M issued / ~R$399.24M reserves. Crown/Fact Finance report list still ends at May 2026 (no June/July monthly PoR PDF); Fact Finance live /reserves/assets/crown category names match the PDF but its BRL sums (~R$254M) disagree with published totals (~R$399M), so live asset amounts were not used for composition weights.",
+    "rationale": "Re-opened 2026-08-08. The Crown transparency page still lists report_brlv_5_2026.pdf as the latest BRLV reserve report; no June, July, or August 2026 BRLV PDF is published. The May 31, 2026 Fact Finance report still records Brazilian Treasury Bonds at 99.99% and ETFs linked to Brazilian Treasury securities at 0.01%, with cash rounded to 0.00%. Because the composition as-of date remains 2026-05-31, the curated rows are stale versus the 31-day admission window.",
     "compositionBasis": "Fact Finance BRLV proof-of-reserves report as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation. No newer monthly itemized composition PDF is published after May 2026.",
+    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

@@ -397,11 +397,11 @@
   },
   "reserves": [
     {
-      "name": "tULTRA/ULTRA (Wellington/Libeara) and FILQ (Fidelity International via Sygnum) — unpublished allocation split",
+      "name": "tULTRA tokenized U.S. Treasury bills",
       "pct": 100,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "FundBridge Capital / Wellington Management / Standard Chartered Bank (ULTRA); Fidelity International / Sygnum (FILQ)",
+      "issuerOrObligor": "Theo Network / tULTRA (Standard Chartered Libeara tokenized U.S. Treasury bills)",
       "riskFactors": [
         "duration",
         "liquidity",
@@ -414,44 +414,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Theo thBILL product page (two institutional underlyings)",
-        "url": "https://theo.xyz/thbill"
-      },
-      {
-        "label": "Theo FILQ addition announcement (2026-06-30)",
-        "url": "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration"
-      },
-      {
-        "label": "Theo thBILL documentation (composition / launch tULTRA)",
+        "label": "Theo thBILL documentation",
         "url": "https://docs.theo.xyz/platform/thbill"
       },
       {
-        "label": "Theo tULTRA documentation (ULTRA fact sheet)",
+        "label": "Theo tULTRA documentation",
         "url": "https://docs.theo.xyz/platform/thbill/tultra"
       },
       {
-        "label": "Our Crypto Talk — FILQ allocation; exact basket weight undisclosed",
-        "url": "https://ourcryptotalk.com/news/theo-thbill-filq-allocation"
+        "label": "Theo thBILL product page",
+        "url": "https://theo.xyz/thbill"
       }
     ],
-    "rationale": "Re-opened 2026-07-28: theo.xyz/thbill states thBILL holds two institutional underlyings — ULTRA (Wellington Management via Libeara/Standard Chartered) and FILQ (Fidelity International via Sygnum/Chainlink NAV). Theo's 2026-06-30 announcement states a $20M FILQ investment 'now sits inside thBILL' as the second underlying alongside Wellington's fund. Independent coverage (Our Crypto Talk) corroborates the dual-underlying structure and states Theo has not disclosed FILQ's exact basket weight. Docs at docs.theo.xyz/platform/thbill still describe launch composition as solely tULTRA and note further regulated T-bill tokens may be added; they do not publish a current percentage split. tULTRA docs identify ULTRA's asset families (ultra-short U.S. Treasuries, repos, cash) without category weights. No dual-sourced numeric allocation is published, so the full reserve is held as one aggregate basket with basket-needs-split rather than inventing weights (including third-party ~83/17 or ~84/16 estimates).",
-    "compositionBasis": "Theo product page + FILQ announcement re-opened 2026-07-28; independent Our Crypto Talk corroboration of dual underlyings and undisclosed weight; Theo tULTRA fact sheet for ULTRA asset families",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-verified on 2026-08-08. The thBILL live reserve adapter exposes a single 100% slice labeled 'tULTRA tokenized U.S. Treasury bills'. This review classifies that compiled slice as a fund-share exposure to Theo's tULTRA instrument. Issuer materials also reference a FILQ allocation, but the live adapter does not itemize it separately; scoring follows the adapter's exact normalized name.",
+    "compositionBasis": "Theo thBILL single-asset live adapter label and issuer documentation",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "Both institutional fund legs (tULTRA/ULTRA and FILQ) are identified by issuer product and announcement sources, but the current percentage allocation between them, ULTRA's internal Treasury/repo/cash split, and any cash/USDC buffer are not published with dual-source dated figures.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The live adapter's single compiled slice is fully classified. Any allocation between tULTRA and FILQ within the issuer's underlying basket is not separately itemized by the adapter.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "tULTRA/ULTRA (Wellington/Libeara) and FILQ (Fidelity International via Sygnum) — unpublished allocation split",
+        "reserveName": "tULTRA tokenized U.S. Treasury bills",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Issuer and independent coverage identify two fund underlyings (ULTRA via tULTRA and FILQ) but do not publish a current defensible allocation split or ULTRA sub-category weights; percentage estimates from secondary reports were not dual-sourced and are not stored."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "tULTRA is a tokenized fund share, not a tracked stablecoin dependency."
       }
     ]
   },

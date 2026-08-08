@@ -55,9 +55,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-05",
-    "reviewer": "Pharos reserve research (JPYSC promotion follow-up)",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SBI Shinsei Trust statutory issuance/deposit-balance disclosure (geo-restricted to Japan; figures via search-engine crawl of the page)",
@@ -76,15 +76,19 @@
         "url": "https://www.fsa.go.jp/common/diet/217/02/setsumei.pdf"
       },
       {
+        "label": "Fystack Japan stablecoin custody rules explainer (trust-type EPI issuer reserve composition since 13 June 2026)",
+        "url": "https://fystack.io/blog/japan-stablecoin-regulation-2026-what-caesp-and-epiesp-custody-rules-actually-require"
+      },
+      {
         "label": "SBI VC Trade JPYSC product page (redemption terms, no deposit insurance)",
         "url": "https://www.sbivc.co.jp/jpysc"
       }
     ],
-    "rationale": "The trustee's statutory disclosure as of 2026-06-30 showed deposit balances (¥10,008,304,794) at or slightly above the issued amount (¥10,008,294,794) with no JGB line item, i.e. effectively 100% yen demand deposits at that date. The issuer's launch release says a portion is planned to be invested in JGBs, and the amended PSA trust-type framework permits up to 50% in JGB/UST with remaining maturity of 3 months or less (or principal-protected time deposits) with issuer top-up obligations. No cash/JGB percentage split, reserve report, or third-party attestation is published; the statutory disclosure page is unreachable outside Japan.",
-    "compositionBasis": "Trustee statutory issuance/deposit-balance disclosure dated 2026-06-30; issuer launch release; CoinPost trust-structure explainer; FSA framework rules bounding permissible JGB allocation.",
+    "rationale": "R02 refresh 2026-08-08: The trustee's statutory disclosure as of 2026-06-30 showed deposit balances (¥10,008,304,794) at or slightly above the issued amount (¥10,008,294,794) with no JGB line item, i.e. effectively 100% yen demand deposits at that date. The amended PSA trust-type framework (in force since 13 June 2026) permits the issuer to hold up to 50% of trust assets in short-term JGBs/USTs with remaining maturity of 3 months or less or in principal-protected time deposits, with top-up obligations. The issuer's launch release says a portion is planned to be invested in JGBs, but no subsequent cash/JGB percentage split, reserve report, or third-party attestation has been published, and the statutory disclosure page remains unreachable outside Japan. The single bank-deposit slice is therefore retained as the last observed composition, with the 50% cap noted as a structural upper bound rather than an actual allocation.",
+    "compositionBasis": "Trustee statutory issuance/deposit-balance disclosure dated 2026-06-30; issuer launch release; CoinPost trust-structure explainer; FSA framework rules and Fystack summary bounding permissible JGB allocation.",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Supply has roughly doubled (to about ¥20.6B) since the last retrievable composition disclosure, and the issuer may shift up to 50% of reserves into JGBs/USTs with remaining maturity of 3 months or less without granular public disclosure; there is no independent attestation program, only trustee statutory disclosure under FSA supervision.",
+    "knownUnknownExposure": "Supply has roughly doubled (to about ¥20.6B) since the last retrievable composition disclosure, and the issuer may shift up to 50% of reserves into short-term JGBs/USTs without granular public disclosure; there is no independent attestation program, only trustee statutory disclosure under FSA supervision.",
     "knownUnknownExposurePct": 0
   },
   "status": "active",

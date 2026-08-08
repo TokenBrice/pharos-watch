@@ -36,6 +36,7 @@
     ],
     "rationale": "2026-07-31 re-open: cNGN's transparency page states that tokens are maintained 1:1 with Naira in licensed custodian banks and that reserve funds receive monthly audits. WrappedCBDC's terms limit minting to Naira deposits and require each token to be backed 1:1 by Naira held in reserve; the ASC FAQ independently describes partner commercial-bank reserve accounts and traditional-currency/cash-equivalent backing. No dated reserve-attestation artifact or custodian-bank names were retrievable, so the current structured envelope remains 100% Naira bank deposits and does not preserve the earlier unsupported 54%/46% split.",
     "compositionBasis": "Current cNGN issuer transparency disclosure",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The page does not identify the custodian banks, their allocation shares, account terms, or link a dated reserve examination report; the exact deposit liquidity is therefore unknown.",
     "knownUnknownExposurePct": 0,

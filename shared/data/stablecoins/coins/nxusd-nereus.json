@@ -577,22 +577,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Nereus Finance documentation",
-        "url": "https://docs.nereus.finance/"
+        "label": "Nereus Finance website",
+        "url": "https://nereus.finance/"
       },
       {
-        "label": "Nereus Finance",
-        "url": "https://nereus.finance/"
+        "label": "Nereus pinned Avalanche deployment manifest",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
       }
     ],
-    "rationale": "Nereus documents NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets, but publishes no reconciled per-market collateral inventory, so the envelope remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring.",
+    "rationale": "Write-time re-open 2026-08-08: Nereus still describes NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets. docs.nereus.finance now redirects to the marketing landing page, and neither the landing page nor the pinned GitHub deployment manifest publishes a reconciled, dated per-market collateral inventory or weights. The envelope therefore remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring.",
     "compositionBasis": "Nereus protocol documentation; per-market collateral weights are undisclosed",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
     "knownUnknownExposure": "Current per-market collateral balances and weights across Nereus lending markets are not published; the aggregate basket cannot be split into reviewed constituents.",
     "knownUnknownExposurePct": 100,

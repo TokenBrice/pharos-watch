@@ -143,25 +143,29 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 re-verify",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "CFX digital dollar infrastructure (re-opened 2026-07-28)",
+        "label": "CFX digital dollar infrastructure",
         "url": "https://cfx.to/"
       },
       {
-        "label": "CFX launches MoveUSD PR Newswire (2025-04-01; re-opened 2026-07-28)",
+        "label": "MoveUSD documentation (what is MoveUSD; U.S. universal bank partner and T-bill revenue note)",
+        "url": "https://docs.moveusd.com/docs/what-is-moveusd"
+      },
+      {
+        "label": "CFX launches MoveUSD PR Newswire (2025-04-01)",
         "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html"
       },
       {
-        "label": "CoinMarketCap MoveUSD about (re-opened 2026-07-28)",
+        "label": "CoinMarketCap MoveUSD about",
         "url": "https://coinmarketcap.com/currencies/movemoney-usd/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 (HTTP 200): cfx.to still states CFX-issued digital assets are redeemable 1:1 for U.S. dollars with USD custody by FDIC Member Banks, and the site footer disclaimer states that U.S. dollar deposits collateralizing CFX Labs's USD-based digital dollar MoveUSD are held in a beneficiary account by an FDIC Member Bank. Independently hosted PR Newswire launch copy (2025-04-01) still states every MoveUSD dollar is backed 1:1 and held in beneficiary accounts at participating FDIC-insured banks. CoinMarketCap's MoveUSD about independently describes a U.S. dollar bank-deposit token backed 1:1 by U.S. dollar deposits held with regulated partner banks, with reserves maintained in demand deposit accounts. The former docs.moveusd.com disclosures path still redirects to docs.cfx.to; docs.cfx.to/docs/key-features does not state reserve composition, and disclosures/reserves paths return 404. No named bank, account-level terms, liquidity terms, or dated independent reserve-to-liability report were found. The 100% bank-deposit slice is retained with counterparty/custody/concentration risk factors and unknown liquidity horizon.",
-    "compositionBasis": "CFX issuer site + independently hosted launch PR + CMC bank-deposit description of MoveUSD USD deposit backing",
+    "rationale": "R02 refresh 2026-08-08 (HTTP 200): cfx.to still states CFX-issued digital assets are redeemable 1:1 for U.S. dollars with USD custody by FDIC Member Banks, and the site footer disclaimer states that U.S. dollar deposits collateralizing CFX Labs's USD-based digital dollar MoveUSD are held in a beneficiary account by an FDIC Member Bank. docs.moveusd.com describes MoveUSD as developed in collaboration with an unnamed U.S. universal bank that is an investor and key partner, and notes that enhanced treasury management capabilities leverage program revenue derived from U.S. Treasury Bills while customer deposits remain within designated beneficiary account(s). Independently hosted PR Newswire launch copy (2025-04-01) still states every MoveUSD dollar is backed 1:1 and held in beneficiary accounts at participating FDIC-insured banks. CoinMarketCap's MoveUSD about independently describes a U.S. dollar bank-deposit token backed 1:1 by U.S. dollar deposits held with regulated partner banks, with reserves maintained in demand deposit accounts. No named bank, account-level terms, liquidity terms, or dated independent reserve-to-liability report were found. The 100% bank-deposit slice is retained as the last observed composition, with counterparty/custody/concentration risk factors and unknown liquidity horizon.",
+    "compositionBasis": "CFX issuer site + MoveUSD docs + independently hosted launch PR + CMC bank-deposit description of MoveUSD USD deposit backing",
     "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The single disclosed reserve category is known, but CFX does not identify the FDIC member bank, publish account-level terms, or provide a dated independent reserve report.",

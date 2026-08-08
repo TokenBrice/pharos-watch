@@ -515,8 +515,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -536,7 +536,7 @@
         "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
       }
     ],
-    "rationale": "At Ethereum block 25530459, the Ethereum AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting controller-local mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each observed slice maps to its exact tracked stablecoin dependency. Alchemix also documents locally minted Optimism and Arbitrum xalUSD backed by chain-local future yield plus bridged Mainnet alUSD; those controllers, bridge lockboxes, Transmuters, and AMO balances are not reconciled in this Ethereum-only snapshot, so it is retained as selected-slice evidence rather than an asset-wide composition. Write-time re-open 2026-07-28: eth_call getSupportedYieldTokens + getYieldTokenParameters on AlchemistV2 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd via ethereum.publicnode.com at block 25627373; enabled expectedValue by underlying DAI 80.2268% / USDC 15.9309% / FRAX 3.4568% / USDT 0.3856%. Interface commit 8915ef7b still defines the state surface; multichain docs still describe L2 alAssets as Ethereum-collateral-backed.",
+    "rationale": "At Ethereum block 25530459, the Ethereum AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting controller-local mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each observed slice maps to its exact tracked stablecoin dependency. Re-read 2026-08-08: Alchemix docs still describe L2 xalUSD as backed by Ethereum-collateral; no issuer-published fresher Ethereum Alchemist composition or asset-wide reconciliation was found, so the prior on-chain snapshot remains the latest usable primary-source breakdown and the review is retained as selected-slice evidence rather than an asset-wide composition.",
     "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
     "compositionAsOf": "2026-07-28",
     "scope": "selected-slices",

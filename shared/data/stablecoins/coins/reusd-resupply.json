@@ -264,7 +264,7 @@
   "reserves": [
     {
       "name": "Curve crvUSD lending markets",
-      "pct": 93.2,
+      "pct": 93.4,
       "risk": "high",
       "coinId": "crvusd-curve",
       "assetClass": "protocol-position",
@@ -279,7 +279,7 @@
     },
     {
       "name": "Frax frxUSD lending markets",
-      "pct": 6.8,
+      "pct": 6.6,
       "risk": "high",
       "coinId": "frxusd-frax",
       "assetClass": "protocol-position",
@@ -294,8 +294,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "SOL-III V9 reserve-slice review; Kimi T27 V9 reserve-slice refresh",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "SOL-III V9 reserve-slice review; Kimi T27 V9 reserve-slice refresh; Kimi R05 live-adapter replay",
     "confidence": "verified",
     "sources": [
       {
@@ -307,9 +307,9 @@
         "url": "https://github.com/resupplyfi/resupply/blob/537b5a0424efd1663b7a2c3262d4a2d0536fc670/src/protocol/ResupplyPair.sol"
       }
     ],
-    "rationale": "The independent resupply-pairs producer enumerated every configured positive-collateral pair and converted its ERC-4626 shares at the same on-chain capture; a 2026-07-30 replay of all eleven configured pairs at Ethereum block 25648351 (underlying(), getPairAccounting(), collateral(), convertToAssets()) reproduced the split: 24,483,249 crvUSD-side and 1,792,040 frxUSD-side converted assets, i.e. 93.2% Curve crvUSD lending-market exposure and 6.8% Fraxlend frxUSD lending-market exposure. Both are layered protocol positions whose upstream issuer and smart-contract failure domains remain explicit.",
-    "compositionBasis": "Exact live Resupply pair registry and ERC-4626 collateral conversion captured at Ethereum block 25648351 on 2026-07-30",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "The independent resupply-pairs producer enumerated every configured positive-collateral pair and converted its ERC-4626 shares at the same on-chain capture. A 2026-08-08 replay of all eleven configured pairs at the latest Ethereum block (underlying(), getPairAccounting(), collateral(), convertToAssets()) returned $24,371,493 crvUSD-side and $1,713,015 frxUSD-side converted assets, i.e. 93.4% Curve crvUSD lending-market exposure and 6.6% Fraxlend frxUSD lending-market exposure. Both are layered protocol positions whose upstream issuer and smart-contract failure domains remain explicit.",
+    "compositionBasis": "Exact live Resupply pair registry and ERC-4626 collateral conversion captured on 2026-08-08 via the configured resupply-pairs adapter against public Ethereum RPC",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
     "knownUnknownExposure": "No positive-collateral pair is omitted; vault liquidity, borrower collateral, and upstream crvUSD or frxUSD solvency remain structured risk factors within the two classified positions.",
     "knownUnknownExposurePct": 0

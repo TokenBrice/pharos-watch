@@ -123,16 +123,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice); R13 re-open",
     "confidence": "manual-review",
     "sources": [
       {
         "label": "XT.COM XTUSD announcement",
         "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+      },
+      {
+        "label": "XT.COM website",
+        "url": "https://www.xt.com/"
+      },
+      {
+        "label": "XSC public RPC (datarpc1.xsc.pub)",
+        "url": "https://datarpc1.xsc.pub"
       }
     ],
-    "rationale": "The first-party announcement describes XT as the initial XTDao collateral asset and says additional collateral may be supported later, but it is a 2022 launch announcement rather than a current reserve inventory. A 2026-07-20 re-review found no current collateral weights, custody evidence, or XSC-readable reserve state. The single issuer-managed envelope is retained with explicit v9 classification rather than invented constituent weights.",
+    "rationale": "The first-party announcement describes XT as the initial XTDao collateral asset and says additional collateral may be supported later, but it is a 2022 launch announcement rather than a current reserve inventory. A 2026-07-20 re-review found no current collateral weights, custody evidence, or XSC-readable reserve state. The single issuer-managed envelope is retained with explicit v9 classification rather than invented constituent weights. R13 re-open 2026-08-08: XT.com still advertises 'Proof of Reserves' and 1:1 backing but publishes no asset-level reserve breakdown; XSC tooling remains limited and no current collateral weights were located.",
     "compositionBasis": "Current Pharos reserve row retained as an issuer-managed placeholder; the reviewed source establishes the historical XTDao design but not a current composition snapshot.",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",

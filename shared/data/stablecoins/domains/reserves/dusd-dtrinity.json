@@ -5,7 +5,7 @@
       "name": "Chain-isolated eligible stablecoin, yieldcoin, and AMO position basket",
       "pct": 100,
       "risk": "high",
-      "assetClass": "other",
+      "assetClass": "protocol-position",
       "issuerOrObligor": "dTRINITY reserve vaults, Curve AMOs, and eligible reserve-asset issuers",
       "riskFactors": [
         "credit",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Codex T13 reserve re-review 2026-07-31",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex T13 reserve re-review 2026-07-31; R13 re-open",
     "confidence": "verified",
     "sources": [
       {
@@ -65,7 +65,7 @@
         "url": "https://rpc.katana.network"
       }
     ],
-    "rationale": "2026-07-31 re-open. Issuer docs still list per-network eligible reserve classes (Ethereum: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, Curve LP receipts; Fraxtal: bridged USDC/USDT/DAI/sDAI plus frxUSD/sfrxUSD and Curve LP; Katana: vbUSDC, vbUSDT, AUSD, frxUSD, sfrxUSD; no public Sonic/Ronin eligible-asset tables on the same page). Fresh public-RPC reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567 called listCollateral() and totalValue() on the documented collateral vaults, confirming current supported-asset membership and nonzero vault accounting, but they do not yield a publishable multi-deployment weight table: Ethereum remains dominated by AMO-dUSD accounting receipts rather than itemized Curve LP legs; Fraxtal mixes residual sfrxUSD with AMO accounting; Katana exposes multiple idle stablecoin/yieldcoin balances. Sonic/Ronin remain outside the documented reserve table. Protocol accounting totals do not replace a reconciled, weighted reserve balance sheet. Static component percentages remain unsupported; one complete aggregate basket with known-unknown residual is retained.",
+    "rationale": "2026-07-31 re-open. Issuer docs still list per-network eligible reserve classes (Ethereum: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, Curve LP receipts; Fraxtal: bridged USDC/USDT/DAI/sDAI plus frxUSD/sfrxUSD and Curve LP; Katana: vbUSDC, vbUSDT, AUSD, frxUSD, sfrxUSD; no public Sonic/Ronin eligible-asset tables on the same page). Fresh public-RPC reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567 called listCollateral() and totalValue() on the documented collateral vaults, confirming current supported-asset membership and nonzero vault accounting, but they do not yield a publishable multi-deployment weight table: Ethereum remains dominated by AMO-dUSD accounting receipts rather than itemized Curve LP legs; Fraxtal mixes residual sfrxUSD with AMO accounting; Katana exposes multiple idle stablecoin/yieldcoin balances. Sonic/Ronin remain outside the documented reserve table. Protocol accounting totals do not replace a reconciled, weighted reserve balance sheet. Static component percentages remain unsupported; one complete aggregate basket with known-unknown residual is retained. R13 re-open 2026-08-08: the dTRINITY docs and website still publish no reserve percentage breakdown, attestation, or dated balance sheet; no newer composition source was found.",
     "compositionBasis": "dTRINITY documented eligible-asset envelope plus 2026-07-31 on-chain listCollateral()/totalValue() reads at Ethereum block 25648892, Fraxtal block 39321334, and Katana block 38710567; current multi-chain asset weights remain undisclosed/unreconcilable",
     "scope": "full-composition",
     "knownUnknownExposure": "Per-asset and per-network reserve weights, Curve AMO LP leg valuation, and a cross-deployment assets-and-liabilities reconciliation are not published; on-chain idle vault balances alone are incomplete where AMO debt receipts dominate.",

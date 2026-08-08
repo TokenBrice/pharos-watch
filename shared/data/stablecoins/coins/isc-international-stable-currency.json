@@ -114,25 +114,97 @@
   },
   "reserves": [
     {
-      "name": "ISC target multi-asset reserve envelope (current allocation undisclosed)",
-      "pct": 100,
+      "name": "Cash (USD)",
+      "pct": 9.4336,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "ISC Reserves (USD cash component)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+      "pct": 9.8897,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock / iShares (short-term US Treasury ETF)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "iShares Physical Gold ETC (SGLD)",
+      "pct": 11.8305,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock / iShares (physical gold ETC)",
+      "riskFactors": [
+        "custody",
+        "market",
+        "concentration",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Vanguard FTSE All-World UCITS ETF (VWRA)",
+      "pct": 12.338,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed ISC reserve managers, custodians, and asset providers",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Vanguard (global equity ETF)",
       "riskFactors": [
         "market",
-        "credit",
         "custody",
         "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "iShares Core Global Aggregate Bond UCITS ETF (AGGU)",
+      "pct": 9.7435,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock / iShares (global investment-grade bond ETF)",
+      "riskFactors": [
+        "credit",
         "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Reserve-held ISC tokens",
+      "pct": 46.7647,
+      "risk": "very-high",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "ISC Reserves (self-held ISC tokens)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi unknown-reduction wave-2 T02 reserve review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (ISC dashboard API fetched 2026-08-08)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -140,45 +212,85 @@
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"
       },
       {
+        "label": "ISC reserve basic mechanics",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics"
+      },
+      {
         "label": "ISC reserve oversight page (audit scheme under consideration)",
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight.md"
       },
       {
-        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings by asset class, fetched 2026-07-30)",
+        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings by asset class, fetched 2026-08-08)",
         "url": "https://isc.money/api/reserve-balances"
       },
       {
-        "label": "ISC dashboard isc-history API (daily target-price series through 2026-07-30)",
+        "label": "ISC dashboard isc-history API (daily target-price series through 2026-08-08)",
         "url": "https://isc.money/api/isc-history"
       }
     ],
-    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash. Re-reviewed 2026-07-30: the dashboard now serves a reserve-balances JSON API naming two reserves (Reserve A and Reserve B) with current USD-denominated holdings across cash, IB01, SGLD, VWRA, and AGGU that roughly track the target, and an isc-history API publishing a daily target-price series through 2026-07-30. The holdings disclosure is undated, mutable, single-source, and unaudited — the oversight page still describes the reserve audit scheme as under consideration — so it does not satisfy the dated, verifiable evidence standard, and the single 100% unresolved multi-asset envelope is retained.",
-    "compositionBasis": "ISC whitepaper target asset families; current allocation issuer-published but unaudited and undated",
+    "rationale": "Re-reviewed 2026-08-08: the ISC dashboard reserve-balances API returns current USD-denominated holdings for Reserve A and Reserve B across cash, IB01 (iShares short-term Treasury ETF), SGLD (iShares physical gold ETC), VWRA (Vanguard global equity ETF), AGGU (iShares global aggregate bond ETF) and ISC. The two reserves are summed and converted to percentage slices against total reserve value. The single largest line is reserve-held ISC itself; it is treated as a self-reserve rather than external backing. The remaining slices track the whitepaper's five target asset families, but the API is undated, mutable, single-source and unaudited, and no independent reserve attestation has been selected. Custody providers and exact fund terms remain undisclosed.",
+    "compositionBasis": "ISC dashboard reserve-balances API as fetched 2026-08-08; combined Reserve A + Reserve B holdings",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer-published current allocation is unaudited and undated; the custody providers and legal entities behind Reserve A and Reserve B, the valuation date, liability reconciliation, and any independent attestation are not established by the reviewed primary sources.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The issuer-published current allocation is undated, mutable, single-source and unaudited. Custody providers, legal entities behind Reserve A and Reserve B, account segregation, insolvency treatment and rehypothecation terms are not established.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "ISC target multi-asset reserve envelope (current allocation undisclosed)",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The issuer publishes target asset families but no verifiable current holdings or allocation."
+        "reserveName": "Cash (USD)",
+        "pct": 9.4336,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD cash held by the ISC Reserves is an external fiat reserve, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)",
+        "pct": 9.8897,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "IB01 ETF shares are external fund assets, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "iShares Physical Gold ETC (SGLD)",
+        "pct": 11.8305,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SGLD gold ETC shares are external commodity assets, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Vanguard FTSE All-World UCITS ETF (VWRA)",
+        "pct": 12.338,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "VWRA ETF shares are external equity fund assets, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "iShares Core Global Aggregate Bond UCITS ETF (AGGU)",
+        "pct": 9.7435,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "AGGU ETF shares are external bond fund assets, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Reserve-held ISC tokens",
+        "pct": 46.7647,
+        "disposition": "self-reserve",
+        "rationale": "The reserve holds ISC itself (likely unissued/treasury or market-making inventory); counting it as external backing would be circular, so it is treated as a protocol self-reserve."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "ISC Reserve accounts and undisclosed reserve managers",
+        "name": "ISC Reserve A and Reserve B (ETF shares and USD cash; specific custodians undisclosed)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi unknown-reduction wave-2 T02 reserve review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (ISC dashboard API fetched 2026-08-08)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -190,11 +302,11 @@
         "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-entities.md"
       },
       {
-        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings, fetched 2026-07-30)",
+        "label": "ISC dashboard reserve-balances API (Reserve A and Reserve B holdings, fetched 2026-08-08)",
         "url": "https://isc.money/api/reserve-balances"
       }
     ],
-    "uncertainty": "The whitepaper states the ISC Reserves maintain full possession and ownership of the assets, and the dashboard API names two reserves (Reserve A and Reserve B), but no custody providers, legal entities, account segregation, insolvency treatment, or rehypothecation terms are disclosed.",
+    "uncertainty": "The whitepaper states the ISC Reserves maintain full possession and ownership of the assets, and the dashboard API names two reserves with current ETF and cash holdings, but the specific custodians, legal entities, account segregation, insolvency treatment, and rehypothecation terms are not disclosed.",
     "knownUnknownExposurePct": 100
   },
   "yieldConfig": {

@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -31,7 +31,7 @@
         "url": "https://rupiahtoken.com/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: the January 31, 2026 independent accountant AUP (Johannes Juara & Rekan / Hari Manurung CPA) still reconciles Rp94,232,212,766 of bank collateral to total issued Rupiah Token with an explicit 1:1 ratio and states procedures obtained bank statements and time-deposit certificates for each collateral account. The live rupiahtoken.com site still describes IDRT as a rupiah-pegged token with mint/redeem against rupiah bank flows and states circulating IDRT is regularly audited by an independent auditor. The complete direct reserve class remains IDR bank deposits including time deposits; bank-level and account-type allocations are not published.",
+    "rationale": "The January 31, 2026 independent accountant AUP (Johannes Juara & Rekan / Hari Manurung CPA) reconciles Rp94,232,212,766 of bank collateral to total issued Rupiah Token with an explicit 1:1 ratio and states procedures obtained bank statements and time-deposit certificates for each collateral account. Re-search on 2026-08-08 of rupiahtoken.com and public S3/attestation paths found no newer issuer-published reserve report, so the January 2026 AUP remains the latest usable primary-source breakdown. The snapshot is 189 days old as of the review date, so it sits outside the 31-day V9 admission window.",
     "compositionBasis": "Independent accountant agreed-upon procedures over Rupiah Token bank collateral as of January 31, 2026",
     "compositionAsOf": "2026-01-31",
     "scope": "full-composition",

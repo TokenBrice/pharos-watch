@@ -278,8 +278,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "verified",
     "sources": [
       {
@@ -303,19 +303,19 @@
         "url": "https://www.ceffu.com/solutions/mirrorx"
       }
     ],
-    "rationale": "Write-time re-open on 2026-07-28 reconfirmed dual independent sources with no composition weights: (1) asterdex.com/en/usdf still states USDF is \"Backed by crypto assets and corresponding short futures positions\" and names Ceffu custody; docs.asterdex.com fund-custody, how-usdf-works, and FAQs still describe USDT mint → Aster Ceffu account → MirrorX 1:1 delegation to a Binance sub-account while assets remain in Ceffu custody, with the strategy buying spot BTC/ETH and shorting matching perpetual notional; (2) ceffu.com/solutions/mirrorx independently describes MirrorX as off-exchange settlement that keeps assets in Ceffu custody while mirroring balances to partner-exchange sub-accounts at 1:1. No public dashboard, attestation, or reserve report publishes retained-USDT, spot, or futures-margin weights, so the prior unsupported 50/25/25 split remains rejected and the full reserve stays one 100% hedged-crypto basket with knownUnknownExposurePct 100.",
+    "rationale": "R02 refresh 2026-08-08 reconfirmed the issuer-documented delta-neutral structure and Ceffu/Binance custody model, with no new public dashboard, attestation, or reserve report publishing retained-USDT, spot-crypto, or futures-margin weights. The product page still describes USDF as backed by crypto assets and corresponding short futures positions with Ceffu custody; the docs still describe USDT mint → Aster Ceffu account → MirrorX 1:1 delegation to a Binance sub-account while assets remain in Ceffu custody, with the strategy buying spot BTC/ETH and shorting matching perpetual notional. Because no supply-weighted split is available and the collateral is an off-exchange, strategy-managed basket, the single reserve is dispositioned as an untracked exogenous hedged-crypto envelope rather than a splittable stablecoin basket.",
     "compositionBasis": "Issuer-documented delta-neutral backing structure plus independent Ceffu MirrorX custody model; constituent shares are undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "Aster does not publish current weights for retained USDT, spot BTC/ETH, or futures-margin exposure.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The reserve class and counterparties are identified, but Aster does not publish current weights for retained USDT, spot BTC/ETH, or futures-margin exposure.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "USDT-funded spot crypto and corresponding short futures positions",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "USDT funds the strategy, but no current constituent weights support treating a portion of the aggregate basket as direct USDT collateral.",
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USDT funds the delta-neutral strategy, but no current constituent weights support treating any portion of the aggregate basket as direct stablecoin collateral. The strategy is an off-exchange, Ceffu-custodied hedged-crypto envelope and is therefore treated as an untracked exogenous asset.",
         "candidateCoinIds": [
           "usdt-tether"
         ]

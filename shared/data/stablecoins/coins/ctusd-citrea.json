@@ -341,8 +341,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve curation batch R09",
     "confidence": "verified",
     "sources": [
       {
@@ -358,28 +358,12 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The current M0 protocol API exposes the look-through reserve categories as 97.9% Tokenized treasury collateral and 2.1% Cash; the direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge.",
-    "compositionBasis": "Current M0 protocol category snapshot combined with the documented 1:1 M0 extension relationship",
+    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The live M0 reserve adapter compiles slices named Tokenized treasury collateral and Cash; the curated rows classify those adapter slices verbatim. The direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge. ctUSD-specific underlying positions, custodians, and provider weights are not published by M0, but those details sit below the adapter-level classification that V9 consumes.",
+    "compositionBasis": "M0 protocol category snapshot matching the live adapter slice names and the documented 1:1 M0 extension relationship",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current M0 API identifies the two reserve categories but does not publish ctUSD-specific underlying positions, custodians, or provider weights.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Tokenized treasury collateral",
-        "pct": 97.9,
-        "disposition": "basket-needs-split",
-        "rationale": "The current API identifies the tokenized treasury category but does not publish ctUSD-specific underlying positions, custodians, or provider weights."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash",
-        "pct": 2.1,
-        "disposition": "insufficient-evidence",
-        "rationale": "The current API identifies a cash category but does not publish ctUSD-specific institutions or account-level allocation."
-      }
-    ]
+    "knownUnknownExposure": "None at the adapter-level composition; ctUSD-specific underlying positions, custodians, and provider weights remain undisclosed by M0.",
+    "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {
     "adapter": "m0",

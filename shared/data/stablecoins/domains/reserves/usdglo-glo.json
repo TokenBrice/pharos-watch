@@ -5,7 +5,7 @@
       "name": "Cash and cash equivalents",
       "pct": 85.21,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "cash",
       "issuerOrObligor": "Undisclosed U.S. banking counterparties holding Brale reserve accounts",
       "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
       "liquidityHorizon": "unknown"
@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex Safety Score V9 reserve batch 7; R13 stale-as-of refresh",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://brale.xyz/stablecoins/USDGLO"
       }
     ],
-    "rationale": "The June 30, 2026 Brale reserve report states $1,818,189 of cash and cash equivalents and $315,494 of U.S. government-backed debt against $2,133,683 of USDGLO issued. The percentages are normalized from those reported values; the report does not identify the underlying banks, instruments, maturities, or provider shares.",
+    "rationale": "The June 30, 2026 Brale reserve report states $1,818,189 of cash and cash equivalents and $315,494 of U.S. government-backed debt against $2,133,683 of USDGLO issued. The percentages are normalized from those reported values; the report does not identify the underlying banks, instruments, maturities, or provider shares. R13 re-open 2026-08-08: the Brale transparency page lists monthly reports only through June 2026; no July 2026 management assertion or independent accountant's report was available, so the June 2026 composition remains the freshest published source.",
     "compositionBasis": "Brale USDGLO reserve report as of June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",

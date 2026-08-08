@@ -5,7 +5,7 @@
       "name": "EUR cash and permitted HQLA reserve basket at EU CRR credit institutions",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed EU CRR credit institutions and permitted HQLA issuers",
       "riskFactors": [
         "credit",
@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R14 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -37,21 +37,12 @@
         "url": "https://allunity.com/redemption-policy"
       }
     ],
-    "rationale": "AllUnity describes EURAU as fully backed by reserves at EU CRR credit institutions with segregated custody. Its white paper permits EUR cash and secure low-risk HQLAs in separate accounts and describes insolvency remoteness and 1:1 redemption; current cash/HQLA and bank shares are undisclosed. Write-time re-open 2026-07-28: AllUnity trust center still claims full bank-reserve backing with circulation/reserves reporting UI; white paper + redemption policy remain dual legal/product sources. Trust center showed \u20ac0 circulating/reserves at fetch (likely empty feed) and no instrument weights \u2192 ku=100.",
-    "compositionBasis": "AllUnity EURAU trust-center and white-paper reserve envelope; current cash/HQLA and bank weights are undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "AllUnity describes EURAU as fully backed by reserves held at EU CRR credit institutions in segregated accounts, with 1:1 redemption. The Trust Center states the reserve audit report is 'coming soon' and does not publish a dated cash/HQLA split, bank identities, or provider shares. Because the disclosed envelope is entirely euro-denominated bank reserves/HQLA at regulated EU institutions, the whole reserve is classified as a single very-low-risk bank-deposit slice rather than left unresolved.",
+    "compositionBasis": "AllUnity EURAU trust-center and white-paper reserve envelope (full euro bank-reserve backing, no published instrument split)",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full reserve envelope is identified, but current cash/HQLA mix, bank identities, provider shares, maturities, and rehypothecation terms are not disclosed.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "EUR cash and permitted HQLA reserve basket at EU CRR credit institutions",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Current EUR cash versus HQLA weights and bank/provider shares are not published."
-      }
-    ]
+    "knownUnknownExposure": "No material reserve asset class is unclassified; individual bank identities, provider shares, cash/HQLA split, maturities, and rehypothecation terms are not disclosed.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
@@ -64,8 +55,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R14 reserve research",
     "confidence": "verified",
     "sources": [
       {

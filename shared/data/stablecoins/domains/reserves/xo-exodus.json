@@ -50,8 +50,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
     "confidence": "probable",
     "sources": [
       {
@@ -67,12 +67,12 @@
         "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
       },
       {
-        "label": "M0 Protocol API GraphQL endpoint",
+        "label": "M0 Protocol API GraphQL endpoint (returned HTTP 500 on 2026-08-08)",
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MoonPay identifies XO as built on M0 infrastructure, and the configured first-party M0 producer reports the captured reserve mix as 97.9% eligible tokenized Treasury collateral and 2.1% cash after normalization. M0's token time series identifies USTB as the eligible collateral; MoonPay's terms retain the XO-specific segregation and legal context.",
-    "compositionBasis": "Exact live M0 collateral capture for XO, MoonPay XO announcement, and stablecoin terms",
+    "rationale": "Re-checked 2026-08-08: the M0 Protocol API GraphQL endpoint returned HTTP 500 for CollateralCurrent and CollateralTimeSeries, so the previously captured M0 collateral mix is retained. MoonPay continues to describe XO as built on M0 infrastructure; the eligible token collateral is linked to USTB via the live adapter. XO-specific provider shares remain undisclosed.",
+    "compositionBasis": "Prior exact live M0 collateral capture for XO, MoonPay XO announcement, and stablecoin terms",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor; XO-specific provider shares remain undisclosed.",
@@ -97,8 +97,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (M0 GraphQL API unreachable this pass; retained prior live capture)",
     "confidence": "probable",
     "sources": [
       {

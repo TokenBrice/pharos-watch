@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30; R13 re-open",
     "confidence": "manual-review",
     "sources": [
       {
@@ -37,8 +37,9 @@
         "url": "https://mainnet.era.zksync.io"
       }
     ],
-    "rationale": "Re-derived 2026-07-30 at zkSync Era block 71379594: the verified Lockdrop portal source names treasuryAddress as the stablecoin deposit destination, and treasuryAddress() returned 0xa5ad8953de51ced330e788dddde19a5f96cac082. That treasury held 0 USDC and 0 USDC.e (and 53,236.81 zkUSD) against a totalSupply of 1,179,099.482755 zkUSD; explorer token-transfer history shows the treasury's USDC.e was moved out in tranches through 2024-10-16 to addresses no current source identifies. No reserve asset, collateral pool, counterparty, coverage ratio, custody arrangement, or assurance process is established by a current primary source, and docs.goal3.xyz and goal3.xyz still do not resolve in DNS, so the full backing is retained as unknown without carrying forward the archived documentation's unsupported positive premise.",
+    "rationale": "Re-derived 2026-07-30 at zkSync Era block 71379594: the verified Lockdrop portal source names treasuryAddress as the stablecoin deposit destination, and treasuryAddress() returned 0xa5ad8953de51ced330e788dddde19a5f96cac082. That treasury held 0 USDC and 0 USDC.e (and 53,236.81 zkUSD) against a totalSupply of 1,179,099.482755 zkUSD; explorer token-transfer history shows the treasury's USDC.e was moved out in tranches through 2024-10-16 to addresses no current source identifies. No reserve asset, collateral pool, counterparty, coverage ratio, custody arrangement, or assurance process is established by a current primary source, and docs.goal3.xyz and goal3.xyz still do not resolve in DNS, so the full backing is retained as unknown without carrying forward the archived documentation's unsupported positive premise. R13 re-open 2026-08-08: docs.goal3.xyz and goal3.xyz remain unreachable; the Goal3 X account returns 404; no reserve composition or attestation has been published.",
     "compositionBasis": "No current primary reserve-composition disclosure; token-contract identification only",
+    "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "Reserve existence, asset composition, counterparties, custody, liquidity, and current coverage are not evidenced by a current primary reserve source.",
     "knownUnknownExposurePct": 100,

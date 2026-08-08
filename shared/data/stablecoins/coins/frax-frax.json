@@ -911,367 +911,380 @@
   "governanceQuality": "dao-governance",
   "custodyModel": "institutional-regulated",
   "reserves": [
-    {
-      "name": "FRAX",
-      "pct": 20.7,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 20,
-      "risk": "low",
-      "assetClass": "money-market-fund",
-      "issuerOrObligor": "WisdomTree Government Money Market Fund",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "frxUSD",
-      "pct": 12.4,
-      "risk": "low",
-      "coinId": "frxusd-frax",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "sFRAX",
-      "pct": 12.5,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 11.5,
-      "risk": "low",
-      "coinId": "ustb-superstate",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "sfrxUSD",
-      "pct": 9.2,
-      "risk": "low",
-      "coinId": "sfrxusd-frax",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 5.2,
-      "risk": "low",
-      "coinId": "buidl-blackrock",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
-      "riskFactors": [
-        "counterparty",
-        "duration",
-        "liquidity",
-        "custody",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "USDe",
-      "pct": 3.3,
-      "risk": "high",
-      "coinId": "usde-ethena",
-      "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Ethena Labs and hedge counterparties",
-      "riskFactors": [
-        "market",
-        "basis",
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "frxETH",
-      "pct": 0.7,
-      "risk": "low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USDB (Bridge)",
-      "pct": 0.7,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Bridge and underlying reserve counterparties",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "sfrxETH",
-      "pct": 0.6,
-      "risk": "low",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "LFRAX",
-      "pct": 0.6,
-      "risk": "medium",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "CVX",
-      "pct": 0.4,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Convex Finance",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USDC (Circle)",
-      "pct": 0.3,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "ETH",
-      "pct": 0.4,
-      "risk": "very-low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Ethereum protocol",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "CRV",
-      "pct": 0.2,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Curve DAO",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "wfrxETH",
-      "pct": 0.2,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "lzfrxETH",
-      "pct": 0.2,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Frax Protocol and LayerZero messaging",
-      "riskFactors": [
-        "market",
-        "counterparty",
-        "liquidity",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "FPI",
-      "pct": 0.1,
-      "risk": "medium",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Protocol",
-      "riskFactors": [
-        "market",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "reUSD",
-      "pct": 0.2,
-      "risk": "medium",
-      "coinId": "reusd-re-protocol",
-      "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Re Protocol and hedge counterparties",
-      "riskFactors": [
-        "market",
-        "basis",
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "USDS",
-      "pct": 0.1,
-      "risk": "low",
-      "coinId": "usds-sky",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky Protocol",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "cvxCRV",
-      "pct": 0.1,
-      "risk": "very-high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Convex Finance and Curve DAO",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "WETH",
-      "pct": 0.1,
-      "risk": "very-low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Wrapped Ether contract",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "lzsfrxETH",
-      "pct": 0.2,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Frax Protocol and LayerZero messaging",
-      "riskFactors": [
-        "market",
-        "counterparty",
-        "liquidity",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Unmapped Frax balance-sheet assets",
-      "pct": 0.1,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Identified BNB, MATIC, USDT, VELO, and crvUSD positions",
-      "riskFactors": [
-        "credit",
-        "market",
-        "liquidity",
-        "counterparty",
-        "custody",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "unknown"
-    }
-  ],
+      {
+        "name": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 22.2,
+        "risk": "low",
+        "assetClass": "money-market-fund",
+        "issuerOrObligor": "WisdomTree Government Money Market Fund",
+        "riskFactors": [
+          "counterparty",
+          "duration",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "FRAX",
+        "pct": 16.7,
+        "risk": "low",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "frxUSD",
+        "pct": 13.5,
+        "risk": "low",
+        "coinId": "frxusd-frax",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "counterparty",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "sFRAX",
+        "pct": 13.2,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "USTB (Superstate tokenized T-bills)",
+        "pct": 11.9,
+        "risk": "low",
+        "coinId": "ustb-superstate",
+        "assetClass": "fund-share",
+        "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund",
+        "riskFactors": [
+          "counterparty",
+          "duration",
+          "liquidity",
+          "custody",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "sfrxUSD",
+        "pct": 8.3,
+        "risk": "low",
+        "coinId": "sfrxusd-frax",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "counterparty",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "BUIDL (BlackRock tokenized T-bills)",
+        "pct": 5.5,
+        "risk": "low",
+        "coinId": "buidl-blackrock",
+        "assetClass": "fund-share",
+        "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+        "riskFactors": [
+          "counterparty",
+          "duration",
+          "liquidity",
+          "custody",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "USDe",
+        "pct": 2.7,
+        "risk": "high",
+        "coinId": "usde-ethena",
+        "assetClass": "hedged-crypto",
+        "issuerOrObligor": "Ethena Labs and hedge counterparties",
+        "riskFactors": [
+          "market",
+          "basis",
+          "counterparty",
+          "custody",
+          "liquidity"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "frxETH",
+        "pct": 0.7,
+        "risk": "low",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "market",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
+        "pct": 0.7,
+        "risk": "very-low",
+        "assetClass": "bank-deposit",
+        "issuerOrObligor": "Erebor Bank (FBO frxUSD Stablecoin Reserve Account)",
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "concentration"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "USDB (Bridge)",
+        "pct": 0.7,
+        "risk": "low",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Bridge and underlying reserve counterparties",
+        "riskFactors": [
+          "counterparty",
+          "smart-contract",
+          "custody"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "name": "LFRAX",
+        "pct": 0.7,
+        "risk": "medium",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "sfrxETH",
+        "pct": 0.6,
+        "risk": "low",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "market",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "CVX",
+        "pct": 0.5,
+        "risk": "very-high",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Convex Finance",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "ETH",
+        "pct": 0.4,
+        "risk": "very-low",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Ethereum protocol",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "lzfrxETH",
+        "pct": 0.2,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Frax Protocol and LayerZero messaging",
+        "riskFactors": [
+          "market",
+          "counterparty",
+          "liquidity",
+          "smart-contract",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "reUSD",
+        "pct": 0.2,
+        "risk": "medium",
+        "coinId": "reusd-re-protocol",
+        "assetClass": "hedged-crypto",
+        "issuerOrObligor": "Re Protocol and hedge counterparties",
+        "riskFactors": [
+          "market",
+          "basis",
+          "counterparty",
+          "custody",
+          "liquidity"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "wfrxETH",
+        "pct": 0.2,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract",
+          "custody"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "CRV",
+        "pct": 0.2,
+        "risk": "very-high",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Curve DAO",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "lzsfrxETH",
+        "pct": 0.2,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Frax Protocol and LayerZero messaging",
+        "riskFactors": [
+          "market",
+          "counterparty",
+          "liquidity",
+          "smart-contract",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "USDC",
+        "pct": 0.1,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Circle Internet Financial",
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "liquidity"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "USDS",
+        "pct": 0.1,
+        "risk": "low",
+        "coinId": "usds-sky",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Sky Protocol",
+        "riskFactors": [
+          "counterparty",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "WETH",
+        "pct": 0.1,
+        "risk": "very-low",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Wrapped Ether contract",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract",
+          "custody"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "name": "cvxCRV",
+        "pct": 0.1,
+        "risk": "very-high",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Convex Finance and Curve DAO",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "FPI",
+        "pct": 0.1,
+        "risk": "medium",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Frax Protocol",
+        "riskFactors": [
+          "market",
+          "smart-contract",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "name": "Other Frax balance-sheet assets",
+        "pct": 0.2,
+        "risk": "high",
+        "assetClass": "other",
+        "issuerOrObligor": "Identified AUSD, AVAX, BNB, CHR, DAI, MATIC, MULTI, OP, PYUSD, RAM, SDT, THE, USCC, USDT, VELO, WAVAX, WBNB, WPOL, ZK, ZZ, axlUSDC, axlfrxETH, crvUSD, sDAI, stkAAVE positions",
+        "riskFactors": [
+          "credit",
+          "market",
+          "liquidity",
+          "counterparty",
+          "custody",
+          "smart-contract"
+        ],
+        "liquidityHorizon": "unknown"
+      }
+    ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "verified",
     "sources": [
       {
@@ -1283,68 +1296,72 @@
         "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview"
       },
       {
-        "label": "Ethereum block 25590333",
-        "url": "https://etherscan.io/block/25590333"
+        "label": "Frax balance-sheet facts page",
+        "url": "https://facts.frax.finance/frax/balance-sheet"
       },
       {
-        "label": "Fraxtal block 38968758",
-        "url": "https://fraxscan.com/block/38968758"
+        "label": "Ethereum block 25711714",
+        "url": "https://etherscan.io/block/25711714"
+      },
+      {
+        "label": "Fraxtal block 39699558",
+        "url": "https://fraxscan.com/block/39699558"
       }
     ],
-    "rationale": "The official Frax balance-sheet response observed at 2026-07-22T19:23:47Z reports $299,785,253.5078 of assets and $281,016,207.8431 of liabilities, itemizes 49 positive asset symbols, and pins every chain read: Ethereum 25590333, Fraxtal 38968758, Arbitrum 486628516, Aurora 208090124, Avalanche 90981561, Base 48979440, Boba 36871693, BSC 111530186, Fantom 122613706, Harmony 91861148, Linea 31481616, Mantle 98308999, Moonbeam 16544948, Moonriver 17150258, Optimism 154574725, Polygon 90695486, Polygon zkEVM 33325430, Scroll 34443975, Stable 32730157, and ZKsync 71265624. Aggregating positive asset rows by symbol and applying the live adapter's one-decimal normalization yields the 25 displayed slices recorded here. The named BNB, MATIC, USDT, VELO, and crvUSD rows total approximately 0.08% and are intentionally preserved as one 0.1% rounded basket because each is below the adapter's display threshold.",
-    "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks and normalized by the live frax-balance-sheet adapter",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "The official Frax balance-sheet response observed at 2026-08-08T17:23:47Z reports $284,442,914.19 of assets and $262,985,172.46 of liabilities, itemizes 216 positive asset rows across 21 chains, and pins every chain read. Aggregating positive asset rows by symbol and normalizing to one-decimal weights yields 26 displayed slices. The residual 'Other Frax balance-sheet assets' slice (0.2%) groups 25 individually sub-display-threshold symbols whose exact USD values are published by the API.",
+    "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The API identifies the five individually sub-display-threshold symbols as BNB, MATIC, USDT, VELO, and crvUSD and publishes their exact raw USD values. The live adapter intentionally groups them into one 0.1% display basket; no source identity or raw value is treated as undisclosed.",
-    "knownUnknownExposurePct": 0.1,
+    "knownUnknownExposure": "The API identifies every sub-threshold symbol and publishes exact raw USD values; no reserve identity is treated as undisclosed.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
+        "reserveIndex": 1,
         "reserveName": "FRAX",
-        "pct": 20.7,
+        "pct": 16.7,
         "disposition": "self-reserve",
         "rationale": "The subject asset cannot create a dependency edge to itself."
       },
       {
-        "reserveIndex": 1,
+        "reserveIndex": 3,
+        "reserveName": "sFRAX",
+        "pct": 13.2,
+        "disposition": "self-reserve",
+        "rationale": "sFRAX is a staked claim on FRAX and therefore remains self exposure rather than an upstream stablecoin edge."
+      },
+      {
+        "reserveIndex": 0,
         "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 20,
+        "pct": 22.2,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "WTGXX is a disclosed WisdomTree government money-market-fund exposure, but it is quarantined outside the active tracked stablecoin set and therefore is not compiled as an active dependency edge.",
+        "rationale": "WTGXX is a disclosed WisdomTree government money-market-fund exposure outside the active tracked stablecoin set.",
         "candidateCoinIds": [
           "wtgxx-wisdomtree"
         ]
       },
       {
-        "reserveIndex": 3,
-        "reserveName": "sFRAX",
-        "pct": 12.5,
-        "disposition": "self-reserve",
-        "rationale": "sFRAX is a staked claim on FRAX and therefore remains subject self exposure rather than an upstream stablecoin edge."
-      },
-      {
-        "reserveIndex": 9,
+        "reserveIndex": 10,
         "reserveName": "USDB (Bridge)",
         "pct": 0.7,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "USDB is identified by the source but is outside the active scoring set, so the fallback does not promote it into the active dependency graph.",
+        "rationale": "USDB is identified by the source but is outside the active scoring set.",
         "candidateCoinIds": [
           "usdb-bridge"
         ]
       },
       {
-        "reserveIndex": 18,
+        "reserveIndex": 24,
         "reserveName": "FPI",
         "pct": 0.1,
         "disposition": "self-reserve",
-        "rationale": "FPI is a Frax-ecosystem stablecoin genesis-collateralized by FRAX itself (fpi-frax carries the upstream fpi-frax -> frax-frax reserve link), so promoting FRAX's 0.1% FPI balance-sheet holding to a dependency edge would close a circular FRAX<->FPI path that the static scoring graph forbids. The position is retained as reserve evidence but treated as downstream Frax-ecosystem self exposure rather than an upstream stablecoin edge."
+        "rationale": "FPI is a Frax-ecosystem stablecoin genesis-collateralized by FRAX itself; promoting FRAX's FPI balance-sheet holding to a dependency edge would close a circular FRAX<->FPI path."
       },
       {
-        "reserveIndex": 24,
-        "reserveName": "Unmapped Frax balance-sheet assets",
-        "pct": 0.1,
-        "disposition": "basket-needs-split",
-        "rationale": "The live adapter combines BNB, MATIC, USDT, VELO, and crvUSD because their individual weights round below display precision; assigning aggregate dependency links would fabricate constituent weights."
+        "reserveIndex": 25,
+        "reserveName": "Other Frax balance-sheet assets",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The residual combines 25 individually sub-display-threshold symbols identified by the API; assigning aggregate dependency links would fabricate constituent weights."
       }
     ]
   },

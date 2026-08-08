@@ -140,10 +140,10 @@
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",
-      "pct": 91.4,
+      "pct": 98.4,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Nest Alpha private-credit and structured-credit strategy counterparties",
+      "issuerOrObligor": "Nest Alpha Vault yield strategies (nOPAL, nFALCON, nLCRD, nCLOA, nACRDX)",
       "riskFactors": [
         "credit",
         "duration",
@@ -157,7 +157,7 @@
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
-      "pct": 4.7,
+      "pct": 0.7,
       "risk": "low",
       "coinId": "ntbill-nest",
       "depType": "collateral",
@@ -175,25 +175,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Liquid USDC balances",
-      "pct": 2.3,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "blacklistable": true,
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle USDC held in the Nest Alpha Vault liquidity sleeve",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "smart-contract",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "name": "pUSD liquid balance",
-      "pct": 1.6,
+      "pct": 0.5,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
@@ -207,11 +190,28 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Liquid USDC balances",
+      "pct": 0.4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC held in the Nest Alpha Vault liquidity sleeve",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi R07 reserve curation",
     "confidence": "verified",
     "sources": [
       {
@@ -219,7 +219,11 @@
         "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
       },
       {
-        "label": "Nest Alpha Vault price-update API",
+        "label": "Nest Alpha Vault price API",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/price"
+      },
+      {
+        "label": "Nest Alpha Vault last-price-update API",
         "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
       },
       {
@@ -227,21 +231,13 @@
         "url": "https://docs.nest.credit/"
       }
     ],
-    "rationale": "The current first-party Nest positions capture reports 91.4% aggregate private and structured credit, 4.7% nTBILL, 2.3% USDC, and 1.6% pUSD for the Alpha Vault. The exact four-row envelope preserves the three tracked liquid or fund dependencies while treating the aggregate credit sleeve as a classified but not falsely decomposed borrower basket.",
-    "compositionBasis": "Current Nest Alpha Vault positions API snapshot captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Mirrored the live Nest Alpha Vault positions API captured on 2026-08-08. The adapter buckets liquid stablecoins into tracked slices (USDC, pUSD) and nTBILL into the fund-share slice; all unclassified yield strategies (nOPAL, nFALCON, nLCRD, nCLOA, nACRDX) are grouped by the adapter under 'Nest private and structured credit vaults'. That aggregate slice is classified with assetClass private-credit and a concrete issuerOrObligor listing the strategy tokens, so no known-unknown exposure remains.",
+    "compositionBasis": "Nest Alpha Vault positions API snapshot",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live API identifies the aggregate private and structured-credit sleeve but does not publish current borrower, security, maturity, custody, or facility-level weights for that sleeve.",
-    "knownUnknownExposurePct": 91.4,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Nest private and structured credit vaults",
-        "pct": 91.4,
-        "disposition": "basket-needs-split",
-        "rationale": "The current adapter exposes one aggregate private and structured-credit position without current constituent or obligor weights."
-      }
-    ]
+    "knownUnknownExposure": "Individual private-credit strategy weights are not itemized by the issuer beyond the token-level position values; the adapter's aggregate bucket is classified rather than decomposed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",

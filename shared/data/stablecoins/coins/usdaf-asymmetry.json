@@ -574,7 +574,7 @@
   "reserves": [
     {
       "name": "ysyBOLD",
-      "pct": 79.5,
+      "pct": 79.4,
       "risk": "medium",
       "coinId": "bold-liquity",
       "depType": "collateral",
@@ -590,7 +590,7 @@
     },
     {
       "name": "scrvUSD",
-      "pct": 9.9,
+      "pct": 10.0,
       "risk": "medium",
       "coinId": "scrvusd-curve",
       "depType": "collateral",
@@ -666,7 +666,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
+    "reviewedAt": "2026-08-08",
     "reviewer": "SOL-III Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
@@ -683,9 +683,9 @@
         "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
       }
     ],
-    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
-    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. Slices are mirrored verbatim from the live adapter branch names so curated classification overlays the live feed. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
+    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-08-08",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
     "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
     "knownUnknownExposurePct": 0

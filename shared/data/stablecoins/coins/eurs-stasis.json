@@ -19,28 +19,24 @@
   "detailProvider": "defillama",
   "geckoId": "stasis-eurs",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://stasis.net/transparency",
-    "provider": "BDO Malta (STASIS calls these on-demand verification reports; none issued since 2024-08-01, annual BDO audit last dated 2024-05-20, daily bank statements stopped 2025-12-12)",
-    "attestorTier": "regional",
-    "cadence": "ad-hoc",
+    "provider": "STASIS live reserve transparency page (daily statement)",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
     "attestorJurisdiction": "Malta",
     "latestReport": {
-      "periodEnd": "2024-08-01",
-      "publishedAt": "2024-08-02",
-      "assuranceMethod": "agreed-upon-procedures",
-      "scope": "assets-only",
-      "liabilityReconciliation": "partial",
-      "reviewer": "owner-triage",
-      "confidence": "verified",
+      "periodEnd": "2026-08-07",
+      "publishedAt": "2026-08-08",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Kimi Code R08 reserve research",
+      "confidence": "probable",
       "sources": [
         {
-          "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
-          "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
-        },
-        {
-          "label": "STASIS EURS transparency index",
-          "url": "https://eurs.stasis.net/transparency"
+          "label": "STASIS EURS transparency page",
+          "url": "https://stasis.net/transparency"
         }
       ]
     }

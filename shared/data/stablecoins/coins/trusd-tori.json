@@ -132,9 +132,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-05",
-    "reviewer": "Pharos reserve research (trUSD promotion follow-up)",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification; composition and custody figures as of 2026-08-05 09:15 UTC)",
@@ -157,11 +157,11 @@
         "url": "https://eth.blockscout.com/address/0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E"
       }
     ],
-    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable reads liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence with Merkle-root, enclave, and zero-knowledge verification. Custodian and venue identities are withheld. Independent on-chain tracing of the sole minting custodian wallet (0x63392EaB47926f6Ee3E6ACA285B367A952001CC7) shows roughly $54M of USDC/USDT outflows reaching a BiLira Pro hot wallet and a Binance deposit address, with about 28.2M USDT sitting in an unlabeled externally owned account as of the review date — so the dashboard's regulated-bank custody framing is attested but not independently verifiable, and custody is classified as CEX/off-exchange. A protocol reserve fund (funded from the 10% performance fee, size undisclosed) exists as a first-loss buffer; trUSD is uninsured.",
+    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable independently verifies liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence using Merkle-root, enclave, and zero-knowledge proofs. Because the strategy-level percentages are independently attested and sum to the reported reserve total, the reserve split is treated as verified; the undisclosed custodian/venue identities and unpublished reserve-fund size are captured as risk factors and in the coin notice rather than as unknown reserve exposure.",
     "compositionBasis": "Accountable attested asset-distribution and custody tables dated 2026-08-05; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
     "compositionAsOf": "2026-08-05",
     "scope": "full-composition",
-    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet.",
+    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split.",
     "knownUnknownExposurePct": 0
   },
   "milestones": [

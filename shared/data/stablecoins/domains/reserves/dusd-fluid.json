@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "owner-triage; Kimi T06 wave-2 re-review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (R11 revisit)",
     "confidence": "unknown",
     "sources": [
       {
@@ -33,7 +33,7 @@
         "url": "http://web.archive.org/web/20230310124908/https://fluid.ch/dusd/"
       }
     ],
-    "rationale": "Re-checked on 2026-07-30: the only located issuer reserve claim remains the December 2021 launch FAQ describing parts of the product and validation API in future tense. The issuer product URL fluid.ch/dusd returned HTTP 522 and its latest Wayback Machine snapshot is 2023-03-10; no current composition or assurance report was found there or in web searches. On-chain at Arbitrum block 489415741, the OffchainTreasuryOracle answer (10,782,314.982420) exactly equals totalSupply (2,952,323.892420) plus totalPendingRedeems (7,829,991.090000), and the oracle's last update transaction is dated 2024-04-21, so the self-reported treasury figure is stale and a large redemption queue is unsettled. The historical cash design cannot support a verified 2026 composition.",
+    "rationale": "Re-checked on 2026-08-08: the issuer product URL fluid.ch/dusd still returned HTTP 522 and no new reserve report, attestation, or banking disclosure was found in web searches or on-chain. The only located issuer reserve claim remains the December 2021 launch FAQ describing the product and validation API in future tense. The OffchainTreasuryOracle last update remains dated 2024-04-21 and the self-reported treasury figure is stale. No verifiable 2026 composition can be established.",
     "compositionBasis": "Evidence-blocked: launch-era issuer design plus current onchain token existence, with no current reserve report",
     "scope": "full-composition",
     "knownUnknownExposure": "All current reserve assets, balances, banking counterparties, safeguarding terms, assurance status, and redemption liquidity are unverified.",
@@ -58,8 +58,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "owner-triage; Kimi T06 wave-2 re-review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (R11 revisit)",
     "confidence": "unknown",
     "sources": [
       {

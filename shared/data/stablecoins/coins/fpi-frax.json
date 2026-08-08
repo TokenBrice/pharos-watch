@@ -456,7 +456,7 @@
   "reserves": [
     {
       "name": "FRAX",
-      "pct": 81.7,
+      "pct": 87.05,
       "risk": "low",
       "coinId": "frax-frax",
       "depType": "collateral",
@@ -473,7 +473,7 @@
     },
     {
       "name": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
-      "pct": 10.7,
+      "pct": 11.44,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Convex, Curve FPI/FRAX liquidity pool, and Frax Finance",
@@ -488,22 +488,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "FXS",
-      "pct": 6.2,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Frax Share token and market liquidity",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "Fraxswap V2 FRAX/FPIS",
-      "pct": 1.4,
+      "pct": 1.5,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Fraxswap V2 FRAX/FPIS liquidity pool",
@@ -516,11 +502,25 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "FXS",
+      "pct": 0.01,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Frax Share token and market liquidity",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -536,33 +536,33 @@
         "url": "https://frax.com/transparency"
       }
     ],
-    "rationale": "The first-party FPI collateral endpoint reports the current FRAX, staked Convex FPI/FRAX LP, FXS, and Fraxswap FRAX/FPIS positions. The exact fixed capture was normalized into four rows, with each LP, governance-token, market, and upstream-stablecoin failure domain retained rather than folding the portfolio into a single FRAX claim.",
-    "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The first-party FPI collateral endpoint was re-read on 2026-08-08 (block 25711761). Ferry/liability entries (FPI tokens locked in FraxFerry) were excluded because they represent bridged supply rather than reserve assets. The remaining reserve positions — Ethereum and Fraxtal comptroller FRAX balances plus the FPI Controller FRAX balance, staked Convex FPI/FRAX LP, Fraxswap V2 FRAX/FPIS, and a negligible FXS dust balance — were normalized to four classified rows. Each LP, governance-token, market, and upstream-stablecoin failure domain is retained rather than folding the portfolio into a single FRAX claim.",
+    "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-08-08; ferry/liability entries excluded from the reserve mix",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "All positive positions returned by the current first-party endpoint are identified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
+    "knownUnknownExposure": "All positive reserve positions returned by the first-party endpoint are identified and classified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
-        "pct": 10.7,
+        "pct": 11.44,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The staked Convex LP is an identified protocol position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "FXS",
-        "pct": 6.2,
+        "reserveName": "Fraxswap V2 FRAX/FPIS",
+        "pct": 1.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "FXS is governance-token collateral rather than a tracked stablecoin dependency."
+        "rationale": "The Fraxswap LP is an identified protocol position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Fraxswap V2 FRAX/FPIS",
-        "pct": 1.4,
+        "reserveName": "FXS",
+        "pct": 0.01,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The Fraxswap LP is an identified protocol position rather than a tracked stablecoin dependency."
+        "rationale": "FXS is governance-token collateral rather than a tracked stablecoin dependency."
       }
     ]
   },

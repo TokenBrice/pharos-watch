@@ -423,7 +423,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
+    "reviewedAt": "2026-08-08",
     "reviewer": "OpenAI Codex backing review; Kimi T24 re-verification",
     "confidence": "probable",
     "sources": [
@@ -432,7 +432,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "rationale": "Ripio's current local-stablecoin page identifies WCLP as a Chilean-peso stablecoin in its wFIAT product family. Re-checked 2026-07-30: the wFIAT attestation index publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but still no wCLP attestation or reserve report, so the composition stays unclassified rather than borrowing sibling-token assurance. The repository's existing collateral description supports a single aggregate reserve envelope of Chilean-peso cash and liquid local-currency instruments, but the reviewed issuer page does not publish a WCLP-specific asset split, named financial institution, or reserve attestation.",
+    "rationale": "Ripio's current local-stablecoin page identifies WCLP as a Chilean-peso stablecoin in its wFIAT product family. Re-checked 2026-08-08: the wFIAT attestation index publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but still no wCLP attestation or reserve report, so the composition stays unclassified rather than borrowing sibling-token assurance. The repository's existing collateral description supports a single aggregate reserve envelope of Chilean-peso cash and liquid local-currency instruments, but the reviewed issuer page does not publish a WCLP-specific asset split, named financial institution, or reserve attestation.",
     "compositionBasis": "Ripio wFIAT local-stablecoin disclosure for WCLP",
     "scope": "full-composition",
     "knownUnknownExposure": "The full 100% reserve envelope remains unclassified beyond Chilean-peso cash and liquid local-currency instruments; no per-token attestation or current category weights were found.",
@@ -463,7 +463,7 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-08",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [

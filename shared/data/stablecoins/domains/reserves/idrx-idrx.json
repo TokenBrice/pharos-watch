@@ -57,8 +57,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi V9 unknown-reduction wave-2 T03",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi V9 unknown-reduction wave-2 T03; R13 stale-as-of refresh",
     "confidence": "verified",
     "sources": [
       {
@@ -70,7 +70,7 @@
         "url": "https://home.idrx.co/en/docs/"
       }
     ],
-    "rationale": "The June 2026 Reserve Transparency Report is an agreed-upon-procedures engagement (Report No. 00016/3.0408/AUP/99/1180-13/1/VI/2026) performed by KAP Jojo Sunarjo & Rekan (Registered Public Accountant licence 0444/KM.1/2013, XLNC founding member) over PT IDRX Indo Inovasi's Reserve Account Report as of June 19, 2026 at 13:00 WIB. It reports Rp12,639,968,180 of collateral against 12,618,760,039 IDRX in circulation (about 100.17% coverage), itemized as USD deposits in escrow at GHP Consulting Pte. Ltd. ($267,127; Rp4,761,805,902), PT Bank Rakyat Indonesia Rp3,722,163,381, Indodax Rp1,500,179,369, Duitku Rp1,260,417,351, PINTU Rp999,852,469, PT Bank Ina Perdana Rp369,006,340, PT Bank Nationalnobu (Nobu Bank) Rp25,536,025, and PT Bank Permata Rp1,007,343. Institution-level balances normalize to the slice weights shown. The report contains no government-bond holdings; composition is entirely IDR/USD fiat balances at the named institutions. The AUP is not an audit or assurance opinion under Indonesian Institute of CPAs standards, which the accountant states explicitly.",
+    "rationale": "The June 2026 Reserve Transparency Report is an agreed-upon-procedures engagement (Report No. 00016/3.0408/AUP/99/1180-13/1/VI/2026) performed by KAP Jojo Sunarjo & Rekan (Registered Public Accountant licence 0444/KM.1/2013, XLNC founding member) over PT IDRX Indo Inovasi's Reserve Account Report as of June 19, 2026 at 13:00 WIB. It reports Rp12,639,968,180 of collateral against 12,618,760,039 IDRX in circulation (about 100.17% coverage), itemized as USD deposits in escrow at GHP Consulting Pte. Ltd. ($267,127; Rp4,761,805,902), PT Bank Rakyat Indonesia Rp3,722,163,381, Indodax Rp1,500,179,369, Duitku Rp1,260,417,351, PINTU Rp999,852,469, PT Bank Ina Perdana Rp369,006,340, PT Bank Nationalnobu (Nobu Bank) Rp25,536,025, and PT Bank Permata Rp1,007,343. Institution-level balances normalize to the slice weights shown. The report contains no government-bond holdings; composition is entirely IDR/USD fiat balances at the named institutions. The AUP is not an audit or assurance opinion under Indonesian Institute of CPAs standards, which the accountant states explicitly. R13 re-open 2026-08-08: the IDRX docs portal returned HTTP 500 and no July 2026 reserve transparency report was located, so the June 2026 AUP remains the freshest published source.",
     "compositionBasis": "KAP Jojo Sunarjo & Rekan agreed-upon-procedures Reserve Account Report as of 2026-06-19, institution-level balances",
     "compositionAsOf": "2026-06-19",
     "scope": "full-composition",
