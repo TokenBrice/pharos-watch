@@ -25,8 +25,8 @@
         "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
       },
       {
-        "label": "Deloitte USDPT reserve examination for May 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Deloitte USDPT reserve examination for June 2026",
+        "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
       }
     ]
   },
@@ -138,8 +138,8 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

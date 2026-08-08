@@ -395,11 +395,11 @@
     }
   ],
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
-    "provider": "Deloitte & Touche LLP",
-    "attestorTier": "big4",
-    "cadence": "monthly",
+    "type": "self-reported",
+    "url": "https://www.sofi.com/crypto/sofiusd/",
+    "provider": "SoFi product disclosures (press reports monthly Deloitte verification, but no public attestation report or transparency page exists; the previously recorded SEC URL resolved to an unrelated ABS-15G filing under a different CIK)",
+    "attestorTier": "self",
+    "cadence": "none",
     "attestorJurisdiction": "United States"
   },
   "listingStatusReview": {

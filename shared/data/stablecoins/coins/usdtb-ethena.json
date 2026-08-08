@@ -21,12 +21,12 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-    "provider": "Big Four accounting firm via Anchorage Digital Bank",
+    "provider": "Deloitte & Touche LLP via Anchorage Digital Bank (firm identity signature-verified from the June 2026 report PDF)",
     "attestorTier": "big4",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -34,8 +34,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDtb Reserve Report - May 2026",
-          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+          "label": "USDtb Reserve Report - June 2026",
+          "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
         }
       ]
     }

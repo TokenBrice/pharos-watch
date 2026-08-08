@@ -20,11 +20,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://openeden.com/tbill/transparency",
-    "provider": "TJ Assurance Partners PAC",
+    "provider": "Protege Fund Services (fund administrator producing the recurring daily and monthly NAV reports); TJ Assurance Partners PAC is the fund's annual auditor with no published report, and the only named controls audit is a one-off Ernst & Young procedures review",
     "attestorTier": "niche",
     "cadence": "daily-nav",
-    "attestorJurisdiction": "Singapore",
-    "attestorLicense": "Singapore Public Accounting Corporation (PAC), ACRA 201437219G"
+    "attestorJurisdiction": "Singapore"
   },
   "links": [
     {

@@ -17,7 +17,7 @@
   "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency",
     "provider": "Ankura Trust Company",
     "attestorTier": "niche",
     "cadence": "daily-nav"

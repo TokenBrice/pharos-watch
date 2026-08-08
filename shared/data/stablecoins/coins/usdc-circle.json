@@ -27,17 +27,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-05-29",
-      "publishedAt": "2026-06-29",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR remediation pass 2026-08 (refreshed to the June 2026 report; PDF retrieved and Deloitte signature verified by research pass)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDC examination report - May 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+          "label": "Deloitte USDC examination report - June 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf"
         }
       ]
     }

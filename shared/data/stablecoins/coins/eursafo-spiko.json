@@ -18,12 +18,11 @@
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-euro",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS SICAV sub-fund"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {

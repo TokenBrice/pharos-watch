@@ -776,11 +776,12 @@
     }
   },
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://accountable.apyx.fi/",
-    "provider": "Accountable",
+    "type": "independent-audit",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions covering the platform's backing assets, of which apxUSD is the collateralized base token (latest report June 2026 as of 2026-08-08; the Accountable dashboard names apxUSD but runs on Apyx-deployed infrastructure and is treated as secondary)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "launchDate": "2026-02-18",
   "mechanismArchetype": "rwa-credit-fund"

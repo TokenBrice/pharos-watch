@@ -18,12 +18,11 @@
   "geckoId": "spiko-us-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: annual certification plus pre-publication asset-composition checks; reports are sent on written request only, none published; the fund page's 'four audits annually' is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {

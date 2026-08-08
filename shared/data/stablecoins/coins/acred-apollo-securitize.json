@@ -19,9 +19,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-    "provider": "Securitize / Apollo (NAV statements published per fund cadence)",
+    "provider": "Securitize / Apollo (native redemptions at daily NAV; RedStone publishes the fund's daily NAV feed)",
     "attestorTier": "self",
-    "cadence": "monthly",
+    "cadence": "daily-nav",
     "attestorJurisdiction": "United States"
   },
   "links": [

@@ -34,8 +34,8 @@
   "geckoId": "ousg",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing",
-    "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)",
+    "url": "https://app.ondo.finance/legal-documentation/us",
+    "provider": "NAV Consulting, Inc. (fund administrator; daily third-party reporting per ondo.finance/ousg; administrator not named on current public pages, and the former Google Drive report folder is now sign-in-gated, so the record points at Ondo's legal-documentation portal)",
     "attestorTier": "niche",
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States"
