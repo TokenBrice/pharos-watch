@@ -1387,3 +1387,65 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
     });
   }
 });
+
+describe("StablecoinMeta schema — PoR / composition lockstep", () => {
+  const reserves = [{ name: "US Treasury bills", pct: 100, risk: "low" }];
+  const latestReport = {
+    periodEnd: "2026-06-30",
+    publishedAt: "2026-07-10",
+    assuranceMethod: "examination",
+    scope: "assets-only",
+    liabilityReconciliation: "none",
+    reviewer: "Fixture Reviewer",
+    confidence: "verified",
+    sources: [{ label: "Attestation", url: "https://example.com/attestation" }],
+  };
+  const reserveReview = (compositionAsOf: string) => ({
+    reviewedAt: "2026-07-12",
+    reviewer: "Fixture Reviewer",
+    confidence: "verified",
+    sources: [{ label: "Attestation", url: "https://example.com/attestation" }],
+    rationale: "The fixture models a curated composition drawn from the attestation.",
+    compositionBasis: "Attestation breakdown table",
+    compositionAsOf,
+    scope: "full-composition",
+    knownUnknownExposure: "None identified.",
+    knownUnknownExposurePct: 0,
+  });
+  const coin = (compositionAsOf: string) =>
+    makeCoin({
+      id: "fixture-lockstep",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport },
+      reserveReview: reserveReview(compositionAsOf),
+    });
+
+  it("accepts a composition dated to the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-06-30")], "fixture")).not.toThrow();
+  });
+
+  it("rejects a composition dated after the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-07-12")], "fixture")).toThrow(/PoR lockstep/);
+  });
+
+  it("rejects a composition dated before the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-05-31")], "fixture")).toThrow(/PoR lockstep/);
+  });
+
+  it("stays silent when either side of the pair is absent", () => {
+    const noComposition = makeCoin({
+      id: "fixture-lockstep-no-composition",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport },
+    });
+    expect(() => parseStablecoinMetaAssets([noComposition], "fixture")).not.toThrow();
+
+    const noReport = makeCoin({
+      id: "fixture-lockstep-no-report",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por" },
+      reserveReview: reserveReview("2026-06-30"),
+    });
+    expect(() => parseStablecoinMetaAssets([noReport], "fixture")).not.toThrow();
+  });
+});
