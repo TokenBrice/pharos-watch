@@ -7,21 +7,21 @@ import {
 
 const EVIDENCE_ONLY_TARGETS = {
   "usdgo-osl": ["custodyContinuity"],
-  "syrupusdc-maple": ["custodyContinuity"],
+  "syrupusdc-maple": ["assuranceAndReconciliation"],
   "susdt-spark": ["assuranceAndReconciliation", "custodyContinuity"],
-  "moveusd-cfx": ["custodyContinuity"],
+  "moveusd-cfx": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "uusd-anything-labs": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "usda-alpha-partner": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "pgold-pleasing": ["assuranceAndReconciliation", "custodyContinuity"],
-  "usdon-ondo": ["assuranceAndReconciliation", "custodyContinuity"],
-  "xaum-matrixdock": ["custodyContinuity"],
-  "chfau-allunity": ["custodyContinuity"],
+  "usdon-ondo": [],
+  "xaum-matrixdock": [],
+  "chfau-allunity": ["assuranceAndReconciliation", "custodyContinuity"],
   "jupusd-jupiter": ["claimAndSegregation"],
-  "brz-transfero": ["assuranceAndReconciliation", "custodyContinuity"],
+  "brz-transfero": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "pathusd-bridge": ["assuranceAndReconciliation"],
-  "eusd-electronic-usd": ["claimAndSegregation", "custodyContinuity"],
+  "eusd-electronic-usd": [],
   "aid-gaib": ["claimAndSegregation", "custodyContinuity"],
-  "usdm-moneta": ["claimAndSegregation", "custodyContinuity"],
+  "usdm-moneta": ["custodyContinuity"],
   "usdb-blast": ["assuranceAndReconciliation", "custodyContinuity"],
   "eusd-telcoin": ["assuranceAndReconciliation", "custodyContinuity"],
   "eurq-quantoz": ["assuranceAndReconciliation", "custodyContinuity"],
@@ -33,8 +33,8 @@ const EVIDENCE_ONLY_TARGETS = {
   "vnxau-vnx": ["custodyContinuity"],
   "axcnh-anchorx": ["custodyContinuity"],
   "kgst-kyrgyz-som": ["assuranceAndReconciliation", "custodyContinuity"],
-  "jtrsy-anemoy": ["lossRecoveryDesign", "navValuation"],
-  "gusd-gate": ["durationAndLiquidity", "fundClaimAndSeniority", "navValuation"],
+  "jtrsy-anemoy": ["lossRecoveryDesign"],
+  "gusd-gate": ["durationAndLiquidity", "fundClaimAndSeniority", "lossRecoveryDesign", "navValuation"],
   "frax-frax": ["durationAndLiquidity", "lossRecoveryDesign", "navValuation"],
   "thbill-theo": ["durationAndLiquidity", "lossRecoveryDesign", "navValuation"],
   "usdk-kast": ["durationAndLiquidity", "lossRecoveryDesign", "navValuation"],
@@ -47,14 +47,14 @@ const EVIDENCE_ONLY_TARGETS = {
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
     expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(36);
-    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(67);
+    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(65);
 
     const overlayById = new Map(
       mechanismReviewOverlaysAsset.overlays.map((overlay) => [overlay.assetId, overlay]),
     );
     for (const [assetId, componentKeys] of Object.entries(EVIDENCE_ONLY_TARGETS)) {
       const overlay = MechanismReviewOverlaySchema.parse(overlayById.get(assetId));
-      expect(overlay.reviewedAt, assetId).toBe("2026-07-29");
+      expect(overlay.reviewedAt, assetId).toBe("2026-08-08");
       const expanded = expandOverlayReview(overlay) as unknown as Record<
         string,
         { quality: string | null; status: { observationState: string; gapIds: string[] } }

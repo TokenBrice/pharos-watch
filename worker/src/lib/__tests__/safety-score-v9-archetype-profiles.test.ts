@@ -26,7 +26,7 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 30) / 1_000;
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 9) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
