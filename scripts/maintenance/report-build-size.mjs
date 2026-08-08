@@ -71,10 +71,12 @@ const DEFAULT_BUDGETS = {
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
   // ceiling sits above the ~253 KB optimized payload.
   representativeDetailHtmlBytes: 270_000,
-  // Safety Score V9 fact/provenance surfaces raise the production USDT route
-  // to 93,408 bytes. Keep the ceiling intentionally narrow while leaving
-  // enough headroom for the representative detail payloads to remain useful.
-  representativeDetailPageTxtBytes: 95_000,
+  // Safety Score V9 fact/provenance surfaces raised the production USDT route
+  // to 93,408 bytes, and the wave-1 curation release (block-pinned control
+  // reviews, mechanism overlay evidence) lifts it to ~95,030. Keep the ceiling
+  // intentionally narrow while leaving enough headroom for the representative
+  // detail payloads to remain useful.
+  representativeDetailPageTxtBytes: 97_500,
   // Sum of gzip sizes of every script chunk referenced by a representative
   // detail page's HTML — the eager first-load JS budget per route (Mythos
   // #50). Ratcheted from 810 KB after the chart-section deferral (P1-6/P1-5)
