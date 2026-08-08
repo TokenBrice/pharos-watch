@@ -32,6 +32,12 @@ Options:
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
   --release-candidate-id <id>     Optional v9-rc-N publication identity override
+  --allow-registry-mismatch       Replay a capture whose registry fingerprint does not match
+                                  the local registry. Needed when carrying a frozen capture
+                                  across a registry-changing curation commit. The resulting
+                                  diff then measures code and curation changes TOGETHER and
+                                  must be partitioned by attribution before it is read as an
+                                  equivalence result.
   -h, --help                      Show this help`;
 
 export interface SafetyScoreV9ReplayArtifact {
@@ -132,6 +138,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   extension?: unknown;
   publishedAtSec: number;
   releaseCandidateId?: string;
+  allowRegistryMismatch?: boolean;
 }): SafetyScoreV9ReplayArtifact {
   return {
     schemaVersion: 1,
@@ -157,6 +164,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       "published-at": { type: "string" },
       extension: { type: "string" },
       "release-candidate-id": { type: "string" },
+      "allow-registry-mismatch": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -179,6 +187,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),
+    ...(values["allow-registry-mismatch"] === true ? { allowRegistryMismatch: true } : {}),
   });
   // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(values.output, serializeSafetyScoreV9ReplayArtifact(artifact), "utf8");
