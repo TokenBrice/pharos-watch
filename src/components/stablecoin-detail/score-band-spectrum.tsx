@@ -84,7 +84,7 @@ export function ScoreBandSpectrum({
             style={{ width: `${widths[index]}%` }}
             className={cn(
               "truncate text-center text-[9px] font-medium uppercase leading-tight tracking-[0.08em]",
-              index === activeIndex ? band.textClass : "invisible text-muted-foreground/60 sm:visible",
+              index === activeIndex ? band.textClass : "max-sm:invisible text-muted-foreground/60",
             )}
           >
             {band.label}

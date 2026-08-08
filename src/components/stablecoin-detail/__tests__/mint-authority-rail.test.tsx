@@ -48,8 +48,8 @@ describe("MintAuthorityRail", () => {
 
   it("draws one signer dot per signer with the threshold filled", () => {
     const html = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl()]} />);
-    expect(html.match(/bg-foreground\/70/g)?.length).toBe(3);
-    expect(html.match(/border-foreground\/30/g)?.length).toBe(3);
+    expect(html.match(/bg-foreground\/80/g)?.length).toBe(3);
+    expect(html.match(/bg-muted-foreground\/25/g)?.length).toBe(3);
   });
 
   it("falls back to a numeric threshold past the dot budget", () => {
@@ -57,7 +57,7 @@ describe("MintAuthorityRail", () => {
       <MintAuthorityRail {...BASE_PROPS} controls={[makeControl({ threshold: 5, signerCount: 11 })]} />,
     );
     expect(html).toContain("5/11");
-    expect(html).not.toContain("bg-foreground/70");
+    expect(html).not.toContain("bg-foreground/80");
   });
 
   it("gives EOA controls the caution tone and short label", () => {
