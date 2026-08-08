@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.1",
+    title: "Structural inputs read published Safety Score outputs",
+    date: "2026-08-08",
+    effectiveAt: 1786147201,
+    summary:
+      "DDR's mint-authority structural input now reads the published Safety Score V9 mint posture band instead of the retired standalone Mint Authority band. Prediction weights, factor rules, and exit thresholds are unchanged.",
+    impact: [
+      "K1's risky-minter test reads the published V9 mint posture band; the concentrated and exposed bands stay the risky set, so the rule is unchanged and only its input moved engines",
+      "A run with no installed V9 publication derives the band from the curated authority posture instead, so a degraded or held publication cannot silently drop K1's band leg; an installed publication is authoritative, including when it publishes no band for an asset",
+      "K5 inputs are unchanged: it already read published Safety Score outputs and continues to do so",
+      "No factor weights, severity bands, duration landmarks, or incident-lifecycle rules change",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.0",
     title: "DDR v4 Methodology Contract",
     date: "2026-07-30",

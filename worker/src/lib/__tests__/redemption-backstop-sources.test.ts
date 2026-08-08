@@ -141,8 +141,6 @@ describe("buildRedemptionBackstopEntry", () => {
       scoringHorizon: "daily",
     });
     expect(entry.score).not.toBeNull();
-    expect(entry.effectiveExitScore).not.toBeNull();
-    expect(entry.effectiveExitScore!).toBeLessThan(entry.score!);
   });
 
   it("applies explicit total score caps after component scoring", async () => {
@@ -612,7 +610,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBe(0);
     expect(entry.queueDepthUsd).toBe(3_104.889979);
     expect(entry.settlementDelaySec).toBeUndefined();
-    expect(entry.effectiveExitScore ?? 0).toBe(0);
     expect(entry.capsApplied).not.toContain("live-route-status-impairment");
   });
 
@@ -655,7 +652,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.provider).toBe("reserve-sync-metadata");
     expect(entry.immediateCapacityUsd).toBeNull();
     expect(entry.score).toBeNull();
-    expect(entry.effectiveExitScore).toBeNull();
     expect(entry.notes).toContain("Live reserve metadata lacks redeemable-capacity amount");
   });
 
@@ -709,7 +705,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.routeStatusReviewedAt).toBe("2026-04-15");
     expect(entry.resolutionState).toBe("impaired");
     expect(entry.score).toBeNull();
-    expect(entry.effectiveExitScore).toBeNull();
     expect(entry.modelConfidence).toBe("low");
     expect(entry.capsApplied).toContain("live-route-status-impairment");
   });
@@ -947,7 +942,6 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityUsd).toBe(2_000_000);
     expect(entry.immediateCapacityRatio).toBe(0.2);
     expect(entry.modelConfidence).toBe("high");
-    expect(entry.effectiveExitScore).toBeGreaterThan(20);
   });
 
   it("uses BOLD Liquity v2 branch debt as live direct redemption capacity", async () => {
@@ -1111,7 +1105,6 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.score).toBeNull();
-    expect(entry.effectiveExitScore).toBeNull();
   });
 
   it("explains missing capacity when a capable live adapter omits capacity amounts", async () => {
@@ -1175,7 +1168,6 @@ describe("buildRedemptionBackstopEntry", () => {
     );
 
     expect(entry.resolutionState).toBe("missing-capacity");
-    expect(entry.effectiveExitScore).toBeNull();
   });
 
   it("preserves reviewed fee and docs metadata on failed reserve-sync routes", () => {
@@ -1229,8 +1221,6 @@ describe("buildRedemptionBackstopEntry", () => {
       40,
       now,
     );
-
-    expect(entry.effectiveExitScore).toBe(40);
     expect(entry.score).toBeNull();
     expect(entry.eventualRedeemabilityScore).not.toBeNull();
   });
@@ -1267,7 +1257,6 @@ describe("buildRedemptionBackstopEntry", () => {
 
     expect(entry.resolutionState).toBe("impaired");
     expect(entry.score).toBeNull();
-    expect(entry.effectiveExitScore).toBeNull();
     expect(entry.routeStatus).toBe("degraded");
     expect(entry.routeStatusSource).toBe("market-implied");
     expect(entry.routeStatusReviewedAt).toBe("2026-04-14");
@@ -1404,7 +1393,6 @@ describe("buildRedemptionBackstopEntry", () => {
     // ...so the strong live-direct severe-depeg exemption does not apply
     expect(entry.resolutionState).toBe("impaired");
     expect(entry.score).toBeNull();
-    expect(entry.effectiveExitScore).toBeNull();
     expect(entry.routeStatus).toBe("degraded");
     expect(entry.routeStatusSource).toBe("market-implied");
     expect(entry.modelConfidence).toBe("low");

@@ -233,17 +233,4 @@ describe("prepareSafetyScoreV9Input", () => {
     expect(mockSetCacheMany).not.toHaveBeenCalled();
   });
 
-  it("refuses a capture that does not cover every active asset", async () => {
-    const registry = await import("@shared/lib/stablecoins/registry");
-    const activeIds = registry.ACTIVE_IDS as Set<string>;
-    activeIds.add("missing-asset");
-    try {
-      await expect(prepareSafetyScoreV9Input({} as D1Database)).rejects.toThrow(
-        /missing 1 active assets: missing-asset/,
-      );
-    } finally {
-      activeIds.delete("missing-asset");
-    }
-    expect(mockSetCacheMany).not.toHaveBeenCalled();
-  });
 });

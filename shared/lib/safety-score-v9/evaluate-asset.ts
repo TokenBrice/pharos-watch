@@ -728,6 +728,19 @@ function conservativeTrackRecordMonths(launchedAtSec: number | null, asOfSec: nu
   return Math.max(0, months);
 }
 
+/**
+ * Whole months elapsed since a reviewed resolved mint incident, on the same
+ * conservative floor convention as {@link conservativeTrackRecordMonths}. An
+ * absent fact returns undefined so the decay ladder holds its strictest rung.
+ */
+function conservativeResolvedIncidentAgeMonths(
+  latestResolvedIncidentAtSec: number | null | undefined,
+  asOfSec: number,
+): number | undefined {
+  if (latestResolvedIncidentAtSec == null) return undefined;
+  return conservativeTrackRecordMonths(latestResolvedIncidentAtSec, asOfSec);
+}
+
 function gapReasonsForStatus(
   asset: V9AssetFactsV3,
   status: V9FactStatusV2,
@@ -1513,6 +1526,13 @@ export function evaluateV9Asset({
       assetId: asset.assetId,
       trackRecordMonths,
       ...asset.economicControlReview,
+      ...(() => {
+        const ageMonths = conservativeResolvedIncidentAgeMonths(
+          asset.economicControlReview.mint.latestResolvedIncidentAtSec,
+          identity.asOfSec,
+        );
+        return ageMonths === undefined ? {} : { resolvedIncidentAgeMonths: ageMonths };
+      })(),
     },
     envelope,
   );

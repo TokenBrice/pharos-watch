@@ -1,20 +1,38 @@
-# Mint Authority Score
+# Mint Authority Score (retired lane)
 
-0-100 standalone methodology for reviewed stablecoin mint-authority risk. Safety Score V9 evaluates the underlying reviewed control evidence directly instead of blending this display score.
+**Retired at safety methodology `9.1` (2026-08-08).** Mint risk is now graded once,
+by the Safety Score V9 Economic Control pillar's mint component. This document is
+kept because the methodology lane still renders its history at
+`/methodology/#mint-authority-score`; nothing on the site scores from it.
+
+Where the signals went:
+
+| Retired signal | Where it lives now |
+| --- | --- |
+| Incident age decay | `semantic.control.mintMergedSignals.resolvedIncidentQualityCaps` |
+| MPC/HSM key custody | `semantic.control.mintMergedSignals.attestedKeyCustodyQuality` / `unattestedEoaPenalty` |
+| Multisig threshold ladder | `semantic.control.mintMergedSignals.multisigQuorumAdjustment` |
+| Modules/guards evidence | `semantic.control.mintMergedSignals.modulesOrGuardsAdjustment` |
+| Route-family pricing | Excluded by design — `capSemantics` already prices it (anti-double-counting) |
+| `authorityPosture` | Validated annotation only; `npm run safety-score-v9:mint-posture-queue` |
+
+See [report-cards.md](./report-cards.md) for the live methodology.
+
+The historical description follows.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.2`
+- **Current methodology version:** `v1.3` (terminal — lane closed)
 - **Runtime/version source:** `shared/lib/methodology-versions/mint-authority.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/mint-authority/`
-- **Scoring source:** `shared/lib/mint-authority-scoring.ts`
+- **Scoring source:** none — the retired engine module was deleted with the lane; the live mint component lives in `shared/lib/safety-score-v9/control.ts`
 - **Public methodology anchor:** `/methodology/#mint-authority-score`
 
 ## Purpose
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-Mint Authority Score remains a display and review-coverage methodology. It does not create selector exclusions, change the homepage default ranking, or feed the canonical Safety Score as a numeric subscore. Safety Score V9 separately compiles the reviewed mint path, control capabilities, incidents, upgradeability, and evidence status into Economic Control facts, gaps, and caps.
+Historically Mint Authority Score was a display and review-coverage methodology that never fed the canonical Safety Score. Safety `9.1` merged its distinct signals into the Economic Control pillar and closed this lane; the sections below describe the retired v1.2 formula as shipped.
 
 ## Inputs
 
@@ -86,7 +104,7 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 ## Surfaces
 
 - Stablecoin detail pages show the score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data exists.
-- The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes status, score, and band. Compact client projections include cap-mutability evidence needed to keep aggregate Mint Authority Scores equivalent to full metadata.
+- The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes the curated route (`Mint Authority Status`) plus the published score and band, whose headers are `Mint Control Score` and `Mint Control Band` since safety `9.1`. Compact client projections include cap-mutability evidence needed to keep aggregate Mint Authority Scores equivalent to full metadata.
 - `/coverage/` counts curated review breadth by route bucket and also exposes score-band breakdown chips.
 - Safety Score V9 does not blend this display score; it compiles the underlying reviewed control evidence into Economic Control facts (see `docs/report-cards.md`). Raw inputs expose `mintAuthorityScore`.
 

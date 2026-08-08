@@ -288,7 +288,6 @@ describe("buildCoverageMatrixModel", () => {
             modelConfidence: "medium",
             capacitySemantics: "immediate-bounded",
             score: 65,
-            effectiveExitScore: 72,
           },
         },
       } as never),

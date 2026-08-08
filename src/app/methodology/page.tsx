@@ -58,7 +58,7 @@ export default function MethodologyPage() {
               {
                 question: "What is the Mint Authority Score?",
                 answer:
-                  "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family, the weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. V9 consumes reviewed mint-control evidence in the Economic Control pillar; unresolved required evidence stays explicit rather than receiving a guessed score.",
+                  "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component starts from a derived posture (cap semantics, claim impairment, reserve reconciliation, and supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Mint route family is deliberately not priced separately because the cap and claim semantics already price it. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
               },
               {
                 question: "How does Pharos confirm depegs and maintain DEWS history?",

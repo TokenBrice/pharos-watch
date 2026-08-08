@@ -145,14 +145,12 @@ describe("runSelector — Treasury happy path", () => {
       canBeBlacklisted: false,
       custodyModel: "onchain",
       depegEventCount: 4,
-      pegStabilityScore: 90,
       pegScore: 95,
       safetyScore: 92,
+      safetyProvenance: "safety-score-v9",
       safetyResilienceScore: 91,
-      safetyDependencyRiskScore: 90,
       safetyDecentralizationScore: 92,
       safetyLiquidityScore: 88,
-      collateralQuality: 89,
     };
 
     const out = runSelector(
@@ -179,7 +177,6 @@ describe("runSelector — Treasury happy path", () => {
       protocolSlug: "weak-peg",
       variantOf: null,
       depegEventCount: 3,
-      pegStabilityScore: 95,
       pegScore: 65,
     };
 
@@ -382,7 +379,7 @@ describe("runSelector — Yield happy path", () => {
     expect(out.recommended.map((rec) => rec.id)).toEqual(["valid-a", "valid-b", "valid-c"]);
     expect(out.recommended[2]?.rankRobustness).toEqual({
       label: "clear-margin",
-      scoreMargin: 12,
+      scoreMargin: 12.9,
     });
     expect(out.lowerRanked.map((row) => row.id)).not.toContain(phantom.id);
     expect(out.lowerRanked.map((row) => row.id)).toContain("valid-e");
@@ -657,8 +654,6 @@ describe("runSelector — universal properties", () => {
       variantOf: null,
       safetyScore,
       safetyResilienceScore: safetyScore,
-      safetyDependencyRiskScore: safetyScore,
-      pegStabilityScore: safetyScore,
       liquidityScore: safetyScore,
       supplyUsd,
     });

@@ -20,39 +20,51 @@ import { SELECTOR_VERSION } from "./version";
  */
 export const WEIGHTS_VERSION = SELECTOR_VERSION;
 
-/** R2-final Treasury weights — sum = 100. */
+/**
+ * Weight vectors carry **one** Safety Score input — the published overall
+ * (`safetyOverall`) — alongside published outputs of the other domains. The
+ * V8-era vectors also carried V9's own pillars (`resilience` = backing,
+ * `decentralization` = control, `effectiveExit` = exit) and a dependency-risk
+ * scalar the Selector re-derived from V9's raw graph, so every one of those
+ * signals was priced twice: once inside the composite and once beside it.
+ * `selector-v2.0` folds their weight back into the composite that already
+ * contains them. Exclusion floors and why-keys still *re-bin* individual
+ * pillars — that is reading a published output, not adding it to a blend.
+ *
+ * The peg slots are the second de-duplication: `pegScoreNow` and
+ * `pegStability*` both read the peg domain's `pegScore`, so a profile now
+ * spends its peg budget on exactly one slot. The peg domain stays in the
+ * vectors on purpose: the Picker exists to let a user weight a domain
+ * differently from the house view, which is a preference, not a re-derivation.
+ */
+
+/** Treasury weights — sum = 100. */
 const TREASURY_WEIGHTS: WeightVector<"treasury"> = {
-  safetyOverall: 30,
-  resilience: 20,
-  dependencyRisk: 17,
-  pegStabilityHistory: 12,
-  decentralization: 10,
-  dewsInverted: 6,
-  bluechip: 5,
+  safetyOverall: 55,
+  pegStabilityHistory: 22,
+  dewsInverted: 13,
+  bluechip: 10,
   supplyLog: 0,
 } as const;
 
-/** R2-final Yield weights — sum = 100. */
+/** Yield weights — sum = 100. */
 const YIELD_WEIGHTS: WeightVector<"yield"> = {
   pharosYieldScore: 28,
+  safetyOverall: 19,
   yieldVariance: 16,
-  safetyOverall: 14,
   sourceRiskInverted: 13,
   excessApy: 10,
   pegStabilityLive: 8,
   liquidity: 6,
-  resilience: 5,
 } as const;
 
-/** R2-final Active Trading weights — sum = 100. */
+/** Active Trading weights — sum = 100. */
 const TRADING_WEIGHTS: WeightVector<"trading"> = {
   liquidity: 30,
-  pegScoreNow: 20,
+  pegScoreNow: 30,
   dewsInverted: 15,
-  pegStabilityLive: 10,
-  effectiveExit: 10,
+  safetyOverall: 14,
   supplyLog: 8,
-  safetyOverall: 4,
   liquidityDiversification: 3,
 } as const;
 
@@ -141,27 +153,30 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
     } else if (input.profile === "yield") {
       shiftWeight(vector, "pegStabilityLive", 5, ["excessApy", "pharosYieldScore"]);
     } else {
-      shiftWeight(vector, "pegScoreNow", 3, ["supplyLog"]);
-      shiftWeight(vector, "pegStabilityLive", 2, ["liquidityDiversification"]);
+      // Trading spends its whole peg budget on `pegScoreNow` now that the
+      // duplicate live-stability slot is gone.
+      shiftWeight(vector, "pegScoreNow", 5, ["supplyLog", "liquidityDiversification"]);
     }
   }
 
   if (input.exitSpeed === "1h") {
+    // A one-hour exit horizon over-weights the live exit read. That used to be
+    // split between the DEX liquidity domain and the V9 Exit pillar; with the
+    // pillar folded into the composite, the whole shift lands on liquidity.
     if (input.profile === "treasury") {
-      shiftWeight(vector, "liquidity", 3, ["bluechip", "safetyOverall"]);
-      shiftWeight(vector, "effectiveExit", 3, ["resilience", "dependencyRisk"]);
+      shiftWeight(vector, "liquidity", 6, ["bluechip", "safetyOverall"]);
     } else if (input.profile === "yield") {
       shiftWeight(vector, "liquidity", 3, ["excessApy", "pharosYieldScore"]);
       shiftWeight(vector, "sourceRiskInverted", 2, ["pharosYieldScore"]);
     } else {
-      shiftWeight(vector, "liquidity", 2, ["supplyLog"]);
-      shiftWeight(vector, "effectiveExit", 2, ["safetyOverall"]);
+      shiftWeight(vector, "liquidity", 4, ["supplyLog", "safetyOverall"]);
     }
   }
 
   if (input.profile === "treasury" && input.horizon === "6mplus") {
-    shiftWeight(vector, "dependencyRisk", 3, ["dewsInverted", "bluechip"]);
-    shiftWeight(vector, "resilience", 2, ["pegStabilityHistory"]);
+    // A multi-quarter horizon prefers structural quality over live stress and
+    // third-party alignment; the structural read is the composite itself.
+    shiftWeight(vector, "safetyOverall", 5, ["dewsInverted", "bluechip", "pegStabilityHistory"]);
   }
 
   if (input.composability === "high") {
@@ -173,9 +188,10 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
   }
 
   if (treasuryActiveDeFiIntent(input)) {
-    shiftWeight(vector, "decentralization", 8, ["bluechip", "safetyOverall"]);
-    shiftWeight(vector, "liquidity", 6, ["safetyOverall", "resilience"]);
-    shiftWeight(vector, "effectiveExit", 6, ["dependencyRisk", "resilience"]);
+    // Deploying treasury into active DeFi trades the long-horizon house view
+    // for live venue depth and live stress.
+    shiftWeight(vector, "liquidity", 10, ["bluechip", "safetyOverall"]);
+    shiftWeight(vector, "dewsInverted", 4, ["safetyOverall"]);
   }
 
   if (input.profile === "yield") {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MATCHED_V9_INVARIANTS, type MatchedV9Invariant } from "@shared/data/safety-score-v9/matched-invariants-v1";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { CompiledV9AssetInput, V9ScoringInput, V9StructuralSignal } from "@shared/types/safety-score-v9";
-import { computeEffectiveExitScoreDiagnostics } from "../redemption-backstop-scoring";
+import { evaluateV9Exit, type V9ExitEvaluationRoute } from "../safety-score-v9/exit";
 import {
   V9_CANDIDATE_POLICY_V1,
   deriveV9ReserveLossSignal,
@@ -13,6 +13,63 @@ import {
 
 const AS_OF_SEC = 1_780_000_000;
 const AS_OF = new Date(AS_OF_SEC * 1_000).toISOString();
+
+/**
+ * Supply chosen so the pillar's grid-snapped stress request lands on the
+ * corpus routes' own `requestedNotionalUsd` (5% of 20M = 1M, already a grid
+ * point), keeping every corpus capacity point an exact match.
+ */
+const MATCHED_CIRCULATING_USD = 20_000_000;
+
+/**
+ * Project a corpus route observation into the Exit pillar's evaluation
+ * vocabulary. The corpus fixes the route facts under test — family, evidence
+ * kind, confidence, failure domains, and the capacity point — and this fills the
+ * remaining fields with a neutral reviewed shape so the invariant measures the
+ * route difference rather than the surrounding scaffolding.
+ */
+function evaluationRoute(observation: ExitRouteObservation): V9ExitEvaluationRoute {
+  const lane =
+    observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook" ? "dex" : "redemption";
+  return {
+    routeKey: observation.routeId,
+    lane,
+    routeFamily: observation.routeFamily as V9ExitEvaluationRoute["routeFamily"],
+    applicability: "required",
+    observationState: "known",
+    scoreEligible: observation.scoreEligible,
+    coverageClass: "exact-complete",
+    evidenceKind: observation.evidenceKind,
+    feeEvidence: null,
+    observationConfidence: observation.confidence,
+    modelConfidence: "high",
+    observationHistory: null,
+    access: lane === "dex" ? "permissionless-onchain" : "issuer-api",
+    holderEligibility: lane === "dex" ? "any-holder" : "verified-customer",
+    capacityScoringHorizon: "immediate",
+    settlement: lane === "dex" ? "atomic" : "same-day",
+    settlementDelaySec: 0,
+    queueDepthUsd: null,
+    dailyLimitUsd: null,
+    minRedeemUsd: null,
+    execution: "deterministic-onchain",
+    outputQuality: "stable-single",
+    outputResolved: true,
+    outputValueRetention: 1,
+    capacityCurve: [
+      {
+        requestedNotionalUsd: observation.requestedNotionalUsd,
+        maxCostBps: observation.maxCostBps,
+        executableUsd: observation.executableUsd,
+        completionRatio: observation.completionRatio,
+        executionCostBps: 0,
+      },
+    ],
+    routeScoreCap: null,
+    failureDomains: [...observation.commonModeKeys],
+    physicalResourceKeys: [...observation.commonModeKeys],
+  };
+}
 
 function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
   return {
@@ -84,21 +141,18 @@ function compiledInput(
 function executeInvariant(invariant: MatchedV9Invariant): void {
   switch (invariant.kind) {
     case "exit-routes": {
-      const evaluate = (routes: readonly ExitRouteObservation[]) => {
-        const dex = routes.filter((route) => route.routeFamily === "dex-amm" || route.routeFamily === "dex-orderbook");
-        const redemption = routes.filter(
-          (route) => route.routeFamily !== "dex-amm" && route.routeFamily !== "dex-orderbook",
+      // The route-scoring engine under test is the Exit pillar: it is the one
+      // surviving same-notional route grader, so the matched corpus measures
+      // the shipped engine rather than a parallel shadow of it.
+      const evaluate = (routes: readonly ExitRouteObservation[]) =>
+        evaluateV9Exit(
+          {
+            circulatingUsd: MATCHED_CIRCULATING_USD,
+            portfolioStatus: "reviewed-complete",
+            routes: routes.map(evaluationRoute),
+          },
+          V9_CANDIDATE_POLICY_V1,
         );
-        return computeEffectiveExitScoreDiagnostics(90, redemption.length > 0 ? 90 : null, {
-          modeledExitSizeUsd: 1_000_000,
-          sameNotionalScoringMode: "active",
-          exitObservationAsOfSec: AS_OF_SEC,
-          dexExitObservationMaxAgeSec: 60,
-          liveRedemptionExitObservationMaxAgeSec: 60,
-          dexExitRouteObservations: dex,
-          redemptionExitRouteObservations: redemption,
-        });
-      };
       const before = evaluate(invariant.before);
       const after = evaluate(invariant.after);
       expect(after.score, invariant.id).not.toBeNull();

@@ -24,7 +24,7 @@ describe("MethodologyPage", () => {
     expect(html).toContain("Pricing Pipeline");
     expect(html).toContain("Safety Scores");
     expect(html).toContain("Mint Authority Score");
-    expect(html).toContain("V9 evaluates the underlying reviewed control facts directly");
+    expect(html).toContain("Safety Score V9 Economic Control pillar, mint component");
     expect(html).toContain("Reader");
     expect(html).toContain("Analyst");
     expect(html).toContain("universal 15-minute onset confirmation window");

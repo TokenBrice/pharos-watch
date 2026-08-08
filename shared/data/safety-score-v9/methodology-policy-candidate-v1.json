@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.07",
+  "releaseVersion": "9.1",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -831,6 +831,34 @@
         "attestationOnlyReconciled": 70,
         "seasonedCreditPoints": 10,
         "seasonedCreditMinMonths": 60
+      },
+      "mintMergedSignals": {
+        "resolvedIncidentQualityCaps": {
+          "recent": 79,
+          "aging": 85,
+          "dated": 90
+        },
+        "resolvedIncidentDecayMinMonths": {
+          "aging": 24,
+          "dated": 48
+        },
+        "attestedKeyCustodyQuality": 45,
+        "unattestedEoaPenalty": 3,
+        "multisigQuorumAdjustment": {
+          "unknownTopology": -6,
+          "singleSigner": -12,
+          "twoSigner": -1,
+          "thresholdThreePlus": 0,
+          "thresholdFourPlusCredit": 2,
+          "majorityThresholdCredit": 2,
+          "timelockCredit": 3,
+          "minAdjustment": -12,
+          "maxAdjustment": 0
+        },
+        "modulesOrGuardsAdjustment": {
+          "noneDetectedCredit": 0,
+          "presentPenalty": 2
+        }
       },
       "oracleTierQuality": {
         "oracleless-or-internal": 95,

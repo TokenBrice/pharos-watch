@@ -96,6 +96,17 @@ export interface SelectorInput {
 // Scoring vocabulary
 // ---------------------------------------------------------------------------
 
+/**
+ * Every weight slot the engine has ever emitted.
+ *
+ * Retired slots stay listed: signed snapshots are retained for five years and
+ * are shape-validated against this vocabulary on read, so dropping a name here
+ * would make historical snapshots unreadable. What a *current* run emits is
+ * decided by `WEIGHT_VECTORS`, which since `selector-v2.0` no longer contains
+ * `resilience`, `dependencyRisk`, `decentralization`, or `effectiveExit` —
+ * those are V9 pillars (or, for `dependencyRisk`, a Selector-side
+ * re-derivation of V9's graph) already priced inside `safetyOverall`.
+ */
 export const WEIGHT_KEYS = [
   "safetyOverall",
   "resilience",
@@ -146,6 +157,11 @@ export interface SelectorComponent {
 // Lowest sub-dimension
 // ---------------------------------------------------------------------------
 
+/**
+ * Every "what to watch" axis the engine has ever emitted. Retired axes stay
+ * listed for the same stored-snapshot reason as `WEIGHT_KEYS`; the live
+ * candidate sets are in `lowest-sub-dimension.ts`.
+ */
 export const LOWEST_SUB_DIMENSION_KEYS = [
   "pegStability",
   "liquidity",
@@ -536,8 +552,8 @@ export interface MergedRow {
 
   supplyUsd: number;
 
+  /** Peg domain's published PegScore. Every peg weight slot reads this one field. */
   pegScore: number | null;
-  pegStabilityScore: number | null;
   activeDepeg: boolean;
   currentDeviationBps: number | null;
   depegEventCount: number;
@@ -546,11 +562,21 @@ export interface MergedRow {
   dewsScore: number | null;
   safetyGrade: ReportCardGrade | null;
   safetyScore: number | null;
+  /**
+   * Where `safetyScore` / `safetyGrade` came from. Structured-tranche rows are
+   * graded by the yield model, not by Safety Score V9, and that substitution
+   * must never reach a shortlist card unlabelled.
+   */
+  safetyProvenance: "safety-score-v9" | "yield-opportunity";
+  /**
+   * Published V9 pillars. They are read by exclusion gates, why-keys, and the
+   * "what to watch" axis — surfaces that re-bin a published output — and are
+   * deliberately absent from the weight vectors, which already carry the
+   * composite these roll up into.
+   */
   safetyResilienceScore: number | null;
-  safetyDependencyRiskScore: number | null;
   safetyDecentralizationScore: number | null;
   safetyLiquidityScore: number | null;
-  collateralQuality: number | null;
   custodyModel: string | null;
   bluechipGrade: BluechipGrade | null;
 

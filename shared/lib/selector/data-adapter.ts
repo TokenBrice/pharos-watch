@@ -5,13 +5,13 @@ import { canonicalizeForDatasetHash } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
-import { COLLATERAL_QUALITY_SCORE, inferResilienceDefaults } from "../report-card-policy";
+import { inferResilienceDefaults } from "../report-card-policy";
+import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
 import type {
   AltYieldSource,
   BluechipRatingsMap,
   DexLiquidityMap,
   PegSummaryResponse,
-  RedemptionBackstopsResponse,
   ReportCardsV9CurrentResponse,
   StablecoinListResponse,
   StressSignalsAllResponse,
@@ -35,7 +35,6 @@ export interface BuildSelectorRowsArgs {
   dexData: DexLiquidityMap | null;
   yieldData: YieldRankingsResponse | null;
   bluechipData: BluechipRatingsMap | null;
-  redemptionData?: RedemptionBackstopsResponse | null;
   /** `Date.now()`-style milliseconds or Unix seconds. */
   now: number;
 }
@@ -71,15 +70,24 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     const dex = args.dexData?.[id];
     const yieldEntry = yieldById.get(id);
     const yieldRisk = yieldEntry?.sourceRisk ?? null;
-    const rowSafetyScore =
-      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyScore != null
-        ? yieldEntry.safetyScore
-        : (safety?.score ?? null);
-    const rowSafetyGrade =
-      yieldEntry?.yieldType === "structured-tranche" && yieldEntry.safetyGrade != null
-        ? yieldEntry.safetyGrade
-        : (safety?.grade ?? null);
-    const redemption = args.redemptionData?.coins?.[id];
+    // Structured-tranche rows carry a grade the yield model minted, not the
+    // stablecoin's V9 card. The substitution stays, but it is recorded rather
+    // than silent: `safetyProvenance` travels with the row, into the dataset
+    // hash, and into the authored explanation.
+    const usesOpportunitySafety =
+      yieldEntry?.yieldType === "structured-tranche" &&
+      yieldEntry.safetyScore != null &&
+      yieldEntry.safetyGrade != null;
+    const rowSafetyScore = usesOpportunitySafety
+      ? yieldEntry.safetyScore
+      : (safety?.score ?? null);
+    const rowSafetyGrade = usesOpportunitySafety
+      ? yieldEntry.safetyGrade
+      : (safety?.grade ?? null);
+    const rowSafetyProvenance: MergedRow["safetyProvenance"] =
+      usesOpportunitySafety || isOpportunityDerivedSafety(yieldEntry?.provenance?.safetyProvenance)
+        ? "yield-opportunity"
+        : "safety-score-v9";
     const bluechip = args.bluechipData?.[id];
     const currentDeviationBps = peg?.currentDeviationBps ?? dex?.dexDeviationBps ?? null;
 
@@ -99,7 +107,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       supplyUsd: supplyById.get(id) ?? 0,
 
       pegScore: peg?.pegScore ?? null,
-      pegStabilityScore: peg?.pegScore ?? null,
       activeDepeg: peg?.activeDepeg ?? false,
       currentDeviationBps,
       depegEventCount: peg?.eventCount ?? 0,
@@ -108,11 +115,10 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       dewsScore: stress?.score ?? null,
       safetyGrade: rowSafetyGrade,
       safetyScore: rowSafetyScore,
+      safetyProvenance: rowSafetyProvenance,
       safetyResilienceScore: safety?.pillars.backing.score ?? null,
-      safetyDependencyRiskScore: resolveDependencyRiskScore(safety),
       safetyDecentralizationScore: safety?.pillars.control.score ?? null,
       safetyLiquidityScore: safety?.pillars.exit.score ?? null,
-      collateralQuality: resolveCollateralQualityScore(meta),
       custodyModel: resolveCustodyModel(meta),
       bluechipGrade: bluechip?.grade ?? null,
 
@@ -120,7 +126,13 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
       concentrationHhi: dex?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},
-      effectiveExitScore: redemption?.effectiveExitScore ?? safety?.pillars.exit.score ?? null,
+      // The published V9 Exit pillar is the exit read. It used to prefer the
+      // redemption snapshot's legacy `effectiveExitScore` — a
+      // max(DEX, redemption) blend over a supply denominator — and fall back to
+      // the pillar, treating two answers to two different questions as
+      // interchangeable. The pillar is the one that measures same-notional exit
+      // capacity, so it is the only one consulted.
+      effectiveExitScore: safety?.pillars.exit.score ?? null,
 
       pharosYieldScore: yieldEntry?.pharosYieldScore ?? null,
       apy30d: yieldEntry?.apy30d ?? null,
@@ -176,6 +188,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         pegCurrency: row.pegCurrency,
         safetyGrade: row.safetyGrade,
         overallScore: row.safetyScore,
+        safetyProvenance: row.safetyProvenance,
         pegScore: row.pegScore,
         dewsScore: row.dewsScore,
         liquidityScore: row.liquidityScore,
@@ -189,12 +202,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         activeDepeg: row.activeDepeg,
         currentDeviationBps: row.currentDeviationBps,
         depegEventCount: row.depegEventCount,
-        safetyPegStabilityScore: row.pegStabilityScore,
         safetyResilienceScore: row.safetyResilienceScore,
-        safetyDependencyRiskScore: row.safetyDependencyRiskScore,
         safetyDecentralizationScore: row.safetyDecentralizationScore,
         safetyLiquidityScore: row.safetyLiquidityScore,
-        collateralQuality: row.collateralQuality,
         custodyModel: row.custodyModel,
         pharosYieldScore: row.pharosYieldScore,
         apy30d: row.apy30d,
@@ -248,43 +258,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   };
 }
 
-function resolveDependencyRiskScore(card: V9ReportCard | undefined): number | null {
-  if (!card) return null;
-  const dependencies = card.dependencies;
-  if (dependencies.cycleBlocked) return 0;
-
-  const scores: number[] = [];
-  for (const dependency of dependencies.serial) {
-    scores.push(!dependency.blocked && dependency.score != null ? dependency.score : 0);
-  }
-
-  if (dependencies.basket.length > 0) {
-    let weightedScore = 0;
-    let knownWeight = 0;
-    let hasUnknown = false;
-    for (const dependency of dependencies.basket) {
-      if (dependency.score == null || dependency.boundedUnknown) {
-        hasUnknown = true;
-        continue;
-      }
-      weightedScore += dependency.score * dependency.weight;
-      knownWeight += dependency.weight;
-    }
-    scores.push(weightedScore + (hasUnknown ? 0 : Math.max(0, 1 - knownWeight) * 100));
-  }
-
-  for (const dependency of dependencies.roles ?? []) {
-    scores.push(!dependency.cycleBlocked && !dependency.boundedUnknown && dependency.score != null ? dependency.score : 0);
-  }
-
-  const roleLimits = dependencies.rolePillarLimits;
-  if (roleLimits?.exit.limit != null) scores.push(roleLimits.exit.limit);
-  if (roleLimits?.control.limit != null) scores.push(roleLimits.control.limit);
-
-  if (scores.length === 0) return 100;
-  return Math.max(0, Math.min(100, Math.min(...scores)));
-}
-
 function resolveBlacklistability(
   card: V9ReportCard | undefined,
   meta: StablecoinClientMeta,
@@ -302,12 +275,6 @@ function resolveBlacklistability(
     case undefined:
       return meta.canBeBlacklisted ?? null;
   }
-}
-
-function resolveCollateralQualityScore(meta: StablecoinClientMeta): number | null {
-  const defaults = inferResilienceDefaults(meta.flags.backing, meta.flags.governance);
-  const quality = meta.collateralQuality ?? defaults.collateralQuality;
-  return COLLATERAL_QUALITY_SCORE[quality] ?? null;
 }
 
 function resolveCustodyModel(meta: StablecoinClientMeta): MergedRow["custodyModel"] {

@@ -1,6 +1,14 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsV2, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
+import {
+  blendExitCapacityComponent,
+  composeExitComponentScore,
+  interpolateExitBreakpointScore,
+  resolveExitDelayBandMultiplier,
+  resolveExitScoringRequest,
+  resolveExitThresholdBandMultiplier,
+} from "../exit-route-scoring";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import { clampScore } from "./primitives";
 
@@ -116,9 +124,6 @@ const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
   queued: { primaryRouteKey: null, score: null },
 };
 
-/** Share of the capacity component carried by completion coverage rather than absolute size. */
-const COVERAGE_SHARE_OF_CAPACITY = 0.6;
-
 function firstPositiveBreakpointValue(
   points: readonly { value: number; score: number }[],
 ): number {
@@ -151,36 +156,28 @@ function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+/**
+ * The pillar's view of the shared exit request: the same clamped supply share
+ * the redemption domain score uses as its denominator, snapped up to the policy
+ * notional grid so capacity curves stay comparable across assets.
+ *
+ * The request policy is read from the validated envelope, not from the shared
+ * constant module: the policy JSON is the versioned artifact the deterministic
+ * replay pins, and the constant module is CI-validated against it.
+ */
 export function selectV9ExitStressRequest(
   circulatingUsd: number | null,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitStressRequest | null {
   assertV9ValidatedPolicyEnvelope(envelope);
-  if (circulatingUsd === null || !Number.isFinite(circulatingUsd) || circulatingUsd <= 0) return null;
-  const policy = envelope.policy.semantic.exit.stressRequest;
-  const rawSupplyRequestUsd = Math.min(policy.capUsd, Math.max(policy.floorUsd, circulatingUsd * policy.supplyRatio));
-  const grid = [...policy.notionalGridUsd].sort((left, right) => left - right);
-  const requestedNotionalUsd = grid.find((notional) => notional >= rawSupplyRequestUsd) ?? grid[grid.length - 1]!;
+  const request = resolveExitScoringRequest("stress-grid", circulatingUsd, envelope.policy.semantic.exit.stressRequest);
+  if (request === null) return null;
   return {
-    requestedNotionalUsd,
-    maxCostBps: policy.maxCostBps,
-    comparisonWindowSec: policy.settlementHorizonSec,
-    rawSupplyRequestUsd,
+    requestedNotionalUsd: request.requestedNotionalUsd,
+    maxCostBps: request.maxCostBps,
+    comparisonWindowSec: request.settlementHorizonSec,
+    rawSupplyRequestUsd: request.rawSupplyRequestUsd,
   };
-}
-
-function interpolateScore(value: number, breakpoints: readonly { value: number; score: number }[]): number {
-  if (value <= breakpoints[0]!.value) return breakpoints[0]!.score;
-  const top = breakpoints[breakpoints.length - 1]!;
-  if (value >= top.value) return top.score;
-  for (let index = 1; index < breakpoints.length; index += 1) {
-    const lower = breakpoints[index - 1]!;
-    const upper = breakpoints[index]!;
-    if (value > upper.value) continue;
-    const progress = (value - lower.value) / (upper.value - lower.value);
-    return lower.score + (upper.score - lower.score) * progress;
-  }
-  return top.score;
 }
 
 function curveIssue(points: readonly V9ExitCapacityPoint[]): string | null {
@@ -260,14 +257,16 @@ function settlementDelayMultiplier(
   delaySec: number,
   bands: readonly { maxSec: number | null; multiplier: number }[],
 ): number {
-  return bands.find((band) => band.maxSec === null || delaySec <= band.maxSec)?.multiplier ?? 0;
+  // An unmatched band means an unusable delay; the pillar zeroes the capacity
+  // component rather than leaving it unpenalized.
+  return resolveExitDelayBandMultiplier(delaySec, bands) ?? 0;
 }
 
 function descendingThresholdMultiplier(
   value: number,
   bands: readonly { threshold: number; multiplier: number }[],
 ): number {
-  return bands.find((band) => value >= band.threshold)?.multiplier ?? 1;
+  return resolveExitThresholdBandMultiplier(value, bands, "at-or-above") ?? 1;
 }
 
 function routeCapacityHorizon(
@@ -551,11 +550,10 @@ function evaluateRoute(
       capsApplied: [],
     };
   }
-  const coverageScore = interpolateScore(completionRatio, policy.coverageRatioBreakpoints);
-  const absoluteScore = interpolateScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
+  const coverageScore = interpolateExitBreakpointScore(completionRatio, policy.coverageRatioBreakpoints);
+  const absoluteScore = interpolateExitBreakpointScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
-  let capacity =
-    (coverageScore * COVERAGE_SHARE_OF_CAPACITY + absoluteScore * (1 - COVERAGE_SHARE_OF_CAPACITY)) * delayMultiplier;
+  let capacity = blendExitCapacityComponent(coverageScore, absoluteScore) * delayMultiplier;
   const constraintMultipliers: string[] = [];
   if (route.queueDepthUsd !== null && route.queueDepthUsd > 0) {
     const serviceCapacityUsd = queueServiceCapacityUsd(route, capacityPoint);
@@ -586,14 +584,7 @@ function evaluateRoute(
         ? policy.boundedCostScore
         : clampScore(100 * (1 - capacityPoint.executionCostBps / Math.max(1, request.maxCostBps))),
   };
-  const weights = policy.componentWeights;
-  let score =
-    components.access * weights.access +
-    components.settlement * weights.settlement +
-    components.executionCertainty * weights.executionCertainty +
-    components.capacity * weights.capacity +
-    components.outputAssetQuality * weights.outputAssetQuality +
-    components.cost * weights.cost;
+  let score = composeExitComponentScore(components, policy.componentWeights);
   const capsApplied: string[] = [...constraintMultipliers];
   // Capacity carries only a minority of the component ladder, so access,
   // settlement, execution certainty, output quality and a bounded-unknown cost

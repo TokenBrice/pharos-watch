@@ -16,6 +16,7 @@ import {
   buildYieldSnapshotRecommendation,
 } from "./snapshot-fixture";
 import { BluechipGradeSchema } from "../../../types/core";
+import { SELECTOR_VERSION } from "../version";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -26,6 +27,95 @@ function expectValid(value: unknown) {
 
 function expectInvalid(value: unknown) {
   expect(validateSelectorSnapshot(value).ok).toBe(false);
+}
+
+/**
+ * Trading slots as `scoreRow` emits them: base weights redistributed over the
+ * present slots, with the missing one stored at `weight: 0, rawValue: null`.
+ */
+function buildTradingSlots(
+  base: readonly (readonly [string, number, number, number])[],
+  missingKey: string,
+): Record<string, unknown>[] {
+  const present = base.filter(([key]) => key !== missingKey);
+  const totalBase = present.reduce((total, [, baseWeight]) => total + baseWeight, 0);
+  const missing = base.find(([key]) => key === missingKey)!;
+  return [
+    ...present.map(([key, baseWeight, rawValue, normalizedValue]) => {
+      const weight = (baseWeight / totalBase) * 100;
+      return {
+        key,
+        weight,
+        rawValue,
+        normalizedValue,
+        contribution: (weight * normalizedValue) / 100,
+        redistributed: false,
+      };
+    }),
+    {
+      key: missing[0],
+      weight: 0,
+      rawValue: null,
+      normalizedValue: null,
+      contribution: 0,
+      redistributed: true,
+    },
+  ];
+}
+
+const LEGACY_TRADING_SLOTS = [
+  ["liquidity", 30, 85, 85],
+  ["pegScoreNow", 23, 92, 92],
+  ["dewsInverted", 15, 10, 90],
+  ["pegStabilityLive", 12, 90, 90],
+  ["effectiveExit", 10, 80, 80],
+  ["supplyLog", 5, 34_000_000_000, 97.82784323784464],
+  ["safetyOverall", 4, 88, 88],
+  ["liquidityDiversification", 1, 0.2, 80],
+] as const;
+
+/** `selector-v2.0` trading vector under the fixture input (`depegTolerance: "zero"`). */
+const CURRENT_TRADING_SLOTS = [
+  ["liquidity", 30, 85, 85],
+  ["pegScoreNow", 35, 92, 92],
+  ["dewsInverted", 15, 10, 90],
+  ["safetyOverall", 14, 88, 88],
+  ["supplyLog", 3, 34_000_000_000, 97.82784323784464],
+  ["liquidityDiversification", 3, 0.2, 80],
+] as const;
+
+function buildTradingSnapshotWithMissingSlot(
+  engineVersion: string,
+  slots: readonly (readonly [string, number, number, number])[],
+  missingKey: string,
+): Record<string, unknown> {
+  const base = buildSelectorSnapshotOutput();
+  return buildSelectorSnapshotOutput({
+    profile: "trading",
+    engineVersion,
+    input: { ...(base.input as Record<string, unknown>), profile: "trading" },
+    recommended: [
+      buildTradingSnapshotRecommendation({
+        components: buildTradingSlots(slots, missingKey),
+      }),
+    ],
+    coverageWarnings: {
+      ...(base.coverageWarnings as Record<string, unknown>),
+      redistributionCount: 1,
+    },
+    methodologyVersions: {
+      ...(base.methodologyVersions as Record<string, unknown>),
+      exclusionFilters: engineVersion,
+    },
+  });
+}
+
+function buildLegacyTradingSnapshot(missingKey: string): Record<string, unknown> {
+  return buildTradingSnapshotWithMissingSlot("selector-v1.91", LEGACY_TRADING_SLOTS, missingKey);
+}
+
+function buildCurrentTradingSnapshot(): Record<string, unknown> {
+  return buildTradingSnapshotWithMissingSlot(SELECTOR_VERSION, CURRENT_TRADING_SLOTS, "safetyOverall");
 }
 
 describe("selector snapshot contract", () => {
@@ -479,6 +569,44 @@ describe("selector snapshot contract", () => {
     const loaded = expectValid(JSON.parse(JSON.stringify(persisted)));
     expect((loaded.recommended[0] as { perInputStaleness: unknown }).perInputStaleness).toEqual({});
     expect(computeSelectorSnapshotSid(loaded)).toBe(sid);
+  });
+
+  it("caps a legacy trading snapshot under the v1.9x critical set and keeps its sid verifiable", () => {
+    const snapshot = expectValid(buildLegacyTradingSnapshot("effectiveExit"));
+    const recommendation = snapshot.recommended[0]!;
+
+    // `effectiveExit` was trading's critical slot at v1.9x, so the stored blob
+    // was published capped at 78 with the matching reason. Replaying it under
+    // the v2.0 set would re-project it upward (~89).
+    expect(recommendation.score).toBe(78);
+    expect(recommendation.confidenceReasons).toContain("missing-critical-effectiveExit");
+    expect(recommendation.confidenceReasons).not.toContain("missing-critical-safetyOverall");
+
+    // A verified (shareable) blob of the same vintage must still round-trip:
+    // any score drift here fails the canonical sid comparison and 502s the link.
+    const verified = createVerifiedSelectorSnapshot(snapshot);
+    const replayed = validateVerifiedSelectorSnapshot(JSON.parse(JSON.stringify(verified)));
+    expect(replayed.ok).toBe(true);
+    if (!replayed.ok) throw new Error(`Expected verified replay, got ${replayed.error}`);
+    expect(computeSelectorSnapshotSid(replayed.snapshot)).toBe(computeSelectorSnapshotSid(verified));
+  });
+
+  it("does not retro-apply the v2.0 trading critical set to a legacy snapshot", () => {
+    const snapshot = expectValid(buildLegacyTradingSnapshot("safetyOverall"));
+    const recommendation = snapshot.recommended[0]!;
+
+    // `safetyOverall` only became critical at v2.0; a v1.9x blob must not gain
+    // a cap it was never published with.
+    expect(recommendation.score).toBeGreaterThan(78);
+    expect(recommendation.confidenceReasons ?? []).not.toContain("missing-critical-safetyOverall");
+  });
+
+  it("applies the v2.0 trading critical set to a v2.0 snapshot", () => {
+    const snapshot = expectValid(buildCurrentTradingSnapshot());
+    const recommendation = snapshot.recommended[0]!;
+
+    expect(recommendation.score).toBe(78);
+    expect(recommendation.confidenceReasons).toContain("missing-critical-safetyOverall");
   });
 
   it("rejects unknown trading staleness inputs", () => {

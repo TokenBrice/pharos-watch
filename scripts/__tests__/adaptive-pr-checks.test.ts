@@ -66,6 +66,9 @@ describe("adaptive PR checks", () => {
     expect(selectChangedGeneratedArtifactIds(["data/coin.json"], registry)).toEqual(["catalog", "index"]);
   });
 
+  // A docs-only PR still verifies the one artifact derived from docs (llms.txt);
+  // artifact freshness is now selected from the changed sources themselves
+  // rather than from whether a Pages surface moved.
   it("keeps docs-only PRs on the small static baseline", () => {
     expect(buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name)).toEqual([
       "lint:changed",
@@ -74,6 +77,7 @@ describe("adaptive PR checks", () => {
       "check:env-contract",
       "check:shared-types-imports",
       "check:critical-coverage-completeness",
+      "check:generated-artifacts",
     ]);
   });
 
@@ -87,6 +91,18 @@ describe("adaptive PR checks", () => {
     expect(buildPrStaticCheckPlan(["worker/src/index.ts"]).commands.map((command) => command.name)).toContain(
       "check:worker-package",
     );
+  });
+
+  it("checks a changed generated artifact even when no Pages surface moved", () => {
+    // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
+    // source left the evaluation-build manifest stale and passed the PR gate.
+    const plan = buildPrStaticCheckPlan(["worker/src/lib/safety-score-v9-extension.ts"]);
+    const artifactCommand = plan.commands.find(
+      (command): command is { name: string; args: string[] } =>
+        command.name === "check:generated-artifacts" && "args" in command,
+    );
+    expect(plan.classification.pagesChanged).toBe(false);
+    expect(artifactCommand?.args[0]).toContain("safety-score-v9-evaluation-build");
   });
 
   it("selects structural checks for production and validation surfaces", () => {

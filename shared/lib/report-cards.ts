@@ -17,7 +17,6 @@ export {
 export {
   computeCollateralQualityFromReserves,
   inferResilienceDefaults,
-  resolveResilienceFactors,
 } from "./report-card-resilience";
 export {
   createBlacklistResolutionContext,

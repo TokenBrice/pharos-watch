@@ -38,7 +38,33 @@ const KNOWN_MISSING_SIGNALS = new Set([
   "every-signal-null",
   "recommendedSource",
 ]);
+/**
+ * Critical-component sets belong to the engine version that produced a
+ * snapshot, not to the engine reading it. They decide the 78 missing-critical
+ * cap and the `missing-critical-*` confidence reasons, so replaying a stored
+ * blob against the wrong set republishes a different number than the one that
+ * was shared — and, for a SID-bound verified snapshot, permanently breaks the
+ * link. `selector-v2.0` re-based the sets for the first time since they were
+ * introduced (trading swapped `effectiveExit` for `safetyOverall`; treasury
+ * dropped `resilience` and `dependencyRisk`), which is why the read path has to
+ * gate them the same way it already gates the component projection.
+ */
 const CRITICAL_COMPONENTS_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlySet<WeightKey>>> = {
+  treasury: new Set(["safetyOverall", "pegStabilityHistory", "dewsInverted"]),
+  yield: new Set([
+    "pharosYieldScore",
+    "yieldVariance",
+    "safetyOverall",
+    "sourceRiskInverted",
+    "pegStabilityLive",
+    "liquidity",
+  ]),
+  trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
+};
+/** The single pre-`selector-v2.0` set, shared by every `v1.0`-`v1.92` snapshot. */
+const LEGACY_CRITICAL_COMPONENTS_BY_PROFILE: Readonly<
+  Record<SelectorProfile, ReadonlySet<WeightKey>>
+> = {
   treasury: new Set([
     "safetyOverall",
     "resilience",
@@ -56,6 +82,15 @@ const CRITICAL_COMPONENTS_BY_PROFILE: Readonly<Record<SelectorProfile, ReadonlyS
   ]),
   trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "effectiveExit"]),
 };
+
+function criticalComponentsFor(
+  engineVersion: string,
+  profile: SelectorProfile,
+): ReadonlySet<WeightKey> {
+  return engineVersion === SELECTOR_VERSION
+    ? CRITICAL_COMPONENTS_BY_PROFILE[profile]
+    : LEGACY_CRITICAL_COMPONENTS_BY_PROFILE[profile];
+}
 
 function hasDuplicates(values: readonly string[]): boolean {
   return new Set(values).size !== values.length;
@@ -160,10 +195,12 @@ function projectLegacyComponents(components: readonly SelectorComponent[]): Sele
 function projectConfidenceReasons(
   recommendation: SelectorRecommendation,
   components: readonly SelectorComponent[],
+  engineVersion: string,
 ): SelectorConfidenceReason[] | undefined {
   const reasons = new Set(recommendation.confidenceReasons ?? []);
+  const critical = criticalComponentsFor(engineVersion, recommendation.profile);
   for (const component of components) {
-    if (component.rawValue === null && CRITICAL_COMPONENTS_BY_PROFILE[recommendation.profile].has(component.key)) {
+    if (component.rawValue === null && critical.has(component.key)) {
       reasons.add(`missing-critical-${component.key}`);
     }
   }
@@ -181,10 +218,12 @@ function projectConfidenceReasons(
 function scoreFromComponents(
   profile: SelectorProfile,
   components: readonly SelectorComponent[],
+  engineVersion: string,
 ): number {
   const rawScore = components.reduce((total, component) => total + component.contribution, 0);
+  const critical = criticalComponentsFor(engineVersion, profile);
   const hasMissingCritical = components.some(
-    (component) => component.rawValue === null && CRITICAL_COMPONENTS_BY_PROFILE[profile].has(component.key),
+    (component) => component.rawValue === null && critical.has(component.key),
   );
   return round1(Math.min(rawScore, hasMissingCritical ? 78 : 100));
 }
@@ -213,10 +252,10 @@ function projectRecommendation(
     ...identity,
     profile: recommendation.profile,
     rank,
-    score: scoreFromComponents(recommendation.profile, components),
+    score: scoreFromComponents(recommendation.profile, components, engineVersion),
     confidence: round1(recommendation.confidence),
     ...(() => {
-      const reasons = projectConfidenceReasons(recommendation, components);
+      const reasons = projectConfidenceReasons(recommendation, components, engineVersion);
       return reasons ? { confidenceReasons: reasons } : {};
     })(),
     components,

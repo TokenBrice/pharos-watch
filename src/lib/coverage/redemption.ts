@@ -104,7 +104,7 @@ function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, da
     );
   }
 
-  if (entry.capacitySemantics === "eventual-only" || entry.score == null || entry.effectiveExitScore == null) {
+  if (entry.capacitySemantics === "eventual-only" || entry.score == null) {
     return createStatus(
       "resolved-unscored",
       "Resolved",

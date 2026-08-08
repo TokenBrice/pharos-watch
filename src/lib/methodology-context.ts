@@ -8,7 +8,6 @@ import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
   MINT_AUTHORITY_METHODOLOGY_PATH,
-  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
   PSI_METHODOLOGY_CHANGELOG_PATH,
@@ -197,11 +196,12 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   mintAuthorityScore: {
     title: "Mint Authority Score",
     summary:
-      "Standalone 0-100 score for the risk that privileged routes can create durable, unbacked stablecoin supply.",
+      "The Safety Score V9 mint component: how much durable, unbacked supply privileged mint paths can create.",
     detail:
-      "Higher is better. The standalone model scores route type, weakest mint-capable controller, quantitative bounds, and reviewer posture, then applies incident, unbounded, EOA, and confidence caps. Safety Score V9 separately evaluates the underlying reviewed control facts in Economic Control.",
+      "Higher is better. Since safety 9.1 mint risk is graded once, inside the V9 Economic Control pillar. The component starts from a derived posture (cap semantics, claim impairment, reconciliation, supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Route family is deliberately not priced separately. Missing or unresolved review data stays NR and never implies safety.",
     methodologyPath: MINT_AUTHORITY_METHODOLOGY_PATH,
-    versionLabel: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
+    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+    changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   activeDepegs: {
     title: "Active Depegs",

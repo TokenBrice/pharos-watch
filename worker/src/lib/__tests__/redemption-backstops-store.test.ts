@@ -23,7 +23,6 @@ function makeRealisticRow(overrides: Record<string, unknown> = {}) {
   return {
     stablecoin_id: "eurc-circle",
     score: 65,
-    effective_exit_score: 58,
     dex_liquidity_score: 44,
     access_score: 40,
     settlement_score: 65,
@@ -119,7 +118,6 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW = {
   stablecoin_id: "usdc-circle",
   snapshot_date: 1_746_748_800,
   score: 65,
-  effective_exit_score: 58,
   dex_liquidity_score: 44,
   updated_at: 1_746_800_000,
   methodology_version: "3.997",
@@ -147,16 +145,15 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
 const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
 const CURRENT_ROWS_SQL =
-  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
+  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
 const CURRENT_ROWS_BY_RUN_ID_SQL = `${CURRENT_ROWS_SQL} WHERE snapshot_run_id = ?`;
 const RUN_ROWS_BY_RUN_ID_SQL =
-  "SELECT stablecoin_id, score, effective_exit_score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
+  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
 function makeWriteRecord(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
   return {
     stablecoinId: "eurc-circle",
     score: 65,
-    effectiveExitScore: 58,
     dexLiquidityScore: 44,
     accessScore: 40,
     settlementScore: 65,
@@ -337,7 +334,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
           makeRealisticRow({
             stablecoin_id: "missing-coin",
             score: null,
-            effective_exit_score: null,
             capacity_score: null,
             source_mode: "static",
             details_json: JSON.stringify({}),
@@ -935,7 +931,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     const record: RedemptionBackstopEntry = {
       stablecoinId: "eurc-circle",
       score: 65,
-      effectiveExitScore: 58,
       dexLiquidityScore: 44,
       accessScore: 40,
       settlementScore: 65,
@@ -998,7 +993,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     const runRowInsert = history.find(
       (entry) => entry.sql.includes("INSERT INTO redemption_backstop_run_rows") && entry.binds.includes("run-test"),
     );
-    expect(runRowInsert?.binds).toHaveLength(25);
+    expect(runRowInsert?.binds).toHaveLength(24);
     expect(
       history.some(
         (entry) =>
@@ -1035,7 +1030,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     const record: RedemptionBackstopEntry = {
       stablecoinId: "eurc-circle",
       score: 65,
-      effectiveExitScore: 58,
       dexLiquidityScore: 44,
       accessScore: 40,
       settlementScore: 65,

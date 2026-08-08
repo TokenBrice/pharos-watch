@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_AUTHORITY_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.3",
+    title: "Retired: mint risk is graded once by Safety Score V9",
+    date: "2026-08-08",
+    effectiveAt: 1786147202,
+    summary:
+      "The standalone Mint Authority Score is retired. Its distinct signals are merged into the Safety Score V9 Economic Control pillar's mint component, which is now the only mint score Pharos publishes. This lane is closed and kept for history.",
+    impact: [
+      "Homepage, screener, coverage, and the stablecoin detail card read the published V9 mint component and its posture band; no surface recomputes a mint score in the browser",
+      "Resolved-incident age decay, MPC/HSM key-custody attestation, the fine multisig quorum ladder, and Safe module evidence moved into the V9 policy asset under `semantic.control.mintMergedSignals`",
+      "Route-family pricing was excluded by design: the V9 cap and claim semantics already price it, and pricing it twice would double-count",
+      "`mintAuthority.authorityPosture` is a validated annotation that never affects the Safety Score; the depeg resolver still consumes it as a curated structural input, so re-curating a posture can move a published depeg verdict",
+      "Curated-versus-derived posture disagreements are reported by `npm run safety-score-v9:mint-posture-queue`",
+      "Curated `mintAuthority` review data, control rows, custody labels, and incident callouts are unchanged — they describe the review and now feed only the V9 fact set",
+      "Further changes to mint risk are published in the Safety Score changelog, starting at 9.1",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.2",
     title: "Immutable-cap bonus requires explicit immutability",
     date: "2026-06-18",

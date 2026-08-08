@@ -99,8 +99,36 @@ export const DATA_DEPENDENCY_REGISTRY = [
     publicationSurface: "dews",
     impactLayer: "availability",
     criticality: DATA_SURFACE_DESCRIPTORS.stressSignals.dependencyCriticality,
-    dependsOn: ["dex-liquidity"],
+    dependsOn: ["dex-liquidity", "depeg-events"],
     consumers: ["stress-signals", "telegram-alerts", "report-cards"],
+    runbookPath: null,
+  },
+  {
+    // Depeg detection runs inside the stablecoin price sync
+    // (`sync-stablecoins/post-enrichment.ts` → `detectDepegEvents`) rather than
+    // on its own trigger, so its producer job is the sync it rides on. The
+    // event ledger it writes is the source of truth for PegScore, and through
+    // PegScore for the V9 peg pillar, which is why it belongs in the map of
+    // record even without a trigger of its own.
+    id: "depeg-events",
+    label: "Depeg event ledger",
+    sourceOfTruth: "depeg_events",
+    producerJob: DATA_SURFACE_DESCRIPTORS.stablecoins.producerJob,
+    cacheKey: null,
+    publicationSurface: null,
+    impactLayer: "data-quality",
+    criticality: "critical",
+    dependsOn: ["stablecoins", "fx-rates"],
+    consumers: [
+      "peg-summary",
+      "stablecoin-detail",
+      "psi",
+      "dews",
+      "safety-score-v9",
+      "depeg-resolver",
+      "telegram-alerts",
+      "project-tape",
+    ],
     runbookPath: null,
   },
   {
@@ -112,7 +140,7 @@ export const DATA_DEPENDENCY_REGISTRY = [
     publicationSurface: "psi",
     impactLayer: "availability",
     criticality: "watch",
-    dependsOn: ["dews"],
+    dependsOn: ["dews", "depeg-events"],
     consumers: ["psi", "shadow-assets"],
     runbookPath: null,
   },
@@ -125,7 +153,7 @@ export const DATA_DEPENDENCY_REGISTRY = [
     publicationSurface: null,
     impactLayer: "availability",
     criticality: "watch",
-    dependsOn: ["dews"],
+    dependsOn: ["dews", "depeg-events"],
     consumers: ["project-tape"],
     runbookPath: null,
   },
@@ -138,7 +166,7 @@ export const DATA_DEPENDENCY_REGISTRY = [
     publicationSurface: "safety-score-v9",
     impactLayer: "availability",
     criticality: DATA_SURFACE_DESCRIPTORS.reportCards.dependencyCriticality,
-    dependsOn: ["stablecoins", "dex-liquidity", "redemption-backstops", "live-reserves"],
+    dependsOn: ["stablecoins", "dex-liquidity", "redemption-backstops", "live-reserves", "depeg-events"],
     consumers: ["report-cards", "stablecoin-detail", "yield-rankings"],
     runbookPath: null,
   },

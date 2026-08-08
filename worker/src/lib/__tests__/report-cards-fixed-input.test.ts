@@ -178,7 +178,6 @@ function redemptionEntry(
   return {
     stablecoinId: "fixture-coin",
     score: 88,
-    effectiveExitScore: 91,
     dexLiquidityScore: 29,
     accessScore: 100,
     settlementScore: 100,

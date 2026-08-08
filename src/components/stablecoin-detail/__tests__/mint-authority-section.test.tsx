@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MintAuthoritySection } from "../mint-authority-section";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 
 const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   status: "reviewed",
@@ -43,46 +44,11 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
     scoreLabel: "70/100",
     compactLabel: "70 Governed",
     bandLabel: "Governed",
+    postureLabel: "Partially bounded admin",
     badgeClassName: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
     textClassName: "text-blue-700 dark:text-blue-400",
-    detail: "Mint Authority Score: 70/100 (Governed).",
-    components: [
-      {
-        key: "route",
-        label: "Route",
-        scoreLabel: "60/100",
-        weightLabel: "30%",
-        textClassName: "text-blue-700 dark:text-blue-400",
-      },
-      {
-        key: "controller",
-        label: "Controller",
-        scoreLabel: "80/100",
-        weightLabel: "40%",
-        textClassName: "text-emerald-700 dark:text-emerald-400",
-      },
-      {
-        key: "bounds",
-        label: "Bounds",
-        scoreLabel: "85/100",
-        weightLabel: "15%",
-        textClassName: "text-emerald-700 dark:text-emerald-400",
-      },
-      {
-        key: "posture",
-        label: "Posture",
-        scoreLabel: "60/100",
-        weightLabel: "15%",
-        textClassName: "text-blue-700 dark:text-blue-400",
-      },
-    ],
-    rawScoreLabel: "72/100",
-    confidenceCapLabel: "<= 100",
-    weakestControlLabel: "Aave Ethereum Governance",
-    weakestControlScoreLabel: "80/100",
-    weakestControlCustodyLabel: null,
-    capsApplied: [],
-    unresolvedReasonLabel: null,
+    detail: "Mint control posture: 70/100 (Governed).",
+    caps: [],
   },
   reviewedAt: "2026-05-12",
   mintIncidents: [],
@@ -123,7 +89,7 @@ describe("MintAuthoritySection", () => {
     );
 
     expect(html).toContain("Not reviewed by Pharos");
-    expect(html).toContain("Mint Authority Score: NR");
+    expect(html).toContain("Mint control posture: NR");
     expect(html).toContain("Unknown does not mean no privileged mint authority.");
   });
 
@@ -135,13 +101,10 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Standalone score");
-    expect(html).toContain("MAS v1.2; V9 evaluates the reviewed control facts");
+    expect(html).toContain("Safety Score V9 mint component");
     expect(html).toContain("Scoring breakdown");
-    expect(html).toContain("Controller");
-    expect(html).toContain("40%");
-    expect(html).toContain("Raw score");
-    expect(html).toContain("No caps applied");
+    expect(html).toContain("Derived posture");
+    expect(html).toContain("Component score");
     expect(html).toContain("Partially bounded admin");
     expect(html).toContain("Confidence: Verified");
     expect(html).toContain("GHO supply is minted by DAO-approved facilitators");
@@ -157,7 +120,10 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket capacity limits minting");
     expect(html).toContain("Aave GHO facilitators");
     expect(html).toContain("https://example.com/gho-facilitators");
-    expect(html).toContain("Methodology v1.2");
+    // 9.1: the card publishes the V9 mint component, so it stamps the
+    // safety-score identity rather than the retired mint-authority lane.
+    expect(html).toContain(`Methodology ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`);
+    expect(html).not.toContain("Methodology v1.3");
     expect(html).toContain("Reviewed 2026-05-12");
   });
 
@@ -182,8 +148,14 @@ describe("MintAuthoritySection", () => {
             bandLabel: "Exposed",
             badgeClassName: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
             textClassName: "text-red-700 dark:text-red-400",
-            capsApplied: ["Incident cap <= 10"],
-            weakestControlCustodyLabel: "Single-key address - custody unverifiable",
+            caps: [
+              {
+                kind: "signal:centralized-mint:critical",
+                label: "Centralized mint (critical)",
+                limitLabel: "<= 10",
+                reason: "Economically effective minting is unbounded or compromised.",
+              },
+            ],
           },
           mintIncidents: [
             {
@@ -200,7 +172,7 @@ describe("MintAuthoritySection", () => {
 
     expect(html).toContain("Mint incident 2024-06-13");
     expect(html).toContain("Privileged mint authority created unbacked supply");
-    expect(html).toContain("Incident cap &lt;= 10");
+    expect(html).toContain("Centralized mint (critical) &lt;= 10");
     expect(html).toContain("Incident report");
     expect(html).toContain("https://example.com/incident");
     expect(html).toContain("Single-key address - custody unverifiable");

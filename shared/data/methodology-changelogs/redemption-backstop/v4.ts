@@ -2,6 +2,26 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.3",
+    title: "One exit engine: the legacy effective exit score retires",
+    date: "2026-08-07",
+    effectiveAt: 1786147200,
+    summary:
+      "Exit was scored by two engines over the same route evidence. The route-scoring tables that the redemption backstop score and the Safety Score V9 Exit pillar each maintained a copy of are now a single definition, validated in CI against the V9 policy artifact. The legacy `effectiveExitScore` blend and its unshipped same-notional shadow engine are deleted; same-notional exit is published by the V9 Exit pillar alone. Redemption route scores themselves are unchanged.",
+    impact: [
+      "The exit scoring tables — component weights, coverage and absolute-capacity breakpoints, settlement-delay, queue-backlog and minimum-redeem bands, holder-eligibility multipliers, confidence factors, route-family caps, and the stress-request policy — live once in `shared/lib/exit-route-scoring.ts`; the V9 policy JSON is asserted against that source rather than pinned to a second authored copy",
+      "Both published views now compose the same engine primitives and differ only in their request: the redemption score measures a route against the supply-denominator notional, the V9 Exit pillar against the same notional snapped to the reviewed stress grid",
+      "`effectiveExitScore` is removed from `GET /api/redemption-backstops` rows, from the snapshot and history writes, and from the detail-page and coverage surfaces; `methodology.effectiveExitModel` is removed from the endpoint and from `v4ScoringParametersHash`",
+      "`score`, `dexLiquidityScore`, `eventualRedeemabilityScore`, every component subscore, capacity semantics, model confidence, route status, and the exit-route observation envelope are unchanged — no redemption route score moves",
+      "Consumers of the retired blend read the published V9 Exit pillar instead: the Selector now sources its exit input from `pillars.exit` only, and no longer fetches the redemption payload at all",
+      "The unshipped `sameNotionalScoringMode: \"active\"` shadow engine — its observation eligibility, capacity-point resolution, pairwise request matching, and correlation classification — is deleted; the V9 Exit pillar performs that work in production",
+      "The `redemption_backstop*` `effective_exit_score` columns remain in D1 and simply stop being written; the entry schema keeps the key declared but inert so Safety Score V9 compiler inputs captured before this version stay replayable",
+      "Discovery's Curve provider check is scoped to the eight chains that credit Curve as a registered discovery provider and honors Curve's chain-path mapping, so deployment-census outcomes are always attributable to a named provider and the guaranteed-failing Gnosis request is gone",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.21",
     title: "DUSD live queue capacity and issuer-discretionary route status",
     date: "2026-07-30",

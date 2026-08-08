@@ -40,7 +40,6 @@ import {
 } from "@shared/lib/redemption-backstop-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
-  REDEMPTION_EFFECTIVE_EXIT_MODEL,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
@@ -63,7 +62,6 @@ export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-
 interface RedemptionBackstopRow {
   stablecoin_id: string;
   score: number | null;
-  effective_exit_score: number | null;
   dex_liquidity_score: number | null;
   access_score: number | null;
   settlement_score: number | null;
@@ -312,7 +310,6 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
     stablecoinId: row.stablecoin_id,
     ...details,
     score: row.score,
-    effectiveExitScore: row.effective_exit_score,
     dexLiquidityScore: row.dex_liquidity_score,
     accessScore: row.access_score,
     settlementScore: row.settlement_score,
@@ -658,7 +655,6 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
         asOf: updatedAt,
       }),
       componentWeights: { ...REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS },
-      effectiveExitModel: REDEMPTION_EFFECTIVE_EXIT_MODEL,
       routeFamilyCaps: { ...REDEMPTION_ROUTE_FAMILY_CAPS },
     },
     updatedAt,

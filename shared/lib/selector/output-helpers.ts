@@ -48,10 +48,6 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
       return row.safetyResilienceScore != null
         ? `resilience ${Math.round(row.safetyResilienceScore)}`
         : "missing resilience";
-    case "safety-dependency-risk-floor":
-      return row.safetyDependencyRiskScore != null
-        ? `dependency risk ${Math.round(row.safetyDependencyRiskScore)}`
-        : "missing dependency risk";
     case "liquidity-floor":
       return row.liquidityScore != null
         ? `liquidity ${Math.round(row.liquidityScore)}`

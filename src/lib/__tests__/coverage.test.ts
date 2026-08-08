@@ -38,7 +38,6 @@ function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): Rede
   return {
     stablecoinId: "test-usd",
     score: 72,
-    effectiveExitScore: 65,
     dexLiquidityScore: 58,
     accessScore: 100,
     settlementScore: 100,
@@ -226,7 +225,6 @@ describe("coverage helpers", () => {
     const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: null,
-        effectiveExitScore: null,
         resolutionState: "missing-capacity",
         modelConfidence: "low",
       }),
@@ -253,7 +251,6 @@ describe("coverage helpers", () => {
     const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: null,
-        effectiveExitScore: null,
         resolutionState: "impaired",
         routeStatus: "degraded",
         routeStatusSource: "market-implied",
@@ -272,7 +269,6 @@ describe("coverage helpers", () => {
     const status = redemptionCoverageFeature.resolve(
       makeRedemptionEntry({
         score: 65,
-        effectiveExitScore: 60,
         modelConfidence: "medium",
         capacitySemantics: "eventual-only",
       }),
@@ -608,9 +604,11 @@ describe("coverage helpers", () => {
       count: 1,
     });
     expect(summary.breakdown).toContainEqual({ key: "unknown", label: "unknown", count: 1 });
-    expect(rows[0].statuses.mintAuthority).toMatchObject({ score: 39, scoreBand: "concentrated" });
-    expect(summary.breakdown).toContainEqual({ key: "score-concentrated", label: "Concentrated", count: 1 });
-    expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 1 });
+    // 9.1: the score buckets read the published V9 mint component. These rows
+    // carry no publication, so both land in the not-rated bucket while the
+    // curation-route buckets above stay curated.
+    expect(rows[0].statuses.mintAuthority).toMatchObject({ score: null, scoreBand: "nr" });
+    expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 2 });
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {
@@ -763,7 +761,6 @@ describe("coverage helpers", () => {
         marketCapUsd: 25,
         redemptionEntry: makeRedemptionEntry({
           score: null,
-          effectiveExitScore: null,
           resolutionState: "impaired",
           routeStatus: "degraded",
           modelConfidence: "low",

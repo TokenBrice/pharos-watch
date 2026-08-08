@@ -130,6 +130,27 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
+export const SAFETY_SCORE_V9_MERGED_MINT_GRADER: MethodologyChangelogEntry = {
+  version: "9.1",
+  title: "One mint grader: incident decay, key custody, and quorum granularity",
+  date: "2026-08-08",
+  effectiveAt: 1786147200,
+  summary:
+    "The standalone Mint Authority Score is retired and its distinct signals are merged into the Economic Control pillar's mint component. A resolved mint incident now decays instead of disappearing, MPC/HSM key custody reclassifies an externally-owned mint key, multisig quorum granularity replaces a binary strong-quorum test, and Safe module evidence is a small modifier. This is the only deliberate score-moving change in the consolidation wave.",
+  impact: [
+    "A resolved mint incident caps the mint component at 79 while recent (under 24 months), 85 while aging (24-48 months), and 90 once dated (48+ months), so it can never score as a clean record; an active incident keeps its unchanged critical path",
+    "An externally-owned mint key takes a 3-point quality penalty that reviewed MPC or HSM custody attestation waives, mirroring the retired engine's issuer-backend treatment",
+    "Multisig mint authority is graded on threshold, signer set, timelock, and Safe module surface instead of a single strong-quorum test; credits are relief against the penalty and can never lift a score above its posture rung",
+    "A reviewed Safe module or guard on the binding mint control applies a 2-point penalty; unknown and not-applicable module surfaces are inert",
+    "41 of 337 published cards moved their mint component (-1 to -3 points) and 16 moved their published score by one point; every letter grade is unchanged, verified by a full-set replay against the 9.07 release baseline",
+    "The curated `authorityPosture` field no longer affects the Safety Score: V9's derived posture is canonical and a curated-vs-derived disagreement raises a curation-queue item instead. It is still a structural input to the depeg resolver, so re-curating a posture can move a published depeg verdict",
+    "Mint route-family pricing is excluded by design because the cap and claim semantics already price it; pillar weights, aggregation, caps, and grade thresholds are unchanged",
+    "Breaking for header-keyed CSV consumers: the homepage and screener exports rename the `Mint Authority Score` column to `Mint Control Score` and `Mint Authority Band` to `Mint Control Band`. Band keys, filter values, and saved screener URLs are unchanged, and the export provenance line now stamps the safety-score identity instead of the retired mint-authority lane",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_NATIVE_INPUT: MethodologyChangelogEntry = {
   version: "9.07",
   title: "Native input pipeline replaces the V8-shaped bridge",

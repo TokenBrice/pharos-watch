@@ -376,10 +376,6 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/redemption-backstops missing methodology.componentWeights",
     );
     assert(
-      body.methodology.effectiveExitModel && isFiniteNumber(body.methodology.effectiveExitModel.diversificationFactor),
-      "/api/redemption-backstops missing effectiveExitModel.diversificationFactor",
-    );
-    assert(
       body.methodology.routeFamilyCaps && typeof body.methodology.routeFamilyCaps === "object",
       "/api/redemption-backstops missing methodology.routeFamilyCaps",
     );

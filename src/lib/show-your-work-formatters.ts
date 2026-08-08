@@ -368,7 +368,6 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
     { label: "Output asset quality", value: fmtNum(entry.outputAssetQualityScore) },
     { label: "Cost", value: fmtNum(entry.costScore) },
     { label: "Composite", value: fmtNum(entry.score) },
-    { label: "Effective exit", value: fmtNum(entry.effectiveExitScore) },
     { label: "Route family", value: entry.routeFamily },
     { label: "Access model", value: entry.accessModel },
     { label: "Settlement model", value: entry.settlementModel },

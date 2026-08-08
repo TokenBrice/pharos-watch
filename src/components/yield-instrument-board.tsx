@@ -14,6 +14,7 @@ import {
   YieldExpandedDetails,
   YieldPysValue,
   YieldSafetyBadge,
+  isOpportunityDerivedYieldRow,
   YieldSignalsIndicator,
   YieldSourceDetails,
   formatYieldRowLabels,
@@ -328,7 +329,12 @@ function YieldInstrumentRowBase({
         <div className="min-w-0">
           <MetricLabel>Safety</MetricLabel>
           <div className="leading-none">
-            <YieldSafetyBadge grade={grade} safetyScore={safetyScore} safetySrLabel={labels.safetySrLabel} />
+            <YieldSafetyBadge
+              grade={grade}
+              safetyScore={safetyScore}
+              safetySrLabel={labels.safetySrLabel}
+              opportunityDerived={isOpportunityDerivedYieldRow(row)}
+            />
           </div>
           <div className="mt-1.5">
             <MetricGauge

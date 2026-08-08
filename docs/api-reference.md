@@ -1035,10 +1035,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "counts": { "incidents": 6, "thresholdCrossings": 13 },
   "nextCursor": null,
   "methodology": {
-    "version": "6.098",
-    "versionLabel": "v6.098",
-    "currentVersion": "6.098",
-    "currentVersionLabel": "v6.098",
+    "version": "6.1",
+    "versionLabel": "v6.1",
+    "currentVersion": "6.1",
+    "currentVersionLabel": "v6.1",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1249,10 +1249,10 @@ Composite peg scores and aggregate statistics. Score history begins at each coin
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.098",
-    "versionLabel": "v6.098",
-    "currentVersion": "6.098",
-    "currentVersionLabel": "v6.098",
+    "version": "6.1",
+    "versionLabel": "v6.1",
+    "currentVersion": "6.1",
+    "currentVersionLabel": "v6.1",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -2366,12 +2366,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.07",
+    "methodologyVersion": "9.1",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.07",
+    "version": "9.1",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2422,7 +2422,6 @@ Rows written by the current worker are grouped by a completed snapshot run manif
     "cusd-cap": {
       "stablecoinId": "cusd-cap",
       "score": 88,
-      "effectiveExitScore": 56,
       "dexLiquidityScore": 29,
       "accessScore": 100,
       "settlementScore": 100,
@@ -2460,14 +2459,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.21"
+      "methodologyVersion": "4.3"
     }
   },
   "methodology": {
-    "version": "4.21",
-    "versionLabel": "v4.21",
-    "currentVersion": "4.21",
-    "currentVersionLabel": "v4.21",
+    "version": "4.3",
+    "versionLabel": "v4.3",
+    "currentVersion": "4.3",
+    "currentVersionLabel": "v4.3",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2478,25 +2477,6 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "capacity": 0.25,
       "outputAssetQuality": 0.15,
       "cost": 0.1
-    },
-    "effectiveExitModel": {
-      "model": "best-path",
-      "diversificationFactor": 0.1,
-      "modeledExitSize": {
-        "supplyRatio": 0.05,
-        "floorUsd": 100000,
-        "capUsd": 25000000
-      },
-      "capacityFactor": {
-        "formula": "min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)",
-        "missingCapacityBehavior": "unbounded"
-      },
-      "confidenceFactors": {
-        "high": 1,
-        "medium": 0.75,
-        "low": 0.35
-      },
-      "diversificationPolicy": "Only independent issuer rails receive the secondary-path diversification bonus in v4 snapshots."
     },
     "routeFamilyCaps": {
       "queueRedeem": 70,
@@ -2509,7 +2489,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 
 `score` is the direct redemption-quality score.
 
-`effectiveExitScore` is the raw best-path exit score written into the redemption snapshot when the route resolved cleanly and is not currently impaired. It reuses last-known DEX liquidity even when the DEX input is stale; the cron records that operational state through `metadata.liquidityStale`. In v4, redemption contribution is adjusted by `capacityFactor = min(1, currentExecutableCapacityUsd / modeledExitSizeUsd)` and by route confidence (`high = 1`, `medium = 0.75`, `low = 0.35`) before the best-path blend. `modeledExitSizeUsd` is `min(max(supplyUsd × 0.05, 100000), 25000000)`. When both DEX liquidity and adjusted redemption exist, only independent issuer rails receive the 10% secondary-path diversification bonus. Report cards may still recompute liquidity from the same underlying redemption score with additional confidence, eligibility, and active-depeg gating, so this raw endpoint value can differ numerically from `dimensions.liquidity.score`.
+The `effectiveExitScore` field and the `methodology.effectiveExitModel` block were removed in redemption methodology v4.3. Same-notional exit is published by the Safety Score V9 Exit pillar (`GET /api/report-cards/v9`, `pillars.exit`), which measures completion of an explicit stress request against reviewed route capacity curves; `dexLiquidityScore` remains on the row as the DEX market-health input.
 
 `methodology.version` is attributed from the latest completed redemption snapshot run, falling back to the latest stored row for legacy snapshots. `methodology.currentVersion` remains the live code version when the API is serving an older snapshot that has not yet been recomputed.
 
@@ -2527,7 +2507,7 @@ Rows written by the current worker are grouped by a completed snapshot run manif
 - `failed` = a route-specific resolver failed
 - `impaired` = the route shape is known but current market or route-availability evidence contradicts broad par redemption
 
-`routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. A severe active depeg (`>=2500 bps`) can publish `routeStatus: "degraded"` and `routeStatusSource: "market-implied"` for static or non-live-direct routes; those impaired rows have `score = null`, `effectiveExitScore = null`, and `modelConfidence = "low"`. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
+`routeStatus` / `routeStatusSource` describe current route availability separately from the static route shape. Normal rows use `routeStatus: "open"` and `routeStatusSource: "static-config"`. A severe active depeg (`>=2500 bps`) can publish `routeStatus: "degraded"` and `routeStatusSource: "market-implied"` for static or non-live-direct routes; those impaired rows have `score = null` and `modelConfidence = "low"`. `holderEligibility` describes the modeled holder cohort, such as `any-holder`, `verified-customer`, `whitelisted-primary`, `pre-incident-holder`, `issuer-discretionary`, or `unknown`.
 
 For v4-compatible snapshots, route-status and capacity telemetry remain part of the four-hour `sync-redemption-backstops` snapshot. The worker does not fetch a separate real-time route-status feed during this sync; route status comes from live-reserve adapter metadata, static reviewed policy, and market-implied severe-depeg overlays.
 
@@ -2544,7 +2524,6 @@ Top-level fields:
 | Field                        | Type                                                                                                                                                       | Description                                                                                                                                                                                                                   |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `score`                      | `number \| null`                                                                                                                                           | Direct redemption-quality score after route-family/config caps                                                                                                                                                                |
-| `effectiveExitScore`         | `number \| null`                                                                                                                                           | Blended exit score used by report cards                                                                                                                                                                                       |
 | `dexLiquidityScore`          | `number \| null`                                                                                                                                           | DEX liquidity input used in the blend                                                                                                                                                                                         |
 | `routeFamily`                | `string`                                                                                                                                                   | `stablecoin-redeem`, `basket-redeem`, `collateral-redeem`, `psm-swap`, `queue-redeem`, or `offchain-issuer`                                                                                                                   |
 | `accessModel`                | `string`                                                                                                                                                   | `permissionless-onchain`, `whitelisted-onchain`, `issuer-api`, or `manual`                                                                                                                                                    |
@@ -2675,7 +2654,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.07",
+      "methodologyVersion": "9.1",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2686,7 +2665,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.07",
+      "methodologyVersion": "9.1",
       "publishedAt": 1772000700
     }
   },
@@ -3223,17 +3202,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.098"
+      "methodologyVersion": "6.1"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.098",
-    "versionLabel": "v6.098",
-    "currentVersion": "6.098",
-    "currentVersionLabel": "v6.098",
+    "version": "6.1",
+    "versionLabel": "v6.1",
+    "currentVersion": "6.1",
+    "currentVersionLabel": "v6.1",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3254,7 +3233,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.098"
+    "methodologyVersion": "6.1"
   },
   "history": [
     {
@@ -3271,10 +3250,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.098",
-    "versionLabel": "v6.098",
-    "currentVersion": "6.098",
-    "currentVersionLabel": "v6.098",
+    "version": "6.1",
+    "versionLabel": "v6.1",
+    "currentVersion": "6.1",
+    "currentVersionLabel": "v6.1",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3625,12 +3604,12 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
   "profile": "treasury",
   "provenance": "pharos-verified",
   "snapshotSchemaVersion": 3,
-  "engineVersion": "selector-v1.91",
+  "engineVersion": "selector-v2.0",
   "datasetHash": "<64-character canonical dataset hash>",
   "verification": {
     "kind": "pharos-server-recomputed-v1",
     "datasetHash": "<same 64-character canonical dataset hash>",
-    "engineVersion": "selector-v1.91"
+    "engineVersion": "selector-v2.0"
   },
   "timestamp": 1715000000000,
   "input": {

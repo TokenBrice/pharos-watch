@@ -158,7 +158,7 @@ describe("StablecoinTable", () => {
       expect(screen.getByText("Market Cap")).toBeTruthy();
       expect(screen.queryByText("Blacklist")).toBeNull();
       expect(screen.queryByText("Peg Score")).toBeNull();
-      expect(screen.getByTitle(/Mint Authority Score/i).textContent).toContain("Mint");
+      expect(screen.getByTitle(/mint control posture/i).textContent).toContain("Mint");
     });
   });
 

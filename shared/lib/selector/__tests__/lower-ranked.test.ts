@@ -22,7 +22,6 @@ function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
     mechanismArchetype: null,
     supplyUsd: 100_000_000,
     pegScore: 90,
-    pegStabilityScore: 80,
     activeDepeg: false,
     currentDeviationBps: 10,
     depegEventCount: 0,
@@ -30,11 +29,10 @@ function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
     dewsScore: 25,
     safetyGrade: "A",
     safetyScore: 80,
+    safetyProvenance: "safety-score-v9",
     safetyResilienceScore: 80,
-    safetyDependencyRiskScore: 80,
     safetyDecentralizationScore: 80,
     safetyLiquidityScore: 80,
-    collateralQuality: 80,
     custodyModel: "onchain",
     bluechipGrade: "A",
     liquidityScore: 80,
@@ -110,10 +108,10 @@ describe("userEmphasizedDimension", () => {
   it("exitSpeed=1h → liquidity", () => {
     expect(userEmphasizedDimension(input({ exitSpeed: "1h" }))).toBe("liquidity");
   });
-  it("treasury × 6mplus → dependencyRisk", () => {
+  it("treasury × 6mplus → safetyOverall", () => {
     expect(
       userEmphasizedDimension(input({ profile: "treasury", horizon: "6mplus" })),
-    ).toBe("dependencyRisk");
+    ).toBe("safetyOverall");
   });
   it("yield + minApy set → pharosYieldScore", () => {
     expect(

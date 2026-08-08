@@ -1,9 +1,3 @@
-import {
-  computeMintAuthorityScore,
-  isMintCapableAbility,
-  stablecoinToMintAuthorityScoringInput,
-  type MintAuthorityParentResolver,
-} from "../../shared/lib/mint-authority-scoring";
 import { isActiveStablecoinMeta } from "../../shared/lib/stablecoins/status";
 import { findCommonCriticalControls } from "../../shared/lib/control-identities";
 import type { MintAuthorityControl, MintAuthorityProfile, StablecoinLink, StablecoinMeta } from "../../shared/types";
@@ -13,6 +7,23 @@ const ROUTE_CHECK_MINT_PATHS = new Set<MintAuthorityProfile["mintPath"]>([
   "offchain-attested-minter",
   "m0-permissioned-minter",
 ]);
+
+/**
+ * Abilities that let a control create durable supply. This is a curation
+ * predicate over reviewed metadata, not a scoring input: the queues below use
+ * it to decide which controls still owe evidence. Safety Score V9 derives its
+ * own mint capability set from the same field in the fact compiler.
+ */
+const MINT_CAPABLE_ABILITIES = new Set<MintAuthorityControl["directMintAbility"]>([
+  "direct",
+  "can-authorize",
+  "cap-limited",
+  "upgrade-only",
+]);
+
+function isMintCapableAbility(ability: MintAuthorityControl["directMintAbility"]): boolean {
+  return MINT_CAPABLE_ABILITIES.has(ability);
+}
 
 const KEY_CUSTODY_PROSE_PATTERN = /\b(mpc|hsm|fireblocks|key management|key custody|signing key)\b/i;
 
@@ -41,10 +52,6 @@ export interface MintAuthorityAuditSourceFreeRow extends MintAuthorityAuditCoinR
   rationale: string;
 }
 
-export interface MintAuthorityAuditUnscoreableRow extends MintAuthorityAuditCoinRow {
-  unresolvedReason: string;
-}
-
 export interface MintAuthorityAuditIncidentRow extends MintAuthorityAuditCoinRow {
   activeDates: string[];
 }
@@ -68,7 +75,6 @@ export interface MintAuthorityReviewAudit {
     activeCoins: number;
     reviewedProfiles: number;
     activeMissingReviews: number;
-    reviewedButUnscoreable: number;
     routeCheckQueue: number;
     capDescriptionQueue: number;
     unresolvedQuestionProfiles: number;
@@ -84,7 +90,6 @@ export interface MintAuthorityReviewAudit {
     sourceUrls: MintAuthorityAuditSourceStats;
   };
   activeMissingReviews: MintAuthorityAuditCoinRow[];
-  reviewedButUnscoreable: MintAuthorityAuditUnscoreableRow[];
   routeCheckQueue: MintAuthorityAuditControlRow[];
   capDescriptionQueue: MintAuthorityAuditControlRow[];
   unresolvedQuestionQueue: MintAuthorityAuditUnresolvedRow[];
@@ -194,15 +199,9 @@ export function buildMintAuthorityReviewAudit({
   coins,
   generatedAt = new Date().toISOString(),
 }: BuildMintAuthorityReviewAuditOptions): MintAuthorityReviewAudit {
-  const coinById = new Map(coins.map((coin) => [coin.id, coin]));
-  const resolveParent: MintAuthorityParentResolver = (id) => {
-    const parent = coinById.get(id);
-    return stablecoinToMintAuthorityScoringInput(parent);
-  };
   const sourceStats = { totalLinks: 0, urls: new Map<string, number>() };
 
   const activeMissingReviews: MintAuthorityAuditCoinRow[] = [];
-  const reviewedButUnscoreable: MintAuthorityAuditUnscoreableRow[] = [];
   const routeCheckQueue: MintAuthorityAuditControlRow[] = [];
   const capDescriptionQueue: MintAuthorityAuditControlRow[] = [];
   const unresolvedQuestionQueue: MintAuthorityAuditUnresolvedRow[] = [];
@@ -225,14 +224,6 @@ export function buildMintAuthorityReviewAudit({
 
     reviewedProfiles += 1;
     appendSourceStats(sourceStats, collectMintAuthoritySources(profile));
-
-    const score = computeMintAuthorityScore(stablecoinToMintAuthorityScoringInput(coin), resolveParent);
-    if (score.score == null && profile.review.disposition !== "unresolved") {
-      reviewedButUnscoreable.push({
-        ...coinRow(coin),
-        unresolvedReason: score.unresolvedReason ?? "unknown",
-      });
-    }
 
     if (profile.review.sourceFreeRationale) {
       sourceFreeQueue.push({ ...coinRow(coin), rationale: profile.review.sourceFreeRationale });
@@ -316,7 +307,6 @@ export function buildMintAuthorityReviewAudit({
       activeCoins,
       reviewedProfiles,
       activeMissingReviews: activeMissingReviews.length,
-      reviewedButUnscoreable: reviewedButUnscoreable.length,
       routeCheckQueue: routeCheckQueue.length,
       capDescriptionQueue: capDescriptionQueue.length,
       unresolvedQuestionProfiles: unresolvedQuestionQueue.length,
@@ -332,7 +322,6 @@ export function buildMintAuthorityReviewAudit({
       sourceUrls: sourceStatsFrom(sourceStats),
     },
     activeMissingReviews: sortRows(activeMissingReviews),
-    reviewedButUnscoreable: sortRows(reviewedButUnscoreable),
     routeCheckQueue: sortRows(routeCheckQueue),
     capDescriptionQueue: sortRows(capDescriptionQueue),
     unresolvedQuestionQueue: sortRows(unresolvedQuestionQueue),
@@ -375,7 +364,6 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     `- Active coins: ${summary.activeCoins}`,
     `- Reviewed Mint Authority profiles: ${summary.reviewedProfiles}`,
     `- Active missing reviews: ${summary.activeMissingReviews}`,
-    `- Reviewed but unscoreable: ${summary.reviewedButUnscoreable}`,
     `- Route-check queue: ${summary.routeCheckQueue}`,
     `- Cap-description queue: ${summary.capDescriptionQueue}`,
     `- Profiles with unresolved questions: ${summary.unresolvedQuestionProfiles}`,
@@ -393,12 +381,6 @@ export function renderMintAuthorityReviewAuditMarkdown(audit: MintAuthorityRevie
     "## Active Missing Reviews",
     "",
     ...renderCoinRows(audit.activeMissingReviews),
-    "",
-    "## Reviewed But Unscoreable",
-    "",
-    ...(audit.reviewedButUnscoreable.length === 0
-      ? ["- None."]
-      : audit.reviewedButUnscoreable.map((row) => `- \`${row.coinId}\` (${row.symbol}): ${row.unresolvedReason}`)),
     "",
     "## Route-Check Queue",
     "",

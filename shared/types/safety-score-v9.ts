@@ -1040,6 +1040,76 @@ const V9ControlPolicySchema = z
         seasonedCreditMinMonths: z.number().int().positive().default(60),
       })
       .strict(),
+    // Safety 9.1 — the merged mint grader. These knobs carry the signals the
+    // retired standalone Mint Authority engine measured and V9 discarded:
+    // resolved-incident age decay, MPC/HSM key-custody attestation, a fine
+    // multisig quorum ladder, and Safe module/guard evidence. They live in the
+    // policy asset so the determinism contract (one digest over every scoring
+    // constant) still holds. MA's route-family pricing is excluded by design:
+    // it double-counts what `capSemantics` already prices.
+    mintMergedSignals: z
+      .object({
+        // A resolved mint incident caps the mint component; the cap relaxes with
+        // the incident's age but never reaches the clean-record ladder. Active
+        // incidents keep the untouched critical `active-control-incident` path.
+        resolvedIncidentQualityCaps: z
+          .object({ recent: ScoreSchema, aging: ScoreSchema, dated: ScoreSchema })
+          .strict(),
+        resolvedIncidentDecayMinMonths: z
+          .object({
+            aging: z.number().int().positive(),
+            dated: z.number().int().positive(),
+          })
+          .strict(),
+        // An externally-owned key under reviewed MPC or HSM custody grades as an
+        // issuer-operated backend rather than a bare single key. The paired
+        // penalty is what the reclassification waives: without it the
+        // attestation would have nothing to grade against, because V9's mint
+        // posture is derived from cap/claim semantics rather than key topology.
+        attestedKeyCustodyQuality: ScoreSchema,
+        unattestedEoaPenalty: z.number().finite().nonnegative(),
+        // Bounded quorum-granularity adjustment replacing the binary
+        // strong-quorum test. Credits can never leapfrog the next posture rung;
+        // penalties can never push below the unbounded-or-compromised rung.
+        multisigQuorumAdjustment: z
+          .object({
+            unknownTopology: z.number().finite().max(0),
+            singleSigner: z.number().finite().max(0),
+            twoSigner: z.number().finite().max(0),
+            thresholdThreePlus: z.number().finite().max(0),
+            thresholdFourPlusCredit: z.number().finite().nonnegative(),
+            majorityThresholdCredit: z.number().finite().nonnegative(),
+            timelockCredit: z.number().finite().nonnegative(),
+            minAdjustment: z.number().finite().max(0),
+            maxAdjustment: z.number().finite().nonnegative(),
+          })
+          .strict(),
+        // Reviewed Safe module/guard surface as a small quality modifier.
+        modulesOrGuardsAdjustment: z
+          .object({
+            noneDetectedCredit: z.number().finite().nonnegative(),
+            presentPenalty: z.number().finite().nonnegative(),
+          })
+          .strict(),
+      })
+      .strict()
+      .superRefine((signals, ctx) => {
+        const caps = signals.resolvedIncidentQualityCaps;
+        if (!(caps.recent <= caps.aging && caps.aging <= caps.dated)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["resolvedIncidentQualityCaps"],
+            message: "Resolved-incident caps must relax monotonically with incident age",
+          });
+        }
+        if (signals.resolvedIncidentDecayMinMonths.aging >= signals.resolvedIncidentDecayMinMonths.dated) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["resolvedIncidentDecayMinMonths"],
+            message: "The dated incident tier must begin after the aging tier",
+          });
+        }
+      }),
     oracleTierQuality: z
       .object({
         "oracleless-or-internal": ScoreSchema,

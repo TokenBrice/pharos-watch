@@ -1,4 +1,4 @@
-import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   computeReportCardsRegistryFingerprint,
@@ -45,7 +45,6 @@ export interface NativeSafetyScoreV9Capture {
   pegAnalyticsPublished: boolean;
   completeness: {
     expectedCount: number;
-    missing: string[];
   };
 }
 
@@ -92,7 +91,6 @@ export async function buildNativeSafetyScoreV9Capture(
     inputFreshness,
     v9PublicationInputHealth,
   } = await loadReportCardsSnapshotInputs(db, {
-    includeBluechipRatings: false,
     ...(options.preloadedStablecoinsCache
       ? { preloadedStablecoinsCache: options.preloadedStablecoinsCache }
       : {}),
@@ -177,12 +175,11 @@ export async function buildNativeSafetyScoreV9Capture(
     methodologyVersion: redemptionSnapshotProvenance.methodologyVersion,
   });
 
+  // `ACTIVE_IDS` is built from `ACTIVE_STABLECOINS` in the same registry
+  // module, so the capture's asset list cannot diverge from the active set. The
+  // guard that used to compare them, and the always-empty `missing` list it
+  // reported, were tautologies left over from the V8-shaped bridge.
   const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
-  const activeAssetIdSet = new Set(activeAssetIds);
-  const missing = [...ACTIVE_IDS].filter((id) => !activeAssetIdSet.has(id)).sort();
-  if (missing.length > 0) {
-    throw new Error(`Native V9 capture is missing ${missing.length} active assets: ${missing.join(",")}`);
-  }
 
   // Collateral drift itself keeps running in the reserve/status lane; only the
   // capture of its diagnostic output drops. The fallback list stays: the V9
@@ -265,6 +262,6 @@ export async function buildNativeSafetyScoreV9Capture(
       eventsByCoin: pegAnalytics.eventsByCoin,
     },
     pegAnalyticsPublished,
-    completeness: { expectedCount: ACTIVE_IDS.size, missing },
+    completeness: { expectedCount: activeAssetIds.length },
   };
 }

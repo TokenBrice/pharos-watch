@@ -228,7 +228,16 @@ export type RedemptionConfidenceDetails = z.infer<typeof RedemptionConfidenceDet
 export const RedemptionBackstopEntrySchema = z.object({
   stablecoinId: z.string(),
   score: ScoreSchema.nullable(),
-  effectiveExitScore: ScoreSchema.nullable(),
+  /**
+   * Retired in redemption methodology v4.3. Nothing computes, writes, or reads
+   * this any more — same-notional exit is published by the Safety Score V9 Exit
+   * pillar. It stays declared, optional, and inert only so frozen Safety Score
+   * V9 compiler inputs captured before the retirement still parse to the bytes
+   * their `redemptionPayloadFingerprint` was taken over; the deterministic
+   * replay contract requires historical captures to stay replayable. Do not
+   * read it: any new consumer wants `pillars.exit` on the V9 report card.
+   */
+  effectiveExitScore: ScoreSchema.nullable().optional(),
   dexLiquidityScore: ScoreSchema.nullable(),
   accessScore: ScoreSchema.nullable(),
   settlementScore: ScoreSchema.nullable(),
@@ -335,31 +344,6 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
     capacity: RatioSchema,
     outputAssetQuality: RatioSchema,
     cost: RatioSchema,
-  }),
-  effectiveExitModel: z.object({
-    model: z.string(),
-    diversificationFactor: RatioSchema,
-    modeledExitSize: z
-      .object({
-        supplyRatio: RatioSchema,
-        floorUsd: NonNegativeNumberSchema,
-        capUsd: NonNegativeNumberSchema,
-      })
-      .optional(),
-    capacityFactor: z
-      .object({
-        formula: z.string(),
-        missingCapacityBehavior: z.string(),
-      })
-      .optional(),
-    confidenceFactors: z
-      .object({
-        high: RatioSchema,
-        medium: RatioSchema,
-        low: RatioSchema,
-      })
-      .optional(),
-    diversificationPolicy: z.string().optional(),
   }),
   routeFamilyCaps: z.object({
     queueRedeem: ScoreSchema,

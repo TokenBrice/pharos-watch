@@ -1,5 +1,6 @@
 import { ContentTable } from "@/components/table";
 import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { V9_MINT_POSTURE_BANDS } from "@shared/lib/safety-score-v9/mint-posture";
 import {
   MethodologyDetails,
   MethodologyFacts,
@@ -8,60 +9,115 @@ import {
 } from "../../methodology-shared";
 import { MINT_AUTHORITY_SCORE_SECTION_CONTENT } from "../methodology-content";
 
-const COMPONENT_COLUMNS = [
-  { id: "component", header: "Component", rowHeader: true },
-  { id: "weight", header: "Weight" },
+const SIGNAL_COLUMNS = [
+  { id: "signal", header: "Signal", rowHeader: true },
+  { id: "effect", header: "Effect" },
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ] as const;
 
-const COMPONENT_ROWS = [
-  {
-    id: "route",
-    cells: {
-      component: "Route",
-      weight: "30%",
-      meaning: "Structural mint route family, from immutable user collateral to bridges, backend signers, or issuer-direct minting.",
-    },
-  },
-  {
-    id: "controller",
-    cells: {
-      component: "Controller",
-      weight: "40%",
-      meaning: "Weakest mint-capable controller across direct minters, minter admins, cap admins, proxy admins, bridge admins, and upgrade paths.",
-    },
-  },
-  {
-    id: "bounds",
-    cells: {
-      component: "Bounds",
-      weight: "15%",
-      meaning: "Whether mint-capable routes are quantitatively capped, and whether a privileged actor can raise those caps.",
-    },
-  },
+const SIGNAL_ROWS = [
   {
     id: "posture",
     cells: {
-      component: "Posture",
-      weight: "15%",
-      meaning: "Reviewed authority posture, from no privileged route through bounded, concentrated, or unbounded/compromised authority.",
+      signal: "Derived posture",
+      effect: "Sets the base",
+      meaning:
+        "Cap semantics, claim impairment, reconciliation cadence, and supervisory regime place the mint on a posture rung: no live authority, bounded admin, partially bounded, unbounded-but-reconciled, concentrated, or unbounded/compromised.",
+    },
+  },
+  {
+    id: "incident",
+    cells: {
+      signal: "Resolved-incident decay",
+      effect: "Caps the component",
+      meaning:
+        "A resolved mint incident caps the component and the cap relaxes with the incident's age. It never reaches the clean-record ladder, so a resolved exploit is never scored as a clean record. An active incident keeps its own critical path.",
+    },
+  },
+  {
+    id: "custody",
+    cells: {
+      signal: "Key custody",
+      effect: "Penalty and waiver",
+      meaning:
+        "A bare externally-owned mint key is a single-point custody failure the cap and claim semantics cannot see. Reviewed MPC or HSM custody reclassifies it as an issuer-operated backend and waives the penalty.",
+    },
+  },
+  {
+    id: "quorum",
+    cells: {
+      signal: "Multisig quorum",
+      effect: "Bounded penalty",
+      meaning:
+        "Threshold, signer set, timelock, and Safe module surface grade quorum quality. A one-of-N Safe is penalized far harder than a three-of-five; relief for a majority threshold or a timelock can cancel the penalty but never lifts the component above its posture rung.",
+    },
+  },
+  {
+    id: "modules",
+    cells: {
+      signal: "Modules and guards",
+      effect: "Small penalty",
+      meaning:
+        "A reviewed Safe module or guard on the binding mint control is an extra path around the quorum and takes a small penalty. Unknown and not-applicable module surfaces are inert.",
     },
   },
 ] as const;
 
 const BAND_COLUMNS = [
   { id: "band", header: "Band", rowHeader: true },
-  { id: "range", header: "Range" },
+  { id: "posture", header: "Derived posture" },
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ] as const;
 
 const BAND_ROWS = [
-  { id: "hardened", cells: { band: "Hardened", range: "80-100", meaning: "No resolved privileged mint path or strongly bounded, high-confidence controls." } },
-  { id: "governed", cells: { band: "Governed", range: "65-79", meaning: "Governance or admin controls exist, but they are comparatively bounded or slow." } },
-  { id: "managed", cells: { band: "Managed", range: "50-64", meaning: "Active mint management exists with some controls or route limits." } },
-  { id: "concentrated", cells: { band: "Concentrated", range: "35-49", meaning: "A small operator, backend, custodian, bridge, or low-threshold route can affect supply." } },
-  { id: "exposed", cells: { band: "Exposed", range: "0-34", meaning: "Unbounded, compromised, single-key, or otherwise weak authority dominates the score." } },
-  { id: "nr", cells: { band: "NR", range: "Not rated", meaning: "Missing, unknown, inherited-but-unresolved, or insufficient review data." } },
+  {
+    id: "hardened",
+    cells: {
+      band: V9_MINT_POSTURE_BANDS.hardened.label,
+      posture: "No live authority, or bounded admin",
+      meaning: V9_MINT_POSTURE_BANDS.hardened.detail,
+    },
+  },
+  {
+    id: "governed",
+    cells: {
+      band: V9_MINT_POSTURE_BANDS.governed.label,
+      posture: "Partially bounded admin",
+      meaning: V9_MINT_POSTURE_BANDS.governed.detail,
+    },
+  },
+  {
+    id: "managed",
+    cells: {
+      band: V9_MINT_POSTURE_BANDS.managed.label,
+      posture: "Unbounded but reconciled",
+      meaning: V9_MINT_POSTURE_BANDS.managed.detail,
+    },
+  },
+  {
+    id: "concentrated",
+    cells: {
+      band: V9_MINT_POSTURE_BANDS.concentrated.label,
+      posture: "Concentrated admin",
+      meaning: V9_MINT_POSTURE_BANDS.concentrated.detail,
+    },
+  },
+  {
+    id: "exposed",
+    cells: {
+      band: V9_MINT_POSTURE_BANDS.exposed.label,
+      posture: "Unbounded or compromised",
+      meaning: V9_MINT_POSTURE_BANDS.exposed.detail,
+    },
+  },
+  {
+    id: "nr",
+    cells: {
+      band: "NR",
+      posture: "Unknown",
+      meaning: "Missing, unknown, inherited-but-unresolved, or insufficient review data.",
+    },
+  },
 ] as const;
 
 export function MintAuthorityScoreMethodologySection() {
@@ -70,60 +126,69 @@ export function MintAuthorityScoreMethodologySection() {
       id={MINT_AUTHORITY_SCORE_SECTION_CONTENT.id}
       title={MINT_AUTHORITY_SCORE_SECTION_CONTENT.title}
       versionBadge={{ label: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL }}
-      versionNote="Version increments when weights, route/controller scores, caps, bands, inheritance, or NR semantics change."
+      versionNote="This lane is closed. Mint risk is versioned in the Safety Score changelog from v9.1 onward; the badge marks the terminal Mint Authority release."
     >
       <p>
-        Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or
-        routed by privileged actors. It focuses on mint paths such as issuer minters, allowlisted minters, cap admins,
-        proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs,
-        custodians, and wrapper inheritance.
+        Mint authority measures how much durable stablecoin supply can be created, authorized, expanded, or routed by
+        privileged actors — issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges,
+        off-chain attestation systems, backend signers, governance, Safes and multisigs, custodians, and wrapper
+        inheritance.
+      </p>
+      <p>
+        Pharos scored this twice until methodology v9.1: once as a standalone Mint Authority Score and once inside the
+        Safety Score. The two engines disagreed — most sharply on incidents, where the standalone score remembered a
+        resolved exploit for years and the Safety Score forgot it the moment it was resolved. Since v9.1 there is one
+        grader. Mint risk is the Safety Score&apos;s Economic Control pillar mint component, and every mint score on the
+        site is that component.
       </p>
       <MethodologyFacts
         facts={[
           { label: "Score range", value: "0-100, with NR for missing or unresolved review data" },
           { label: "Main risk", value: "Privileged durable supply creation or mint-route expansion" },
-          { label: "Safety Score role", value: "V9 evaluates the underlying reviewed control facts directly" },
+          { label: "Where it lives", value: "Safety Score V9 Economic Control pillar, mint component" },
         ]}
       />
       <ContentTable
         tableId="methodology-mint-authority-components"
         testId="methodology-mint-authority-components-table"
-        columns={COMPONENT_COLUMNS}
-        rows={COMPONENT_ROWS}
+        columns={SIGNAL_COLUMNS}
+        rows={SIGNAL_ROWS}
       />
-      <WorkedExample summary="Worked example: compromised privileged mint route">
-        <p className="pharos-numeric">Inputs: route=40, controller=15, bounds=30, posture=5</p>
-        <p className="pharos-numeric">rawScore=round(40*0.30 + 15*0.40 + 30*0.15 + 5*0.15)=23</p>
+      <WorkedExample summary="Worked example: a resolved mint incident on a reconciled issuer">
         <p>
-          Because the profile records an unbounded or compromised posture with a privileged-mint incident, the incident
-          cap limits the final score to <span className="text-foreground">10/100 (Exposed)</span>.
+          An issuer whose minting is economically unbounded but reconciled against reserves under attestation sits on
+          the reconciled rung. A privileged-mint incident from eighteen months ago is resolved, so it raises no active
+          incident signal — but the resolved-incident cap still holds the component below the bounded-admin rung, and
+          the cap relaxes on the incident&apos;s second and fourth anniversaries.
+        </p>
+        <p>
+          Under the retired standalone engine the same asset carried a permanent cap in the teens. Under the merged
+          grader the penalty is proportionate to the pillar it feeds, and it is the same number the letter grade uses.
         </p>
       </WorkedExample>
-      <MethodologyDetails summary="Technical details: caps, inheritance, and bands">
+      <MethodologyDetails summary="Technical details: composition, annotation, and bands">
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Caps</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>
-              Bounds: cap-limited controls receive the immutable-cap bonus only when every cap-limited mint-capable
-              control explicitly records that its cap cannot be raised. Unknown or omitted cap-mutability evidence stays
-              bounded, but does not score as immutable.
-            </li>
-            <li>
-              Incident cap: unbounded or compromised authority with a recorded mint incident is capped by the age of
-              the most recent incident — 10 when under 2 years old, 15 at 2-4 years, 20 at 4+ years. Decay is purely
-              time-based and always stays below the no-incident unbounded cap.
-            </li>
-            <li>Unbounded cap: unbounded or compromised authority without a recorded incident is capped at 25.</li>
-            <li>EOA cap: a non-issuer-context EOA that can mint or authorize minting without MPC/HSM attestation is capped at 40.</li>
-            <li>Confidence cap: verified caps at 100, probable at 90, manual-review at 85, and unknown returns NR.</li>
-          </ul>
+          <h3 className="text-foreground font-medium">Composition</h3>
+          <p>
+            The mint component is one of three in the Economic Control pillar, alongside oracle and bridge topology.
+            The pillar takes the lowest binding component, so a weak mint path is not averaged away by a strong oracle.
+          </p>
         </div>
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Wrapper inheritance</h3>
+          <h3 className="text-foreground font-medium">What is deliberately not counted</h3>
           <p>
-            `wrapped-or-variant-inherited` rows inherit from `inheritedFrom`. If the parent is scoreable, the wrapper
-            score is the lower of the parent score and a blend of 60% parent score plus 40% weakest wrapper-control score.
-            Missing parents, cycles, unresolved parents, and depth-limit cases return NR.
+            The retired engine priced the mint route family (issuer-direct, permissioned minter, bridge synthetic, and
+            so on) as its own weighted component. That is not carried over: the cap and claim semantics already price
+            the same risk, and counting it twice would double-penalize the same fact.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-foreground font-medium">Curated posture is an annotation</h3>
+          <p>
+            The curated authority-posture field shown on detail pages is a reviewer annotation. It is validated against
+            the derived posture and never affects the Safety Score; a disagreement raises curation work rather than
+            moving a score. It is not inert everywhere: the depeg resolver reads it as a curated structural input, so
+            re-curating a posture can change a published depeg verdict.
           </p>
         </div>
         <ContentTable

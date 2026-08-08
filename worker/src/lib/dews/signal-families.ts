@@ -13,6 +13,7 @@ import { clamp } from "@shared/lib/math";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { DEWSInput, SignalResult } from "./types";
 import { piecewiseLinear } from "./compatibility";
+import { deriveDepegSignal } from "../depeg-signals";
 
 // ---------------------------------------------------------------------------
 // Source-quality scoring tables
@@ -271,14 +272,30 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
     return { value: 0, available: false };
   }
 
-  // Primary deviation from peg (bps)
-  const primaryDevBps = Math.abs((price / pegRef - 1) * 10000);
+  // Deviations come from the canonical depeg-signal derivation so DEWS and the
+  // depeg detector answer "how far from peg is this price" with one formula.
+  // `absBps` is the canonical (rounded) basis-point reading; the derivation
+  // fail-closes on non-positive prices, and so must this call site — coercing
+  // its `null` to `0` would publish "no divergence" from a price that cannot
+  // be a price, which is the one direction this signal must never fail in.
+  const primary = deriveDepegSignal(price, pegRef);
+  if (primary === null) {
+    return { value: 0, available: false, unavailableReason: "invalid-price" };
+  }
+  const primaryDevBps = primary.absBps;
+
+  // A non-null but non-positive DEX price is bad data, not a zero-divergence
+  // observation: drop the cross-source legs rather than let a coerced `0` fold
+  // into the max as source agreement.
+  const dexPrice = dexPriceUsd !== null && Number.isFinite(dexPriceUsd) && dexPriceUsd > 0
+    ? dexPriceUsd
+    : null;
 
   // DEX deviation from peg (bps)
-  const dexDevBps = dexPriceUsd !== null ? Math.abs((dexPriceUsd / pegRef - 1) * 10000) : 0;
+  const dexDevBps = dexPrice !== null ? (deriveDepegSignal(dexPrice, pegRef)?.absBps ?? 0) : 0;
 
   // Cross-source spread (bps)
-  const crossSpreadBps = dexPriceUsd !== null && price > 0 ? Math.abs((price / dexPriceUsd - 1) * 10000) : 0;
+  const crossSpreadBps = dexPrice !== null ? (deriveDepegSignal(price, dexPrice)?.absBps ?? 0) : 0;
 
   const worstBps = Math.max(primaryDevBps, dexDevBps, crossSpreadBps);
 
@@ -310,9 +327,10 @@ export function computeDivergSignal(input: DEWSInput): SignalResult {
   return {
     value,
     available: true,
-    spreadBps: Math.round(worstBps * 100) / 100,
-    primaryDevBps: Math.round(primaryDevBps * 100) / 100,
-    dexDevBps: Math.round(dexDevBps * 100) / 100,
+    // Already canonical integers from `deriveDepegSignal`.
+    spreadBps: worstBps,
+    primaryDevBps,
+    dexDevBps,
   };
 }
 

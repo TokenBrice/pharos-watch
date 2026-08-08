@@ -197,7 +197,6 @@ const donorFixed = {
     "dai-makerdao": {
       stablecoinId: "dai-makerdao",
       score: 100,
-      effectiveExitScore: 100,
       dexLiquidityScore: 54,
       accessScore: 100,
       settlementScore: 100,
@@ -755,6 +754,8 @@ const donorReplay = {
                   kind: "mint-control",
                 },
               ],
+              keyCustody: "unknown",
+              modulesOrGuards: "unknown",
               incidentState: "none",
               materialSupplyShare: null,
               scope: "global",
@@ -799,6 +800,7 @@ const donorReplay = {
               observationState: "known",
             },
             supervision: "unknown",
+            latestResolvedIncidentAtSec: null,
             upgrade: {
               controlKey: null,
               state: "immutable",

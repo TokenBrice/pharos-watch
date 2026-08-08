@@ -6,7 +6,6 @@ import type { RedemptionBackstopEntry } from "@shared/types";
 const BASE_ENTRY: RedemptionBackstopEntry = {
   stablecoinId: "eurc-circle",
   score: 65,
-  effectiveExitScore: 58,
   dexLiquidityScore: 44,
   accessScore: 40,
   settlementScore: 65,
@@ -163,7 +162,6 @@ describe("RedemptionBackstopCard", () => {
         entry={{
           ...BASE_ENTRY,
           score: null,
-          effectiveExitScore: null,
           sourceMode: "static",
           resolutionState: "missing-capacity",
           modelConfidence: "low",
@@ -210,7 +208,6 @@ describe("RedemptionBackstopCard", () => {
         entry={{
           ...BASE_ENTRY,
           score: null,
-          effectiveExitScore: null,
           resolutionState: "impaired",
           routeStatus: "degraded",
           routeStatusSource: "market-implied",

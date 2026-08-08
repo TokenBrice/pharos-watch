@@ -5,6 +5,7 @@ import {
   SAFETY_SCORE_V9_ACTIVATION,
   SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
   SAFETY_SCORE_V9_EXIT_REDUNDANCY,
+  SAFETY_SCORE_V9_MERGED_MINT_GRADER,
   SAFETY_SCORE_V9_NATIVE_INPUT,
   SAFETY_SCORE_V9_ROUTE_CAPACITY,
   SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE,
@@ -25,6 +26,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.1": (
+    <>
+      <p>{SAFETY_SCORE_V9_MERGED_MINT_GRADER.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_MERGED_MINT_GRADER.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.07": (
     <>
       <p>{SAFETY_SCORE_V9_NATIVE_INPUT.summary}</p>

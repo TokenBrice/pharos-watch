@@ -27,6 +27,7 @@ import type {
 } from "@shared/types";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
+import type { PublishedMintComponent } from "@/lib/mint-authority-display";
 
 export type {
   CoverageBreakdownItem,
@@ -69,6 +70,8 @@ interface BuildCoverageRowInput {
   dependencyCoverage?: DependencyCoverageFact | null;
   hasDependencyCoverage?: boolean;
   blacklistStatus?: BlacklistStatus | null;
+  /** Published V9 mint component; absent publications render a not-rated mint band. */
+  publishedMint?: PublishedMintComponent | null;
   liveReserveFresh?: boolean | null;
   dataAvailability?: Partial<Record<CoverageFeatureKey, boolean>>;
 }
@@ -161,6 +164,7 @@ export function buildCoverageRow({
   dependencyCoverage,
   hasDependencyCoverage,
   blacklistStatus = null,
+  publishedMint = null,
   liveReserveFresh = true,
   dataAvailability,
 }: BuildCoverageRowInput): CoverageRow {
@@ -175,7 +179,7 @@ export function buildCoverageRow({
     flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
     blacklist: blacklistFeature.resolve(coin, blacklistStatus),
     dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
-    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary),
+    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary, publishedMint),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {

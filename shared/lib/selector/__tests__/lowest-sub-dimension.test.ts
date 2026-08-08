@@ -21,7 +21,6 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     mechanismArchetype: null,
     supplyUsd: 1e9,
     pegScore: 90,
-    pegStabilityScore: 80,
     activeDepeg: false,
     currentDeviationBps: 10,
     depegEventCount: 0,
@@ -29,11 +28,10 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     dewsScore: 20,
     safetyGrade: "A",
     safetyScore: 80,
+    safetyProvenance: "safety-score-v9",
     safetyResilienceScore: 80,
-    safetyDependencyRiskScore: 80,
     safetyDecentralizationScore: 80,
     safetyLiquidityScore: 80,
-    collateralQuality: 80,
     custodyModel: "onchain",
     bluechipGrade: "A",
     liquidityScore: 80,
@@ -64,24 +62,43 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
 }
 
 describe("candidate sets", () => {
-  it("treasury + trading = 9 SAFETY_NINE keys", () => {
-    expect(LOWEST_SUB_DIMENSION_CANDIDATES.treasury).toHaveLength(9);
-    expect(LOWEST_SUB_DIMENSION_CANDIDATES.trading).toHaveLength(9);
+  it("treasury + trading share the six base watch axes", () => {
+    expect(LOWEST_SUB_DIMENSION_CANDIDATES.treasury).toEqual([
+      "pegStability",
+      "liquidity",
+      "resilience",
+      "decentralization",
+      "governanceOverride",
+      "activeDepegHistory",
+    ]);
+    expect(LOWEST_SUB_DIMENSION_CANDIDATES.trading).toEqual(LOWEST_SUB_DIMENSION_CANDIDATES.treasury);
   });
 
-  it("yield adds yieldVariance + sourceRisk → 11 keys", () => {
-    expect(LOWEST_SUB_DIMENSION_CANDIDATES.yield).toHaveLength(11);
+  it("yield adds yieldVariance + sourceRisk", () => {
+    expect(LOWEST_SUB_DIMENSION_CANDIDATES.yield).toHaveLength(8);
+    expect(LOWEST_SUB_DIMENSION_CANDIDATES.yield).toEqual(
+      expect.arrayContaining(["yieldVariance", "sourceRisk"]),
+    );
+  });
+
+  it("no candidate set offers a retired axis", () => {
+    for (const candidates of Object.values(LOWEST_SUB_DIMENSION_CANDIDATES)) {
+      expect(candidates).not.toEqual(
+        expect.arrayContaining(["dependencyRisk", "collateralQuality", "custodyModel"]),
+      );
+    }
   });
 });
 
 describe("lookupNormalizedSubDimension", () => {
-  it("pegStability reads pegStabilityScore", () => {
-    expect(lookupNormalizedSubDimension(makeRow({ pegStabilityScore: 65 }), "pegStability")).toBe(65);
+  it("pegStability reads the peg domain's PegScore", () => {
+    expect(lookupNormalizedSubDimension(makeRow({ pegScore: 65 }), "pegStability")).toBe(65);
   });
 
-  it("custodyModel maps via ladder", () => {
-    expect(lookupNormalizedSubDimension(makeRow({ custodyModel: "cex" }), "custodyModel")).toBe(40);
-    expect(lookupNormalizedSubDimension(makeRow({ custodyModel: "institutional-top" }), "custodyModel")).toBe(100);
+  it("retired axes never resolve to a value", () => {
+    expect(lookupNormalizedSubDimension(makeRow({ custodyModel: "cex" }), "custodyModel")).toBeNull();
+    expect(lookupNormalizedSubDimension(makeRow(), "collateralQuality")).toBeNull();
+    expect(lookupNormalizedSubDimension(makeRow(), "dependencyRisk")).toBeNull();
   });
 
   it("governanceOverride mapping", () => {
@@ -103,28 +120,23 @@ describe("lookupNormalizedSubDimension", () => {
 describe("selectLowestSubDimension", () => {
   it("picks the minimum non-null dimension", () => {
     const row = makeRow({
-      safetyDependencyRiskScore: 30,
-      pegStabilityScore: 80,
-      safetyResilienceScore: 80,
+      safetyResilienceScore: 30,
       safetyDecentralizationScore: 80,
       safetyLiquidityScore: 80,
-      collateralQuality: 80,
     });
     const result = selectLowestSubDimension(row, "treasury", []);
-    expect(result?.key).toBe("dependencyRisk");
+    expect(result?.key).toBe("resilience");
     expect(result?.score).toBe(30);
   });
 
   it("ties break by profile-weight relevance", () => {
     // Tie at 40 between pegStability and decentralization for Treasury.
-    // Treasury weights: pegStabilityHistory=12, decentralization=10 → pegStability wins.
+    // `decentralization` no longer holds a weight slot, so pegStability wins.
     const row = makeRow({
-      pegStabilityScore: 40,
+      pegScore: 40,
       safetyDecentralizationScore: 40,
       safetyResilienceScore: 80,
-      safetyDependencyRiskScore: 80,
       safetyLiquidityScore: 80,
-      collateralQuality: 80,
     });
     const result = selectLowestSubDimension(row, "treasury", []);
     expect(result?.key).toBe("pegStability");
@@ -132,12 +144,10 @@ describe("selectLowestSubDimension", () => {
 
   it("falls back to governanceOverride/activeDepegHistory when other dimensions are null", () => {
     const row = makeRow({
-      pegStabilityScore: null,
+      pegScore: null,
       safetyLiquidityScore: null,
       safetyResilienceScore: null,
       safetyDecentralizationScore: null,
-      safetyDependencyRiskScore: null,
-      collateralQuality: null,
       custodyModel: null,
       canBeBlacklisted: false,
       depegEventCount: 0,
@@ -164,12 +174,9 @@ describe("selectLowestSubDimension", () => {
   it("yieldVariance + sourceRisk only surface under Yield profile", () => {
     const row = makeRow({
       apyVariance30d: 4, // → normalizes to 0 (lowest possible)
-      pegStabilityScore: 80,
       safetyLiquidityScore: 80,
       safetyResilienceScore: 80,
       safetyDecentralizationScore: 80,
-      safetyDependencyRiskScore: 80,
-      collateralQuality: 80,
     });
     const yieldResult = selectLowestSubDimension(row, "yield", []);
     expect(yieldResult?.key).toBe("yieldVariance");
@@ -184,12 +191,9 @@ describe("selectLowestSubDimension", () => {
       depegEventCount: 1,
       venueRiskTier: "high",
       warningSignals: ["unstable-apy"],
-      pegStabilityScore: 40, // make this the min
       safetyLiquidityScore: 80,
       safetyResilienceScore: 80,
       safetyDecentralizationScore: 80,
-      safetyDependencyRiskScore: 80,
-      collateralQuality: 80,
     });
     const result = selectLowestSubDimension(row, "yield", []);
     expect(result?.contextKeys).toEqual(

@@ -106,7 +106,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
   // Consumed by the report-card calibration CLI outside this runtime-only scan.
-  "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
   // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
@@ -124,11 +123,9 @@ const EXPORT_ALLOWLIST = new Set([
   // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
   "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
-  // Report-card survivors of the retired V8 engine. `inferResilienceDefaults` is
-  // consumed through `report-card-policy.ts` directly; `resolveResilienceFactors`
-  // is the reviewed-override resolver kept for the V9 research/calibration CLIs.
+  // Report-card survivor of the retired V8 engine: consumed through
+  // `report-card-policy.ts` directly rather than through this barrel.
   "shared/lib/report-cards.ts::inferResilienceDefaults",
-  "shared/lib/report-cards.ts::resolveResilienceFactors",
   // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
   // outside the runtime source graph scanned by this checker.
   "shared/lib/site-csp.ts::buildStaticContentSecurityPolicy",

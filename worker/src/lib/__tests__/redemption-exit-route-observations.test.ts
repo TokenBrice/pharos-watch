@@ -202,7 +202,6 @@ describe("redemption same-notional route observations", () => {
 const supplyFullEntry: RedemptionBackstopEntry = {
   stablecoinId: "usdc-circle",
   score: null,
-  effectiveExitScore: null,
   dexLiquidityScore: null,
   accessScore: 40,
   settlementScore: 65,

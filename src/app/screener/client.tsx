@@ -39,11 +39,10 @@ import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_STATUS_CONFIG,
   resolveMintAuthorityScoreDisplay,
+  type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
+import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
-import {
-  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/constants";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
@@ -205,6 +204,7 @@ export function ScreenerClient() {
         backing: number | null;
         exit: number | null;
         control: number | null;
+        mint: PublishedMintComponent | null;
       }
     >();
     for (const card of reportData?.cards ?? []) {
@@ -214,6 +214,7 @@ export function ScreenerClient() {
         backing: card.pillars.backing.score,
         exit: card.pillars.exit.score,
         control: card.pillars.control.score,
+        mint: readV9CardMintComponent(card),
       });
     }
     const dewsById = new Map<string, number>();
@@ -231,7 +232,7 @@ export function ScreenerClient() {
       const lifecycle = meta.status ?? "active";
       const safety = reportById.get(meta.id) ?? null;
       const pegCoin = pegById.get(meta.id);
-      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(meta.id, meta.mintAuthoritySummary);
+      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -251,7 +252,7 @@ export function ScreenerClient() {
         safetyControlScore: safety?.control ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
-        mintAuthorityScore: mintAuthorityScore.result.score,
+        mintAuthorityScore: mintAuthorityScore.score,
         mintAuthorityScoreBand: mintAuthorityScore.bandKey,
         mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,
         mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,
@@ -365,7 +366,10 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
-            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
+            // 9.1: the mint columns are the published V9 mint component, so
+            // they are stamped with the safety-score identity. The retired
+            // standalone mint-authority lane no longer produces this value.
+            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included)`}
             triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
             disabled={scoreFilterDataLoading}
           />

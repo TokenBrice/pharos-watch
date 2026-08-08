@@ -16,14 +16,21 @@ import { round1 } from "../math";
 import { WEIGHT_VECTORS } from "./weights";
 import { yieldVariance as normYieldVariance, sourceRiskInverted } from "./normalization";
 
-const SAFETY_NINE = [
+/**
+ * Watch axes evaluated for every profile.
+ *
+ * This replaced the V8 dimension roster (`SAFETY_NINE`) at `selector-v2.0`.
+ * Three of its nine entries are gone: `dependencyRisk` graded a scalar the
+ * Selector re-derived from V9's dependency graph, and `collateralQuality` /
+ * `custodyModel` graded curated metadata through V8 score ladders that the V9
+ * Backing and Control pillars now price directly. What survives reads a
+ * published domain output or a plain row fact.
+ */
+const BASE_WATCH_CANDIDATES = [
   "pegStability",
   "liquidity",
   "resilience",
   "decentralization",
-  "dependencyRisk",
-  "collateralQuality",
-  "custodyModel",
   "governanceOverride",
   "activeDepegHistory",
 ] as const satisfies readonly LowestSubDimensionKey[];
@@ -32,18 +39,9 @@ export const LOWEST_SUB_DIMENSION_CANDIDATES: Record<
   SelectorProfile,
   readonly LowestSubDimensionKey[]
 > = {
-  treasury: SAFETY_NINE,
-  trading: SAFETY_NINE,
-  yield: [...SAFETY_NINE, "yieldVariance", "sourceRisk"] as const,
-};
-
-const CUSTODY_LADDER: Record<string, number> = {
-  "institutional-top": 100,
-  "institutional-regulated": 85,
-  "institutional-unregulated": 60,
-  "institutional-sanctioned": 50,
-  cex: 40,
-  onchain: 90,
+  treasury: BASE_WATCH_CANDIDATES,
+  trading: BASE_WATCH_CANDIDATES,
+  yield: [...BASE_WATCH_CANDIDATES, "yieldVariance", "sourceRisk"] as const,
 };
 
 /**
@@ -56,19 +54,19 @@ export function lookupNormalizedSubDimension(
 ): number | null {
   switch (key) {
     case "pegStability":
-      return row.pegStabilityScore;
+      return row.pegScore;
     case "liquidity":
       return row.safetyLiquidityScore;
     case "resilience":
       return row.safetyResilienceScore;
     case "decentralization":
       return row.safetyDecentralizationScore;
+    // Retired axes. They stay in the vocabulary so stored snapshots that
+    // recorded them still render; no current run selects them.
     case "dependencyRisk":
-      return row.safetyDependencyRiskScore;
     case "collateralQuality":
-      return row.collateralQuality;
     case "custodyModel":
-      return row.custodyModel != null ? (CUSTODY_LADDER[row.custodyModel] ?? null) : null;
+      return null;
     case "governanceOverride":
       if (row.canBeBlacklisted === true) return 0;
       if (row.canBeBlacklisted === "inherited") return 30;
@@ -99,12 +97,6 @@ function profileWeightFor(
         return profile === "treasury" ? "pegStabilityHistory" : "pegStabilityLive";
       case "liquidity":
         return "liquidity";
-      case "resilience":
-        return "resilience";
-      case "decentralization":
-        return "decentralization";
-      case "dependencyRisk":
-        return "dependencyRisk";
       case "yieldVariance":
         return "yieldVariance";
       case "sourceRisk":

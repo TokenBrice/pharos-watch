@@ -27,6 +27,10 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import {
+  YIELD_OPPORTUNITY_SAFETY_DESCRIPTION,
+  isOpportunityDerivedSafety,
+} from "@shared/lib/yield-opportunity-provenance";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
@@ -166,6 +170,13 @@ const YIELD_EXPORT_COLUMNS: CsvColumn<YieldExportRow>[] = [
   { header: "PYS null reason", accessor: (entry) => entry.row.pysNullReason ?? "" },
   { header: "Safety grade", accessor: (entry) => entry.row.safetyGrade ?? "NR" },
   { header: "Safety score", accessor: (entry) => entry.row.safetyScore ?? "NR" },
+  {
+    header: "Safety provenance",
+    accessor: (entry) =>
+      isOpportunityDerivedSafety(entry.row.provenance?.safetyProvenance)
+        ? "opportunity-derived"
+        : "safety-score-v9",
+  },
   { header: "Yield source", accessor: (entry) => entry.row.yieldSource },
   { header: "Yield type", accessor: (entry) => entry.row.yieldType },
   { header: "Source posture", accessor: (entry) => entry.row.sourcePosture ?? "unknown" },
@@ -568,8 +579,18 @@ export function YieldMobileCard({
           <Badge
             variant="outline"
             className={`px-1.5 py-0.5 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+            title={
+              isOpportunityDerivedSafety(row.provenance?.safetyProvenance)
+                ? YIELD_OPPORTUNITY_SAFETY_DESCRIPTION
+                : undefined
+            }
           >
             {grade}
+            {isOpportunityDerivedSafety(row.provenance?.safetyProvenance) ? (
+              <span aria-hidden="true" className="ml-0.5 align-super text-[8px] leading-none">
+                {"\u2020"}
+              </span>
+            ) : null}
           </Badge>
         ) : null}
         <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>

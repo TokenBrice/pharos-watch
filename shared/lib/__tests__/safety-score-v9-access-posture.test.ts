@@ -59,6 +59,8 @@ function control(
     authority: { authorityKey: `authority:${controlKey}`, model: "issuer-backend", threshold: null },
     delaySec: 0,
     materialSupplyShare: null,
+    keyCustody: "unknown",
+    modulesOrGuards: "unknown",
     incidentState: "none",
     failureDomains: [{ kind: "upgrade-control", key: controlKey }],
     ...overrides,

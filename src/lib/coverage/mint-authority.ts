@@ -15,14 +15,23 @@ import {
   resolveMintAuthorityScoreDisplay,
   resolveMintAuthorityStatus,
   type MintAuthorityStatusKind,
+  type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
 
-function resolveMintAuthority(summary?: MintAuthorityCoverageSummary | null): CoverageStatus {
+/**
+ * The curation-route buckets stay curated (they describe *which* review path an
+ * asset is on). Safety 9.1 re-sources only the score buckets, which now come
+ * from the published V9 mint component instead of a browser recomputation.
+ */
+function resolveMintAuthority(
+  summary?: MintAuthorityCoverageSummary | null,
+  publishedMint?: PublishedMintComponent | null,
+): CoverageStatus {
   const status = resolveMintAuthorityStatus(summary);
-  const score = resolveMintAuthorityScoreDisplay(undefined, summary);
+  const score = resolveMintAuthorityScoreDisplay(publishedMint);
   return {
     ...createPresetStatus(status),
-    score: score.result.score,
+    score: score.score,
     scoreBand: score.bandKey,
   };
 }

@@ -208,6 +208,7 @@ export function buildEconomicControlReview(context: AssetBuildContext): V9Econom
         controlKey: null,
         reconciliation: "unknown",
         supervision: "unknown",
+        latestResolvedIncidentAtSec: null,
         upgrade: { state: "unknown", controlKey: null },
       },
       oracle: {

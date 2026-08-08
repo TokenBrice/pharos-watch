@@ -1,14 +1,9 @@
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
-  MINT_AUTHORITY_SCORE_BANDS,
-  computeMintAuthorityScore,
-  resolveMintAuthorityScoreBand,
-  type MintAuthorityParentResolver,
-  type MintAuthorityScoreBand,
-  type MintAuthorityScoreResult,
-  type MintAuthorityScoringInput,
-} from "@shared/lib/mint-authority-scoring";
+  V9_MINT_POSTURE_BANDS,
+  resolveV9MintPostureBand,
+  type V9MintPostureBand,
+} from "@shared/lib/safety-score-v9/mint-posture";
 
 export type MintAuthorityStatusKind =
   | "no-privileged-mint"
@@ -20,7 +15,8 @@ export type MintAuthorityStatusKind =
   | "unknown";
 
 type MintAuthorityTone = "emerald" | "sky" | "amber" | "violet" | "slate";
-export type MintAuthorityScoreFilterValue = MintAuthorityScoreBand | "nr";
+/** Published V9 mint posture band, plus the not-rated bucket. */
+export type MintAuthorityScoreFilterValue = V9MintPostureBand | "nr";
 
 interface MintAuthorityStatusConfig {
   kind: MintAuthorityStatusKind;
@@ -144,34 +140,14 @@ export const MINT_AUTHORITY_SCORE_FILTER_CONFIG: Record<
   MintAuthorityScoreFilterValue,
   { label: string; detail: string }
 > = {
-  hardened: {
-    label: MINT_AUTHORITY_SCORE_BANDS.hardened.label,
-    // Range source: MINT_AUTHORITY_SCORE_BANDS.hardened.min.
-    detail: "Mint Authority Score is 80 or higher.",
-  },
-  governed: {
-    label: MINT_AUTHORITY_SCORE_BANDS.governed.label,
-    // Range source: governed.min through hardened.min - 1.
-    detail: "Mint Authority Score is 65 to 79.",
-  },
-  managed: {
-    label: MINT_AUTHORITY_SCORE_BANDS.managed.label,
-    // Range source: managed.min through governed.min - 1.
-    detail: "Mint Authority Score is 50 to 64.",
-  },
-  concentrated: {
-    label: MINT_AUTHORITY_SCORE_BANDS.concentrated.label,
-    // Range source: concentrated.min through managed.min - 1.
-    detail: "Mint Authority Score is 35 to 49.",
-  },
-  exposed: {
-    label: MINT_AUTHORITY_SCORE_BANDS.exposed.label,
-    // Range source: below MINT_AUTHORITY_SCORE_BANDS.concentrated.min.
-    detail: "Mint Authority Score is below 35.",
-  },
+  hardened: V9_MINT_POSTURE_BANDS.hardened,
+  governed: V9_MINT_POSTURE_BANDS.governed,
+  managed: V9_MINT_POSTURE_BANDS.managed,
+  concentrated: V9_MINT_POSTURE_BANDS.concentrated,
+  exposed: V9_MINT_POSTURE_BANDS.exposed,
   nr: {
     label: "NR",
-    detail: "Mint Authority Score is not rated because the review is missing, unknown, or unresolved.",
+    detail: "The mint control posture is not rated because the review is missing, unknown, or unresolved.",
   },
 };
 
@@ -193,13 +169,24 @@ const MINT_AUTHORITY_SCORE_TEXT_CLASS: Record<MintAuthorityScoreFilterValue, str
   nr: "text-muted-foreground",
 };
 
-/** Band-toned text class for any 0-100 mint-authority score value (total or component). */
-export function mintAuthorityScoreTextClassName(score: number | null | undefined): string {
-  return MINT_AUTHORITY_SCORE_TEXT_CLASS[resolveMintAuthorityScoreBand(score ?? null) ?? "nr"];
+/** Band-toned text class for a published mint posture. */
+export function mintPostureTextClassName(posture: string | null | undefined): string {
+  return MINT_AUTHORITY_SCORE_TEXT_CLASS[resolveV9MintPostureBand(posture) ?? "nr"];
+}
+
+/**
+ * The published V9 mint component, as every cross-coin surface reads it off
+ * `card.breakdowns.control.components`. `breakdowns` is nullable on older
+ * publications, so an absent component is a first-class NR rather than an error.
+ */
+export interface PublishedMintComponent {
+  score: number | null;
+  posture: string | null;
 }
 
 export interface MintAuthorityScoreDisplay {
-  result: MintAuthorityScoreResult;
+  score: number | null;
+  posture: string | null;
   scoreLabel: string;
   compactLabel: string;
   bandKey: MintAuthorityScoreFilterValue;
@@ -209,56 +196,33 @@ export interface MintAuthorityScoreDisplay {
   detail: string;
 }
 
-function mintAuthoritySummaryToScoringInput(
-  id: string | undefined,
-  summary?: MintAuthorityCoverageSummary | null,
-): MintAuthorityScoringInput | null {
-  if (!summary) return null;
-
-  return {
-    id,
-    mintPath: summary.mintPath,
-    authorityPosture: summary.authorityPosture,
-    confidence: summary.confidence,
-    inheritedFrom: summary.inheritedFrom,
-    mintIncidents: summary.mintIncidents,
-    controls: summary.controls,
-  };
-}
-
-const resolveClientParent: MintAuthorityParentResolver = (id) => {
-  const parent = CLIENT_TRACKED_META_BY_ID.get(id);
-  return mintAuthoritySummaryToScoringInput(id, parent?.mintAuthoritySummary);
-};
-
-function computeMintAuthoritySummaryScore(
-  id: string | undefined,
-  summary?: MintAuthorityCoverageSummary | null,
-  parentResolver: MintAuthorityParentResolver = resolveClientParent,
-): MintAuthorityScoreResult {
-  return computeMintAuthorityScore(mintAuthoritySummaryToScoringInput(id, summary), parentResolver);
-}
-
+/**
+ * Safety 9.1: the mint score and band are read from the published V9 mint
+ * component instead of recomputed in the browser from curated inputs. The
+ * band comes from the published posture, so it stays stable when a bounded
+ * merged-signal credit or penalty moves the component by a point.
+ */
 export function resolveMintAuthorityScoreDisplay(
-  id: string | undefined,
-  summary?: MintAuthorityCoverageSummary | null,
-  parentResolver: MintAuthorityParentResolver = resolveClientParent,
+  mint?: PublishedMintComponent | null,
 ): MintAuthorityScoreDisplay {
-  const result = computeMintAuthoritySummaryScore(id, summary, parentResolver);
-  const bandKey = result.band ?? "nr";
-  const scoreLabel = result.score != null ? `${result.score}/100` : "NR";
-  const compactLabel = result.score != null ? `${result.score} ${result.bandLabel}` : "NR";
+  const band = resolveV9MintPostureBand(mint?.posture);
+  const bandKey: MintAuthorityScoreFilterValue = band ?? "nr";
+  const score = band === null ? null : (mint?.score ?? null);
+  const bandLabel = MINT_AUTHORITY_SCORE_FILTER_CONFIG[bandKey].label;
+  const scoreLabel = score != null ? `${score}/100` : "NR";
+  const compactLabel = score != null ? `${score} ${bandLabel}` : "NR";
   const detail =
-    result.score != null
-      ? `Mint Authority Score: ${scoreLabel} (${result.bandLabel}). Higher scores mean fewer or better-bounded privileged mint paths.`
-      : "Mint Authority Score is not rated because the review is missing, unknown, or unresolved.";
+    score != null
+      ? `Mint control posture: ${scoreLabel} (${bandLabel}). ${MINT_AUTHORITY_SCORE_FILTER_CONFIG[bandKey].detail}`
+      : MINT_AUTHORITY_SCORE_FILTER_CONFIG.nr.detail;
 
   return {
-    result,
+    score,
+    posture: mint?.posture ?? null,
     scoreLabel,
     compactLabel,
     bandKey,
-    bandLabel: result.bandLabel,
+    bandLabel,
     badgeClassName: MINT_AUTHORITY_SCORE_BADGE_CLASS[bandKey],
     textClassName: MINT_AUTHORITY_SCORE_TEXT_CLASS[bandKey],
     detail,

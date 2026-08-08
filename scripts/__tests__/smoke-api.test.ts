@@ -27,7 +27,6 @@ function makeRedemptionBody(overrides: Record<string, unknown> = {}) {
       "cusd-cap": {
         stablecoinId: "cusd-cap",
         score: 88,
-        effectiveExitScore: 56,
         dexLiquidityScore: 29,
         accessScore: 100,
         settlementScore: 100,
@@ -120,10 +119,6 @@ function makeRedemptionBody(overrides: Record<string, unknown> = {}) {
         capacity: 0.25,
         outputAssetQuality: 0.15,
         cost: 0.1,
-      },
-      effectiveExitModel: {
-        model: "best-path",
-        diversificationFactor: 0.15,
       },
       routeFamilyCaps: {
         queueRedeem: 80,

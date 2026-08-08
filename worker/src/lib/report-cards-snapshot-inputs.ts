@@ -1,4 +1,3 @@
-import { getCache } from "./db-cache";
 import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
   loadDexLiquiditySnapshot,
@@ -34,7 +33,6 @@ export class ReportCardsSnapshotUnavailableError extends Error {
 
 export interface ReportCardsSnapshotInputs {
   stablecoinsCached: StablecoinsCacheLoadOk;
-  bluechipCached: Awaited<ReturnType<typeof getCache>> | null;
   dexLiquiditySnapshot: DexLiquidityLoadResult;
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   redemptionSnapshotProvenance: {
@@ -52,12 +50,6 @@ export interface ReportCardsSnapshotInputs {
 
 export interface LoadReportCardsSnapshotInputsOptions {
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
-  /**
-   * Bluechip ratings feed the V8 report-card projection only. The native V9
-   * capture never reads them, so it skips the load rather than spending one of
-   * the six connections a cron trigger gets from Cloudflare's pool.
-   */
-  includeBluechipRatings?: boolean;
 }
 
 const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
@@ -328,7 +320,6 @@ export async function loadReportCardsSnapshotInputs(
 ): Promise<ReportCardsSnapshotInputs> {
   const [
     stablecoinsCachedResult,
-    bluechipCachedResult,
     dexLiquiditySnapshotResult,
     dexDeploymentSupplyJoinResult,
     redemptionBackstopMapResult,
@@ -337,7 +328,6 @@ export async function loadReportCardsSnapshotInputs(
     options.preloadedStablecoinsCache
       ? Promise.resolve(options.preloadedStablecoinsCache)
       : loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
-    options.includeBluechipRatings === false ? Promise.resolve(null) : getCache(db, "bluechip-ratings"),
     loadDexLiquiditySnapshot(db),
     loadDexDeploymentSupplyJoin(db),
     loadRedemptionBackstopSnapshot(db),
@@ -367,17 +357,6 @@ export async function loadReportCardsSnapshotInputs(
     redemptionSnapshotUnavailable = true;
     redemptionBackstopSnapshot = { map: {}, latestUpdatedAt: null };
   }
-
-  const bluechipCached =
-    bluechipCachedResult.status === "fulfilled"
-      ? bluechipCachedResult.value
-      : (() => {
-          console.warn(
-            "[report-cards] Bluechip ratings unavailable; continuing without bluechip overlay:",
-            bluechipCachedResult.reason,
-          );
-          return null;
-        })();
 
   let dexLiquiditySnapshot = EMPTY_DEX_LIQUIDITY_SNAPSHOT;
   let liquidityStale = false;
@@ -472,7 +451,6 @@ export async function loadReportCardsSnapshotInputs(
 
   return {
     stablecoinsCached,
-    bluechipCached,
     dexLiquiditySnapshot,
     redemptionBackstopMap,
     redemptionSnapshotProvenance: {

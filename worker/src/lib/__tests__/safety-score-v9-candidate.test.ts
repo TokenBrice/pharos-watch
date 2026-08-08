@@ -295,6 +295,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
       controlKey: null,
       reconciliation: "not-applicable",
       supervision: "unknown",
+      latestResolvedIncidentAtSec: null,
       upgrade: { state: "not-applicable", controlKey: null },
     },
     oracle: {
@@ -689,7 +690,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "active",
-      policyVersion: "9.07",
+      policyVersion: "9.1",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });
