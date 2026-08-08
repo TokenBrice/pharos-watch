@@ -35,7 +35,10 @@ const RISKY_POSTURES = new Set([
   "unbounded-reconciled",
   "unbounded-or-compromised",
 ]);
-// The severe rung stays reserved for a *compromised* minter surging supply.
+// The severe rung stays reserved for an *economically unbounded* minter observed
+// surging supply. Both unbounded rungs qualify: reconciliation is after-the-fact
+// evidence, so it does not bound how much can be printed during the event. A
+// merely concentrated admin surges at the elevated rung instead.
 const SEVERE_SURGE_POSTURES = new Set(["unbounded-reconciled", "unbounded-or-compromised"]);
 const SEVERE_VERY_HIGH_RISK_RESERVE_PCT = 30;
 const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
