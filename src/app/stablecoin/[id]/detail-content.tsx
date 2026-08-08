@@ -12,7 +12,6 @@ import { ContractDeployments } from "@/components/key-info-card/contract-deploym
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
-import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -302,7 +301,6 @@ export function DetailContent({
                 obituary={viewModel.coin.obituary}
               />
             ) : null}
-            <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
           </div>
           <div className="mt-4">
             {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
@@ -314,6 +312,8 @@ export function DetailContent({
               collateralUsageEntries={collateralUsageEntries}
               frozenNote={frozenNote}
               hasCollateralUsage={staticHasCollateralUsage}
+              mechanismBacking={mechanismBacking}
+              mechanismCollateralization={mechanismCollateralization}
               mechanismReview={mechanismReview}
               transferReview={transferReview}
               overviewGateRef={overviewGateRef}

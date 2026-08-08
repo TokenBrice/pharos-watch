@@ -12,8 +12,13 @@ import {
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
 import type { RedemptionBackstopEntry } from "@shared/types";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { RedemptionRouteRail } from "@/components/stablecoin-detail/redemption-route-rail";
+import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
+import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -21,6 +26,26 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
 const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
+
+/** The view model's real tone cutoffs (80/65/50/35) as an unlabeled score
+ *  track — these tiers have no published names, so the spectrum shows only
+ *  position and tone, never invented vocabulary. Worst → best, left → right. */
+const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = [
+  { key: "t0", label: "", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
+  { key: "t35", label: "", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
+  { key: "t50", label: "", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
+  { key: "t65", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
+  { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+];
+const REDEMPTION_SCORE_CUTOFFS = [0, 35, 50, 65, 80] as const;
+
+function redemptionScoreBandKey(score: number): string {
+  if (score >= 80) return "t80";
+  if (score >= 65) return "t65";
+  if (score >= 50) return "t50";
+  if (score >= 35) return "t35";
+  return "t0";
+}
 
 function MetadataBadgeList({ items }: { items: readonly { label: string; value: string }[] }) {
   return (
@@ -61,17 +86,24 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <span className="text-sm text-muted-foreground">Standalone route score</span>
           <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
-            <Badge variant="outline" className={cn("px-2.5 py-1 pharos-numeric text-lg", viewModel.scoreToneClass)}>
-              {viewModel.heroScoreLabel}
-            </Badge>
+            <ScorePill size="lg" label={viewModel.heroScoreLabel} toneClass={viewModel.scoreToneClass} />
           </ScoreBadgeWrapper>
         </div>
 
-        {/* ── arrange: Classification + metadata badges (secondary) ── */}
+        {viewModel.score != null ? (
+          <ScoreBandSpectrum
+            mode="range"
+            bands={REDEMPTION_SCORE_BANDS}
+            cutoffs={REDEMPTION_SCORE_CUTOFFS}
+            activeKey={redemptionScoreBandKey(viewModel.score)}
+            score={viewModel.score}
+            ariaLabel={`Route score ${viewModel.score} of 100 on the redemption score track.`}
+            className="max-w-md"
+          />
+        ) : null}
+
+        {/* ── arrange: metadata badges (route family lives on the rail's venue station) ── */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
-            {viewModel.routeFamilyLabel}
-          </Badge>
           <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
             {viewModel.sourceModeLabel}
           </Badge>
@@ -102,24 +134,20 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         ) : null}
 
-        {/* ── distill: Route properties as compact inline row ── */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Access </span>
-            <span className="font-medium">{viewModel.accessLabel}</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Settlement </span>
-            <span className="font-medium">{viewModel.settlementLabel}</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Output </span>
-            <span className="font-medium">{viewModel.outputAssetLabel}</span>
-          </div>
-        </div>
+        {/* ── the exit rail: holder → gate → venue → output; FactGrid below sm ── */}
+        <RedemptionRouteRail
+          accessModel={viewModel.accessModel}
+          accessLabel={viewModel.accessLabel}
+          settlementLabel={viewModel.settlementLabel}
+          outputAssetLabel={viewModel.outputAssetLabel}
+          routeFamilyLabel={viewModel.routeFamilyLabel}
+        />
 
-        {/* ── primary capacity column beside stacked secondary detail (balances the full width) ── */}
-        <div className="grid items-start gap-3 xl:grid-cols-2">
+        {/* ── detail layer: capacity/fee/confidence fold behind the standard
+               disclosure — the score, route chips, and access row above are
+               the summary read ── */}
+        <ModuleDisclosure label="Capacity, fees & confidence">
+        <div className="mt-2 grid items-start gap-3 xl:grid-cols-2">
           {/* ── Capacity card (earns the card treatment — has detail) ── */}
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
@@ -159,6 +187,14 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         </div>
 
+        {/* ── distill: Notes (filtered for redundancy with capacity) ── */}
+        {viewModel.filteredNotes.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            {viewModel.filteredNotes.join(". ")}
+          </div>
+        ) : null}
+        </ModuleDisclosure>
+
         {/* ── colorize + distill: Sub-scores collapsed with color ── */}
         <ScoringBreakdownDisclosure>
           <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
@@ -174,44 +210,23 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         </ScoringBreakdownDisclosure>
 
-        {/* ── distill: Notes (filtered for redundancy with capacity) ── */}
-        {viewModel.filteredNotes.length > 0 ? (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            {viewModel.filteredNotes.join(". ")}
-          </div>
-        ) : null}
-
-        {viewModel.docSources.length > 0 ? (
-          <div className="space-y-1">
-            {viewModel.docSources.map((source) => {
-              return (
-                <div key={`${source.label}:${source.url}`} className="text-sm">
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex underline underline-offset-2 transition-colors hover:text-foreground"
-                  >
-                    {source.label}
-                  </a>
-                  {source.supports ? (
-                    <span className="ml-2 text-xs text-muted-foreground">Supports {source.supports}</span>
-                  ) : null}
-                </div>
-              );
-            })}
-            {viewModel.docsReviewedAt ? (
-              <p className="text-xs text-muted-foreground">Reviewed {viewModel.docsReviewedAt}</p>
-            ) : null}
-            {viewModel.docsProvenanceLabel ? (
-              <p className="text-xs text-muted-foreground">{viewModel.docsProvenanceLabel}</p>
-            ) : null}
-          </div>
-        ) : null}
-
         <ShowYourWorkPanel kind="redemption" entry={entry} stablecoinId={entry.stablecoinId} />
 
-        <MethodologyCardActions topic="redemptionBackstop" showWorkToggle />
+        <EvidenceFooter
+          topic="redemptionBackstop"
+          showWorkToggle
+          sources={viewModel.docSources.map((source) => ({
+            label: source.label,
+            url: source.url,
+            note: source.supports ? `Supports ${source.supports}` : undefined,
+          }))}
+          sourcesFootnote={
+            viewModel.docsProvenanceLabel ? (
+              <p className="text-xs text-muted-foreground">{viewModel.docsProvenanceLabel}</p>
+            ) : null
+          }
+          trailing={viewModel.docsReviewedAt ? `Reviewed ${viewModel.docsReviewedAt}` : undefined}
+        />
       </CardContent>
     </Card>
   );

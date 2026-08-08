@@ -123,16 +123,41 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("dllr-sovryn")).toBe(true);
     expect(resolved.get("fxd-fathom")).toBe("possible");
     expect(resolved.get("cjpy-yamato")).toBe("possible");
-    // jusd-juicedollar: TERRA re-review confirmed the verified Citrea JUSD source
-    // exposes no native holder freeze/blacklist and added a reviewed
-    // upstreamSuppressionRationale, so USDC.e/USDT.e/ctUSD reserve exposure no
-    // longer propagates as inheritance.
-    expect(resolved.get("jusd-juicedollar")).toBe(false);
+    // jusd-juicedollar: the later cohort recheck preserved the direct No finding
+    // but removed the incorrect suppression of its live USDT.e bridge reserve.
+    expect(resolved.get("jusd-juicedollar")).toBe("inherited");
     expect(resolved.get("silk-shade-protocol")).toBe("inherited");
     // bnusd-balanced: re-audited up to a resolved Yes — the canonical bnUSD SCORE
     // exposes a Governance-only govTransfer that moves balances from arbitrary
     // source addresses, a direct holder-control surface above reserve inheritance.
     expect(resolved.get("bnusd-balanced")).toBe(true);
+  });
+
+  it("pins the August 8 2026 unfreezable-cohort corrections", () => {
+    const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
+
+    for (const id of [
+      "brlm-mento",
+      "buck-bucket-protocol",
+      "frax-frax",
+      "hyusd-hylo",
+      "jusd-juicedollar",
+      "lisusd-lista",
+      "sdola-inverse-finance",
+      "usd3-reserve-protocol",
+      "usdaf-asymmetry",
+      "usdh-hubble",
+      "usdxl-last",
+      "xdai-gnosis",
+      "yzusd-yuzu",
+    ]) {
+      expect(resolved.get(id)).toBe("inherited");
+    }
+
+    expect(resolved.get("ousd-origin-protocol")).toBe("possible");
+    expect(resolved.get("usdx-kava")).toBe("possible");
+    expect(resolved.get("zchf-frankencoin")).toBe("possible");
+    expect(resolved.get("uusd-youves")).toBe(true);
   });
 
   it("pins the retired Dilutable cohort under freeze-only semantics", () => {

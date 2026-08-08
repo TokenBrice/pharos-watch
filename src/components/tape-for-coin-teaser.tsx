@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
 import { formatCompactUsd } from "@shared/lib/format";
 import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS, type TapeEvent } from "@shared/types/tape-event";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 interface TapeForCoinTeaserProps {
   /** Canonical stablecoin id (e.g. `usdt-tether`). */
@@ -180,7 +181,7 @@ export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
   return (
     <div className="pharos-card-shell space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">News</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>News</h2>
         <Link
           href={`/timeline/?coin=${encodeURIComponent(coinId)}`}
           aria-label="View all events on the timeline"

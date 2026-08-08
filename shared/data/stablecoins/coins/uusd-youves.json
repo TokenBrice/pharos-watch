@@ -668,9 +668,9 @@
       "decimals": 12
     }
   ],
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "TzKT uUSD FA2 entrypoints (balance_of/transfer/mint/burn/execute)",
@@ -687,12 +687,19 @@
       {
         "label": "TzKT finalized head (observation level)",
         "url": "https://api.tzkt.io/v1/head"
+      },
+      {
+        "label": "Pinned Youves AdministrableFA2 source",
+        "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/utils/fa2.py#L438-L530"
+      },
+      {
+        "label": "Recent applied uUSD burn calls",
+        "url": "https://api.tzkt.io/v1/operations/transactions?target=KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW&entrypoint=burn&status=applied&limit=20&sort.desc=id"
       }
     ],
-    "evidence": "Write-time re-review on 2026-07-31 of the sole tracked Tezos FA2 uUSD token KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW (token_id 0). TzKT at finalized head level 14291558 (2026-07-30T23:17:28Z) lists only balance_of, burn(owner,token_id,token_amount), execute(lambda), mint, remove_administrator, set_administrator, set_token_metadata, transfer, and update_operators; there is no blacklist, freeze, pause, or transfer-hook entrypoint. The active token_id 0 administrator bigmap entries are the Youves Vault Creator and legacy/V3 engine contracts; they mint/burn along vault and liquidation accounting but expose no holder freeze list. The official Youves registry identifies KT1XRPE… as the uUSD FA2 and lists the same legacy/active engine deployments. Ordinary FA2 transfer has no pause/blacklist gate. Conclusion: no direct holder freeze/blacklist surface; canBeBlacklisted=false.",
-    "upstreamSuppressionRationale": "Material collateral includes USDt on Tezos, which Tether can freeze at the collateral layer, and engine administrators can mint/burn uUSD as part of vault accounting. Those surfaces affect collateral value or supply accounting; they are not a uUSD FA2 holder-level freeze/blacklist path. Upstream USDt freeze and engine mint authority remain reserve and mint-control risks.",
-    "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-reviewed 2026-08-08. The official AdministrableFA2 implementation permits any token administrator to call burn(owner, token_id, token_amount) against the named owner's balance rather than only the administrator's own balance. Live token_id 0 administrator entries include Youves engine contracts, and recent applied burn operations show an engine caller differing from the holder whose uUSD was burned. This is a current allowance-free arbitrary-holder burn primitive, so uUSD resolves direct Yes. Material USDt collateral supplies additional upstream Tether freeze exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [

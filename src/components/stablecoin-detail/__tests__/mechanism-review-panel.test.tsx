@@ -15,6 +15,15 @@ const review: MechanismReviewView = {
   ],
 };
 
+function getSourcesToggle() {
+  return screen.getByRole("button", { name: /Sources/ });
+}
+
+function getSourcesContainer(container: HTMLElement) {
+  const link = container.querySelector('a[href="https://example.com/deloitte"]');
+  return link?.closest("div") ?? null;
+}
+
 describe("MechanismReviewPanel", () => {
   afterEach(() => cleanup());
 
@@ -23,12 +32,21 @@ describe("MechanismReviewPanel", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the full section with archetype, notes, and every source", () => {
-    render(<MechanismReviewPanel review={review} />);
+  it("renders the full section with archetype and notes, sources folded but in the DOM", () => {
+    const { container } = render(<MechanismReviewPanel review={review} />);
     expect(screen.getByText("Custodial Cash and Cash-Equivalents")).toBeTruthy();
     expect(screen.getByText(/Reviewed 2026-07-15/)).toBeTruthy();
     expect(screen.getByText(/Segregated Accounts/)).toBeTruthy();
-    expect(screen.getByText("Sources (2)")).toBeTruthy();
+
+    // Folded by default at every breakpoint, but citations stay crawlable.
+    const toggle = getSourcesToggle();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const sourcesContainer = getSourcesContainer(container);
+    expect(sourcesContainer?.hasAttribute("hidden")).toBe(true);
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(getSourcesContainer(container)?.hasAttribute("hidden")).toBe(false);
     expect(screen.getByRole("link", { name: /Deloitte examination report/ }).getAttribute("href"))
       .toBe("https://example.com/deloitte");
   });
@@ -39,7 +57,7 @@ describe("MechanismReviewPanel", () => {
     expect(section?.className).toContain("xl:hidden");
   });
 
-  it("cuts long in-flow notes to a lead behind one control and keeps the sources visible", () => {
+  it("cuts long in-flow notes to a lead behind one control", () => {
     const longNotes = `${review.notes} `.repeat(20).trim();
     render(<MechanismReviewPanel review={{ ...review, notes: longNotes }} />);
 
@@ -48,8 +66,8 @@ describe("MechanismReviewPanel", () => {
     const lead = screen.getByText(/Segregated Accounts/).textContent ?? "";
     expect(lead.length).toBeLessThan(400);
     expect(lead.endsWith("…")).toBe(true);
-    // The full-width section keeps its citations visible while the prose is cut.
-    expect(screen.getByText("Sources (2)")).toBeTruthy();
+    // The prose fold and the sources fold are independent controls.
+    expect(getSourcesToggle().getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(screen.getByRole("button", { name: /Read the full review/ }));
 
@@ -64,18 +82,21 @@ describe("MechanismReviewPanel", () => {
   });
 
   it("clamps the compact rail copy until it is expanded", () => {
-    render(<MechanismReviewPanel review={review} compact />);
+    const { container } = render(<MechanismReviewPanel review={review} compact />);
     // Reviewed notes run past 6,000 characters on the longest assets, which
     // cannot render unclamped in a 22rem rail.
     const notes = screen.getByText(/Segregated Accounts/);
     expect(notes.className).toContain("line-clamp-3");
-    expect(screen.queryByText("Sources (2)")).toBeNull();
+    expect(getSourcesContainer(container)?.hasAttribute("hidden")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /Read more/ }));
 
     expect(screen.getByText(/Segregated Accounts/).className).not.toContain("line-clamp-3");
-    expect(screen.getByText("Sources (2)")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Show less/ })).toBeTruthy();
+
+    // Sources open independently through the evidence footer.
+    fireEvent.click(getSourcesToggle());
+    expect(getSourcesContainer(container)?.hasAttribute("hidden")).toBe(false);
   });
 
   it("keeps the anchor id on the in-flow copy only", () => {

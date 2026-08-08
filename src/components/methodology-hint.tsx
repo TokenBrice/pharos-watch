@@ -34,7 +34,7 @@ type MethodologyTriggerButtonProps = ComponentPropsWithoutRef<"button"> & {
   topic: MethodologyContextKey;
 };
 
-function MethodologyLinks({ item, showVersion = true }: { item: MethodologyContextItem; showVersion?: boolean }) {
+export function MethodologyLinks({ item, showVersion = true }: { item: MethodologyContextItem; showVersion?: boolean }) {
   return (
     <>
       {showVersion && item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}

@@ -6,6 +6,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 const PREVIEW_COUNT = 9;
 
@@ -82,7 +83,7 @@ export function CollateralUsageSection({ entries }: CollateralUsageSectionProps)
   return (
     <section id="collateral-usage" className="@container animate-in fade-in space-y-2.5 duration-300">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-2.5">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className={DETAIL_MODULE_TITLE_CLASS}>
           Used by <span className="ml-1 font-normal text-muted-foreground tabular-nums">{usage.length}</span>
         </h3>
         {showsTypeBreakdown && (

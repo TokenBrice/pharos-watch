@@ -381,7 +381,7 @@ export function LongformScrollspyNav({
                     className={cn(
                       "group pharos-focus-ring relative isolate inline-flex shrink-0 snap-start items-center overflow-hidden whitespace-nowrap font-medium transition-colors",
                       isPillTabs
-                        ? "h-7 min-h-0 gap-1.5 rounded-[7px] px-3.5 py-1 text-sm leading-none"
+                        ? "min-h-11 gap-1.5 rounded-[7px] px-3.5 py-1 text-sm leading-none md:h-7 md:min-h-0"
                         : "min-h-11 gap-1.5 rounded-full px-3 py-1.5 text-xs md:min-h-8 md:text-sm",
                       isPillTabs ? "pharos-pill-tab" : "pharos-rail-tab",
                       isPillTabs && isActive && "pharos-pill-tab-active",

@@ -2767,9 +2767,8 @@
       "decimals": 9
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sui mainnet GraphQL (object-type enumeration and deny-list scan, checkpoints 304909276-304911372, 2026-07-30)",
@@ -2782,12 +2781,15 @@
       {
         "label": "Bucket Protocol terms of service (interface-level restrictions only)",
         "url": "https://docs.bucketprotocol.io/resources/terms-of-service"
+      },
+      {
+        "label": "Bucket Protocol Peg Stability Module",
+        "url": "https://docs.bucketprotocol.io/mechanisms/peg-stability-module"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 against Sui mainnet at checkpoints 304,909,276-304,911,372. BUCK (0xce7ff77a…::buck::BUCK) was created as an unregulated currency: network-wide enumeration finds zero RegulatedCoinMetadata<BUCK>, DenyCapV2<BUCK>, or legacy DenyCap<BUCK> objects, and none of the 1,414 per-type config keys in the shared Sui deny list (object 0x403) covers the BUCK coin type (the sole *::buck::BUCK entry belongs to an unrelated meme coin at 0xe657d340…). All 18 modules of the current package (v27 at 0x346684e4…) contain no 0x2::deny_list reference at interface or bytecode level and no pause/whitelist/blacklist transfer gating; the only 'freeze' strings are public_freeze_object (object immutability). No party holds a holder-level freeze or blacklist authority over BUCK, and none can be retrofitted because the one-time BUCK witness was consumed at currency creation, even though the package remains upgradeable for protocol parameters via AdminCap. Reach: no holder-level restriction exists at the token; controlling authority: none for transfers. Upstream exposure is collateral-side only: the PSM holds Circle USDC, which is holder-blocklistable on Sui (DenyCapV2<0xdba34672…::usdc::USDC> exists; Circle blocklisting policy), a reserve/dependency-axis exposure (failure domain asset:usdc-circle) rather than a BUCK transfer capability. Bucket's docs and V1/V2 audits make no freeze claims either way; the terms of service describe only frontend interface geo-restrictions. This manual review supersedes the 2026-05-12 inferred 'Upstream' backfill, which rested on reserve/PSM text signals rather than a primary source on the BUCK token itself.",
-    "reviewer": "Kimi T53 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "Suppression recorded 2026-07-31. The PSM holds Circle USDC and Tether USDT, whose issuers can freeze PSM-held balances and thereby impair BUCK redemption liquidity or claim value; neither issuer has any function over BUCK holder balances, because the Sui BUCK currency carries no DenyCapV2/RegulatedCoinMetadata and its one-time witness was consumed at creation. Those exposures remain reserve-quality and dependency risks (failure domains asset:usdc-circle, asset:usdt-tether), not BUCK blacklistability."
+    "evidence": "Re-reviewed 2026-08-08. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official Peg Stability Module nevertheless holds Circle USDC and Tether USDT in a shared vault for direct 1:1 BUCK conversions. Those issuers can freeze PSM-held balances and impair BUCK redemption liquidity, which is the resolver's Upstream condition even though neither issuer controls BUCK transfers directly.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

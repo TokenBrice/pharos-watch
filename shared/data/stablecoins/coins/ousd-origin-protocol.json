@@ -44,9 +44,9 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Origin Dollar OUSD.sol (GitHub master)",
@@ -71,12 +71,15 @@
       {
         "label": "Ethereum PublicNode RPC",
         "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Origin governed upgradeability proxy source",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/proxies/InitializeGovernedUpgradeabilityProxy.sol"
       }
     ],
-    "evidence": "At Ethereum block 25648342, OUSD proxy 0x2a8e1e67… EIP-1967 implementation slot returned 0xa7b7c59a…; vaultAddress() returned Vault 0xE75D77B1…; governor() and admin() returned Timelock 0x35918cDE…. Verified OUSD.sol transfer/transferFrom execute with no blacklist, pause, freeze, or sanction check. burn(account,amount) is onlyVault. VaultCore requestWithdrawal, redeem, and burnForStrategy all call oToken.burn(msg.sender, amount) — never an arbitrary third-party holder. Single material deployment is native Ethereum (bridge-route review). No token-level freeze surface is present.",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "OUSD is 100% USDC-backed via Morpho/Curve strategies. Circle USDC can freeze upstream USDC balances and impair vault liquidity/redemption, but USDC freeze does not blacklist or stop transfer of the OUSD ERC-20 itself. That exposure is reserve/dependency risk, not OUSD holder freeze."
+    "evidence": "Re-reviewed 2026-08-08. OUSD transfer and transferFrom contain no current blacklist or sanction check, while burn(account, amount) is a live arbitrary-account primitive restricted to the Vault. Current VaultCore public entrypoints pass msg.sender rather than an unrelated holder, so an immediately callable arbitrary seizure path was not established. The authorized Vault and OUSD proxy remain governor-upgradeable, however, making the existing holder-burn primitive governance-reachable and supporting Possible rather than No. OUSD's 100% USDC backing independently supplies Upstream Circle freeze exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "exotic",
   "governanceQuality": "wrapper",

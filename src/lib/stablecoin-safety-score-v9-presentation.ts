@@ -492,7 +492,7 @@ function parseControlBreakdown(
 ): StablecoinSafetyScoreV9PillarBreakdown {
   const toRow = (component: SafetyScoreV9ControlBreakdown["components"][number]) => makeRow({
     key: component.key,
-    label: component.kind === "mint" ? "Mint control posture" : component.label,
+    label: component.kind === "mint" ? "Mint authority" : component.label,
     score: component.score,
     status: component.binding ? "Binding" : "Diagnostic",
   });
@@ -566,7 +566,7 @@ function pillarBreakdown(
 }
 
 function componentBaseLabel(component: string): { label: string; category: string } {
-  if (component === "mint") return { label: "Mint control posture", category: "Authority" };
+  if (component === "mint") return { label: "Mint authority", category: "Authority" };
   if (component === "oracle") return { label: "Oracle design", category: "Oracle" };
   if (component.startsWith("mechanism:")) {
     return {

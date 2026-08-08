@@ -4,6 +4,12 @@ import Link from "next/link";
 import { ArrowUpRight, Info } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
+import { cn } from "@/lib/utils";
 import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
 import { isThreeStepArchetype } from "@/components/stablecoin-detail/mechanism-diagrams/three-step-archetype-diagram";
 import { VerticalThreeStepDiagram } from "@/components/stablecoin-detail/mechanism-diagrams/vertical-three-step-diagram";
@@ -29,9 +35,9 @@ export function PegStabilityCard(props: PegStabilityBodyProps) {
   const useVerticalFlow = effectiveArchetype != null && !isWrapper && isThreeStepArchetype(effectiveArchetype);
 
   return (
-    <Card id="mechanism" className="pharos-card-shell h-full gap-0 overflow-hidden py-0 scroll-mt-24">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
-        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+    <Card id="mechanism" className={cn(DETAIL_MODULE_SHELL_CLASS, "h-full scroll-mt-24")}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
           Peg Stability
         </DetailSectionTitle>
         {/* Header info affordance (Figma coin template) → mechanism explainer. */}

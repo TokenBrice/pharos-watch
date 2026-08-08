@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   Award,
   ChevronDown,
@@ -18,8 +19,15 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
@@ -410,7 +418,13 @@ function PillarRow({
   cardId: string;
   pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
 }) {
-  const [open, setOpen] = useState(pillar.isWeakest);
+  // The weakest pillar auto-opens on desktop only (owner decision 2026-08-08):
+  // the "why the score isn't higher" story earns the room at lg+, while phones
+  // start fully folded. Server snapshot is "below desktop" so SSR ships closed
+  // and desktop opens after hydration; a user toggle always wins.
+  const isBelowDesktop = useIsMobile(1024, true);
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (pillar.isWeakest && !isBelowDesktop);
   const detailsId = useId();
   const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
   const scoreGrade = scoreToV9Grade(pillar.score);
@@ -419,7 +433,7 @@ function PillarRow({
     <div className="py-2">
       <button
         type="button"
-        onClick={() => hasDetails && setOpen((value) => !value)}
+        onClick={() => hasDetails && setUserOpen(!open)}
         className={cn(
           "pharos-focus-ring block min-h-12 w-full rounded-sm py-1.5 text-left",
           !hasDetails && "cursor-default",
@@ -604,21 +618,23 @@ export function StablecoinSafetyScoreV9Card({
       <CapSection card={card} />
       <ScoreConstructionPanel card={card} />
       {presentation.primaryReasons.length > 0 ? (
-        <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-reasons`}>
-          <h3 id={`${card.id}-v9-reasons`} className="text-sm font-semibold">Rating notes</h3>
-          <ul className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground">
-            {presentation.primaryReasons.map((reason) => <li key={reason}>{reason}</li>)}
-          </ul>
+        <section className="border-b border-border/40 pb-3" aria-label="Rating notes">
+          <ModuleDisclosure label="Rating notes" count={presentation.primaryReasons.length}>
+            <ul className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground">
+              {presentation.primaryReasons.map((reason) => <li key={reason}>{reason}</li>)}
+            </ul>
+          </ModuleDisclosure>
         </section>
       ) : null}
       <AccessPosturePanel rows={presentation.accessRows} review={transferReview} />
+      <EvidenceFooter topic="safetyScore" />
     </div>
   );
 
   return (
-    <Card className="pharos-card-shell gap-0 overflow-hidden py-0" data-safety-model="v9">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
-        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+    <Card className={DETAIL_MODULE_SHELL_CLASS} data-safety-model="v9">
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
           Safety Score
         </DetailSectionTitle>
         <HeaderActions updatedAtMs={updatedAtMs} />

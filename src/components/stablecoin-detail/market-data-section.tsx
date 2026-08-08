@@ -46,7 +46,9 @@ interface MarketDataSectionProps {
  * the visible window via `ifOverflow="hidden"`).
  */
 export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, frozenNote }: MarketDataSectionProps) {
-  const [range, setRange] = useState<TimeRangeOption>("all");
+  // 90d default: recent structure is the read this page optimizes for; "all"
+  // compresses a decade of supply into an unreadable first paint.
+  const [range, setRange] = useState<TimeRangeOption>("90d");
 
   return (
     <MarketDataChartSyncProvider>

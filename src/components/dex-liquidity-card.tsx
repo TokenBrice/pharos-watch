@@ -18,6 +18,7 @@ import { getScoreTier, TIER_TEXT, ratioQualityColor } from "@/lib/severity-color
 import { BalanceBar } from "@/components/balance-bar";
 import { getConcentrationLabel, getLiquidityEvidenceLabel } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
@@ -203,6 +204,15 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             </div>
           </div>
 
+        </div>
+
+        {/* The score explanation is the module's one summary visual. */}
+        {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
+
+        {/* ── Detail layer: market structure folds behind the standard
+               disclosure — headline KPIs and the score read stay above ── */}
+        <ModuleDisclosure label="Full market breakdown">
+        <div className="mt-3 space-y-4">
           {/* Health indicators — grouped into a cohesive block */}
           {(liq.concentrationHhi != null ||
             liq.depthStability != null ||
@@ -262,7 +272,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           {/* DEX-Implied Price — anchors the bottom of the summary zone */}
           {liq.dexPriceUsd != null && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
+              <p className="pharos-kicker">DEX-Implied Price</p>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="text-lg font-extrabold font-mono tabular-nums">${liq.dexPriceUsd.toFixed(4)}</span>
                 {liq.dexDeviationBps != null && (
@@ -287,20 +297,16 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               </div>
             </div>
           )}
-        </div>
 
-        {/* ── Zone 2: Market Structure ── */}
-        <div className="space-y-4">
           <ProtocolBar protocolTvl={liq.protocolTvl} />
 
           <ChainBar chainTvl={liq.chainTvl} />
-
-          {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
 
           <TvlTrendChart stablecoinId={stablecoinId} />
 
           {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
         </div>
+        </ModuleDisclosure>
 
         {liq.scoreComponents ? (
           <ShowYourWorkPanel kind="liquidity" scoreComponents={liq.scoreComponents} stablecoinId={stablecoinId} />

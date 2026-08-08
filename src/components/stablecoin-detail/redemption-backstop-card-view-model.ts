@@ -372,6 +372,8 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     routeStatusLabel: formatRedemptionRouteStatus(entry.routeStatus),
     modelConfidenceLabel: formatRedemptionModelConfidence(entry.modelConfidence),
     resolutionSummary: getResolutionSummary(entry),
+    score: entry.score,
+    accessModel: entry.accessModel,
     accessLabel: REDEMPTION_ACCESS_LABELS[entry.accessModel],
     settlementLabel: REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel],
     outputAssetLabel: REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType],

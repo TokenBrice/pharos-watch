@@ -522,9 +522,9 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Frankencoin documentation",
@@ -549,12 +549,15 @@
       {
         "label": "Chainlink CCIP mainnet token config (ZCHF BurnMintTokenPool 1.5.1, allowList disabled on all 8 networks)",
         "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+      },
+      {
+        "label": "Frankencoin collateral positions API",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
       }
     ],
-    "evidence": "Token-level review 2026-07-17: the Ethereum ZCHF contract 0xB58E61C3098d85632Df34EecfB899A1Ed80921cB is a plain non-proxy ERC-20 (EIP-1967 implementation slot zero at block 25551030) whose verified source exposes transfer, transferFrom, minter-gated mint/burn, and the veto-governance functions suggestMinter/denyMinter; it has no owner, holder blacklist, freeze, seize, or pause function. The seven L2 BridgedFrankencoin deployments 0xd4dd9e2F021BB459D5A5f6c24C12fE09c5D45553 carry the same non-proxy, restriction-free token surface (Optimism code and zero EIP-1967 slot verified at block 154337993). Cross-chain transport uses Chainlink CCIP BurnMintTokenPool 1.5.1 pools with allowListEnabled=false, so no address allowlisting gates bridging; pool rate limits throttle bridge flow but cannot freeze holder balances or transfers on any chain. Collateral tokens held inside positions (cbBTC, WBTC, PAXG, XAUt, tokenized equities) are issuer-freezable at their own layer; that is a reserve-quality exposure priced in the reserve facts, not a freeze reach over ZCHF holder transfers, so the reviewed token-level status is false.",
-    "reviewer": "KIMI ANCHOR-EV Safety Score V9 access review",
-    "reviewedAt": "2026-07-17",
-    "upstreamSuppressionRationale": "cbBTC, WBTC, PAXG, XAUt, and the tokenized-equity collateral lines (BOSS, DQTS, SPYon, REALU, LENDS) carry issuer-side freeze controls, and Chainlink CCIP is an external validation network with governance-set rate limits; none of these are exposed as native ZCHF holder-balance or transfer controls on any of the eight reviewed deployments, so they remain reserve-quality and bridge-route risks rather than a blacklistability property of ZCHF itself."
+    "evidence": "Re-reviewed 2026-08-08. Ethereum Frankencoin exposes minterOnly burnFrom(owner, amount), which calls the internal burn path without spending holder allowance; BridgedFrankencoin likewise documents admitted modules as able to move or burn arbitrary addresses. Current active minters are protocol contracts whose reviewed public entrypoints constrain the payer, so no immediately callable human/admin seizure was established. Governance can, however, admit a new minter after the protocol delay unless vetoed, leaving a concrete token-level arbitrary-holder burn surface and supporting Possible rather than No. Current positions also contain issuer-freezable XAUT, PAXG, WBTC, cbBTC, and tokenized-equity collateral, providing independent Upstream exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

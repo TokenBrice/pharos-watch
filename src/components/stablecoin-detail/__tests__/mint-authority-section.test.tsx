@@ -20,7 +20,10 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       key: "aave-governance",
       label: "Aave Ethereum Governance",
       roleLabel: "Facilitator",
+      authorityTypeKey: "dao-governor",
       authorityTypeLabel: "DAO governor",
+      threshold: 3,
+      signerCount: 5,
       directMintAbilityLabel: "Cap-limited",
       locationLabel: "ethereum / 0x1234...abcd",
       fullLocationLabel: "ethereum / 0x123400000000000000000000000000000000abcd",
@@ -43,6 +46,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
     score: 70,
     scoreLabel: "70/100",
     compactLabel: "70 Governed",
+    bandKey: "governed",
     bandLabel: "Governed",
     postureLabel: "Partially bounded admin",
     badgeClassName: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -101,8 +105,8 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Safety Score V9 mint component");
     expect(html).toContain("Scoring breakdown");
+    expect(html).toContain("Primary controls");
     expect(html).toContain("Derived posture");
     expect(html).toContain("Component score");
     expect(html).toContain("Partially bounded admin");
@@ -170,15 +174,19 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
+    // An active incident keeps the loud in-summary callout.
     expect(html).toContain("Mint incident 2024-06-13");
     expect(html).toContain("Privileged mint authority created unbacked supply");
-    expect(html).toContain("Centralized mint (critical) &lt;= 10");
+    // Structural caps render inside the scoring breakdown with their reason.
+    expect(html).toContain("Centralized mint (critical)");
+    expect(html).toContain("&lt;= 10");
+    expect(html).toContain("Economically effective minting is unbounded or compromised.");
     expect(html).toContain("Incident report");
     expect(html).toContain("https://example.com/incident");
     expect(html).toContain("Single-key address - custody unverifiable");
   });
 
-  it("features repeat mint incidents with a count header", () => {
+  it("folds resolved incidents into a calm incident history ledger", () => {
     const html = renderToStaticMarkup(
       <MintAuthoritySection
         profile={{
@@ -203,12 +211,36 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
-    expect(html).toContain("Repeat mint incidents (2)");
-    expect(html).toContain("2025-10-04");
+    // Resolved incidents are a historical record behind the disclosure, not a
+    // red alarm: red stays reserved for active incidents.
+    expect(html).toContain("Incident history");
+    expect(html).toContain("Mint incident 2025-10-04");
     expect(html).toContain("Second exploit borrowed stablecoin with no collateral.");
-    expect(html).toContain("2024-01-30");
+    expect(html).toContain("Mint incident 2024-01-30");
     expect(html).toContain("First exploit turned the borrow route into bad debt.");
-    expect(html).not.toContain("Mint incident 2025-10-04");
+    expect(html).not.toContain("border-red-500/25");
+  });
+
+  it("draws the mint rail and band ladder when a symbol is provided, absorbing the path and posture chips", () => {
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
+
+    // Band ladder lights the published band; the standalone band text goes.
+    expect(html).toContain("Hardened");
+    expect(html).toContain("Exposed");
+    // Rail stations: issuer path, control glyph row, supply symbol + posture.
+    expect(html).toContain("Facilitator");
+    expect(html).toContain("3/5");
+    expect(html).toContain("GHO");
+    expect(html).toContain("Partially bounded admin");
+    // Absorbed chips: the full mint-path label survives only as the origin title.
+    expect(html).not.toContain(">Facilitator bucket mint<");
+    expect(html).toContain("Facilitator bucket mint");
+  });
+
+  it("keeps the chip summary when no symbol is available for the rail", () => {
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} />);
+    expect(html).toContain("Facilitator bucket mint");
+    expect(html).toContain("Partially bounded admin");
   });
 
   it("renders verification gaps when review questions remain", () => {

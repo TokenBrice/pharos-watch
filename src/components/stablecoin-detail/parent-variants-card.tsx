@@ -7,6 +7,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 // 6 bordered rows ≈ the dependency graph's height, so the Dependency Context
 // split stays balanced even for parents with dozens of variants (USDC).
@@ -27,7 +28,7 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
 
   return (
     <section className="space-y-2.5">
-      <h3 className="px-2.5 text-sm font-semibold text-foreground">
+      <h3 className={`px-2.5 ${DETAIL_MODULE_TITLE_CLASS}`}>
         Variants <span className="ml-1 font-normal text-muted-foreground tabular-nums">{variants.length}</span>
       </h3>
       <div className={`grid gap-1.5 ${showAll ? "max-h-96 overflow-y-auto" : ""}`}>

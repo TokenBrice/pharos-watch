@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import { SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -36,8 +39,10 @@ export function ContractDeployments({
   compact?: boolean;
 }) {
   const [openContractKey, setOpenContractKey] = useState<string | null>(null);
-  const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
-  const [showAllContractsDesktop, setShowAllContractsDesktop] = useState(false);
+  // One expansion state serves the sm:hidden chip grid and the sm+ list —
+  // previously two independent booleans left the two responsive renderings of
+  // this single instance out of sync.
+  const [showAllContracts, setShowAllContracts] = useState(false);
   // Keyed by chain+address: some coins deploy twice on one chain, and a
   // chain-only key would flash the copied check on both rows.
   const [copiedContract, setCopiedContract] = useState<string | null>(null);
@@ -54,13 +59,13 @@ export function ContractDeployments({
 
   const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
-  const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
+  const visibleMobileContracts = showAllContracts ? contracts : mobileContractsPreview;
   const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
   // Desktop shows labeled rows (chain name + address + actions), not an
   // icon-only wall -- recognition fails past the top-10 chain logos. Preview 9
   // keeps the card compact for coins with dozens of deployments.
   const desktopContractsPreview = contracts.slice(0, compact ? 4 : 9);
-  const visibleDesktopContracts = showAllContractsDesktop ? contracts : desktopContractsPreview;
+  const visibleDesktopContracts = showAllContracts ? contracts : desktopContractsPreview;
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
   const openContract = contracts.find((contract) => getContractKey(contract) === openContractKey) ?? null;
@@ -75,7 +80,7 @@ export function ContractDeployments({
   }
 
   if (compact) {
-    const ToggleIcon = showAllContractsDesktop ? Minimize2 : Maximize2;
+    const ToggleIcon = showAllContracts ? Minimize2 : Maximize2;
     return (
       <section
         // The in-flow Key Info instance owns `#contracts` but is xl:hidden;
@@ -86,7 +91,7 @@ export function ContractDeployments({
       >
         <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Contracts</h2>
+            <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
             <span className="text-muted-foreground/50" aria-hidden="true">
               ·
             </span>
@@ -95,14 +100,14 @@ export function ContractDeployments({
           {hiddenDesktopContractCount > 0 ? (
             <button
               type="button"
-              onClick={() => setShowAllContractsDesktop((current) => !current)}
+              onClick={() => setShowAllContracts((current) => !current)}
               className="pharos-focus-ring inline-flex size-6 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
               aria-label={
-                showAllContractsDesktop
+                showAllContracts
                   ? "Collapse contract deployments"
                   : `Show all ${contracts.length} contract deployments`
               }
-              title={showAllContractsDesktop ? "Collapse contracts" : `Show all ${contracts.length} contracts`}
+              title={showAllContracts ? "Collapse contracts" : `Show all ${contracts.length} contracts`}
             >
               <ToggleIcon className="h-3 w-3" aria-hidden="true" />
             </button>
@@ -151,7 +156,7 @@ export function ContractDeployments({
       <div className="hidden sm:block">
         <div
           className={`grid gap-1.5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 ${
-            showAllContractsDesktop ? "max-h-96 overflow-y-auto pr-1" : ""
+            showAllContracts ? "max-h-96 overflow-y-auto pr-1" : ""
           }`}
         >
           {visibleDesktopContracts.map((c) => (
@@ -166,10 +171,10 @@ export function ContractDeployments({
         {hiddenDesktopContractCount > 0 && (
           <button
             type="button"
-            onClick={() => setShowAllContractsDesktop((current) => !current)}
+            onClick={() => setShowAllContracts((current) => !current)}
             className="pharos-focus-ring mt-2 inline-flex min-h-9 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            {showAllContractsDesktop ? "Show less" : `Show all ${contracts.length} chains`}
+            {showAllContracts ? "Show less" : `Show all ${contracts.length} chains`}
           </button>
         )}
       </div>
@@ -178,17 +183,17 @@ export function ContractDeployments({
           type="button"
           onClick={() => {
             if (
-              showAllContractsMobile &&
+              showAllContracts &&
               openContractKey &&
               !mobileContractsPreview.some((contract) => getContractKey(contract) === openContractKey)
             ) {
               setOpenContractKey(null);
             }
-            setShowAllContractsMobile((current) => !current);
+            setShowAllContracts((current) => !current);
           }}
           className="pharos-focus-ring mt-3 inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:hidden"
         >
-          {showAllContractsMobile ? "Show less" : `Show all ${contracts.length} chains`}
+          {showAllContracts ? "Show less" : `Show all ${contracts.length} chains`}
         </button>
       ) : null}
     </div>

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { ChevronDown, ExternalLink, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewDeployment, TransferReviewView } from "@/lib/transfer-review";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 function DeploymentEvidence({ deployment }: { deployment: TransferReviewDeployment }) {
   return (
@@ -117,7 +119,7 @@ export function AccessPosturePanel({
     return (
       <section className="pharos-card-shell overflow-hidden" aria-label="Access posture">
         <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-          <h2 className="text-sm font-medium text-muted-foreground">Access posture</h2>
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Access posture</h2>
           <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
         </div>
         <div className="px-4 pb-4">
@@ -128,16 +130,16 @@ export function AccessPosturePanel({
     );
   }
 
+  // In-flow (below xl) the posture rows fold behind the standard disclosure;
+  // the rail keeps its at-a-glance expanded copy at xl+.
   return (
     <section className="border-b border-border/40 pb-3 xl:hidden" aria-label="Access posture">
-      <div className="flex items-center gap-2">
-        <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 className="text-sm font-semibold">Access posture</h3>
-      </div>
-      <div className="mt-1">
-        {list}
-        {evidence}
-      </div>
+      <ModuleDisclosure label="Access posture">
+        <div className="mt-1">
+          {list}
+          {evidence}
+        </div>
+      </ModuleDisclosure>
     </section>
   );
 }

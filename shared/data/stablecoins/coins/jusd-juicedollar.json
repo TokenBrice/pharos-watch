@@ -87,9 +87,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "JuiceDollar smart-contract functions",
@@ -122,12 +121,15 @@
       {
         "label": "Citrea Public RPC",
         "url": "https://rpc.mainnet.citrea.xyz"
+      },
+      {
+        "label": "JuiceDollar live stablecoin info API",
+        "url": "https://api.juicedollar.com/ecosystem/stablecoin/info"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 23:16:45 UTC at Citrea block 10675546. The sole tracked JUSD deployment 0x0987d3720d38847ac6dbb9d025b9de892a3ca35c is verified by CitreaScan and the pinned JuiceDollar source; its ABI/source expose standard transfer and transferFrom only, with no holder blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. An eth_call transfer(address,uint256) of zero from a nonzero caller returned true; owner() reverted and the EIP-1967 implementation slot was zero. JuiceDollar's functions reference separately documents StablecoinBridge emergencyStop as an issuance/redemption control, not a native JUSD transfer stop. The reserve slice remains an inherited USDT.e/Tether and bridge failure domain (asset:usdt-tether and contract:citrea:0x5cc0e668f8ba61e111b6168e19d17d3c65040614), not a JUSD holder-freeze surface.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31",
-    "upstreamSuppressionRationale": "USDT.e/Tether controls can impair JUSD collateral or redemption through the StablecoinBridge, but the reviewed JUSD token has no native holder-balance control; the upstream asset and bridge remain separately represented as reserve and bridge failure domains."
+    "evidence": "Re-reviewed 2026-08-08. The current JuiceDollar token has no native holder blacklist or transfer pause; minter-only burnFrom remains allowance-gated for ordinary holders, and reviewed active minter contracts constrain burns to protocol participants or msg.sender. The live StablecoinBridge held 10,506.645477 USDT.e against 10,508.038 JUSD supply, making substantially all JUSD dependent on Tether-controlled reserve assets. That exact positive reserve exposure resolves JUSD as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "native",
   "custodyModel": "onchain",

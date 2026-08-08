@@ -5,6 +5,7 @@ import { ChevronDown, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { MechanismBackingMetric, MechanismBackingNote, MechanismBackingView } from "@/lib/mechanism-backing";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 const STATE_LABELS: Record<MechanismBackingNote["state"], string> = {
   "not-applicable": "Not applicable",
@@ -82,7 +83,7 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Backing mechanics">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Backing mechanics</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Backing mechanics</h2>
         <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
           Reviewed {view.reviewedAt}
         </span>

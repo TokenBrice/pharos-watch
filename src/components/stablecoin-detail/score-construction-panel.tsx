@@ -1,6 +1,7 @@
 "use client";
 
 import { ScanSearch, Sigma } from "lucide-react";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9PreBreakdownCard,
@@ -8,6 +9,7 @@ import type {
 import { buildScoreWaterfall, type ScoreWaterfallStep } from "@/lib/safety-score-v9-waterfall";
 import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 type ConstructionCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
 
@@ -104,7 +106,7 @@ export function ScoreConstructionPanel({
     return (
       <section className="pharos-card-shell overflow-hidden" aria-label="How this score is built">
         <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-          <h2 className="text-sm font-medium text-muted-foreground">How this score is built</h2>
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>How this score is built</h2>
           <Sigma className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
         </div>
         {waterfall ? <div className="px-4 pb-4">{waterfall}</div> : null}
@@ -115,14 +117,15 @@ export function ScoreConstructionPanel({
     );
   }
 
+  // In-flow (below xl) the construction arithmetic is detail, not verdict —
+  // it folds behind the standard disclosure; the rail keeps its at-a-glance
+  // expanded copy at xl+.
   return (
     <section className="border-b border-border/40 pb-3 xl:hidden" aria-label="How this score is built">
-      <div className="flex items-center gap-2">
-        <Sigma className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 className="text-sm font-semibold">How this score is built</h3>
-      </div>
-      {waterfall ? <div className="mt-2">{waterfall}</div> : null}
-      {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
+      <ModuleDisclosure label="How this score is built">
+        {waterfall ? <div className="mt-2">{waterfall}</div> : null}
+        {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
+      </ModuleDisclosure>
     </section>
   );
 }

@@ -14,6 +14,7 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { cn } from "@/lib/utils";
@@ -227,20 +228,13 @@ function CompactPriceTransparencyCard({
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Price transparency">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Price Transparency</h2>
-        <div className="flex items-center gap-2">
-          {updatedAtLabel ? (
-            <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
-              <RefreshCw className="h-3 w-3" aria-hidden="true" />
-              {updatedAtLabel}
-            </span>
-          ) : null}
-          <SourcesModal
-            sources={sources}
-            includeProtocolRedeem={includeProtocolRedeem}
-            updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
-          />
-        </div>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Price Transparency</h2>
+        {updatedAtLabel ? (
+          <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
+            <RefreshCw className="h-3 w-3" aria-hidden="true" />
+            {updatedAtLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="px-4 pb-4">
@@ -599,6 +593,8 @@ export function PriceTransparencyCard({
             </button>
           )}
         </div>
+
+        <EvidenceFooter topic="pegScore" />
       </CardContent>
     </Card>
   );

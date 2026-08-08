@@ -5,6 +5,7 @@ import { ChevronDown, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 function shareLabel(row: FailureDomainRow): string {
   if (row.exposureShare === null) return "Unquantified";
@@ -52,7 +53,7 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <div className="flex min-w-0 items-center gap-2">
           <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-sm font-medium text-muted-foreground">Shared failure domains</h2>
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Shared failure domains</h2>
         </div>
         <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
           {view.rows.length}

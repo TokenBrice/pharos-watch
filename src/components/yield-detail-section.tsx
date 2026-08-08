@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -173,8 +174,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         </div>
       ) : null}
 
-      {attribution ? <YieldChangeAttributionCard attribution={attribution} /> : null}
-
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
           APY trend against the current benchmark hurdle rate and peer median.
@@ -246,6 +245,12 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           variant="yield"
         />
       </div>
+
+      {/* ── Detail layer: diagnostics fold behind the standard disclosure —
+             active warnings, the chart, and the three stat tiles stay above ── */}
+      <ModuleDisclosure label="Yield diagnostics">
+      <div className="mt-3 space-y-4">
+      {attribution ? <YieldChangeAttributionCard attribution={attribution} /> : null}
 
       <YieldRankMovementCard attribution={ranking.rankChangeAttribution ?? null} />
 
@@ -358,6 +363,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </div>
         </div>
       ) : null}
+      </div>
+      </ModuleDisclosure>
 
       <nav
         aria-label="More yield analysis"

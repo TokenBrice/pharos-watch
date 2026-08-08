@@ -40,7 +40,12 @@ export interface MintAuthorityDetailControlViewModel {
   key: string;
   label: string;
   roleLabel: string;
+  /** Raw bounded key ("multisig", "safe", "eoa", …) for glyph dispatch. */
+  authorityTypeKey: string;
   authorityTypeLabel: string;
+  /** Numeric threshold/signers when published, for signer-dot rendering. */
+  threshold: number | null;
+  signerCount: number | null;
   directMintAbilityLabel: string;
   locationLabel: string;
   fullLocationLabel: string;
@@ -79,6 +84,8 @@ export interface MintAuthorityDetailScoreViewModel {
   score: number | null;
   scoreLabel: string;
   compactLabel: string;
+  /** Published posture band key ("hardened" … "exposed" | "nr") for the band ladder. */
+  bandKey: string;
   bandLabel: string;
   postureLabel: string;
   badgeClassName: string;
@@ -434,6 +441,7 @@ function buildMintAuthorityScoreViewModel(
     score: display.score,
     scoreLabel: display.scoreLabel,
     compactLabel: display.compactLabel,
+    bandKey: display.bandKey,
     bandLabel: display.bandLabel,
     postureLabel: labelFromMap(display.posture, AUTHORITY_POSTURE_LABELS),
     badgeClassName: display.badgeClassName,
@@ -472,7 +480,10 @@ function buildMintAuthorityControlViewModel(
     key: `${label}:${chain ?? "no-chain"}:${address ?? index}`,
     label,
     roleLabel: labelFromMap(control.role, CONTROL_ROLE_LABELS),
+    authorityTypeKey: stringValue(control.authorityType) ?? "unknown",
     authorityTypeLabel,
+    threshold: control.threshold ?? null,
+    signerCount: control.signerCount ?? null,
     directMintAbilityLabel: labelFromMap(control.directMintAbility, DIRECT_MINT_ABILITY_LABELS),
     locationLabel,
     fullLocationLabel,

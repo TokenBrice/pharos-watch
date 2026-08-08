@@ -526,9 +526,8 @@
       }
     ]
   },
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Asymmetry USDaf overview",
@@ -557,12 +556,15 @@
       {
         "label": "Ethereum PublicNode control reads",
         "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Asymmetry current USDaf reserve stats",
+        "url": "https://app.asymmetry.finance/api/stats"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 23:16:47 UTC at Ethereum block 25648895. The sole tracked USDaf BoldToken 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 has owner() = zero and zero EIP-1967 implementation/admin/beacon slots. The current verified Blockscout source and pinned BoldToken source expose no pause, freeze, holder blacklist, seizure, or arbitrary-holder burn; transfer and transferFrom zero-value calls from nonzero callers returned true. BoldToken does contain a fixed recipient guard rejecting transfers to core Liquity contracts, but it is not a mutable holder denylist. Asymmetry's current docs/terms describe the protocol and disclaim control over distributed-ledger transactions. Reserve-linked failure domains remain separately inherited from ysyBOLD, scrvUSD, sUSDS, sfrxUSD, tBTC, and wBTC (asset: bold-liquity, scrvusd-curve, susds-sky, sfrxusd-frax, Threshold/tBTC custodians, and WBTC custodians), not USDaf holder transfers.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31",
-    "upstreamSuppressionRationale": "The explicit No verdict is limited to USDaf holder-balance transfers. Its reserve-linked upstream assets and custodians remain separate backing/dependency failure domains and are not asserted freeze-free."
+    "evidence": "Re-reviewed 2026-08-08. The renounced, non-proxy USDaf BoldToken exposes no mutable pause, holder blacklist, seizure, or arbitrary-holder burn; its fixed core-contract recipient guard is not discretionary censorship. Current reserve stats nevertheless include tracked sUSDS, sfrxUSD, scrvUSD, tBTC, and wBTC exposures with possible, direct, or inherited issuer/custodian controls. Those positive reserve relationships resolve USDaf as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",

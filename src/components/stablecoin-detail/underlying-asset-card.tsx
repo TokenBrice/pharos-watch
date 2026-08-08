@@ -7,6 +7,7 @@ import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/varian
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { VariantKind } from "@shared/types";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 interface UnderlyingAssetCardProps {
   parent: StablecoinClientMeta;
@@ -20,7 +21,7 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
 
   return (
     <section className="space-y-2.5">
-      <h3 className="px-2.5 text-sm font-semibold text-foreground">Underlying Asset</h3>
+      <h3 className={`px-2.5 ${DETAIL_MODULE_TITLE_CLASS}`}>Underlying Asset</h3>
       <Link
         href={buildStablecoinUrl(parent.id)}
         className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-2.5 py-2.5 transition-colors hover:border-border/80 hover:bg-muted/40"
