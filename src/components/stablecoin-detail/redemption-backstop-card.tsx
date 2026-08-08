@@ -15,7 +15,9 @@ import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -63,9 +65,7 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <span className="text-sm text-muted-foreground">Standalone route score</span>
           <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
-            <Badge variant="outline" className={cn("px-2.5 py-1 pharos-numeric text-lg", viewModel.scoreToneClass)}>
-              {viewModel.heroScoreLabel}
-            </Badge>
+            <ScorePill size="lg" label={viewModel.heroScoreLabel} toneClass={viewModel.scoreToneClass} />
           </ScoreBadgeWrapper>
         </div>
 
@@ -104,21 +104,15 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         ) : null}
 
-        {/* ── distill: Route properties as compact inline row ── */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Access </span>
-            <span className="font-medium">{viewModel.accessLabel}</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Settlement </span>
-            <span className="font-medium">{viewModel.settlementLabel}</span>
-          </div>
-          <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Output </span>
-            <span className="font-medium">{viewModel.outputAssetLabel}</span>
-          </div>
-        </div>
+        {/* ── distill: Route properties in the passport fact grammar ── */}
+        <FactGrid
+          aria-label="Route properties"
+          items={[
+            { key: "access", label: "Access", value: viewModel.accessLabel },
+            { key: "settlement", label: "Settlement", value: viewModel.settlementLabel },
+            { key: "output", label: "Output", value: viewModel.outputAssetLabel },
+          ]}
+        />
 
         {/* ── detail layer: capacity/fee/confidence fold behind the standard
                disclosure — the score, route chips, and access row above are

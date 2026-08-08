@@ -8,6 +8,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
@@ -190,22 +191,10 @@ export function MintAuthoritySection({
           </DetailSectionTitle>
           {score ? (
             <ScoreBadgeWrapper topic="mintAuthorityScore" variant="tooltip-only" triggerAriaLabel={scoreTriggerLabel}>
-              <Badge
-                variant="outline"
-                className={cn("px-2 py-0.5 pharos-numeric text-sm", score.badgeClassName)}
-                title={score.detail}
-              >
-                {score.scoreLabel}
-              </Badge>
+              <ScorePill label={score.scoreLabel} toneClass={score.badgeClassName} title={score.detail} />
             </ScoreBadgeWrapper>
           ) : (
-            <Badge
-              variant="outline"
-              className="border-border/60 bg-muted/30 px-2 py-0.5 pharos-numeric text-sm text-muted-foreground"
-              title="The mint control posture is not rated."
-            >
-              NR
-            </Badge>
+            <ScorePill label="NR" title="The mint control posture is not rated." />
           )}
         </div>
       </CardHeader>
