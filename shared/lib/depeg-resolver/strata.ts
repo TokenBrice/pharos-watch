@@ -41,7 +41,15 @@ export function depthBucket(peakDeviationBps: number): DdrDepthBucket {
 }
 
 const ROBUST_ARCHETYPES = new Set(["cdp", "fiat-cash", "tbill", "rwa-credit-fund"]);
-const FRAGILE_POSTURES = new Set(["concentrated-admin", "unbounded-or-compromised"]);
+// `unbounded-reconciled` is a supervisory refinement *within* the unbounded
+// class, not an exit from it: the claim can still be expanded at will, and
+// reconciliation is after-the-fact evidence rather than a bound. It stays
+// fragile so adopting the finer curated vocabulary moves no depeg verdict.
+const FRAGILE_POSTURES = new Set([
+  "concentrated-admin",
+  "unbounded-reconciled",
+  "unbounded-or-compromised",
+]);
 
 /**
  * Coarse 2-way structural class. Robust = a real-collateral mechanism with a

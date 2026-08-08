@@ -85,6 +85,17 @@ describe("structuralClass", () => {
     expect(structuralClass(coin({ authorityPosture: "unbounded-or-compromised" }))).toBe("fragile");
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
+
+  it("keeps a reconciled unbounded minter fragile, including over a robust archetype", () => {
+    // The curated vocabulary gained `unbounded-reconciled` as a refinement of
+    // the unbounded class. Re-annotating a supervised issuer from
+    // `unbounded-or-compromised` to it must not reclassify the coin, or ~110
+    // assets would silently change stratum and move DDR duration percentiles.
+    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
+    expect(
+      structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-reconciled" })),
+    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-or-compromised" })));
+  });
 });
 
 describe("resolveOutlook — acceptance cases", () => {

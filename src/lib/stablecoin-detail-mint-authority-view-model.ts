@@ -232,6 +232,7 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "none-resolved": "No privileged mint resolved",
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
+  "unbounded-reconciled": "Unbounded, supervised & reconciled",
   "concentrated-admin": "Concentrated admin",
   "unbounded-or-compromised": "Unbounded or compromised",
   unknown: "Unknown",
@@ -241,6 +242,9 @@ const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   "none-resolved": "minimized",
   "bounded-admin": "minimized",
   "partially-bounded-admin": "neutral",
+  // Same elevated tone as the rest of the unbounded/concentrated tier: the
+  // supervision is real, but the minting is still economically unbounded.
+  "unbounded-reconciled": "elevated",
   "concentrated-admin": "elevated",
   "unbounded-or-compromised": "elevated",
   unknown: "neutral",
