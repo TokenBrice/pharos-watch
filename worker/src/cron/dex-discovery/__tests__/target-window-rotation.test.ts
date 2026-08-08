@@ -3,7 +3,7 @@ import type { ContractDeployment } from "@shared/types/core";
 
 // A mega-multichain footprint: a cheap CoinGecko head plus a GeckoTerminal-only
 // tail whose 2s pacing floor cannot fit in the same per-coin budget.
-const { CG_CHAINS, GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
+const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
   const cgChains = ["ethereum", "arbitrum", "base", "optimism", "polygon", "avalanche", "celo", "gnosis", "bsc", "fantom"];
   const gtOnlyChains = ["linea", "scroll", "mantle", "mode", "manta", "zksync", "sonic", "taiko", "unichain", "worldchain"];
   return {
