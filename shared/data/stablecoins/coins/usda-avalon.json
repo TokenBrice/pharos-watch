@@ -860,12 +860,12 @@
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
-        "0x3f390dD6EF69f68f9877aACC086856a200808693",
-        "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc"
+        "0x3f390dd6ef69f68f9877aacc086856a200808693",
+        "0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc"
       ],
       "implementationAddresses": [
-        "0x10D162BB7fA363201b0c749cd96322082F733a97",
-        "0x1d6321C031665802b9829f60a0602364BF30456f"
+        "0x10d162bb7fa363201b0c749cd96322082f733a97",
+        "0x1d6321c031665802b9829f60a0602364bf30456f"
       ],
       "adminAddresses": [
         "0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69",
@@ -873,62 +873,69 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "USDa token and minter-proxy admin Safe",
-      "observedBlock": 25530438,
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
       "sources": [
         {
           "label": "USDa Ethereum token",
-          "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8a60e489004ca22d775c5f2c657598278d17d9c2"
         },
         {
           "label": "USDa first minter proxy",
-          "url": "https://etherscan.io/address/0x3f390dD6EF69f68f9877aACC086856a200808693#code"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3f390dd6ef69f68f9877aacc086856a200808693"
         },
         {
           "label": "USDa second minter proxy",
-          "url": "https://etherscan.io/address/0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc#code"
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
         }
       ]
     },
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x3f390dD6EF69f68f9877aACC086856a200808693",
+        "address": "0x3f390dd6ef69f68f9877aacc086856a200808693",
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530438,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25530438. Its EIP-1967 implementation is 0x10D162BB7fA363201b0c749cd96322082F733a97 and ProxyAdmin is 0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
+        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25712112. Its EIP-1967 implementation is 0x10d162bb7fa363201b0c749cd96322082f733a97 and ProxyAdmin is 0x8ed73f9e5a4b49d07e696fe03b867e0870ac0e69, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
       },
       {
         "chain": "ethereum",
-        "address": "0x1e7DFF07b891a40eF08Bb7D1D2c4385d4Ac39DFc",
+        "address": "0x1e7dff07b891a40ef08bb7d1d2c4385d4ac39dfc",
         "label": "USDa MINT_ROLE holder",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530438,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25530438. Its EIP-1967 implementation is 0x1d6321C031665802b9829f60a0602364BF30456f and ProxyAdmin is 0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
+        "evidence": "A complete RoleGranted/RoleRevoked replay plus hasRole() confirms this transparent proxy still holds MINT_ROLE at Ethereum block 25712112. Its EIP-1967 implementation is 0x1d6321c031665802b9829f60a0602364bf30456f and ProxyAdmin is 0x06de2c3fe2b69ad0acfe2aeccc871f327b08d093, owned by the reviewed USDa Safe. The current implementation is not explorer-verified, so no narrower call-level cap is claimed."
       },
       {
         "chain": "ethereum",
-        "address": "0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9",
+        "address": "0xdfb1b1c0e0f697829af500d73364d863cb3c6ce9",
         "label": "USDa token and minter-proxy admin Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -940,35 +947,40 @@
         "safe": {
           "version": "1.3.0",
           "owners": [
-            "0xd955F0c167adbf7d553fc4D59A964A1b115Cc093",
-            "0x351806B55e93A8Bcb47Be3ACAF71584deDEaB324",
-            "0x85AF4b64A0d98fd9A0ef9b473dD50008F8624b8A",
-            "0x2557Ac54165134D7EfD5ab94B750e9e04147beb1",
-            "0x3b47b6a52e2C5bd4ca23eF7295Af7c435E63FC92",
-            "0xe9Cd042b659AD5fbdd6627F08ada1ed0608259f6"
+            "0xd955f0c167adbf7d553fc4d59a964a1b115cc093",
+            "0x351806b55e93a8bcb47be3acaf71584dedeab324",
+            "0x85af4b64a0d98fd9a0ef9b473dd50008f8624b8a",
+            "0x2557ac54165134d7efd5ab94b750e9e04147beb1",
+            "0x3b47b6a52e2c5bd4ca23ef7295af7c435e63fc92",
+            "0xe9cd042b659ad5fbdd6627f08ada1ed0608259f6"
           ],
           "threshold": 5,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-          "observedBlock": 25530438,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
           "source": "safe-api"
         },
-        "observedBlock": 25530438,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "USDa admin Safe",
-            "url": "https://app.safe.global/home?safe=eth:0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9/"
           },
           {
             "label": "USDa Ethereum source",
             "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#code"
           }
         ],
-        "evidence": "At Ethereum block 25530438, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE, upgrade either existing minter proxy, and configure trusted OFT peers."
+        "evidence": "At Ethereum block 25712112, owner() returned this Safe and hasRole() confirmed it holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE. Both minter ProxyAdmin owner() calls also returned this Safe. RPC and Safe Transaction Service reported threshold 5, six owners, no modules, and zero guard. It can grant MINT_ROLE, upgrade either existing minter proxy, and configure trusted OFT peers."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -982,11 +994,19 @@
         {
           "label": "USDa Sourcify source",
           "url": "https://sourcify.dev/server/v2/contract/1/0x8a60e489004ca22d775c5f2c657598278d17d9c2?fields=sources,abi"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        },
+        {
+          "label": "USDa admin Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9/"
         }
       ],
-      "evidence": "Complete Ethereum role-event replay through block 25530438 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. The immutable USDa token also uses LayerZero OFT peer minting; deployment route semantics remain separately represented by bridgeRouteRisk rather than duplicated as an unidentified mint control.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Complete Ethereum role-event replay through block 25712112 identifies exactly two live MINT_ROLE holders and the sole current admin Safe. Direct storage and owner() reads establish both transparent-proxy minter implementations, their two ProxyAdmins, and common 5-of-6 Safe ownership. Both implementations remain unverified, so no call-level issuance cap can be established; the Safe can grant MINT_ROLE or upgrade either minter proxy, making aggregate economic cap semantics unbounded. The immutable USDa token also uses LayerZero OFT peer minting; deployment route semantics remain separately represented by bridgeRouteRisk rather than duplicated as an unidentified mint control.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

@@ -80,8 +80,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Sourcify Optimism contract source",
@@ -98,11 +99,20 @@
       {
         "label": "DephaserJPY verified source on Base",
         "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "Optimism fixed-block RPC",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "Current-source re-review: the verified DephaserJPY token source exposes no direct holder freeze or blacklist function, and PAUSER_ROLE has no members on the reviewed Optimism or Base deployments. burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-08-08 at Optimism block 155309915 and Base block 49714630. Both tracked DephaserJPY deployments retained direct runtime code with zero EIP-1967 implementation and admin slots. Their verified ABI/source exposes standard ERC-20 transfer paths, role-gated mint, and allowance-gated burnFrom, but no pause, blacklist, freeze, allowlist, seizure, transfer hook, or privileged arbitrary-holder burn. The earlier PAUSER_ROLE wording was stale: the current verified ABI has no PAUSER_ROLE or pause function. Direct JPYT blacklistability is false. Locked USDC/USDT can be frozen upstream and impair backing or redemption, but those issuers cannot restrict JPYT holder balances.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "USDC and USDT issuers can freeze collateral or redemption inventory and thereby impair JPYT value or exits, but the verified immutable JPYT contracts give those issuers no direct authority over JPYT balances. That exposure remains backing/dependency risk rather than an inherited transfer-control verdict."
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

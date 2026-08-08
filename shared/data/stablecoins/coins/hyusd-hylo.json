@@ -88,8 +88,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Hylo on-chain addresses",
@@ -108,7 +109,8 @@
         "url": "https://docs.hylo.so/product-guide/stablecoin.md"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437980139. The sole tracked HYUSD mint remains owned by the SPL Token program with freezeAuthority = null, so no direct HYUSD token-account freeze path exists. Current reviewed pool composition nevertheless includes 5.319864% Circle USDC plus cbBTC exposure. Circle retains freeze authority over the Solana USDC reserve asset, making HYUSD Upstream under the any-positive-reserve rule.",
+    "upstreamSuppressionRationale": "Circle can freeze the Solana USDC reserve position and impair Hylo backing or conversions, but that upstream authority cannot freeze HYUSD token accounts. HYUSD's own immutable SPL freeze authority is null and cannot be restored under the pinned Token Program rules.",
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437980139. The sole tracked HYUSD mint remains owned by the legacy SPL Token program with freezeAuthority = null; pinned Token Program source requires the current freeze authority to freeze an account and does not permit a disabled authority to be restored. Hylo identifies no separate issuer transfer-control layer. Current reviewed pool composition nevertheless includes 5.319864% Circle USDC plus cbBTC exposure. Circle can freeze that reserve asset and impair backing or conversions, but cannot freeze HYUSD token accounts. Direct holder freeze is therefore false, with the USDC position recorded separately as upstream risk.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },

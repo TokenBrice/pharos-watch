@@ -39,9 +39,9 @@
         "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 at Ethereum block 25648410. Sole tracked stUSDS proxy 0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9 has EIP-1967 implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 and admin slot zero. asset() returns USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f. wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returns 1 (Pause Proxy). Implementation bytecode has rely/deny and no blacklist, isBlacklisted, freeze, pause, or paused selectors. Pinned StUsds.sol transfer/transferFrom are ordinary ERC-20 balance moves with only zero/self-address guards; _authorizeUpgrade is wards-gated (upgrade is mint-authority domain, not a live holder freeze). No direct holder freeze/blacklist on stUSDS. Upstream: tracked parent usds-sky (variantOf/mintAuthority.inheritedFrom) has reviewed Solana freezeAuthority, so freeze exposure is inherited-upstream. Controlling authority for wrapper upgrades: Sky Pause Proxy wards. Failure domain: asset:usds-sky (upstream) plus contract:ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9 for upgrade surface.",
-    "reviewer": "Grok T49 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The sole stUSDS proxy still used implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22; asset() still returned USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f and wards(Sky Pause Proxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb) still returned 1. The pinned implementation has ordinary transfers and no live blacklist/freeze/pause path, while wards gate future upgrades. The inherited finding is valid because variantOf and mintAuthority.inheritedFrom both resolve to reviewed parent usds-sky, whose Solana deployment retains freeze authority.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -75,7 +75,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "address": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
         "label": "stUSDS Sky Pause Proxy upgrade authority",
         "role": "proxy-admin",
         "authorityType": "dao-governor",
@@ -115,7 +115,7 @@
         "0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22"
       ],
       "adminAddresses": [
-        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB"
+        "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,

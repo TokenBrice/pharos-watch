@@ -4,7 +4,7 @@
   "geckoId": "jpysc",
   "name": "JPYSC",
   "symbol": "JPYSC",
-  "oneLiner": "JPYSC is Shinsei Trust & Banking's closed-loop yen stablecoin for verified SBI VC Trade users, awaiting public-chain circulation.",
+  "oneLiner": "JPYSC is Shinsei Trust & Banking's Ethereum-issued, closed-loop yen stablecoin for verified SBI VC Trade users; external-wallet withdrawals remain disabled.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -13,8 +13,15 @@
     "rwa": false,
     "navToken": false
   },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x6781d5631bfe47432b089e64e3eab3b6edd26177",
+      "decimals": 18
+    }
+  ],
   "collateral": "Segregated Shinsei Trust & Banking trust accounts holding yen cash and Japanese government bonds, with JGBs capped at 50% of reserves under Japan's Type III Electronic Payment Instrument framework",
-  "pegMechanism": "Trust-bank-backed JPY stablecoin issued by Shinsei Trust & Banking and distributed by SBI VC Trade. The June 24, 2026 launch is closed-loop for verified SBI VC Trade users; external-wallet withdrawals and public-chain circulation remain pending legal, tax, and deployment clarity.",
+  "pegMechanism": "Trust-bank-backed JPY stablecoin issued by Shinsei Trust & Banking and distributed by SBI VC Trade. The June 24, 2026 launch is closed-loop for verified SBI VC Trade users; the Ethereum token is deployed, but external-wallet withdrawals and open public-chain circulation remain disabled pending legal and tax policy.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -37,10 +44,254 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: JPYSC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+      },
+      {
+        "label": "Official Startale JPYSC contract page",
+        "url": "https://startale.com/ja/jpysc"
+      },
+      {
+        "label": "Ethereum observation block 25712112",
+        "url": "https://eth.blockscout.com/block/25712112"
+      }
+    ],
+    "evidence": "At Ethereum block 25712112, the official JPYSC proxy resolved to verified StablecoinV1 implementation 0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e and paused() was false. Verified source gives the current blacklister 0xba1fb3b95cdea5c62dc7c83a9ac8c704160d2356 address-level blacklist/unblacklist power, the pauser 0xf30a72ba1fb9de61a1531fd8a691d046d425ae32 global pause power, and the seizer 0x90de37a09222f08ead6de034aa84dfcddf9ca560 court-order forced-transfer power after an address is blacklisted. Holder transfers enforce both the pause and blacklist gates.",
+    "reviewer": "OpenAI Codex C03 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "canBeBlacklisted": true,
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "JPYSC uses renewable per-minter allowances plus a per-minter destination whitelist. No minter was active at the observation block, but an EOA minter admin can immediately authorize a new allowance and the 3-of-4 owner Safe can rotate both operational gates; UUPS upgrades are separated behind a two-day timelock controlled by another 3-of-4 Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x6781d5631bfe47432b089e64e3eab3b6edd26177"
+      ],
+      "implementationAddresses": [
+        "0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+      ],
+      "adminAddresses": [
+        "0xae3009db589872dba6a28618543031fe77af3f0b"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "JPYSC two-day UUPS upgrade timelock",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
+      "sources": [
+        {
+          "label": "Blockscout JPYSC UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6781d5631bfe47432b089e64e3eab3b6edd26177"
+        },
+        {
+          "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+        },
+        {
+          "label": "Blockscout verified JPYSC TimelockController",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xae3009db589872dba6a28618543031fe77af3f0b"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x97b5505953c8480f3592450788b39175a9bbea2b",
+        "label": "JPYSC minter administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The minter administrator can configure or renew a per-minter allowance once the current allowance is zero; the verified implementation imposes no global issuance ceiling.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+          },
+          {
+            "label": "Ethereum observation block 25712112",
+            "url": "https://eth.blockscout.com/block/25712112"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, minterAdmin() returned this EOA. Verified source makes configureMinter/removeMinter exclusive to that address and allows any new allowance after the current allowance reaches zero. Complete MinterConfigured/MinterRemoved replay found the two historical operator addresses 0x7e7b8b835b5face8db66ddc28fae589ee7abb647 and 0x03c1dcfbf5aaa334c3a270a5a2b782bcbf1be5fa both removed; direct isMinter and minterAllowance reads returned false and zero for each."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0f12d96ee363c0a70c18bb1a2565651c13682fbf",
+        "label": "JPYSC mint-destination whitelist manager",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+          }
+        ],
+        "evidence": "whitelistManager() returned this EOA at Ethereum block 25712112. Verified source requires each mint destination to be whitelisted for the calling minter, so this is an independent operational gate but cannot create supply or grant a mint allowance."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd55be56fa8a4adcf92fa81454439327ef9d362e2",
+        "label": "JPYSC owner and operational-role recovery Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xa72510778d9bedd2b56edcf22f1ded908050a233",
+            "0x1d483e9165290b0a0029d2e19e6d44b8ba08701f",
+            "0x5058bd213126101a487bdd721ec0cf8f8157819c",
+            "0x91bbdfb0487bbc01928ef2c4509e33fccb5b55d7"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "JPYSC owner Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xD55bE56fA8a4aDcf92fA81454439327eF9d362E2/"
+          },
+          {
+            "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, owner() returned this 3-of-4 Safe. Safe Transaction Service reported version 1.4.1, four owners, no modules, and zero guard. Verified StablecoinV1 lets the owner rotate the minter administrator and mint-destination whitelist manager immediately, so the Safe can authorize a new mint path even though it is deliberately separated from UUPS upgrade authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xae3009db589872dba6a28618543031fe77af3f0b",
+        "label": "JPYSC two-day UUPS upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+          },
+          {
+            "label": "Blockscout verified JPYSC TimelockController",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xae3009db589872dba6a28618543031fe77af3f0b"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, upgradeAuthority() returned this verified TimelockController and getMinDelay() returned 172800 seconds. StablecoinV1 restricts both _authorizeUpgrade and updateUpgradeAuthority to the current upgrade authority, so the token owner cannot bypass the timelock's two-day delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x21f47948c68715424b5ca671467ac50e6cdd0267",
+        "label": "JPYSC upgrade-governance Safe (timelock proposer/canceller)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 4,
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xaf168be0f066520082c0237fbf48e26288a5309c",
+            "0x370420f4ee0e0722f1cb7308b4f3e6243c0e4f58",
+            "0x8a18aabc225e2138bd6dd4e6c0b3eccf0aaa21a1",
+            "0xddb21ef940fc493a87745936d67d5a70f5babca5"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "JPYSC upgrade-governance Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x21F47948C68715424B5Ca671467Ac50E6CdD0267/"
+          },
+          {
+            "label": "Blockscout verified JPYSC TimelockController",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xae3009db589872dba6a28618543031fe77af3f0b"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, this Safe was 3-of-4, version 1.4.1, with no modules and zero guard. Timelock hasRole checks returned true for its PROPOSER_ROLE and CANCELLER_ROLE; EXECUTOR_ROLE was open to address zero, so anyone may execute a ready operation but only reviewed proposers can schedule one."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Official Startale JPYSC contract page",
+          "url": "https://startale.com/ja/jpysc"
+        },
+        {
+          "label": "Blockscout verified JPYSC StablecoinV1 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xba161409749ae95e9bbc1cf3a2dd3fe3e0af1d5e"
+        },
+        {
+          "label": "SBI Shinsei Trust Bank JPYSC terms",
+          "url": "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260624.pdf"
+        },
+        {
+          "label": "SBI Shinsei Trust statutory JPYSC issuance and deposit balances",
+          "url": "https://www.shinseitrust.com/stablecoin/jpysc.html"
+        },
+        {
+          "label": "Japan FSA licensed trust-bank list",
+          "url": "https://www.fsa.go.jp/menkyo/menkyoj/ginkou.pdf"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ],
+      "evidence": "At Ethereum block 25712112, direct role reads and a complete MinterConfigured/MinterRemoved replay established no live minter but a live EOA minter administrator able to issue renewable allowances without a global on-chain cap. Minting also requires a separately managed per-minter destination whitelist. The 3-of-4 owner Safe can rotate both operational roles; UUPS authority is separated behind a 172800-second TimelockController whose sole live proposer is another 3-of-4 Safe. Official terms state that issuance has no upper limit, so economic cap semantics are unbounded. The only public reserve snapshot retrieved is dated 2026-06-30 and the terms disclaim an issuance audit, so no reconciliation cadence is asserted. SBI Shinsei Trust Bank appears on the FSA's licensed trust-bank list and issues JPYSC as the trust-bank instrument described in official product materials, supporting prudential supervision.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
   },
   "custodyModel": "institutional-regulated",
   "reserves": [

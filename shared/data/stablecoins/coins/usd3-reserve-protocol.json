@@ -47,8 +47,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Reserve Protocol pause/freeze states documentation",
@@ -73,9 +74,14 @@
       {
         "label": "Reserve Protocol DTF discovery API",
         "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "Reserve Protocol terms and conditions",
+        "url": "https://reserve.org/terms-and-conditions"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Ethereum RToken and Base OptimismMintableERC20 transfers expose no current holder blacklist, seizure, or transfer pause. Reserve Protocol's Main freeze controls halt issue/redeem and protocol trading while leaving ERC-20 transfers open, so they remain operational controls rather than direct FreezeWatch transfer restrictions under the current taxonomy. The live USD3 basket is 25% sUSDS plus 75% USDC-derived Aave, Compound, and Steakhouse wrappers. Those positive issuer-freezable reserve slices resolve USD3 as Upstream rather than No.",
+    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712317, the USD3 proxy still resolved to verified RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That implementation and the verified Base OptimismMintableERC20 representation expose ordinary ERC-20 transfers with no holder blacklist, seizure, arbitrary holder burn, or transfer pause. Reserve Protocol's Main freeze controls halt issue, redeem, and protocol trading while explicitly leaving ERC-20 functions open. Reserve's terms describe ABC Labs as a non-custodial interface contributor and reserve only the ability to restrict access to the services, not an issuer right to freeze USD3 balances.",
+    "upstreamSuppressionRationale": "The live USD3 basket includes sUSDS and USDC-derived Aave, Compound, and Steakhouse wrappers whose upstream issuers can freeze reserve assets and impair redemption. That reserve-leg exposure does not give Reserve governance, ABC Labs, or an upstream issuer authority to freeze or seize holders' USD3 balances in the reviewed token contracts.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },

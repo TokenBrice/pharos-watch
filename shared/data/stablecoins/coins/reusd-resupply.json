@@ -147,8 +147,9 @@
     }
   ],
   "governanceQuality": "dao-governance",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "REUSD verified contract source",
@@ -163,9 +164,10 @@
         "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
       }
     ],
-    "evidence": "The verified REUSD source exposes owner/operator-controlled mint and standard ERC-20 transfers, but no holder blacklist, freeze, seizure, or global pause function. The owner is Resupply Core and proposal execution is governed by the token-weighted Voter with a seven-day vote and one-day execution delay. crvUSD and frxUSD lending-vault collateral create upstream loss exposure without granting their controllers access to REUSD holder balances.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "upstreamSuppressionRationale": "crvUSD and frxUSD can be impaired through their own upstream controls while deposited in Resupply markets, but neither parent issuer or protocol can freeze an existing holder's separate REUSD balance. That reserve/market dependency is loss and exit risk rather than inherited holder-transfer authority.",
+    "evidence": "Re-reviewed 2026-08-08. The exact verified, immutable REUSD Stablecoin deployment exposes owner/operator-controlled mint and allowance-checked burn, while transfer and transferFrom remain standard ERC-20 paths. It has no holder blacklist, freeze, seizure, global pause, arbitrary holder burn, proxy, or upgrade hook. The owner is the Resupply Core governance contract; its execution and operator permissions do not add a token-level holder restriction path. The previous inherited verdict was invalid because REUSD has no stablecoin parent identity: crvUSD and frxUSD lending-market exposure can impair collateral or exits but cannot restrict existing REUSD holder balances.",
+    "reviewer": "OpenAI Codex C04 access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

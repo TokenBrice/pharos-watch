@@ -11,9 +11,8 @@
     "rwa": false,
     "navToken": true
   },
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Morpho VaultV2 source (transfer requires canSendShares/canReceiveShares)",
@@ -52,9 +51,9 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       }
     ],
-    "evidence": "2026-07-30 re-pin of freeze/transfer posture across all three tracked deployments. Ethereum 0x8c106eedad96553e64287a5a6839c3cc78afa3d0 is verified Morpho VaultV2 (immutable; EIP-1967 impl/admin slots zero at Ethereum block 25648243). VaultV2 transfer/transferFrom require canSendShares(sender) and canReceiveShares(recipient); canSendShares returns true when sendSharesGate==0 or the gate allows the account. At block 25648243: asset()=USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, owner()=0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, curator()=0x9e33faae38ff641094fa68c65c2ce600b3410585, sendSharesGate/receiveSharesGate/sendAssetsGate/receiveAssetsGate all zero, canSendShares(0x1)=true and canReceiveShares(0x2)=true, totalAssets≈84,287,391.52 USDC. Curator can submit a gate-setting call and execute after the vault's gate-setter timelock, so Ethereum direct transfer restriction is possible (not currently active). Base 0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61 (MetaMorpho) at Base block 49328092: asset=native Base USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, owner=0x5a4e19842e09000a582c20a4f524c26fb48dd4d0, EIP-1967 slots zero; ABI has no pause/blacklist/isBlacklisted and eth_call to those selectors reverts. Arbitrum 0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed (MetaMorphoV1_1) at Arbitrum block 489415296: asset=native USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831, same owner, EIP-1967 slots zero; paused()/isBlacklisted eth_call reverts. Gauntlet branded-vault disclaimer states vaults are not custodial products and does not create holder freeze rights. Circle USDC remains additional upstream freezability on the underlying asset, not a gtUSDCp share blacklist. Aggregate direct posture: possible (Ethereum VaultV2 share gates).",
-    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Corrected 2026-08-08 across all three tracked deployments. At Ethereum block 25712116, immutable VaultV2 0x8c106eedad96553e64287a5a6839c3cc78afa3d0 had zero sendSharesGate and receiveSharesGate. Although the source exposes timelocked share-gate setters, timelock(selector) was 604800 and abdicated(selector) was true for both setSendSharesGate(address) and setReceiveSharesGate(address); verified source states an abdicated function cannot be executed, so the curator cannot activate those gates. Base MetaMorpho at block 49712686 and Arbitrum MetaMorphoV1_1 at block 492482369 retain ordinary ERC-20 share transfers with no pause, blacklist, freeze, or gate mechanism. All three vaults are immutable and mint shares only against their chain-local USDC asset. Direct gtUSDCp transfers are therefore permissionless; freeze exposure is inherited from the named usdc-circle parent and its chain-local USDC contracts.",
+    "reviewer": "OpenAI Codex C03 control review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -88,7 +87,7 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x8c106EEdAd96553E64287a5A6839C3CC78Afa3d0",
+        "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
         "label": "Gauntlet USDC Prime MetaMorpho V2 vault Ethereum (immutable, deposit-only mint)",
         "role": "wrapper",
         "authorityType": "contract",
@@ -149,7 +148,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
         "label": "Inherited Ethereum USDC MasterMinter",
         "role": "minter-admin",
         "authorityType": "contract",

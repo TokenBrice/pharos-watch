@@ -176,12 +176,23 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
+    "summary": "Ethereum XSGD currently has two allowance-capped minter multisigs, a 3-of-5 MasterMinter Safe that can change those allowances, a separate 3-of-5 token-owner Safe, and a 2-of-5 legacy multisig controlling proxy upgrades. Solana mint and freeze authority remains a direct 3-of-10 SPL multisig. Overall issuance is economically unbounded but periodically reconciled.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-14",
-      "observedBlock": 25530897,
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x70e8de73ce538da2beed35d14187f6959a8eca96"
+      ],
+      "implementationAddresses": [
+        "0x256bf13787d308fe15b4297369ea00006b638fbf"
+      ],
+      "adminAddresses": [
+        "0x5daab87246b8f8556e159a54f1b21832e1376951"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "XSGD proxy-admin legacy multisig",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712169,
       "sources": [
         {
           "label": "XSGD Ethereum token",
@@ -208,6 +219,14 @@
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
+          "label": "XSGD current verified implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
+        },
+        {
+          "label": "XSGD verified proxy-admin multisig",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5daab87246b8f8556e159a54f1b21832e1376951"
+        },
+        {
           "label": "Solana Token Program",
           "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -224,28 +243,88 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x70e8de73ce538da2beed35d14187f6959a8eca96",
-        "label": "XSGD token MasterMinter path",
+        "address": "0x098a4c0c291c35109e742ba8f0961b0490e9a7f6",
+        "label": "XSGD live minter legacy multisig",
         "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "authorityType": "multisig",
+        "directMintAbility": "cap-limited",
+        "threshold": 2,
+        "signerCount": 7,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712169,
+        "capDescription": "Current token minter allowance: 131,860,242.08 XSGD. The minter cannot raise its own allowance; the separate MasterMinter Safe can reconfigure it.",
         "sources": [
           {
-            "label": "StraitsX product page",
-            "url": "https://www.straitsx.com/"
+            "label": "XSGD verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
           },
           {
-            "label": "Ethereum token read contract",
-            "url": "https://etherscan.io/"
+            "label": "Verified legacy minter multisig",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x098a4c0c291c35109e742ba8f0961b0490e9a7f6"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25294588, owner() returned 0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964 and masterMinter() returned 0x4a423F581dF9A7575FBe9cf22013638E8DbbE273."
+        "evidence": "A complete MinterConfigured/MinterRemoved event replay through Ethereum block 25712169 found this address still active. isMinter() returned true and minterAllowance() returned 131860242080000 base units. The verified MultiSigWalletWithDailyLimit returned required() = 2, seven owners, and dailyLimit() = 0."
       },
       {
         "chain": "ethereum",
-        "address": "0x4a423F581dF9A7575FBe9cf22013638E8DbbE273",
+        "address": "0x92d271c7cc0c18239222774f59a31dc4c7dc2fee",
+        "label": "XSGD live minter Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "cap-limited",
+        "threshold": 2,
+        "signerCount": 8,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 2,
+          "owners": [
+            "0xb5d6f50e2233f2a073026dcaf6f34f38727754f7",
+            "0x26eab3e93d156c77b39ab4893d178c4867b83404",
+            "0xc1eb5968ab4f53698b3f4a096309ecbe2208253c",
+            "0x6ba8c6793c376c04730f76f854d5a59eed93754b",
+            "0xda6e08eca946c891902b583af2b883b3b69a5804",
+            "0x056b0a301d0595d9f39369ca0a9e36b5cb4be5ac",
+            "0x7ddeb8aee3499190990f7636d2bcedd42151c701",
+            "0x1647abd62e70595c972717995714c02d2f78a11b"
+          ],
+          "enabledModules": [],
+          "guard": "0x29107e4d2e76e97fb8c1d7ee8eff7c2447640e09",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25712169,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712169,
+        "capDescription": "Current token minter allowance: 155,860,695.35 XSGD. The minter cannot raise its own allowance; the separate MasterMinter Safe can reconfigure it.",
+        "sources": [
+          {
+            "label": "XSGD verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x92d271C7cC0C18239222774f59A31dc4C7DC2fEE/"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "A complete minter-event replay through Ethereum block 25712169 found this address still active. isMinter() returned true and minterAllowance() returned 155860695350000 base units. Safe state was 2-of-8 with no enabled modules and guard 0x29107e4d2e76e97fb8c1d7ee8eff7c2447640e09."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4a423f581df9a7575fbe9cf22013638e8dbbe273",
         "label": "XSGD MasterMinter Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -258,29 +337,41 @@
           "version": "1.4.1",
           "threshold": 3,
           "owners": [
-            "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
-            "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
-            "0x6BA8c6793C376c04730f76f854D5a59EED93754B",
-            "0x1647ABd62E70595C972717995714c02d2F78A11B",
-            "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            "0x99c1f7dfea0e4c0c089752e113be840aba869468",
+            "0x7ddeb8aee3499190990f7636d2bcedd42151c701",
+            "0x6ba8c6793c376c04730f76f854d5a59eed93754b",
+            "0x1647abd62e70595c972717995714c02d2f78a11b",
+            "0xa5149891595b6a693a5aeae40b3ab399d77ded3b"
           ],
           "enabledModules": [],
-          "guard": "0x828718eEeBfbf18Df20b3A45b9ABEA74E4bdf47c",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 25294588,
+          "guard": "0x828718eeebfbf18df20b3a45b9abea74e4bdf47c",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25712169,
+          "observedAt": "2026-08-08",
           "source": "safe-api"
         },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712169,
         "sources": [
           {
             "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x4a423F581dF9A7575FBe9cf22013638E8DbbE273/"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x4a423F581dF9A7575FBe9cf22013638E8DbbE273/"
+          },
+          {
+            "label": "XSGD verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no enabled modules, and guard 0x828718eEeBfbf18Df20b3A45b9ABEA74E4bdf47c."
+        "evidence": "At Ethereum block 25712169, masterMinter() returned this address. Current Safe state was 3-of-5 with no enabled modules, guard 0x828718eeebfbf18df20b3a45b9abea74e4bdf47c, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and master copy 0x41675c099f32341bf84bfc5382af534df5c7461a. This role can configure or remove token minters and their allowances."
       },
       {
         "chain": "ethereum",
-        "address": "0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964",
+        "address": "0x9bd41d6caa1ad2be20ea48c5f4be3c180522f964",
         "label": "StraitsX token owner Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -293,25 +384,66 @@
           "version": "1.4.1",
           "threshold": 3,
           "owners": [
-            "0x99c1F7dfeA0e4c0C089752E113bE840AbA869468",
-            "0x97D0299f9C945393ae415b85d8ADB3A577e810BA",
-            "0x7ddEb8aee3499190990F7636d2BCEdD42151c701",
-            "0xEc0f004A0b57DF88e617b913b246DCc44d646e9C",
-            "0xa5149891595b6a693a5aEaE40B3aB399D77deD3B"
+            "0x99c1f7dfea0e4c0c089752e113be840aba869468",
+            "0x97d0299f9c945393ae415b85d8adb3a577e810ba",
+            "0x7ddeb8aee3499190990f7636d2bcedd42151c701",
+            "0xec0f004a0b57df88e617b913b246dcc44d646e9c",
+            "0xa5149891595b6a693a5aeae40b3ab399d77ded3b"
           ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 25294588,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25712169,
+          "observedAt": "2026-08-08",
           "source": "safe-api"
         },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712169,
         "sources": [
           {
             "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964/"
+          },
+          {
+            "label": "XSGD verified token implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Phase 0c second pass refreshed Safe Transaction Service state against Ethereum block 25294588: threshold 3, five owners, no modules, and zero guard."
+        "evidence": "At Ethereum block 25712169, owner() returned this address. Current Safe state was 3-of-5 with no enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and master copy 0x41675c099f32341bf84bfc5382af534df5c7461a. The owner can replace the MasterMinter and other privileged roles."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5daab87246b8f8556e159a54f1b21832e1376951",
+        "label": "XSGD proxy-admin legacy multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712169,
+        "sources": [
+          {
+            "label": "XSGD verified proxy-admin multisig",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5daab87246b8f8556e159a54f1b21832e1376951"
+          },
+          {
+            "label": "XSGD verified FiatTokenProxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x70e8de73ce538da2beed35d14187f6959a8eca96"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25712169, the legacy Zeppelinos admin slot keccak256('org.zeppelinos.proxy.admin') resolved to this verified MultiSigWalletWithDailyLimit. It returned required() = 2, five owners, and dailyLimit() = 0. The same block resolved implementation 0x256bf13787d308fe15b4297369ea00006b638fbf from the legacy Zeppelinos implementation slot; the admin can replace that mint and access-control logic without a delay."
       },
       {
         "chain": "solana",
@@ -322,15 +454,44 @@
         "directMintAbility": "direct",
         "threshold": 3,
         "signerCount": 10,
-        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At finalized Solana slot 425774906, the XSGD mint account 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
+        "observedAt": "2026-08-08",
+        "observedBlock": 438047701,
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "SPL Token multisig account layout",
+            "url": "https://github.com/solana-program/token/blob/08a08157471f8e2c6e85c17e638d04007c761357/program/src/state.rs#L177-L205"
+          }
+        ],
+        "evidence": "At finalized Solana slot 438047701, the XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The initialized SPL Token multisig decoded as 3-of-10."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
+        {
+          "label": "XSGD current verified Ethereum implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x256bf13787d308fe15b4297369ea00006b638fbf"
+        },
+        {
+          "label": "XSGD verified proxy-admin multisig",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5daab87246b8f8556e159a54f1b21832e1376951"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
         {
           "label": "StraitsX XSGD",
           "url": "https://www.straitsx.com/xsgd"
@@ -344,9 +505,9 @@
           "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XSGD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig. The StraitsX XSGD archive publishes independent reserve examinations for the 15th and month-end dates from January through May 2026. The latest reviewed KK Yap & Associates examination covers May 31, 2026, was published June 23, 2026, and fully reconciles XSGD reserve assets to tokens on the recorded semi-monthly cadence, establishing periodic reconciliation. The MAS directory matches the exact issuer, StraitsX SGD Issuance Pte. Ltd., as a Major Payment Institution, supporting prudential supervision of the same legal entity.",
-      "reviewer": "OpenAI Codex XSGD reserve and regulated-issuer review",
-      "reviewedAt": "2026-07-29"
+      "evidence": "Fresh reads at Ethereum block 25712169 resolved the legacy Zeppelinos proxy implementation and 2-of-5 admin multisig, the current 3-of-5 owner and MasterMinter Safes, and two still-active downstream minters: a 2-of-7 legacy multisig capped at 131,860,242.08 XSGD and a 2-of-8 Safe capped at 155,860,695.35 XSGD. Both allowances are administrator-raiseable, and the proxy admin can replace mint logic without delay, so the aggregate economic cap is unbounded. Finalized Solana slot 438047701 reconfirmed a 3-of-10 SPL Token multisig as both mint and freeze authority. The StraitsX archive publishes independent reserve examinations on a semi-monthly cadence; the reviewed May 31, 2026 report fully reconciles reserve assets to tokens. The MAS directory identifies the exact issuer, StraitsX SGD Issuance Pte. Ltd., as a Major Payment Institution.",
+      "reviewer": "OpenAI Codex C05 control and access review",
+      "reviewedAt": "2026-08-08"
     }
   },
   "bridgeRouteRisk": {

@@ -104,8 +104,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Docs",
@@ -126,11 +127,19 @@
       {
         "label": "SCRT Labs v1.10 hardcoded-admins proposal (SILK SNIP-25 at code id 877)",
         "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+      },
+      {
+        "label": "Live SILK contract info",
+        "url": "https://secretnetwork-api.lavenderfive.com/compute/v1beta1/info/secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd"
+      },
+      {
+        "label": "Live SILK admin multisig account",
+        "url": "https://secretnetwork-api.lavenderfive.com/cosmos/auth/v1beta1/accounts/secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf"
       }
     ],
-    "evidence": "Re-derived 2026-07-30: the SILK SNIP-25 token instantiates the SNIP-20 reference implementation at code id 877 per the SCRT Labs v1.10 hardcoded-admins proposal. That implementation's execute surface exposes no per-address freeze, blacklist, or transfer-block function; the only admin restriction primitive is SetContractStatus (NormalRun / StopAllButRedeems / StopAll), a global pause affecting all holders equally, controllable by the contract admin (ShadeDAO Multisig, on-chain-verified 5-of-7). The current contract status level is private Secret Network state. No direct SILK holder blacklist was identified, but Shade documentation and the Shade Lend announcement list stablecoins such as USDC among collateral and redemption-pool routes, so under the any-reserve FreezeWatch policy the posture resolves as upstream freeze exposure.",
-    "reviewer": "Kimi T08 wave-2 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified 2026-08-08 at Secret block 26592492. SILK contract secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd remained code id 877 (SILK-25) with admin secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf. The live auth account identifies that admin as a 5-of-7 LegacyAmino multisig. The pinned SNIP-20/SNIP-25 implementation exposes SetContractStatus with NormalRun, StopAllButRedeems, and StopAll states, so the admin has an actual global holder-transfer pause even though the private current status and absence of a selective per-address list prevent claiming a currently exercised blacklist. That verified global stop mechanism resolves direct access to true; reserve-asset freeze exposure is separate backing risk.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
   },
   "custodyModel": "onchain",
   "collateralQuality": "alt-lst-bridged-or-mixed",

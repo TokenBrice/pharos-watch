@@ -216,9 +216,14 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
       {
         "label": "Mento stable assets on Celo",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
@@ -249,9 +254,10 @@
       }
     ],
     "sourceFreeRationale": "The current holder-facing XOFm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "At Celo block 73552563 (2026-07-30T23:15:21Z), the sole tracked XOFm deployment 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 returned owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147, broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, implementation slot = 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E, and proxy-admin slot = 0x890DB8A597940165901372Dd7DB61C9f246e2147. The current verified StableTokenV2 ABI has transfer/transferFrom, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting; it exposes no pause, freeze, blacklist, seizure, arbitrary-holder burn, or transfer-hook function for a governance caller. Direct holder freeze is therefore No. The Mento Reserve API published 2026-07-30 still shows shared USDT/EURC/USDC-family collateral, so inherited upstream exposure remains and the review status stays inherited; the timelocked upgrade/admin failure domain is Mento governance, with Celo VM as the separate protocol gas-debit domain.",
-    "reviewer": "Codex T65 access review",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. XOFm 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict XOFm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "Freezeable assets in Mento's shared reserve can impair XOFm backing or exits, but their issuers have no direct authority over XOFm balances. Those exposures remain reserve/dependency risk; the timelocked token upgrade path is represented by the transfer overlay."
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

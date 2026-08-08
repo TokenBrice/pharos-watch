@@ -85,22 +85,34 @@
       },
       {
         "id": "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99",
+        "sourceChain": "ethereum",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe111178a87a3bff0c8d18decba5798827539ae99",
-        "protocol": "STASIS native issuance",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "issuer-native-burn-mint",
-        "semantics": "native-mint",
-        "scope": "canonical",
+        "protocol": "Polygon PoS Portal",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "reviewNote": "Correction 2026-08-08: this is a Polygon PoS UChildERC20 bridge representation, not issuer-native minting. At Polygon block 91674456, implementation() returned 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483 and DEPOSITOR_ROLE had exactly one member, ChildChainManager 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. Deposit minting is tied to Polygon state sync and Ethereum escrow; implementation replacement routes through a 1-of-1 legacy multisig whose sole owner is a 5-of-9 Safe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-08",
         "sources": [
           {
-            "label": "STASIS EURS",
-            "url": "https://stasis.net/"
+            "label": "Polygon UChildERC20 source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20.sol"
+          },
+          {
+            "label": "EURS Polygon proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
           }
         ]
       },
@@ -313,14 +325,25 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURS is issued by STSS (Malta) Limited / STASIS on Ethereum (primary), Polygon, and Stellar. The Ethereum contract's owner slot holds a Gnosis Safe 1.3.0 (7/3 multisig, no modules/guard) and the issuer slot holds an EOA. Stellar issuer GC5FGD… uses a 5-signer multisig with threshold 3/3/3.",
+    "summary": "EURS native issuance is unbounded through an Ethereum issuer EOA/delegate Safe and a Stellar 3-of-5 issuer multisig. Material Polygon EURS is instead a Polygon PoS UChildERC20 representation minted only by ChildChainManager; upgrades route through a 1-of-1 legacy multisig whose sole owner is a 5-of-9 Safe.",
     "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-21",
-      "observedBlock": 25580037,
+      "model": "custom",
+      "proxyAddresses": [
+        "0xe111178a87a3bff0c8d18decba5798827539ae99"
+      ],
+      "implementationAddresses": [
+        "0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483"
+      ],
+      "adminAddresses": [
+        "0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f",
+        "0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Polygon EURS UChild proxy-owner legacy multisig",
+      "observedAt": "2026-08-08",
+      "observedBlock": 91674456,
       "sources": [
         {
           "label": "EURS Ethereum contract",
@@ -333,6 +356,14 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon EURS UChild proxy",
+          "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+        },
+        {
+          "label": "Polygon PoS UChildERC20 source",
+          "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20.sol"
         }
       ]
     },
@@ -342,8 +373,8 @@
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295020, storage slot 3 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains address 0x70250fcfef983c9b912c8eefb7021b4b7bae836e; eth_getCode returned no bytecode (EOA). In the EURSToken contract layout (owner=slot2, issuer=slot3, totalSupply=slot4), slot3 is the issuer address which holds mint/freeze authority in the issuer-operated model. Follow-up 2026-07-20: EURSToken storage slot 3 reads owner = 0x70250fcfef983c9b912c8eefb7021b4b7bae836e (eth_getCode: no bytecode — EOA). setOwner/setDelegate are owner-gated per the verified EURSToken source.",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25712310, EURSToken storage slot 3 still held this code-empty issuer EOA. The verified immutable source gives the issuer direct mint/freeze authority without a supply ceiling, so it can expand native Ethereum EURS without an on-chain cap.",
         "sources": [
           {
             "label": "EURS contract on Etherscan",
@@ -358,14 +389,17 @@
         "address": "0x70250fcfef983c9b912c8eefb7021b4b7bae836e",
         "failureDomainKeys": [
           "eoa:ethereum:0x70250fcfef983c9b912c8eefb7021b4b7bae836e"
-        ]
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712310,
+        "modulesOrGuardsStatus": "not-applicable"
       },
       {
         "label": "STASIS owner Safe (setOwner / admin authority)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
@@ -380,30 +414,162 @@
             "0xdf8a372f71968542442a2dc5915cf3c40502166b",
             "0x558cc8752201b5f709f5d200a6f2256dafc805cc"
           ],
-          "observedAt": "2026-07-20",
-          "source": "onchain",
-          "observedBlock": 25571720
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedAt": "2026-08-08",
+          "source": "safe-api",
+          "observedBlock": 25712310
         },
-        "evidence": "At Ethereum block 25295020, storage slot 2 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 (the contract's owner). masterCopy() on that address = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 non-L2); threshold() = 3; getOwners() returned 7 addresses; getModules() = 0; guard slot = 0x0. Slot4 totalSupply = 12412594000 (= 124,125,940 EURS at 2 decimals, confirmed match). Follow-up 2026-07-20: EURSToken storage slot 2 reads delegate = 0x1bee4f735062cd00841d6997964f187f5f5f5ac9, a GnosisSafeProxy (blockscout-verified) with getThreshold()=3 and 7 owners (getOwners()); mastercopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Delegated EURS execution (mint/burn/freeze) routes through this Safe.",
+        "evidence": "At Ethereum block 25712310, EURSToken storage slot 2 still held this delegate Safe. Safe API returned the listed 3-of-7 owners, no modules, zero guards, and Safe 1.3.0. The verified token source lets the delegated owner administer the issuer path, so the Safe can authorize a replacement issuer and raise native issuance capacity.",
         "sources": [
           {
             "label": "EURS contract on Etherscan",
             "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
+          },
+          {
+            "label": "STASIS owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1bee4f735062cd00841d6997964f187f5f5f5ac9/"
           }
         ],
         "chain": "ethereum",
         "address": "0x1bee4f735062cd00841d6997964f187f5f5f5ac9",
         "failureDomainKeys": [
           "safe:ethereum:0x1bee4f735062cd00841d6997964f187f5f5f5ac9"
-        ]
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712310
+      },
+      {
+        "label": "Polygon EURS ChildChainManager depositor",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "UChildERC20.deposit can mint only when called by Polygon ChildChainManager through the PoS state-sync path corresponding to Ethereum bridge escrow.",
+        "chain": "polygon",
+        "address": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 91674456,
+        "sources": [
+          {
+            "label": "Polygon PoS UChildERC20 source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20.sol"
+          },
+          {
+            "label": "Polygon EURS proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          }
+        ],
+        "evidence": "At Polygon block 91674456, DEPOSITOR_ROLE had exactly one member, this ChildChainManager contract. The official UChildERC20 source permits minting only through deposit() restricted to that role and burns only the withdrawing caller. The manager cannot change its own role or proxy implementation."
+      },
+      {
+        "label": "Polygon EURS UChild proxy-owner legacy multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "threshold": 1,
+        "signerCount": 1,
+        "chain": "polygon",
+        "address": "0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f",
+        "failureDomainKeys": [
+          "multisig:polygon:0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 91675433,
+        "sources": [
+          {
+            "label": "Polygon EURS UChild proxy source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20Proxy.sol"
+          },
+          {
+            "label": "Polygon EURS proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          },
+          {
+            "label": "Polygon EURS proxy-owner legacy multisig",
+            "url": "https://polygonscan.com/address/0x355b8e02e7f5301e6fac9b7cac1d6d9c86c0343f#code"
+          }
+        ],
+        "evidence": "At Polygon block 91675433, EURS proxyOwner() returned this legacy MultiSigWallet and implementation() remained 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483. getOwners() returned only Safe 0x3a635c48836e7c0b9aeb378640b0bfd516985cf5 and required() returned 1. The UChild proxy exposes owner-gated updateImplementation/updateAndCall, so execution by the sole-owner Safe can replace bridge-mint logic and bypass current constraints."
+      },
+      {
+        "label": "Polygon EURS proxy-owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "chain": "polygon",
+        "address": "0x3a635c48836e7c0b9aeb378640b0bfd516985cf5",
+        "failureDomainKeys": [
+          "safe:polygon:0x3a635c48836e7c0b9aeb378640b0bfd516985cf5"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 91675433,
+        "safe": {
+          "owners": [
+            "0x9d851f8b8751c5fbc09b9e74e6e68e9950949052",
+            "0x10cb290fc4a5473460572ecf67b4c0cf06da99a3",
+            "0x1ae033d45ce93bbb0ddbf71a0da9de01fefd8529",
+            "0x4e981bae8e3cd06ca911fffe5504b2653ac1c38a",
+            "0x39415255619783a2e71fcf7d8f708a951d92e1b6",
+            "0xb771380f912e4b5f6beddf81314c383c13f16ab5",
+            "0x06f2cafb5276b11baa6679abe49d5a5c0a911f5b",
+            "0xab4045c93e4effa9b325f706c9a690ed00d08958",
+            "0x342ebaca3acc54d6f5ee78073fec4af07f42b94e"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.1.1",
+          "observedAt": "2026-08-08",
+          "observedBlock": 91675433,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Polygon EURS proxy-owner Safe",
+            "url": "https://polygonscan.com/address/0x3a635c48836e7c0b9aeb378640b0bfd516985cf5#code"
+          },
+          {
+            "label": "Polygon public RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 91675433, the sole owner of the 1-of-1 proxy-owner multisig was this Safe. On-chain reads returned threshold 5, the listed nine owners, Safe version 1.1.1, no enabled modules, and zero guard and fallback-handler slots; that Safe version has no module-guard facility. A 5-of-9 Safe quorum can therefore authorize EURS implementation replacement through the outer multisig."
       },
       {
         "label": "Stellar issuer account multisig",
         "role": "direct-minter",
-        "authorityType": "issuer-backend",
+        "authorityType": "multisig",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Stellar issuer GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ confirmed via Horizon API: 5 active signers (weight 1 each) plus master key (weight 0), thresholds all set to 3 — equivalent to a 5/3 multisig. Signers: GAOHTWU…, GAYMJ7M…, GAZQ6UE…, GC4RTEX…, GD4ZFKF….",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "chain": "stellar",
+        "address": "GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 63395662,
+        "failureDomainKeys": [
+          "multisig:stellar:gc5fgcdeogogsnwccnks3omevdhte3q5a5feqwqkv3axa7n6kdq2cuzj"
+        ],
+        "evidence": "Horizon reported five active weight-one signers, a weight-zero master key, and low/medium/high thresholds all equal to three at last-modified ledger 63395662. This 3-of-5 issuer account can create unbounded Stellar EURS trustline balances; no contract supply cap applies.",
         "sources": [
           {
             "label": "Stellar Horizon issuer account",
@@ -412,12 +578,14 @@
         ]
       }
     ],
-    "reconciliation": "unknown",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Verified at Ethereum block 25295020. EURSToken (non-proxy) at 0xdb25f211ab05b1c97d595516f45794528a807ad8: owner (slot2) = Gnosis Safe 1.3.0 (7/3, no modules, no guard); issuer (slot3) = EOA 0x70250fcfef. totalSupply confirmed via slot4. Polygon contract (0xe111178a) has different storage layout; Ethereum is the primary verified deployment. Stellar issuer GC5FGD… confirmed as 5/3 multisig via Horizon API. STASIS advertises quarterly and annual BDO Malta work, but the latest public independent reserve procedures report is dated August 1, 2024; the latest issuer page entry is only a December 12, 2025 account statement. Challenge searches found no 2025 or 2026 independent supply-to-reserve reconciliation, so the stale BDO cadence is not treated as current and reconciliation is unknown. The MFSA registry search did not produce a stable exact issuer authorization for EURS/STSS, and no bank, trust, EMI, or equivalent prudential charter was verified; supervision is none.",
+      "evidence": "At Ethereum block 25712310, immutable EURSToken slots still resolved to the issuer EOA and 3-of-7 delegate Safe. At Polygon blocks 91674456-91675433, the material Polygon token was corrected from issuer-native to a UChildERC20 PoS bridge representation: ChildChainManager alone held DEPOSITOR_ROLE, while implementation replacement routes through a 1-of-1 legacy multisig whose sole owner is a 5-of-9 Safe. Horizon last-modified ledger 63395662 still showed a 3-of-5 Stellar issuer multisig. Ethereum and Stellar issuance have no on-chain aggregate cap, so semantics are unbounded. STASIS's live transparency page published an assets-and-liabilities statement for 2026-08-07 on 2026-08-08, supporting periodic issuer-operated reconciliation; current independent assurance was not established. No prudential issuer authorization was verified.",
       "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "STASIS Transparency",

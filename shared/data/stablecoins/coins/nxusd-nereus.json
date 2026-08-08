@@ -442,7 +442,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "NXUSD exact-match source and ABI",
@@ -481,10 +481,12 @@
         "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "evidence": "At Avalanche block 90343075, the tracked NXUSD deployment 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 was a 5,007-byte direct deployment with a zero EIP-1967 implementation slot. Sourcify exact-match ABI/source exposes ordinary ERC-20 transfer, transferFrom, approval, and permit behavior; owner-only mint and mintToBentoBox; and burn(uint256), which subtracts only msg.sender's balance. It has no pause, blacklist, freeze, seizure, or privileged arbitrary-holder-burn function. owner() remained the 2-of-3 Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, but that ownership cannot add a holder-control path to the immutable deployed code. Zero-value transfer and self-burn eth_call simulations succeeded at the reviewed block. At Polygon block 90266253, the separately deployed NXUSDV2 token 0xf955a6694c6f5629f5ecd514094b3bd450b59000 returned name and symbol NXUSD, 18 decimals, positive supply, and owner 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8; verified source exposes owner-gated mint and burn without a holder blacklist or freeze surface. The official Nereus Avalanche manifest also identifies USDCCauldron 0xd75a20314fb7fbe79ec7474497d5bf09e9c00cfc; at that block collateral() returned native Circle USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e and totalBorrow was 182,497.852160412510292820 NXUSD. The verified current Circle USDC implementation exposes blacklist/unBlacklist and gates transfer and transferFrom with notBlacklisted, establishing an active upstream collateral exposure. Current issuer legal material and the archived issuer page were reviewed as context but do not establish a direct NXUSD holder restriction. Inherited therefore preserves the upstream USDC risk without claiming a direct NXUSD freeze. Kimi T57 wave-2 re-derivation 2026-07-30: at Avalanche block 91630122 owner() still returns the 2-of-3 Safe (getThreshold()=2), the code is still a 5,007-byte direct deployment with a zero EIP-1967 implementation slot, and the Sourcify exact-match ABI still exposes no pause/blacklist/freeze/seize surface (function set: DOMAIN_SEPARATOR, allowance, approve, balanceOf, burn, claimOwnership, decimals, lastMint, mint, mintToBentoBox, name, nonces, owner, pendingOwner, permit, symbol, totalSupply, transfer, transferFrom, transferOwnership); at Polygon block 91162695 the NXUSDV2 owner is unchanged (0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8, 5,856-byte deployment). The inherited verdict is retained: the upstream exposure is collateral-level (blacklistable USDC in the USDCCauldron), which the engine's inherited resolution cannot express because nxusd has no mint-level inheritedFrom/variantOf upstream.",
+    "evidence": "Re-verified 2026-08-08 at Avalanche block 92344314 and Polygon block 91674352. Avalanche NXUSD remained a direct non-proxy deployment owned by the reviewed 2-of-3 Safe; its exact verified source exposes ordinary ERC-20 transfers, owner-only mint/mintToBentoBox, and self-only burn, with no pause, blacklist, freeze, seizure, or privileged holder burn. Polygon NXUSDV2 remained a direct deployment owned by 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8 and likewise exposes owner-gated mint/burn without a holder restriction. The prior inherited value was invalid because NXUSD has no variantOf or mintAuthority.inheritedFrom parent. Circle can freeze USDC collateral in a Nereus cauldron, but that is backing impairment rather than direct authority over NXUSD balances, so the direct verdict is false.",
     "reviewer": "GPT SOL-CORP-C wave6; Kimi T57 wave-2 re-verification",
-    "reviewedAt": "2026-07-30"
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "Circle can freeze USDC held as Nereus collateral and impair a cauldron's solvency, liquidation, or redemption path, but Circle cannot freeze balances in either immutable NXUSD token deployment. That exposure remains reserve/collateral risk rather than direct NXUSD blacklistability."
   },
+  "canBeBlacklisted": false,
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Nereus issued distinct owner-mintable NXUSD contracts on Avalanche and Polygon. No lockbox or third-party bridge contract was identified, so the two deployments are treated as issuer-native issuance rather than one bridged token.",

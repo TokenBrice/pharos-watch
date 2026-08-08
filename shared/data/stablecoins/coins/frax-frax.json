@@ -172,7 +172,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "FRAX Ethereum verified source (Blockscout)",
@@ -203,10 +203,12 @@
         "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum pool_burn_from is onlyPools but delegates to ERC20Custom._burnFrom, which deducts the registered pool's allowance; a current-state simulation from an active pool against a funded holder without allowance reverted with ERC20: burn amount exceeds allowance. Direct FRAX holder control is therefore not established. The live Frax balance sheet nevertheless contains positive exposure to tracked issuer-freezable assets including frxUSD, sfrxUSD, USTB, BUIDL, USDe, USDC, and USDS. Under FreezeWatch's any-positive-reserve rule, those holdings make the resolved posture Upstream rather than No.",
+    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712115. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum remained a direct non-proxy deployment (EIP-1967 implementation slot zero); pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. The live balance sheet contains issuer-freezable reserve assets, but those are collateral impairment dependencies rather than a direct FRAX holder-control mechanism. The direct blacklist verdict is therefore false, with reserve and bridge risks preserved in their owning reviews.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "Issuer-freezable reserve assets can impair FRAX collateral value, liquidity, or redemption paths, but their issuers cannot freeze balances in the immutable canonical FRAX contract. Those exposures remain reserve and dependency risks rather than direct FRAX blacklistability."
   },
+  "canBeBlacklisted": false,
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
@@ -216,7 +218,7 @@
       "model": "immutable",
       "implementationAddresses": [
         "0x853d955acef822db058eb8505911ed77f175b99e",
-        "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241"
+        "0xcf37b62109b537fa0cb9a90af4ca72f6fb85e241"
       ],
       "canChangeMintLogic": false,
       "observedAt": "2026-07-14",
@@ -239,13 +241,16 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241",
+        "address": "0xcf37b62109b537fa0cb9a90af4ca72f6fb85e241",
         "label": "FRAX AMO Minter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": true,
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The AMO Minter can create FRAX only for approved AMOs within its aggregate 700,000,000 FRAX mint cap; owner or timelock governance can change that cap.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712139,
         "sources": [
           {
             "label": "Frax AMO docs",
@@ -256,11 +261,11 @@
             "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25530270, owner() returned the Frax Comptroller Safe and timelock_address() returned 0x8412ebf4.... frax_mint_cap() was 700M FRAX and setFraxMintCap() remained callable by either owner or timelock."
+        "evidence": "At Ethereum block 25712139, owner() still returned the Frax Comptroller Safe, timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca, and frax_mint_cap() remained 700,000,000 FRAX. The contract is the cap-limited mint route; only its owner or timelock can raise the cap."
       },
       {
         "chain": "ethereum",
-        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+        "address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
         "label": "Frax Comptroller Safe",
         "role": "minter-admin",
         "authorityType": "safe",
@@ -272,18 +277,23 @@
         "safe": {
           "threshold": 3,
           "owners": [
-            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
-            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
-            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
-            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
-            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
           ],
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25530270,
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25712139,
+          "observedAt": "2026-08-08",
           "source": "safe-api"
         },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712139,
         "sources": [
           {
             "label": "Safe transaction service",
@@ -294,9 +304,12 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
           }
         ],
-        "evidence": "At Ethereum block 25530270, the AMO Minter owner and the 172800-second Timelock admin both resolved to this Safe. Safe API returned 3-of-5 owners, no enabled modules, zero guard, and fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4."
+        "evidence": "At Ethereum block 25712139, the AMO Minter owner still resolved to this Safe and the configured timelock remained 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Safe API returned the listed 3-of-5 owners, no enabled modules, zero guard and module guard, and Safe v1.3.0. The Safe can authorize AMOs and raise the 700 million FRAX cap directly through its owner path, bypassing the timelock."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -308,9 +321,10 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ],
-      "evidence": "At Ethereum block 25530270, FRAX token and AMO Minter were verified non-proxy contracts with zero EIP-1967 slots. The AMO Minter's owner was the 3-of-5 Frax Comptroller Safe; its timelock had the same Safe as admin and a 172800-second delay, while direct owner calls remain possible. The Safe can raise the observed 700M FRAX AMO cap. Contract-governed minting requires no off-chain reconciliation; no mint-authority incident is recorded in the reviewed sources.",
+      "evidence": "At Ethereum block 25712139, FRAX and AMO Minter remained direct non-proxy contracts. The AMO Minter retained a 700 million FRAX aggregate cap, owner Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, and timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The 3-of-5 owner Safe can authorize AMOs and raise the cap through the immediate owner path; Safe API reported no modules and zero guard/module guard. Current issuance is contract-governed and raiseable, with reconciliation not applicable to this on-chain AMO control model and no prudential supervisor. No public mint-authority incident was identified.",
       "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
     }
   },
   "bridgeRouteRisk": {

@@ -124,17 +124,17 @@
         "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/wallet/wallet2.cpp#L1975-L2059"
       },
       {
-        "label": "Zephyr Explorer current block 830885",
-        "url": "https://explorer.zephyrprotocol.com/api/block/830885"
+        "label": "Zephyr Explorer current HF11 block 837231",
+        "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
       },
       {
         "label": "Zephyr reserve snapshot",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "evidence": "Write-time re-open 2026-07-31 against official Zephyr documentation, v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, and native-chain Explorer block 830885 (2026-07-30 23:15:13 UTC). ZSD is one of four native Zephyr asset types; the official docs list the EVM bridge as testnet-only, so no production wrapper exposure is identified. Same-asset ZSD sends map to STABLE_TRANSFER in cryptonote_tx_utils.cpp; the reviewed consensus and wallet paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer/admin transfer-pause path. wallet2.cpp freeze() only marks a locally held transfer/key image, while daemon bans are host/subnet controls. The failure domain is Zephyr chain consensus and its oracle inputs, not a token-level issuer. No direct blacklistability established.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Write-time re-open 2026-08-08 against official Zephyr documentation, the still-current v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, and native-chain HF11 block 837231 (2026-08-08 19:36:16 UTC; hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d). ZSD is one of four native Zephyr asset types; the official docs list the EVM bridge as testnet-only, so no production wrapper exposure is identified. Same-asset ZSD sends map to STABLE_TRANSFER in cryptonote_tx_utils.cpp; the reviewed consensus and wallet paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer/admin transfer-pause path. wallet2.cpp freeze() only marks a locally held transfer/key image, while daemon bans are host/subnet controls. The failure domain is Zephyr chain consensus and its oracle inputs, not a token-level issuer. No direct blacklistability established.",
+    "reviewer": "Codex C10 wave1 control review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
@@ -156,37 +156,39 @@
             "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
           },
           {
-            "label": "Zephyr GitHub — enums.h transaction_type",
-            "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+            "label": "Zephyr v2.3.0 transaction types",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
           },
           {
-            "label": "Zephyr GitHub — cryptonote_config.h",
-            "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
+            "label": "Zephyr v2.3.0 chain configuration",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h"
           }
         ],
-        "evidence": "Source review of enums.h confirmed transaction_type enum lists only user-facing types (MINT_STABLE, REDEEM_STABLE, MINT_RESERVE, REDEEM_RESERVE, MINT_YIELD, REDEEM_YIELD, TRANSFER variants, AUDIT types) — no ADMIN_MINT or emergency bypass type. blockchain.cpp contains no 'admin', 'foundation', 'emergency', or 'bypass' patterns. cryptonote_config.h includes a hardcoded foundation oracle RSA key (ORACLE_PUBLIC_KEY), which controls price-feed signing but is not a direct mint authority. 2026-07-20 follow-up: failure domain anchored to the Zephyr base protocol itself; there is no privileged contract or account with mint authority — mint/redeem is open to any user against ZEPH collateral under deterministic reserve-ratio rules.",
+        "evidence": "Source review of the still-current v2.3.0 release confirmed the transaction_type enum lists only user-facing types (MINT_STABLE, REDEEM_STABLE, MINT_RESERVE, REDEEM_RESERVE, MINT_YIELD, REDEEM_YIELD, TRANSFER variants, AUDIT types) — no ADMIN_MINT or emergency bypass type. blockchain.cpp contains no admin, foundation, emergency, or bypass mint surface. cryptonote_config.h includes a hardcoded foundation oracle RSA key (ORACLE_PUBLIC_KEY), which controls price-feed signing but is not a direct mint authority. The failure domain is anchored to Zephyr consensus itself: there is no privileged contract or account with mint authority, and mint/redeem remains open to users against ZEPH collateral under deterministic reserve-ratio rules at HF11 block 837231.",
         "failureDomainKeys": [
           "protocol:zephyr-chain"
         ],
-        "observedAt": "2026-07-20"
+        "observedAt": "2026-08-08",
+        "observedBlock": 837231
       }
     ],
     "economicCapSemantics": "bounded",
-    "reconciliation": "continuous",
+    "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Zephyr native reserve mint/redeem rules",
-      "observedAt": "2026-07-20",
+      "observedAt": "2026-08-08",
+      "observedBlock": 837231,
       "sources": [
         {
           "label": "Zephyr GitHub - native mint transaction types",
-          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
         },
         {
           "label": "Zephyr GitHub - native chain configuration",
-          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h"
         }
       ]
     },
@@ -197,17 +199,21 @@
           "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
         },
         {
-          "label": "Zephyr GitHub — enums.h",
-          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+          "label": "Zephyr v2.3.0 transaction types",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
         },
         {
-          "label": "Zephyr GitHub — cryptonote_config.h",
-          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
+          "label": "Zephyr v2.3.0 chain configuration",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_config.h"
+        },
+        {
+          "label": "Zephyr Explorer HF11 block 837231",
+          "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-20. Official Zephyr source exposes only reserve-ratio-gated user MINT_STABLE, MINT_RESERVE, and MINT_YIELD transaction types; no admin, emergency, or foundation mint bypass was found in enums.h, blockchain.cpp, or cryptonote_tx_utils.cpp. Existing ZSD rules therefore enforce collateral and reserve-ratio checks continuously as part of each mint, and the existing asset's native consensus rules cannot be upgraded through a privileged contract or account. The foundation oracle RSA key is a price-feed centralization vector, not a direct mint authority. No named prudential supervisor is evidenced by the reviewed protocol materials.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Re-reviewed 2026-08-08. GitHub still identifies v2.3.0 (commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a) as the latest official release, and Explorer block 837231 confirms the live network remains on HF11. The source exposes only reserve-ratio-gated user MINT_STABLE, MINT_RESERVE, and MINT_YIELD transaction types; no admin, emergency, or foundation mint bypass was found in enums.h, blockchain.cpp, or cryptonote_tx_utils.cpp. ZSD issuance is a native consensus conversion, not an issuer-backend reserve reconciliation path, so reconciliation is explicitly not-applicable. The foundation oracle RSA key is a price-feed centralization vector, not a direct mint authority. No named prudential supervisor is evidenced by the reviewed protocol materials.",
+      "reviewer": "Codex C10 wave1 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

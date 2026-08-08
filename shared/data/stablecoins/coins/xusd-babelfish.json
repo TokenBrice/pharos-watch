@@ -42,10 +42,10 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "XUSD is a reserve-backed aggregator whose current DLLR and Rootstock bridged USDT exposures inherit upstream issuer or protocol access surfaces; the reviewed XUSD controller evidence does not establish a separate holder-level blacklist path for every branch.",
-    "evidence": "Current BabelFish and Rootstock evidence identifies the XUSD masset manager controller and the linked DLLR, bridged USDT, and DOC reserve branches. The inherited posture is retained because the reviewed sources do not prove a complete holder freeze or transfer-control inventory across XUSD and every upstream reserve branch.",
+    "reviewedStatus": true,
+    "evidence": "Re-verified 2026-08-08 at Rootstock block 9134338: direct non-proxy XUSD token 0xb5999795be0ebb5bab23144aa5fd6a02d080299f returned owner 0x1440d19436beeaf8517896bffb957a88ec95a00f. The token's owner-only burn(address,uint256) path destroys the supplied holder balance without an allowance check. The owner is the masset manager proxy, whose current EIP-1967 implementation and admin slots resolve to 0x92d7ad53b2d824277d22877d5299c2af479da322 and 0x37a706259f5201c03f6cb556a960f30f86842d01. The live manager route and its upgrade admin can therefore exercise or preserve arbitrary holder burns; that direct seizure mechanism is independently sufficient for true.",
     "sources": [
       {
         "label": "BabelFish XUSD overview",
@@ -58,10 +58,15 @@
       {
         "label": "Rootstock XUSD masset manager",
         "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+      },
+      {
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
       }
     ],
-    "reviewer": "SONG-2 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "upstreamSuppressionRationale": "DLLR, bridged USDT, and other reserve branches add upstream reserve and redemption controls, but the direct XUSD owner-burn path already determines the asset-level verdict.",
+    "reviewer": "Codex C08 control/access audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

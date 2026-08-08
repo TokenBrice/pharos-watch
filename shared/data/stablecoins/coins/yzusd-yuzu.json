@@ -232,8 +232,9 @@
       }
     ]
   },
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Yuzu Money overview",
@@ -264,8 +265,8 @@
         "url": "https://cache.accountable.capital/dashboard/yuzu"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The current Plasma implementation's pause is confined to mint and redeem paths, and its restriction-manager role only administers minter/redeemer roles; no current holder transfer blacklist or seizure hook was found. Current reserves nevertheless contain positive issuer-freezable exposure to USDT0, syrupUSDT, syrupUSDC, syrupUSDG, USTB, mGLOBAL, USDe, sUSDe, and AUSD. Under FreezeWatch's reserve inheritance rule, those documented slices resolve yzUSD as Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "evidence": "Re-reviewed 2026-08-08. The current Plasma implementation's pause is confined to mint and redeem paths, and its restriction-manager role only administers minter/redeemer roles; no current holder-transfer blacklist, freeze, seizure, or arbitrary holder-burn hook was found. Yuzu's Hypernative/Sentinel documentation describes surgical blocking of malicious wallets from protocol interactions, but does not establish that this control can intercept an ordinary yzUSD ERC-20 transfer. Current reserves also contain issuer-freezable USDT0, syrupUSDT, syrupUSDC, syrupUSDG, USTB, mGLOBAL, USDe, sUSDe, and AUSD; those controls can impair backing or exits but cannot directly freeze a yzUSD holder balance. The prior inherited verdict was invalid because yzUSD has no single resolvable parent identity. Possible is retained honestly because the documented operational-blocking boundary and issuer legal terms could not be proven to exclude holder-token reach.",
+    "reviewer": "OpenAI Codex C04 access review",
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "exotic",

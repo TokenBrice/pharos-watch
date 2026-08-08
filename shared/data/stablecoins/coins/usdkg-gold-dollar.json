@@ -333,12 +333,14 @@
         "evidence": "At Tron block 84453790, owner() on TXZo12...nwEG returned 0x34b436...4fd5, the Tron address TEmt2R...A8jd. The verified owner contract ABI and current constant calls returned seven owners (TVZwUL...Jao, TQHTXd...XLU, TXAjos...WDG, TSfP1D...8vB, TZ5KnE...aXL, TMy7WS...bKw, and TEPMSb...AZv) and getThreshold() = 3. The custom multisig has no owner-management, module, or guard functions, and the token's issue() and redeem() functions are owner-gated."
       }
     ],
-    "reconciliation": "not-applicable",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments. Verified bytecode and storage show direct immutable contracts rather than proxy deployments. The only public reserve audit for USDKG is a single Kreston Global ISRS 4400 agreed-upon-procedures gold review valued at 2025-11-28; despite a claimed quarterly cadence no newer report was found as of 2026-07, making the sole reconciliation stale and agreed-upon-procedures lighter than an attestation opinion, so reconciliation is not credibly established. The Kyrgyz oversight regimes checked are AML/VASP-only and the nominal regulator (Ministry of Finance) also owns the issuing state entity, so there is no arms-length prudential supervisor and supervision is none.",
-      "reviewer": "Codex V9 control curation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments, and verified bytecode/storage show direct immutable contracts rather than proxies. The transparency portal still publishes two independent reserve snapshots (January and November 2025), including a Kreston Digital Assets ISRS 4400 agreed-upon-procedures reconciliation of gold existence, custody, valuation, and the controlled issuance wallets as of 2025-11-28. More than one third-party assets-and-liabilities snapshot establishes periodic rather than continuous reconciliation, but the series is irregular and stale: the portal still lists only 2025 Q4 on 2026-08-08 despite claiming quarterly audits, and the engagement reports factual findings rather than an assurance opinion. Minting remains economically unbounded because both owner multisigs can issue without an on-chain cap. The Kyrgyz oversight regimes checked are AML/VASP-only and the nominal regulator also owns the issuing state entity, so no arms-length prudential supervisor was established and supervision remains none.",
+      "reviewer": "OpenAI Codex C04 control review; prior V9 control cohort",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "USDKG transparency",

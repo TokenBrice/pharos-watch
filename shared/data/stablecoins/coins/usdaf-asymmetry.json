@@ -526,8 +526,9 @@
       }
     ]
   },
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Asymmetry USDaf overview",
@@ -562,8 +563,9 @@
         "url": "https://app.asymmetry.finance/api/stats"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The renounced, non-proxy USDaf BoldToken exposes no mutable pause, holder blacklist, seizure, or arbitrary-holder burn; its fixed core-contract recipient guard is not discretionary censorship. Current reserve stats nevertheless include tracked sUSDS, sfrxUSD, scrvUSD, tBTC, and wBTC exposures with possible, direct, or inherited issuer/custodian controls. Those positive reserve relationships resolve USDaf as Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "upstreamSuppressionRationale": "Reserve assets can be frozen or impaired upstream, but those controls do not give an issuer or administrator authority to freeze existing balances in the reviewed USDaf token contract. The fixed core-contract recipient guard is protocol routing rather than discretionary holder censorship, and reserve dependencies remain represented in the reserve graph.",
+    "evidence": "At Ethereum block 25712463 (2026-08-08T19:53:59Z; hash 0x618ff702108d99dab9aefdef506ad07bb2bf95a86f571ea65db27698420510af), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots; its runtime code remained the verified direct BoldToken deployment. The pinned and verified source exposes ordinary holder transfer and allowance transferFrom behavior, a fixed core-contract recipient guard, and fixed protocol mint/burn routes, but no mutable pause, holder blacklist, seizure, or arbitrary-holder burn. The reviewed project materials and holder terms identify protocol and reserve risks but no separate issuer power to freeze existing USDaf balances. Direct holder freeze is therefore false; reserve-asset controls remain upstream dependencies rather than token access controls.",
+    "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",

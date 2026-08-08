@@ -82,23 +82,23 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.theo.xyz"
+        "label": "Blockscout verified thBILL implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
       },
       {
-        "label": "Website",
-        "url": "https://theo.xyz"
+        "label": "Ethereum observation block 25712112",
+        "url": "https://eth.blockscout.com/block/25712112"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 25712112, the UUPS proxy resolved to verified IToken implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519. Its EMERGENCY_ROLE holder 0x7afb1d3308d22639f1ce698a2985cbf22f96d94a remained authorized to call pause(), and the implementation gates its shared _update path with whenNotPaused, so pausing blocks holder transfers as well as mint and redemption. The token was not paused at observation. A live two-day UUPS upgrade path provides an additional transfer-control surface.",
+    "reviewer": "OpenAI Codex C03 control review",
+    "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "thBILL is Ethereum-native (pinned proxy) and reaches Arbitrum, Base, HyperEVM, and Stable through Theo's documented LayerZero OFT V2 contract (shared address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, endpoint/peers read 2026-07-20 and 2026-07-29), administered by the Theo 4-of-6 Admin Multisig.",
-    "reviewedAt": "2026-07-29",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle); Claude V9 bridge-deployment materiality wave3",
+    "summary": "thBILL is Ethereum-native through a live two-day-administered UUPS vault and reaches Arbitrum, Base, HyperEVM, and Stable through Theo's documented LayerZero OFT V2 contract at shared address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, administered by the Theo 4-of-6 Safe.",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex bridge route review; OpenAI Codex C03 control correction",
     "confidence": "verified",
     "protocols": [
       {
@@ -134,17 +134,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home deployment: thBILL on Ethereum is a pinned 134-byte proxy to implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519 (EIP-1967 impl slot set, admin slot zero, no upgrade path — read 2026-07-20). Theo documents a separate thBILL OFT contract for cross-chain movement.",
+        "reviewNote": "Canonical home deployment corrected at Ethereum block 25712112: thBILL is an ERC-1967 UUPS proxy using verified IToken implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519. UUPS authorization is DEFAULT_ADMIN_ROLE-gated; timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 is the sole current admin and has a 172800-second minimum delay. Theo documents a separate thBILL OFT contract for cross-chain movement.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
-            "label": "Theo docs — contract addresses",
-            "url": "https://docs.theo.xyz/resources/addresses"
+            "label": "Blockscout thBILL UUPS proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fa487bca6158c64046b2813623e20755091da0b"
           },
           {
-            "label": "thBILL Ethereum token",
-            "url": "https://etherscan.io/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+            "label": "Blockscout verified thBILL implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+          },
+          {
+            "label": "Blockscout verified thBILL TimelockController",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
           }
         ]
       },
@@ -283,68 +288,98 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unknown",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "thBILL issuance is administered through the Theo backend, an Ethereum DEFAULT_ADMIN TimelockController, and the Theo 4-of-6 governance Safe. The canonical token uses a pinned implementation, while every tracked LayerZero OFT deployment resolves owner and delegate control to the same Safe.",
+    "summary": "Canonical thBILL is a UUPS ERC-4626 multi-asset vault: public deposit and mint paths transfer supported collateral before minting shares, with no privileged raw-mint function. A two-day TimelockController holds DEFAULT_ADMIN_ROLE and UUPS authority; Theo's 4-of-6 Safe controls that timelock.",
     "upgradeability": {
-      "model": "immutable",
+      "model": "uups",
+      "proxyAddresses": [
+        "0x5fa487bca6158c64046b2813623e20755091da0b"
+      ],
       "implementationAddresses": [
         "0x325478a069b0dbbdfbee909fa3741f84259ba519"
       ],
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-20",
+      "adminAddresses": [
+        "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "thBILL UUPS upgrade timelock",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
       "sources": [
         {
-          "label": "Theo Network docs",
-          "url": "https://docs.theo.xyz"
+          "label": "Blockscout thBILL UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fa487bca6158c64046b2813623e20755091da0b"
         },
         {
-          "label": "thBILL ETH contract on Blockscout",
-          "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+          "label": "Blockscout verified thBILL implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+        },
+        {
+          "label": "Blockscout verified thBILL TimelockController",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
         }
       ]
     },
     "controls": [
       {
-        "label": "Theo Network issuance backend",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Theo Network mints/redeems thBILL for KYC-verified institutional and non-US accredited investors against tULTRA collateral, settling in USDC; there is no permissionless or user-collateralized mint route.",
+        "chain": "ethereum",
+        "address": "0x5fa487bca6158c64046b2813623e20755091da0b",
+      "label": "thBILL ERC-4626 multi-asset wrapper",
+      "role": "wrapper",
+      "authorityType": "contract",
+      "directMintAbility": "cap-limited",
+      "capDescription": "Public deposit and mint create thBILL shares only after the wrapper transfers the corresponding quantity of an accepted collateral asset from the caller; the wrapper exposes no uncollateralized or privileged raw-mint path.",
+      "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
-            "label": "Theo Network docs",
-            "url": "https://docs.theo.xyz"
+            "label": "Blockscout verified thBILL implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
           }
         ],
-        "modulesOrGuardsStatus": "not-applicable"
+        "evidence": "At Ethereum block 25712112, asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and depositAssetsList() returned supported asset 0x82b840b6edf77f90c92a70b99f0b5d50e7967330. The verified ERC-4626 multi-asset implementation transfers the requested collateral from the caller before internally minting shares; it exposes no privileged external raw-mint function."
       },
       {
-        "label": "thBILL DEFAULT_ADMIN TimelockController (minDelay=0)",
-        "role": "minter-admin",
-        "authorityType": "timelock",
         "address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
         "chain": "ethereum",
-        "directMintAbility": "none",
+        "label": "thBILL UUPS upgrade timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295049, hasRole(DEFAULT_ADMIN_ROLE, 0x2bb4b7...) on token 0x5fa487bca6158c64046b2813623e20755091da0b returned true. Contract verified as TimelockController (minDelay=0 confirmed via getMinDelay()). Controlled by Safe 0x94877640... which holds PROPOSER/EXECUTOR/CANCELLER roles per RoleGranted logs at block 25046194.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
-            "label": "thBILL ETH contract on Blockscout",
-            "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+            "label": "Blockscout verified thBILL implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+          },
+          {
+            "label": "Blockscout verified thBILL TimelockController",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
           }
         ],
-        "modulesOrGuardsStatus": "not-applicable"
+        "evidence": "At Ethereum block 25712112, this TimelockController was the sole live thBILL DEFAULT_ADMIN_ROLE holder and getMinDelay() returned 172800 seconds. Verified IToken source gates UUPS upgrades, emergency-role administration, deposit-asset/config changes, and other AccessControl administration through DEFAULT_ADMIN_ROLE."
       },
       {
-        "label": "Theo governance Safe (4-of-6, ETH)",
-        "role": "minter-admin",
-        "authorityType": "safe",
         "address": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
         "chain": "ethereum",
-        "directMintAbility": "none",
+        "label": "Theo governance Safe (timelock proposer/executor/canceller)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "threshold": 4,
         "signerCount": 6,
@@ -360,36 +395,56 @@
           ],
           "threshold": 4,
           "enabledModules": [],
-          "guard": null,
-          "fallbackHandler": null,
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedBlock": 25295049,
-          "source": "onchain"
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
+          "source": "safe-api"
         },
-        "evidence": "At Ethereum block 25295049: getOwners() returned 6 owners; getThreshold() = 4; slot 0 = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.4.1 singleton). getModulesPaginated returned empty (next=0x1, arr_len=0). This Safe holds PROPOSER/EXECUTOR/CANCELLER on the TimelockController which holds DEFAULT_ADMIN on the thBILL token.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
-            "label": "thBILL ETH contract on Blockscout",
-            "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+            "label": "Theo governance Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x94877640dD9E6F1e3Cb56Bf7b5665b7152601295/"
+          },
+          {
+            "label": "Blockscout verified thBILL TimelockController",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
           }
-        ]
+        ],
+        "evidence": "At Ethereum block 25712112, Safe state was 4-of-6, version 1.4.1, with the listed owners, no enabled modules, and zero guard. Timelock role checks confirmed this Safe holds PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE; it can therefore schedule and execute thBILL administration and UUPS upgrades after the two-day delay."
       }
     ],
-    "economicCapSemantics": "unknown",
-    "reconciliation": "unknown",
-    "supervision": "unknown",
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295049, DEFAULT_ADMIN_ROLE on the canonical thBILL token resolves to TimelockController 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 with zero minimum delay; its proposer, executor, and canceller authority resolves to the 4-of-6 Theo Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295, which had no enabled modules. The 2026-07-20 deployment review confirms the canonical 134-byte pinned proxy implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519 has no upgrade path. It also enumerates the Arbitrum, Base, and HyperEVM LayerZero OFT deployments and resolves each OFT owner and delegate to the same Theo 4-of-6 Safe.",
-      "reviewer": "P2 mint-free cohort; Claude V9 Phase 3 cur-14; OpenAI Codex V9 deployment reconciliation",
-      "reviewedAt": "2026-07-21",
+      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
-          "label": "Theo Network docs",
-          "url": "https://docs.theo.xyz"
+          "label": "Blockscout thBILL UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5fa487bca6158c64046b2813623e20755091da0b"
         },
         {
-          "label": "thBILL ETH contract on Blockscout",
-          "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+          "label": "Blockscout verified thBILL implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x325478a069b0dbbdfbee909fa3741f84259ba519"
+        },
+        {
+          "label": "Blockscout verified thBILL TimelockController",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02"
+        },
+        {
+          "label": "Theo governance Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x94877640dD9E6F1e3Cb56Bf7b5665b7152601295/"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
         }
       ],
       "disposition": "scoreable"

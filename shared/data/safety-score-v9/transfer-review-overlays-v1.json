@@ -36,15 +36,15 @@
     },
     {
       "assetId": "crvusd-curve",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The verified non-proxy Vyper crvUSD Stablecoin contract has ordinary holder transfer and allowance-gated transferFrom/burnFrom paths. Minter authority can mint and replace itself but cannot pause, blacklist, allowlist, or seize through transfer.",
+          "evidence": "At Ethereum block 25712115, the canonical verified Vyper crvUSD Stablecoin remained a direct non-proxy deployment with zero EIP-1967 implementation slot. It has ordinary holder transfer and allowance-gated transferFrom/burnFrom paths; minter authority cannot pause, blacklist, allowlist, seize, or burn without allowance.",
           "sources": [
             {
               "label": "Blockscout verified Ethereum crvUSD source",
@@ -60,19 +60,23 @@
     },
     {
       "assetId": "dai-makerdao",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C01 control wave",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x6b175474e89094c44da98b954eedeac495271d0f",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The verified, non-proxy Dai contract implements unconditional holder transfer and allowance paths; privileged wards can mint but cannot pause, allowlist, blacklist, or bypass holder authorization for transfer or burn.",
+          "evidence": "At Ethereum block 25711852 the non-proxy verified Dai implementation exposed ordinary holder transfer and allowance paths, with no pause, allowlist, blacklist, seizure, or privileged holder-burn path. Mint is ward-gated; burn requires the holder or an allowance.",
           "sources": [
             {
-              "label": "Blockscout verified Ethereum Dai source",
-              "url": "https://eth.blockscout.com/address/0x6b175474e89094c44da98b954eedeac495271d0f?tab=contract"
+              "label": "Ethereum DAI verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
+            },
+            {
+              "label": "Ethereum PublicNode RPC",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         },
@@ -81,7 +85,7 @@
           "contractOrTokenId": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "At Polygon block 90387614 the verified UChildERC20Proxy pointed to verified UChildDAI 0x490e379c9cff64944be82b849f8fd5972c7999a7 and proxyOwner was unreachable precompile address 0x1; the implementation has ordinary ERC-20 transfers and no pause, blacklist, or transfer allowlist.",
+          "evidence": "At Polygon block 91670976 the proxy resolved to verified UChildDAI 0x490e379c9cff64944be82b849f8fd5972c7999a7 and proxyOwner() was precompile/sentinel address 0x0000000000000000000000000000000000000001. The implementation has ordinary ERC-20 transfers and no pause, blacklist, seizure, or transfer allowlist.",
           "sources": [
             {
               "label": "Sourcify verified Polygon Dai proxy",
@@ -89,7 +93,7 @@
             },
             {
               "label": "Sourcify verified Polygon UChildDAI implementation",
-              "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=all"
+              "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=abi,metadata,sources"
             },
             {
               "label": "Polygon public RPC",
@@ -153,15 +157,15 @@
     },
     {
       "assetId": "frax-frax",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x853d955acef822db058eb8505911ed77f175b99e",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The verified direct FRAXStablecoin deployment uses the standard ERC-20 transfer path. Owner, timelock, pool, and collateral-ratio roles do not expose a holder transfer pause, blacklist, or allowlist.",
+          "evidence": "At Ethereum block 25712115, FRAX remained a verified direct non-proxy deployment with zero EIP-1967 implementation slot. Its standard ERC-20 path has no holder transfer pause, blacklist, allowlist, or seizure; pool burn remains allowance-gated.",
           "sources": [
             {
               "label": "Blockscout verified Ethereum FRAX source",
@@ -194,15 +198,15 @@
     },
     {
       "assetId": "gho-aave",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The address is a verified non-proxy GhoToken. AccessControl governs facilitator and bucket management only; holder transfer and transferFrom have no pause, blacklist, allowlist, or administrative transfer hook.",
+          "evidence": "At Ethereum block 25712115, this remained a verified direct non-proxy GhoToken with zero EIP-1967 implementation slot. AccessControl governs facilitator and bucket management only; holder transfer and transferFrom have no pause, blacklist, allowlist, seizure, or administrative transfer hook.",
           "sources": [
             {
               "label": "Sourcify verified Ethereum GhoToken source",
@@ -218,15 +222,15 @@
     },
     {
       "assetId": "hyusd-hylo",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C05 access review",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Solana finalized slot 433471440 reports this exact 82-byte legacy SPL Token mint has freezeAuthority null; a mint-filtered finalized account read found zero frozen accounts among 16,891 accounts. The Tokenkeg ProgramData has null upgrade authority. Pinned program source requires holder authorization for transfer, requires the current freeze authority to freeze accounts, and prevents a disabled authority from being restored.",
+          "evidence": "At finalized Solana slot 437980139 on 2026-08-08, this exact legacy SPL Token mint still had freezeAuthority = null. The immutable Tokenkeg program's pinned source requires holder authorization for transfers, requires the current freeze authority to freeze an account, and prevents a disabled authority from being restored. HYUSD transfers are therefore permissionless even though upstream reserve assets can carry separate issuer controls.",
           "sources": [
             {
               "label": "Solana finalized mainnet RPC",
@@ -383,15 +387,15 @@
     },
     {
       "assetId": "pusd-polymarket",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "polygon",
           "contractOrTokenId": "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Polygon block 90387654 this ERC-1967 proxy used verified CollateralToken implementation 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f. Current transfers are standard ERC-20, but owner 0x47ebfac3353314c788b96cdcbf41daadfe03629c can authorize arbitrary UUPS upgrades, so transfers are restrictable.",
+          "evidence": "At Polygon block 91673086, this ERC-1967 proxy still used verified CollateralToken implementation 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner 0x47ebfac3353314c788b96cdcbf41daadfe03629c. Current transfers are standard ERC-20 without a blacklist or pause, but the owner can authorize arbitrary UUPS upgrades, so transfers remain restrictable.",
           "sources": [
             {
               "label": "Polymarket official pinned CollateralToken source",
@@ -583,15 +587,15 @@
     },
     {
       "assetId": "usdh-hubble",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C09 control/access review",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Solana finalized slot 433471440 reports this exact 82-byte legacy SPL Token mint has freezeAuthority null; a mint-filtered finalized account read found zero frozen accounts among 40,331 accounts. The Tokenkeg ProgramData has null upgrade authority. Pinned program source requires holder authorization for transfer, requires the current freeze authority to freeze accounts, and prevents a disabled authority from being restored.",
+          "evidence": "At finalized Solana slot 438054830, this exact 82-byte legacy SPL Token mint remained owned by Tokenkeg and had freezeAuthority null. Pinned Tokenkeg source requires holder authorization for transfer, requires the current freeze authority to freeze an account, and prevents a disabled freeze authority from being restored.",
           "sources": [
             {
               "label": "Solana finalized mainnet RPC",
@@ -760,15 +764,15 @@
     },
     {
       "assetId": "buck-bucket-protocol",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C05 access review",
       "deployments": [
         {
           "chainId": "sui",
           "contractOrTokenId": "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The tracked BUCK witness has only the drop ability, and the published buck module creates an ordinary currency with coin::create_currency; it contains neither a DenyCap nor a regulated-currency creation path. Although the compatible package is upgradeable through its UpgradeCap, generic transfer::public_transfer<Coin<BUCK>> bypasses BUCK-module hooks. The TreasuryCap controls minting but cannot intercept transfers of already-held Coin<BUCK> objects.",
+          "evidence": "Rechecked through Sui checkpoints 304909276-304911372 on 2026-08-08. The tracked BUCK witness has only the drop ability, and the deployed object set contains no RegulatedCoinMetadata, DenyCapV2, or legacy DenyCap. The published module creates an ordinary currency; generic transfer::public_transfer<Coin<BUCK>> bypasses package hooks, while TreasuryCap authority controls minting but cannot intercept transfers of already-held BUCK coin objects.",
           "sources": [
             {
               "label": "Sui mainnet JSON-RPC package and normalized BUCK module",
@@ -857,15 +861,15 @@
     },
     {
       "assetId": "nxusd-nereus",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "avalanche",
           "contractOrTokenId": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The verified direct NXUSD deployment has owner-only mint and mintToBentoBox paths. burn(amount) burns only msg.sender, and the source has no proxy, blacklist, freeze, pause, holder seizure, or transfer hook.",
+          "evidence": "At Avalanche block 92344314, the verified direct NXUSD deployment remained non-proxied and owner() returned the 2/3 Safe 0xdd3d9bddac3c47794b457687ae43e874198e1467. Owner-only mint and mintToBentoBox do not alter holder transfers; burn(amount) burns only msg.sender, and the source has no blacklist, freeze, pause, holder seizure, or transfer hook.",
           "sources": [
             {
               "label": "Sourcify exact-match Avalanche NXUSD source",
@@ -876,20 +880,37 @@
               "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/NXUSD.sol"
             }
           ]
+        },
+        {
+          "chainId": "polygon",
+          "contractOrTokenId": "0xf955a6694c6f5629f5ecd514094b3bd450b59000",
+          "scope": "additional",
+          "posture": "permissionless",
+          "evidence": "At Polygon block 91674352, the tracked direct NXUSD deployment was non-proxied and owner() returned 0xc4eca396272c12bbcc6fba2acc84984a43f77ef8. Its verified NXUSD transfer implementation has no blacklist, freeze, pause, seizure, or transfer hook. Polygon represented about 9.5% of observed NXUSD supply, below the material-deployment threshold but included for completeness.",
+          "sources": [
+            {
+              "label": "Polygonscan verified NXUSD contract",
+              "url": "https://polygonscan.com/address/0xf955a6694c6f5629f5ecd514094b3bd450b59000#code"
+            },
+            {
+              "label": "Polygon public RPC",
+              "url": "https://polygon-rpc.com"
+            }
+          ]
         }
       ]
     },
     {
       "assetId": "fpi-frax",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "The verified direct FPI source has ordinary ERC-20 transfers. Its privileged minter_burn_from calls ERC20Burnable.burnFrom, which spends the holder's allowance; minter status alone cannot burn an unapproved holder. No pause, blacklist, freeze, transfer hook, or upgradeable proxy controls the material Ethereum deployment.",
+          "evidence": "At Ethereum block 25712273, canonical FPI remained a direct immutable token with ordinary ERC-20 transfers. Its privileged minter_burn_from calls allowance-consuming ERC20Burnable.burnFrom; minter status alone cannot burn an unapproved holder. Verified source contains no pause, blacklist, freeze, seizure, or transfer hook.",
           "sources": [
             {
               "label": "Sourcify verified Ethereum FPI source",
@@ -898,6 +919,27 @@
             {
               "label": "Ethereum Blockscout verified FPI contract",
               "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+            }
+          ]
+        },
+        {
+          "chainId": "fraxtal",
+          "contractOrTokenId": "0xfc00000000000000000000000000000000000003",
+          "scope": "additional",
+          "posture": "restrictable",
+          "evidence": "At Fraxtal block 39703046, FPI proxy 0xfc00000000000000000000000000000000000003 used implementation 0xfcc0d30000000000000000000000000000000003 and ProxyAdmin 0xfc0000000000000000000000000000000000000a. Current implementation transfer paths expose no holder restriction, but ProxyAdmin owner 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 is a live 3/5 Safe that can replace the implementation without a timelock, so this deployment is restrictable.",
+          "sources": [
+            {
+              "label": "Fraxtal FPI proxy",
+              "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000003?tab=contract"
+            },
+            {
+              "label": "Fraxtal FPI ProxyAdmin",
+              "url": "https://fraxscan.com/address/0xfc0000000000000000000000000000000000000a?tab=contract"
+            },
+            {
+              "label": "Fraxtal public RPC",
+              "url": "https://rpc.frax.com"
             }
           ]
         }
@@ -1060,15 +1102,15 @@
     },
     {
       "assetId": "usdv-solomon",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C09 control/access review",
       "deployments": [
         {
           "chainId": "solana",
           "contractOrTokenId": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "At finalized Solana slot 434084056, this exact mint is owned by the legacy SPL Token program, has freezeAuthority null, and its 564 observed token accounts included no frozen account. Issuance authority cannot freeze existing Tokenkeg transfers without a freeze authority or Token-2022 transfer extension.",
+          "evidence": "At finalized Solana slot 438054830, this exact mint remained owned by the legacy SPL Token program and had freezeAuthority null. It has no Token-2022 transfer extension, and pinned Tokenkeg source requires the current freeze authority to freeze an account; the issuance authority alone cannot stop holder transfers.",
           "sources": [
             {
               "label": "Solana mainnet finalized mint and token-account observation",
@@ -1117,15 +1159,15 @@
     },
     {
       "assetId": "brlm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C10 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "evidence": "At Celo block 74318085 on 2026-08-08, the BRLm proxy still pointed to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e, its owner/admin remained Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and getMinDelay() remained 172800 seconds. Current transfer logic contains no holder restriction, but the verified owner-gated proxy can replace transfer behavior after the two-day timelock, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified BRLm proxy",
@@ -1145,15 +1187,15 @@
     },
     {
       "assetId": "usdq-quill",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "scroll",
           "contractOrTokenId": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At the reviewed Scroll state, this ERC-1967 proxy points to the verified BoldToken UUPS implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523. Its authority is AccessManager proxy 0xbe589551397d0f28255e429ddb478620b1c2f08a, whose current implementation is verified QuillAccessManager; upgradeToAndCall has target role 2, and the current Safe 0x32fD58B8c4D454aB585DEA736b7D2b5929B6676c holds roles 0 and 2. That active upgrade path can replace transfer behavior.",
+          "evidence": "At Scroll block 34599130, USDQ proxy 0xdb9e8f82d6d45fff803161f2a5f75543972b229a still used verified BoldToken implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 and AccessManager authority 0xbe589551397d0f28255e429ddb478620b1c2f08a. Registered core components retain allowance-free burn(address,uint256) over holder balances, and upgradeToAndCall remains role 2 with a 300-second Safe delay; the deployment is restrictable.",
           "sources": [
             {
               "label": "Scroll Blockscout verified USDQ ERC-1967 proxy",
@@ -1177,15 +1219,15 @@
     },
     {
       "assetId": "zarm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "evidence": "At Celo block 74317848, ZARm proxy 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 still used verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner 0x890db8a597940165901372dd7db61c9f246e2147. Current transfers contain no holder restriction, but the owner is the Mento Timelock with a 172800-second minimum delay and can replace the implementation, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified ZARm proxy",
@@ -1205,15 +1247,15 @@
     },
     {
       "assetId": "xofm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "evidence": "At Celo block 74317848, XOFm proxy 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 still used verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner 0x890db8a597940165901372dd7db61c9f246e2147. Current transfers contain no holder restriction, but the owner is the Mento Timelock with a 172800-second minimum delay and can replace the implementation, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified XOFm proxy",
@@ -1233,15 +1275,15 @@
     },
     {
       "assetId": "audm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C12 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0x7175504c455076f15c04a2f90a8e352281f492f9",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "evidence": "At Celo block 74313815 on 2026-08-08, the AUDm proxy still pointed to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e, its EIP-1967 owner/admin slot still held Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and getMinDelay() remained 172800 seconds. Current transfers are ordinary ERC-20 operations, but the verified proxy's owner-only implementation replacement lets delayed governance replace transfer behavior, so the deployment is restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified AUDm proxy",
@@ -1338,15 +1380,15 @@
     },
     {
       "assetId": "ousd-origin-protocol",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The current proxy implementation is verified OUSD 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33. Ordinary transfer and transferFrom have no blacklist or pause branch, but the implementation grants vaultAddress exclusive burn(address,uint256) authority over any nonzero holder balance. That live privileged holder-burn path makes transfer restrictable.",
+          "evidence": "At Ethereum block 25712273, OUSD proxy 0x2a8e1e676ec238d8a992307b495b45b3feaa5e86 used verified implementation 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33. Ordinary transfer paths have no blacklist branch, but burn(address,uint256) grants Vault 0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70 a live arbitrary-holder balance-destruction primitive. OUSD and Vault are also upgradeable by timelock 0x35918cde7233f2d6a9f6904caccab6b3f0893e69f with a 172800-second minimum delay, so the deployment is restrictable.",
           "sources": [
             {
               "label": "Ethereum Blockscout verified OUSD proxy",
@@ -1362,15 +1404,15 @@
     },
     {
       "assetId": "home-homecoin",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "HomeCoin's official site identifies this exact address as its HOME contract. The exact-matched transparent proxy currently resolves to verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c. Its ERC-1967 admin is verified ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f, whose current owner is nonzero. The current transfer path is ordinary ERC-20, but this live administrator can replace the implementation and introduce restrictions.",
+          "evidence": "At Ethereum block 25712294, HOME proxy 0xb8919522331c59f5c16bdfaa6a121a6e03a91f62 used verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c and ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. Current transfer paths have no holder restriction, but ProxyAdmin owner 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 remains a five-owner, threshold-three legacy multisig able to replace the implementation without a timelock, making HOME restrictable.",
           "sources": [
             {
               "label": "Sourcify exact-matched HOME proxy",
@@ -1426,15 +1468,15 @@
     },
     {
       "assetId": "doc-money-on-chain",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C08 control/access audit",
       "deployments": [
         {
           "chainId": "rootstock",
           "contractOrTokenId": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Money On Chain documents DoC as its RBTC/Rootstock stablecoin. The verified non-proxy DoCToken currently has owner() = MoCExchange 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038. Holder transfer is ordinary ERC-20, but the owner-only burn(address,uint256) path burns an arbitrary holder balance without allowance. The documented system owner is therefore a direct holder-transfer intervention surface.",
+          "evidence": "At Rootstock block 9134345 on 2026-08-08, verified non-proxy DoCToken owner() still returned MoCExchange 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038. Holder transfer is ordinary ERC-20, but the owner-only burn(address,uint256) path burns an arbitrary holder balance without allowance. The documented system owner is therefore a direct holder-transfer intervention surface.",
           "sources": [
             {
               "label": "Rootstock Blockscout verified DoCToken source",
@@ -1451,6 +1493,27 @@
             {
               "label": "Rootstock public RPC observation",
               "url": "https://public-node.rsk.co"
+            }
+          ]
+        },
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Arbitrum block 492491752 on 2026-08-08, this exact DOC deployment had direct 12,493-byte runtime code with zero EIP-1967 implementation and admin slots. Blockscout and Sourcify exact-match it as the immutable MyOFT/OFT deployment. owner() returned 0xb2395eaaeb03fb1f46647c423378b24f2e906305 and endpoint() returned the canonical LayerZero v2 endpoint, but the verified OFT transfer path is standard ERC-20 and exposes no holder blacklist, pause, seizure, arbitrary holder burn, or owner transfer hook. Owner peer/delegate configuration governs cross-chain messaging rather than local holder transfers.",
+          "sources": [
+            {
+              "label": "Arbitrum Blockscout verified DOC OFT source",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+            },
+            {
+              "label": "Sourcify exact-match Arbitrum DOC OFT source",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0x2ad62eb9744c720364f6ac856360a43e8a2229b5?fields=sources,compilation"
+            },
+            {
+              "label": "Arbitrum public RPC observation",
+              "url": "https://arbitrum-one-rpc.publicnode.com"
             }
           ]
         }
@@ -1486,22 +1549,22 @@
     },
     {
       "assetId": "nect-beraborrow",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C10 wave1 control review; Codex P2 access acc-2",
       "deployments": [
         {
           "chainId": "berachain",
           "contractOrTokenId": "0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The verified direct DebtToken initializes privileged borrower-operations and DenManager paths. Its burn(address,uint256) permits a whitelisted DenManager or PSM bond to destroy an arbitrary holder balance without allowance, and the MetaBeraborrowCore owner can alter the privileged whitelist. Ordinary transfer is open, but this live holder-burn authority makes NECT restrictable.",
+          "evidence": "At Berachain block 24601923 the canonical NECT remained a direct non-proxy DebtToken. Its verified burn(address,uint256) permits a whitelisted DenManager or PSM bond to destroy an arbitrary holder balance without allowance. The WBERA DenManager 0xf1356cb726c2988c65c5313350c9115d9af0f954 remained whitelisted, and a fixed-block call from it to burn an unrelated address with amount zero succeeded. The MetaBeraborrowCore owner can also alter the PSMBond whitelist. Ordinary transfers are open, but this live holder-burn authority makes NECT restrictable.",
           "sources": [
             {
               "label": "Routescan verified Berachain NECT source",
               "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
             },
             {
-              "label": "Berachain public RPC",
+              "label": "Berachain public RPC used for block 24601923 reads",
               "url": "https://rpc.berachain.com"
             }
           ]
@@ -1510,15 +1573,15 @@
     },
     {
       "assetId": "usdaf-asymmetry",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C10 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct BoldToken deployment. Current owner() and the EIP-1967 implementation, admin, and beacon slots are zero. Its verified source has ordinary holder transfer and allowance transferFrom checks only; there is no pause, blacklist, freeze, arbitrary-holder burn, or reachable administrative transfer hook.",
+          "evidence": "At Ethereum block 25712463 on 2026-08-08, the exact-matched direct BoldToken deployment still returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots. Its verified source has ordinary holder transfer and allowance transferFrom checks plus a fixed core-contract recipient guard, with no pause, blacklist, freeze, arbitrary-holder burn, or reachable administrative transfer hook, so the deployment remains permissionless.",
           "sources": [
             {
               "label": "Sourcify exact-matched USDaf BoldToken source",
@@ -1538,15 +1601,15 @@
     },
     {
       "assetId": "cadm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0xff4ab19391af240c311c54200a492233052b6325",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The verified CADm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "evidence": "At Celo block 74317848, CADm proxy 0xff4ab19391af240c311c54200a492233052b6325 still used verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner 0x890db8a597940165901372dd7db61c9f246e2147. Current transfers contain no holder restriction, but the owner is the Mento Timelock with a 172800-second minimum delay and can replace the implementation, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified CADm proxy",
@@ -1566,15 +1629,15 @@
     },
     {
       "assetId": "copm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C12 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0x8a567e2ae79ca692bd748ab832081c45de4041ea",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The verified COPm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "evidence": "At Celo block 74313815 on 2026-08-08, the COPm proxy still pointed to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e, its EIP-1967 owner/admin slot still held Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and getMinDelay() remained 172800 seconds. Current transfers are ordinary ERC-20 operations, but the verified proxy's owner-only implementation replacement lets delayed governance replace transfer behavior, so the deployment is restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified COPm proxy",
@@ -1594,15 +1657,15 @@
     },
     {
       "assetId": "ghsm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The verified GHSm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "evidence": "At Celo block 74317848, GHSm proxy 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 still used verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner 0x890db8a597940165901372dd7db61c9f246e2147. Current transfers contain no holder restriction, but the owner is the Mento Timelock with a 172800-second minimum delay and can replace the implementation, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified GHSm proxy",
@@ -1622,15 +1685,15 @@
     },
     {
       "assetId": "kesm-mento",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex P2 access acc-2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "celo",
           "contractOrTokenId": "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "The verified KESm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "evidence": "At Celo block 74317848, KESm proxy 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 still used verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner 0x890db8a597940165901372dd7db61c9f246e2147. Current transfers contain no holder restriction, but the owner is the Mento Timelock with a 172800-second minimum delay and can replace the implementation, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Celo Blockscout verified KESm proxy",
@@ -1801,15 +1864,15 @@
     },
     {
       "assetId": "euro3-3a-dao",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "polygon",
           "contractOrTokenId": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify reports an exact match for MintableToken at Polygon block 90573596; the address holds direct non-proxy code and both EIP-1967 implementation and admin slots are zero. MintableToken is OpenZeppelin ERC20 plus Ownable with onlyOwner mint as its sole privileged function; it declares no _beforeTokenTransfer override, no pause, no blacklist and no allowlist, so holder transfer and transferFrom cannot be blocked by any role.",
+          "evidence": "At Polygon block 91675721, EURO3 retained direct non-proxy code with zero EIP-1967 slots. Sourcify exact-match MintableToken source has only owner-gated mint over ordinary OpenZeppelin ERC-20 transfers and no pause, blacklist, freeze, allowlist, seizure, or transfer hook.",
           "sources": [
             {
               "label": "Sourcify exact-match Polygon MintableToken sources",
@@ -1818,6 +1881,10 @@
             {
               "label": "Polygonscan EURO3 contract",
               "url": "https://polygonscan.com/address/0xa0e4c84693266a9d3bbef2f394b33712c76599ab#code"
+            },
+            {
+              "label": "Polygon public RPC",
+              "url": "https://polygon-bor-rpc.publicnode.com"
             }
           ]
         },
@@ -1826,7 +1893,7 @@
           "contractOrTokenId": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Sourcify reports an exact match for MintableToken at Linea block 31455642, with direct non-proxy code and zero EIP-1967 implementation and admin slots. The privileged surface is onlyOwner mint only; transfer and transferFrom are unmodified OpenZeppelin ERC20 with no hook, pause, blacklist or allowlist.",
+          "evidence": "At Linea block 31656728, EURO3 likewise retained direct non-proxy MintableToken code and zero EIP-1967 slots. Owner authority can mint but cannot alter or restrict holder transfers, so the deployment is permissionless.",
           "sources": [
             {
               "label": "Sourcify exact-match Linea MintableToken sources",
@@ -1835,6 +1902,10 @@
             {
               "label": "Lineascan EURO3 contract",
               "url": "https://lineascan.build/address/0x3f817b28da4940f018c6b5c0a11c555ebb1264f9#code"
+            },
+            {
+              "label": "Linea public RPC",
+              "url": "https://rpc.linea.build"
             }
           ]
         }
@@ -1866,15 +1937,15 @@
     },
     {
       "assetId": "ybold-yearn",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "At Ethereum block 25575159 the address is a 45-byte EIP-1167 minimal proxy whose hard-coded target is Yearn V3 vault logic 0xd8063123bba3b480569244ae66bfe72b6c84b00d; a minimal proxy has no admin and no upgrade path, and both EIP-1967 slots are zero. Sourcify verifies the target as YearnV3Vault. Its internal _transfer only asserts sufficient balance, and _transfer_from only spends allowance; the roles system and the shutdown flag gate strategy management and deposits, never holder share transfer, and there is no pause, blacklist, freeze or seizure on the transfer path.",
+          "evidence": "At Ethereum block 25712273, yBOLD remained a 45-byte EIP-1167 clone whose fixed target is Yearn V3 Vault logic 0xd8063123bba3b480569244ae66bfe72b6c84b00d; both EIP-1967 slots were zero. Verified _transfer and _transfer_from only enforce balance and allowance. Vault roles and isShutdown (false) gate strategy management and deposits, not holder share transfers; there is no pause, blacklist, freeze, seizure, or upgrade path on the transfer path.",
           "sources": [
             {
               "label": "Sourcify verified YearnV3Vault implementation",
@@ -2337,15 +2408,15 @@
     },
     {
       "assetId": "susds-sky",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C01 control wave",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At ethereum block 25575158 the EIP-1967 implementation slot is populated and Sourcify verifies the target as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
+          "evidence": "At Ethereum block 25711847 the EIP-1967 implementation slot resolved to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, which Sourcify verifies as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist, or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
           "sources": [
             {
               "label": "Sourcify verified ethereum SUsds implementation",
@@ -2362,7 +2433,7 @@
           "contractOrTokenId": "0x5875eee11cf8398102fdad704c9e96607675467a",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At base block 48888024 the EIP-1967 implementation slot is populated and Sourcify verifies the target as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
+          "evidence": "At Base block 49711042 the EIP-1967 implementation slot resolved to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8, which Sourcify verifies as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist, or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
           "sources": [
             {
               "label": "Sourcify verified base SUsds implementation",
@@ -2379,7 +2450,7 @@
           "contractOrTokenId": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At optimism block 154483309 the EIP-1967 implementation slot is populated and Sourcify verifies the target as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
+          "evidence": "At Optimism block 155306328 the EIP-1967 implementation slot resolved to 0x6f0888dda6a5e35451d5be0fabb20171715788b3, which Sourcify verifies as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist, or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
           "sources": [
             {
               "label": "Sourcify verified optimism SUsds implementation",
@@ -2396,7 +2467,7 @@
           "contractOrTokenId": "0xddb46999f8891663a8f2828d25298f70416d7610",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At arbitrum block 485758765 the EIP-1967 implementation slot is populated and Sourcify verifies the target as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
+          "evidence": "At Arbitrum block 492469331 the EIP-1967 implementation slot resolved to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7, which Sourcify verifies as SUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist, or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
           "sources": [
             {
               "label": "Sourcify verified arbitrum SUsds implementation",
@@ -2412,15 +2483,15 @@
     },
     {
       "assetId": "stusds-sky",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At ethereum block 25575158 the EIP-1967 implementation slot is populated and Sourcify verifies the target as StUsds, a UUPSUpgradeable contract whose _authorizeUpgrade is gated by the auth modifier, requiring wards[msg.sender] == 1. The current implementation leaves holder transfer and transferFrom open with no pause, blacklist or freeze, but rely and deny let existing wards grant themselves upgrade authority and replace the implementation with one that restricts holder transfer. That live privileged upgrade path over transfer behavior makes the deployment restrictable.",
+          "evidence": "At Ethereum block 25712115, the proxy still used StUsds implementation 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22, asset() returned USDS, and wards(Sky Pause Proxy) returned 1. Current transfers have no blacklist, pause, or freeze, but wards can authorize a UUPS upgrade that changes transfer behavior, so the deployment remains restrictable.",
           "sources": [
             {
               "label": "Sourcify verified ethereum StUsds implementation",
@@ -2436,15 +2507,15 @@
     },
     {
       "assetId": "sgho-aave",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACCESS acc-A",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C03 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575158 the EIP-1967 implementation slot resolves to 0xff229a0bbb614a284de8ae0e41e5974878fd7c04, Sourcify-verified as sGho, and the EIP-1967 admin slot resolves to live ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. The implementation inherits PausableUpgradeable and ERC20Upgradeable; paused() read false at the observed block. Both the pause control and the active admin upgrade path can restrict holder transfer, so the deployment is restrictable.",
+          "evidence": "At Ethereum block 25712116 the EIP-1967 implementation slot still resolved to Sourcify-verified sGho 0xff229a0bbb614a284de8ae0e41e5974878fd7c04. Its role-gated pause() sets the state checked by the whenNotPaused ERC-20 _update override, blocking all holder transfers while paused. paused() was false and Aave Governance V3 Level-1 Executor 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a held PAUSE_GUARDIAN_ROLE, so the deployment is restrictable.",
           "sources": [
             {
               "label": "Sourcify verified Ethereum sGho implementation",
@@ -2701,15 +2772,15 @@
     },
     {
       "assetId": "gtusdcp-gauntlet",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C03 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "ETH block 25648243 VaultV2: gates currently zero but curator-settable after timelock.",
+          "posture": "permissionless",
+          "evidence": "Ethereum block 25712116: immutable VaultV2 share gates were zero. Both setSendSharesGate(address) and setReceiveSharesGate(address) had 604800-second timelocks but abdicated(selector)=true; verified source makes abdication permanent, so neither share gate can be activated.",
           "sources": [
             {
               "label": "VaultV2 source",
@@ -2726,7 +2797,7 @@
           "contractOrTokenId": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Base MetaMorpho block 49328092: ordinary ERC-20 transfers; no gate.",
+          "evidence": "Base block 49712686: immutable MetaMorpho held native Base USDC and retained ordinary ERC-20 share transfers with no pause, blacklist, freeze, or transfer gate.",
           "sources": [
             {
               "label": "Sourcify Base",
@@ -2743,7 +2814,7 @@
           "contractOrTokenId": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Arbitrum MetaMorphoV1_1 block 489415296: ordinary transfers; no freeze/gate.",
+          "evidence": "Arbitrum block 492482369: immutable MetaMorphoV1_1 held native Arbitrum USDC and retained ordinary ERC-20 share transfers with no pause, blacklist, freeze, or transfer gate.",
           "sources": [
             {
               "label": "Arbitrum Blockscout",
@@ -2942,22 +3013,22 @@
     },
     {
       "assetId": "cjpy-yamato",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C10 wave1 control review; Claude ACC-B TRANSFER-FACT",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "Sourcify exact-matches this direct non-proxy deployment as CJPY, whose Currency base has plain OpenZeppelin ERC-20 transfer paths with no pause, blacklist, freeze, or transfer hook. However burn(address to,uint256 amount) is onlyCurrencyOS and calls _burn(to, amount) with no allowance check, so the bound CurrencyOS contract can destroy an arbitrary holder balance. At Ethereum block 25575164 the currencyOS storage slot held nonzero 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f while the governance slot was zero, so that privileged burner is now immutable rather than removable.",
+          "evidence": "At Ethereum block 25712439, Sourcify's exact-matched direct CJPY deployment still had a zero EIP-1967 implementation slot. Its Currency base has plain OpenZeppelin ERC-20 transfers with no pause, blacklist, freeze, or transfer hook, but onlyCurrencyOS burn(address,uint256) calls _burn on the supplied address without allowance. Direct storage reads kept currencyOS slot 6 bound to 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f and governance slot 7 zero; CurrencyOS governance resolved to the live 2-of-4 Safe. The bound route can therefore destroy an arbitrary holder balance and remains restrictable.",
           "sources": [
             {
               "label": "Sourcify verified CJPY source (chain 1)",
               "url": "https://sourcify.dev/server/v2/contract/1/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575164 storage reads",
+              "label": "Ethereum public RPC used for block 25712439 storage and controller reads",
               "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
@@ -3063,15 +3134,15 @@
     },
     {
       "assetId": "jpyt-dephaser",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "optimism",
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Verified DephaserJPY at Optimism block 154923376: immutable; ordinary ERC-20 transfer; no pause/blacklist/allowlist/hook.",
+          "evidence": "At Optimism block 155309915, JPYT retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Verified transfer logic has no pause, blacklist, freeze, allowlist, seizure, or transfer hook; role-gated mint and allowance-gated burnFrom do not restrict holder transfers.",
           "sources": [
             {
               "label": "Optimism Blockscout verified source",
@@ -3088,7 +3159,7 @@
           "contractOrTokenId": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Same DephaserJPY on Base; EIP-1967 zero at block 49328091; no transfer restriction surface.",
+          "evidence": "At Base block 49714630, JPYT likewise retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Its verified DephaserJPY transfer paths have no holder restriction, so this deployment is permissionless.",
           "sources": [
             {
               "label": "Sourcify Base ABI",
@@ -3104,22 +3175,30 @@
     },
     {
       "assetId": "jusd-juicedollar",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C10 wave1 control review; Claude ACC-B TRANSFER-FACT",
       "deployments": [
         {
           "chainId": "citrea",
           "contractOrTokenId": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
           "scope": "canonical",
-          "posture": "restrictable",
-          "evidence": "Sourcify verifies this direct deployment as JuiceDollar, and at Citrea block 10231641 no EIP-1967 implementation, admin, or beacon slot was set. The source has no transfer override, pause, blacklist, or freeze. It does override allowance so that the reserve contract is reported as holding type(uint256).max over every holder unconditionally, which is the same implicit privileged-allowance mechanism reviewed as restrictable for Frankencoin-family tokens; minterOnly burnFrom then spends that implicit allowance before _burn.",
+          "posture": "permissionless",
+          "evidence": "At Citrea block 11058127, the direct JuiceDollar deployment retained a zero EIP-1967 implementation slot and ordinary OpenZeppelin ERC-20 transfer paths with no pause, blacklist, freeze, or transfer hook. minterOnly burnFrom always spends allowance. Live reads showed StablecoinBridgeUSDT is a minter but has zero allowance from an ordinary address. The override gives the Equity reserve maximum allowance from every holder, but that reserve is not thereby a minter; minters receive implicit allowance only from another minter, a registered position, or the reserve itself. No privileged caller can therefore move or burn an ordinary holder's JUSD without approval.",
           "sources": [
             {
               "label": "Sourcify verified JuiceDollar source (chain 4114)",
               "url": "https://sourcify.dev/server/v2/contract/4114/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
             },
             {
-              "label": "Citrea public RPC used for the block 10231641 reads",
+              "label": "Pinned JuiceDollar token source",
+              "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+            },
+            {
+              "label": "Official JuiceDollar function reference",
+              "url": "https://docs.juicedollar.com/smart-contracts/functions"
+            },
+            {
+              "label": "Citrea public RPC used for block 11058127 reads",
               "url": "https://rpc.mainnet.citrea.xyz"
             }
           ]
@@ -3310,22 +3389,22 @@
     },
     {
       "assetId": "susdd-tron-dao-reserve",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C02 control review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as SavingsUsdd, and at Ethereum block 25575197 no EIP-1967 implementation, admin, or beacon slot was set. transfer rejects only the zero address and the contract itself, transferFrom enforces the holder allowance, and share burns happen only inside allowance-checked withdraw and redeem. The verified source has no owner, ward, pause, blacklist, freeze, seizure, or arbitrary holder burn path.",
+          "evidence": "Sourcify exact-matches this direct deployment as SavingsUsdd, and at Ethereum block 25712115 its EIP-1967 implementation slot remained zero. transfer rejects only the zero address and the contract itself, transferFrom enforces holder allowance, and share burns occur only in allowance-checked withdraw/redeem. The verified source has no owner, ward, pause, blacklist, freeze, seizure, or arbitrary-holder burn path.",
           "sources": [
             {
               "label": "Sourcify verified SavingsUsdd source (chain 1)",
               "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575197 reads",
+              "label": "Ethereum PublicNode RPC used for the block 25712115 reads",
               "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
@@ -3335,14 +3414,14 @@
           "contractOrTokenId": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
           "scope": "material-bridge",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches the BSC deployment to the same single-file SavingsUsdd source as Ethereum, and at BSC block 111125246 no EIP-1967 implementation, admin, or beacon slot was set. Holder transfer and allowance-gated transferFrom carry no pause, blacklist, freeze, seizure, or privileged burn path.",
+          "evidence": "Sourcify exact-matches the BSC deployment to the same SavingsUsdd source as Ethereum, and at BSC block 114787010 its EIP-1967 implementation slot remained zero. Holder transfer and allowance-gated transferFrom carry no pause, blacklist, freeze, seizure, or privileged burn path.",
           "sources": [
             {
               "label": "Sourcify verified SavingsUsdd source (chain 56)",
               "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
             },
             {
-              "label": "BSC public RPC used for the block 111125246 reads",
+              "label": "BSC public RPC used for the block 114787010 reads",
               "url": "https://bsc-dataseed.binance.org"
             }
           ]
@@ -3375,23 +3454,44 @@
     },
 {
   "assetId": "usdp-parallel",
-  "reviewedAt": "2026-07-22",
-  "reviewer": "GPT SOL-TRANSFER wave6",
+  "reviewedAt": "2026-08-08",
+  "reviewer": "Codex C08 control/access audit",
   "deployments": [
     {
       "chainId": "ethereum",
       "contractOrTokenId": "0x9b3a8f7cec208e247d97dee13313690977e24459",
       "scope": "canonical",
       "posture": "restrictable",
-      "evidence": "At Ethereum block 25575201 this proxy reported symbol USDp and its EIP-1967 implementation slot resolved to 0xa19c5d1013a8682ac76206a085ec24ac89f7c025, verified on Blockscout as TokenP. The verified implementation adds no transfer hook, but burnSelf(uint256 amount,address burner) is marked restricted and calls _burn(burner, amount) with no allowance check, so any AccessManager-authorized role can destroy an arbitrary holder balance; _authorizeUpgrade is likewise restricted, leaving the AccessManager able to replace the token logic.",
+      "evidence": "At Ethereum block 25712317 on 2026-08-08, USDp proxy 0x9b3a8f7cec208e247d97dee13313690977e24459 resolved through its EIP-1967 implementation slot to current Blockscout-verified TokenP 0x83de446e5076877263828e9120b0ea8b0bc0d0e4, and authority() returned ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a. TokenP's restricted burnSelf(uint256,address) calls _burn on the supplied holder without an allowance check, and restricted _authorizeUpgrade permits authorized roles to replace token logic.",
       "sources": [
         {
-          "label": "Blockscout verified TokenP implementation",
-          "url": "https://eth.blockscout.com/address/0xa19c5d1013a8682ac76206a085ec24ac89f7c025?tab=contract"
+          "label": "Ethereum Blockscout current verified TokenP implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x83de446e5076877263828e9120b0ea8b0bc0d0e4"
         },
         {
-          "label": "Ethereum public RPC used for the block 25575201 slot reads",
+          "label": "Ethereum public RPC used for block 25712317 reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "chainId": "base",
+      "contractOrTokenId": "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+      "scope": "material-bridge",
+      "posture": "restrictable",
+      "evidence": "At Base block 49713867 on 2026-08-08, this USDp ERC-1967 proxy resolved to current Blockscout-verified TokenP implementation 0x0003f636a8d50d15ccb7ff243cafb0026f82ad9f and authority() returned ParallelAccessManager 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46. The implementation's restricted burnSelf(uint256,address) burns the supplied holder balance without allowance, while restricted _authorizeUpgrade leaves transfer logic replaceable by an authorized manager role.",
+      "sources": [
+        {
+          "label": "Base Blockscout current verified TokenP implementation",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0003f636a8d50d15ccb7ff243cafb0026f82ad9f"
+        },
+        {
+          "label": "Parallel official Base USDp address",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
+        },
+        {
+          "label": "Base public RPC used for block 49713867 reads",
+          "url": "https://base-rpc.publicnode.com"
         }
       ]
     },
@@ -3400,19 +3500,44 @@
       "contractOrTokenId": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
       "scope": "material-bridge",
       "posture": "restrictable",
-      "evidence": "At Avalanche block 90981824 this USDp ERC-1967 proxy resolved to Routescan-verified TokenP implementation 0xcb3e564293393e0d4f43305a250d4e1716de600b and authority() returned nonzero AccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The implementation's restricted burnSelf(uint256,address) burns the supplied holder balance without an allowance check, and its restricted _authorizeUpgrade permits authorized roles to replace the token logic.",
+      "evidence": "At Avalanche block 92344805 on 2026-08-08, this USDp ERC-1967 proxy resolved to current Routescan-verified TokenP implementation 0xd561e7d133c78f8e28072a5a4b5fd7704331fb3b and authority() returned ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The implementation's restricted burnSelf(uint256,address) burns the supplied holder balance without allowance, and restricted _authorizeUpgrade permits authorized roles to replace token logic.",
       "sources": [
         {
-          "label": "Routescan verified Avalanche TokenP implementation",
-          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xcb3e564293393e0d4f43305a250d4e1716de600b"
+          "label": "Routescan current verified Avalanche TokenP implementation",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd561e7d133c78f8e28072a5a4b5fd7704331fb3b"
         },
         {
           "label": "Parallel official Avalanche USDp address",
           "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
         },
         {
-          "label": "Avalanche public RPC used for block 90981824 reads",
-          "url": "https://api.avax.network/ext/bc/C/rpc"
+          "label": "Avalanche public RPC used for block 92344805 reads",
+          "url": "https://avalanche-c-chain-rpc.publicnode.com"
+        }
+      ]
+    },
+    {
+      "chainId": "hyperliquid",
+      "contractOrTokenId": "0xbe65f0f410a72bec163dc65d46c83699e957d588",
+      "scope": "material-bridge",
+      "posture": "restrictable",
+      "evidence": "At HyperEVM block 42660392 on 2026-08-08, the catalogued material Hyperliquid USDp proxy resolved through its EIP-1967 implementation slot to HyperEVMScan-verified TokenP 0xe9b09cc151fcc7f6a1347098ed305b02f46b17b8 and authority() returned ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e. The verified implementation exposes restricted burnSelf(uint256,address), which burns the supplied holder balance without allowance, plus restricted UUPS upgrade authorization. Parallel's deployment page identifies this exact proxy as its HyperEVM USDp deployment.",
+      "sources": [
+        {
+          "label": "HyperEVMScan verified current TokenP implementation",
+          "url": "https://hyperevmscan.io/address/0xe9b09cc151fcc7f6a1347098ed305b02f46b17b8#code"
+        },
+        {
+          "label": "Parallel official HyperEVM USDp address",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp"
+        },
+        {
+          "label": "Parallel TokenP interface",
+          "url": "https://github.com/parallel-protocol/parallel-parallelizer/blob/main/contracts/interfaces/ITokenP.sol"
+        },
+        {
+          "label": "HyperEVM public RPC used for block 42660392 reads",
+          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
     }
@@ -3448,22 +3573,22 @@
     },
     {
       "assetId": "wbrl-ripio",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C09 control/access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575198 this ERC-1967 proxy reported symbol wBRL, paused() false, and an implementation slot of 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, which Blockscout verifies as LatamStable. That implementation's _update inherits ERC20PausableUpgradeable, so any PAUSER_ROLE holder halts every holder transfer, and _authorizeUpgrade is gated only by UPGRADER_ROLE.",
+          "evidence": "At Ethereum block 25712393 this ERC-1967 proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Blockscout-verified LatamStable routes _update through ERC20PausableUpgradeable, so that role can halt every holder transfer.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation",
               "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?tab=contract"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575198 slot reads",
+              "label": "Ethereum public RPC used for the block 25712393 reads",
               "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
@@ -3473,14 +3598,14 @@
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Base block 48888443 this deterministic-address proxy reported symbol wBRL and resolved to implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, whose Base runtime bytecode hashes identically to the Ethereum implementation reviewed as LatamStable. A PAUSER_ROLE pause therefore halts all holder transfers here as well, and UPGRADER_ROLE can replace the logic.",
+          "evidence": "At Base block 49714331 this deterministic-address proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Its runtime bytecode matches the Ethereum LatamStable implementation, whose ERC20Pausable _update lets that role halt every holder transfer.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation reference",
               "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?tab=contract"
             },
             {
-              "label": "Base public RPC used for the block 48888443 reads",
+              "label": "Base public RPC used for the block 49714331 reads",
               "url": "https://mainnet.base.org"
             }
           ]
@@ -3490,14 +3615,14 @@
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At World Chain block 32615299 this deterministic-address proxy reported symbol wBRL and resolved to implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, whose World Chain runtime bytecode hashes identically to the Ethereum LatamStable implementation. Holder transfers stop on a PAUSER_ROLE pause and UPGRADER_ROLE can replace the logic.",
+          "evidence": "At World Chain block 33441185 this deterministic-address proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Its runtime bytecode matches the Ethereum LatamStable implementation, whose ERC20Pausable _update lets that role halt every holder transfer.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation reference",
               "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?tab=contract"
             },
             {
-              "label": "World Chain public RPC used for the block 32615299 reads",
+              "label": "World Chain public RPC used for the block 33441185 reads",
               "url": "https://worldchain-mainnet.g.alchemy.com/public"
             }
           ]
@@ -3507,14 +3632,14 @@
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Polygon block 90574166 this deterministic-address proxy reported symbol wBRL and resolved to implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, which Sourcify exact-matches on Polygon as a later LatamStable revision. That revision keeps the ERC20Pausable _update and additionally exposes a COMPLIANCE_ROLE blocklist that reverts transfers for a named address, so the deployment carries both a global pause and a holder-selective block.",
+          "evidence": "At Polygon block 91675323 this deterministic-address proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Sourcify exact-matches this revision: it keeps ERC20Pausable and adds a COMPLIANCE_ROLE blocklist, enabling both a global pause and holder-selective transfer blocks.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
             },
             {
-              "label": "Polygon public RPC used for the block 90574166 reads",
+              "label": "Polygon public RPC used for the block 91675323 reads",
               "url": "https://polygon-bor-rpc.publicnode.com"
             }
           ]
@@ -3524,14 +3649,14 @@
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At BSC block 111126091 this deterministic-address proxy reported symbol wBRL and resolved to implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, whose BSC runtime bytecode hashes identically to the Polygon implementation Sourcify exact-matches as the compliance-bearing LatamStable revision. It therefore carries the same PAUSER_ROLE pause and COMPLIANCE_ROLE address block over holder transfers.",
+          "evidence": "At BSC block 114794465 this deterministic-address proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Its runtime bytecode matches the Polygon compliance revision, so it carries the same global pause and COMPLIANCE_ROLE holder-selective blocklist.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation reference (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
             },
             {
-              "label": "BSC public RPC used for the block 111126091 reads",
+              "label": "BSC public RPC used for the block 114794465 reads",
               "url": "https://bsc-dataseed.binance.org"
             }
           ]
@@ -3541,14 +3666,14 @@
           "contractOrTokenId": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Gnosis block 47302573 this deterministic-address proxy reported symbol wBRL and resolved to implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, whose Gnosis runtime bytecode hashes identically to the Polygon compliance-bearing LatamStable revision. Holder transfers are subject to the same PAUSER_ROLE pause and COMPLIANCE_ROLE address block.",
+          "evidence": "At Gnosis block 47624683 this deterministic-address proxy reported symbol wBRL, paused() false, implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d, and PAUSER_ROLE for Ripio EOA 0x466c786bbf83c7fd28f4056345abb6380e352e2f. Its runtime bytecode matches the Polygon compliance revision, so it carries the same global pause and COMPLIANCE_ROLE holder-selective blocklist.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation reference (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
             },
             {
-              "label": "Gnosis public RPC used for the block 47302573 reads",
+              "label": "Gnosis public RPC used for the block 47624683 reads",
               "url": "https://rpc.gnosischain.com"
             }
           ]
@@ -3557,22 +3682,22 @@
     },
     {
       "assetId": "wpen-ripio",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 25575199 this ERC-1967 proxy reported symbol wPEN, paused() false, and an implementation slot of 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, which Blockscout verifies as LatamStable. That implementation's _update inherits ERC20PausableUpgradeable, so any PAUSER_ROLE holder halts every holder transfer, and _authorizeUpgrade is gated only by UPGRADER_ROLE.",
+          "evidence": "At Ethereum block 25712443, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers; the deployment is restrictable.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation",
               "url": "https://eth.blockscout.com/address/0x9d6266a9167f17ff3dd20f63a474812d0cd47969?tab=contract"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575199 slot reads",
+              "label": "Ethereum public RPC",
               "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
@@ -3582,14 +3707,14 @@
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Base block 48888452 this deterministic-address proxy reported symbol wPEN and resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, whose Base runtime bytecode hashes identically to the Ethereum implementation verified as LatamStable. A PAUSER_ROLE pause halts all holder transfers and UPGRADER_ROLE can replace the logic.",
+          "evidence": "At Base block 49714630, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers; the deployment is restrictable.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation reference",
               "url": "https://eth.blockscout.com/address/0x9d6266a9167f17ff3dd20f63a474812d0cd47969?tab=contract"
             },
             {
-              "label": "Base public RPC used for the block 48888452 reads",
+              "label": "Base public RPC",
               "url": "https://mainnet.base.org"
             }
           ]
@@ -3599,14 +3724,14 @@
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At World Chain block 32615308 this deterministic-address proxy reported symbol wPEN and resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, whose World Chain runtime bytecode hashes identically to the Ethereum LatamStable implementation. Holder transfers stop on a PAUSER_ROLE pause and UPGRADER_ROLE can replace the logic.",
+          "evidence": "At World Chain block 33441485, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers; the deployment is restrictable.",
           "sources": [
             {
               "label": "Blockscout verified LatamStable implementation reference",
               "url": "https://eth.blockscout.com/address/0x9d6266a9167f17ff3dd20f63a474812d0cd47969?tab=contract"
             },
             {
-              "label": "World Chain public RPC used for the block 32615308 reads",
+              "label": "World Chain public RPC",
               "url": "https://worldchain-mainnet.g.alchemy.com/public"
             }
           ]
@@ -3616,14 +3741,14 @@
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Polygon block 90574178 this deterministic-address proxy reported symbol wPEN and resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, which Sourcify exact-matches on Polygon as a later LatamStable revision. That revision keeps the ERC20Pausable _update and adds a COMPLIANCE_ROLE blocklist that reverts transfers for a named address.",
+          "evidence": "At Polygon block 91675721, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers, and the compliance-bearing implementation also lets COMPLIANCE_ROLE block named addresses; the deployment is restrictable.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0x9d6266a9167f17ff3dd20f63a474812d0cd47969"
             },
             {
-              "label": "Polygon public RPC used for the block 90574178 reads",
+              "label": "Polygon public RPC",
               "url": "https://polygon-bor-rpc.publicnode.com"
             }
           ]
@@ -3633,14 +3758,14 @@
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At BSC block 111126133 this deterministic-address proxy reported symbol wPEN and resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, whose BSC runtime bytecode hashes identically to the Polygon implementation Sourcify exact-matches as the compliance-bearing LatamStable revision. The same PAUSER_ROLE pause and COMPLIANCE_ROLE address block govern holder transfers.",
+          "evidence": "At BSC block 114796051, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers, and the compliance-bearing implementation also lets COMPLIANCE_ROLE block named addresses; the deployment is restrictable.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation reference (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0x9d6266a9167f17ff3dd20f63a474812d0cd47969"
             },
             {
-              "label": "BSC public RPC used for the block 111126133 reads",
+              "label": "BSC public RPC",
               "url": "https://bsc-dataseed.binance.org"
             }
           ]
@@ -3650,14 +3775,14 @@
           "contractOrTokenId": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
           "scope": "material-bridge",
           "posture": "restrictable",
-          "evidence": "At Gnosis block 47302577 this deterministic-address proxy reported symbol wPEN and resolved to implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969, whose Gnosis runtime bytecode hashes identically to the Polygon compliance-bearing LatamStable revision. Holder transfers are subject to the same PAUSER_ROLE pause and COMPLIANCE_ROLE address block.",
+          "evidence": "At Gnosis block 47624798, wPEN proxy 0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe still used LatamStable implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 and paused() returned false. ERC20Pausable lets PAUSER_ROLE halt all transfers, and the compliance-bearing implementation also lets COMPLIANCE_ROLE block named addresses; the deployment is restrictable.",
           "sources": [
             {
               "label": "Sourcify verified LatamStable implementation reference (chain 137)",
               "url": "https://sourcify.dev/server/v2/contract/137/0x9d6266a9167f17ff3dd20f63a474812d0cd47969"
             },
             {
-              "label": "Gnosis public RPC used for the block 47302577 reads",
+              "label": "Gnosis public RPC",
               "url": "https://rpc.gnosischain.com"
             }
           ]
@@ -3666,23 +3791,107 @@
     },
     {
       "assetId": "wsrusd-reservoir",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Claude ACC-B TRANSFER-FACT",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C04 access review",
       "deployments": [
         {
           "chainId": "ethereum",
           "contractOrTokenId": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-matches this direct deployment as Savingcoin, an AccessControl plus ERC4626 wrapper. At Ethereum block 25575199 no EIP-1967 implementation, admin, or beacon slot was set. The verified source has no transfer, transferFrom, or _update override and no pause, blacklist, freeze, seizure, or arbitrary holder burn; MANAGER authority reaches only the deposit cap and the savings rate.",
+          "evidence": "Sourcify exact-matches this direct deployment as Savingcoin, an AccessControl plus ERC4626 wrapper. At Ethereum block 25712251 on 2026-08-08, the implementation, admin, and beacon slots remained zero. Verified source has no transfer, transferFrom, or _update override and no pause, blacklist, freeze, seizure, or arbitrary holder burn; MANAGER authority reaches only the deposit cap and savings rate.",
           "sources": [
             {
               "label": "Sourcify verified Savingcoin source (chain 1)",
               "url": "https://sourcify.dev/server/v2/contract/1/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
             },
             {
-              "label": "Ethereum public RPC used for the block 25575199 reads",
+              "label": "Ethereum public RPC used for block 25712251",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Arbitrum block 492488625 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots. Blockscout verifies it as WsrusdOft, a constructor-deployed LayerZero OFT over standard ERC-20 transfer paths. The contract adds cross-chain send/receive and owner configuration but no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "sources": [
+            {
+              "label": "Blockscout verified Arbitrum WsrusdOft source",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+            },
+            {
+              "label": "Arbitrum public RPC used for block 492488625",
+              "url": "https://arb1.arbitrum.io/rpc"
+            },
+            {
+              "label": "Reservoir official contract inventory",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+            }
+          ]
+        },
+        {
+          "chainId": "sei",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Sei block 225091218 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots and the exact same runtime hash as the verified Arbitrum WsrusdOft. That OFT implementation uses ordinary ERC-20 transfers and exposes no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "sources": [
+            {
+              "label": "Blockscout verified WsrusdOft source for the exact runtime family",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+            },
+            {
+              "label": "Sei public RPC used for block 225091218",
+              "url": "https://evm-rpc.sei-apis.com"
+            },
+            {
+              "label": "Reservoir official contract inventory",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+            }
+          ]
+        },
+        {
+          "chainId": "monad",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Monad block 94284946 on 2026-08-08, this direct 12,275-byte WsrusdOft deployment had zero EIP-1967 implementation, admin, and beacon slots. The verified constructor/ABI and the issuer's inventory identify the same LayerZero OFT family, whose standard ERC-20 transfer path has no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "sources": [
+            {
+              "label": "MonadScan verified wsrUSD contract",
+              "url": "https://monadscan.com/address/0x4809010926aec940b550d34a46a52739f996d75d#code"
+            },
+            {
+              "label": "Monad public RPC used for block 94284946",
+              "url": "https://rpc.monad.xyz"
+            },
+            {
+              "label": "Reservoir official contract inventory",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+            }
+          ]
+        },
+        {
+          "chainId": "pharos",
+          "contractOrTokenId": "0x4809010926aec940b550d34a46a52739f996d75d",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "At Pharos block 14595397 on 2026-08-08, this direct 12,275-byte deployment had zero EIP-1967 implementation, admin, and beacon slots and the exact same runtime hash as the Monad WsrusdOft deployment. Its standard LayerZero OFT/ERC-20 surface has no pause, blacklist, freeze, seizure, transfer allowlist, or arbitrary holder burn.",
+          "sources": [
+            {
+              "label": "Reservoir official contract inventory and OFT source repository",
+              "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+            },
+            {
+              "label": "Pharos public RPC used for block 14595397",
+              "url": "https://api.zan.top/public/pharos-mainnet"
+            },
+            {
+              "label": "Blockscout verified WsrusdOft source for the deployed OFT family",
+              "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
             }
           ]
         }
@@ -3746,15 +3955,15 @@
     },
     {
       "assetId": "usdxl-last",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C07 transfer review; GPT SOL-TRANSFER wave6",
       "deployments": [
         {
           "chainId": "hyperevm",
           "contractOrTokenId": "0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At HyperEVM block 41167489, EIP-1967 storage resolved the tracked proxy to implementation 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and proxy admin 0xf050623d497be7ea6653fd205a537d10300b4c6e. The live proxy admin can replace the token implementation and therefore alter or halt holder transfers.",
+          "evidence": "At HyperEVM block 42660797, the EIP-1967 implementation slot resolved the tracked proxy to 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. The proxy uses immutable-admin transparent-proxy semantics: the standard admin storage slot is zero, while an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that 2-of-2 Safe. The current implementation has ordinary ERC-20 transfers, but the live Safe can replace it and therefore alter or halt holder transfers; posture is restrictable.",
           "sources": [
             {
               "label": "Verified HyperEVM proxy",
@@ -3765,8 +3974,37 @@
               "url": "https://hyperevmscan.io/address/0xce23355599cdbe5dca05186c5d9d5b37d959b27f#code"
             },
             {
-              "label": "HyperEVM public RPC used for block 41167489 reads",
+              "label": "HyperEVM public RPC used for block 42660797 reads",
               "url": "https://rpc.hyperliquid.xyz/evm"
+            },
+            {
+              "label": "HyperEVM observation block 42660797",
+              "url": "https://www.hyperevmscan.io/block/42660797"
+            }
+          ]
+        },
+        {
+          "chainId": "hyperliquid",
+          "contractOrTokenId": "0xf448c3cad413cdf0feb1746d7b057967",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "On 2026-08-08, Hyperliquid's tokenDetails response for 0xf448c3cad413cdf0feb1746d7b057967 identified USDXL, linked it to HyperEVM contract 0xca79db4b49f608ef54a5cb813fbed3a6387bc645 through spotMeta, and returned genesis.blacklistUsers=[]. HIP-1 defines native spot balances and user transfers. The deployment API confines blacklistUsers to the pre-genesis UserGenesis phase; the completed token's live metadata records no blacklisted genesis account and exposes no issuer-operated post-genesis transfer restriction. HyperCore holder transfers are therefore permissionless; the separate Core/EVM system link and upgradeable HyperEVM token remain represented by their own route and deployment findings.",
+          "sources": [
+            {
+              "label": "Hyperliquid live info API",
+              "url": "https://api.hyperliquid.xyz/info"
+            },
+            {
+              "label": "Hyperliquid spot token-details API documentation",
+              "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/spot"
+            },
+            {
+              "label": "Hyperliquid HIP-1 native token standard",
+              "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+            },
+            {
+              "label": "Hyperliquid HIP-1 deployment actions",
+              "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/deploying-hip-1-and-hip-2-assets"
             }
           ]
         }
@@ -3922,15 +4160,15 @@
     },
     {
       "assetId": "usdd-tron-dao-reserve",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C01 control/access review",
       "deployments": [
         {
           "chainId": "tron",
           "contractOrTokenId": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "At Tron block 84692782, Tronscan identified this as a verified direct non-proxy contract and TronGrid reported runtime code hash 4db6707e03a01b8852c76f394fc1ab91b4c7f3e88ee3c094ee9204d66f2cccb1. Verified Usdd logic requires the holder or allowance for transferFrom and burn; wards gate mint, rely, and deny only. No pause, blacklist, seizure, upgrade, or privileged holder-burn mechanism was found.",
+          "evidence": "At Tron block 85180039, the canonical direct Usdd token still authorized the documented Join. Verified Usdd logic requires the holder or allowance for transferFrom and burn; wards gate mint, rely, and deny only. No pause, blacklist, seizure, upgrade, or privileged holder-burn mechanism was found.",
           "sources": [
             {
               "label": "Tronscan verified USDD source",
@@ -3941,8 +4179,12 @@
               "url": "https://docs.usdd.io/developers/deployment-addresses"
             },
             {
-              "label": "TronGrid mainnet API used for block 84692782 reads",
+              "label": "TronGrid mainnet API used for block 85180039 reads",
               "url": "https://api.trongrid.io"
+            },
+            {
+              "label": "Tron observation block 85180039",
+              "url": "https://tronscan.org/#/block/85180039"
             }
           ]
         },
@@ -3951,19 +4193,40 @@
           "contractOrTokenId": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "Sourcify exact-match verifies the direct Usdd deployment. Its transferFrom and burn paths require the holder or allowance; wards gate only mint, rely, and deny. At Ethereum block 25590384 both EIP-1967 implementation and admin slots were zero. No pause, blacklist, seizure, upgrade, or privileged holder-burn mechanism was found.",
+          "evidence": "Sourcify verifies the direct Usdd deployment. Its transferFrom and burn paths require the holder or allowance; wards gate only mint, rely, and deny. At Ethereum block 25711756 both EIP-1967 implementation and admin slots were zero. No pause, blacklist, seizure, upgrade, or privileged holder-burn mechanism was found.",
           "sources": [
             {
-              "label": "Sourcify exact-match Ethereum USDD source",
-              "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=sources"
+              "label": "Sourcify verified Ethereum USDD source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=compilation,sources,proxyResolution"
             },
             {
               "label": "Official USDD deployment addresses",
               "url": "https://docs.usdd.io/developers/deployment-addresses"
             },
             {
-              "label": "Ethereum observation block 25590384",
-              "url": "https://etherscan.io/block/25590384"
+              "label": "Ethereum observation block 25711756",
+              "url": "https://etherscan.io/block/25711756"
+            }
+          ]
+        },
+        {
+          "chainId": "bsc",
+          "contractOrTokenId": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Sourcify verifies the direct Usdd deployment. Its transferFrom and burn paths require the holder or allowance; wards gate only mint, rely, and deny. At BSC block 114778869 both EIP-1967 implementation and admin slots were zero. No pause, blacklist, seizure, upgrade, or privileged holder-burn mechanism was found.",
+          "sources": [
+            {
+              "label": "Sourcify verified BSC USDD source",
+              "url": "https://sourcify.dev/server/v2/contract/56/0x45e51bc23d592eb2dba86da3985299f7895d66ba?fields=compilation,sources,proxyResolution"
+            },
+            {
+              "label": "Official USDD deployment addresses",
+              "url": "https://docs.usdd.io/developers/deployment-addresses"
+            },
+            {
+              "label": "BSC observation block 114778869",
+              "url": "https://bscscan.com/block/114778869"
             }
           ]
         }
@@ -4090,15 +4353,15 @@
     },
     {
       "assetId": "fxd-fathom",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C09 control/access review",
       "deployments": [
         {
           "chainId": "xdc",
           "contractOrTokenId": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At XDC block 105233053, the transparent proxy implementation and admin slots resolved to 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a and ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b. ProxyAdmin owner() was EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c. Current official FathomStablecoin code leaves holder transfers open, but that EOA-controlled ProxyAdmin can immediately replace the transfer implementation, so the deployment is restrictable.",
+          "evidence": "At XDC block 105873757, the transparent proxy implementation and admin slots resolved to 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a and ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b; ProxyAdmin owner() remained EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c. Current pinned FathomStablecoin code has no live pause, blacklist, freeze, seizure, transfer whitelist, or privileged arbitrary-holder burn, but the EOA-controlled ProxyAdmin can immediately replace that logic, so the deployment is restrictable.",
           "sources": [
             {
               "label": "XDCScan FXD proxy",
@@ -4113,8 +4376,8 @@
               "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/59b41c447903497c0d74985bd18f7ec77e3b5e5e/contracts/main/stablecoin-core/FathomStablecoin.sol"
             },
             {
-              "label": "XDC observation block 105233053",
-              "url": "https://xdcscan.com/block/105233053"
+            "label": "XDC observation block 105873757",
+            "url": "https://xdcscan.com/block/105873757"
             }
           ]
         }
@@ -4271,15 +4534,15 @@
     },
     {
       "assetId": "silk-shade-protocol",
-      "reviewedAt": "2026-07-22",
-      "reviewer": "GPT SOL-TRANSFER wave6",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C11 access review",
       "deployments": [
         {
           "chainId": "secret",
           "contractOrTokenId": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Secret block 26330301, SILK used code id 877 with code hash 638a3e1d25ed621d00c3c46230270734ea715d36a4da7137e5a797d2326b561e and retained non-null contract admin secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf. Secret's pinned keeper implementation authorizes that admin to migrate the contract to a different CodeID, allowing replacement of holder-transfer behavior behind existing balances.",
+          "evidence": "At Secret block 26592492, SILK remained code id 877 with contract admin secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf, whose live auth account is a 5-of-7 multisig. The deployed SNIP-20/SNIP-25 code exposes admin SetContractStatus global-stop states, and the non-null admin can also migrate code, so holder transfers are restrictable even though the private current status cannot be observed.",
           "sources": [
             {
               "label": "Live SILK contract info",
@@ -4410,15 +4673,15 @@
     },
     {
       "assetId": "fusd-freedom-dollar",
-      "reviewedAt": "2026-07-27",
-      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C05 access review",
       "deployments": [
         {
           "chainId": "zano",
           "contractOrTokenId": "86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "FUSD is a Zano Confidential Asset (asset id 86143388…4f8f), not a smart contract: Zano has no contract VM, so same-asset transfers are consensus-level sends validated by ring signatures alone. The 2026-07-14 access review and Zano deploy_asset/update_asset RPC documentation expose no holder-selective blacklist, freeze, pause, seize, or transfer-hook surface; the asset-owner key can EMIT/UPDATE supply but cannot block holder transfers. Asset descriptor read at Zano height 3770932 (2026-07-14), corroborated by two independent daemons.",
+          "evidence": "At Zano height 3807334 on 2026-08-08, the FUSD Confidential Asset descriptor retained the same owner key and identified the asset as censorship-resistant. Zano's primary deploy_asset/update_asset documentation limits that owner to EMIT, UPDATE, and ownership transfer; it exposes no holder-selective blacklist, freeze, pause, seize, arbitrary burn, or transfer hook. Same-asset transfers remain consensus-level sends, so the canonical asset is permissionless.",
           "sources": [
             {
               "label": "Zano docs — deploy_asset (Confidential Asset descriptor)",
@@ -4438,15 +4701,15 @@
     },
     {
       "assetId": "zsd-zephyr-protocol",
-      "reviewedAt": "2026-07-27",
-      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C10 wave1 control review; Kimi data review",
       "deployments": [
         {
           "chainId": "zephyr",
           "contractOrTokenId": "ZSD",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "ZSD is a native Zephyr consensus asset (asset_type ZSD post-HF11), not an issuer-deployed token contract. Reviewed against official v2.3.0 source commit 67c5f53: same-asset ZSD sends map to STABLE_TRANSFER and the consensus paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer transfer-pause; wallet-RPC freeze marks only a locally held transfer in that wallet, and daemon set_bans concerns P2P hosts. Verified at network height 819289 (block 386f59b9…50cc19, HF11). The 2025 audit hardfork was a consensus-wide migration, not a holder-targeted control.",
+          "evidence": "ZSD is a native Zephyr consensus asset (asset_type ZSD post-HF11), not an issuer-deployed token contract. Re-reviewed against the still-current official v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a: same-asset ZSD sends map to STABLE_TRANSFER and the consensus paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer transfer-pause; wallet-RPC freeze marks only a locally held transfer in that wallet, and daemon set_bans concerns P2P hosts. Verified at HF11 block 837231 (hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d, 2026-08-08 19:36:16 UTC). The 2025 audit hardfork was a consensus-wide migration, not a holder-targeted control.",
           "sources": [
             {
               "label": "Zephyr v2.3.0 transaction-type source",
@@ -4457,8 +4720,8 @@
               "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
             },
             {
-              "label": "Zephyr Explorer block 819289",
-              "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+              "label": "Zephyr Explorer HF11 block 837231",
+              "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
             }
           ]
         }
@@ -4466,15 +4729,15 @@
     },
     {
       "assetId": "zys-zephyr-protocol",
-      "reviewedAt": "2026-07-27",
-      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "Codex C10 wave1 control review; Kimi data review",
       "deployments": [
         {
           "chainId": "zephyr",
           "contractOrTokenId": "ZYS",
           "scope": "canonical",
           "posture": "permissionless",
-          "evidence": "ZYS is the native Zephyr yield asset (asset_type ZYS post-HF11). Reviewed against official v2.3.0 source commit 67c5f53: same-asset ZYS sends map to YIELD_TRANSFER with no separate address-level blacklist, holder freeze, seize, privileged burn, or issuer transfer-control path; mint/redeem is the user-facing MINT_YIELD/REDEEM_YIELD consensus conversion against ZSD with RingCT amount-conservation checks. Verified at network height 819289 (HF11).",
+          "evidence": "ZYS is the native Zephyr yield asset (asset_type ZYS post-HF11). Re-reviewed against the still-current official v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a: same-asset ZYS sends map to YIELD_TRANSFER with no separate address-level blacklist, holder freeze, seize, privileged burn, or issuer transfer-control path; mint/redeem is the user-facing MINT_YIELD/REDEEM_YIELD consensus conversion against ZSD with RingCT amount-conservation checks. Verified at HF11 block 837231 (hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d, 2026-08-08 19:36:16 UTC).",
           "sources": [
             {
               "label": "Zephyr v2.3.0 transaction-type source",
@@ -4485,8 +4748,8 @@
               "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
             },
             {
-              "label": "Zephyr Explorer block 819289",
-              "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+              "label": "Zephyr Explorer HF11 block 837231",
+              "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
             }
           ]
         }
@@ -4526,15 +4789,15 @@
     },
     {
       "assetId": "usdx-kava",
-      "reviewedAt": "2026-07-30",
-      "reviewer": "Kimi T39 Safety Score V9 access review",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C06 access review",
       "deployments": [
         {
           "chainId": "kava",
           "contractOrTokenId": "usdx",
           "scope": "canonical",
-          "posture": "permissionless",
-          "evidence": "USDX is a native Cosmos SDK bank denom on Kava (x/cdp debt_param denom usdx read at height 21878704). /kava/evmutil/v1beta1/params lists no usdx conversion pair, so there is no ERC-20 or contract transfer-control surface; bank sends are validated by consensus alone with no per-denom freeze, denylist, pause, or transfer hook in Kava's module set.",
+          "posture": "restrictable",
+          "evidence": "At Kava height 22013136, USDX was the native bank denom usdx and the live send_enabled query returned no override, so transfers were enabled. Kava wires the governance authority into the bank keeper, however, and Cosmos SDK MsgSetSendEnabled lets that authority disable ordinary sends for the individual denom. The currently enabled but governance-pausable denom is therefore restrictable.",
           "sources": [
             {
               "label": "Kava x/cdp params API (live read at height 21878704)",
@@ -4547,6 +4810,14 @@
             {
               "label": "Kava CDP module docs",
               "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+            },
+            {
+              "label": "Kava application bank-keeper governance wiring",
+              "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L468"
+            },
+            {
+              "label": "Kava USDX bank send-enabled state",
+              "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
             }
           ]
         },
@@ -4560,6 +4831,38 @@
             {
               "label": "Mintscan Osmosis IBC USDX denom",
               "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "trusd-tori",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "OpenAI Codex C03 control review",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At Ethereum block 25712112, the UUPS proxy resolved to verified TrUSD implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631. Current holder transfer and transferFrom use ordinary ERC-20 logic with no blacklist, pause, seizure, or transfer-whitelist hook; the whitelist in ToriMinting 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e applies only to mint and redemption routes. TIMELOCK_ADMIN_ROLE holder 0x7af35ab3e5373da511c5f1331f44335a36da1a55 can replace token logic after its current 86400-second delay, so secondary transfers remain restrictable.",
+          "sources": [
+            {
+              "label": "Blockscout verified trUSD implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+            },
+            {
+              "label": "Blockscout verified ToriMinting",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+            },
+            {
+              "label": "Blockscout verified ToriTimelock",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+            },
+            {
+              "label": "Ethereum observation block 25712112",
+              "url": "https://eth.blockscout.com/block/25712112"
             }
           ]
         }

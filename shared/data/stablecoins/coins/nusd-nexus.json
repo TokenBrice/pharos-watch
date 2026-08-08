@@ -104,8 +104,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Synapse LPToken source (no freeze, blacklist, or transfer pause)",
@@ -129,9 +130,10 @@
       }
     ],
     "sourceFreeRationale": "Deployment-wide inventory completed: every reviewed NUSD deployment is either the canonical Ethereum nexus-pool LPToken clone or a SynapseERC20 bridge deployment, and neither token implementation exposes holder freeze, denylist, or transfer-pause controls.",
-    "evidence": "At Ethereum block 25648538 on 2026-07-30, eth_getCode confirmed the canonical NUSD token 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remains the fixed EIP-1167 clone of LPToken implementation 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, and the nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 remains the fixed clone of SwapFlashLoan implementation 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. Verified LPToken source exposes only pool-owner mint, burn, and a self-transfer guard, with no blacklist, freeze, or pausable transfer path; verified SynapseERC20 source for the twelve peripheral bridge deployments exposes only MINTER_ROLE mint and standard burn, again with no holder-level controls. The SwapFlashLoan admin (2-of-3 Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55) can pause deposits, swaps, and single-asset withdrawals but cannot freeze or restrict NUSD token transfers, and neither clone is upgradeable. NUSD's categorical exposure is therefore inherited: the nexus pool holds DAI, USDC, and USDT, and the USDC and USDT issuers can freeze the pool-held upstream balances (DAI has no issuer freeze), which can trap or impair the reserve rather than censor NUSD transfers directly.",
-    "reviewer": "Kimi Safety Score V9 access review T60",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712317: canonical NUSD 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remains the fixed 45-byte EIP-1167 clone of LPToken implementation 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, its EIP-1967 slots remain zero, and owner() still returns nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. Verified LPToken source exposes only pool-owner mint, burn, and a self-transfer guard, with no blacklist, freeze, arbitrary holder burn, or pausable transfer path. The twelve reviewed peripheral deployments are fixed SynapseERC20 clones whose verified logic likewise gates mint only and leaves transfers permissionless. The pool admin can pause pool operations but cannot restrict NUSD holder transfers, and no separate issuer has a legal or technical holder-balance freeze power over these fixed contracts.",
+    "upstreamSuppressionRationale": "The nexus pool holds DAI, USDC, and USDT; Circle and Tether can freeze pool-held reserve balances and thereby impair NUSD redemption. That reserve-leg risk does not give either upstream issuer or Synapse authority to freeze or seize NUSD balances in the reviewed canonical and bridge-token contracts.",
+    "reviewer": "Codex C08 control/access audit",
+    "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",

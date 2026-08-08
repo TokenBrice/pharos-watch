@@ -1261,8 +1261,9 @@
       "decimals": 8
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "UpgradeableUsdxlToken.sol (pinned usdxl-core commit)",
@@ -1283,10 +1284,18 @@
       {
         "label": "HypurrFi USDXL docs",
         "url": "https://docs.hypurrfi.com/products/usdxl"
+      },
+      {
+        "label": "Hyperliquid HIP-1 native token standard",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-1-native-token-standard"
+      },
+      {
+        "label": "Hyperliquid spot token-details API documentation",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/spot"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The current GHO-style USDXL implementation retains ordinary ERC-20 transfers and caller-only facilitator burn, with no native holder blacklist or transfer pause; proxy upgradeability remains a separate control risk. HypurrFi's official USDXL documentation describes a partial stablecoin reserve primarily composed of USDT0 and a direct USDT0 mint route. That positive Tether-controlled reserve and PSM exposure resolves USDXL as Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "evidence": "Re-reviewed both tracked deployments on 2026-08-08. The pinned GHO-style HyperEVM implementation retains ordinary ERC-20 transfer and transferFrom, and facilitator burn destroys only the caller's balance; it has no current holder blacklist, transfer pause, seizure, arbitrary holder burn, or transfer hook. At HyperEVM block 42660797 the proxy still used implementation 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, while an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that same 2-of-2 Safe. The Safe can replace the implementation, so a future transfer restriction remains technically possible even though none exists now. Hyperliquid's live tokenDetails response for token 0xf448c3cad413cdf0feb1746d7b057967 reported the linked USDXL token, deployer 0x67a6d918c3adfc36b047a8684491481114f6b3a6, and an empty genesis.blacklistUsers array; HIP-1 defines capped native balances and user transfers, with genesis blacklisting confined to the deployment sequence. No current HyperCore holder restriction was identified. HypurrFi documents upstream USDT0 reserve/PSM exposure, but USDXL has no variantOf or mintAuthority.inheritedFrom parent, so the prior inherited verdict was not resolvable by the V9 adapter and is corrected. Because the live HyperEVM admin can still change token logic and no current issuer terms conclusively waive holder-control powers, reviewedStatus remains the honest possible verdict rather than false.",
+    "reviewer": "OpenAI Codex C07 access review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
@@ -1450,8 +1459,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "HypurrFi / Last proxy admin Safe (upgrade authority)",
-      "observedAt": "2026-07-14",
-      "observedBlock": 40440697,
+      "observedAt": "2026-08-08",
+      "observedBlock": 42660797,
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
@@ -1468,6 +1477,10 @@
         {
           "label": "HyperEVM JSON-RPC",
           "url": "https://rpc.hyperliquid.xyz/evm"
+        },
+        {
+          "label": "HyperEVM observation block 42660797",
+          "url": "https://www.hyperevmscan.io/block/42660797"
         }
       ]
     },
@@ -1491,9 +1504,9 @@
       },
       {
         "label": "HypurrFi / Last proxy admin Safe (upgrade authority)",
-        "role": "governor",
+        "role": "proxy-admin",
         "authorityType": "safe",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "upgrade-only",
         "chain": "hyperevm",
         "address": "0xf050623d497be7ea6653fd205a537d10300b4c6e",
         "canRaiseCap": true,
@@ -1510,16 +1523,38 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x0000000000000000000000000000000000000000",
           "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
-          "observedBlock": 37547570,
+          "observedBlock": 42660797,
+          "observedAt": "2026-08-08",
           "source": "onchain"
         },
-        "evidence": "At HyperEVM block 37547570: EIP-1967 proxy admin slot of USDXL (0xca79db4b...) = 0xf050623d...; getOwners() returned [0x67a6d918..., 0xae04ce2f...]; Safe storage slot 3 (ownerCount) = 2, slot 4 (threshold) = 2, slot 5 (guard) = 0; getModulesPaginated returned empty array (no modules). masterCopy = 0xfb1bffc9... This Safe controls USDXL implementation upgrades."
+        "observedAt": "2026-08-08",
+        "observedBlock": 42660797,
+        "sources": [
+          {
+            "label": "USDXL HyperEVM token proxy",
+            "url": "https://www.hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645?tab=contract"
+          },
+          {
+            "label": "USDXL proxy-admin Safe",
+            "url": "https://www.hyperevmscan.io/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
+          },
+          {
+            "label": "HyperEVM JSON-RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "HyperEVM observation block 42660797",
+            "url": "https://www.hyperevmscan.io/block/42660797"
+          }
+        ],
+        "evidence": "At HyperEVM block 42660797, the USDXL proxy's EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f. The proxy uses immutable-admin transparent-proxy semantics rather than the EIP-1967 admin storage slot: eth_call of admin() from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that same address, while a non-admin call fell through to the implementation. Safe getOwners() returned [0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], getThreshold() returned 2, and getModulesPaginated() returned no enabled modules. This 2-of-2 Safe can replace USDXL implementation logic without a timelock."
       }
     ],
     "review": {
-      "evidence": "At HyperEVM block 40440697: the USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and the admin slot returned Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e. Safe getOwners() returned [0x67a6d918..., 0xae04ce2f...] and getThreshold() returned 2; getModulesPaginated() returned no enabled modules, and the guard storage slot was zero. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade. Economic-control fields authored 2026-07-20: economicCapSemantics is unbounded because the contract-level bucket freeze is not independently enforced — the same 2-of-2 proxy-admin Safe (0xf050623d497be7ea6653fd205a537d10300b4c6e, no modules, zero guard) can replace the implementation with no timelock and reinstate uncapped issuance. reconciliation is not-applicable because USDXL is a CDP against on-chain HypurrFi collateral with no off-chain reserve to attest. supervision is none: Last operates no named financial regulator relationship for USDXL.",
-      "reviewer": "Codex CTRL curation batch 18; Pharos V9 Phase 3 curation lane cur-4 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "The USDXL proxy at 0xca79db4b49f608ef54a5cb813fbed3a6387bc645 uses an immutable-admin transparent proxy. The earlier description of its admin as an EIP-1967 storage-slot value was corrected on 2026-08-08: at HyperEVM block 42660797, the EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, the standard admin storage slot was zero, and an admin-only admin() call from 0xf050623d497be7ea6653fd205a537d10300b4c6e returned that 2-of-2 Safe. Safe getOwners() returned [0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], getThreshold() returned 2, and getModulesPaginated() returned no enabled modules. Prior fixed-block review established three facilitators (market loans, flash loans, USDT0 PSM), exhausted buckets, zero members for DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE across reviewed candidates, and no RoleGranted history; the contract-level facilitator configuration is frozen. The sole remaining path to restore or expand minting is the 2-of-2 proxy-admin Safe replacing the implementation. economicCapSemantics is unbounded because that upgrade path can reinstate uncapped issuance without a timelock. reconciliation is not-applicable because USDXL is a CDP against on-chain HypurrFi collateral with no off-chain reserve to attest. supervision is none: Last publishes no named financial-regulator relationship for USDXL.",
+      "reviewer": "OpenAI Codex C07 control correction; Codex CTRL curation batch 18; Pharos V9 Phase 3 curation lane cur-4",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
@@ -1536,6 +1571,10 @@
         {
           "label": "HyperEVM JSON-RPC",
           "url": "https://rpc.hyperliquid.xyz/evm"
+        },
+        {
+          "label": "HyperEVM observation block 42660797",
+          "url": "https://www.hyperevmscan.io/block/42660797"
         }
       ]
     },

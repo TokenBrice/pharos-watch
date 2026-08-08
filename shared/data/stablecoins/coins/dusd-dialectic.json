@@ -370,7 +370,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "unknown",
+    "confidence": "probable",
     "summary": "DUSD shares mint only through the Machine: user deposits at the current share price, and fee shares minted to the Watermark Fee Manager, whose accrual is capped by governance-set maximum rates. Durable USDC issuance stays inherited from Circle. The residual admin surface is Makina's: the Risk Manager can raise the share supply cap immediately, and the DAO can upgrade the Machine class through a shared beacon behind a 2-day AccessManager delay. At the pinned block the Machine-beacon selector uses ADMIN_ROLE 0, whose guardian is role 0; the Security Council holds role 7 and therefore is not established as cancellation authority for that active upgrade path.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "raiseable",
@@ -641,16 +641,24 @@
         {
           "label": "Makina January 20 incident postmortem",
           "url": "https://makinafi.substack.com/p/post-mortem-january-20th-2026-incident"
+        },
+        {
+          "label": "Makina January 21 incident update",
+          "url": "https://makinafi.substack.com/p/incident-update-regarding-the-dusdusdc"
+        },
+        {
+          "label": "Makina official publication archive",
+          "url": "https://makinafi.substack.com/archive"
+        },
+        {
+          "label": "Ethereum observation block 25712315",
+          "url": "https://etherscan.io/block/25712315"
         }
       ],
-      "evidence": "Fixed-block reads at Ethereum block 25637903 (module and redeemer closure at block 25638710): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. The Machine beacon's upgradeTo(address) selector is assigned to ADMIN_ROLE 0, with a 172,800-second DAO execution delay and role 0 as its guardian; the Security Council holds role 7, so its cancellation authority for that active selector is not established. The Security Council Safe's enabled RecoveryModeTriggerModule is bound immutably to that Safe, with an unattributed EOA executor that can bypass the 2-of-4 Safe threshold only to request entry into Recovery Mode; the Safe alone can replace the executor. The DUSD AsyncRedeemer whitelist was enabled at block 25638710. Makina's January 20 incident postmortem describes an external Curve accounting/oracle propagation exploit, states that Machine-held funds were not compromised, and records Security Council activation of Recovery Mode; this is one reviewed non-qualifying incident under the privileged/unbacked-mint definition, not exhaustive evidence that no qualifying mint incident exists. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy. Security Module slashing is authorized but discretionary and bounded by current stake and slash parameters; the reviewed materials establish no Operator recourse, treasury recapitalization, external guarantor, binding replenishment, or enforceable holder loss waterfall, so the Security Module is control evidence only and not positive risk-transfer credit.",
-      "reviewer": "OpenAI Codex Safety Score V9 on-chain curation; Claude stablecoin addition (issue #705)",
-      "reviewedAt": "2026-07-30",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "How should the mint-authority schema and compiler represent the Security Council Safe's enabled RecoveryModeTriggerModule as a distinct zero-delay, 1-of-1 EOA subauthority limited to setRecoveryMode(true), without attributing that threshold or capability to the broader 2-of-4 Safe?",
-        "Has an explicit, scoped historical review of privileged or unbacked DUSD mint incidents, with an as-of date, sources, evidence, and disposition, been completed so incidentState can be set without inferring absence from generic review completion?"
-      ]
+      "evidence": "Fixed-block reads at Ethereum blocks 25637903 and 25638710 established the complete local issuance inventory: the DUSD share token's minter() and owner() both return Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = DUSD, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token is direct code; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are owned by the AccessManager. The Machine beacon upgradeTo(address) selector is ADMIN_ROLE 0 with a 172,800-second DAO execution delay and role 0 guardian; the Security Council holds role 7, so it is not established as cancellation authority for that selector. At block 25712315 on 2026-08-08, the token owner/minter, Machine accounting token, 75,000,000-share limit, recoveryMode=false, Machine beacon implementation, AccessManager role assignment and delay, three governance Safe thresholds, and Council module/executor all rechecked unchanged. The RecoveryModeTriggerModule is completely represented as a narrow bypass surface on the Security Council control: modulesOrGuardsStatus records its presence, bypassSurfaces records its sole setRecoveryMode(true) route, and failureDomainKeys records both module and 1-of-1 executor. It cannot mint, raise the share cap, or upgrade code, so adding it as an economically mint-capable control would overstate its scope. The official Makina publication archive was reviewed through 2026-08-08 for privileged or unbacked DUSD mint incidents. The January 20 postmortem and January 21 update describe an external Curve accounting/oracle propagation exploit, state that Machine-held funds were not compromised and DUSD remained collateralized, and record Security Council activation of Recovery Mode; it is non-qualifying under the privileged/unbacked-mint definition. No qualifying mint incident was identified in the reviewed official sources; the complete scoreable review therefore establishes incidentState without asserting a positive incident row. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28,800 seconds and maxSharePriceChangeRate() = 9,512,937,595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy. Security Module slashing is authorized but discretionary and bounded by current stake and slash parameters; the reviewed materials establish no Operator recourse, treasury recapitalization, external guarantor, binding replenishment, or enforceable holder loss waterfall, so the Security Module is control evidence only and not positive risk-transfer credit.",
+      "reviewer": "OpenAI Codex C07 control review; OpenAI Codex Safety Score V9 on-chain curation; Claude stablecoin addition (issue #705)",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
     }
   },
   "yieldConfig": {

@@ -259,30 +259,35 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "reUSD currently grants MINTER_ROLE to a collateral-deposit layer, an immutable redemption contract with no mint call, and a CCIP burn/mint pool. A two-day TimelockController holds token admin and UUPS upgrade roles; a 3-of-5 Safe is its sole proposer, executor, and canceller.",
+    "summary": "reUSD currently grants MINTER_ROLE to a collateral-deposit layer, an immutable redemption contract with no mint call, and a CCIP burn/mint pool. A two-day TimelockController holds the live UUPS upgrader role, but both it and a 3-of-5 Safe hold token DEFAULT_ADMIN_ROLE; the Safe can immediately authorize new minters or upgraders.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
         "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
       ],
       "implementationAddresses": [
-        "0xb5276c436F65913Cd5332DE745d04feDEb4a21D4"
+        "0xb5276c436f65913cd5332de745d04fedeb4a21d4"
       ],
       "adminAddresses": [
-        "0x69dDEa332723cF5407151aAF68B9b076557FCA93"
+        "0x69ddea332723cf5407151aaf68b9b076557fca93",
+        "0x8eec10616802ef639ca55c98ac856553fadefbad"
       ],
       "canChangeMintLogic": true,
-      "delaySec": 172800,
-      "controlRef": "reUSD token admin and UUPS upgrader timelock",
-      "observedBlock": 25530324,
+      "controlRef": "reUSD governance Safe (token DEFAULT_ADMIN)",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
       "sources": [
         {
-          "label": "reUSD proxy and ShareToken implementation",
-          "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72#code"
+          "label": "Blockscout verified reUSD proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
         },
         {
-          "label": "reUSD TimelockController",
-          "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
+          "label": "Blockscout verified ShareToken implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb5276c436f65913cd5332de745d04fedeb4a21d4"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
         }
       ]
     },
@@ -297,14 +302,15 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The verified InsuranceCapitalLayer mints reUSD shares only after supported collateral is transferred in and share conversion checks pass. Its own UUPS upgrader role is held by the same two-day timelock that controls reUSD.",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "InsuranceCapitalLayer proxy",
             "url": "https://etherscan.io/address/0x4691c475be804fa85f91c2d6d0adf03114de3093#code"
           }
         ],
-        "evidence": "The complete RoleGranted/RoleRevoked history plus hasRole() at Ethereum block 25530324 confirms this proxy still holds reUSD MINTER_ROLE. Verified InsuranceCapitalLayer source calls shareToken.mint() only in collateral-backed deposit flows; its UPGRADER_ROLE is held by timelock 0x69dDEa...."
+        "evidence": "The complete RoleGranted/RoleRevoked history plus hasRole() at Ethereum block 25712112 confirms this proxy still holds reUSD MINTER_ROLE. Verified InsuranceCapitalLayer source calls shareToken.mint() only in collateral-backed deposit flows; its live UPGRADER_ROLE is held by timelock 0x69ddea332723cf5407151aaf68b9b076557fca93."
       },
       {
         "chain": "ethereum",
@@ -315,14 +321,15 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "reUSD InstantRedemption",
             "url": "https://etherscan.io/address/0xa31deebb3680a3007120e74bcbdf4df36f042a40#code"
           }
         ],
-        "evidence": "hasRole(MINTER_ROLE) was true at Ethereum block 25530324, but the verified immutable InstantRedemption bytecode exposes redemption and burn flows and contains no call to ShareToken.mint(). The role assignment therefore is not a live callable mint surface in this implementation."
+        "evidence": "hasRole(MINTER_ROLE) was true at Ethereum block 25712112, but the verified immutable InstantRedemption bytecode exposes redemption and burn flows and contains no call to ShareToken.mint(). The role assignment therefore is not a live callable mint surface in this implementation."
       },
       {
         "chain": "ethereum",
@@ -334,18 +341,19 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The verified BurnWithFromMintTokenPool can mint only through validated CCIP releaseOrMint messages and configured remote-chain rate limits; its owner is the reviewed reUSD Safe.",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "reUSD CCIP BurnWithFromMintTokenPool",
             "url": "https://etherscan.io/address/0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465#code"
           }
         ],
-        "evidence": "The complete role-event history and hasRole() confirm this pool holds reUSD MINTER_ROLE at block 25530324. Verified pool source mints in _releaseOrMint() after CCIP validation. owner() returned Safe 0x8eec10616802Ef639CA55c98ac856553fAdEfBaD."
+        "evidence": "The complete role-event history and hasRole() confirm this pool holds reUSD MINTER_ROLE at Ethereum block 25712112. Verified pool source mints in _releaseOrMint() after CCIP validation. owner() returned Safe 0x8eec10616802ef639ca55c98ac856553fadefbad."
       },
       {
         "chain": "ethereum",
-        "address": "0x69dDEa332723cF5407151aAF68B9b076557FCA93",
+        "address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
         "label": "reUSD token admin and UUPS upgrader timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
@@ -353,26 +361,27 @@
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "reUSD TimelockController",
-            "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x69ddea332723cf5407151aaf68b9b076557fca93"
           },
           {
             "label": "reUSD ShareToken implementation",
             "url": "https://etherscan.io/address/0xb5276c436f65913cd5332de745d04fedeb4a21d4#code"
           }
         ],
-        "evidence": "At Ethereum block 25530324, hasRole() confirmed this TimelockController is the sole current reUSD DEFAULT_ADMIN_ROLE and UPGRADER_ROLE holder; getMinDelay() returned 172800 seconds. Verified ShareToken source gates minting by MINTER_ROLE and UUPS replacement by UPGRADER_ROLE."
+        "evidence": "At Ethereum block 25712112, this TimelockController remained a reUSD DEFAULT_ADMIN_ROLE holder and the sole current UPGRADER_ROLE holder; getMinDelay() returned 172800 seconds. The governance Safe is a second DEFAULT_ADMIN_ROLE holder, so the delay does not bound the Safe's ability to grant a new upgrader. Verified ShareToken source gates minting by MINTER_ROLE and UUPS replacement by UPGRADER_ROLE."
       },
       {
         "chain": "ethereum",
-        "address": "0x8eec10616802Ef639CA55c98ac856553fAdEfBaD",
-        "label": "reUSD governance Safe",
-        "role": "governor",
+        "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+        "label": "reUSD governance Safe (token DEFAULT_ADMIN)",
+        "role": "proxy-admin",
         "authorityType": "safe",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "threshold": 3,
         "signerCount": 5,
         "canRaiseCap": true,
@@ -380,32 +389,34 @@
         "safe": {
           "version": "1.4.1",
           "owners": [
-            "0x2a3Ef2FEd07D025b8B1f07d99C77471D11529db9",
-            "0x28d8af3CF7286Bdc34ae80cb90093dFA4dbb0020",
-            "0x7dd97C12abd41c53B4f2B3df6b872753F9DABCaa",
-            "0x1F76cC0eF4605f57478f3044e703AF6B0C57A297",
-            "0x0AE4eeAFfDA174F84c84c22f03a28F3AAB02FbDC"
+            "0x2a3ef2fed07d025b8b1f07d99c77471d11529db9",
+            "0x28d8af3cf7286bdc34ae80cb90093dfa4dbb0020",
+            "0x7dd97c12abd41c53b4f2b3df6b872753f9dabcaa",
+            "0x1f76cc0ef4605f57478f3044e703af6b0c57a297",
+            "0x0ae4eeaffda174f84c84c22f03a28f3aab02fbdc"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
-          "observedBlock": 25530324,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
           "source": "safe-api"
         },
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
         "sources": [
           {
             "label": "reUSD governance Safe",
-            "url": "https://app.safe.global/home?safe=eth:0x8eec10616802Ef639CA55c98ac856553fAdEfBaD"
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x8eec10616802Ef639CA55c98ac856553fAdEfBaD/"
           },
           {
             "label": "reUSD TimelockController",
-            "url": "https://etherscan.io/address/0x69dDEa332723cF5407151aAF68B9b076557FCA93#code"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x69ddea332723cf5407151aaf68b9b076557fca93"
           }
         ],
-        "evidence": "At Ethereum block 25530324, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. Timelock hasRole() returned true for this Safe as the sole PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE holder."
+        "evidence": "At Ethereum block 25712112, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. hasRole() also confirmed the Safe directly holds token DEFAULT_ADMIN_ROLE, so it can immediately grant MINTER_ROLE or UPGRADER_ROLE. It remains the sole TimelockController proposer, executor, and canceller."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -430,13 +441,21 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
         },
         {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        },
+        {
+          "label": "reUSD governance Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x8eec10616802Ef639CA55c98ac856553fAdEfBaD/"
+        },
+        {
           "label": "The Network Firm proof-of-reserves",
           "url": "https://www.thenetworkfirm.com/proof-of-reserves"
         }
       ],
-      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard. reUSD is issued by the Resilience Foundation (Cayman exempted foundation company); The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision is attestation-only. The permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics are authored unbounded; reconciled continuously without a prudential supervisor places reUSD in the high tier.",
-      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "evidence": "A complete Blockscout RoleGranted/RoleRevoked replay through Ethereum block 25712112, followed by direct hasRole() checks, found three live MINTER_ROLE holders, two DEFAULT_ADMIN_ROLE holders, and one current UPGRADER_ROLE holder. This corrects the prior sole-admin claim: both timelock 0x69ddea332723cf5407151aaf68b9b076557fca93 and Safe 0x8eec10616802ef639ca55c98ac856553fadefbad hold DEFAULT_ADMIN_ROLE. Although the timelock's current upgrade actions wait 172800 seconds, the 3-of-5 Safe can immediately grant itself or another address MINTER_ROLE or UPGRADER_ROLE. Verified implementations establish each current minter's callable behavior. The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision remains attestation-only. The permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics remain unbounded.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

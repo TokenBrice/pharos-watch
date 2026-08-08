@@ -472,8 +472,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "APACX PHT overview",
@@ -486,11 +487,23 @@
       {
         "label": "Verified PHT Ethereum deployment",
         "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+      },
+      {
+        "label": "Sourcify exact-match Polygon PhtOFTUpgradeable implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x98210a4b34eafd668838108c99ad13a2b4340618?fields=sources,compilation,abi"
+      },
+      {
+        "label": "Tronscan PHT contract metadata",
+        "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+      },
+      {
+        "label": "Tron observation block 85182167",
+        "url": "https://tronscan.org/#/block/85182167"
       }
     ],
-    "evidence": "BLOCKED: APACX documents PHT as a Maker-style CDP and publishes the Ethereum core addresses, while the tracked asset also has Polygon and Tron deployments. The reviewed public sources do not provide a deployment-wide holder-control inventory for all three token contracts, so the inherited apcxUSDT/USDT exposure is retained without asserting a direct no-freeze result.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed all three tracked deployments on 2026-08-08. Ethereum 0xbe370ad45d44eb45174c4ec60b88839fef32c077 is a direct, non-proxy MakerDAO Dai-source token: transferFrom requires holder allowance, authorized wards may mint, and no pause, blacklist, freeze, seizure, or arbitrary holder-burn path exists. Polygon 0xe75220cb014dfb2d354bb59be26d7458bb8d0706 still resolved to exact-match PhtOFTUpgradeable implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 at block 91674718. Its current implementation adds no transfer restriction to LayerZero OFT ERC-20 behavior, but owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace that implementation through UUPS. Tron TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs remained material and unresolved: at block 85182167, Tronscan returned name=PhtOFT, is_proxy=false, verify_status=0, and a method map containing transfer, transferFrom, send, lzReceive, setPeer, and setDelegate but no visible pause/freeze selector; owner() returned EOA hex 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (base58 TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4). Because the Tron runtime is unverified, selector absence cannot prove that its transfer path lacks a fallback or indirect holder restriction. The prior inherited verdict had no resolvable variantOf or mintAuthority.inheritedFrom parent and was therefore structurally invalid for the V9 freeze adapter. It is corrected to possible, which honestly preserves the unresolved material Tron deployment rather than asserting false.",
+    "reviewer": "OpenAI Codex C07 access review; SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

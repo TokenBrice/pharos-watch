@@ -290,9 +290,9 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Kava x/cdp params API (live read at height 21878704)",
@@ -323,7 +323,7 @@
         "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 against Kava 0.28.2 / Cosmos SDK 0.47.15. Kava wires governance authority into the bank keeper, whose live MsgSetSendEnabled path can disable ordinary sends for an individual denom including usdx. Current send_enabled state is empty/default-enabled, so the control exists but has not been exercised; this supports Possible. The current 1,118-CDP inventory also places approximately 81.92% of USDX principal against custodial or issuer-controlled HBTC, BTCB, BUSD, and USDT collateral, supplying independent Upstream exposure.",
+    "evidence": "Re-verified at Kava height 22013136 on 2026-08-08. USDX is the native Cosmos bank denom usdx; the live send_enabled query returned no override, so sends are currently enabled. Kava nevertheless wires the governance authority into the bank keeper, and the active Cosmos SDK MsgSetSendEnabled path lets that authority disable ordinary bank sends for the individual usdx denom. That live global transfer-pause mechanism resolves the direct access verdict to true even though it is not currently exercised. Custodial collateral remains a separate upstream impairment exposure.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
