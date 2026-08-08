@@ -50,7 +50,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "steakUSDT is a Morpho ERC-4626 vault over USDT; wrapper minting is deposit/share accounting while durable USDT issuance is inherited from reviewed Tether controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDT mint ability.",
     "inheritedFrom": "usdt-tether",

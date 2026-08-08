@@ -81,7 +81,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "sDAI is an ERC-4626 savings wrapper over DAI; wrapper minting is deposit/share accounting while durable DAI mint authority is inherited from reviewed Maker/Sky DAI.",
     "inheritedFrom": "dai-makerdao",

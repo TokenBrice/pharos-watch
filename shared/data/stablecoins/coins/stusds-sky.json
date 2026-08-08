@@ -45,7 +45,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "stUSDS is an ERC-4626 risk-capital wrapper over USDS; wrapper minting is deposit/share accounting while durable USDS mint authority is inherited from reviewed Sky governance controls.",
     "inheritedFrom": "usds-sky",

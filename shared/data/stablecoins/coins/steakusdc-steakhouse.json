@@ -50,7 +50,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "steakUSDC is an immutable MetaMorpho ERC-4626 vault (no proxy). Shares mint only through deposits. Vault owner is VaultV2Supervisor (0x4d7bd498bb24098ca281c05519629c605407f71d), itself owned by the observed Steakhouse 5-of-10 Safe; base USDC issuance remains inherited from Circle.",
     "inheritedFrom": "usdc-circle",

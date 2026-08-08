@@ -280,8 +280,19 @@ export type MintAuthorityMintPath = (typeof MINT_AUTHORITY_MINT_PATH_VALUES)[num
 // V9 has derived it since 9.1; the curated vocabulary lacked it, so a supervised
 // issuer had to be annotated `unbounded-or-compromised` — the same rung as an
 // issuer with no reconciliation at all. The two are not the same fact.
+//
+// `none-resolved` and `none-resolved-mint` are the two scopes of the same
+// finding. `none-resolved` is whole-of-chain: no privileged control of any kind
+// anywhere on the mint path, and for a wrapper only when the parent is itself
+// `none-resolved`. `none-resolved-mint` is *mint-scoped*: no privileged mint
+// path on this asset, while other control domains (upgradeability, parameters,
+// and — for a wrapper — the parent's own mint authority) may still exist. V9
+// derives its mint posture mint-scoped, so a share wrapper over a governed
+// parent derives `none-resolved` while the whole-of-chain curated value could
+// never say it; the mint-scoped value is what those annotations mean.
 export const MINT_AUTHORITY_POSTURE_VALUES = [
   "none-resolved",
+  "none-resolved-mint",
   "bounded-admin",
   "partially-bounded-admin",
   "unbounded-reconciled",

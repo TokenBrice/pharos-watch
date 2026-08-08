@@ -774,6 +774,9 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
       });
     }
 
+    // Whole-of-chain only. `none-resolved-mint` is deliberately exempt: it
+    // claims nothing about the parent, which is the reason a share wrapper over
+    // a governed parent can carry it at all.
     if (mintAuthority.authorityPosture !== "none-resolved") {
       continue;
     }

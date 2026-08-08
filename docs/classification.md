@@ -121,9 +121,16 @@ Mint path labels:
 | `wrapped-or-variant-inherited`  | Wrapper, staking, savings, or variant asset inherits authority from a parent plus wrapper mechanics.                                         |
 | `unknown`                       | Not reviewed or insufficient evidence.                                                                                                       |
 
-Authority posture labels are descriptive bands only: `none-resolved`, `bounded-admin`, `partially-bounded-admin`, `unbounded-reconciled`, `concentrated-admin`, `unbounded-or-compromised`, and `unknown`. Do not color or rank these like report-card grades.
+Authority posture labels are descriptive bands only: `none-resolved`, `none-resolved-mint`, `bounded-admin`, `partially-bounded-admin`, `unbounded-reconciled`, `concentrated-admin`, `unbounded-or-compromised`, and `unknown`. Do not color or rank these like report-card grades.
 
 `unbounded-reconciled` ("Unbounded, supervised & reconciled") names economically unbounded minting that is reconciled against reserves or run under a supervisory regime. It renders in the same elevated tone as `concentrated-admin` and `unbounded-or-compromised`, and the depeg resolver treats it identically to them: the supervision is real, but the claim can still be expanded at will.
+
+`none-resolved` and `none-resolved-mint` ("No privileged mint resolved" / "No privileged mint path") are the two *scopes* of one finding, and both render in the same minimized tone.
+
+- `none-resolved` is whole-of-chain: no control anywhere on the mint path holds privileged ability of any kind — including upgrade or parameter authority — and a wrapper may only use it when its reviewed parent is also `none-resolved`.
+- `none-resolved-mint` is mint-scoped: no control can mint or authorize minting on this asset, while other control domains may exist. Upgrade and parameter authority do not disqualify it, and it makes no claim about a wrapper's parent.
+
+Safety Score V9 derives its mint posture mint-scoped, so a share wrapper over a governed parent derives `none-resolved` from facts the whole-of-chain curated value can never assert. `none-resolved-mint` is the annotation that states the same fact at the same scope. It is a benign posture: the depeg resolver treats it as neither fragile nor risky, and it does not earn the R1 non-inflatable-supply anchor, which stays reserved for whole-of-chain `none-resolved` and immutable user-collateralized mint paths.
 
 Mint controls derive a stable controller identity from `chain + address`; EVM addresses are case-normalized while case-sensitive non-EVM addresses are preserved. `failureDomainKeys` are reserved for reviewed off-chain common modes that an address cannot express. `controllerAssetId` may identify the tracked native asset whose issuance system owns a reused controller. The V9 dependency evaluator uses that directionality to avoid making the controller's native asset depend on downstream products while keeping foreign products exposed to the shared controller; the field does not change the standalone Mint Authority Score. `upgradeability` records proxy model, implementation/admin addresses, mint-logic mutability, delay, observation point, sources, and the exact existing control label that owns an upgradeable path. `mintIncidents.status` is required; `resolvedAt` is optional for historical remediation and forbidden on an active incident.
 

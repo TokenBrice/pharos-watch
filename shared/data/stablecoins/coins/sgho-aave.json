@@ -37,7 +37,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "sGHO is a savings wrapper over GHO; wrapper minting is share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls.",
     "inheritedFrom": "gho-aave",

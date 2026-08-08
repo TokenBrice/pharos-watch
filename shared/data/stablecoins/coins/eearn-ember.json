@@ -42,7 +42,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "eEARN is a UUPS USDC vault-share wrapper: current shares are minted against deposited USDC, base USDC issuance is inherited from Circle, and the local implementation can be replaced through the CTG One Governance timelock, whose proposer, executor, and canceller roles are each held by a single externally owned account behind a one-day delay.",
     "inheritedFrom": "usdc-circle",

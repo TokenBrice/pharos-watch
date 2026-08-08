@@ -230,6 +230,7 @@ const MINT_PATH_PASSPORT_LABELS: Record<string, string> = {
 
 const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
   "none-resolved": "No privileged mint resolved",
+  "none-resolved-mint": "No privileged mint path",
   "bounded-admin": "Bounded admin",
   "partially-bounded-admin": "Partially bounded admin",
   "unbounded-reconciled": "Unbounded, supervised & reconciled",
@@ -240,6 +241,9 @@ const AUTHORITY_POSTURE_LABELS: Record<string, string> = {
 
 const AUTHORITY_POSTURE_TONES: Record<string, MintAuthorityPostureTone> = {
   "none-resolved": "minimized",
+  // Same tone as `none-resolved`: the finding about the mint path is identical,
+  // only its scope is narrower. Other control domains carry their own signals.
+  "none-resolved-mint": "minimized",
   "bounded-admin": "minimized",
   "partially-bounded-admin": "neutral",
   // Same elevated tone as the rest of the unbounded/concentrated tier: the

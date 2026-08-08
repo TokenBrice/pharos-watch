@@ -643,6 +643,77 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/none-resolved/);
   });
 
+  it("lets none-resolved-mint keep non-mint control domains that none-resolved forbids", () => {
+    const controls = [
+      {
+        label: "Upgrade admin",
+        role: "proxy-admin" as const,
+        authorityType: "contract" as const,
+        directMintAbility: "upgrade-only" as const,
+        evidence: "The fixture models an upgrade admin that holds no mint ability.",
+      },
+    ];
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls,
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+
+    // The same controls under the whole-of-chain value stay rejected.
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          confidence: "verified",
+          controls,
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved cannot include mint-capable controls/);
+  });
+
+  it("rejects none-resolved-mint when a control can mint or authorize minting", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped-minter",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls: [
+            {
+              label: "Real minter",
+              role: "direct-minter",
+              authorityType: "contract",
+              directMintAbility: "direct",
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved-mint cannot include a control that can mint/);
+  });
+
+  it("requires none-resolved-mint to use a non-privileged mintPath", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped-path",
+        mintAuthority: makeMintAuthority({
+          mintPath: "issuer-direct-mint",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
+  });
+
   it("keeps unknown mint paths paired with unknown posture unless evidence supports compromise", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({

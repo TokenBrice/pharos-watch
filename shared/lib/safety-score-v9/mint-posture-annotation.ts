@@ -2,7 +2,12 @@ import type { MintAuthorityPosture } from "../../types/core";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { compareText, deepFreeze } from "./primitives";
-import { V9_MINT_POSTURE_BAND_ORDER, resolveV9MintPostureBand, type V9MintPostureBand } from "./mint-posture";
+import {
+  V9_MINT_POSTURE_BAND_ORDER,
+  curatedMintPostureBand,
+  resolveV9MintPostureBand,
+  type V9MintPostureBand,
+} from "./mint-posture";
 
 const V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN = "safety-score-v9.curated-mint-posture-queue.v1";
 
@@ -110,7 +115,11 @@ export function buildV9CuratedMintPostureQueue(
       continue;
     }
     const curatedPosture = input.curatedPosture ?? "unknown";
-    const curatedBand = curatedPosture === "unknown" ? null : resolveV9MintPostureBand(curatedPosture);
+    // The curated side must resolve through the curated projection: the curated
+    // vocabulary carries values V9 never derives (`none-resolved-mint`), and
+    // resolving those against the derived map alone would report them as
+    // unreviewed rather than as the agreement they are.
+    const curatedBand = curatedMintPostureBand(curatedPosture);
     const derivedBand = resolveV9MintPostureBand(input.derivedPosture);
     const disagreement = classify(curatedBand, derivedBand);
     if (disagreement === null) continue;

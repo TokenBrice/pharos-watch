@@ -105,7 +105,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "srUSD (Savingcoin, non-upgradeable) is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32... No proxy/upgrade path. Base rUSD mint authority inherited from Reservoir PSM/Credit Enforcer controls.",
     "upgradeability": {

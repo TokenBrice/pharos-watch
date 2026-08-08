@@ -63,7 +63,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "upgradeability": {
       "model": "uups",

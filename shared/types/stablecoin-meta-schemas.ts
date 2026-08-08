@@ -170,6 +170,17 @@ const PRIVILEGED_DIRECT_MINT_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbili
   "parameter-only",
 ] satisfies MintAuthorityDirectMintAbility[]);
 
+/**
+ * The mint-scoped subset: abilities that are themselves a path to new supply.
+ * `upgrade-only` and `parameter-only` are privileged over *other* domains, so
+ * they disqualify whole-of-chain `none-resolved` but not `none-resolved-mint`.
+ */
+const PRIVILEGED_MINT_PATH_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility> = new Set([
+  "direct",
+  "cap-limited",
+  "can-authorize",
+] satisfies MintAuthorityDirectMintAbility[]);
+
 function hasSourceLinks(sources: readonly StablecoinLink[] | undefined): boolean {
   return (sources?.length ?? 0) > 0;
 }
@@ -1093,15 +1104,19 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
       }
     }
 
-    if (profile.authorityPosture === "none-resolved") {
+    // Both none-resolved scopes require a mintPath that is not itself a
+    // privileged issuance route; they differ only in which controls disqualify.
+    if (profile.authorityPosture === "none-resolved" || profile.authorityPosture === "none-resolved-mint") {
       if (profile.mintPath !== "immutable-user-collateralized" && profile.mintPath !== "wrapped-or-variant-inherited") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "authorityPosture none-resolved requires a non-privileged mintPath",
+          message: `authorityPosture ${profile.authorityPosture} requires a non-privileged mintPath`,
           path: ["authorityPosture"],
         });
       }
+    }
 
+    if (profile.authorityPosture === "none-resolved") {
       const privilegedControlIndex = controls.findIndex((control) =>
         PRIVILEGED_DIRECT_MINT_ABILITIES.has(control.directMintAbility),
       );
@@ -1110,6 +1125,22 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
           code: z.ZodIssueCode.custom,
           message: "authorityPosture none-resolved cannot include mint-capable controls",
           path: ["controls", privilegedControlIndex, "directMintAbility"],
+        });
+      }
+    }
+
+    // Mint-scoped: only an ability that *is* a mint path disqualifies. Upgrade
+    // and parameter authority are other control domains — real risk, priced by
+    // the V9 upgrade leg, but not a claim that this asset can be minted at will.
+    if (profile.authorityPosture === "none-resolved-mint") {
+      const mintCapableControlIndex = controls.findIndex((control) =>
+        PRIVILEGED_MINT_PATH_ABILITIES.has(control.directMintAbility),
+      );
+      if (mintCapableControlIndex >= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting",
+          path: ["controls", mintCapableControlIndex, "directMintAbility"],
         });
       }
     }
