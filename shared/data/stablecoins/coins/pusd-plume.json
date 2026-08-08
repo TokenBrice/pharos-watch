@@ -207,7 +207,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "pUSD is a Nucleus BoringVault (non-upgradeable) on both Ethereum and Plume; owner()=3-of-6 Plume Safe (0xa08a\u2026) on both chains; a RolesAuthority (0x97bc\u2026, same Safe as owner) gates enter(). Teller at 0x41bdb4 (Plume) is the OFAC-gated deposit gateway confirmed by live mint transactions.",
     "upgradeability": {

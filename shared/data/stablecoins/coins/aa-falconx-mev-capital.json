@@ -192,7 +192,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "AA_FalconXUSDC is a direct IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle.",

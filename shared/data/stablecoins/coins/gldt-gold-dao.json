@@ -173,7 +173,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "GLDT is minted exclusively by the Gold DAO dapp/swap canister 6f6ua-hqaaa-aaaar-qairq-cai, which the ICRC-1 ledger metadata confirms as the ledger's sole minting account; minting is economically bounded at 100 GLDT per gram of locked GLD NFT per the issuer whitepaper. Both the swap canister and the ledger are controlled by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, which sits in the standard SNS Root/Governance loop, so the Gold DAO SNS can upgrade the mint code and alter the bound through governance. The live code enforcing the locked-NFT rule is not independently verified, capping confidence at manual-review.",
     "controls": [

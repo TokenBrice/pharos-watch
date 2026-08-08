@@ -375,7 +375,7 @@
   "canBeBlacklisted": "possible",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "FXD is minted from collateralized debt positions on XDC; the StablecoinAdapter proxy (0xe3b248) holds MINTER_ROLE on the FXD token. Both the FXD token proxy and the StablecoinAdapter proxy are managed by a single ProxyAdmin (0xb82ad475) whose owner is EOA 0x594d425a. DEFAULT_ADMIN_ROLE has been renounced. The EOA can unilaterally upgrade the FXD token and StablecoinAdapter logic, making this concentrated-admin.",
     "controls": [

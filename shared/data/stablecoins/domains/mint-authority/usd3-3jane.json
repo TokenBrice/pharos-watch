@@ -2,7 +2,7 @@
   "id": "usd3-3jane",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USD3 shares are minted by the vault only against USDC deposits. A 3-of-5 3Jane Safe controls a one-day configuration timelock, while a separate seven-day timelock owns the proxy admin and can replace mint-critical implementation logic.",
     "inheritedFrom": "usdc-circle",

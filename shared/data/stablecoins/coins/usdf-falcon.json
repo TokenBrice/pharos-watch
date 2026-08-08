@@ -206,7 +206,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDf uses an Ethereum transparent proxy whose ProxyAdmin is owned by a 4/6 Safe. Ethereum minting is delegated to a PreCollateralizedMinter; BSC, Base, and XDC use immutable Chainlink BurnMintERC20 deployments whose local token pools and default-admin Safes have been enumerated on-chain.",
     "upgradeability": {

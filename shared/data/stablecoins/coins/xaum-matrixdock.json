@@ -109,7 +109,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
     "upgradeability": {

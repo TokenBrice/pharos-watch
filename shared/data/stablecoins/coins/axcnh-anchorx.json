@@ -121,7 +121,7 @@
   "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
     "upgradeability": {

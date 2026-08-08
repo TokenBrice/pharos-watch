@@ -431,7 +431,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDz uses immutable bytecode on all five tracked deployments, but its control plane is chain-local. Ethereum deposit minting is SPCT-gated under a 2/6 admin Safe; Base's 2/7 owner Safe controls OFT peers; and 2/6 Arbitrum, 2/7 Blast, and 2/6 Manta owner Safes can replace each chain's currently uncapped direct minter.",
     "upgradeability": {

@@ -1083,7 +1083,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "bnUSD minting is limited on ICON to the registered Balanced Loans and Peg Stability SCOREs, subject to the token debt ceiling; the current owner of the Governance SCORE is a single EOA that can raise that ceiling and upgrade mint-critical SCORE logic.",
     "upgradeability": {

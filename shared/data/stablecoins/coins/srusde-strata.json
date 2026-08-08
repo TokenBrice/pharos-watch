@@ -33,7 +33,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "srUSDe is an ERC-4626 senior-risk wrapper over USDe; wrapper minting is deposit/share accounting while durable USDe mint authority is inherited from reviewed Ethena signed-order controls.",
     "inheritedFrom": "usde-ethena",

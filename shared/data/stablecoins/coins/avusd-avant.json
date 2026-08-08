@@ -430,7 +430,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "Avalanche avUSD has one active token minter, the immutable AvantMintingV2 gateway. A single current MINTER_ROLE EOA may invoke its collateral-backed, per-block-capped mint flow; the token owner and gateway default admin are the same documented MPC-custodied EOA, which can replace minters and raise the cap.",
     "upgradeability": {

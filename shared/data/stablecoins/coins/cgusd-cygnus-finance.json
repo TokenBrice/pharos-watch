@@ -59,7 +59,7 @@
   ],
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity. Both the vault and oracle are owned by a TimelockController with 10s delay, controlled by a 2/11 Safe as proposer.",
     "upgradeability": {

@@ -110,7 +110,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "PUSD is a Polygon UUPS-proxy ERC-20 whose current wrapper-role contracts mint only against USDC/USDC.e or legacy position settlement, while three UUPS prediction-market modules hold the token's separate minter role and mint only against burned position claims in their current implementations. A 3-of-6 Safe controls all roles and upgrades through a custom 12-hour Timelock. PUSD does not create base USDC supply; inherits Circle mint authority.",
     "inheritedFrom": "usdc-circle",
