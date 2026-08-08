@@ -47,9 +47,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",
-    "provider": "Chainlink Proof of Reserve / Instruxi",
+    "provider": "Chainlink Proof of Reserve / Instruxi (ion-por feed: 86400s heartbeat with 2% deviation threshold; measures I-ON Digital's total reserve, not a pmUSD-specific reconciliation against the ION.au tranche pledged to RAAC)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "daily"
   },
   "links": [
     {

@@ -20,23 +20,23 @@
   "cmcSlug": "glo-dollar",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.usdglo.com/reserves",
-    "provider": "Brale Inc. management self-assertion",
+    "url": "https://brale.xyz/stablecoins/USDGLO",
+    "provider": "Brale Inc. management self-assertion (monthly reports carry no accountant's opinion since May 2025 despite brale.xyz marketing claiming independent-accounting-firm reports; usdglo.com 308-redirect-loops, so the record points at the Brale transparency page)",
     "attestorTier": "self",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-04",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-06",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Brale Inc. management",
+      "reviewer": "PoR remediation pass 2026-08 (report PDF read directly: management assertion signed July 6, 2026, no accountant's opinion)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDGLO reserve report - May 2026",
-          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+          "label": "USDGLO reserve report - June 2026 (Assertion of Brale Management)",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-06-2026.pdf"
         },
         {
           "label": "Brale USDGLO transparency",

@@ -34,12 +34,11 @@
   "detailProvider": "defillama",
   "geckoId": "gaib-aid",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://aid.gaib.ai/transparency",
-    "provider": "McMillan Woods (Hong Kong) CPA Limited",
-    "attestorTier": "regional",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Hong Kong"
+    "provider": "GAIB transparency dashboard (the claimed monthly McMillan Woods (Hong Kong) CPA attestation exists only in GAIB blog marketing — no attestation report is retrievable anywhere, McMillan Woods appears nowhere in GAIB's docs corpus, and the docs promise only forward-looking quarterly third-party audits)",
+    "attestorTier": "self",
+    "cadence": "none"
   },
   "links": [
     {

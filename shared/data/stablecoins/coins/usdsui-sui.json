@@ -14,11 +14,11 @@
   "collateral": "Bridge Open Issuance USD reserves backed at least 1:1 by equivalent fiat value, including short-dated U.S. Treasuries, overnight Treasury repos, government money-market funds, and cash in segregated bankruptcy-remote accounts",
   "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge / independent third-party audits",
-    "attestorTier": "niche",
-    "cadence": "quarterly",
+    "provider": "Bridge issuance FAQ (no published USDsui reserve report; FAQ audit statement is forward-looking and Bridge treats independent-accountant attestations as an optional paid add-on)",
+    "attestorTier": "self",
+    "cadence": "none",
     "attestorJurisdiction": "United States"
   },
   "mechanismArchetype": "fiat-cash",

@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://openeden.com/usdo/transparency",
-    "provider": "OpenEden issuer reserve API and transparency dashboard",
-    "attestorTier": "self",
+    "provider": "OpenEden issuer reserve API and transparency dashboard, plus the Chainlink usdo-por Proof of Reserve feed on Base (porSource Wallet Address Manager, cross-chain, 86400s heartbeat, 0.5% deviation threshold; no accounting-firm attestation exists for USDO reserves)",
+    "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
       "periodEnd": "2026-07-22",

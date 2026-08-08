@@ -18,11 +18,31 @@
   "detailProvider": "commodity",
   "geckoId": "streamex-gldy",
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
-    "provider": "Chainlink Proof of Reserve",
-    "attestorTier": "niche",
-    "cadence": "real-time"
+    "type": "independent-audit",
+    "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve",
+    "provider": "EisnerAmper LLP AICPA examination (one report to date; the Chainlink gldy-reserves feed has porSource Streamex / porType Off-chain with a 86400s heartbeat, so it transports issuer-reported ounces rather than independently attesting them)",
+    "attestorTier": "regional",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-07-01",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "PoR remediation pass 2026-08 (unmodified opinion per issuer press release: 3,064.674268 GLDY outstanding vs 3,064.915910 oz gold in reserve; report PDF itself not published standalone)",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Streamex press release - first independent reserve attestation (2026-07-01)",
+          "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve"
+        },
+        {
+          "label": "Chainlink GLDY reserves feed (issuer-sourced)",
+          "url": "https://data.chain.link/feeds/base/base/gldy-reserves"
+        }
+      ]
+    }
   },
   "links": [
     {

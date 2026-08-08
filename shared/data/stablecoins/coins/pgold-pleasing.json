@@ -35,13 +35,6 @@
   "jurisdiction": {
     "country": "Hong Kong"
   },
-  "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://www.pleasinggold.com/",
-    "provider": "Pleasing Gold issuer disclosure",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
-  },
   "contracts": [
     {
       "chain": "arbitrum",

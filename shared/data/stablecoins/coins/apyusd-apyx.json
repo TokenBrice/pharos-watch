@@ -405,11 +405,12 @@
     }
   },
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://accountable.apyx.fi/",
-    "provider": "Accountable",
+    "type": "independent-audit",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions (latest report June 2026 as of 2026-08-08; the Accountable real-time dashboard runs on Apyx-deployed infrastructure and is treated as secondary, not independent assurance)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "launchDate": "2026-02-20"
 }

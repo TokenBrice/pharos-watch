@@ -20,7 +20,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://goldfishgold.com/collateral",
-    "provider": "Goldfish designated collateral wallet on Ethereum",
+    "provider": "Goldfish designated collateral wallet on Ethereum (proves only a related-party ION.au token balance versus GGBR supply; underlying in-situ gold quantity and extractability are not independently attested)",
     "attestorTier": "self",
     "cadence": "real-time",
     "latestReport": {
@@ -28,9 +28,9 @@
       "publishedAt": "2026-07-22",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "GPT SOL-EVD-A wave6",
-      "confidence": "verified",
+      "liabilityReconciliation": "partial",
+      "reviewer": "PoR remediation pass 2026-08 (downgraded from full/verified: wallet ratio check does not reconcile gold to liabilities)",
+      "confidence": "probable",
       "sources": [
         {
           "label": "Goldfish collateral model and designated wallet (accessed 2026-07-22)",

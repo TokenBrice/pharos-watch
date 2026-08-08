@@ -21,9 +21,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://stasis.net/transparency",
-    "provider": "BDO Malta",
+    "provider": "BDO Malta (STASIS calls these on-demand verification reports; none issued since 2024-08-01, annual BDO audit last dated 2024-05-20, daily bank statements stopped 2025-12-12)",
     "attestorTier": "regional",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Malta",
     "latestReport": {
       "periodEnd": "2024-08-01",

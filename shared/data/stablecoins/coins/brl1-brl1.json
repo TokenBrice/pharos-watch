@@ -71,25 +71,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brl1.io/en/como_funciona",
-    "provider": "BRL1 self-published proof of reserves",
+    "provider": "BRL1 self-published proof of reserves (latestReport removed 2026-08: the May 2026 report file and the current brl1.io report link are Google Drive documents gated behind a Google sign-in, so the report cannot be publicly re-verified)",
     "attestorTier": "self",
     "cadence": "ad-hoc",
-    "attestorJurisdiction": "Brazil",
-    "latestReport": {
-      "periodEnd": "2026-05-01",
-      "publishedAt": "2026-05-01",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "BRL1 proof-of-reserves report - May 2026",
-          "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
-        }
-      ]
-    }
+    "attestorJurisdiction": "Brazil"
   },
   "liveReservesConfig": {
     "adapter": "single-asset",

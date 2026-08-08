@@ -36,10 +36,11 @@
   "geckoId": "comtech-gold",
   "cmcSlug": "comtech-gold",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://comtechgold.com/proof-of-gold-audit",
-    "attestorTier": "niche",
-    "cadence": "monthly"
+    "provider": "ComTech FZCO self-signed gold-stock letters with issuer DMCC Tradeflow screenshots; quarterly custodian audits advertised but newest routine-audit entry is 2025-03-21",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

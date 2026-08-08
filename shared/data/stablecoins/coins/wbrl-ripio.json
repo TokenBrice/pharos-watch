@@ -18,7 +18,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
-    "provider": "Pablo Eduardo Soto",
+    "provider": "Pablo Eduardo Soto (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
@@ -26,7 +26,7 @@
     "latestReport": {
       "periodEnd": "2026-03-31",
       "publishedAt": "2026-05-18",
-      "assuranceMethod": "attestation",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
       "reviewer": "OpenAI Codex backing review",

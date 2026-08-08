@@ -18,12 +18,11 @@
   "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-cash-and-carry",
-    "provider": "PwC",
+    "url": "https://docs.spiko.io/documentation/product_overview/cash_and_carry/legal_documentation",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor certifying annual accounts (first financial year closes December 2026, so no PwC report exists yet; daily NAV struck by CACEIS Fund Administration; the marketing page's 'four audits a year' refers to Spiko's money market funds)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF FPS / Alternative Investment Fund"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",

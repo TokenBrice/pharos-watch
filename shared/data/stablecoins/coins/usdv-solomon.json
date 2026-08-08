@@ -79,10 +79,10 @@
   },
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
-    "provider": "Solomon Labs and Ceffu attestations",
+    "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+    "provider": "Solomon Labs documentation (no published reserve attestation artefact exists; the former asset-attestations docs URL serves an empty shell, and current docs state USDv reserves are USDG and USDC with direct short-dated US Treasury exposure being added — the earlier Ceffu-custodied basis-trade narrative is gone from the docs)",
     "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "cadence": "none"
   },
   "links": [
     {

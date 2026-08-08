@@ -19,10 +19,10 @@
   "geckoId": "brz",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://transfero.com/brz",
-    "provider": "Transfero BRZ reserve disclosure",
+    "url": "https://transfero.com/brz-stablecoin",
+    "provider": "Transfero BRZ reserve disclosure (static self-published figure; only dated artefact is a self-produced transparency report as of 2024-03-31)",
     "attestorTier": "self",
-    "cadence": "daily"
+    "cadence": "ad-hoc"
   },
   "launchDate": "2019-07-19",
   "links": [

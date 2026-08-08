@@ -15,9 +15,9 @@
   "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://u.tech/",
-    "provider": "United Stables transparency dashboard",
-    "attestorTier": "self",
+    "url": "https://u.tech/por",
+    "provider": "Chainlink Proof of Reserve feed on BNB Chain (u-por, linked from the issuer PoR page since July 2026; Ceffu provides custody per Ceffu's announcement, but no downloadable custodian attestation was retrievable and the feed's heartbeat/source metadata could not be verified)",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "mechanismArchetype": "fiat-cash",

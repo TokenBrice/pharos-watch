@@ -44,17 +44,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Malaysia",
     "latestReport": {
-      "periodEnd": "2025-07-31",
-      "publishedAt": "2025-08-29",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-23",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex T61 reserve review",
+      "reviewer": "PoR remediation pass 2026-08 (record was ~11 months stale; June 2026 report verified live at cdn.blox.my, Last-Modified 2026-07-23; July 2026 report not yet published as of 2026-08-08)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
-          "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
+          "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2026-06-30)",
+          "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
         }
       ]
     }
