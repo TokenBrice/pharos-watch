@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { MintAuthorityRail } from "@/components/stablecoin-detail/mint-authority-rail";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -31,6 +33,18 @@ const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
   neutral: "bg-[var(--text-tertiary)]",
   elevated: "bg-[var(--severity-mild)]",
 };
+
+/** The five published V9 posture bands — ordinal, not score ranges: 9.1
+ *  retired the score cutoffs, so the ladder lights the published band rather
+ *  than positioning a marker on a fictional scale. Rendered worst → best so
+ *  "right = safer" reads the same as the redemption score track. */
+const MINT_BAND_SPECTRUM: readonly SpectrumBand[] = [
+  { key: "exposed", label: "Exposed", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
+  { key: "concentrated", label: "Concentrated", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
+  { key: "managed", label: "Managed", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
+  { key: "governed", label: "Governed", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
+  { key: "hardened", label: "Hardened", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+];
 
 function DetailBadge({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -167,12 +181,18 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
 
 export function MintAuthoritySection({
   profile,
+  symbol,
 }: {
   profile?: MintAuthorityDetailViewModel | null;
+  /** Token symbol for the mint rail's supply station. */
+  symbol?: string | null;
 }) {
   if (!profile) return null;
   const isReviewed = profile.status === "reviewed";
   const score = profile.score;
+  const railControls = profile.controls ?? [];
+  const hasRail = Boolean(symbol) && railControls.length > 0 && profile.mintPathShortLabel !== "Unknown";
+  const hasSpectrum = score != null && score.bandKey != null && score.bandKey !== "nr";
   const scoreTriggerLabel = score
     ? `Mint Authority Score ${score.scoreLabel}, ${score.bandLabel}. Explain methodology.`
     : undefined;
@@ -210,16 +230,41 @@ export function MintAuthoritySection({
           </>
         ) : (
           <>
+            {hasSpectrum ? (
+              <ScoreBandSpectrum
+                mode="ordinal"
+                bands={MINT_BAND_SPECTRUM}
+                activeKey={score.bandKey}
+                ariaLabel={`Mint posture band: ${score.bandLabel}, on the five-band ladder from Hardened to Exposed.`}
+              />
+            ) : null}
+
+            {hasRail ? (
+              <MintAuthorityRail
+                symbol={symbol!}
+                mintPathShortLabel={profile.mintPathShortLabel}
+                mintPathLabel={profile.mintPathLabel}
+                postureLabel={profile.authorityPostureLabel}
+                postureTone={profile.authorityPostureTone}
+                controls={railControls}
+              />
+            ) : null}
+
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              {score ? <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span> : null}
-              <DetailBadge>{profile.mintPathLabel}</DetailBadge>
-              <DetailBadge>
-                <span
-                  aria-hidden
-                  className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
-                />
-                {profile.authorityPostureLabel}
-              </DetailBadge>
+              {score && !hasSpectrum ? (
+                <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
+              ) : null}
+              {/* The rail's issuer and supply stations absorb these two facts. */}
+              {!hasRail ? <DetailBadge>{profile.mintPathLabel}</DetailBadge> : null}
+              {!hasRail ? (
+                <DetailBadge>
+                  <span
+                    aria-hidden
+                    className={cn("h-1.5 w-1.5 shrink-0 rounded-full", POSTURE_DOT_CLASS[profile.authorityPostureTone])}
+                  />
+                  {profile.authorityPostureLabel}
+                </DetailBadge>
+              ) : null}
               <DetailBadge>
                 {profile.confidenceVerified ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
                 Confidence: {profile.confidenceLabel}
@@ -256,8 +301,8 @@ export function MintAuthoritySection({
 
             {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
 
-            {profile.controls.length > 0 ? (
-              <ModuleDisclosure label="Primary controls" count={profile.controls.length}>
+            {railControls.length > 0 ? (
+              <ModuleDisclosure label="Primary controls" count={railControls.length}>
                 <div className="mt-2 space-y-3">
                   {hasVerificationGaps ? (
                     <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
@@ -275,7 +320,7 @@ export function MintAuthoritySection({
                     </div>
                   ) : null}
                   <ul className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-muted/15">
-                    {profile.controls.map((control) => (
+                    {railControls.map((control) => (
                       <MintAuthorityControlRow key={control.key} control={control} />
                     ))}
                   </ul>

@@ -20,7 +20,10 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
       key: "aave-governance",
       label: "Aave Ethereum Governance",
       roleLabel: "Facilitator",
+      authorityTypeKey: "dao-governor",
       authorityTypeLabel: "DAO governor",
+      threshold: 3,
+      signerCount: 5,
       directMintAbilityLabel: "Cap-limited",
       locationLabel: "ethereum / 0x1234...abcd",
       fullLocationLabel: "ethereum / 0x123400000000000000000000000000000000abcd",
@@ -43,6 +46,7 @@ const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
     score: 70,
     scoreLabel: "70/100",
     compactLabel: "70 Governed",
+    bandKey: "governed",
     bandLabel: "Governed",
     postureLabel: "Partially bounded admin",
     badgeClassName: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -215,6 +219,28 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Mint incident 2024-01-30");
     expect(html).toContain("First exploit turned the borrow route into bad debt.");
     expect(html).not.toContain("border-red-500/25");
+  });
+
+  it("draws the mint rail and band ladder when a symbol is provided, absorbing the path and posture chips", () => {
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} symbol="GHO" />);
+
+    // Band ladder lights the published band; the standalone band text goes.
+    expect(html).toContain("Hardened");
+    expect(html).toContain("Exposed");
+    // Rail stations: issuer path, control glyph row, supply symbol + posture.
+    expect(html).toContain("Facilitator");
+    expect(html).toContain("3/5");
+    expect(html).toContain("GHO");
+    expect(html).toContain("Partially bounded admin");
+    // Absorbed chips: the full mint-path label survives only as the origin title.
+    expect(html).not.toContain(">Facilitator bucket mint<");
+    expect(html).toContain("Facilitator bucket mint");
+  });
+
+  it("keeps the chip summary when no symbol is available for the rail", () => {
+    const html = renderToStaticMarkup(<MintAuthoritySection profile={REVIEWED_PROFILE} />);
+    expect(html).toContain("Facilitator bucket mint");
+    expect(html).toContain("Partially bounded admin");
   });
 
   it("renders verification gaps when review questions remain", () => {

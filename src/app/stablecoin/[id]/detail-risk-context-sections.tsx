@@ -170,7 +170,7 @@ export function DetailRiskContextSections({
             <BackingMechanicsCard view={mechanismBacking} />
           </div>
         ) : null}
-        <MintAuthoritySection profile={viewModel.mintAuthority} />
+        <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {showPegChart ? (
           <MarketDataSection
             stablecoinId={viewModel.id}

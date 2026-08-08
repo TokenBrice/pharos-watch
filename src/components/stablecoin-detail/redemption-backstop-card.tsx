@@ -15,8 +15,9 @@ import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
-import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { RedemptionRouteRail } from "@/components/stablecoin-detail/redemption-route-rail";
+import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
@@ -25,6 +26,26 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
 const SCORE_BREAKDOWN_KEYS = ["access", "settlement", "execution", "capacity", "outputQuality", "cost"] as const;
+
+/** The view model's real tone cutoffs (80/65/50/35) as an unlabeled score
+ *  track — these tiers have no published names, so the spectrum shows only
+ *  position and tone, never invented vocabulary. Worst → best, left → right. */
+const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = [
+  { key: "t0", label: "", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
+  { key: "t35", label: "", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
+  { key: "t50", label: "", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
+  { key: "t65", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
+  { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+];
+const REDEMPTION_SCORE_CUTOFFS = [0, 35, 50, 65, 80] as const;
+
+function redemptionScoreBandKey(score: number): string {
+  if (score >= 80) return "t80";
+  if (score >= 65) return "t65";
+  if (score >= 50) return "t50";
+  if (score >= 35) return "t35";
+  return "t0";
+}
 
 function MetadataBadgeList({ items }: { items: readonly { label: string; value: string }[] }) {
   return (
@@ -69,11 +90,20 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </ScoreBadgeWrapper>
         </div>
 
-        {/* ── arrange: Classification + metadata badges (secondary) ── */}
+        {viewModel.score != null ? (
+          <ScoreBandSpectrum
+            mode="range"
+            bands={REDEMPTION_SCORE_BANDS}
+            cutoffs={REDEMPTION_SCORE_CUTOFFS}
+            activeKey={redemptionScoreBandKey(viewModel.score)}
+            score={viewModel.score}
+            ariaLabel={`Route score ${viewModel.score} of 100 on the redemption score track.`}
+            className="max-w-md"
+          />
+        ) : null}
+
+        {/* ── arrange: metadata badges (route family lives on the rail's venue station) ── */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
-            {viewModel.routeFamilyLabel}
-          </Badge>
           <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
             {viewModel.sourceModeLabel}
           </Badge>
@@ -104,14 +134,13 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         ) : null}
 
-        {/* ── distill: Route properties in the passport fact grammar ── */}
-        <FactGrid
-          aria-label="Route properties"
-          items={[
-            { key: "access", label: "Access", value: viewModel.accessLabel },
-            { key: "settlement", label: "Settlement", value: viewModel.settlementLabel },
-            { key: "output", label: "Output", value: viewModel.outputAssetLabel },
-          ]}
+        {/* ── the exit rail: holder → gate → venue → output; FactGrid below sm ── */}
+        <RedemptionRouteRail
+          accessModel={viewModel.accessModel}
+          accessLabel={viewModel.accessLabel}
+          settlementLabel={viewModel.settlementLabel}
+          outputAssetLabel={viewModel.outputAssetLabel}
+          routeFamilyLabel={viewModel.routeFamilyLabel}
         />
 
         {/* ── detail layer: capacity/fee/confidence fold behind the standard
