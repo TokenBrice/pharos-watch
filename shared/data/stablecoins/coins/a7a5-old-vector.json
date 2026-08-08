@@ -16,9 +16,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.a7a5.io/legal/transparency.md",
-    "provider": "A7A5",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "provider": "A7A5 docs transparency page (no reserve artefact has ever been published: the page is two marketing sentences, the docs corpus contains no reserve report, and the only audit is a smart-contract code audit)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "258",

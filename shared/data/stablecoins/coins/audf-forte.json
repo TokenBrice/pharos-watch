@@ -352,11 +352,11 @@
     ]
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.forteaud.com/transparency",
-    "provider": "MVAB Audit Pty Ltd (MVA Bennett), Chartered Accountants",
-    "attestorTier": "niche",
-    "cadence": "monthly",
+    "provider": "Forte transparency page (homepage claims published third-party audit reports of AUDF reserves but none exists anywhere on the site; the only PDF is a smart-contract audit, and MVAB Audit Pty Ltd appears nowhere in the site content)",
+    "attestorTier": "none",
+    "cadence": "none",
     "attestorJurisdiction": "Australia"
   },
   "links": [

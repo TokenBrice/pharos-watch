@@ -18,10 +18,10 @@
   "detailProvider": "defillama",
   "geckoId": "cad-coin",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://loon.finance/transparency/",
-    "provider": "Loon monthly third-party attestation for CAD reserves held at ATB Financial",
-    "attestorTier": "niche",
+    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc, requested by HDCPA Professional Corporation (no accountant's report, opinion, or signature; no CADC circulation figure appears, so liabilities are not reconciled)",
+    "attestorTier": "none",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada"
   },

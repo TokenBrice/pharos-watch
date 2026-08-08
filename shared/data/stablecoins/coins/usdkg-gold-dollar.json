@@ -21,9 +21,24 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.usdkg.com/transparency",
-    "provider": "Kreston Global",
-    "attestorTier": "regional",
-    "cadence": "quarterly"
+    "provider": "Kreston Digital Assets Ltd (the signing entity per the report's letter of engagement - 'Kreston Global' is the network brand; entity registration and audit licence unconfirmed; only two reserve reports have ever been published, January and November 2025, so the quarterly claim is unsupported and the series is ~8 months stale)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "latestReport": {
+      "periodEnd": "2025-11-28",
+      "publishedAt": "2025-11-30",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "PoR verification sweep 2026-08 (ISRS 4400 Revised report of factual findings, no opinion; disclosed scope gap: vault access log withheld under bank safety rules; the site's live gold figure is unbacked by any newer artefact)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kreston Digital Assets USDKG agreed-upon-procedures report - November 2025",
+          "url": "https://www.usdkg.com/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

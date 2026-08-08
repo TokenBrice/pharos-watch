@@ -18,14 +18,14 @@
   "geckoId": "cetes",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf",
-    "attestorTier": "niche",
+    "url": "https://api.etherfuse.com/statement/attestation",
+    "attestorTier": "regional",
     "cadence": "monthly",
     "provider": "BHR México",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-06-26",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-07-24",
+      "publishedAt": "2026-07-24",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -33,8 +33,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "BHR México reasonable-assurance report - June 26, 2026",
-          "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+          "label": "BHR México reasonable-assurance report - July 24, 2026 (SFAI Global member firm)",
+          "url": "https://api.etherfuse.com/statement/attestation/526d450b-46d9-46be-86f0-bb625bf0c945.pdf"
         },
         {
           "label": "Etherfuse attestation history",

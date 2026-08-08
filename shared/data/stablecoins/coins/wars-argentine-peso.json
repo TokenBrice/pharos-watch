@@ -459,14 +459,14 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-    "provider": "Ripio wARS collateral attestations by local public accountants",
+    "provider": "Pablo Eduardo Soto, Contador Público, CPCECABA T.275 F.153 (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
     "latestReport": {
       "periodEnd": "2026-03-31",
       "publishedAt": "2026-04-22",
-      "assuranceMethod": "attestation",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
       "reviewer": "OpenAI Codex backing review",

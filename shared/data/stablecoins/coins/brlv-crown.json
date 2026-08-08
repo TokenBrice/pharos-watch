@@ -17,20 +17,20 @@
   "detailProvider": "coingecko",
   "geckoId": "crown-brlv",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.crown-brlv.com/transparencia/",
-    "provider": "Fact Finance",
-    "attestorTier": "niche",
-    "cadence": "daily",
+    "provider": "Fact Finance Ltda technical verification memos (an RWA oracle firm, not an audit practice; signer is a technical lead, not a licensed accountant; the 'daily audits' claim is marketing copy with no daily artefact, and the monthly memo series shows no June or July 2026 report)",
+    "attestorTier": "none",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
       "periodEnd": "2026-05-31",
       "publishedAt": "2026-05-31",
-      "assuranceMethod": "attestation",
+      "assuranceMethod": "onchain-proof",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
-      "confidence": "verified",
+      "liabilityReconciliation": "partial",
+      "reviewer": "PoR verification sweep 2026-08 (memo carries no assurance standard, no opinion, and no accountant signature; series stalled after May 2026)",
+      "confidence": "probable",
       "sources": [
         {
           "label": "Fact Finance BRLV proof-of-reserves report - May 2026",

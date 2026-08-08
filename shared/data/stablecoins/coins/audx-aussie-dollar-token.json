@@ -251,13 +251,13 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audxtoken.com/transparency",
-    "provider": "Aura Partners",
+    "provider": "Aura Partners, Chartered Accountants (ASAE 3000/3100 limited assurance with direct bank confirmations; note the firm shares its Sydney floor with the issuer, Level 11, 9 Castlereagh St)",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
       "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-06",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",

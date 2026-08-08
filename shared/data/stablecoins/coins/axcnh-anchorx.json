@@ -39,8 +39,8 @@
     "attestorTier": "regional",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-15",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-15",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -48,8 +48,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
-          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+          "label": "Kreston AxCNH Agreed-Upon Procedures Report - June 2026",
+          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA"
         },
         {
           "label": "AnchorX transparency page",

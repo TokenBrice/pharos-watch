@@ -335,11 +335,11 @@
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://home.idrx.co/en/docs",
-    "provider": "IDRX transparency and audit documents",
-    "attestorTier": "niche",
-    "cadence": "ad-hoc"
+    "provider": "IDRX documents portal (document API returns HTTP 500 as of 2026-08-08 so the table renders empty; no reserve attestor is named anywhere - referenced third parties are custodians/partners and CertiK is a smart-contract auditor)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

@@ -27,17 +27,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-23",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex XSGD reserve report review",
+      "reviewer": "PoR verification sweep 2026-08 (June PDF read: SSAE 3000 reasonable-assurance opinion, 23,661,169 XSGD vs S$23,674,708 reserves; semi-monthly series unbroken through H1 2026)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 31 May 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bcf4afadd295291e1be8_XSGD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+          "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 30 June 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
         }
       ]
     }

@@ -34,11 +34,11 @@
   "geckoId": "compliant-naira",
   "cmcSlug": "consortium-naira",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://cngn.co/transparency",
-    "provider": "Bala Isah Garba & Company",
-    "attestorTier": "niche",
-    "cadence": "monthly",
+    "provider": "cNGN transparency page (no reserve attestation is reachable: the page's only documents are smart-contract security audits, its live reserve widget renders zero values, and the reported Bala Isah Garba & Company ISAE 3000 engagement exists only in secondary press with the last referenced report October 2025)",
+    "attestorTier": "none",
+    "cadence": "none",
     "attestorJurisdiction": "Nigeria"
   },
   "links": [
