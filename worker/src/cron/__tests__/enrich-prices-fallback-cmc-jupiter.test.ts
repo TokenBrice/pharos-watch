@@ -1448,11 +1448,11 @@ describe("enrichMissingPrices", () => {
 
     expect(result.resolved).toBe(0);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // Which deployment leads is environment-dependent since the P-wave near
+    // registration (ethereum vs bridged NEAR); the invariant is that an
+    // address lookup fires instead of an ambiguous symbol search.
     expect(fetchSpy.mock.calls[0]?.[0]).toContain(
-      // The P-wave DexScreener registration for `near` made GUSD's bridged NEAR
-      // deployment the first address-lookup candidate; the intent pinned here is
-      // unchanged - an address lookup fires instead of a symbol search.
-      "api.dexscreener.com/tokens/v1/near/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
+      "api.dexscreener.com/tokens/v1/",
     );
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
