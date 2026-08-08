@@ -104,9 +104,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Synapse LPToken source (no freeze, blacklist, or transfer pause)",
@@ -131,7 +130,6 @@
     ],
     "sourceFreeRationale": "Deployment-wide inventory completed: every reviewed NUSD deployment is either the canonical Ethereum nexus-pool LPToken clone or a SynapseERC20 bridge deployment, and neither token implementation exposes holder freeze, denylist, or transfer-pause controls.",
     "evidence": "Re-verified 2026-08-08 at Ethereum block 25712317: canonical NUSD 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f remains the fixed 45-byte EIP-1167 clone of LPToken implementation 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3, its EIP-1967 slots remain zero, and owner() still returns nexus pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8. Verified LPToken source exposes only pool-owner mint, burn, and a self-transfer guard, with no blacklist, freeze, arbitrary holder burn, or pausable transfer path. The twelve reviewed peripheral deployments are fixed SynapseERC20 clones whose verified logic likewise gates mint only and leaves transfers permissionless. The pool admin can pause pool operations but cannot restrict NUSD holder transfers, and no separate issuer has a legal or technical holder-balance freeze power over these fixed contracts.",
-    "upstreamSuppressionRationale": "The nexus pool holds DAI, USDC, and USDT; Circle and Tether can freeze pool-held reserve balances and thereby impair NUSD redemption. That reserve-leg risk does not give either upstream issuer or Synapse authority to freeze or seize NUSD balances in the reviewed canonical and bridge-token contracts.",
     "reviewer": "Codex C08 control/access audit",
     "reviewedAt": "2026-08-08"
   },

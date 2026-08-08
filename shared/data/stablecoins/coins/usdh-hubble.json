@@ -362,9 +362,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Solana finalized mainnet RPC",
@@ -380,7 +379,6 @@
       }
     ],
     "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDH remains an 82-byte legacy SPL Token mint owned by Tokenkeg with freezeAuthority null. Pinned Tokenkeg logic requires holder/delegate authorization for transfers and burns, requires a current freeze authority to freeze an account, and prevents a disabled freeze authority from being restored. Hubble positively documents USDH as a censorship-resistant, decentralized stablecoin minted by users through the protocol and held in any Solana wallet; it identifies no off-chain issuer account-control rail. Hubble governance can upgrade the borrowing program but cannot replace immutable Tokenkeg or restore the mint's disabled freeze authority. Circle can freeze USDC held by the PSM and thereby impair reserves or exits, but it cannot freeze or seize a holder's USDH balance. The direct holder-seizure verdict is therefore No.",
-    "upstreamSuppressionRationale": "Circle can freeze USDC held by Hubble's Peg Stability Module and thereby impair USDH backing, swaps, or exits, but Circle has no authority over the separate legacy SPL USDH mint or its holder accounts. That reserve-leg exposure remains backing and redemption risk rather than direct USDH blacklistability.",
     "reviewer": "OpenAI Codex C09 control/access review",
     "reviewedAt": "2026-08-08"
   },

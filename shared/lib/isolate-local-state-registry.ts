@@ -100,6 +100,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The current Safety Score V9 publication inputs and stablecoin registry statuses are authoritative; this only avoids repeated per-coin dependency and mint-component scans inside one run.",
   },
   {
+    sourcePath: "worker/src/cron/dex-discovery/crawl-horizon-pools.ts",
+    stateNames: ["horizonRequestState"],
+    owner: "Stellar Horizon discovery pacing",
+    kind: "coordination",
+    resetOrTtl: "One last-request timestamp enforcing the ~1s Horizon pacing floor inside a single discovery run; resets with the isolate and via the test-only reset hook.",
+    durableTruth: "Horizon's server-side rate limit is authoritative; this state only spaces requests within one isolate to stay under it.",
+  },
+  {
     sourcePath: "worker/src/cron/telegram-quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",

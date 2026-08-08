@@ -743,7 +743,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Curve crvUSD source repository",
@@ -780,10 +780,8 @@
     ],
     "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical crvUSD Stablecoin remained a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified Vyper source has ordinary transfer and allowance-gated transferFrom/burnFrom paths without blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause. The ten tracked bridge representations were previously reviewed through verified source or canonical mappings and likewise exposed bridge mint/burn or upgrade controls rather than a current Curve-controlled holder restriction. Collateral-issuer and bridge impairment remain separate upstream/deployment risks and do not make the direct blacklist verdict inherited.",
     "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "Freezable collateral and bridge custody can impair crvUSD backing, liquidation, redemption, or route availability, but those upstream actors cannot freeze balances in the immutable canonical crvUSD token. Those dependencies remain reserve, oracle, and bridge risks."
+    "reviewedAt": "2026-08-08"
   },
-  "canBeBlacklisted": false,
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

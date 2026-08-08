@@ -215,7 +215,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Aave GHO introduction",
@@ -236,10 +236,8 @@
     ],
     "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers.",
     "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "Issuer-freezable assets can appear in GHO facilitator or collateral routes and impair borrowing, repayment, or peg liquidity, but those issuers cannot freeze balances in the immutable canonical GHO token. CCIP and facilitator controls remain bridge and issuance risks, not holder-blacklist authority."
+    "reviewedAt": "2026-08-08"
   },
-  "canBeBlacklisted": false,
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
     "authorityPosture": "partially-bounded-admin",

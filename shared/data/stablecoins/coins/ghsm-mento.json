@@ -95,9 +95,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento Celo mainnet deployment inventory",
@@ -147,8 +146,7 @@
     "sourceFreeRationale": "The current holder-facing GHSm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
     "evidence": "Re-verified 2026-08-08 at Celo block 74317848. GHSm 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict GHSm balances and are therefore dependency risk, not an inherited direct-access verdict.",
     "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "Freezeable assets in Mento's shared reserve can impair GHSm backing or exits, but their issuers have no direct authority over GHSm balances. Those exposures remain reserve/dependency risk; the timelocked token upgrade path is represented by the transfer overlay."
+    "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

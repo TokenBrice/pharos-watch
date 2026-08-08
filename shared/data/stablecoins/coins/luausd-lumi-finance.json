@@ -102,9 +102,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify UtilityToken.sol",
@@ -124,7 +123,6 @@
       }
     ],
     "evidence": "Re-verified 2026-08-08 against the Sourcify exact-match UtilityToken source and Lumi's official protocol documentation. The sole tracked LUAUSD deployment is direct, non-proxy code: EIP-1967 implementation and admin slots were zero at Arbitrum block 492494540. UtilityToken is OpenZeppelin ERC20 + ERC20Burnable + Ownable; onlyOwner applies to mint and ownership transfer, burnFrom requires holder allowance, transfer and transferFrom are unmodified ERC-20 paths, and there is no pause, freeze, blacklist, seize, arbitrary burn, allowlist, or transfer hook. owner() returned controller 0xb422502156118aa49eff0d4da26fdedccb186049, but that controller cannot replace the direct token bytecode or bypass its transfer rules. Lumi's official materials describe LUAUSD as an on-chain protocol currency minted from staked LUA and traded in permissionless pools; they establish no separate issuer terms power to freeze or seize LUAUSD balances. Conclusion: reviewedStatus=false for the tracked token's holder balance/transfer freeze surface.",
-    "upstreamSuppressionRationale": "USDT/USDC exposure in Lumi's on-chain reserve and liquidity mechanisms is an upstream reserve-quality and redemption dependency, not a contractual or technical power over LUAUSD holder balances. The exact-match, non-upgradeable LUAUSD token has no upstream token wrapper link and no freeze-capable transfer path, so reserve composition does not override the reviewed direct token-access verdict.",
     "reviewer": "OpenAI Codex C07 access review; Kimi T20 wave-2 unknown reduction",
     "reviewedAt": "2026-08-08"
   },

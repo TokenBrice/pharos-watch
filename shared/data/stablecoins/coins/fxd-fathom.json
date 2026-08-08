@@ -345,7 +345,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Fathom Terms of Service (confirmed protocol payments are irreversible)",
@@ -365,11 +365,9 @@
       }
     ],
     "evidence": "Re-reviewed 2026-08-08 at XDC block 105873757. The FXD transparent proxy still resolves to implementation 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. The pinned current FathomStablecoin implementation is an ordinary ERC-20 surface with mint/burn authorization but no pause, blacklist, freeze, seize, transfer whitelist, or privileged arbitrary-holder burn. Fathom's current Terms additionally state that confirmed protocol payments are irreversible and that the operator has no ability to reverse them. ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b remains immediately controlled by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c, so future logic can add restrictions; that upgrade risk is recorded as restrictable in the transfer overlay and is not a live holder-seizure power. The direct blacklistability verdict is therefore No.",
-    "upstreamSuppressionRationale": "Collateral, oracle, and stablecoin-adapter controls can impair FXD solvency, liquidation, or redemption, but those upstream actors cannot freeze or seize an existing holder's FXD balance under the reviewed token implementation. Immediate ProxyAdmin mutability remains separately represented by the restrictable transfer-overlay posture.",
     "reviewer": "OpenAI Codex C09 control/access review",
     "reviewedAt": "2026-08-08"
   },
-  "canBeBlacklisted": false,
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

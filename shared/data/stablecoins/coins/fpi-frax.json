@@ -85,9 +85,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "FPI Ethereum token verified source (Blockscout)",
@@ -120,8 +119,7 @@
     ],
     "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712273, canonical FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e remained a direct, immutable token whose verified transfer and minter paths contain no blacklist, freeze, pause, seize, allowlist, or arbitrary-holder burn. At Fraxtal block 39703046, proxy 0xfc00000000000000000000000000000000000003 used implementation 0xfcc0d30000000000000000000000000000000003 and ProxyAdmin 0xfc0000000000000000000000000000000000000a; current implementation selector and source review likewise found no active holder restriction. The verified ZKsync CrossChainCanonicalV2 deployment has the same restriction-free transfer model. Frax's FPI documentation describes protocol mint/redemption and does not establish a separate issuer legal account-freeze power. Current blacklistability is therefore false; the Fraxtal 3/5 Safe's immediate ability to introduce restrictions by upgrading code is represented separately as a restrictable deployment in the transfer overlay.",
     "reviewer": "OpenAI Codex C06 access review",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "FPI's FRAX-denominated reserves and AMO positions (reviewed 2026-07-30 for frax-frax as not holder-blacklistable) and LP or governance-token reserve slices can impair claim value or redemption liquidity if those upstream assets fail or freeze, but none of those actors has a direct holder freeze, blacklist, or transfer-restriction path on FPI token deployments. Those exposures remain reserve-quality and dependency risks, not FPI blacklistability."
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

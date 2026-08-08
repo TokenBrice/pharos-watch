@@ -109,9 +109,8 @@
       "decimals": 9
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Solana mainnet RPC getAccountInfo for the USDv SPL mint at finalized slot 438054830",
@@ -131,7 +130,6 @@
       }
     ],
     "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDv is an 82-byte legacy SPL Token mint owned by Tokenkeg and its freezeAuthority option is zero. The pinned Tokenkeg processor requires holder/delegate authorization for transfers and a current freeze authority for account freezes; a disabled freeze authority cannot be restored. Solomon's current Terms describe Solomon as an interface-only, non-custodial operator that cannot sign or cause user transactions and disclose interface geofencing/wallet screening rather than a power over already-issued USDv. Reserve-asset issuer controls can impair USDv backing or redemption but cannot freeze a standalone holder's USDv token account, so the direct holder-seizure verdict is No; the dedicated transfer overlay separately records the permissionless current transfer logic.",
-    "upstreamSuppressionRationale": "Issuers of stablecoins held in Solomon's reserves can freeze reserve balances and impair USDv backing or redemption, but they cannot freeze or seize balances in the separate legacy SPL USDv mint. Those dependencies remain reserve and exit risks rather than direct USDv holder-control authority.",
     "reviewer": "OpenAI Codex C09 control/access review",
     "reviewedAt": "2026-08-08"
   },

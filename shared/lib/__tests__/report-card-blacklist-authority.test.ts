@@ -12,11 +12,9 @@ const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "crvusd-curve",
   "dai-makerdao",
   "jpyt-dephaser",
-  "pht-pht",
   "reusd-resupply",
   "srusd-reservoir",
   "usdd-tron-dao-reserve",
-  "usdu-unitas",
 ] as const;
 
 function deterministicShuffle<T>(values: readonly T[]): T[] {
@@ -59,7 +57,11 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("usdrif-rif")).toBe(true);
     expect(resolved.get("usdr-ring")).toBe(true);
     expect(resolved.get("inalpha-nest")).toBe(true);
-    expect(resolved.get("sbold-k3-capital")).toBe("possible");
+    // sbold-k3-capital: the C07 exact-source review (2026-08-08, Ethereum block
+    // 25712319) re-graded the earlier "possible" down to a resolved No — the
+    // owner pause gates deposit/mint/withdraw/redeem/swap only, while sBOLD
+    // transfer/transferFrom stay unmodified ERC-20 paths.
+    expect(resolved.get("sbold-k3-capital")).toBe(false);
     // cdp-enosys: re-audited up to a resolved Yes — owner can register burn/forced-transfer callers.
     expect(resolved.get("cdp-enosys")).toBe(true);
   });
@@ -97,19 +99,23 @@ describe("report-card blacklist authority", () => {
     // Felix feUSD on Hyperliquid: TransparentUpgradeableProxy. Project docs
     // cite "Admin Parameter Controls" and "Emergency Pausing" as features.
     expect(resolved.get("feusd-felix")).toBe(true);
-    // Quill USDQ on Scroll: no direct blacklist confirmed, but the token is a
-    // mutable EIP-1967/UUPS-style proxy behind AccessManager authority.
-    expect(resolved.get("usdq-quill")).toBe("possible");
+    // Quill USDQ on Scroll: re-audited up to a resolved Yes by C11 (Scroll block
+    // 34599130). Transfers carry no blacklist branch, but the configured
+    // CollateralRegistry/BorrowerOperations/TroveManager/StabilityPool
+    // components hold allowance-free burn(address,uint256) over arbitrary
+    // balances — a live privileged holder-burn primitive.
+    expect(resolved.get("usdq-quill")).toBe(true);
     // Orki USDK on Swellchain: no direct blacklist confirmed, but the token is
     // a mutable EIP-1967 proxy behind Orki AccessManager authority.
     expect(resolved.get("usdk-orki")).toBe("possible");
     // srUSD: wrapper over rUSD; freeze exposure now resolves through the parent
     // balance sheet and PSM path, while mint authority is assessed separately.
     expect(resolved.get("srusd-reservoir")).toBe("inherited");
-    // BabelFish XUSD: upgradeable mAsset + multisig with pause history;
-    // explicit `false` override removed so reserve inheritance (32% bridged
-    // USDT, 14% bridged USDC) now flows through.
-    expect(resolved.get("xusd-babelfish")).toBe("inherited");
+    // BabelFish XUSD: C08 (Rootstock block 9134338) resolved this above reserve
+    // inheritance to a direct Yes — the owner-only burn(address,uint256) held by
+    // manager proxy 0x1440d194... destroys a supplied holder balance without
+    // allowance.
+    expect(resolved.get("xusd-babelfish")).toBe(true);
   });
 
   it("pins the May 25 2026 full unfreezable re-audit", () => {
@@ -121,12 +127,24 @@ describe("report-card blacklist authority", () => {
     // dllr-sovryn: re-audited up to a resolved Yes — manager-gated burn plus an
     // owner-settable MassetManager proxy establish direct holder intervention.
     expect(resolved.get("dllr-sovryn")).toBe(true);
-    expect(resolved.get("fxd-fathom")).toBe("possible");
-    expect(resolved.get("cjpy-yamato")).toBe("possible");
+    // fxd-fathom: C09 (XDC block 105873757) verified no direct holder freeze on
+    // the pinned FathomStablecoin logic, so the earlier "possible" upgrade-path
+    // grade moves to the transfer overlay. The reviewed CGO (Comtech Gold)
+    // collateral sleeve keeps a positive blacklistable reserve share, so
+    // FreezeWatch resolves the remaining exposure upstream.
+    expect(resolved.get("fxd-fathom")).toBe("inherited");
+    // cjpy-yamato: C10 (Ethereum block 25712439) re-audited up to a resolved Yes
+    // — the bound CurrencyOS can call burn(address,uint256) without allowance
+    // and its 2-of-4 governance Safe can register Yamato callers.
+    expect(resolved.get("cjpy-yamato")).toBe(true);
     // jusd-juicedollar: the later cohort recheck preserved the direct No finding
     // but removed the incorrect suppression of its live USDT.e bridge reserve.
     expect(resolved.get("jusd-juicedollar")).toBe("inherited");
-    expect(resolved.get("silk-shade-protocol")).toBe("inherited");
+    // silk-shade-protocol: C11 (Secret block 26592492) resolved the reserve-only
+    // reading up to a direct Yes — the pinned SNIP-20/25 implementation exposes
+    // admin `SetContractStatus` StopAllButRedeems/StopAll, a system-wide holder
+    // transfer stop held by a 5-of-7 multisig.
+    expect(resolved.get("silk-shade-protocol")).toBe(true);
     // bnusd-balanced: re-audited up to a resolved Yes — the canonical bnUSD SCORE
     // exposes a Governance-only govTransfer that moves balances from arbitrary
     // source addresses, a direct holder-control surface above reserve inheritance.
@@ -147,15 +165,24 @@ describe("report-card blacklist authority", () => {
       "usd3-reserve-protocol",
       "usdaf-asymmetry",
       "usdh-hubble",
-      "usdxl-last",
       "xdai-gnosis",
-      "yzusd-yuzu",
     ]) {
       expect(resolved.get(id)).toBe("inherited");
     }
 
-    expect(resolved.get("ousd-origin-protocol")).toBe("possible");
-    expect(resolved.get("usdx-kava")).toBe("possible");
+    // usdxl-last / yzusd-yuzu: the C07 and C04 reviews replaced the unresolvable
+    // upstream identity with an explicit direct verdict. Both tokens have
+    // unrestricted current transfer paths but a live logic-replacement Safe (and
+    // for yzUSD, undocumented Sentinel wallet blocking), so "possible" is the
+    // honest bounded direct grade and it outranks the reserve inference.
+    expect(resolved.get("usdxl-last")).toBe("possible");
+    expect(resolved.get("yzusd-yuzu")).toBe("possible");
+    // ousd-origin-protocol: C06 (Ethereum block 25712273) found a live
+    // Vault-only burn(address,uint256) arbitrary-holder destruction primitive.
+    expect(resolved.get("ousd-origin-protocol")).toBe(true);
+    // usdx-kava: C06 (Kava height 22013136) found Kava wires governance into the
+    // bank keeper, so MsgSetSendEnabled can globally disable `usdx` sends.
+    expect(resolved.get("usdx-kava")).toBe(true);
     expect(resolved.get("zchf-frankencoin")).toBe("possible");
     expect(resolved.get("uusd-youves")).toBe(true);
   });
@@ -170,15 +197,26 @@ describe("report-card blacklist authority", () => {
     // USDe left the inherited-only cohort after the reviewed TON deployment
     // established an administrator-controlled wallet lock path.
     expect(resolved.get("usde-ethena")).toBe(true);
+    // usdu-unitas: C04 replaced the unresolvable upstream identity with a direct
+    // Yes — Unipay's terms reserve the right to freeze, burn, or restrict USDu
+    // without prior notice, which FreezeWatch treats as issuer-level authority.
+    expect(resolved.get("usdu-unitas")).toBe(true);
+    // pht-pht: C07 left the direct grade honestly bounded at "possible" — the
+    // material Tron deployment is unverified, and the Polygon UUPS proxy owner
+    // can replace an otherwise unrestricted implementation.
+    expect(resolved.get("pht-pht")).toBe("possible");
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
     // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
     // direct holder freeze/blacklist and added a reviewed suppression (same-symbol
     // false positive vs the unrelated Noble USDN), re-graded to direct false.
     expect(resolved.get("usdn-smardex")).toBe(false);
     expect(resolved.get("vcred-vcred")).toBe(false);
-    // fpi-frax: TERRA re-review found an owner-controlled ProxyAdmin upgrade path
-    // on Fraxtal (upgrade-control, not active freeze), re-graded to "possible".
-    expect(resolved.get("fpi-frax")).toBe("possible");
+    // fpi-frax: C06 re-reviewed every live deployment (Ethereum block 25712273,
+    // Fraxtal block 39703046, ZKsync canonical) and found no holder restriction,
+    // moving the Fraxtal ProxyAdmin upgrade path to the restrictable transfer
+    // posture. Its FRAX/AMO reserve leg still carries freezable upstream
+    // exposure, so FreezeWatch resolves it upstream rather than as a direct No.
+    expect(resolved.get("fpi-frax")).toBe("inherited");
     // DUSD: the MachineShare token has no reviewed local holder freeze path.
     // The blacklist surface is inherited from the USDC accounting-token
     // exposure, while AsyncRedeemer access gating is modeled separately as

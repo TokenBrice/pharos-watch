@@ -38,9 +38,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Polymarket pUSD documentation",
@@ -65,8 +64,7 @@
     ],
     "evidence": "Re-verified 2026-08-08 at Polygon block 91673086. The pUSD proxy implementation remained 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() remained Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. The verified CollateralToken implementation defines wrap, unwrap, allowance-gated burn, role administration, and UUPS authorization but no blacklist, holder freeze, seizure, arbitrary-holder burn, pause, or transfer-hook restriction. The immutable CollateralOnramp can pause new wrapping per collateral but cannot freeze existing pUSD balances. Circle can restrict reserve USDC, and the Timelock can replace pUSD logic; those are reserve and future-upgrade risks captured separately, not a current direct holder-blacklist mechanism.",
     "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "Circle can freeze USDC or USDC.e held as pUSD backing and thereby impair wrapping or redemption, but that upstream authority cannot freeze existing pUSD balances. The separately reviewed UUPS owner makes transfers restrictable through future upgrades without creating a current blacklist function."
+    "reviewedAt": "2026-08-08"
   },
   "liveReservesConfig": {
     "adapter": "pusd-vault",

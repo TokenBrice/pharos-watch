@@ -364,10 +364,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "upstreamSuppressionRationale": "Canonical Ethereum DAI and the material Polygon child token have no direct holder blacklist, freeze, seizure, or transfer-pause path. Reserve-leg and bridge custody censorship remain upstream backing or bridge failure domains; they do not give an issuer or administrator authority to freeze balances in these reviewed DAI token contracts.",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Ethereum DAI verified source and ABI",

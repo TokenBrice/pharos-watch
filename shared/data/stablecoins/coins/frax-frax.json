@@ -172,7 +172,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "FRAX Ethereum verified source (Blockscout)",
@@ -205,10 +205,8 @@
     ],
     "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712115. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum remained a direct non-proxy deployment (EIP-1967 implementation slot zero); pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. The live balance sheet contains issuer-freezable reserve assets, but those are collateral impairment dependencies rather than a direct FRAX holder-control mechanism. The direct blacklist verdict is therefore false, with reserve and bridge risks preserved in their owning reviews.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08",
-    "upstreamSuppressionRationale": "Issuer-freezable reserve assets can impair FRAX collateral value, liquidity, or redemption paths, but their issuers cannot freeze balances in the immutable canonical FRAX contract. Those exposures remain reserve and dependency risks rather than direct FRAX blacklistability."
+    "reviewedAt": "2026-08-08"
   },
-  "canBeBlacklisted": false,
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",

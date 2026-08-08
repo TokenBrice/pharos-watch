@@ -352,10 +352,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "upstreamSuppressionRationale": "USDD's canonical Tron, Ethereum, and BSC token implementations are direct deployments with zero implementation/admin slots and no blacklist, freeze, seizure, or global pause function; transfer and burn require holder authority or allowance. While the issuer governance controls mint/deny wards, it cannot retroactively add holder-level freeze logic to the immutable deployed code.",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "USDD freeze-free core-features disclosure",

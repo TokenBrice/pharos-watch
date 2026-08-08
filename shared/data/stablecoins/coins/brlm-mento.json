@@ -163,9 +163,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento BRLm Celo availability documentation",
@@ -212,7 +211,6 @@
         "url": "https://www.mento.org/blog/the-evolution-of-mento-direct-distribution-and-modularity-for-enhanced-stability"
       }
     ],
-    "upstreamSuppressionRationale": "Reserve assets and exchange routes can be censored or impaired upstream, but those controls do not give an issuer or administrator authority to freeze existing balances in the reviewed BRLm token contract. The delayed governance upgrade path remains measured separately as deployment restrictability.",
     "evidence": "At Celo block 74318085 (2026-08-08T19:54:03Z; hash 0x4f92837c8e7a0c52346e7727cf0aef289de42f4a06786ffb498a2f3f96701433), the sole tracked BRLm proxy returned owner/admin 0x890db8a597940165901372dd7db61c9f246e2147, broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, exchange zero, and implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e; the Mento Timelock delay remained 172800 seconds. Verified StableTokenV2 exposes ordinary transfers, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting, with no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer-hook restriction. Official Mento materials describe community governance and direct protocol distribution rather than a separate issuer freeze power. Direct holder freeze is therefore false; reserve controls and the two-day upgrade path remain upstream and restrictability risks.",
     "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
