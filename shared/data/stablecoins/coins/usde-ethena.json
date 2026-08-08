@@ -63,7 +63,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (docs-listed custodian attestations top out at May 2026 as of 2026-08-08, ~3 months behind the monthly claim; the live oracle/dashboard layer remains current)",
     "attestorTier": "niche",
     "cadence": "real-time"
   },

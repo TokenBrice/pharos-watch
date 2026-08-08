@@ -69,28 +69,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://freedomdollar.com/",
-    "provider": "Freedom Dollar",
+    "provider": "Freedom Dollar (latestReport removed 2026-08: the page's own reserve widget says 'Last updated: 07/08/2025' - over a year stale - so the prior 2026-07-30 review verified only that the URL loads, not that reserve data is current)",
     "attestorTier": "self",
-    "cadence": "real-time",
-    "latestReport": {
-      "periodEnd": "2026-07-30",
-      "publishedAt": "2026-07-30",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
-      "reviewer": "Kimi T39 Safety Score V9 reserve research",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "Freedom Dollar live reserve disclosure",
-          "url": "https://freedomdollar.com/"
-        },
-        {
-          "label": "Zano public daemon RPC (get_asset_info)",
-          "url": "https://node.zano.org/json_rpc"
-        }
-      ]
-    }
+    "cadence": "ad-hoc"
   },
   "custodyProfile": {
     "providers": [

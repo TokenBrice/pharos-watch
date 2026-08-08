@@ -19,9 +19,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://fusd.finchain.global/#reserves",
-    "provider": "FinChain reserve dashboard",
+    "provider": "FinChain reserve dashboard (reserve section is captioned 'as of February 2026' and figures do not render statically - no live feed observed as of 2026-08-08)",
     "attestorTier": "self",
-    "cadence": "real-time",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Bermuda"
   },
   "links": [

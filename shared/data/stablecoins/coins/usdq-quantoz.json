@@ -32,10 +32,10 @@
     "type": "self-reported",
     "url": "https://www.quantoz.com/transparency",
     "attestorTier": "self",
-    "cadence": "real-time",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Netherlands",
     "attestorLicense": "DNB EMI (MiCAR)",
-    "provider": "Quantoz transparency dashboard"
+    "provider": "Quantoz reserve status overview (static periodic snapshot table shared with EURQ, latest dated 2026-06-30 - not the live dashboard previously recorded)"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

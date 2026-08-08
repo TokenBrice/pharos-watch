@@ -81,7 +81,7 @@
     "type": "real-time",
     "url": "https://reserve.mento.org/",
     "provider": "Mento Reserve dashboard",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "oracleRisk": {

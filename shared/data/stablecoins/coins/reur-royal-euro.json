@@ -14,11 +14,11 @@
   "collateral": "Euro cash reserves held through top-tier international banks to target 1:1 backing for each REUR issued by The RIB Digital Holdings Limited",
   "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "self-reported",
     "url": "https://rib.digital/transparency",
-    "provider": "RIB Digital signed PoR snapshots",
+    "provider": "RIB Digital signed PoR snapshots (series stalled: newest snapshot on the page is dated 2026-04-23/24, ~3.5 months old as of 2026-08-08, against a real-time claim)",
     "attestorTier": "self",
-    "cadence": "real-time",
+    "cadence": "ad-hoc",
     "latestReport": {
       "periodEnd": "2026-04-08",
       "publishedAt": "2026-04-20",

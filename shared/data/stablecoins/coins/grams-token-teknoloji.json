@@ -21,7 +21,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
-    "provider": "Token Teknoloji reserve proof page",
+    "provider": "Token Teknoloji reserve proof page (no reserve figure renders - empty supply widget; page reuses GRAMG's contract address and contains leftover platinum copy; custody described as company vaults, contradicting the shared PoR page's named banks)",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Turkey"

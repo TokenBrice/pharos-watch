@@ -19,8 +19,8 @@
   "geckoId": "gram-gold",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
-    "provider": "Token Teknoloji reserve proof page",
+    "url": "https://www.token.com.tr/en/reserve-tokens/gram-gold-gramg/",
+    "provider": "Token Teknoloji reserve proof page (no reserve figure renders - the supply widget is empty; the Turkish page claims physical gold >90% at the Turkish Central Bank while the English page says GRAMG is collateralized by PAXG - irreconcilable backing descriptions; evidence widget links an Ethereum address while copy says Avalanche)",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Turkey"

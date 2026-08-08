@@ -22,7 +22,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",
-    "provider": "ht.digital",
+    "provider": "ht.digital (Harris & Trotter digital: quarterly assurance reports - latest period 2026-04-30, next cycle slightly overdue as of 2026-08-08 - alongside weekly self-published reserve reports current through 2026-08-03; latestReport tracks the quarterly assurance artefact)",
     "attestorTier": "niche",
     "cadence": "weekly",
     "latestReport": {

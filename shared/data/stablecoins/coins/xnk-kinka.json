@@ -36,9 +36,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
-    "provider": "Kinka issuer disclosures",
-    "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "provider": "Kinka whitepaper (no reserve artefact has ever been published: full site media library enumerated 2026-08-08 holds no vault report, custodian certificate, or attestation; the promised 'regular audits by a Japanese auditing firm' refers to the TSE-listed parent's statutory audit, unpublished; site appears dormant since late 2024)",
+    "attestorTier": "none",
+    "cadence": "none",
     "attestorJurisdiction": "British Virgin Islands"
   },
   "links": [

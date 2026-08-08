@@ -21,8 +21,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore CPA Limited",
-    "attestorTier": "niche",
+    "provider": "Moore CPA Limited (Moore Global network member; daily individually signed ISAE 3000 reasonable-assurance reports at widget.verinumus.io, current through 2026-08-07 - latestReport refresh queued for a coherent update with the reserve-composition review; the report itself discloses ~99.98% of reserves as a single at-cost First Digital Trust fund position under redemption litigation)",
+    "attestorTier": "regional",
     "cadence": "daily",
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",

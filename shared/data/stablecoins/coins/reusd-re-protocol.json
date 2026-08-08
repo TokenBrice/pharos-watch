@@ -69,11 +69,11 @@
     ]
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "real-time",
     "url": "https://app.re.xyz/transparency",
-    "provider": "The Network Firm",
+    "provider": "The Network Firm live daily on-chain transparency dashboard (current through 2026-08-08; the only formal TNF artefact is an AUP report dated 2025-10-31, ~9 months old, so periodic-report framing would overstate freshness)",
     "attestorTier": "niche",
-    "cadence": "daily-nav"
+    "cadence": "daily"
   },
   "links": [
     {

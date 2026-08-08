@@ -19,7 +19,7 @@
     "type": "real-time",
     "url": "https://app.reservoir.xyz/reserves",
     "provider": "Reservoir Protocol (on-chain live balance sheet)",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "variantOf": "rusd-reservoir",

@@ -100,6 +100,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://usdd.io/data",
+    "provider": "TRON DAO Reserve USDD data dashboard (client-rendered live collateral-ratio page)",
     "attestorTier": "self",
     "cadence": "real-time"
   },

@@ -20,7 +20,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
-    "provider": "Bureau Veritas",
+    "provider": "Bureau Veritas (Singapore) Pte Ltd (semi-annual physical vault inventory certificates; the July 2026 cycle - periodEnd 2026-07-15, published 2026-07-21 - is queued for a coherent refresh together with the reserve-composition review)",
     "attestorTier": "niche",
     "cadence": "semi-annual",
     "attestorJurisdiction": "Singapore",
@@ -29,9 +29,9 @@
       "periodEnd": "2026-01-07",
       "publishedAt": "2026-01-15",
       "assuranceMethod": "audit",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "TERRA-II attestation restoration",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (Jan 2026 certificate read: 100% physical inventory of 482 bars vs the Parcel Ownership List; XAUm tokens and circulating supply appear nowhere in the document, so the previous full-reconciliation scope was wrong - the bar-vs-token comparison is issuer-asserted in the blog only)",
       "confidence": "verified",
       "sources": [
         {

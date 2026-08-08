@@ -18,9 +18,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://vndc.io/",
-    "provider": "Jade Labs / VNDC issuer disclosure",
+    "provider": "Jade Labs / VNDC issuer disclosure (vndc.io origin unreachable, HTTP 521 on repeated checks 2026-08-08; no reserve artefact verifiable)",
     "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "cadence": "none",
     "attestorJurisdiction": "Vietnam"
   },
   "links": [

@@ -35,10 +35,10 @@
   "geckoId": "gold-token",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://gldt.org/",
-    "provider": "KPMG",
+    "url": "https://docs.gold-dao.org/other/audit-reports",
+    "provider": "KPMG SA Neuchatel (Swiss Auditing Standard 920 reports of factual findings, expressly neither an audit nor a review, restricted use; reconciles 7.9kg gold at Loomis to GLD NFT certificates of Bity Tokenisation SA - not to GLDT token supply - sampling 100 of 790 serials; newest report periodEnd 2025-09-21, published 2025-10-02, series stalled ~10.5 months against the claimed cycle; gldt.org itself hosts no artefact)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Switzerland"
   },
   "links": [

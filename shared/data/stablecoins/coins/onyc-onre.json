@@ -314,7 +314,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.onre.finance/security-and-verification/independent-attestations",
-    "provider": "Apex Group",
+    "provider": "Apex Insurance Fund Services Ltd. monthly agreed-upon-procedures NAV statements (cover pages state 'Un-audited'; administrator-level independence - Apex administers the NAV it reports; unbroken monthly series Nov 2025 through Jun 2026, view-only Google Drive links)",
     "attestorTier": "niche",
     "cadence": "monthly"
   },

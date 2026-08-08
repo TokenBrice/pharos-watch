@@ -21,9 +21,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.gate.com/gusd",
-    "provider": "Gate",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "provider": "Gate exchange-wide zk-Merkle proof-of-reserves (GUSD appears only inside a pooled stablecoin bucket with no per-asset ratio and no named attestor; this is an exchange custody proof of customer assets, not evidence that GUSD issuance is backed by segregated issuer reserves)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "links": [
     {

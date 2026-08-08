@@ -20,9 +20,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://cap.app/vault/reserves/cUSD",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Cap reserves dashboard"
+    "provider": "Cap Labs reserves dashboard (issuer-operated, not a third party)"
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

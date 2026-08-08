@@ -41,9 +41,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge issuance FAQ (third-party audits and transparency reports promised quarterly, not yet published)",
+    "provider": "Bridge issuance FAQ (no published pathUSD reserve report; the FAQ's quarterly audit statement is forward-looking only - same posture as the corrected usdsui-sui record)",
     "attestorTier": "self",
-    "cadence": "quarterly",
+    "cadence": "none",
     "attestorJurisdiction": "United States"
   },
   "links": [

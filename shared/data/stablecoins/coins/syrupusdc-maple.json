@@ -22,7 +22,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm",
+    "provider": "The Network Firm (PoR programme launched 2026-05-07; the recorded URL is the launch announcement - the live TNF-verified feed is referenced at app.maple.finance pool pages but could not be confirmed at a stable public path; re-verify)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "United States"

@@ -20,13 +20,13 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kinesis.money/trust-security/",
-    "provider": "Bureau Veritas (Inspectorate International)",
+    "provider": "Bureau Veritas Commodities UK Ltd (Inspectorate International; commodity vault inspection under agreed procedures with no opinion - the token-vs-metal comparison exists only in the issuer cover letter, whose signatory heads both Kinesis and the vault operator ABX)",
     "attestorTier": "niche",
     "cadence": "semi-annual",
     "latestReport": {
       "periodEnd": "2026-04-20",
       "publishedAt": "2026-06-03",
-      "assuranceMethod": "audit",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
       "liabilityReconciliation": "unknown",
       "reviewer": "Inspectorate International",

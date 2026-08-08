@@ -19,9 +19,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",
-    "provider": "Monerium financial information",
+    "provider": "Monerium financial information (entity-wide safeguarded-assets table sourced from semi-annual and annual audited statements; aligned with the eure-monerium sibling record)",
     "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "cadence": "semi-annual",
     "attestorJurisdiction": "Iceland",
     "attestorLicense": "EMI (Central Bank of Iceland)"
   },
