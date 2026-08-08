@@ -8,7 +8,10 @@ import { createReportCardsFixedInput, normalizeFixedInput } from "../report-card
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
-const AS_OF_SEC = Date.parse("2026-07-31T12:00:00.000Z") / 1_000;
+// Kept ahead of the newest reviewed date in the registry metadata this fixture
+// reads: the usdc-circle parent's mint-authority review moved to 2026-08-08,
+// which the extension's scoring-clock guard treats as a future review.
+const AS_OF_SEC = Date.parse("2026-08-09T12:00:00.000Z") / 1_000;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "dusd-dialectic";
 const PARENT_ID = "usdc-circle";
@@ -24,7 +27,7 @@ function fixedInput() {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     activeAssetIds: [...ACTIVE_ASSET_IDS],
-    capturedAt: "2026-07-31T12:00:00.000Z",
+    capturedAt: "2026-08-09T12:00:00.000Z",
     sourceGeneration: "report-cards:fixture:dusd-team-answers",
     dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
     redemptionGenerationId: "redemption-backstops-unavailable",

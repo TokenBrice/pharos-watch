@@ -261,9 +261,11 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       }),
     );
     const profile = metaById.get(assetId)!.mintAuthority!;
+    // Clock kept ahead of the usdc-circle parent's 2026-08-08 mint-authority
+    // review, which the scoring-clock guard would otherwise reject as future.
     const input = fixedInput(activeAssetIds, {}, {
-      clockSec: Date.parse("2026-07-31T00:00:00.000Z") / 1_000,
-      capturedAt: "2026-07-31T00:00:00.000Z",
+      clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
+      capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
     });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;

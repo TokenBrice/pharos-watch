@@ -1,29 +1,29 @@
 {
-  "publishedAtSec": 1784505603,
+  "publishedAtSec": 1786233603,
   "draft": {
     "captureKind": "exact-publication-inputs",
     "activeAssetIds": [
       "usdt-tether",
       "usdc-circle"
     ],
-    "capturedAt": "2026-07-20T00:00:00.000Z",
-    "sourceGeneration": "report-cards:8.17:1784505359",
-    "dexGenerationId": "dex-liquidity-1784502340",
+    "capturedAt": "2026-08-09T00:00:00.000Z",
+    "sourceGeneration": "report-cards:8.17:1786233359",
+    "dexGenerationId": "dex-liquidity-1786230340",
     "redemptionGenerationId": "redemption:385d714a-e8a8-4b64-800a-35b56cfcfeb8",
     "registryRevision": "sha256:12a11e371169422586443376997f4802361241503d32f02e5bf514959f3aac6b",
     "methodologyVersion": "8.17",
-    "clockSec": 1784505600,
-    "updatedAt": 1784505359,
+    "clockSec": 1786233600,
+    "updatedAt": 1786233359,
     "liquidityStale": false,
     "redemptionStale": false,
     "inputFreshness": {
       "dexLiquidity": {
-        "updatedAt": 1784502340,
+        "updatedAt": 1786230340,
         "ageSeconds": 3260,
         "stale": false
       },
       "redemptionBackstops": {
-        "updatedAt": 1784504609,
+        "updatedAt": 1786232609,
         "ageSeconds": 991,
         "stale": false
       }
@@ -45,7 +45,7 @@
         "eventCount": 3,
         "worstDeviationBps": -1211,
         "activeDepeg": false,
-        "lastEventAt": 1678683726,
+        "lastEventAt": 1680411726,
         "trackingSpanDays": 1461,
         "methodologyVersion": "6.096"
       },
@@ -65,7 +65,7 @@
         "eventCount": 5,
         "worstDeviationBps": 278,
         "activeDepeg": false,
-        "lastEventAt": 1679587307,
+        "lastEventAt": 1681315307,
         "trackingSpanDays": 1461,
         "methodologyVersion": "6.096"
       }
@@ -123,7 +123,7 @@
               "evidenceKind": "documented-terms",
               "confidence": "medium",
               "scoreEligible": false,
-              "observedAt": 1779161123,
+              "observedAt": 1780889123,
               "freshnessSeconds": 4997886,
               "commonModeKeys": [
                 "issuer:usdc-circle"
@@ -176,7 +176,7 @@
         "routeExitCorrelation": "independent-issuer-rail",
         "queueEnabled": false,
         "methodologyVersion": "4.17",
-        "updatedAt": 1784504609,
+        "updatedAt": 1786232609,
         "docs": {
           "label": "Circle Transparency",
           "url": "https://www.circle.com/transparency",
@@ -260,7 +260,7 @@
         "routeExitCorrelation": "independent-issuer-rail",
         "queueEnabled": false,
         "methodologyVersion": "4.17",
-        "updatedAt": 1784504609,
+        "updatedAt": 1786232609,
         "docs": {
           "label": "Tether Transparency",
           "url": "https://tether.to/en/transparency",
@@ -674,11 +674,11 @@
     "liveReserveProvenanceMap": {
       "usdc-circle": {
         "source": "circle-transparency",
-        "fetchedAt": 1784504208
+        "fetchedAt": 1786232208
       },
       "usdt-tether": {
         "source": "tether-transparency",
-        "fetchedAt": 1784504203
+        "fetchedAt": 1786232203
       }
     },
     "chainCirculatingById": {
@@ -2685,7 +2685,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:olas",
@@ -2750,7 +2750,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:txone",
@@ -2815,7 +2815,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:ggdc",
@@ -2880,7 +2880,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:wdag",
@@ -2945,7 +2945,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:weth",
@@ -3010,7 +3010,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:xai",
@@ -3072,7 +3072,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset:usdt-tether",
@@ -3134,7 +3134,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset:usdt-tether",
@@ -3199,7 +3199,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:fly",
@@ -3264,7 +3264,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:sts",
@@ -3320,7 +3320,7 @@
           }
         },
         "methodologyVersion": "5.84",
-        "updatedAt": 1784502340
+        "updatedAt": 1786230340
       },
       "usdt-tether": {
         "liquidityScore": 64,
@@ -3369,7 +3369,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset-symbol:weth",
@@ -3431,7 +3431,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset:usdc-circle",
@@ -3493,7 +3493,7 @@
             "evidenceKind": "reserve-based-amm-simulation",
             "confidence": "high",
             "scoreEligible": true,
-            "observedAt": 1784502340,
+            "observedAt": 1786230340,
             "freshnessSeconds": 0,
             "commonModeKeys": [
               "asset:usdc-circle",
@@ -3549,7 +3549,7 @@
           }
         },
         "methodologyVersion": "5.84",
-        "updatedAt": 1784502340
+        "updatedAt": 1786230340
       }
     }
   }
