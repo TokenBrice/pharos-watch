@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MintAuthoritySection } from "../mint-authority-section";
 import type { MintAuthorityDetailViewModel } from "@/lib/stablecoin-detail-mint-authority-view-model";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 
 const REVIEWED_PROFILE: MintAuthorityDetailViewModel = {
   status: "reviewed",
@@ -119,7 +120,10 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket capacity limits minting");
     expect(html).toContain("Aave GHO facilitators");
     expect(html).toContain("https://example.com/gho-facilitators");
-    expect(html).toContain("Methodology v1.3");
+    // 9.1: the card publishes the V9 mint component, so it stamps the
+    // safety-score identity rather than the retired mint-authority lane.
+    expect(html).toContain(`Methodology ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`);
+    expect(html).not.toContain("Methodology v1.3");
     expect(html).toContain("Reviewed 2026-05-12");
   });
 

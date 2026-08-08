@@ -7,7 +7,7 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
 } from "@shared/lib/depeg-resolver-version";
-import { resolveV9MintPostureBand } from "@shared/lib/safety-score-v9/mint-posture";
+import { curatedMintPostureBand, resolveV9MintPostureBand } from "@shared/lib/safety-score-v9/mint-posture";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -40,6 +40,12 @@ export interface DdrV9DependencyCard {
 
 let v9DependencyImpairmentByCoin = new Map<string, boolean>();
 let v9MintPostureBandByCoin = new Map<string, string | null>();
+/**
+ * Whether a V9 mint-posture projection was installed for this run. Needed to
+ * tell "the publication says this asset has no band" from "there is no
+ * publication", which `Map.get() ?? null` collapses.
+ */
+let v9MintPostureProjectionInstalled = false;
 
 function hasFrozenOrDeadUpstream(card: DdrV9DependencyCard): boolean {
   return card.dependencies.serial.some((dependency) => {
@@ -57,12 +63,14 @@ function publishedMintPostureBand(card: DdrV9DependencyCard): string | null {
 export function hydrateV9DependencyImpairment(cards: readonly DdrV9DependencyCard[]): void {
   v9DependencyImpairmentByCoin = new Map(cards.map((card) => [card.id, hasFrozenOrDeadUpstream(card)]));
   v9MintPostureBandByCoin = new Map(cards.map((card) => [card.id, publishedMintPostureBand(card)]));
+  v9MintPostureProjectionInstalled = true;
 }
 
 /** Clear V9 dependency state before a run whose V9 publication is unavailable. */
 export function clearV9DependencyImpairment(): void {
   v9DependencyImpairmentByCoin = new Map();
   v9MintPostureBandByCoin = new Map();
+  v9MintPostureProjectionInstalled = false;
 }
 
 export function toStructural(meta: StablecoinMeta, dependencyImpaired?: boolean | null): DdrCoinStructural {
@@ -78,9 +86,18 @@ export function toStructural(meta: StablecoinMeta, dependencyImpaired?: boolean 
     mintPath: meta.mintAuthority?.mintPath ?? null,
     authorityPosture: meta.mintAuthority?.authorityPosture ?? null,
     // 9.1: the published V9 mint posture band replaces the retired standalone
-    // Mint Authority band. Absent when no V9 publication is installed for this
-    // run, which leaves K1's risky-minter test on its posture and mint-path legs.
-    mintAuthorityScoreBand: v9MintPostureBandByCoin.get(meta.id) ?? null,
+    // Mint Authority band. The retired engine derived the band from curated
+    // metadata, so it was always evaluable; a publication-sourced band is not.
+    // Losing the band leg because the V9 pipeline is degraded would make K1
+    // *less* likely to flag supply weaponization exactly when the pipeline is
+    // unhealthy, so a run with no installed projection falls back to the
+    // curated posture rather than to `null` — the same shape as the curated
+    // `dependencies` fallback below. A run *with* a projection keeps the
+    // published answer verbatim, including a published "no band".
+    mintAuthorityScoreBand: v9MintPostureBandByCoin.get(meta.id)
+      ?? (v9MintPostureProjectionInstalled
+        ? null
+        : curatedMintPostureBand(meta.mintAuthority?.authorityPosture)),
     mintIncidents: meta.mintAuthority?.mintIncidents?.map((incident) => ({
       date: incident.date,
       status: incident.status,

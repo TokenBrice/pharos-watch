@@ -43,9 +43,6 @@ import {
 } from "@/lib/mint-authority-display";
 import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
-import {
-  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/methodology-versions/constants";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
 import type { PegSummaryCoin, ReportCardGrade, StablecoinData } from "@shared/types";
@@ -369,7 +366,10 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
-            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
+            // 9.1: the mint columns are the published V9 mint component, so
+            // they are stamped with the safety-score identity. The retired
+            // standalone mint-authority lane no longer produces this value.
+            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included)`}
             triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
             disabled={scoreFilterDataLoading}
           />

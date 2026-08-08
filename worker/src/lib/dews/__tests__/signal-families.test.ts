@@ -143,6 +143,30 @@ describe("DEWS signal family curves", () => {
     expect(smoothed.value).toBeCloseTo(30, 5);
   });
 
+  it("fails closed on a non-positive price instead of publishing zero divergence", () => {
+    // A zero/negative price is not "no divergence": the canonical derivation
+    // returns null for it, and coercing that to 0 would report calm on a price
+    // that cannot be a price.
+    expect(computeDivergSignal(baseInput({ price: 0 }))).toEqual({
+      value: 0,
+      available: false,
+      unavailableReason: "invalid-price",
+    });
+    expect(computeDivergSignal(baseInput({ price: -1 }))).toEqual({
+      value: 0,
+      available: false,
+      unavailableReason: "invalid-price",
+    });
+
+    // A bad DEX price is dropped from the cross-source legs; the valid primary
+    // deviation still reports rather than being diluted by a coerced zero.
+    const badDex = computeDivergSignal(baseInput({ price: 0.9925, dexPriceUsd: 0 }));
+    expect(badDex.available).toBe(true);
+    expect(badDex.primaryDevBps).toBe(75);
+    expect(badDex.dexDevBps).toBe(0);
+    expect(badDex.spreadBps).toBe(75);
+  });
+
   it("pins blacklist count and spike multiplier curves", () => {
     expect(computeBlacklistSignal(baseInput({ hasBlacklistTracking: false }))).toEqual({
       value: 0,

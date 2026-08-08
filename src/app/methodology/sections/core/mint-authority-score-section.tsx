@@ -186,7 +186,9 @@ export function MintAuthorityScoreMethodologySection() {
           <h3 className="text-foreground font-medium">Curated posture is an annotation</h3>
           <p>
             The curated authority-posture field shown on detail pages is a reviewer annotation. It is validated against
-            the derived posture and never scores; a disagreement raises curation work rather than moving a score.
+            the derived posture and never affects the Safety Score; a disagreement raises curation work rather than
+            moving a score. It is not inert everywhere: the depeg resolver reads it as a curated structural input, so
+            re-curating a posture can change a published depeg verdict.
           </p>
         </div>
         <ContentTable

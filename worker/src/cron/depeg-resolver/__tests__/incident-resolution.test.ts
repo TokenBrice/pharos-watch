@@ -189,8 +189,8 @@ describe("deriveMintSurge", () => {
 describe("toStructural", () => {
   it("projects the published V9 mint posture band and incident status", () => {
     // 9.1: the band is hydrated from the V9 publication, not recomputed from
-    // curated metadata. Without a publication it stays null and K1 falls back
-    // to its posture and mint-path legs.
+    // curated metadata. An installed projection is authoritative, including
+    // when it publishes no band for an asset.
     hydrateV9DependencyImpairment([
       {
         id: "fixture-k1",
@@ -237,6 +237,47 @@ describe("toStructural", () => {
     expect(structural.mintIncidents).toEqual([
       { date: "2026-05-24", status: "active", resolvedAt: null },
     ]);
+    clearV9DependencyImpairment();
+  });
+
+  it("falls back to the curated posture band when no V9 projection is installed", () => {
+    // The retired engine derived the band from curated metadata, so K1's band
+    // leg was always evaluable. A held or unavailable V9 publication must not
+    // silently drop it — that would fail *open* on a kill signal exactly when
+    // the pipeline is degraded.
+    clearV9DependencyImpairment();
+    const meta = {
+      id: "fixture-k1-held",
+      symbol: "FK1H",
+      name: "Fixture K1 Held",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: false,
+        navToken: false,
+      },
+      mintAuthority: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "unbounded-or-compromised",
+        confidence: "verified",
+        summary: "Unbounded reviewed issuer mint controller.",
+        review: {
+          evidence: "Reviewed against the mint controller.",
+          reviewer: "Pharos",
+          reviewedAt: "2026-05-25",
+        },
+      },
+    } as StablecoinMeta;
+
+    expect(toStructural(meta).mintAuthorityScoreBand).toBe("exposed");
+
+    // With a projection installed, a published "no band" stays authoritative.
+    hydrateV9DependencyImpairment([
+      { id: "fixture-k1-held", dependencies: { serial: [] } },
+    ]);
+    expect(toStructural(meta).mintAuthorityScoreBand).toBeNull();
     clearV9DependencyImpairment();
   });
 
