@@ -136,7 +136,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURAU is controlled by two AllUnity EOAs across all six EVM chains (ETH, ARB, OP, Base, Polygon, BSC): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
     "upgradeability": {

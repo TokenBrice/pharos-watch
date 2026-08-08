@@ -369,7 +369,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "bC3M has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set.",
     "upgradeability": {

@@ -113,7 +113,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURQ is issuer-minted by Quantoz across Ethereum (3/5 HadronMultisig owner, 3/5 proxy admin), Polygon (3/5 HadronMultisig owner, 3/5 proxy admin), XRPL (single master-key issuer account), and Algorand (single manager account). All mint-capable surfaces confirmed.",
     "controls": [

@@ -96,7 +96,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "KGST's sole BSC deployment is a TransparentUpgradeableProxy. The token owner and the owner of ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b are both the same immediate 2-of-5 Safe at 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Stablecoin.mint(uint256) has no supply cap and mints to the owner caller. The Safe has no modules, guard, module guard, or timelock.",
     "upgradeability": {

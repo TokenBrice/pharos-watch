@@ -128,7 +128,7 @@
   "governanceQuality": "single-entity",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract. A current Circle xReserve attester authorizes mint messages, while Movement-native 4-of-6 multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 can immediately replace attesters and upgrade the compatible-policy Move package. No permissionless free-mint path exists.",

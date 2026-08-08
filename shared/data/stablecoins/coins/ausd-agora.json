@@ -213,7 +213,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "AUSD uses rate-limited EVM minter and bridge-minter roles plus a Solana Token-2022 mint authority. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed paths.",
     "upgradeability": {

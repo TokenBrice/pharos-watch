@@ -26,7 +26,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE and MINT_ROLE is currently unassigned (granting runs through the Safe). The Ethereum MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract owned by the same Safe. ProxyAdmin across chains is owned by the Admin Safe.",
     "upgradeability": {

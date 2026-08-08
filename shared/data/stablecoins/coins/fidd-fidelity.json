@@ -152,7 +152,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is a UUPS proxy with three DEFAULT_ADMIN_ROLE EOAs, five MINTER_ROLE EOAs, and one separate UPGRADER_ROLE EOA. There is no ProxyAdmin or timelock.",
     "upgradeability": {

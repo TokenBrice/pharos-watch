@@ -278,7 +278,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "OUSG minting runs through the OUSG_InstantManager (MINTER_ROLE holder) and is governed by a 4-of-7 Ondo Safe (DEFAULT_ADMIN and MINTER_ROLE on the token). The InstantManager's own admin is a separate 3-of-5 Ondo Safe.",
     "upgradeability": {

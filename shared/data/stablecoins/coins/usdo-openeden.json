@@ -143,7 +143,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDO has AccessControl MINTER_ROLE/BURNER_ROLE/UPGRADE_ROLE. Active mint roles include an EOA default admin, an Express mint/redeem contract, and a CCIP burn/mint token pool.",
     "upgradeability": {

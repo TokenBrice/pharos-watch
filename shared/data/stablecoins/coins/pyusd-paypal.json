@@ -253,7 +253,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "PYUSD is issuer-minted by Paxos-operated infrastructure; the Ethereum token (PaxosTokenV2 / AdminUpgradeabilityProxy) delegates supply control to a dedicated SupplyControl contract whose owner and the token's defaultAdmin are the same Paxos EOA. All addressable controls confirmed at block 25294757.",
     "upgradeability": {

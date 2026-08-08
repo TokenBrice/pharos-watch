@@ -33,9 +33,7 @@ describe("V9 curated mint posture queue", () => {
     const queue = buildV9CuratedMintPostureQueue([
       { assetId: "agree-exact", curatedPosture: "bounded-admin", derivedPosture: "bounded-admin" },
       { assetId: "agree-band", curatedPosture: "none-resolved", derivedPosture: "bounded-admin" },
-      // The curated vocabulary has no reconciled-unbounded rung, so an adverse
-      // annotation over a reconciled derivation is the split, not a conflict.
-      { assetId: "agree-split", curatedPosture: "unbounded-or-compromised", derivedPosture: "unbounded-reconciled" },
+      { assetId: "agree-reconciled", curatedPosture: "unbounded-reconciled", derivedPosture: "unbounded-reconciled" },
       { assetId: "neither", curatedPosture: "unknown", derivedPosture: "unknown" },
     ]);
     expect(queue.entries).toEqual([]);
@@ -47,14 +45,19 @@ describe("V9 curated mint posture queue", () => {
       { assetId: "a-adverse", curatedPosture: "concentrated-admin", derivedPosture: "partially-bounded-admin" },
       { assetId: "m-unreviewed", curatedPosture: "unknown", derivedPosture: "bounded-admin" },
       { assetId: "d-unresolved", curatedPosture: "bounded-admin", derivedPosture: "unknown" },
+      // No longer suppressed: the curated vocabulary can now express the
+      // reconciled rung, so a stale adverse annotation over it is a real
+      // curation item.
+      { assetId: "b-stale-adverse", curatedPosture: "unbounded-or-compromised", derivedPosture: "unbounded-reconciled" },
     ]);
     expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
       ["a-adverse", "curated-adverse"],
+      ["b-stale-adverse", "curated-adverse"],
       ["d-unresolved", "derived-unresolved"],
       ["m-unreviewed", "curated-unreviewed"],
       ["z-optimistic", "curated-optimistic"],
     ]);
-    expect(queue.reviewedAssetCount).toBe(4);
+    expect(queue.reviewedAssetCount).toBe(5);
     expect(queue.entries.every((entry) => entry.action.length > 0)).toBe(true);
   });
 

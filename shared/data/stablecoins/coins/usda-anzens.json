@@ -132,7 +132,7 @@
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
     "economicCapSemantics": "unknown",

@@ -110,7 +110,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "cNGN is issued by the Africa Stablecoin Consortium. On EVM chains the token owners are Gnosis Safe 2/2 multisigs of the same two consortium signers (re-verified on all four chains 2026-07-20; Polygon Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba enumerated for the first time). The Base contract additionally has an EOA-owned ProxyAdmin enabling upgrades. On Solana the Token-2022 mint authority is a PDA of the issuer's issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 (operational authority EOA 88ifu36R...; program upgradeable by EOA 8Ng3h97W...), with freeze/delegate held by an SPL 2-of-2 multisig.",
     "upgradeability": {

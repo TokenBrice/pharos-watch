@@ -123,7 +123,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURE is minted via Monerium's licensed EMI flow; the Ethereum token owner is a 3/6 Safe (Monerium-operated); proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
     "upgradeability": {

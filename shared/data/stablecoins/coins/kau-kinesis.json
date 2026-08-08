@@ -81,7 +81,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "KAU is a Fireblocks ERC20F UUPS proxy on Ethereum. mint() is onlyRole(MINTER_ROLE) with no on-chain cap, held by a single EOA (0x4b1f9e5b…). A separate single EOA (0xe584e152…) holds DEFAULT_ADMIN_ROLE, which is the role admin for every role, so it can grant itself UPGRADER_ROLE and replace the implementation. No UPGRADER_ROLE holder currently exists. KAG and KAU use the same ERC20F implementation but distinct minter/admin EOAs and distinct DenyList registries. Minting is operationally gated off-chain by Kinesis deposits of allocated gold bullion, not by contract logic.",
     "upgradeability": {

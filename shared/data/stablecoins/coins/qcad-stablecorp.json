@@ -224,7 +224,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. The token-owner Safes and proxy-admin Safes have different signer compositions; no modules or guards were detected. Stablecorp's issuance backend mints through the Safe-controlled token contracts.",
     "controls": [

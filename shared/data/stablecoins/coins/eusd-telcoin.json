@@ -78,7 +78,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "eUSD is issued by Telcoin Digital Asset Bank under a Nebraska Digital Asset Depository charter. The token is a BeaconProxy (Stablecoin contract); MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a Gnosis Safe 1.4.1 (6/3 multisig, no modules/guard); beacon upgrades controlled by a separate Safe 1.4.1 (7/2).",
     "controls": [

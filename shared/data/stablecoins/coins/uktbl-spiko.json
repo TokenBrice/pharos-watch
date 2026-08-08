@@ -104,7 +104,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum plus UKTBL-specific Chainlink CCIP pools on Ethereum, Polygon, Base, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts, with no pending Soroban owner/admin transfer at ledger 63675179. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds.",
     "controls": [

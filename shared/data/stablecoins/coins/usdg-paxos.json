@@ -185,7 +185,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDG is issuer-minted by Paxos-operated infrastructure; the Ethereum token uses a UUPS ERC1967Proxy and delegates supply control to a SupplyControl contract. The SupplyControl owner and the token's defaultAdmin are a TimelockController (24h delay) whose sole proposer and executor is the Paxos admin EOA. The mint and upgrade paths were confirmed at block 25526176.",
     "upgradeability": {

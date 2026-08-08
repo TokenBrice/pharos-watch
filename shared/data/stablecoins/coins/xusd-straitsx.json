@@ -162,7 +162,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "StraitsX XUSD uses Circle-style MasterMinter deployments on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. The BNB Chain token is a legacy ZeppelinOS proxy controlled by another 3/5 Safe; the Solana mint authority is a 3/10 multisig.",
     "upgradeability": {

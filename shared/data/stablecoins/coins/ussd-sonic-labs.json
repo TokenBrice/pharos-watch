@@ -455,7 +455,7 @@
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure. The tracked direct mint path is a BrandedCustodian that accepts local frxUSD and calls the USSD token's MINTER_ROLE; external Frax routes expose a broader issuer-administered set of approved USD assets and tokenized Treasury reserves.",
     "upgradeability": {

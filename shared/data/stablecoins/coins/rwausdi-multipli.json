@@ -314,7 +314,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "A shared zero-code EOA has uncapped direct-mint permission on Ethereum, Base, Arbitrum, and Monad through four chain-local RolesAuthority contracts. Each token and RolesAuthority is also owned by a same-address, no-delay Safe whose cutoff quorum varies by chain: 1-of-7 on Arbitrum, 2-of-7 on Monad, 3-of-8 on Ethereum, and 3-of-7 on Base. Those Safes can mint, replace or extend the minter set, change the authority contract, and immediately upgrade the UUPS tokens.",
     "upgradeability": {

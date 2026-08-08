@@ -51,7 +51,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "CHFAU is issuer-native on Ethereum, Polygon, Base, and Tempo. The three EVM deployments use the same deterministic ERC1967 proxy address and UUPS implementation; the same AllUnity EOAs hold DEFAULT_ADMIN_ROLE and MINTER_ROLE on Ethereum, Polygon, and Base. Tempo uses a native TIP-20 token whose role members are not enumerable through the standard EVM interface.",
     "upgradeability": {

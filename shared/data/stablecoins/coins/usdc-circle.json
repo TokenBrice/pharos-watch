@@ -581,7 +581,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MasterMinter (MinterAdmin) contract for minter management and an EOA token owner/admin. All addressable controls confirmed at block 25294757.",
     "upgradeability": {

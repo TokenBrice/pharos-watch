@@ -37,7 +37,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); shares are minted only against USDC deposits. Vault owner is the Steakhouse Safe v1.4.1 8/5. Base USDC issuance is inherited from Circle.",
     "inheritedFrom": "usdc-circle",

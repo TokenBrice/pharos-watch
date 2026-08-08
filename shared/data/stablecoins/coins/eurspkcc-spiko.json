@@ -136,7 +136,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "eurSPKCC mint is gated by a Spiko PermissionManager on every chain. On Ethereum, Polygon, Arbitrum and Base the token's mint selector accepts group 0 (a 3/8 Safe on Ethereum, 3/6 elsewhere) or group 2, whose members are Spiko's two-step Minter contract (5,000,000 eurSPKCC daily limit, initiator + approver) and the Chainlink CCIP BurnWithFromMintTokenPool, itself owned by an EOA. Starknet mint requires MINTER_ROLE, held by a 3/5 Argent multisig plus three single-key accounts. Stellar mint requires the MINTER role, held by three single-key accounts, and the owner is a single-key account that can upgrade the wasm. Cross-chain the Safe-gated EVM admin is the bound; Starknet and Stellar are single-key surfaces.",
     "upgradeability": {

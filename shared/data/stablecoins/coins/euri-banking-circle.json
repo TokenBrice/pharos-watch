@@ -100,7 +100,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum and BSC both have the same EOA owner and same proxy-admin contract whose owner is also a confirmed EOA.",
     "controls": [

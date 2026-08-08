@@ -84,10 +84,11 @@ function classify(
   if (curatedBand === null) return "curated-unreviewed";
   if (derivedBand === null) return "derived-unresolved";
   if (curatedBand === derivedBand) return null;
-  // The curated vocabulary predates V9's split of unbounded minting into a
-  // reconciled and an unreconciled rung, so an "exposed" annotation over a
-  // "managed" derivation is the expected shape of that split, not a conflict.
-  if (curatedBand === "exposed" && derivedBand === "managed") return null;
+  // Until the curated vocabulary gained `unbounded-reconciled` it could not
+  // express the reconciled rung, so an "exposed" annotation over a "managed"
+  // derivation was suppressed as the expected shape of that split. The
+  // vocabulary now carries the rung and every affected asset is annotated with
+  // it, so the suppression would only hide a real disagreement.
   return BAND_RANK.get(curatedBand)! < BAND_RANK.get(derivedBand)! ? "curated-optimistic" : "curated-adverse";
 }
 

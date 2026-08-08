@@ -106,7 +106,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "sYUSD is Aegis's yield-bearing ERC-4626 wrapper over YUSD. Both Ethereum and BSC deployments are transparent proxies controlled via ProxyAdmin → 3/5 Safe (same Safe address on both chains, v1.4.1, no modules, no guard). Shares minted only by depositing YUSD; base YUSD mint authority is inherited from reviewed yusd-aegis controls.",
     "inheritedFrom": "yusd-aegis",

@@ -249,7 +249,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURCV Ethereum mint is restricted to SG-FORGE's immutable registrar EOA. The token is a UUPS SmartCoin V4 proxy: the immutable technical EOA executes upgrades only after the registrar has authorized the candidate implementation; there is no separate proxy-admin slot.",
     "upgradeability": {

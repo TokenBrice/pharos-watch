@@ -125,7 +125,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USD1 is issuer-backed; the Ethereum token owner is an AccessControl controller whose defaultAdmin is a 3/6 Safe. MINTER_ROLE is held by that Safe, a BitGo 2/3 WalletSimple, and one EOA.",
     "upgradeability": {

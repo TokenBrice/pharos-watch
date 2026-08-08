@@ -96,7 +96,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USTBL mint and burn are permission-gated on every deployment. On Ethereum, Polygon, Base, Etherlink and Arbitrum a PermissionManager ADMIN group with exactly one 3-of-6 Safe member authorizes minting and can upgrade both the token and the PermissionManager; on Starknet the same authority is a 3-of-5 Argent multisig; on Stellar it is a single-key account that owns both the token and the PermissionManager, which is the weakest control in the set.",
     "upgradeability": {

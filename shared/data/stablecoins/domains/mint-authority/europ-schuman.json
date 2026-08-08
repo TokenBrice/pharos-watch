@@ -2,7 +2,7 @@
   "id": "europ-schuman",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "EUROP uses UUPS token proxies on Ethereum, Polygon, Avalanche, and Plasma, Schuman's issuer account on XRPL, and a Token-2022 mint on Solana. The EVM deployments use chain-local admin and master-minter Safes; XRPL uses its issuer quorum; Solana uses a 1-of-3 Token-2022 mint-authority multisig.",
     "upgradeability": {

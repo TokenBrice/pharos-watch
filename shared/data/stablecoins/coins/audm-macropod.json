@@ -274,7 +274,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Macropod centrally mints AUDM for approved clients: Ethereum, Base, and Redbelly share the same UUPS implementation and code-empty DEFAULT_ADMIN and MINTER_ROLE EOAs, while the Solana Token-2022 mint has a distinct System Program-owned wallet as mint authority.",
     "upgradeability": {

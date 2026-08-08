@@ -332,7 +332,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EUTBL mint and burn are permission-gated on every deployment. Chain-local PermissionManager ADMIN Safes resolve the EVM authority paths, including the material Arbitrum deployment; Starknet uses an Argent 3-of-5 multisig, while Stellar token and PermissionManager ownership terminate at one single-key account.",
     "controls": [

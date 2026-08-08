@@ -343,7 +343,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "mMEV has independently mintable deployments on Ethereum, Plume, and Etherlink. A chain-local deposit vault and EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 can mint on every deployment, while EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 is an additional Ethereum minter. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and shared admin EOA can change those grants immediately; proxy upgrades pass through a two-day chain-local timelock.",
     "upgradeability": {

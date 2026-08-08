@@ -212,7 +212,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Anchorage Digital Bank issues USDPT on Solana. The Token-2022 mint retains an externally owned mint/permanent-delegate authority plus separate metadata, pause, and freeze authorities, so durable supply remains under issuer-controlled keys.",
     "upgradeability": {

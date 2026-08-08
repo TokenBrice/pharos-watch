@@ -158,7 +158,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "VNXAU has seven independently mintable native deployments. Ethereum, Base, Polygon, and Etherlink use VNXDGR proxies with uncapped increaseSupply() access for every chain-local VNXManager role-0 bearer. Solana has one unrestricted SPL mint authority, Tezos has two unrestricted role-0 bearers, and Stellar has one effective master signer on the issuer account. No deployment enforces a global supply cap or timelock, no on-chain multisig was found, and off-chain MPC/HSM custody is unknown.",
     "controls": [

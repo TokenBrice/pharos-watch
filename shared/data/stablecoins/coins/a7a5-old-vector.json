@@ -143,7 +143,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
     "upgradeability": {

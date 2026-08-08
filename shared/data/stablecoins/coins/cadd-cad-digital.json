@@ -37,7 +37,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "CADD uses ERC20F with role-gated minting and UUPS upgrades. Ethereum and Base share the same implementation and EIP-7702 delegated role holders: minter 0x4b37dd8b, default admin 0xb3a77dd7, and upgrader 0x9367b51c. All three delegate to Fireblocks' verified UniversalGaslessDelegate; the off-chain signer custody policy remains undisclosed.",
     "upgradeability": {

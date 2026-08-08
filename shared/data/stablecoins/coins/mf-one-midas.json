@@ -150,7 +150,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "mF-ONE has two live direct-minter controls on Ethereum: backend EOA 0x4f75307888fd06b16594cc93ed478625ad65eeea and DepositVault proxy 0x41438435c20b1c2f1fca702d387889f346a0c3de. A 1-of-3 Safe and a separate EOA can immediately rotate mint operators through DEFAULT_ADMIN_ROLE. The token, vault, and shared MidasAccessControl proxies share a ProxyAdmin owned by a two-day timelock.",
     "upgradeability": {

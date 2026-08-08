@@ -229,7 +229,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
     "upgradeability": {

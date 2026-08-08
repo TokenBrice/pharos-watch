@@ -171,7 +171,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
     "upgradeability": {

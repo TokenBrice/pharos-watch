@@ -168,7 +168,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves; the mint is enforced on-chain by a PlutusV2 policy gated on a one-shot state-thread token whose counter datum reconciles cumulative supply, but the validator that guards the controlling token has not been decompiled, so the terminal signer set remains unattributed.",
     "controls": [
