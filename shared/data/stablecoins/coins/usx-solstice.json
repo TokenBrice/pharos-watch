@@ -26,8 +26,8 @@
       "periodEnd": "2026-07-15",
       "publishedAt": "2026-07-15",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
       "confidence": "verified",
       "sources": [

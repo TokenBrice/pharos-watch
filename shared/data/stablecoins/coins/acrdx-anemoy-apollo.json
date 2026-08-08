@@ -43,8 +43,8 @@
       "periodEnd": "2026-07-24",
       "publishedAt": "2026-07-27",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "Grok wave8 phase1 reserve re-verify",
       "confidence": "verified",
       "sources": [

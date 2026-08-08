@@ -27,8 +27,8 @@
       "periodEnd": "2026-07-22",
       "publishedAt": "2026-07-22",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "PoR remediation pass 2026-08 (downgraded from full/verified: wallet ratio check does not reconcile gold to liabilities)",
       "confidence": "probable",
       "sources": [

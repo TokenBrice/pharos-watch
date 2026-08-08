@@ -42,8 +42,8 @@
       "periodEnd": "2026-07-21",
       "publishedAt": "2026-07-21",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "OpenAI Codex V9 NR-recovery review",
       "confidence": "verified",
       "sources": [

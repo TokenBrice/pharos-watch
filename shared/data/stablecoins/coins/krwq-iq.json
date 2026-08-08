@@ -44,7 +44,7 @@
       "publishedAt": "2026-07-14",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
-      "liabilityReconciliation": "partial",
+      "liabilityReconciliation": "none",
       "reviewer": "OpenAI Codex backing review",
       "confidence": "verified",
       "sources": [

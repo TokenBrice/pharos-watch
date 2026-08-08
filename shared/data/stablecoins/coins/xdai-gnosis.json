@@ -40,8 +40,8 @@
       "periodEnd": "2026-07-22",
       "publishedAt": "2026-07-22",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "OpenAI Codex Safety Score V9 backing review",
       "confidence": "verified",
       "sources": [

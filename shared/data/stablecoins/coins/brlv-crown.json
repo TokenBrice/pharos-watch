@@ -27,8 +27,8 @@
       "periodEnd": "2026-05-31",
       "publishedAt": "2026-05-31",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "PoR verification sweep 2026-08 (memo carries no assurance standard, no opinion, and no accountant signature; series stalled after May 2026)",
       "confidence": "probable",
       "sources": [

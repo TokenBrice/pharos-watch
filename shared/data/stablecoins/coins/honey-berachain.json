@@ -129,8 +129,8 @@
       "periodEnd": "2026-07-14",
       "publishedAt": "2026-07-14",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "OpenAI Codex backing review",
       "confidence": "verified",
       "sources": [
