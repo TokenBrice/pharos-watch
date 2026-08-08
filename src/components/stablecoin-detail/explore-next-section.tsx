@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   BACKING_LABELS,
@@ -120,7 +121,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
       aria-labelledby="explore-next-heading"
     >
       <div className="space-y-1.5">
-        <DetailSectionTitle id="explore-next-heading">Explore Next</DetailSectionTitle>
+        <DetailSectionTitle id="explore-next-heading" className={DETAIL_MODULE_TITLE_CLASS}>Explore Next</DetailSectionTitle>
         <p className="text-sm text-muted-foreground">
           Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add
           context to what you just read.

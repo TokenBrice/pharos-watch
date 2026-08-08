@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ComposedChart, Bar, Tooltip } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
@@ -33,42 +33,32 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
 
   if (isLoading) {
     return (
-      <Card className="pharos-card-shell">
-        <CardHeader>
-          <Skeleton className="h-5 w-48" />
-          <Skeleton className="h-3 w-64 mt-1" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className={`${CHART_HEIGHT} w-full`} />
-        </CardContent>
-      </Card>
+      <section className="border-t border-border/40 pt-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-3 w-64 mt-1" />
+        <Skeleton className={`${CHART_HEIGHT} mt-4 w-full`} />
+      </section>
     );
   }
 
   if (chartData.length === 0) {
     return (
-      <Card className="pharos-card-shell animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-        <CardHeader>
-          <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground">
-            Insufficient data for the quarterly view on this asset yet.
-          </p>
-        </CardContent>
-      </Card>
+      <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
+        <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Insufficient data for the quarterly view on this asset yet.
+        </p>
+      </section>
     );
   }
 
   return (
-    <Card className="pharos-card-shell animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-      <CardHeader>
-        <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Count of blacklist, unblacklist, and destroy events attributed to their execution quarter.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <section className="border-t border-border/40 pt-4 animate-in fade-in duration-[220ms] motion-reduce:animate-none">
+      <CardTitle as="h3" className="pharos-kicker">Events per Quarter</CardTitle>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Count of blacklist, unblacklist, and destroy events attributed to their execution quarter.
+      </p>
+      <div className="mt-4">
         <div className="mb-3 flex flex-wrap gap-2">
           {(["blacklist", "unblacklist", "destroy"] as const).map((key) => (
             <div key={key} className="pharos-chart-legend-chip">
@@ -124,8 +114,8 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
             <Skeleton className="h-full w-full" />
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

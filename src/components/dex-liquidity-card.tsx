@@ -272,7 +272,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           {/* DEX-Implied Price — anchors the bottom of the summary zone */}
           {liq.dexPriceUsd != null && (
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
+              <p className="pharos-kicker">DEX-Implied Price</p>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="text-lg font-extrabold font-mono tabular-nums">${liq.dexPriceUsd.toFixed(4)}</span>
                 {liq.dexDeviationBps != null && (

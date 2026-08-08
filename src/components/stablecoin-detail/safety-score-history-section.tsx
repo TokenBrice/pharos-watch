@@ -21,6 +21,7 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared/lib/format";
 import { getReportCardGradeRank } from "@shared/lib/report-cards";
 import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
+import { MethodologyLabel } from "@/components/methodology-hint";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -149,7 +150,9 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Grade History</DetailSectionTitle>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
+          <MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>
+        </DetailSectionTitle>
         {meta?.updatedAt != null && meta.updatedAt > 0 ? (
           <FreshnessIndicator
             compact

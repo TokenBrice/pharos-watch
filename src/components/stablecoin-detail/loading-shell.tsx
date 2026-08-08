@@ -64,7 +64,7 @@ export function StablecoinDetailLoadingShell({
           <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {["Safety Score", "Overview", "Chart", "Info", "Liquidity"].map((label) => (
+          {["Risk", "Context", "Liquidity", "Activity", "History", "Explore"].map((label) => (
             <div
               key={label}
               className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border/60 bg-background px-4 py-2 text-sm text-muted-foreground"

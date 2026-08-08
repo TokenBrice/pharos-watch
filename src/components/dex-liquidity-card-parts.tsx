@@ -98,7 +98,7 @@ function BreakdownSection({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">{title}</p>
+      <p className="pharos-kicker">{title}</p>
       <BreakdownBar
         entries={entries}
         total={total}
@@ -167,7 +167,7 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
+      <p className="pharos-kicker">
         {totalPoolCount != null && totalPoolCount > displayed
           ? `Top ${displayed} of ${totalPoolCount} pools`
           : "Top Pools"}
@@ -319,7 +319,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
+        <p className="pharos-kicker">TVL History (90d)</p>
         <ChartSkeleton className="h-32" />
       </div>
     );
@@ -328,7 +328,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   if (hasOnlyUnobservedHistory) {
     return (
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
+        <p className="pharos-kicker">TVL History (90d)</p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           <p>Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.</p>
           <p className="mt-1">
@@ -345,7 +345,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
+      <p className="pharos-kicker">TVL History (90d)</p>
       <div ref={chartContainerRef} className="h-32" role="figure" aria-label="TVL trend chart">
         {isChartReady ? (
           <AreaChart width={width} height={height} data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
@@ -394,7 +394,7 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
   }));
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Score Breakdown</p>
+      <p className="pharos-kicker">Score Breakdown</p>
       {bars.map(({ label, value, weight, tooltip }) => (
         <div key={label} className="flex items-center gap-2 text-xs">
           <span className="w-28 sm:w-36 text-muted-foreground shrink-0 cursor-help" title={tooltip}>
