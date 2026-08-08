@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockCircuitOutcomeRecord } from "../../../test-helpers/cron";
 
+const fetchDsTokenPairsWithStatusMock = vi.hoisted(() => vi.fn());
 const fetchDsTokenPoolsWithStatusMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../dex-liquidity/crawl-helpers", async (importOriginal) => {
@@ -35,7 +36,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 vi.mock("../../../lib/dexscreener", () => ({
   fetchDsTokenPoolsWithStatus: fetchDsTokenPoolsWithStatusMock,
-  fetchDsTokenPairsWithStatus: fetchDsTokenPoolsWithStatusMock,
+  fetchDsTokenPairsWithStatus: fetchDsTokenPairsWithStatusMock,
   dsRateLimit: vi.fn().mockResolvedValue(undefined),
   getDsTrackedTokenPriceUsd: vi.fn(
     (pair: { baseToken: { address: string }; priceUsd: string | null }, trackedAddress: string) => ({
@@ -57,7 +58,7 @@ import {
 } from "../crawl-dexscreener-pools";
 import { knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
-import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPairsWithStatus, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
@@ -86,6 +87,7 @@ describe("crawlCoin DexScreener hardening", () => {
   beforeEach(() => {
     vi.mocked(crawlTokenPools).mockReset();
     vi.mocked(crawlTokenPools).mockResolvedValue({ stoppedEarly: false });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockReset();
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
     vi.mocked(dsRateLimit).mockReset();
     vi.mocked(dsRateLimit).mockResolvedValue(undefined);
@@ -104,7 +106,7 @@ describe("crawlCoin DexScreener hardening", () => {
   it("skips malformed DexScreener pairs and keeps valid pairs in the same response", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
         {
@@ -145,6 +147,8 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]?.poolId).toBe("ethereum:0xgoodpool");
     expect("priceObs" in result).toBe(false);
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
+    expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[dex-discovery] dexscreener malformed pair for ethereum:0xAbC"),
       expect.objectContaining({
@@ -156,10 +160,45 @@ describe("crawlCoin DexScreener hardening", () => {
     );
   });
 
+  it("reports every eligible DexScreener pair in the deployment census, including known pools", async () => {
+    const pair = {
+      chainId: "ethereum",
+      dexId: "uniswap-v3",
+      labels: ["V3"],
+      baseToken: { address: "0xabc", name: "Test USD", symbol: "TUSD" },
+      quoteToken: { address: "0xquote", name: "USD Coin", symbol: "USDC" },
+      priceUsd: "1.00",
+      volume: { h24: 15_000, h6: 0, h1: 0, m5: 0 },
+      liquidity: { usd: 75_000, base: 0, quote: 0 },
+      pairCreatedAt: null,
+    };
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        { ...pair, pairAddress: "0xknownpool" },
+        { ...pair, pairAddress: "0xnewpool" },
+      ],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "test-coin",
+      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
+      null,
+      new Set([knownPoolIdKey("test-coin", "ethereum:0xknownpool")]),
+    );
+
+    expect(result.pools.map((pool) => pool.poolId)).toEqual(["ethereum:0xnewpool"]);
+    expect(result.deploymentOutcomes[0]).toMatchObject({
+      outcome: "observed_pools",
+      observedPoolCount: 2,
+    });
+  });
+
   it("records one DexScreener failure for a crawl with only target errors", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("DexScreener boom"));
+    vi.mocked(fetchDsTokenPairsWithStatus).mockRejectedValueOnce(new Error("DexScreener boom"));
 
     const result = await crawlCoin(
       createMockDb(),
@@ -176,7 +215,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("records DexScreener discovery success when any target request reaches the source", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus)
+    vi.mocked(fetchDsTokenPairsWithStatus)
       .mockRejectedValueOnce(new Error("first target failed"))
       .mockResolvedValueOnce({
         ok: true,
@@ -204,7 +243,7 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(dsRateLimit).mockImplementation(async () => {
       events.push("pace");
     });
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async () => {
+    vi.mocked(fetchDsTokenPairsWithStatus).mockImplementation(async () => {
       events.push("fetch");
       return { ok: true, pairs: [] };
     });
@@ -230,7 +269,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
   it("latches a hard refusal across coin crawls and records one run-level failure", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: false,
       pairs: [],
       status: 429,
@@ -265,7 +304,8 @@ describe("crawlCoin DexScreener hardening", () => {
     );
     await finalizeDexScreenerDiscoveryRun(db, runState);
 
-    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
+    expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
     expect(shouldAttemptFetch).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
@@ -351,7 +391,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
     expect(crawlTokenPools).not.toHaveBeenCalled();
-    expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
+    expect(fetchDsTokenPairsWithStatus).not.toHaveBeenCalled();
     expect(fetchJsonWithRetry).toHaveBeenCalledWith(
       "https://api.curve.finance/v1/getPools/all/ethereum",
       expect.anything(),
@@ -410,7 +450,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("preserves non-EVM DexScreener identities and rejects case-distinct token matches", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
       ok: true,
       pairs: [
         {
@@ -448,7 +488,7 @@ describe("crawlCoin DexScreener hardening", () => {
       new Set(),
     );
 
-    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledWith(
       "solana",
       "MintCase",
       expect.any(AbortSignal),
@@ -623,7 +663,7 @@ describe("crawlCoin DexScreener hardening", () => {
       schemaDegraded: false,
       pools: [],
     });
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pairs: [] });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({ ok: true, pairs: [] });
     vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
       expect(config.tokens).toEqual([
         {
@@ -659,7 +699,7 @@ describe("crawlCoin DexScreener hardening", () => {
       events.push("gt");
       return { stoppedEarly: false };
     });
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async (chain) => {
+    vi.mocked(fetchDsTokenPairsWithStatus).mockImplementation(async (chain) => {
       events.push(`ds:${chain}`);
       return { ok: true, pairs: [] };
     });
@@ -699,7 +739,7 @@ describe("crawlCoin DexScreener hardening", () => {
       schemaDegraded: false,
       pools: [],
     });
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
       if (String(url).includes("api.curve.finance")) throw timeout;
       return {
@@ -750,7 +790,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("keeps CoinGecko tickers staging output aligned with current orderbook rows", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
       response: new Response(null, { status: 200 }),
       body: {
@@ -827,7 +867,7 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("keeps same-exchange CoinGecko tickers pools distinct across stablecoins", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     vi.mocked(fetchJsonWithRetry).mockImplementation(async () => ({
       response: new Response(null, { status: 200 }),
       body: {
