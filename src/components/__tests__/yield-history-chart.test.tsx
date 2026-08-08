@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { fireEvent, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 
@@ -62,6 +62,9 @@ describe("YieldHistoryChart", () => {
       />,
     );
 
+    // The publish-time PYS strip now rides the breakdown toggle.
+    expect(screen.queryByTestId("pys-sparkline")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Show APY and PYS breakdown detail"));
     expect(screen.getByTestId("pys-sparkline")).toBeTruthy();
     expect(screen.getByText(/PYS 89 \(\+29\)/)).toBeTruthy();
   });

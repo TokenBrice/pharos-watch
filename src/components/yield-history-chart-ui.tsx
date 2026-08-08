@@ -325,7 +325,7 @@ export function Controls({
           onPressedChange={onShowBreakdownChange}
           variant="outline"
           size="sm"
-          aria-label="Show base and reward APY breakdown"
+          aria-label="Show APY and PYS breakdown detail"
           className={cn(
             "rounded-full border-border/60 bg-background/60 text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
             compact ? "px-2.5 text-[11px]" : "px-3 text-xs",
