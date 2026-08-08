@@ -208,7 +208,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "CHFm is minted by Mento's immutable BorrowerOperations and ActivePool contracts for borrower debt and accrued interest. The token owner and proxy admin, plus the SystemParams ProxyAdmin owner, resolve to the same immediate 4/6 Mento Safe.",
     "controls": [

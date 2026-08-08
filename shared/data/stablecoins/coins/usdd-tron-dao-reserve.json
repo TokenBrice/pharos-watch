@@ -381,7 +381,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDD uses direct Maker-style token and Join contracts on Tron, Ethereum, and BSC. Each Join can mint only against existing Vat credit/debt accounting; chain-local GovActionsProxy owner paths can immediately change system authorization and limits with no timelock.",
     "upgradeability": {

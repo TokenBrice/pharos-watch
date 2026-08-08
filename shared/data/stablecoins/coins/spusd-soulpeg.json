@@ -111,7 +111,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "spUSD is a role-gated BSC wrapper: the SoulPeg wrapper contract (0x0e8fb2e…) holds MINTER_ROLE and BURNER_ROLE on-chain; DEFAULT_ADMIN_ROLE is held by EOA 0xf683ab3…. MAX_SUPPLY is an immutable constant at 1B tokens.",
     "controls": [

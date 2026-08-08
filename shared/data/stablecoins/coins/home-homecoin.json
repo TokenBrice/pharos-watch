@@ -156,7 +156,7 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is an EIP-1967 proxy. The ProxyAdmin (0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f) is owned by a 5-signer legacy Gnosis MultiSigWallet (0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, threshold 3-of-5). Minting occurs only through Bacon Protocol Pan contracts when borrowers draw lien-backed loans. BACON governance controls Pan additions.",
     "upgradeability": {

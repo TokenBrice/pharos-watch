@@ -133,7 +133,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Ring USD (USDR) is a Fei-fork ERC20Burnable whose MINTER_ROLE holders can mint to any address uncapped; roles are managed by Ring Protocol's Core access-control contract (0xb2799…). At block 25295203: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs); no revocations recorded.",
     "controls": [

@@ -117,7 +117,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "U is issuer-operated on Ethereum, BSC, and Tron. Ethereum/BSC use chain-local instances of the same 2/4 Safe; Tron uses a native 2/4 account permission. Those authorities directly control token minting, AutoOwner mint endpoints, and all mint-critical upgrades without a timelock.",
     "upgradeability": {

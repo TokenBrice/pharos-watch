@@ -106,7 +106,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "JPYT is a non-upgradeable OpenZeppelin AccessControlEnumerable ERC-20 with mint() gated on MINTER_ROLE and no supply cap. On each chain MINTER_ROLE is held by exactly one contract — the DePhaser DepositManager, itself an ERC-1967/UUPS proxy that mints JPYT against USDT (Optimism) or USDC (Base) deposits routed into Aave. DEFAULT_ADMIN_ROLE is the role admin of MINTER_ROLE and is held by a single EOA per chain, so that EOA can grant MINTER_ROLE to any address (including itself) in one transaction and then mint without bound. Each DepositManager proxy is separately upgradeable by its own DEFAULT_ADMIN EOA, which can self-grant UPGRADER_ROLE and replace the mint implementation.",
     "controls": [

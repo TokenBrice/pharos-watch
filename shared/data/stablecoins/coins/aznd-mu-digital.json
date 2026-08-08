@@ -320,7 +320,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AZND primary issuance is KYC-gated by Mu Digital, while the Monad token's mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA. The Monad AccessManager default admin can change that role set. Ethereum AZND is a UUPS LayerZero OFT spoke whose owner can change trusted peers and whose AccessManager default admin can upgrade mint-critical logic; both controls currently resolve to the same Mu Digital EOA.",
     "upgradeability": {

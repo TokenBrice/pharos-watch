@@ -69,7 +69,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. Ethereum and Base wrappers are UUPS proxies whose mint-critical upgrade paths are controlled by the same 3/6 Safe through chain-local Apyx AccessManagers; durable base issuance is inherited from the reviewed apxUSD issuer authority.",
     "inheritedFrom": "apxusd-apyx",

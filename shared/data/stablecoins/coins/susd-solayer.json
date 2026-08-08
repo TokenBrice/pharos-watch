@@ -117,7 +117,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority PDA. The Solayer program remains upgradeable by a plain keypair (EOA-equivalent) upgrade authority.",
     "controls": [

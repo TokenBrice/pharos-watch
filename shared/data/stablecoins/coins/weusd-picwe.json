@@ -321,7 +321,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "WEUSD is minted and redeemed through PicWe's omni-chain protocol via AccessControl tokens whose live BSC/Base/Arbitrum roles resolve to a PicWe admin/minter EOA plus a mint/redeem contract; the basket-style backing (roughly 9 USDT + 1 MOVE) explains the persistent ~$0.91 trading level.",
     "upgradeability": {

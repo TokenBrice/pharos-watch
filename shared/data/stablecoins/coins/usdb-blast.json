@@ -210,7 +210,7 @@
   },
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDB is the Blast L2 native dollar minted by the OP-stack L1 standard bridge / stablecoin yield manager. The L1 USDYieldManager is owned by a 3/5 Gnosis Safe (Blast operator multisig). USDB on Blast is an OP-stack predeploy with ProxyAdmin at the L2 standard predeploy (0x4200…0018).",
     "upgradeability": {

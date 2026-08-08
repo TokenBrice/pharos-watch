@@ -2460,7 +2460,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "satUSD mint authority is resolved through the fully enumerated Ethereum and Base ward histories plus the reviewed deployment inventory for every other tracked chain. Chain-local SatoshiXApp contracts mint CDP debt, while the same River owner EOA controls UUPS upgrades and can appoint unrestricted wards.",
     "upgradeability": {

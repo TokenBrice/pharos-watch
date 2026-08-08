@@ -93,7 +93,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "probable",
     "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished. The token owner is Kinka's unverified token-sale contract, whose owner is an OpenZeppelin TimelockController (1-day delay) with a 2-of-3 Gnosis Safe as sole proposer/canceller, an open executor, and DEFAULT_ADMIN_ROLE held by the deployer EOA and the timelock itself. The Cardano deployment is an NFT-gated PlutusV3 minting policy whose authorising NFT holder is not publicly enumerable.",
     "controls": [

@@ -133,7 +133,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA that also owns the ProxyAdmin. After retiring the compromised Ethereum-Base bridge, the issuer deployed an independently gold-backed native Base token whose MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner are separately identified.",
     "mintIncidents": [

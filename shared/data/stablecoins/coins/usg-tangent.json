@@ -918,7 +918,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USG has three mint routes, all resolved on-chain. mintDebt is callable by isMinter addresses, which are exactly the 13 Tangent markets registered through MarketCreator.initializeMarket (setIsMinter has never been called); each market mints only against user collateral. mintIR is callable by the single isIRProducer, the IRCalculator, which mints accrued interest to the ControlTower fee treasury. mintPegKeeper is onlyOwner and mints uncapped USG into either of the two registered peg keepers. The owner of USG, the ControlTower and the MarketCreator is one 3/4 Tangent Safe (v1.4.1, no modules, no guard); it can also setIsMinter on any address, so it is an unbounded mint authority.",
     "upgradeability": {

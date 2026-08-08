@@ -157,7 +157,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AID uses role-gated issuer minting. On Ethereum, two contract MINTER_ROLE holders are confirmed active (4099 and 3162 bytes). DEFAULT_ADMIN is held by both a 3/5 Safe and an EOA (confirmed no bytecode). On Arbitrum, Base, and BSC, the same DEFAULT_ADMIN Safe and EOA are confirmed; MINTER_ROLE has no active grants on those chains (different impl, bridge-minted).",
     "controls": [

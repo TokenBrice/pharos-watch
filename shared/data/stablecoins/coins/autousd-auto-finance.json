@@ -62,7 +62,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "autoUSD is a Tokemak (AUTO Finance) Autopool USDC strategy-vault share token: shares mint only through the permissionless ERC-4626 deposit flow (Etherscan-verified AutopoolETH implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695, compiler v0.8.24; live asset/totalAssets/maxDeposit/factory reads 2026-07-20), and the transparent-proxy upgrade path is controlled by a 6-of-11 Safe. Durable base USDC issuance remains inherited from Circle.",
     "inheritedFrom": "usdc-circle",

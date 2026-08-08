@@ -197,7 +197,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "inheritedFrom": "usdf-astherus",
     "summary": "asUSDF shares mint only after the asUSDFEarn UUPS wrapper receives USDF; the token's sole default admin and the wrapper upgrade authority are a six-hour timelock governed by an Astherus 4-of-8 Safe. Underlying USDF issuance remains inherited from usdf-astherus.",

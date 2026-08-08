@@ -124,7 +124,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, with token owner resolving to a 4/6 Mento Safe. Monad deployment confirmed: same Safe address (0x5809...Ba458) is the owner, 4-of-7 on Monad (one additional signer). NEAR deployment is a bridge token controlled by EOA a11bd.near (plain wallet account, no staking lock).",
     "upgradeability": {

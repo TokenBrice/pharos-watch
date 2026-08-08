@@ -308,7 +308,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "StandX DUSD uses an on-chain Gateway for USDT/USDC deposits. Solana mint authority is a PDA of an immutable program, and BSC's sole MINTER_ROLE is the Gateway controller proxy under a 3-of-4 DEFAULT_ADMIN Safe; the terminal Settler/RSV backend signer set is issuer-undisclosed and is the manual-review cap on this profile.",
     "controls": [

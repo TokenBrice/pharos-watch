@@ -190,7 +190,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "GBPm is a legacy StableTokenV3 (cGBP) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
     "upgradeability": {

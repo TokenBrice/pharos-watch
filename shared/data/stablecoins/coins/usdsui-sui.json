@@ -152,7 +152,7 @@
   "governanceQuality": "regulated-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDsui is issued through Bridge's Open Issuance platform on Sui. The TreasuryCap was wrapped at deploy into Bridge's shared TokenAuthority contract (0xd4fc1ca0b...) via stablecoin_manager::register_stablecoin. Minting requires MinterRole, held by Bridge operational address 0xb1e7dc9a5... The TokenAuthority is shared (no single owner) with Bridge controlling AdminRole and MinterRole.",
     "upgradeability": {

@@ -47,7 +47,7 @@
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USD0 issuance runs through Usual's RWA/custody-backed DaoCollateral contract, which holds USD0_MINT on RegistryAccess; separate 8-of-15 Safes control role grants and the transparent-proxy upgrade path.",
     "upgradeability": {

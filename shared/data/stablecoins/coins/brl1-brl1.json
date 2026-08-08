@@ -116,7 +116,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "BRL1's sole Polygon deployment is an ERC1967 proxy using UUPS ERC20F logic. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 is the sole MINTER_ROLE holder and can mint without a supply cap. DEFAULT_ADMIN_ROLE is held by EOA 0xccfc24f563fbd798f171d16cc0706529c4739217, which can immediately grant MINTER_ROLE or UPGRADER_ROLE. No UPGRADER_ROLE holder exists at the cutoff; the previously identified 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 account holds BURNER_ROLE only.",
     "upgradeability": {

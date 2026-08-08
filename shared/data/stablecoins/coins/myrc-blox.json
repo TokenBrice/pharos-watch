@@ -348,7 +348,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan. The Ethereum MYRC token is a non-proxy immutable ERC-20 (EIP-1967 implementation and admin slots are zero; verified source has no upgrade surface).",
     "upgradeability": {

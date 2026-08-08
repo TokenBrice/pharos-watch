@@ -211,7 +211,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "JupUSD mint and freeze authority is a PDA of the JupUSD program. The program is upgradeable through a zero-delay autonomous Squads v4 multisig with threshold 4 of 9, so that multisig can change the permissioned mint logic without replacing the SPL mint.",
     "upgradeability": {

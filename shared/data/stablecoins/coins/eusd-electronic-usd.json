@@ -165,7 +165,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EUSD is a Reserve Protocol RToken: permissionless 1:1 basket mint/redeem. Protocol-level controls (pause, freeze, basket changes) require OWNER/PAUSER/FREEZER roles on a central Auth contract whose DEFAULT_ADMIN is a 3-of-5 Gnosis Safe; no on-chain timelock.",
     "controls": [

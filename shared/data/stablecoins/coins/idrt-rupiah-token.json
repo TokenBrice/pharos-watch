@@ -271,7 +271,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "IDRT is a non-upgradeable Ownable ERC20 on Ethereum, BSC, and Polygon. On all three chains the token owner() is the same 4-of-6 Safe multisig (same six signers cross-chain). The owner() controls mint and burn. Harmony is excluded from this assessment (chain inactive).",
     "controls": [

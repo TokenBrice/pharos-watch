@@ -186,7 +186,7 @@
   "governanceQuality": "regulated-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. Full RoleGranted/RoleRevoked history shows all roles (MINTER, DEFAULT_ADMIN, PAUSER, UPGRADER) consolidated into a single Brale-operated EOA on every chain.",
     "upgradeability": {

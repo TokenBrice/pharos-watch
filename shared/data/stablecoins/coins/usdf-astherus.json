@@ -97,7 +97,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDF uses AccessControl; MINTER_AND_BURN_ROLE (0x144dc672...) is held by the USDFEarn UUPS proxy (0xc271fc70...) which mints USDF 1:1 on USDT deposit. The token's DEFAULT_ADMIN_ROLE and USDFEarn's immutable upgrade authority are the same 6-hour TimelockController. A 4-of-8 Safe is the timelock's sole external proposer, executor, and canceller, and separately holds USDFEarn's ADMIN_ROLE for direct changes to the 500 million USDF supply cap.",
     "upgradeability": {

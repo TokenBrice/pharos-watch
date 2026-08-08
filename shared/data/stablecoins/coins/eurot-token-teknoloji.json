@@ -71,7 +71,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EUROT uses direct, immutable StableCoin deployments on Avalanche and Polygon. On Avalanche, EOA 0xff80b391b286887d446b1124820f87d5b049b4fb is both owner and supply manager. On Polygon, EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077 is both owner and supply manager, while the Avalanche EOA is the live proposed owner and can claim ownership immediately. Each current owner or supply manager can mint without an on-chain supply cap.",
     "upgradeability": {

@@ -659,7 +659,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "NXUSD is a BoringOwnable CDP stablecoin; mint() is onlyOwner. The owner is a Gnosis Safe 1.3.0 with 2-of-3 threshold on Avalanche — no modules, no guard — that administers the NXUSD token and Nereus CDP parameters.",
     "upgradeability": {

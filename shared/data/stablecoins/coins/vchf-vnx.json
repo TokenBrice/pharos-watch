@@ -408,7 +408,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "VCHF minting remains controlled by VNXManager 0xCdB386...c9AE and its sole observed minter, EOA 0x7b0c15...9403. The Ethereum transparent proxy is administered by custom VNXProxyAdmin 0x817f8a...8165: upgrade() and upgradeAndCall() require role 1 in separate VNXManager 0x2B535E...114b, whose role 1 currently has no bearers. Self-administered role 0 is held by two independent EOAs, 0x45a149...545a and 0xAcC56E...311A, either of which can grant itself role 1 without delay; 0x45a149...545a also owns VNXProxyAdmin and can redirect the proxy admin through changeProxyAdmin().",
     "upgradeability": {

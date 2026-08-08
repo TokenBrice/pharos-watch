@@ -229,7 +229,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDKG is issued natively on Ethereum and Tron through immutable Tether-style contracts whose issue() and redeem() functions are owner-gated. Each deployment is controlled by a separate verified 3-of-7 multisig: 0xcF355a...7377 on Ethereum and TEmt2R...A8jd on Tron.",
     "upgradeability": {

@@ -238,7 +238,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "PGOLD is minted by Pleasing International (Hong Kong) via EOA-controlled token contracts. On Ethereum, the CCIPAdmin EOA (0x142a96da) grants mint roles to the CCIP burn/mint pool (0xf3067615). On Arbitrum, the proxy owner EOA (0x142a96da) can call mint() directly; a separate proxy-admin contract (0x50ead2d2) is owned by a different EOA (0x7e5cc9bb). On ApeChain the token is non-upgradeable, owned by EOA 0x25a6a7fb.",
     "controls": [

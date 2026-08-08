@@ -164,7 +164,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "pmUSD minting is gated by the f(x) Treasury contract (0x51c4348a…). The Treasury holds a fToken() pointer to pmUSD and is the exclusive minter; its owner and the proxy admin owner for both pmUSD and the Market contract is a single RAAC 2/3 Safe (0xCa3144AAD…).",
     "controls": [

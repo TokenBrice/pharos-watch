@@ -107,7 +107,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "YUSD mint authority terminates in a single 3-of-5 Safe (0x4Fe78eF65BD8EDDED480efaB030BA680646503c8) on every deployment. Ethereum and BSC each mint through a chain-local AegisMinting contract that requires a whitelisted order signed by trusted signer 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e; Avalanche is a LayerZero V2 OFT that mints on peer delivery. None of the four contracts is a proxy, but the Safe can repoint mint logic because YUSD.setMinter is onlyOwner, so mint-critical logic is Safe-changeable with no timelock.",
     "upgradeability": {

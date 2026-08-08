@@ -95,7 +95,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "scUSD is a Veda BoringVault receipt token on Ethereum and Sonic. Each immutable vault authorizes the same-address LayerZeroTeller, while a chain-specific 4/6 Veda/Paladin Safe controls role grants through a one-day TimelockController and RolesAuthority.",
     "upgradeability": {

@@ -128,7 +128,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "SPKCC mints are gated by Spiko's PermissionManager on every EVM deployment: mint() requires ADMIN group 0 or daily-operator group 2, and group 0 alone can grant group 2 and replace both the token and the PermissionManager implementation. The group-0 holder is a 3-of-6 Safe on Ethereum, Arbitrum, Polygon and Base. Starknet is owned by a 3-of-5 multisig account; the Soroban deployment's owner and WASM-upgrade authority is a single ed25519 key. No deployment encodes a supply cap and no path carries a timelock.",
     "upgradeability": {

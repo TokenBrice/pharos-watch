@@ -1438,7 +1438,7 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
     "upgradeability": {

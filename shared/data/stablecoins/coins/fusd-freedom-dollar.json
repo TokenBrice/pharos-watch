@@ -178,7 +178,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "FUSD is a native Zano Confidential Asset (asset id 8614…4f8f), not a smart contract: Zano has no contract VM, so issuance is a consensus-level EMIT operation that only the holder of the asset-owner key 497d6b7a…c7c1 can sign. That single key can emit up to the descriptor's total_max_supply of 1e15 fUSD against 11.4M fUSD outstanding — a ceiling roughly 87 million times circulation, so the mint is unbounded in practice — and it can hand ownership to any other key. The white paper's over-collateralization and 'DAO' framing is an off-chain operating policy: Zano consensus checks only the owner signature and the max-supply ceiling, never the ZANO reserve. total_max_supply is immutable post-deployment, so no cap-raise path exists.",
     "upgradeability": {

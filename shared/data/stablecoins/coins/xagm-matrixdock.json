@@ -64,7 +64,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "XAGm has issuer-controlled Ethereum and Sui operator paths. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay. Ethereum's owner controls delayed UUPS upgrades; Sui's State owner holds the MToken package UpgradeCap.",
     "upgradeability": {

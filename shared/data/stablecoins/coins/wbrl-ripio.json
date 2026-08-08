@@ -279,7 +279,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "WBRL is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
     "upgradeability": {

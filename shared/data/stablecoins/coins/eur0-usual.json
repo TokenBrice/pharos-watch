@@ -83,7 +83,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EUR0 minting is permissioned through RegistryAccess. Two enumerated Usual protocol modules currently hold EUR0_MINT, while the same 8-of-15 Usual Safe signer set can add minters through RegistryAccess and replace the token implementation through ProxyAdmin.",
     "controls": [

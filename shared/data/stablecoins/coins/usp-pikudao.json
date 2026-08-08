@@ -99,7 +99,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters. The token owner is a confirmed EOA (0x3D7DBEC2…). The only active minter is the Piku Funding Manager contract and cap = max uint256. The token ProxyAdmin is controlled by a 2/3 Safe; the Funding Manager and Oracle workflow modules resolve through a separate root InverterBeacon controlled by a 1/1 Safe.",
     "upgradeability": {

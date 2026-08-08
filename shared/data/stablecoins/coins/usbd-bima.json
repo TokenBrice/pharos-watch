@@ -642,7 +642,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR, per-collateral maxSystemDebt ceilings). No contract in the mint path is a proxy, but mint logic remains mutable by privilege: the BimaCore owner EOA (0xaca5d659364636284041b8d3acad8a57f6e7b8a5) can call DebtToken.authorizedMint() for an unbounded amount, repoint setLendingVaultAdapterAddress() at any contract (which then gets unbounded mint()), deploy new minting TroveManagers through the owner-gated Factory, and raise maxSystemDebt via TroveManager.setParameters(). The USBD token/OFT owner is a separate EOA (0xe3fbba95bb35be804696624dd1e9344a86e3cbc4).",
     "controls": [

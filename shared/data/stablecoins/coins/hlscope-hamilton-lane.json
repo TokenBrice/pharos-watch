@@ -254,7 +254,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "HLSCOPE uses Securitize DSToken UUPS proxies on Ethereum, Polygon, Optimism, Plume, and Tron. The four EVM deployments share owner EOA 0x59c1eAcE...76Ee; Tron uses owner EOA TGmCDF...6huia. Both reviewed owners hold the trust-service MASTER role on their respective reviewed branches, which authorizes issuance and UUPS upgrades. No permissionless mint route exists.",
     "upgradeability": {

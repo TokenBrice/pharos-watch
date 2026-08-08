@@ -118,7 +118,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock.",
     "upgradeability": {

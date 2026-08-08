@@ -2,7 +2,7 @@
   "id": "inalpha-nest",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "inALPHA is a non-upgradeable BoringVault on Ethereum. Shares are minted only via the enter() function, which requires authorization from a RolesAuthority contract (0x5e500500968388a13b3ff885c3eed7158a5d82ef). The sole authorized Teller is TellerWithMultiAssetSupportPredicateProxy (0x6104fe10ca937a086ba7AdbD0910A4733d380cB6). Vault owner is a 3-of-6 Gnosis Safe (0xa08a0dc480bd60d1d56c8eec6c722125eafea982).",
     "upgradeability": {

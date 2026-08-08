@@ -312,7 +312,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, and Plasma.",
     "upgradeability": {

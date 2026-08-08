@@ -100,7 +100,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Non-Ethereum chain owners are issuer-context EOAs or 2-of-3 Safes. Solana mint authority is a system-program wallet. All controls corroborate Transfero centralized issuance.",
     "upgradeability": {

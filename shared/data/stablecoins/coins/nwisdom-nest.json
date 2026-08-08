@@ -300,7 +300,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "nWISDOM is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs WisdomTree-fund allocation. Both Teller and Manager are owned by the same Nest 3-of-6 Safe.",
     "upgradeability": {

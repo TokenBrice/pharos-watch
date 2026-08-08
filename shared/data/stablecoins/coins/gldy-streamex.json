@@ -58,7 +58,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "GLDY's sole Base deployment is a UUPS proxy with two active TREASURY_ROLE mint paths: legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951. DEFAULT_ADMIN_ROLE is independently held by legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130. Either admin can immediately grant minters, alter reserve-oracle configuration, or upgrade mint logic; no role revocations or timelock were found.",
     "upgradeability": {

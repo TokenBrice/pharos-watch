@@ -321,7 +321,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "yoUSD is an ERC-4626 vault on Base where users mint shares by depositing USDC. Base USDC issuance is inherited from Circle; the vault's RolesAuthority holds no share-mint capability, leaving strategy execution, redemption fulfilment, pausing and a Safe-proposed 2-day timelock upgrade as the privileged surfaces.",
     "inheritedFrom": "usdc-circle",
