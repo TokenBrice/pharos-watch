@@ -36,7 +36,10 @@ export function SectionBanner({
   return (
     <div
       className={cn(
-        "my-12 flex items-center justify-center gap-6 text-muted-foreground",
+        // my-8: summary-first modules compressed the zones, so the old my-12
+        // banners were carrying more vertical weight than the content they
+        // announce.
+        "my-8 flex items-center justify-center gap-6 text-muted-foreground",
         className,
       )}
       role="presentation"

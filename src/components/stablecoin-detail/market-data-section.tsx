@@ -19,6 +19,8 @@ import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { cn } from "@/lib/utils";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 
@@ -33,6 +35,8 @@ interface MarketDataSectionProps {
   stablecoinId: string;
   supplyHistory: SupplyHistoryPoint[];
   pegCurrency: string | null | undefined;
+  /** Supply query freshness for the header chip. */
+  updatedAtMs?: number;
   /** Optional frozen-state notice rendered above the chart pair. */
   frozenNote?: ReactNode;
 }
@@ -45,7 +49,7 @@ interface MarketDataSectionProps {
  * the range changes (reference-line markers inside each chart stay gated to
  * the visible window via `ifOverflow="hidden"`).
  */
-export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, frozenNote }: MarketDataSectionProps) {
+export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, updatedAtMs, frozenNote }: MarketDataSectionProps) {
   // 90d default: recent structure is the read this page optimizes for; "all"
   // compresses a decade of supply into an unreadable first paint.
   const [range, setRange] = useState<TimeRangeOption>("90d");
@@ -56,6 +60,7 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, fr
         stablecoinId={stablecoinId}
         supplyHistory={supplyHistory}
         pegCurrency={pegCurrency}
+        updatedAtMs={updatedAtMs}
         frozenNote={frozenNote}
         range={range}
         setRange={setRange}
@@ -76,6 +81,7 @@ function MarketDataSectionBody({
   stablecoinId,
   supplyHistory,
   pegCurrency,
+  updatedAtMs,
   frozenNote,
   range,
   setRange,
@@ -114,7 +120,17 @@ function MarketDataSectionBody({
     <section id="chart" aria-label="Market data charts" className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Market Data</DetailSectionTitle>
-        <TimeRangeButtons options={TIME_RANGE_OPTIONS} value={range} onChange={setRange} />
+        <div className="flex flex-wrap items-center gap-2">
+          {updatedAtMs ? (
+            <FreshnessIndicator
+              compact
+              updatedAtMs={updatedAtMs}
+              staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.supplyHistory * 1000}
+              labelPrefix="Updated"
+            />
+          ) : null}
+          <TimeRangeButtons options={TIME_RANGE_OPTIONS} value={range} onChange={setRange} />
+        </div>
       </div>
       <div className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         {frozenNote}

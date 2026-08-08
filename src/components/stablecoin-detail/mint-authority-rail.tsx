@@ -10,6 +10,7 @@ import {
   Users,
   Vault,
 } from "lucide-react";
+import { revealAnchorId } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
 import type {
   MintAuthorityDetailControlViewModel,
@@ -49,7 +50,7 @@ function SignerDots({ threshold, signerCount }: { threshold: number; signerCount
           key={index}
           className={cn(
             "h-1.5 w-1.5 rounded-full",
-            index < threshold ? "bg-foreground/70" : "border border-foreground/30",
+            index < threshold ? "bg-foreground/80" : "bg-muted-foreground/25",
           )}
         />
       ))}
@@ -101,11 +102,15 @@ function ControlChip({ control }: { control: MintAuthorityDetailControlViewModel
 
 function RailArrow() {
   return (
-    <div aria-hidden="true" className="flex items-center max-sm:h-4 max-sm:flex-col sm:min-w-6 sm:flex-1">
-      <span className="bg-border max-sm:h-full max-sm:w-px sm:h-px sm:w-full" />
-      <span
-        className="border-border max-sm:border-x-4 max-sm:border-t-[5px] max-sm:border-x-transparent sm:border-y-4 sm:border-l-[5px] sm:border-y-transparent"
-      />
+    <div aria-hidden="true" className="sm:min-w-6 sm:flex-1">
+      <div className="hidden items-center sm:flex">
+        <span className="h-px w-full bg-border" />
+        <span className="border-y-4 border-l-[5px] border-border border-y-transparent" />
+      </div>
+      <div className="ml-4 flex h-4 flex-col items-center sm:hidden">
+        <span className="h-full w-px bg-border" />
+        <span className="border-x-4 border-t-[5px] border-border border-x-transparent" />
+      </div>
     </div>
   );
 }
@@ -171,9 +176,16 @@ export function MintAuthorityRail({
             <ControlChip key={control.key} control={control} />
           ))}
           {hiddenControlCount > 0 ? (
-            <span className="text-[10px] text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => {
+                const details = revealAnchorId("mint-primary-controls");
+                details?.scrollIntoView({ block: "nearest" });
+              }}
+              className="pharos-focus-ring rounded-sm text-[10px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+            >
               +{hiddenControlCount} more in Primary controls
-            </span>
+            </button>
           ) : null}
         </span>
       </div>

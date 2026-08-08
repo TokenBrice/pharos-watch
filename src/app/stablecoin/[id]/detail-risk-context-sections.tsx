@@ -4,6 +4,7 @@ import type { ReactNode, Ref } from "react";
 import { ChartPie } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
 import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
+import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
@@ -170,12 +171,18 @@ export function DetailRiskContextSections({
             <BackingMechanicsCard view={mechanismBacking} />
           </div>
         ) : null}
+        {viewModel.coin.bridgeRouteRiskSummary ? (
+          <div className="xl:hidden">
+            <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
+          </div>
+        ) : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {showPegChart ? (
           <MarketDataSection
             stablecoinId={viewModel.id}
             supplyHistory={viewModel.supplyHistory}
             pegCurrency={viewModel.coin.flags.pegCurrency}
+            updatedAtMs={viewModel.supplyUpdatedAt}
             frozenNote={frozenNote}
           />
         ) : (

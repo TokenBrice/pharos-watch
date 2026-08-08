@@ -470,8 +470,17 @@ export function useYieldHistoryChartModel({
       .filter((point) => !spikeDates.has(point.date))
       .map((point) => point.apy);
     const values: number[] = apyValues.length > 0 ? [...apyValues] : chartData.map((point) => point.apy);
-    values.push(benchmarkRate);
-    if (medianApy > 0) {
+    // Reference lines join the domain only when they sit near the data.
+    // A hurdle several data-spans away otherwise empties the plot (ZCHF:
+    // a flat 3.5% series stretched to show a -0.04% benchmark); far-away
+    // references clamp to the domain edge at render time instead.
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const nearBand = Math.max((dataMax - dataMin) * 2, 1);
+    if (benchmarkRate >= dataMin - nearBand && benchmarkRate <= dataMax + nearBand) {
+      values.push(benchmarkRate);
+    }
+    if (medianApy > 0 && medianApy >= dataMin - nearBand && medianApy <= dataMax + nearBand) {
       values.push(medianApy);
     }
 

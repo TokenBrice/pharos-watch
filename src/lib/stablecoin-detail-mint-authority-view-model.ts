@@ -20,6 +20,10 @@ import {
 } from "@/lib/mint-authority-display";
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
+import {
+  projectBridgeRouteRiskClientSummary,
+  type BridgeRouteRiskClientSummary,
+} from "@/lib/stablecoin-detail-bridge-client";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -127,6 +131,7 @@ type StablecoinDetailServerOnlyField =
   | "reserveReview";
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServerOnlyField> & {
+  bridgeRouteRiskSummary?: BridgeRouteRiskClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -176,8 +181,10 @@ export function buildStablecoinDetailClientCoin(
   } = coin;
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
   const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
+  const bridgeRouteRiskSummary = projectBridgeRouteRiskClientSummary(coin);
   return {
     ...clientCoin,
+    ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
     ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };

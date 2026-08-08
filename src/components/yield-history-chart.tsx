@@ -77,7 +77,7 @@ export function YieldHistoryChart({
   const visibleSpikes = [...spikeAnnotations]
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, MAX_SPIKE_MARKERS);
-  const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
+  const chartHeightClass = compact ? "h-[200px]" : "h-[220px] sm:h-[260px]";
   /* Map raw history points to the sparkline shape. We read directly from the
      query payload (not model.chartData) because the model's mapper omits the
      optional pysAtPublish field. */
@@ -169,7 +169,7 @@ export function YieldHistoryChart({
         compact={compact}
         days={model.days}
         onDaysChange={model.setDays}
-        hasBreakdown={model.hasBreakdown}
+        hasBreakdown={model.hasBreakdown || pysSparklinePoints.some((point) => point.pysAtPublish !== null)}
         showBreakdown={model.effectiveShowBreakdown}
         onShowBreakdownChange={model.setShowBreakdown}
         availableSources={availableSources}
@@ -231,7 +231,7 @@ export function YieldHistoryChart({
                 content={<YieldHistoryTooltip showBreakdown={model.effectiveShowBreakdown} compact={compact} spikesByDate={spikesByDate} />}
               />
               <ReferenceLine
-                y={benchmarkRate}
+                y={Math.min(Math.max(benchmarkRate, model.yDomain[0]), domainMax)}
                 stroke={CHART_SLATE}
                 strokeOpacity={0.8}
                 strokeDasharray="6 4"
@@ -243,7 +243,7 @@ export function YieldHistoryChart({
               />
               {medianApy > 0 ? (
                 <ReferenceLine
-                  y={medianApy}
+                  y={Math.min(Math.max(medianApy, model.yDomain[0]), domainMax)}
                   stroke={CHART_BLUE}
                   strokeOpacity={0.45}
                   strokeDasharray="3 3"
@@ -353,7 +353,7 @@ export function YieldHistoryChart({
             <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
           )}
         </div>
-        {pysSparklinePoints.some((point) => point.pysAtPublish !== null) ? (
+        {model.showBreakdown && pysSparklinePoints.some((point) => point.pysAtPublish !== null) ? (
           <div className="mt-2 border-t border-border/40 pt-2">
             <PysHistorySparkline history={pysSparklinePoints} />
           </div>

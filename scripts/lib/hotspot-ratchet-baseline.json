@@ -170,8 +170,8 @@
     "branchCount": 12
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 155,
-    "maxFunctionLines": 98,
+    "fileLines": 156,
+    "maxFunctionLines": 99,
     "branchCount": 7
   },
   "worker/src/api/api-key-requests.ts": {

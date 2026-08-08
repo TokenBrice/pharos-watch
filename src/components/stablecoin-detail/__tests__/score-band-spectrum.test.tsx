@@ -32,8 +32,8 @@ describe("ScoreBandSpectrum", () => {
         ariaLabel="Score 63 of 100"
       />,
     );
-    expect(html).toContain("width:40%");
-    expect(html).toContain("width:20%");
+    expect(html).toContain("flex-grow:40");
+    expect(html).toContain("flex-grow:20");
     expect(html).toContain("left:63%");
   });
 

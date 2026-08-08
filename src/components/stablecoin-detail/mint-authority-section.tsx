@@ -302,7 +302,7 @@ export function MintAuthoritySection({
             {score ? <MintAuthorityScoreBreakdown score={score} /> : null}
 
             {railControls.length > 0 ? (
-              <ModuleDisclosure label="Primary controls" count={railControls.length}>
+              <ModuleDisclosure id="mint-primary-controls" label="Primary controls" count={railControls.length}>
                 <div className="mt-2 space-y-3">
                   {hasVerificationGaps ? (
                     <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">

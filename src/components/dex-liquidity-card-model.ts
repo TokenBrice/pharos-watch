@@ -1,3 +1,4 @@
+import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import type { DexLiquidityData, DexLiquidityPool } from "@shared/types";
 
 type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["balanceDetails"]>;
@@ -39,6 +40,39 @@ export function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefi
   return balanceDetails
     .map((entry) => `${entry.symbol} ${entry.balancePct.toFixed(1)}%`)
     .join(", ");
+}
+
+/**
+ * One-line verdict derived from the published score components — a template
+ * over data, never authored per coin: the strongest components "carry" the
+ * score and the weakest is named the drag (below 60) or the softest spot.
+ * Replaces the methodology disclaimer as the module's opening line; the
+ * disclaimer lives verbatim in the liquidityScore methodology hint.
+ */
+export function buildLiquidityVerdictLine(components: DexLiquidityData["scoreComponents"]): string | null {
+  if (!components) return null;
+  const entries = LIQUIDITY_SCORE_WEIGHTS.map((weight) => ({
+    label: weight.label,
+    value: Math.round(components[weight.key]),
+  }));
+  if (entries.some((entry) => !Number.isFinite(entry.value))) return null;
+
+  const sorted = [...entries].sort((a, b) => b.value - a.value);
+  const strengths = sorted.filter((entry) => entry.value >= 70).slice(0, 2);
+  const weakest = sorted[sorted.length - 1]!;
+
+  const strengthClause =
+    strengths.length === 2
+      ? `${strengths[0]!.label} ${strengths[0]!.value} and ${strengths[1]!.label.toLowerCase()} ${strengths[1]!.value} carry the score`
+      : strengths.length === 1
+        ? `${strengths[0]!.label} ${strengths[0]!.value} carries the score`
+        : "No component clears 70";
+  const weakClause =
+    weakest.value < 60
+      ? `${weakest.label.toLowerCase()} ${weakest.value} is the drag`
+      : `${weakest.label.toLowerCase()} ${weakest.value} is the softest`;
+
+  return `${strengthClause}; ${weakClause}.`;
 }
 
 export function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null {

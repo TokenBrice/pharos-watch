@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ExternalLink, Globe } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ExternalLink, Globe } from "lucide-react";
 import {
   SECTION_DIVIDER_CLASS,
   SECTION_SCROLL_MT,
@@ -247,6 +250,34 @@ export function MechanismSection({
   );
 }
 
+/** One clamped line comfortably carries ~90 characters at the card width;
+ *  shorter summaries skip the toggle so it never appears as a no-op. */
+const INFRA_SUMMARY_CLAMP_THRESHOLD = 90;
+
+function InfrastructureSummary({ summary }: { summary: string }) {
+  const [open, setOpen] = useState(false);
+  const collapsible = summary.length > INFRA_SUMMARY_CLAMP_THRESHOLD;
+
+  return (
+    <>
+      <p className={cn("text-sm leading-relaxed text-muted-foreground", collapsible && !open && "line-clamp-1")}>
+        {summary}
+      </p>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="pharos-focus-ring inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
+        >
+          {open ? "Show less" : "More"}
+          <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} aria-hidden="true" />
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 export function InfrastructureSection({ meta }: { meta: StablecoinMeta }) {
   const infrastructureSummaries = buildInfrastructureSummaries(meta);
   if (infrastructureSummaries.length === 0) return null;
@@ -262,7 +293,7 @@ export function InfrastructureSection({ meta }: { meta: StablecoinMeta }) {
           >
             {label}
           </Link>
-          <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
+          <InfrastructureSummary summary={summary} />
         </div>
       ))}
     </div>

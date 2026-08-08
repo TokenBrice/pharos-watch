@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -66,6 +67,10 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
 
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
   const view = useYieldDetailSectionModel(stablecoinId);
+  // 640px matches the sm breakpoint; server snapshot renders the chart so
+  // desktop-first crawls keep it, phones fold it after hydration. Called
+  // before the status early-returns to keep hook order stable.
+  const isMobileViewport = useIsMobile(640, false);
   const historyQuery = useYieldHistory(stablecoinId, { days: 30, mode: "best" });
   const rankingForAttribution = view.status === "ready" ? view.ranking : null;
   const attribution = useMemo(
@@ -141,56 +146,41 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {view.apiWarning}
         </div>
       ) : null}
-      {view.singleWarning ? (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-          <span>
-            <span className="font-medium">{formatYieldWarningSignal(view.singleWarning)}</span>
-            <span className="block text-xs text-amber-800/80 dark:text-amber-200/80">
-              {formatYieldWarningSignalDescription(view.singleWarning)}
-            </span>
-          </span>
-        </div>
-      ) : null}
-
-      {view.warningSignals.length >= 2 ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-            <div className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Multiple risk signals active:</strong>
-              <ul className="mt-1 space-y-0.5 text-xs text-amber-700/90 dark:text-amber-300/85">
-                {view.warningSignals.map((signal) => (
-                  <li key={signal}>
-                    <span className="font-medium">{formatYieldWarningSignal(signal)}</span>
-                    <span className="block text-amber-700/80 dark:text-amber-300/75">
-                      {formatYieldWarningSignalDescription(signal)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="space-y-3">
+        {/* Verdict line derived from published figures (excess yield vs the
+            benchmark hurdle, PYS after adjustments) — falls back to the
+            neutral caption when the hurdle comparison is unavailable. */}
         <p className="text-sm text-muted-foreground">
-          APY trend against the current benchmark hurdle rate and peer median.
+          {excessYield != null && view.ranking.apy30d != null
+            ? `APY ${formatPercent(view.ranking.apy30d)} ${excessYield >= 0 ? "clears" : "misses"} the ${view.ranking.benchmarkLabel} hurdle (${formatSignedPercent(excessYield)}); PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
+            : "APY trend against the current benchmark hurdle rate and peer median."}
         </p>
 
-        <YieldHistoryChart
-          stablecoinId={stablecoinId}
-          defaultDays={30}
-          benchmarkRate={view.benchmarkRate}
-          benchmarkLabel={view.ranking.benchmarkLabel}
-          benchmarkIsFallback={view.benchmarkIsFallback}
-          medianApy={view.medianApy}
-          availableSources={view.historySources}
-          hideSourceSelector={view.historySources.length > 1}
-          externalSourceKeys={view.externalSourceKeys}
-        />
-      </div>
+      {view.warningSignals.length > 0 ? (
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {view.warningSignals.map((signal) => (
+              <span
+                key={signal}
+                className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
+              >
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                {formatYieldWarningSignal(signal)}
+              </span>
+            ))}
+          </div>
+          <ModuleDisclosure label="What these warnings mean" count={view.warningSignals.length}>
+            <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
+              {view.warningSignals.map((signal) => (
+                <li key={signal}>
+                  <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}:</span>{" "}
+                  {formatYieldWarningSignalDescription(signal)}
+                </li>
+              ))}
+            </ul>
+          </ModuleDisclosure>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile label="Yield" variant="yield">
@@ -245,6 +235,40 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           variant="yield"
         />
       </div>
+
+        {/* The chart folds behind a disclosure on phones (owner feedback: it
+            dominated the mobile module while rarely being the key read). */}
+        {isMobileViewport ? (
+          <ModuleDisclosure label="APY trend" deferredChildren={<div className="mt-2">
+          <YieldHistoryChart
+            stablecoinId={stablecoinId}
+            defaultDays={30}
+            benchmarkRate={view.benchmarkRate}
+            benchmarkLabel={view.ranking.benchmarkLabel}
+            benchmarkIsFallback={view.benchmarkIsFallback}
+            medianApy={view.medianApy}
+            availableSources={view.historySources}
+            hideSourceSelector={view.historySources.length > 1}
+            externalSourceKeys={view.externalSourceKeys}
+          />
+          </div>}>
+            <></>
+          </ModuleDisclosure>
+        ) : (
+          <YieldHistoryChart
+            stablecoinId={stablecoinId}
+            defaultDays={30}
+            benchmarkRate={view.benchmarkRate}
+            benchmarkLabel={view.ranking.benchmarkLabel}
+            benchmarkIsFallback={view.benchmarkIsFallback}
+            medianApy={view.medianApy}
+            availableSources={view.historySources}
+            hideSourceSelector={view.historySources.length > 1}
+            externalSourceKeys={view.externalSourceKeys}
+          />
+        )}
+      </div>
+
 
       {/* ── Detail layer: diagnostics fold behind the standard disclosure —
              active warnings, the chart, and the three stat tiles stay above ── */}
