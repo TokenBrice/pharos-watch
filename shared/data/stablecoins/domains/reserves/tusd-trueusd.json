@@ -4,34 +4,36 @@
     {
       "name": "USD reserves (Moore Hong Kong attested)",
       "pct": 100,
-      "risk": "very-high",
+      "risk": "high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "First Digital Trust Limited, undisclosed fund investments, and depository institutions",
-      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
-      "liquidityHorizon": "over-seven-days"
+      "issuerOrObligor": "First Digital Trust Limited (Hong Kong depository institution)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "GROK-RESEARCH wave8 phase1",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA TUSD Consolidated Reserves Report - July 27, 2026",
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - August 7, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
-        "label": "Verinumus TUSD live snapshot API",
-        "url": "https://widget.verinumus.io/api/v1/tusd/snapshot"
-      },
-      {
-        "label": "TUSD transparency dashboard (embeds Verinumus widget)",
+        "label": "TUSD transparency",
         "url": "https://tusd.io/transparency"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: Moore CPA ISAE 3000 reasonable-assurance report as of 27 July 2026 04:30:30 PM HKT (PDF via widget.verinumus.io/api/v1/tusd/report; PDF CreationDate 2026-07-27) lists Total TrueUSD tokens issued 494,515,082.75 and USD denominated collateral of US Treasury Bills $0, First Digital Trust Limited $501,850,000, and US Dollars Cash $78,900.88, totaling US$501,928,900.88 (FDT 99.98% and cash 0.02% of that total at reported cost). The same-system live snapshot (widget.verinumus.io/api/v1/tusd/snapshot, timestamp 2026-07-27T08:30:48.069Z) independently returns totalToken 494515082.75 and totalTrust 501928900.88 with no per-line composition rows. tusd.io/transparency embeds the Verinumus widget and states daily Moore Hong Kong attestations with reserve breakdown. Live classification therefore remains one 100% aggregate USD-reserves row keyed to the attested total; report-level FDT/cash detail is recorded in knownUnknownExposure and custodyProfile but cannot be split one-to-one against the live feed.",
-    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 27, 2026, corroborated by Verinumus live snapshot totals and the issuer transparency embed",
-    "compositionAsOf": "2026-07-27",
+    "rationale": "Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of 07 August 2026 04:30:30 PM HKT (PDF read this pass): reserves at cost are $501,850,000 in a single First Digital Trust Limited fund position (~99.98%) plus $78,900.88 cash; US Treasury bills $0. Total $501,928,900.88 against 494,515,082.75 TUSD issued (of which 412,585,497.92 held by Techteryx, public float ~81.9M). The auditor's own notes: procedures cover cost not fair value; the FDT fund invested 'all or substantially all' of the collateral in instruments 'which cannot be readily convertible to cash'; ongoing redemption litigation with FDT 'may suggest potential liquidity and credit risks'; DIFC worldwide freezing order (Oct 2025) up to US$456M. The single curated row carries the live chainlink-por adapter's slice identity (USD reserves, Moore Hong Kong attested, 100%); the report-verified split (99.98% single FDT fund position at cost / 0.02% cash) and the auditor's illiquidity, litigation, and freezing-order notes are recorded here and in the row's risk metadata rather than as separate rows so live classification is preserved.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of August 7, 2026",
+    "compositionAsOf": "2026-08-07",
     "scope": "full-composition",
     "knownUnknownExposure": "The live snapshot exposes only aggregate totalTrust. Moore's report identifies a 99.98% First Digital Trust fund/other-instruments position reported at cost (fair value not examined) and 0.02% cash at Bahamian depository institutions; fund underlying assets, liquidity, counterparties, and current fair value remain undisclosed. The report notes ongoing Techteryx litigation against FDT, DIFC freezing orders up to US$456 million, and that substantially all Hong Kong depository collateral was invested for yield and is not readily convertible to cash.",
     "knownUnknownExposurePct": 100,
@@ -41,7 +43,7 @@
         "reserveName": "USD reserves (Moore Hong Kong attested)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The exact live identity is a single aggregate totalTrust row. Report-level 99.98% opaque FDT fund/other instruments plus 0.02% cash cannot support a one-to-one tracked dependency or a more granular live classification, even though the report-level split is recorded in this review and custody profile."
+        "rationale": "~99.98% of the attested reserve is a single First Digital Trust fund position reported at cost with undisclosed underlying instruments, illiquidity per the auditor's note, redemption litigation, and a DIFC freezing order."
       }
     ]
   },

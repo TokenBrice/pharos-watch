@@ -33,7 +33,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",
@@ -98,8 +98,8 @@
         "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],
-    "reconciliation": "periodic",
-    "supervision": "prudential",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -124,7 +124,7 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho vault can mint shares only against deposited USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC.",
+      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho vault can mint shares only against deposited USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-07-15"
     }
@@ -157,8 +157,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "gtUSDC has one tracked Ethereum vault contract. The Across/World candidate signal did not resolve to a durable gtUSDC bridge route, so this is reviewed as a native single-chain vault token.",

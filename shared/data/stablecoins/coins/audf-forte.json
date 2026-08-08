@@ -26,7 +26,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE and MINT_ROLE is currently unassigned (granting runs through the Safe). The Ethereum MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract owned by the same Safe. ProxyAdmin across chains is owned by the Admin Safe.",
     "upgradeability": {
@@ -166,7 +166,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "AUDF is integrated with LayerZero and Stargate for cross-chain interoperability. Because Stargate/LayerZero introduces external bridge and messaging infrastructure, Pharos scores AUDF as external lock/mint route exposure rather than native-only issuance.",
@@ -353,11 +352,11 @@
     ]
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.forteaud.com/transparency",
-    "provider": "MVAB Audit Pty Ltd (MVA Bennett), Chartered Accountants",
-    "attestorTier": "niche",
-    "cadence": "monthly",
+    "provider": "Forte transparency page (homepage claims published third-party audit reports of AUDF reserves but none exists anywhere on the site; the only PDF is a smart-contract audit, and MVAB Audit Pty Ltd appears nowhere in the site content)",
+    "attestorTier": "none",
+    "cadence": "none",
     "attestorJurisdiction": "Australia"
   },
   "links": [

@@ -139,7 +139,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "SG-FORGE issues USDCV natively on Ethereum (SmartCoin V4 UUPS) and Solana (SPL Token-2022); per-chain mint authority resolves to SG-FORGE-controlled accounts. No third-party bridge carries the representation.",
@@ -212,7 +211,7 @@
   "custodyModel": "institutional-top",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDCV Ethereum mint is gated by the registrar EOA (0x7de0bb…da69) immutable in the shared SmartCoin V4 implementation (same as EURCV); no proxy admin; Solana deployment is issuer-controlled and not separately scored.",
     "upgradeability": {

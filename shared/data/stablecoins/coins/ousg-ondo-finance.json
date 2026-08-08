@@ -34,8 +34,8 @@
   "geckoId": "ousg",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing",
-    "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)",
+    "url": "https://app.ondo.finance/legal-documentation/us",
+    "provider": "NAV Consulting, Inc. (fund administrator; daily third-party reporting per ondo.finance/ousg; administrator not named on current public pages, and the former Google Drive report folder is now sign-in-gated, so the record points at Ondo's legal-documentation portal)",
     "attestorTier": "niche",
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States"
@@ -278,7 +278,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "OUSG minting runs through the OUSG_InstantManager (MINTER_ROLE holder) and is governed by a 4-of-7 Ondo Safe (DEFAULT_ADMIN and MINTER_ROLE on the token). The InstantManager's own admin is a separate 3-of-5 Ondo Safe.",
     "upgradeability": {
@@ -439,7 +439,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

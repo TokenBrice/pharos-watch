@@ -181,7 +181,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "CJPY is minted permissionlessly from Yamato's Liquity-v1-style ETH pledges (130% MCR, one-time fee, no interest). The Yamato contract is a UUPS proxy (ERC1967Proxy) pointing to YamatoV4 implementation; upgrade authority (onlyGovernance) is held by a 2-of-4 Gnosis Safe at 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec with no modules. CJPY token is non-upgradeable with no owner; its own private governance variable has been permanently renounced (revokeGovernance), so its CurrencyOS pointer is fixed. CurrencyOS itself (which coordinates minting) is a separate UUPS proxy whose upgrade authority resolves to the same 2-of-4 Safe.",
     "upgradeability": {
@@ -352,7 +352,6 @@
     },
     "economicCapSemantics": "unbounded"
   },
-  "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
   "reserves": [

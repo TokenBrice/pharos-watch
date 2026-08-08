@@ -256,7 +256,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "M token held by Startale USDSC",

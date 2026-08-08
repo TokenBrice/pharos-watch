@@ -82,8 +82,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Undisclosed UUSD backing assets",
@@ -190,7 +188,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; live reads resolve the token owner to a 4/6 Safe that can mint/burn directly and controls the proxy-admin ownership chain.",
     "controls": [

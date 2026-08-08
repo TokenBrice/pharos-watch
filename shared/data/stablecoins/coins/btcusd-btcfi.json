@@ -402,7 +402,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "BtcUSD's canonical Bifrost issuance runs through the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647, a non-proxy contract that holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral; the token's DEFAULT_ADMIN_ROLE EOA can grant or revoke that role but cannot mint directly. On Base, the ERC20_Bridged proxy's two owners mint the bridged representation, and its proxy admin resolves to an EOA. The Bifrost AccessControl is non-enumerable and public Bifrost RPCs cannot serve full-history role-grant logs, so membership exclusivity and the unverified Base owner contract cap this review at manual-review.",
     "upgradeability": {
@@ -525,10 +525,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "continuous",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant the mint role, but cannot mint directly. Follow-up at Bifrost block 37087890 (2026-07-27): the token's mint gate is keccak256(\"Minter\") (not OZ's MINTER_ROLE — getRoleMemberCount reverts because the token uses plain, non-enumerable AccessControl). BTCFi's own handler API names 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD token handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded, while simulations from the owner EOA and all four collateral handlers reverted AccessControlUnauthorizedAccount. The handler is a non-proxy 5,266-byte contract, so the canonical CDP mint path is resolved. Two limits cap confidence at manual-review: (1) plain AccessControl membership cannot be enumerated without grant-event history, and both public Bifrost RPC families (public-01/02.mainnet.bifrostnetwork.com, public-01/02.mainnet.thebifrost.io) time out on getLogs beyond single-block ranges, so a second Minter member cannot be excluded on-chain; (2) the Base bridge owner contract 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe is source-unverified on Blockscout/Basescan/Sourcify and exposes no Safe or owner() interface (getOwners/getThreshold/owner all return empty), so its internal signer policy is unknown.",
+      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant the mint role, but cannot mint directly. Follow-up at Bifrost block 37087890 (2026-07-27): the token's mint gate is keccak256(\"Minter\") (not OZ's MINTER_ROLE — getRoleMemberCount reverts because the token uses plain, non-enumerable AccessControl). BTCFi's own handler API names 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD token handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded, while simulations from the owner EOA and all four collateral handlers reverted AccessControlUnauthorizedAccount. The handler is a non-proxy 5,266-byte contract, so the canonical CDP mint path is resolved. Two limits cap confidence at manual-review: (1) plain AccessControl membership cannot be enumerated without grant-event history, and both public Bifrost RPC families (public-01/02.mainnet.bifrostnetwork.com, public-01/02.mainnet.thebifrost.io) time out on getLogs beyond single-block ranges, so a second Minter member cannot be excluded on-chain; (2) the Base bridge owner contract 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe is source-unverified on Blockscout/Basescan/Sourcify and exposes no Safe or owner() interface (getOwners/getThreshold/owner all return empty), so its internal signer policy is unknown. M-2 evidence review 2026-08-08: reconciliation downgraded continuous -> unknown - the review evidences the mint-role topology (bridge-token owners, handler role) but states no mechanism reconciling BtcUSD supply against BTC backing, no reserve endpoint is sourced, and no artefact names what is reconciled against what. The unbounded-reconciled posture's reconciled leg is therefore unsupported; V9 grades it conservatively while reconciliation is unknown.",
       "reviewer": "P2 mint-free cohort; Kimi data review",
       "reviewedAt": "2026-07-27",
       "disposition": "scoreable",
@@ -638,7 +638,6 @@
     ]
 
   },
-  "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [
     "liquity-v1"

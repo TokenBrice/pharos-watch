@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://explorer.dgld.ch/",
-    "provider": "MKS PAMP bar registry",
-    "attestorTier": "niche",
+    "provider": "Gold Token SA live bar registry (issuer-maintained; reconciles per-chain token supply to named PAMP bar serials with zero gap, verified via the registry API 2026-08-08; MKS PAMP is custodian/refiner, not an attestor, and no third-party audit is published - the litepaper's 'independent audit framework' has no artefact)",
+    "attestorTier": "self",
     "cadence": "real-time",
     "attestorJurisdiction": "Switzerland"
   },
@@ -133,7 +133,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA that also owns the ProxyAdmin. After retiring the compromised Ethereum-Base bridge, the issuer deployed an independently gold-backed native Base token whose MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner are separately identified.",
     "mintIncidents": [
@@ -351,6 +351,5 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "launchDate": "2022-11-03"
 }

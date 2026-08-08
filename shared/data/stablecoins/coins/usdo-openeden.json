@@ -20,8 +20,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://openeden.com/usdo/transparency",
-    "provider": "OpenEden issuer reserve API and transparency dashboard",
-    "attestorTier": "self",
+    "provider": "OpenEden issuer reserve API and transparency dashboard, plus the Chainlink usdo-por Proof of Reserve feed on Base (porSource Wallet Address Manager, cross-chain, 86400s heartbeat, 0.5% deviation threshold; no accounting-firm attestation exists for USDO reserves)",
+    "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
       "periodEnd": "2026-07-22",
@@ -143,7 +143,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDO has AccessControl MINTER_ROLE/BURNER_ROLE/UPGRADE_ROLE. Active mint roles include an EOA default admin, an Express mint/redeem contract, and a CCIP burn/mint token pool.",
     "upgradeability": {
@@ -233,6 +233,8 @@
         "evidence": "Direct hasRole read showed MINTER_ROLE; Sourcify source identifies USDOBurnMintTokenPool."
       }
     ],
+    "supervision": "prudential",
+    "reconciliation": "periodic",
     "review": {
       "sources": [
         {
@@ -246,14 +248,29 @@
         {
           "label": "USDO RoleGranted logs",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "OpenEden USDO reserve-composition endpoint: live per-wallet reserve holdings",
+          "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+        },
+        {
+          "label": "BMA regulated-entities register: OpenEden Digital Limited, Digital Assets Business, Class F, reg. 202403468, effective 26 May 2026",
+          "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "BMA Digital Asset Business (Prudential Standards) (Annual Return) Rules 2018 (BR 98/2018)",
+          "url": "https://cdn.bma.bm/documents/2023-11-27-15-56-27-Digital-Asset-Business-Prudential-Standards-Annual-Return-Rules-2018.pdf"
+        },
+        {
+          "label": "Chainlink USDO Reserves feed metadata (usdo-por: 86400s heartbeat, porAuditor Cross-chain)",
+          "url": "https://reference-data-directory.vercel.app/feeds-ethereum-mainnet-base-1.json"
         }
       ],
-      "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces. 2026-07-20 follow-up: the full RoleGranted/RoleRevoked history for the Ethereum token (routescan etherscan-compatible API, blocks 0-latest) confirms exactly these three mint surfaces — DEFAULT_ADMIN_ROLE is held solely by the EOA 0x5eaff7af80488033bc845709806d5fae5291eb88 (deployer 0xfefe66b655c0785237bF3364D93684062F76D767 had admin revoked at block 21019942), and MINTER_ROLE is held solely by that same EOA, USDOExpressV2 0x80e49D1bdCE8F80c38E88Dd5C4c004dDb9B4E887, and the CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 (granted at blocks 22185866/22185868, never revoked). The default admin is definitively an EOA, not a Safe/multisig; that fact is recorded as the control's authorityType rather than left open. At Ethereum block 25579975, the EIP-1967 implementation slot resolved to 0x87e3ba929c71c0e28fc1c817d107a888a59c523e, the proxy-admin slot was zero, and the implementation exposed proxiableUUID(), upgradeToAndCall(), and UPGRADE_ROLE. Role logs and hasRole confirmed the same EOA 0x5eaff7af80488033bc845709806d5fae5291eb88 is the sole active UPGRADE_ROLE holder.",
+      "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces. 2026-07-20 follow-up: the full RoleGranted/RoleRevoked history for the Ethereum token (routescan etherscan-compatible API, blocks 0-latest) confirms exactly these three mint surfaces — DEFAULT_ADMIN_ROLE is held solely by the EOA 0x5eaff7af80488033bc845709806d5fae5291eb88 (deployer 0xfefe66b655c0785237bF3364D93684062F76D767 had admin revoked at block 21019942), and MINTER_ROLE is held solely by that same EOA, USDOExpressV2 0x80e49D1bdCE8F80c38E88Dd5C4c004dDb9B4E887, and the CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 (granted at blocks 22185866/22185868, never revoked). The default admin is definitively an EOA, not a Safe/multisig; that fact is recorded as the control's authorityType rather than left open. At Ethereum block 25579975, the EIP-1967 implementation slot resolved to 0x87e3ba929c71c0e28fc1c817d107a888a59c523e, the proxy-admin slot was zero, and the implementation exposed proxiableUUID(), upgradeToAndCall(), and UPGRADE_ROLE. Role logs and hasRole confirmed the same EOA 0x5eaff7af80488033bc845709806d5fae5291eb88 is the sole active UPGRADE_ROLE holder. Reconciliation review (2026-08-08): USDO reserve holdings are enumerated per wallet on a public endpoint and covered by a live third-party oracle, so backing is recomputable by any third party rather than taken on the issuer word - the Chainlink USDO Reserves feed on Base returned 24,718,359.89 updated 2026-08-08 with porSource Wallet Address Manager, and the issuer endpoint listed the cold and hot wallets per chain holding TBILL, BUIDL, VBILL, RLUSD and USDC (26.82M USDO against 27.16M reserve assets, 101.27%). Supervision is prudential: OpenEden Digital Limited appears on the Bermuda Monetary Authority regulated-entities register under Digital Assets Business, matching the DABA licence cited in OpenEden documentation. No accounting-firm attestation exists - the assurance is continuous on-chain, not periodic. M-1 evidence review 2026-08-08: supervision 'prudential' upgraded to primary evidence - BMA register entry read directly (OpenEden Digital Limited, Class F, reg. 202403468, effective 2026-05-26; previously a time-limited Class M expiring 2026-03-31, with an unverifiable ~8-week register gap before Class F took effect) under the DABA prudential regime (BR 98/2018: audited financial statements, business plan, compliance certificate). Reconciliation downgraded continuous -> periodic: no issuer artefact names a reconciliation series; the only named series is the Chainlink usdo-por feed with a daily 86400s heartbeat and porAuditor 'Cross-chain' (no accounting firm), whose declared scope (U.S. Treasury bills only) and value (24,718,359.89 on 2026-08-08) diverge ~9% from the issuer API's full-basket figure (27,161,572.74 incl. RLUSD/USDC/BUIDL/VBILL); the docs transparency page is 7 months stale and still future-tense about a public dashboard.",
       "reviewer": "Codex mint-authority top100 batch-c; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-      "reviewedAt": "2026-07-20"
+      "reviewedAt": "2026-08-08"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDO's documented cross-chain route is Chainlink CCIP. CCIP provides token transfers through Chainlink oracle-network validation and rate-limited token pools, so Pharos scores the route as an external validated network rather than an issuer-only or canonical rollup bridge.",

@@ -380,8 +380,6 @@
     "reviewedAt": "2026-07-14",
     "upstreamSuppressionRationale": "The reviewed override is scoped to the USDH holder-facing token. Hubble docs describe a crypto-collateral CDP vault system, so this override deliberately suppresses inferred upstream freeze exposure from generic BTC/ETH/stablecoin text signals."
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

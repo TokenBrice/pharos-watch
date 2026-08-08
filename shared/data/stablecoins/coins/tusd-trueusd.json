@@ -21,22 +21,22 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore CPA Limited",
-    "attestorTier": "niche",
+    "provider": "Moore CPA Limited (Moore Global network member; daily individually signed ISAE 3000 reasonable-assurance reports at widget.verinumus.io, current through 2026-08-07 - latestReport refresh queued for a coherent update with the reserve-composition review; the report itself discloses ~99.98% of reserves as a single at-cost First Digital Trust fund position under redemption litigation)",
+    "attestorTier": "regional",
     "cadence": "daily",
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",
     "latestReport": {
-      "periodEnd": "2026-07-22",
-      "publishedAt": "2026-07-22",
+      "periodEnd": "2026-08-07",
+      "publishedAt": "2026-08-07",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "GPT SOL-BIND wave6",
+      "reviewer": "PoR verification sweep 2026-08 (daily Moore report read directly; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 22, 2026",
+          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - August 7, 2026",
           "url": "https://widget.verinumus.io/api/v1/tusd/report"
         }
       ]
@@ -204,7 +204,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "TUSD has four independently mintable issuer-native deployments. Ethereum uses a 2/3 Safe, BSC and Avalanche use chain-local 2/3 Safes with the same three owners, and Tron uses a single native account. Each final owner can bypass the configured mint pools and approvals, replace the mint key, and immediately upgrade both the token and controller proxies.",
     "upgradeability": {
@@ -520,7 +520,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "TrueUSD has four issuer-native mintable deployments (Ethereum, BSC, Avalanche, Tron) whose controllers match the reviewed mintAuthority profile; the Polygon, Arbitrum, and Optimism deployments are canonical-bridge lock-mint representations (Polygon PoS ChildChainManager, Arbitrum L2ERC20Gateway, OP L2StandardBridge), the Fantom deployment is a legacy Multichain representation controlled by the defunct Multichain MPC EOA, and the NEAR deployment is a Rainbow Bridge factory representation.",

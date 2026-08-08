@@ -81,8 +81,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
@@ -192,7 +190,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "AA_FalconXUSDC is a direct IdleCDOTranche token whose shares are minted exclusively by IdleCDO 0x433d5b17... against USDC deposits. The IdleCDO mint logic is a transparent proxy controlled by an 86,400-second timelock; the tranche has no independent proxy or privileged mint key. Base USDC supply is inherited from Circle.",
@@ -336,7 +334,7 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay. Economic-cap review completed 2026-07-15: tranche shares are minted only by the IdleCDO against deposited USDC. Changing that deposit-bound mint logic requires the independently enforced 86,400-second upgrade timelock, so the economic cap is raiseable rather than unbounded. No exact product-level prudential supervisor was identified.",
+      "evidence": "At Ethereum block 25526837, AA_FalconXUSDC minter() still returned IdleCDO 0x433d5b175.... The direct tranche had zero EIP-1967 implementation, admin, and beacon slots. IdleCDO's transparent proxy had implementation 0xdd596250..., ProxyAdmin 0x9438904a..., and ProxyAdmin owner timelock 0xda86e15d... with an 86,400-second minimum delay. Economic-cap review completed 2026-07-15: tranche shares are minted only by the IdleCDO against deposited USDC. Changing that deposit-bound mint logic requires the independently enforced 86,400-second upgrade timelock, so the economic cap is raiseable rather than unbounded. No exact product-level prudential supervisor was identified. M-2 evidence binding 2026-08-08: reconciliation continuous is the deposit-bound mint itself - fixed-block simulations (Ethereum 25526837) prove tranche shares are minted only by the IdleCDO against deposited USDC, so supply reconciles against vault collateral by construction; changing that binding requires the sourced 86,400-second timelock.",
       "reviewer": "Codex Safety Score V9 registry pass",
       "reviewedAt": "2026-07-15",
       "disposition": "scoreable",

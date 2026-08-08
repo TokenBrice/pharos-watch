@@ -82,7 +82,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "vCRED mint() is onlyOwner; the onchain owner is a Gnosis Safe v1.4.1+L2 (1-of-2 multisig) with no modules and no guard.",
     "controls": [
@@ -159,8 +159,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

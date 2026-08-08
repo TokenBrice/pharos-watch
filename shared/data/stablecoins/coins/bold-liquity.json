@@ -410,8 +410,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "BOLD is Ethereum-issued by Liquity V2 and its multichain route is documented through Chainlink CCIP. The route uses an external interoperability network with token-transfer validation assumptions, not only a native rollup bridge.",

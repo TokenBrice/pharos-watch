@@ -94,7 +94,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "TAU Pty Ltd issuer-native multichain AUDX: terms state issuance on Ethereum and Polygon and expressly permit issuance on other blockchains; the issuer website claims 12+ supported chains. Exact on-chain checks at Conflux eSpace block 153047580 and XDC block 105432932 re-confirm Aussie Dollar Token / AUDX / 18 decimals with MINTER_ROLE held by the same issuer EOAs already inventoried in mintAuthority (0x1274d873 on Conflux; 0xc9d8603b on XDC, matching Ethereum/Polygon). All four tracked deployments are reviewed as native-issuance issuer routes with no third-party bridge controller.",
@@ -252,13 +251,13 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audxtoken.com/transparency",
-    "provider": "Aura Partners",
+    "provider": "Aura Partners, Chartered Accountants (ASAE 3000/3100 limited assurance with direct bank confirmations; note the firm shares its Sydney floor with the issuer, Level 11, 9 Castlereagh St)",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
       "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-06",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -302,7 +301,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
     "upgradeability": {

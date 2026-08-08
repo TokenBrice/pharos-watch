@@ -90,7 +90,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "sUSD1+ is a Lorenzo strategy-vault receipt whose base USD1 authority is inherited from the reviewed parent, but local share issuance and mint logic are controlled by Lorenzo's CeDeFiManager. Its terminal BOSS_ROLE holder is a 2-of-3 Safe that also holds the manager's ADMIN_ROLE and OPERATOR_ROLE, so it can immediately authorize local minters/signers or replace the UUPS logic.",
     "inheritedFrom": "usd1-world-liberty-financial",
@@ -223,8 +223,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "sUSD1+ has one tracked BNB Chain deployment and is modeled as a staked wrapper of USD1+. No separate bridge route for the wrapper was verified, so the secondary row is triaged as single-chain/native.",

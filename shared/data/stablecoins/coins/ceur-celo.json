@@ -103,7 +103,6 @@
       "decimals": 9
     }
   ],
-  "deploymentModel": "native-multichain",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -241,7 +240,6 @@
       "reviewedAt": "2026-07-20"
     }
   },
-  "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "liveReservesConfig": {
     "adapter": "mento",

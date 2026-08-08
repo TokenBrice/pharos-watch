@@ -47,9 +47,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por",
-    "provider": "Chainlink Proof of Reserve / Instruxi",
+    "provider": "Chainlink Proof of Reserve / Instruxi (ion-por feed: 86400s heartbeat with 2% deviation threshold; measures I-ON Digital's total reserve, not a pmUSD-specific reconciliation against the ION.au tranche pledged to RAAC)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "daily"
   },
   "links": [
     {
@@ -72,7 +72,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -164,7 +163,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "pmUSD minting is gated by the f(x) Treasury contract (0x51c4348a…). The Treasury holds a fToken() pointer to pmUSD and is the exclusive minter; its owner and the proxy admin owner for both pmUSD and the Market contract is a single RAAC 2/3 Safe (0xCa3144AAD…).",
     "controls": [

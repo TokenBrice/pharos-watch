@@ -55,8 +55,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Undisclosed reserve assets",
@@ -117,7 +115,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "USDA's BSC token has an uncapped MINT role. At BSC block 112274230, the MINT role is held by a minter contract and an EOA; the EOA is the sole DEFAULT_ADMIN_ROLE holder and can appoint more minters. The minter contract's owner is a separate EOA that can authorize callers through that contract. Address ownership, custody, and any non-standard replacement or migration authority are undisclosed.",
     "controls": [

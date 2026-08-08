@@ -35,11 +35,26 @@
   "geckoId": "gold-token",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://gldt.org/",
-    "provider": "KPMG",
+    "url": "https://docs.gold-dao.org/other/audit-reports",
+    "provider": "KPMG SA Neuchatel (Swiss Auditing Standard 920 reports of factual findings, expressly neither an audit nor a review, restricted use; reconciles 7.9kg gold at Loomis to GLD NFT certificates of Bity Tokenisation SA - not to GLDT token supply - sampling 100 of 790 serials; newest report periodEnd 2025-09-21, published 2025-10-02, series stalled ~10.5 months against the claimed cycle; gldt.org itself hosts no artefact)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "Switzerland"
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Switzerland",
+    "latestReport": {
+      "periodEnd": "2025-09-21",
+      "publishedAt": "2025-10-02",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (PDF read: Swiss AS 920 factual findings, no assurance expressed; reconciles gold to GLD NFT certificates, not GLDT supply; newest artefact in a stalled series)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG SA report of factual findings - September 2025 (docs.gold-dao.org audit reports)",
+          "url": "https://docs.gold-dao.org/other/audit-reports"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -73,8 +88,6 @@
       "decimals": 8
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "dao-governance",
@@ -96,34 +109,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T44 unknown-reduction wave-2",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Gold DAO physical-gold redemption guide",
-        "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
-      },
-      {
-        "label": "Gold DAO whitepaper — Gold Token (GLDT)",
-        "url": "https://docs.gold-dao.org/v/gold-dao-whitepaper/the-ecosystem/products/gold-token-gldt"
-      },
-      {
-        "label": "DefiLlama RWA profile for GLDT",
-        "url": "https://defillama.com/rwa/asset/GLDT"
-      },
-      {
-        "label": "Gold DAO KPMG vault audit reports",
+        "label": "Gold DAO audit reports (KPMG SA Neuchatel)",
         "url": "https://docs.gold-dao.org/other/audit-reports"
       },
       {
-        "label": "ICRC API — GLDT ledger (read 2026-07-30)",
-        "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
+        "label": "Gold DAO documentation",
+        "url": "https://docs.gold-dao.org/"
       }
     ],
-    "rationale": "Re-derived 2026-07-30: the Gold DAO whitepaper fixes minting at exactly 100 GLDT per 1 g of GLD NFT locked in the swap canister, with reverse swaps burning GLDT to release the NFT, and the redemption guide confirms GLD NFTs are legal deeds for specific audited gold bars stored in Swiss vaults. DefiLlama's independent RWA profile corroborates the 100:1 backing and locked-GLD-NFT route, names Bity Tokenisation SA as the GLD NFT issuer, and cites the periodic KPMG factual-findings reports over gold held at Loomis Schweiz AG, Kloten (latest published report period 2025-09-30 covering 7.9 kg / 790 certificates; KPMG expressly frames these as agreed-upon procedures, not an assurance audit). The ICRC API read on 2026-07-30 binds the ledger's sole minting account to the Gold DAO swap canister 6f6ua-hqaaa-aaaar-qairq-cai (total supply 594,499.99 GLDT), so the locked-GLD-NFT swap is the only issuance path and the reviewed composition remains one aggregate 100% locked-gold-NFT category; this reserve classification does not establish that a GLDT holder has a direct legal claim on gold before completing the NFT swap and redemption process.",
-    "compositionBasis": "Gold DAO whitepaper and redemption documentation, independently corroborated by DefiLlama's GLDT RWA profile, the KPMG factual-findings vault reports, and the on-chain minting-account binding",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "Pinned to the newest verifiable artefact: KPMG SA Neuchatel Swiss AS 920 report of factual findings, procedures on site 21 September 2025, signed 2 October 2025 (PDF read this pass; expressly 'we do not express any assurance'): 790 Loomis GLD gold certificates representing 7.9kg of 1kg bars at Loomis Schweiz AG, supplier invoices covering 7.8992kg, 100 of 790 serials physically re-verified. The report reconciles gold to GLD NFT certificates of Bity Tokenisation SA, not to GLDT token supply. The live gldt.org page still shows current gold figures (reviewed 2026-07-30) but is not an attested artefact; the series is ~10.5 months stale.",
+    "compositionBasis": "KPMG SA report of factual findings as of 21 September 2025",
+    "compositionAsOf": "2025-09-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but bar inventory beyond the 2025-09-30 KPMG factual-findings count, serial-level allocation, and per-bar custody shares are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0,
@@ -173,7 +174,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
     "summary": "GLDT is minted exclusively by the Gold DAO dapp/swap canister 6f6ua-hqaaa-aaaar-qairq-cai, which the ICRC-1 ledger metadata confirms as the ledger's sole minting account; minting is economically bounded at 100 GLDT per gram of locked GLD NFT per the issuer whitepaper. Both the swap canister and the ledger are controlled by Gold DAO Root tw2vt-hqaaa-aaaaq-aab6a-cai, which sits in the standard SNS Root/Governance loop, so the Gold DAO SNS can upgrade the mint code and alter the bound through governance. The live code enforcing the locked-NFT rule is not independently verified, capping confidence at manual-review.",
     "controls": [

@@ -316,8 +316,6 @@
     "reviewer": "Kimi T39 Safety Score V9 access review",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Kava CDP collateral and protocol liquidity",

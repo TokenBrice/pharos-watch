@@ -12,7 +12,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
+    "reviewedAt": "2026-08-08",
     "reviewer": "Codex T58 safety-v9 unknown-reduction w2 (rejected-redo re-derivation)",
     "confidence": "unknown",
     "sources": [
@@ -29,9 +29,9 @@
         "url": "https://www.anchorx.org/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31: the issuer's GitHub reserve feed (latest commit 2026-07-29) reports circulationAmount 39.13 and reservesAmount 39.13 and links March/June attestation files, but publishes no reserve asset classes, institution names, terms, or allocation. The linked SharePoint attestation URLs redirect to Microsoft sign-in in the current retrieval environment, so the report contents cannot be re-derived now. AnchorX's public site likewise exposes no structured composition. The prior 100% bank-deposit slice is therefore not retained; the complete reserve remains an explicit unknown residual pending a retrievable assurance report.",
-    "compositionBasis": "AnchorX public reserve feed and linked attestation index; current attestation contents unavailable",
-    "compositionAsOf": "2026-07-29",
+    "rationale": "Write-time re-open 2026-07-31: the issuer's GitHub reserve feed (latest commit 2026-07-29) reports circulationAmount 39.13 and reservesAmount 39.13 and links March/June attestation files, but publishes no reserve asset classes, institution names, terms, or allocation. The linked SharePoint attestation URLs redirect to Microsoft sign-in in the current retrieval environment, so the report contents cannot be re-derived now. AnchorX's public site likewise exposes no structured composition. The prior 100% bank-deposit slice is therefore not retained; the complete reserve remains an explicit unknown residual pending a retrievable assurance report. Lockstep pin 2026-08-08: compositionAsOf anchored to the June 2026 Kreston AUP period that latestReport records; the composition remains an unknown envelope (no asset classes published) and the GitHub feed parity read of 2026-07-29 (circulation 39.13 = reserves 39.13) is retained as corroboration.",
+    "compositionBasis": "AnchorX June 2026 Kreston AUP period (composition classes undisclosed) with the issuer reserve feed parity check",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The current issuer feed does not disclose the reserve composition; linked attestations were not retrievable at write time.",
     "knownUnknownExposurePct": 100,

@@ -27,7 +27,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.tori.finance/transparency",
-    "provider": "Accountable",
+    "provider": "Accountable (confirmed: the issuer's live /api/solvency response carries dashboardUrl https://tori.accountable.capital, which serves the Accountable instance; app.tori.finance/transparency surfaces the same live solvency data)",
     "attestorTier": "niche",
     "cadence": "real-time"
   },

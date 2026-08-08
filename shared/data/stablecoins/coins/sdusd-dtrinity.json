@@ -100,8 +100,6 @@
     "reviewer": "Kimi T24 unknown-reduction wave-2 research",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "sdUSD is a staked wrapper around dTRINITY dUSD with deployments on Ethereum and Fraxtal. L2BEAT candidate data points to Across-style route liquidity for this family, and no issuer-native bridge-control document was verified, so the wrapper is conservatively scored as a liquidity/intent route.",
@@ -230,7 +228,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
     "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD \u2014 no privileged mint surface. Fraxtal's DStakeProxyAdmin is owned by a separate 24-hour TimelockController (0x0bafaDA2...) whose proposer/executor/canceller role is a 3-of-5 Safe (0xFC2f89f9...) holding the identical five-owner set as the Ethereum Safe.",

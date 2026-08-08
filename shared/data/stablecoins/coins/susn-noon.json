@@ -405,7 +405,6 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",

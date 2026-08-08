@@ -237,13 +237,13 @@ function resolveSettlementDelayMultiplier(settlementDelaySec: number): number {
 
 function resolveQueueBacklogMultiplier(backlogRatio: number): number {
   // NaN-input fall-through: no penalty.
-  return resolveExitThresholdBandMultiplier(backlogRatio, QUEUE_BACKLOG_PENALTY_TIERS, "at-or-above") ?? 1;
+  return resolveExitThresholdBandMultiplier(backlogRatio, QUEUE_BACKLOG_PENALTY_TIERS) ?? 1;
 }
 
 function resolveMinRedeemMultiplier(minRedeemUsd: number): number {
-  // Strictly-above matching: a minimum sitting exactly on a threshold takes the
-  // gentler band. Diverges deliberately from the queue ladder above.
-  return resolveExitThresholdBandMultiplier(minRedeemUsd, MIN_REDEEM_PENALTY_TIERS, "above") ?? 1;
+  // At-or-above matching, unified with the queue ladder above: a minimum on a
+  // threshold takes that band. NaN-input fall-through: no penalty.
+  return resolveExitThresholdBandMultiplier(minRedeemUsd, MIN_REDEEM_PENALTY_TIERS) ?? 1;
 }
 
 function resolveLiveHolderEligibilityMultiplier(holderEligibility: RedemptionHolderEligibility): number {

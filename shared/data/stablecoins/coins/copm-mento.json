@@ -216,8 +216,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "COPm has a single Celo deployment in the reviewed metadata and Celo's local-stablecoin docs list COPm as a Mento stablecoin on Celo. No material bridge route is resolved for this row.",

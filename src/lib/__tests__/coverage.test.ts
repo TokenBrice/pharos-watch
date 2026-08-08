@@ -383,6 +383,28 @@ describe("coverage helpers", () => {
         confidence: "verified",
       }).kind,
     ).toBe("issuer-or-backend-mint");
+  });
+
+  it("keeps the curated route bucket but marks the score Data n/a when report cards are missing", () => {
+    const summary: MintAuthorityCoverageSummary = {
+      mintPath: "immutable-user-collateralized",
+      authorityPosture: "none-resolved",
+      confidence: "verified",
+    };
+    const publishedMint = { score: 92, posture: "none-resolved" };
+
+    const available = mintAuthorityCoverageFeature.resolve(summary, publishedMint, true);
+    expect(available.kind).toBe("no-privileged-mint");
+    expect(available.score).toBe(92);
+    expect(available.scoreBand).toBe("hardened");
+
+    // The curated half survives; only the re-sourced half degrades, and it does
+    // so visibly rather than collapsing into an indistinguishable "not rated".
+    const unavailable = mintAuthorityCoverageFeature.resolve(summary, publishedMint, false);
+    expect(unavailable.kind).toBe("no-privileged-mint");
+    expect(unavailable.available).toBe(true);
+    expect(unavailable.score).toBeNull();
+    expect(unavailable.scoreBand).toBe("data-unavailable");
     expect(
       mintAuthorityCoverageFeature.resolve({
         mintPath: "permissioned-minter",

@@ -26,7 +26,20 @@ const RISKY_MINT_PATHS = new Set([
   "amo-or-custodian-hybrid",
   "facilitator-bucket-mint",
 ]);
-const RISKY_POSTURES = new Set(["concentrated-admin", "unbounded-or-compromised"]);
+// See `FRAGILE_POSTURES` in strata.ts: `unbounded-reconciled` refines the
+// unbounded class rather than leaving it, so K1's risky-minter leg treats it
+// exactly like `unbounded-or-compromised`. The finer curated vocabulary is a
+// display and band distinction; it must not silently relax a depeg verdict.
+const RISKY_POSTURES = new Set([
+  "concentrated-admin",
+  "unbounded-reconciled",
+  "unbounded-or-compromised",
+]);
+// The severe rung stays reserved for an *economically unbounded* minter observed
+// surging supply. Both unbounded rungs qualify: reconciliation is after-the-fact
+// evidence, so it does not bound how much can be printed during the event. A
+// merely concentrated admin surges at the elevated rung instead.
+const SEVERE_SURGE_POSTURES = new Set(["unbounded-reconciled", "unbounded-or-compromised"]);
 const SEVERE_VERY_HIGH_RISK_RESERVE_PCT = 30;
 const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
 const HARD_COLLATERAL_RESERVE_PCT = 80;
@@ -238,7 +251,7 @@ function killSignals(
   // K1 — supply weaponization (below-peg only)
   if (below && riskyMinter && (supplyExpanding || recentMintIncident)) {
     const sev =
-      (coin.authorityPosture === "unbounded-or-compromised" && supply.mintSurge === true) ||
+      (coin.authorityPosture != null && SEVERE_SURGE_POSTURES.has(coin.authorityPosture) && supply.mintSurge === true) ||
       (recentMintIncident && deep)
         ? "severe"
         : "elevated";

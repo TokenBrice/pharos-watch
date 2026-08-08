@@ -40,8 +40,8 @@
       "periodEnd": "2026-07-22",
       "publishedAt": "2026-07-22",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
       "reviewer": "OpenAI Codex Safety Score V9 backing review",
       "confidence": "verified",
       "sources": [
@@ -316,8 +316,6 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "xDAI is a native Gnosis gas balance, not an ERC-20 deployment: USDS enters the canonical Gnosis xDAI Foreign Bridge on Ethereum, a 4-of-7 validator network authorizes the Home Bridge to mint native xDAI through the block reward contract, and the reverse path burns xDAI before USDS is unlocked. This global bridge-representation route has no exact token-contract row to join; WXDAI is only a traded wrapper and is intentionally excluded from canonical supply matching.",

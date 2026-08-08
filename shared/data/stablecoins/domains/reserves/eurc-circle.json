@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Other Bank Deposits",
-      "pct": 98,
+      "pct": 98.56135,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Other regulated financial institutions in the EEA",
@@ -16,7 +16,7 @@
     },
     {
       "name": "Deposits at Systemically Important Institutions",
-      "pct": 2,
+      "pct": 1.43865,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Systemically important financial institutions in the EEA",
@@ -29,26 +29,21 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the Circle transparency adapter's exact slice identities; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Circle transparency",
+        "label": "Circle transparency (weekly reserve disclosure, as of Aug 06, 2026)",
         "url": "https://www.circle.com/transparency"
       },
       {
-        "label": "Circle EURC reserve overview",
-        "url": "https://www.circle.com/eurc"
-      },
-      {
-        "label": "Circle EURC terms",
-        "url": "https://www.circle.com/legal/eurc-terms"
+        "label": "Deloitte EURC examination report - June 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf"
       }
     ],
-    "rationale": "Circle's July 9 weekly disclosure reports EUR 369.85 million of other bank deposits and EUR 7.38 million of deposits at systemically important institutions. Percentages normalize those two disclosed amounts to their EUR 377.23 million total and preserve the live Circle adapter's reserve identities.",
-    "compositionBasis": "Circle weekly EURC reserve composition disclosure",
-    "compositionAsOf": "2026-07-09",
+    "rationale": "Curated rows mirror the live Circle transparency adapter's two EURC slice identities, with weights from the Aug 06, 2026 weekly disclosure (EUR 391.19M other bank deposits, EUR 5.71M deposits at systemically important institutions). These rows are the classification scaffold for the live adapter; the Deloitte June 30, 2026 examination (EUR 384.7M all-cash reserves vs EUR 382.0M EURC, read directly this pass) is recorded on the proofOfReserves latestReport and corroborates the all-deposit composition. compositionAsOf is intentionally absent: the weekly disclosure is a rolling live basis, not the examined balance-sheet date.",
+    "compositionBasis": "Circle weekly EURC reserve composition disclosure (live-adapter classification scaffold)",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's two-category disclosure; individual deposit institutions are not named.",
     "knownUnknownExposurePct": 0

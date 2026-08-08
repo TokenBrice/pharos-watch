@@ -19,8 +19,8 @@
   "geckoId": "tokenised-gbp",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.tokenisedgbp.com/transparency",
-    "provider": "Andersen LLP",
+    "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf",
+    "provider": "Andersen LLP (UK member of Andersen Global; the site's 'Audited Reserves' copy is contradicted by the artefact's own AUP no-opinion language; the transparency page is a JS shell so the record points at the report PDF)",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United Kingdom",
@@ -389,7 +389,7 @@
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "tGBP uses transparent proxies on five EVM chains and a standard SPL Token mint on Solana. EOA 0xAF4fCE...595C0 controls EVM minting and four live ProxyAdmin paths; Avalanche's ProxyAdmin is self-owned. Solana minting is controlled by a 1-of-2 SPL multisig.",
     "upgradeability": {

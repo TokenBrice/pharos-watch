@@ -12,13 +12,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
-    "sources": [{"label": "Matrixdock XAGm", "url": "https://www.matrixdock.com/xagm"}],
-    "rationale": "Matrixdock reports total supply, physical bullion weight, and bar count, and states that XAGm is backed by 99.9% LBMA-accredited Good Delivery silver stored in Asia. It also identifies Bureau Veritas physical audits and vault asset statements.",
-    "compositionBasis": "Matrixdock live bullion and supply disclosure",
-    "compositionAsOf": "2026-07-14",
+    "sources": [
+      {
+        "label": "Matrixdock XAGm",
+        "url": "https://www.matrixdock.com/xagm"
+      }
+    ],
+    "rationale": "Bureau Veritas July 2026 physical audit (PDF read directly this pass): 100% inventory of 66 Good Delivery silver bars against the Parcel Ownership List dated 30 June 2026, no anomalies. XAGm tokens appear nowhere in the certificate. Composition is a single allocated-silver category; Matrixdock's live disclosure corroborates bar count and weight.",
+    "compositionBasis": "Bureau Veritas physical audit against the Parcel Ownership List dated 30 June 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete direct reserve asset is physical silver; the reviewed page does not provide a vault-by-vault allocation.",
     "knownUnknownExposurePct": 0

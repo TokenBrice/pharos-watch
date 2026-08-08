@@ -162,8 +162,6 @@ const StablecoinMetaAssetSchemaShape = {
   dependencyReview: DependencyReviewSchema.optional(),
   canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
   blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
-  chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
-  deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
   custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
   governanceQuality: StablecoinMetaEnumSchemas.governanceQuality.optional(),
@@ -544,6 +542,33 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
         path: ["reserveReview"],
       });
     }
+
+    // PoR / composition lockstep.
+    //
+    // The V9 reserve extension only accepts a curated composition when
+    // `reserveReview.compositionAsOf` equals `proofOfReserves.latestReport.periodEnd`
+    // — the curated rows have to describe the same balance-sheet date the report
+    // attests, or they are not evidence for it. That gate is silent by design:
+    // a mismatch rejects the coin's entire curated composition and emits no
+    // error, which is how xsgd-straitsx lost 23 published points unnoticed. Only
+    // a prose rule in the PoR rubric stood behind it.
+    //
+    // Refreshing one date without the other is the whole defect class, so the
+    // two must move together or not at all.
+    const latestReportPeriodEnd = meta.proofOfReserves?.latestReport?.periodEnd;
+    const compositionAsOf = meta.reserveReview?.compositionAsOf;
+    if (latestReportPeriodEnd != null && compositionAsOf != null && latestReportPeriodEnd !== compositionAsOf) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          `PoR lockstep: reserveReview.compositionAsOf (${compositionAsOf}) must equal ` +
+          `proofOfReserves.latestReport.periodEnd (${latestReportPeriodEnd}). The curated composition must ` +
+          `describe the same date the attestation covers, or the Safety Score V9 reserve extension silently ` +
+          `discards the whole composition. Re-curate the rows to the report's period end, or advance both ` +
+          `dates together to a newer report.`,
+        path: ["reserveReview", "compositionAsOf"],
+      });
+    }
     const reviewedReserveIndices = new Set<number>();
     let unresolvedDispositionPct = 0;
     for (let index = 0; index < (meta.reserveReview?.nonLinkDispositions ?? []).length; index += 1) {
@@ -776,6 +801,9 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
       });
     }
 
+    // Whole-of-chain only. `none-resolved-mint` is deliberately exempt: it
+    // claims nothing about the parent, which is the reason a share wrapper over
+    // a governed parent can carry it at all.
     if (mintAuthority.authorityPosture !== "none-resolved") {
       continue;
     }

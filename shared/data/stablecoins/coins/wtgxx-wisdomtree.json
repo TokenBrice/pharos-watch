@@ -18,7 +18,7 @@
   "geckoId": "wisdomtree-treasury-money-market-digital-fund",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+    "url": "https://www.wisdomtreeconnect.com/digital-funds/money-market/wtgxx",
     "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)",
     "attestorTier": "self",
     "cadence": "daily-nav",
@@ -403,8 +403,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

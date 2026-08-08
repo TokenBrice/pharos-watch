@@ -41,9 +41,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge issuance FAQ (third-party audits and transparency reports promised quarterly, not yet published)",
+    "provider": "Bridge issuance FAQ (no published pathUSD reserve report; the FAQ's quarterly audit statement is forward-looking only - same posture as the corrected usdsui-sui record)",
     "attestorTier": "self",
-    "cadence": "quarterly",
+    "cadence": "none",
     "attestorJurisdiction": "United States"
   },
   "links": [
@@ -184,8 +184,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
@@ -198,7 +196,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "probable",
     "summary": "At Tempo block 32028752, pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remains a UUPS proxy (implementation 0x271c4d8616ed81c2cc006446c61f25219b182f8a; EIP-1967 admin slot zero). Its sole DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e authorizes upgradeToAndCall, so mint logic is changeable. The same proxy holds ISSUER_ROLE on the pathUSD TIP-20 token and mints within the 100 million supply cap.",
     "upgradeability": {

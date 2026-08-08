@@ -972,7 +972,6 @@
     "reviewer": "T52 access review (fresh exact replay)",
     "reviewedAt": "2026-07-31"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Metronome Synth msUSD is natively issued on every deployed chain: each deployment is a 2,739-byte EIP-1967 proxy whose minting is controlled by that chain's Metronome Synth core under Metronome DAO governance, not by a third-party bridge. DefiLlama records every chain's msUSD supply as issued.",

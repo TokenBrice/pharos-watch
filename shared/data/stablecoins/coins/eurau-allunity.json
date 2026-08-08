@@ -136,7 +136,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURAU is controlled by two AllUnity EOAs across all six EVM chains (ETH, ARB, OP, Base, Polygon, BSC): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
     "upgradeability": {
@@ -280,7 +280,6 @@
       "reviewedAt": "2026-07-21"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "AllUnity says EURAU integrates Chainlink CCIP for native zero-slippage burn/mint transfers across supported chains. Because durable cross-chain supply movement depends on CCIP's external interoperability network and issuer controls, the route is scored as external-validated-network.",

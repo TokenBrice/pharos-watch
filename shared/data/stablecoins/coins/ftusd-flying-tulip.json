@@ -48,7 +48,7 @@
     "url": "https://flyingtulip.com/ftusd/dashboard/",
     "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Flying Tulip dashboard"
+    "provider": "Flying Tulip dashboard (reads reserve state client-side via on-chain contract calls; no server reserves API exists in any of the 36 page bundles and archive captures are pre-hydration shells, so the dashboard is statically unverifiable by design)"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
@@ -158,7 +158,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "ftUSD on both Ethereum and Sonic is controlled by the same 3/5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the minter contract (0x56c5892b). The minter contract is a UUPS proxy (impl 0xf47bb65f on Sonic) with no separate ProxyAdmin. Identical ownership confirmed on both chains.",
     "upgradeability": {

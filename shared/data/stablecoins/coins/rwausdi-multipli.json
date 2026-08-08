@@ -211,7 +211,6 @@
     "reviewer": "GPT SOL-NR-A wave6",
     "reviewedAt": "2026-07-22"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "reserves": [
     {
@@ -315,7 +314,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "A shared zero-code EOA has uncapped direct-mint permission on Ethereum, Base, Arbitrum, and Monad through four chain-local RolesAuthority contracts. Each token and RolesAuthority is also owned by a same-address, no-delay Safe whose cutoff quorum varies by chain: 1-of-7 on Arbitrum, 2-of-7 on Monad, 3-of-8 on Ethereum, and 3-of-7 on Base. Those Safes can mint, replace or extend the minter set, change the authority contract, and immediately upgrade the UUPS tokens.",
     "upgradeability": {
@@ -692,7 +691,7 @@
           "url": "https://github.com/transmissions11/solmate/tree/main/src/auth"
         }
       ],
-      "evidence": "At the fixed cutoff, all four positive-supply deployments exposed the same mint, Auth, RolesAuthority, and UUPS ABI. The 23,116-byte implementations expose mint(address,uint256), authority(), isAuthorized(address,bytes4), setAuthority(address), and upgradeToAndCall(address,bytes), with no cap or minter-allowance entry point. Fixed-block simulations proved the shared role-5 EOA and each token-owner Safe can mint, while a random address reverts UNAUTHORIZED; only the Safe could execute the current upgrade path. Complete RolesAuthority event scans found one role-5 holder per chain, the same EOA, and the RolesAuthority owner is each chain-local Safe. Exact ERC-1967 slots, Safe owner lists, thresholds, module sentinels, guard slots, fallback handlers, and block hashes were checked on Ethereum, Base, Arbitrum, and Monad. External bridge or route semantics remain unresolved in bridgeRouteRisk and are not treated as reviewed by this control audit.",
+      "evidence": "At the fixed cutoff, all four positive-supply deployments exposed the same mint, Auth, RolesAuthority, and UUPS ABI. The 23,116-byte implementations expose mint(address,uint256), authority(), isAuthorized(address,bytes4), setAuthority(address), and upgradeToAndCall(address,bytes), with no cap or minter-allowance entry point. Fixed-block simulations proved the shared role-5 EOA and each token-owner Safe can mint, while a random address reverts UNAUTHORIZED; only the Safe could execute the current upgrade path. Complete RolesAuthority event scans found one role-5 holder per chain, the same EOA, and the RolesAuthority owner is each chain-local Safe. Exact ERC-1967 slots, Safe owner lists, thresholds, module sentinels, guard slots, fallback handlers, and block hashes were checked on Ethereum, Base, Arbitrum, and Monad. External bridge or route semantics remain unresolved in bridgeRouteRisk and are not treated as reviewed by this control audit. M-2 evidence binding 2026-08-08: reconciliation periodic re-verified live - the sourced AFI POR middleware serves a current zk reserves proof and a weekly periodic-report series (Period 32, snapshot 2026-08-02, solvency verified by AFI POR Middleware) for rwaUSDi; the series is current and third-party-operated.",
       "reviewer": "Codex Safety Score V9 evidence audit / SOL-IV calibration",
       "reviewedAt": "2026-07-15"
     }

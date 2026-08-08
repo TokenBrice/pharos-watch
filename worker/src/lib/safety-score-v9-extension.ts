@@ -111,6 +111,17 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
+  /**
+   * Replay-only operator override. The registry fingerprint check exists so a
+   * production publication can never score a capture against a registry it was
+   * not captured from. An equivalence replay deliberately does exactly that when
+   * it carries a frozen capture across a curation commit, so the operator can
+   * accept the mismatch explicitly.
+   *
+   * Never set on the production publication path: the runner and cron callers
+   * leave it undefined, so the check is unchanged for every non-replay caller.
+   */
+  allowRegistryMismatch?: boolean;
 }
 
 interface PreparedDependency {
@@ -2147,12 +2158,20 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
   const reviewedTransferFacts = options.reviewedTransferFacts ?? SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS;
-  const registryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
-  if (registryFingerprint !== fixedInput.registryFingerprint) {
+  const localRegistryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
+  const allowRegistryMismatch = options.allowRegistryMismatch === true;
+  if (!allowRegistryMismatch && localRegistryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
-      `Safety Score v9 registry fingerprint ${registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
+      `Safety Score v9 registry fingerprint ${localRegistryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
     );
   }
+  // With the mismatch accepted, the extension adopts the *capture's* registry
+  // identity. The compiled fact set already stamps its registry provenance from
+  // the fixed input, and the trusted compile path re-asserts extension identity
+  // against it, so adopting it here is what keeps the replay internally
+  // coherent. The registry rows themselves are still the local tree's: the
+  // resulting artifact measures code and curation together and is replay-only.
+  const registryFingerprint = allowRegistryMismatch ? fixedInput.registryFingerprint : localRegistryFingerprint;
   const clockSec = fixedInput.clockSec;
   const activeIds = new Set(fixedInput.activeAssetIds);
   const preparedById = new Map<string, PreparedDependency>();

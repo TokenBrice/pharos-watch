@@ -105,10 +105,8 @@ import {
 } from "./core";
 import {
   BridgeRouteRiskTierSchema,
-  ChainTierSchema,
   CollateralQualitySchema,
   CustodyModelSchema,
-  DeploymentModelSchema,
   GovernanceQualitySchema,
   OracleRiskTierSchema,
 } from "./core";
@@ -171,6 +169,24 @@ const PRIVILEGED_DIRECT_MINT_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbili
   "upgrade-only",
   "parameter-only",
 ] satisfies MintAuthorityDirectMintAbility[]);
+
+/**
+ * The mint-scoped subset: abilities that are themselves a path to new supply.
+ * `upgrade-only` and `parameter-only` are privileged over *other* domains, so
+ * they disqualify whole-of-chain `none-resolved` but not `none-resolved-mint`.
+ */
+const PRIVILEGED_MINT_PATH_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility> = new Set([
+  "direct",
+  "cap-limited",
+  "can-authorize",
+] satisfies MintAuthorityDirectMintAbility[]);
+
+/**
+ * Floor for the reviewer sentence backing a scored economic-control claim. Long
+ * enough to force a statement of what was reconciled or which regime supervises,
+ * short enough that it never fights a genuinely terse but complete note.
+ */
+const MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH = 40;
 
 function hasSourceLinks(sources: readonly StablecoinLink[] | undefined): boolean {
   return (sources?.length ?? 0) > 0;
@@ -1095,15 +1111,19 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
       }
     }
 
-    if (profile.authorityPosture === "none-resolved") {
+    // Both none-resolved scopes require a mintPath that is not itself a
+    // privileged issuance route; they differ only in which controls disqualify.
+    if (profile.authorityPosture === "none-resolved" || profile.authorityPosture === "none-resolved-mint") {
       if (profile.mintPath !== "immutable-user-collateralized" && profile.mintPath !== "wrapped-or-variant-inherited") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "authorityPosture none-resolved requires a non-privileged mintPath",
+          message: `authorityPosture ${profile.authorityPosture} requires a non-privileged mintPath`,
           path: ["authorityPosture"],
         });
       }
+    }
 
+    if (profile.authorityPosture === "none-resolved") {
       const privilegedControlIndex = controls.findIndex((control) =>
         PRIVILEGED_DIRECT_MINT_ABILITIES.has(control.directMintAbility),
       );
@@ -1112,6 +1132,61 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
           code: z.ZodIssueCode.custom,
           message: "authorityPosture none-resolved cannot include mint-capable controls",
           path: ["controls", privilegedControlIndex, "directMintAbility"],
+        });
+      }
+    }
+
+    // Mint-scoped: only an ability that *is* a mint path disqualifies. Upgrade
+    // and parameter authority are other control domains — real risk, priced by
+    // the V9 upgrade leg, but not a claim that this asset can be minted at will.
+    if (profile.authorityPosture === "none-resolved-mint") {
+      const mintCapableControlIndex = controls.findIndex((control) =>
+        PRIVILEGED_MINT_PATH_ABILITIES.has(control.directMintAbility),
+      );
+      if (mintCapableControlIndex >= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting",
+          path: ["controls", mintCapableControlIndex, "directMintAbility"],
+        });
+      }
+    }
+
+    // Evidence binding for the two economic-control facts (M-2).
+    //
+    // `reconciliation` and `supervision` were bare optional scalars: nothing
+    // coupled either to a source or to a reviewer sentence, yet between them
+    // they lift the V9 mint component from 25 to 55/70/80 and can suppress a
+    // `high` structural signal — worth up to 29 published points. Every sibling
+    // fact of that weight already binds its own evidence (`upgradeability` and
+    // `proofOfReserves.latestReport` each require `sources.min(1)`).
+    //
+    // Only the score-bearing values are gated. `unknown`, `not-applicable` and
+    // `none` assert nothing and must stay free to record an absence.
+    const claimsReconciliation = profile.reconciliation === "continuous" || profile.reconciliation === "periodic";
+    const claimsSupervision = profile.supervision === "prudential";
+    if (claimsReconciliation || claimsSupervision) {
+      const claimed = [
+        claimsReconciliation ? `reconciliation ${profile.reconciliation}` : null,
+        claimsSupervision ? "supervision prudential" : null,
+      ]
+        .filter((value): value is string => value !== null)
+        .join(" and ");
+
+      if (!profileHasSourceLinks) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${claimed} is a scored economic-control claim and requires at least one review source`,
+          path: ["review", "sources"],
+        });
+      }
+      if ((profile.review.evidence ?? "").trim().length < MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            `${claimed} requires a review evidence sentence of at least ` +
+            `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating what was reconciled or which regime supervises it`,
+          path: ["review", "evidence"],
         });
       }
     }
@@ -1286,8 +1361,6 @@ export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
   .strict();
 
 export const StablecoinMetaEnumSchemas = {
-  chainTier: ChainTierSchema,
-  deploymentModel: DeploymentModelSchema,
   collateralQuality: CollateralQualitySchema,
   custodyModel: CustodyModelSchema,
   governanceQuality: GovernanceQualitySchema,

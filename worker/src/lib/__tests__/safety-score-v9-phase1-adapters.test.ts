@@ -15,7 +15,7 @@ import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
-const CURATION_CLOCK_SEC = Date.UTC(2026, 6, 29, 12) / 1_000;
+const CURATION_CLOCK_SEC = Date.UTC(2026, 7, 9, 12) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
 const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",

@@ -96,7 +96,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint and Lisk deployment. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",
@@ -336,15 +335,15 @@
     }
   },
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://home.idrx.co/en/docs",
-    "provider": "IDRX transparency and audit documents",
-    "attestorTier": "niche",
-    "cadence": "ad-hoc"
+    "provider": "IDRX documents portal (document API returns HTTP 500 as of 2026-08-08 so the table renders empty; no reserve attestor is named anywhere - referenced third parties are custodians/partners and CertiK is a smart-contract auditor)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "IDRX uses direct issuer-controlled minting. Complete RoleGranted/RoleRevoked histories were established on 2026-07-30 for every issuer-listed EVM deployment: MINTER_ROLE is held by issuer Safe multisigs (2-of-3, 2-of-8, 2-of-5, and 2-of-7 configurations by chain), one legacy Polygon minter EOA granted 2023-06-27 and never revoked, and a BSC minter assignment at a Safe address that has no deployed contract code on BSC. DEFAULT_ADMIN_ROLE, which can grant and revoke MINTER_ROLE and UPGRADER_ROLE, is held by the issuer ops EOA 0x5515be1db2a513888f5cf375bf5c7956ee93c779 plus 2-of-3 Safes. UUPS upgrades route through UPGRADER_ROLE on per-chain TimelockController contracts (48 h minimum delay on Polygon, Worldchain, and Lisk; 1 s on BSC), but DEFAULT_ADMIN can reconfigure the role set without delay. On Solana, the current mint is controlled by a single System-Program key (Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn), while the officially deprecated mint's authority is an autonomous Squads v4 2-of-3 multisig (CxFQVMMLzjXgN3eRXUr7mtyBGWxKPeWYJuX6Q97tEy5o) that cannot mint through standard Squads v4 flows; its residual ~77.85M IDRX supply sits outside the June 2026 attestation's Solana figure even though the issuer still honors 1:1 redemption.",
     "upgradeability": {

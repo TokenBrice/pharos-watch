@@ -1,5 +1,3 @@
-import type { ChainTier } from "../../types";
-
 export const L2BEAT_CHAIN_RISK_SNAPSHOT_META = {
   source: "https://l2beat.com/api/scaling/summary",
   fetchedAt: "2026-06-12",
@@ -755,19 +753,6 @@ export interface L2BeatChainEnvironmentAssessment {
   risks: Record<L2BeatRiskField, L2BeatRiskValue>;
 }
 
-export interface L2BeatSafetyScoreAudit {
-  chainId: string;
-  projectId: string;
-  slug: string;
-  name: string;
-  stage: L2BeatStage;
-  category: string;
-  hostChain: string;
-  chainEnvironmentScore: number;
-  suggestedChainTier: ChainTier | null;
-  notes: string[];
-}
-
 export function resolveL2BeatProjectId(chainId: string): keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT | null {
   if (chainId in L2BEAT_CHAIN_RISK_SNAPSHOT) {
     return chainId as keyof typeof L2BEAT_CHAIN_RISK_SNAPSHOT;
@@ -817,38 +802,5 @@ export function getL2BeatChainEnvironmentAssessment(chainId: string): L2BeatChai
     riskScore,
     score,
     risks: snapshot.risks,
-  };
-}
-
-export function getL2BeatSafetyScoreAudit(chainId: string): L2BeatSafetyScoreAudit | null {
-  const resolved = resolveL2BeatSnapshot(chainId);
-  if (!resolved) return null;
-
-  const { projectId, snapshot } = resolved;
-  const stage: L2BeatStage = snapshot.stage;
-  const chainEnvironmentScore = computeL2BeatChainEnvironmentScore(snapshot);
-  const stageSupportsStage1Tier = L2BEAT_STAGE_SCORES[stage] >= L2BEAT_STAGE_SCORES["Stage 1"];
-  const suggestedChainTier: ChainTier | null = stageSupportsStage1Tier ? "stage1-l2" : null;
-  const notes = [
-    stageSupportsStage1Tier
-      ? "L2BEAT stage supports auditing Safety Score chainTier as stage1-l2."
-      : "L2BEAT stage does not by itself support a stage1-l2 Safety Score classification; review chainTier manually.",
-    "L2BEAT does not classify stablecoin token routes, so deploymentModel remains an asset-level manual review.",
-  ];
-  if (snapshot.isUnderReview) {
-    notes.push("L2BEAT marks this project under review; treat the audit signal as provisional.");
-  }
-
-  return {
-    chainId,
-    projectId,
-    slug: snapshot.slug,
-    name: snapshot.name,
-    stage,
-    category: snapshot.category,
-    hostChain: snapshot.hostChain,
-    chainEnvironmentScore,
-    suggestedChainTier,
-    notes,
   };
 }

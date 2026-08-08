@@ -148,8 +148,6 @@
     "reviewer": "Codex T65 access review",
     "reviewedAt": "2026-07-31"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "GHSm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native.",

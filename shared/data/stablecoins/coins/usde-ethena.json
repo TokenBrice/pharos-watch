@@ -63,7 +63,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk (docs-listed custodian attestations top out at May 2026 as of 2026-08-08, ~3 months behind the monthly claim; the live oracle/dashboard layer remains current)",
     "attestorTier": "niche",
     "cadence": "real-time"
   },
@@ -289,7 +289,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDe minting uses signed-order flows through the EthenaMinting contract. At Ethereum block 25576200, the one-day TimelockController owned the USDe token and held the active minter contract's default-admin role; the 5/10 Ethena Safe held its proposer, canceller, and executor roles.",
     "upgradeability": {
@@ -510,7 +510,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "liveReservesConfig": {

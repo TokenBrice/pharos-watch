@@ -23,12 +23,12 @@
     "provider": "Accountable",
     "attestorTier": "niche",
     "latestReport": {
-      "periodEnd": "2026-07-15",
-      "publishedAt": "2026-07-15",
+      "periodEnd": "2026-07-28",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Solstice attestation API observed at the 2026-07-28 review",
       "confidence": "verified",
       "sources": [
         {
@@ -112,7 +112,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -132,7 +131,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account (Ze3CQhTMi6...), and the program upgrade authority is a Solstice-operated EOA (BzMuMbtah9...). All mint-capable controls confirmed on-chain.",
     "controls": [
@@ -241,7 +240,6 @@
       ]
     }
   },
-  "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {

@@ -243,8 +243,6 @@
       ]
     }
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "third-party-bridge",
   "reserves": [
     {
       "name": "Rootstock BTC (rBTC) collateral",

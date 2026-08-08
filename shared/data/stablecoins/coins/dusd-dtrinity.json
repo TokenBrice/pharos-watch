@@ -352,7 +352,7 @@
   "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "dUSD mint authority is now enumerated on all four deployments. Every chain runs a transparent proxy whose ProxyAdmin is governed by a 3-of-5 Safe behind a 1-day TimelockController on Ethereum, Fraxtal and Katana, while Sonic's ProxyAdmin and token DEFAULT_ADMIN_ROLE sit directly under a 2-of-4 Safe with no timelock. Six contracts hold MINTER_ROLE across the four tokens and the dUSD token exposes no supply cap, so authorized minting is economically unbounded.",
     "upgradeability": {

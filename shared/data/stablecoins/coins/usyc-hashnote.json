@@ -231,7 +231,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USYC has uncapped max-allowance issuance paths on Ethereum and BSC, where a shared FundAdmin can authorize new max-allowance minters and separate RolesAuthority owners can change permissions. Separate token-owner EOAs can immediately upgrade each UUPS token. On Solana, a program-controlled PDA mints USYC and the documented Teller and Permissions program has a single no-delay upgrade key.",
     "upgradeability": {
@@ -667,7 +667,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

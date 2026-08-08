@@ -70,8 +70,6 @@
     "reviewer": "Codex Safety Score V9 access review; Kimi T06 wave-2 re-verification",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Fluid DUSD supply is confined to its canonical Arbitrum deployment; the single reviewed route is native issuance. No bridge route carries the claim.",
@@ -143,7 +141,7 @@
   ],
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DUSD's verified Arbitrum implementation permits only OffchainTreasuryOracle to call mint. That oracle needs an ORACLE_UPDATER_ROLE caller and a current off-chain signer attestation, while the token enforces a mutable off-chain treasury-balance ceiling. Three token DEFAULT_ADMIN_ROLE holders, the oracle administrator, and the transparent-proxy admin can alter the mint path or mint logic.",
     "upgradeability": {

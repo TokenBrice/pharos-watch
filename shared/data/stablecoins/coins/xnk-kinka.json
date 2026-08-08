@@ -36,9 +36,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
-    "provider": "Kinka issuer disclosures",
-    "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "provider": "Kinka whitepaper (no reserve artefact has ever been published: full site media library enumerated 2026-08-08 holds no vault report, custodian certificate, or attestation; the promised 'regular audits by a Japanese auditing firm' refers to the TSE-listed parent's statutory audit, unpublished; site appears dormant since late 2024)",
+    "attestorTier": "none",
+    "cadence": "none",
     "attestorJurisdiction": "British Virgin Islands"
   },
   "links": [
@@ -93,7 +93,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "probable",
     "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished. The token owner is Kinka's unverified token-sale contract, whose owner is an OpenZeppelin TimelockController (1-day delay) with a 2-of-3 Gnosis Safe as sole proposer/canceller, an open executor, and DEFAULT_ADMIN_ROLE held by the deployer EOA and the timelock itself. The Cardano deployment is an NFT-gated PlutusV3 minting policy whose authorising NFT holder is not publicly enumerable.",
     "controls": [
@@ -284,8 +284,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

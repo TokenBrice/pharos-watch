@@ -124,7 +124,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "WUSD is issuer-minted natively by WSPN on all three tracked networks. Each deployment is an ERC1967 proxy over an AccessControl ERC20 (ERC20F family) whose complete RoleGranted history shows mint rights only with WSPN operator accounts: the same DEFAULT_ADMIN EOA 0x731efdc9 and minter EOA 0x1a41b592 on every chain, plus chain-local mint/burn operator contracts. masterMinter() and LayerZero endpoint() probes revert and no third-party bridge contract holds MINTER_ROLE, so the earlier LayerZero external lock/mint candidate is not supported by on-chain evidence; cross-chain movement is issuer-native burn/mint through WSPN rails.",

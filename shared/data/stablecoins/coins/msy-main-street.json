@@ -165,7 +165,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

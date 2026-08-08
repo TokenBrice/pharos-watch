@@ -3,57 +3,70 @@
   "reserves": [
     {
       "name": "Euro cash held at regulated financial institutions",
-      "pct": 32.31,
+      "pct": 31.947113,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Societe Generale S.A. and Banking Circle S.A.",
-      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
       "name": "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)",
-      "pct": 67.69,
+      "pct": 68.052887,
       "risk": "low",
       "assetClass": "other",
       "issuerOrObligor": "Societe Generale S.A. and Banking Circle S.A.; underlying instruments undisclosed",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG EUROP Q1 2026 attestation",
-        "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+        "label": "KPMG attestation on EUROP tokens and reserves - 30 June 2026",
+        "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf"
       },
       {
-        "label": "Schuman Financial reserve audit index",
+        "label": "Schuman reserve audits index",
         "url": "https://schuman.io/reserve-audits/"
       }
     ],
-    "rationale": "The KPMG-attested Q1 2026 reserve report lists EUR 2.386687 million of cash and EUR 5.000000 million of cash equivalents against EUR 7.386687 million of total reserves. Those balances normalize to 32.31% cash and 67.69% cash equivalents and replace the prior unsupported 98% cash-equivalent / 2% additional-fund estimate.",
-    "compositionBasis": "KPMG attestation of the EUROP Reserve Report as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "KPMG S.A. (statutory auditor of Salvus SAS) limited/negative assurance as of 30 June 2026 08:00 UTC (signed 2026-07-03, PDF read this pass; the report states it is neither an audit nor a review and concludes 'no matters to report'): EUR 2,300,280.35 cash and EUR 4,899,995.78 cash equivalents at regulated institutions (Societe Generale EUR 5,204,639.41; Banking Circle EUR 1,995,636.72), totalling EUR 7,200,276.13 against 6,840,292.27 EUROP in circulation across Ethereum/Polygon/Avalanche/Plasma (over-collateralization ~EUR 360k). Note: the headline reserve figure (7,200,276.54) differs from both breakdown tables (7,200,276.13) by EUR 0.41 - an internal inconsistency in the artefact. Cash-equivalent instruments remain undisclosed.",
+    "compositionBasis": "KPMG attestation of the EUROP Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report discloses the cash-equivalent total but not its underlying instruments, maturities, or liquidity terms.",
-    "knownUnknownExposurePct": 67.69,
+    "knownUnknownExposurePct": 68.052887,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Euro cash held at regulated financial institutions",
-        "pct": 32.31,
+        "pct": 31.947113,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The reserve is euro cash rather than another tracked stablecoin."
+        "rationale": "Euro bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Euro cash equivalents held at regulated financial institutions (instruments undisclosed)",
-        "pct": 67.69,
+        "pct": 68.052887,
         "disposition": "insufficient-evidence",
-        "rationale": "KPMG confirms the aggregate cash-equivalent balance but the report does not identify the instruments or their maturity and liquidity terms."
+        "rationale": "The cash-equivalent instruments are undisclosed in the KPMG artefact; the category cannot be classified further."
       }
     ]
   },

@@ -290,7 +290,6 @@
       "reviewedAt": "2026-07-20"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "sUSDS is issued natively by the Sky Savings USDS vault on Ethereum. Its three authored non-Ethereum deployments are SkyLink canonical rollup lock/mint representations on Base, OP Mainnet, and Arbitrum; no unauthored NTT or liquidity route influences this profile tier. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to those three representations.",

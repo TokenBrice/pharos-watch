@@ -18,12 +18,11 @@
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-euro",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS SICAV sub-fund"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {
@@ -108,7 +107,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURSAFO is the EUR share class of Spiko's AMF-authorized UCITS fund. Tokens are minted by Spiko's daily-operator relayer contracts (two UUPS proxies) under a PermissionManager (custom RBAC), with a Gnosis Safe 1.4.1 (8/3) as the super-admin that controls upgrades and permission assignments.",
     "upgradeability": {
@@ -240,8 +239,6 @@
       ]
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Spiko announced Chainlink CCIP integration for regulated money-market fund tokens across multiple blockchains. EURSAFO therefore carries external CCIP validation assumptions instead of an issuer-only native route.",

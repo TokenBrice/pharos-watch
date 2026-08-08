@@ -49,7 +49,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "yoUSD is issued independently as a local ERC-4626 vault on Base, Ethereum, and Arbitrum. YO's gateway documentation says deposits and redemptions occur independently on each chain and shares received on one chain can only be redeemed there, so no bridge control carries the issuance claim.",
@@ -321,7 +320,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "yoUSD is an ERC-4626 vault on Base where users mint shares by depositing USDC. Base USDC issuance is inherited from Circle; the vault's RolesAuthority holds no share-mint capability, leaving strategy execution, redemption fulfilment, pausing and a Safe-proposed 2-day timelock upgrade as the privileged surfaces.",
     "inheritedFrom": "usdc-circle",

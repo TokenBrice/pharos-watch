@@ -18,24 +18,28 @@
   "geckoId": "zarp-stablecoin",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf",
-    "provider": "Kempen Audit",
+    "url": "https://www.zarpstablecoin.com/transparency/",
+    "provider": "Kempen Audit (restricted-use agreed-upon-procedures reports that state they are not an assurance engagement; observed publication history is irregular — roughly quarterly to early 2025, then ~5-month gaps — so no fixed cadence is claimed)",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "South Africa",
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
-      "periodEnd": "2026-02-27",
-      "publishedAt": "2026-03-03",
+      "periodEnd": "2026-07-01",
+      "publishedAt": "2026-07-02",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "SOL-3 adversarial verification",
+      "reviewer": "PoR verification sweep 2026-08 (July AUP PDF read; composition review advanced in lockstep; publishedAt from the upload timestamp embedded in the report URL)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kempen ZARP agreed-upon procedures report - February 2026",
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+          "label": "Kempen ZARP agreed-upon procedures report - 1 July 2026",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
+        },
+        {
+          "label": "ZARP transparency page (report index)",
+          "url": "https://www.zarpstablecoin.com/transparency/"
         }
       ]
     }
@@ -225,7 +229,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
     "upgradeability": {
@@ -326,8 +330,8 @@
         "evidence": "Solana getAccountInfo on both ZARP SPL mints (dngKhBQ... and 8v8aBHR...) returned mintAuthority = 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j. Account owner_program = 11111111111111111111111111111111 (System Program) = EOA-equivalent wallet, not a program."
       }
     ],
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -349,11 +353,19 @@
         {
           "label": "FSCA crypto-asset service providers",
           "url": "https://www.fsca.co.za/Regulated%20Entities/Pages/Crypto-Assets-Service-Providers.aspx"
+        },
+        {
+          "label": "Kempen Audit ISRS 4400 agreed-upon-procedures report on ZARP tokens, 1 July 2026",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
+        },
+        {
+          "label": "ZARP transparency archive: nine Kempen agreed-upon-procedures reports, May 2024 to July 2026",
+          "url": "https://www.zarpstablecoin.com/transparency/"
         }
       ],
-      "evidence": "Role enumeration via Blockscout RoleGranted/RoleRevoked events plus hasRole confirmation at block 25295023. MINTER_ROLE = one EOA (0x37b1af), DEFAULT_ADMIN = one EOA (0xf50064), UPGRADER_ROLE = nobody currently (prior holder 0xfa4eb9 had all roles revoked). Same MINTER and ADMIN confirmed on Base and Polygon. Solana both SPL mints share one system-wallet mintAuthority. All addressable controls confirmed. Mint-tier review (2026-07-15): Kempen Audit issued quarterly agreed-upon-procedures reports through 2026-02-27, published 2026-03-03, but the next expected quarterly report is overdue as of 2026-07-15; current recurring reconciliation is therefore not established. No exact prudential issuer authorization for ZARP Stablecoin (Pty) Ltd was established in FSCA's crypto-asset provider records.",
+      "evidence": "Role enumeration via Blockscout RoleGranted/RoleRevoked events plus hasRole confirmation at block 25295023. MINTER_ROLE = one EOA (0x37b1af), DEFAULT_ADMIN = one EOA (0xf50064), UPGRADER_ROLE = nobody currently (prior holder 0xfa4eb9 had all roles revoked). Same MINTER and ADMIN confirmed on Base and Polygon. Solana both SPL mints share one system-wallet mintAuthority. All addressable controls confirmed. Mint-tier review (2026-07-15): Kempen Audit issued quarterly agreed-upon-procedures reports through 2026-02-27, published 2026-03-03, but the next expected quarterly report is overdue as of 2026-07-15; current recurring reconciliation is therefore not established. No exact prudential issuer authorization for ZARP Stablecoin (Pty) Ltd was established in FSCA's crypto-asset provider records. Reconciliation review (2026-08-08): the report the 2026-07-15 pass recorded as overdue has since been published - Kempen Audit Incorporated (Chartered Accountants SA, Registered Auditor) issued an ISRS 4400 agreed-upon-procedures report as of 2026-07-01 reconciling R91,205,857.45 at Old Mutual Wealth Trust Company and R1,144,210 at Standard Bank against 83,196,465.61 ZARP asserted in circulation, verifying supply directly on Ethereum, Solana, Base and Polygon. Nine such reports run from May 2024 to July 2026, so a recurring third-party reconciliation is established. Supervision remains non-prudential: ZARP Stablecoin (Pty) Ltd acts as a representative of Inves Capital (Pty) Ltd with a CASP licence still pending, and is explicitly not SARB-endorsed, so attestation-only.",
       "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15"
+      "reviewedAt": "2026-08-08"
     }
   },
   "collateralQuality": "rwa",
@@ -362,40 +374,34 @@
     {
       "name": "ZAR fiat reserves",
       "pct": 100,
-      "risk": "low",
+      "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "ZARP Stablecoin (Pty) Ltd.; Old Mutual Wealth Trust Company; Standard Bank",
+      "issuerOrObligor": "Old Mutual Wealth Trust Company (JHB) and Standard Bank of South Africa",
       "riskFactors": [
         "counterparty",
-        "liquidity",
         "custody",
-        "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Kimi T59 re-review 2026-07-30",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "ZARP Stablecoin documentation",
-        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+        "label": "Kempen ZARP agreed-upon procedures report - 1 July 2026",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
       },
       {
-        "label": "ZARP Stablecoin website FAQ (treasury managed by Old Mutual Wealth, independent auditor verification)",
-        "url": "https://www.zarpstablecoin.com/"
-      },
-      {
-        "label": "Kempen ZARP agreed-upon procedures report",
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+        "label": "ZARP transparency page (report index)",
+        "url": "https://www.zarpstablecoin.com/transparency/"
       }
     ],
-    "rationale": "The live single-asset adapter publishes one aggregate ZAR fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents. Kempen's February 2026 agreed-upon procedures verified balances in an Old Mutual Wealth trust account and ZARP's Standard Bank call-deposit/current accounts and reconciled liabilities across Ethereum, Solana, Base, and Polygon. The report does not establish a redemption settlement time or a complete cash-versus-cash-equivalent split. Write-time re-open 2026-07-28: Kempen AUP PDF still verifies ZAR collateral in Standard Bank + Old Mutual Wealth accounts totaling R87,291,970 against issued ZARP on 27 Feb 2026; ZARP docs introduction still states treasury reserve of rand currency equivalents managed by Old Mutual Wealth. Write-time re-open 2026-07-30: ZARP docs introduction and the zarpstablecoin.com FAQ both still state that rands are held in a treasury managed by Old Mutual Wealth with independent auditors verifying at least R1 per ZARP in circulation; the composition remains 100% ZAR fiat reserves, with 2026-02-27 retained as the last independently verified composition date.",
-    "compositionBasis": "ZARP treasury and Kempen reserve-assurance disclosures",
-    "compositionAsOf": "2026-02-27",
+    "rationale": "Kempen Audit ISRS 4400 (Revised) AUP as of 1 July 2026 10:00 (PDF read this pass; expressly no opinion): AUP-verified balances of R91,205,857.45 at Old Mutual Wealth Trust Company (JHB) and R1,144,210 at Standard Bank (call+current), totalling R92,350,067.45 against 83,196,465.61 ZARP in circulation (gross on-chain 83,586,533 less treasury/frozen). NOTE: the attached management reserve report states a single unbroken total of ZAR 91,142,415.00 - a R1,207,652.45 gap versus the AUP-verified components that the document does not reconcile; percentages here use the AUP-verified figures. The single curated row carries the live single-asset adapter's slice identity (ZAR fiat reserves, 100%); the AUP-verified institution split (98.76% Old Mutual Wealth Trust / 1.24% Standard Bank) is recorded here rather than as separate rows so live classification is preserved.",
+    "compositionBasis": "Kempen Audit agreed-upon procedures report as of 1 July 2026",
+    "compositionAsOf": "2026-07-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve is identified as rand currency equivalents, but the reviewed sources do not provide a current bank-account or cash-equivalent category split, provider shares, or legal segregation terms.",
     "knownUnknownExposurePct": 0,
@@ -405,7 +411,7 @@
         "reserveName": "ZAR fiat reserves",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Rand bank balances are external reserve assets rather than a tracked stablecoin dependency."
+        "rationale": "ZAR trust-company and bank cash are external fiat reserves, not tracked stablecoin dependencies."
       }
     ]
   },

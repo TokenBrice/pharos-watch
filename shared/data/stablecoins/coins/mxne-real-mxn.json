@@ -36,7 +36,7 @@
     "type": "independent-audit",
     "url": "https://app.etherfuse.com/legal/proof-of-reserves",
     "provider": "Etherfuse third-party attestations (BHR Mexico) covering the CETES Stablebonds backing MXNe",
-    "attestorTier": "niche",
+    "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
@@ -171,8 +171,6 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "MXNe is issuer-minted natively by Brale on Base (MINTER_ROLE verified on-chain), Solana, and Stellar; no bridge carries the claim.",
@@ -257,7 +255,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "MXNe is issued by Brale across Base (BraleToken ERC1967 proxy), Solana (SPL mint), and Stellar (issuer account); on each chain a single issuer-controlled EOA/keypair holds all mint and admin rights.",
     "upgradeability": {

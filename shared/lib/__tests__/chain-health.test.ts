@@ -14,7 +14,6 @@ import {
   computeL2BeatChainEnvironmentScore,
   computeL2BeatRiskScore,
   getL2BeatChainEnvironmentAssessment,
-  getL2BeatSafetyScoreAudit,
   resolveL2BeatProjectId,
   type L2BeatChainRiskSnapshot,
   type L2BeatRiskSentiment,
@@ -176,15 +175,6 @@ describe("computeChainEnvironmentAssessment", () => {
     expect(resolveL2BeatProjectId("zksync")).toBe("zksync2");
     expect(resolveL2BeatProjectId("polygon-zkevm")).toBe("polygonzkevm");
     expect(resolveL2BeatProjectId("morph-l2")).toBe("morph");
-  });
-
-  it("provides Safety Score audit context without deployment-model mutation", () => {
-    const baseAudit = getL2BeatSafetyScoreAudit("base");
-    const scrollAudit = getL2BeatSafetyScoreAudit("scroll");
-
-    expect(baseAudit?.suggestedChainTier).toBe("stage1-l2");
-    expect(scrollAudit?.suggestedChainTier).toBeNull();
-    expect(scrollAudit?.notes.join(" ")).toContain("deploymentModel remains an asset-level manual review");
   });
 });
 

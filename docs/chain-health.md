@@ -60,7 +60,7 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 
 Stage scores are `Stage 2 -> 100`, `Stage 1 -> 80`, `Stage 0 -> 55`, and `Not applicable` / `Under review -> 50`. Risk sentiments score as `good -> 100`, `warning -> 60`, `bad -> 20`, and neutral/under-review values as `50`.
 
-L2BEAT audit helpers also expose chainTier/deploymentModel review context and Interop-backed bridge-route review candidates for Safety Score research. Live Safety Score scoring does not consume the Chain Health snapshot directly in `v1.4`; bridge-route scoring consumes only curated `bridgeRouteRisk` metadata once a reviewer writes a sourced profile.
+L2BEAT audit helpers also expose Interop-backed bridge-route review candidates for Safety Score research. Live Safety Score scoring does not consume the Chain Health snapshot directly in `v1.4`; bridge-route scoring consumes only curated `bridgeRouteRisk` metadata once a reviewer writes a sourced profile.
 
 `GET /api/chains` keeps the numeric `healthFactors.chainEnvironment` field and adds `chainEnvironmentEvidence` beside it. Matched projects return the consumed L2BEAT project ID, slug, stage score, risk score, five risk fields, and snapshot source date; unmatched chains return the fallback Pharos resilience tier. This is evidence/provenance only and does not introduce live L2BEAT fetching.
 
@@ -68,7 +68,6 @@ Maintenance commands:
 
 - `npm run check:l2beat-snapshot-coverage` validates that explicit Pharos aliases still point at checked-in snapshot projects.
 - `npm run audit:l2beat-snapshot-coverage -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
-- `npm run candidates:l2beat-safety-score` writes an advisory `agents/l2beat-safety-score-candidates.md` queue for Safety Score `chainTier` and `deploymentModel` review. It does not mutate stablecoin metadata.
 - `npm run candidates:l2beat-bridge-routes` writes an advisory `agents/l2beat-bridge-route-candidates.md` queue for reviewed `bridgeRouteRisk` profiles. Safety Score V9 can consume a profile only after it is verified and curated into per-coin metadata.
 
 ## Update Contract

@@ -273,10 +273,29 @@ export const MINT_AUTHORITY_MINT_PATH_VALUES = [
 ] as const;
 export type MintAuthorityMintPath = (typeof MINT_AUTHORITY_MINT_PATH_VALUES)[number];
 
+// Ordered strongest-first, matching `V9_MINT_POSTURE_BAND_ORDER`.
+//
+// `unbounded-reconciled` describes economically unbounded minting that is
+// nonetheless reconciled against reserves or run under a supervisory regime.
+// V9 has derived it since 9.1; the curated vocabulary lacked it, so a supervised
+// issuer had to be annotated `unbounded-or-compromised` — the same rung as an
+// issuer with no reconciliation at all. The two are not the same fact.
+//
+// `none-resolved` and `none-resolved-mint` are the two scopes of the same
+// finding. `none-resolved` is whole-of-chain: no privileged control of any kind
+// anywhere on the mint path, and for a wrapper only when the parent is itself
+// `none-resolved`. `none-resolved-mint` is *mint-scoped*: no privileged mint
+// path on this asset, while other control domains (upgradeability, parameters,
+// and — for a wrapper — the parent's own mint authority) may still exist. V9
+// derives its mint posture mint-scoped, so a share wrapper over a governed
+// parent derives `none-resolved` while the whole-of-chain curated value could
+// never say it; the mint-scoped value is what those annotations mean.
 export const MINT_AUTHORITY_POSTURE_VALUES = [
   "none-resolved",
+  "none-resolved-mint",
   "bounded-admin",
   "partially-bounded-admin",
+  "unbounded-reconciled",
   "concentrated-admin",
   "unbounded-or-compromised",
   "unknown",
@@ -658,17 +677,6 @@ export interface DependencyWeight {
   type?: DependencyType;
 }
 
-export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
-export type ChainTier = (typeof CHAIN_TIER_VALUES)[number];
-
-export const DEPLOYMENT_MODEL_VALUES = [
-  "single-chain",
-  "canonical-bridge",
-  "third-party-bridge",
-  "native-multichain",
-] as const;
-export type DeploymentModel = (typeof DEPLOYMENT_MODEL_VALUES)[number];
-
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
 
@@ -894,8 +902,6 @@ export const VARIANT_KIND_VALUES = [
 ] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
-export const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
-export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
@@ -1048,8 +1054,6 @@ export interface StablecoinMeta {
   dependencyReview?: DependencyReview;
   canBeBlacklisted?: BlacklistabilityStatus;
   blacklistabilityReview?: BlacklistabilityReview;
-  chainTier?: ChainTier;
-  deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;

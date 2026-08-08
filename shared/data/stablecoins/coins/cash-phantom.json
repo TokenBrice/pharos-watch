@@ -111,7 +111,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -121,7 +120,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "upgradeability": {
       "model": "custom",
@@ -510,7 +509,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
     "adapter": "curated-validated",

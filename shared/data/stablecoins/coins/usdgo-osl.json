@@ -21,17 +21,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Anchorage USDGO Reserve Report - May 31, 2026",
-          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+          "label": "Anchorage USDGO Reserve Report - June 30, 2026",
+          "url": "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf"
         }
       ]
     }
@@ -135,7 +135,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -145,7 +144,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDGO is a Solana Token-2022 issuer token. C2QJ... is the externally signable mint and permanent-delegate authority; a finalized mint transaction confirms it as the sole on-chain signer. Separate configuration, pause, freeze, and fee-withdrawal EOAs cannot mint. The shared Token-2022 program remains upgradeable through a 4/6 Squads V3 multisig with no enforced delay.",
     "upgradeability": {

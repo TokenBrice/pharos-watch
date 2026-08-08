@@ -216,8 +216,6 @@ export interface L2BeatDeploymentContextRow {
   stage: string;
   isUnderReview: boolean;
   chainEnvironmentScore: number;
-  chainTier: string | null;
-  deploymentModel: string | null;
 }
 
 export interface DependencyCoverageBaseline {
@@ -1226,8 +1224,6 @@ function findL2BeatDeploymentContextRows(activeCoins: readonly StablecoinMeta[])
         stage: context.stage,
         isUnderReview: context.isUnderReview,
         chainEnvironmentScore: context.chainEnvironmentScore,
-        chainTier: coin.chainTier ?? null,
-        deploymentModel: coin.deploymentModel ?? null,
       });
     }
   }
@@ -1619,8 +1615,8 @@ function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContex
   const clipped = rows.slice(0, L2BEAT_CONTEXT_LIMIT);
   if (clipped.length === 0) return ["_None._"];
   return [
-    "coin | chain | route | L2BEAT project | layer | category | host | stage | env score | chainTier | deploymentModel",
-    "--- | --- | --- | --- | --- | --- | --- | --- | ---: | --- | ---",
+    "coin | chain | route | L2BEAT project | layer | category | host | stage | env score",
+    "--- | --- | --- | --- | --- | --- | --- | --- | ---:",
     ...clipped.map((row) => [
       `${row.symbol} (${row.coinId})`,
       row.chainId,
@@ -1631,8 +1627,6 @@ function renderL2BeatDeploymentContextRows(rows: readonly L2BeatDeploymentContex
       row.hostChain,
       row.stage,
       row.chainEnvironmentScore,
-      row.chainTier,
-      row.deploymentModel,
     ].map(markdownValue).join(" | ")),
     ...(rows.length > clipped.length ? [`_Plus ${rows.length - clipped.length} more rows._`] : []),
   ];

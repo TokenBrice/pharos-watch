@@ -64,7 +64,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "WCLP is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
     "upgradeability": {
@@ -211,7 +211,6 @@
     "reviewer": "Kimi T24 unknown-reduction wave-2 research",
     "reviewedAt": "2026-07-30"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "WCLP is issuer-minted on all six deployments by Ripio's own minter-router contracts (cross-chain router 0x46167cB0... holds MINTER_ROLE on every chain, verified on-chain), with the 4-of-7 Ripio Safe as DEFAULT_ADMIN. No third-party bridge carries the claim; cross-chain movement is issuer-operated burn-mint.",

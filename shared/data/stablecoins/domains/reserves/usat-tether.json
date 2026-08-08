@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Reverse repurchase agreements collateralized by U.S. Treasury securities",
-      "pct": 90.07,
+      "pct": 90.019148,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed U.S. broker-dealer counterparty",
@@ -19,7 +19,7 @@
     },
     {
       "name": "Cash in demand deposit accounts",
-      "pct": 9.93,
+      "pct": 9.980852,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major U.S. commercial banks",
@@ -32,22 +32,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USA₮ Reserve Report - May 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Deloitte USA₮ Reserve Report - June 2026",
+        "url": "https://learn.anchorage.com/06.30.26_USAT-Stablecoin-Attestation-Report.pdf"
       },
       {
         "label": "Anchorage Digital USA₮ reserve attestations",
         "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
       }
     ],
-    "rationale": "Deloitte's May examination reports $141.444 million of Treasury-collateralized reverse repurchase agreements and $15.589006 million of cash against $157.033006 million of reserve assets at May 31, 2026. Those amounts normalize to 90.07% repo and 9.93% cash.",
-    "compositionBasis": "Deloitte examination of the USA₮ Reserve Report as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $177,423,363 against 176,794,845 redeemable USAT (Ethereum only) - $159,715,000 of overnight reverse repurchase agreements collateralized by U.S. Treasuries (single U.S. broker-dealer counterparty, 6/30 purchase maturing 7/1) and $17,708,363 of cash in demand deposits at FDIC-insured institutions ($17,458,363 uninsured). Surplus $628,518.",
+    "compositionBasis": "Deloitte examination of the USA₮ Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No material asset-class exposure is unclassified; the report does not identify the repo counterparty, commercial banks, or custodian and sub-custodian used for the reported accounts.",
     "knownUnknownExposurePct": 0

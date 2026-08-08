@@ -266,7 +266,7 @@ function descendingThresholdMultiplier(
   value: number,
   bands: readonly { threshold: number; multiplier: number }[],
 ): number {
-  return resolveExitThresholdBandMultiplier(value, bands, "at-or-above") ?? 1;
+  return resolveExitThresholdBandMultiplier(value, bands) ?? 1;
 }
 
 function routeCapacityHorizon(

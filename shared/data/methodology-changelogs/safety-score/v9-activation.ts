@@ -130,6 +130,43 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
+export const SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY: MethodologyChangelogEntry = {
+  version: "9.12",
+  title: "A resolved mint incident costs a full posture class",
+  date: "2026-08-08",
+  effectiveAt: 1786233601,
+  summary:
+    "The resolved-mint-incident decay shipped in 9.1 at the strongest ladder that flipped no grade — a calibration constraint, not a judgment, whose whole effect was one point on one asset. The severity is now chosen on merit: while the incident is recent the mint reads as a concentrated admin, from 24 months as a partially bounded admin, and from 48 months as a bounded admin. Every rung is an existing V9 posture value, and because the last rung sits above every uncapped mint in the incident-carrying set the penalty genuinely expires rather than becoming a permanent tax.",
+  impact: [
+    "The resolved-incident cap on the mint component moves from 79/85/90 to 55/70/85 for the recent (under 24 months), aging (24-48 months), and dated (48+ months) tiers; the tier boundaries themselves are unchanged",
+    "One published grade changes: pyusd-paypal moves A- to B (mint 79 to 55, score 80 to 70) on a resolved 2025-10-15 incident. Its cap relaxes to 70 on 2027-10-15 (B+) and to 85 on 2029-10-15, by which point its seasoned-issuer credit has raised its uncapped mint to 84, so A- is fully restored",
+    "One published score changes without a grade change: reusd-resupply 47 to 45, D either way",
+    "usdt-tether, dola-inverse-finance, ousd-origin-protocol, lisusd-lista and the four USDT wrappers are untouched, so the dependency-projection channel is never engaged; dgld-gold-token-sa and nxusd-nereus stay pinned at the unbounded-or-compromised floor",
+    "The decay still measures only the age of the most recent resolved incident, not its severity: an operational error reversed the same day and an exploit with real bad debt take the identical cap. Making the decay severity-aware is a schema change and is not in this version",
+    "The curated `authorityPosture` vocabulary gains two values, neither of which scores. `unbounded-reconciled` (\"Unbounded, supervised & reconciled\") stops a supervised issuer being annotated with the same value as an issuer with no reconciliation at all; the depeg resolver treats it exactly like `unbounded-or-compromised`, so it moves no depeg verdict. `none-resolved-mint` (\"No privileged mint path\") is the mint-scoped sibling of `none-resolved`, for an asset no control can mint while other control domains still exist — the scope V9 already derives at, which whole-of-chain `none-resolved` could not express. 14 share wrappers whose own token has no minter move onto it from an adverse posture; the resolver reads it as benign (neither fragile nor risky) and it does not earn the R1 non-inflatable-supply anchor, so two of the 14 change structural stratum and seven lose K1's curated risky-minter leg",
+    "Pillar weights, aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
+export const SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION: MethodologyChangelogEntry = {
+  version: "9.11",
+  title: "Unified exit ladder boundary semantics",
+  date: "2026-08-08",
+  effectiveAt: 1786233600,
+  summary:
+    "The shared exit engine's two descending penalty ladders read their thresholds the same way. The queue-backlog ladder already matched at-or-above; the minimum-redeem ladder matched strictly above, so a route whose minimum landed exactly on a boundary took the gentler band. Both now match at-or-above.",
+  impact: [
+    "A route with a minimum redemption of exactly $1,000,000 takes the 0.75 capacity multiplier instead of 0.9; exactly $10,000 takes 0.9 instead of no penalty",
+    "Only routes whose reviewed minimum sits exactly on a ladder threshold can move; every other route is arithmetically identical",
+    "The comparison mode is no longer a parameter of the shared band resolver, so the two ladders cannot silently diverge again",
+    "Ladder thresholds and multipliers, component weights, pillar weights, aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_MERGED_MINT_GRADER: MethodologyChangelogEntry = {
   version: "9.1",
   title: "One mint grader: incident decay, key custody, and quorum granularity",

@@ -39,8 +39,8 @@
     "attestorTier": "regional",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-15",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-15",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -48,8 +48,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
-          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+          "label": "Kreston AxCNH Agreed-Upon Procedures Report - June 2026",
+          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA"
         },
         {
           "label": "AnchorX transparency page",
@@ -118,10 +118,9 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
     "upgradeability": {

@@ -20,7 +20,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "yvUSDC-1 is a Yearn vault share over USDC; vault shares mint against deposited USDC while base USDC mint authority is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
@@ -138,8 +138,6 @@
       "decimals": 6
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

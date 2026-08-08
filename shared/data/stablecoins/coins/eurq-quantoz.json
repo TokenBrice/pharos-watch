@@ -37,6 +37,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://quantoz.com/transparency",
+    "provider": "Quantoz reserve status overview (static periodic snapshot table, latest dated 2026-06-30; marketing calls it continuous but no live feed is served)",
     "attestorTier": "self",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Netherlands",
@@ -113,7 +114,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURQ is issuer-minted by Quantoz across Ethereum (3/5 HadronMultisig owner, 3/5 proxy admin), Polygon (3/5 HadronMultisig owner, 3/5 proxy admin), XRPL (single master-key issuer account), and Algorand (single manager account). All mint-capable surfaces confirmed.",
     "controls": [

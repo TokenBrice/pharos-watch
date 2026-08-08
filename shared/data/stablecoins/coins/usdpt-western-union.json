@@ -138,17 +138,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDPT reserve examination for May 2026",
-          "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
+          "label": "Deloitte USDPT reserve examination for June 2026",
+          "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
         },
         {
           "label": "Anchorage Digital USDPT reserve-attestation index",
@@ -212,7 +212,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Anchorage Digital Bank issues USDPT on Solana. The Token-2022 mint retains an externally owned mint/permanent-delegate authority plus separate metadata, pause, and freeze authorities, so durable supply remains under issuer-controlled keys.",
     "upgradeability": {
@@ -309,44 +309,51 @@
   "reserves": [
     {
       "name": "Demand deposits at FDIC-insured depository institutions",
-      "pct": 9.3718693586,
+      "pct": 2.54898,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "FDIC-insured depository institutions",
-      "riskFactors": ["credit", "counterparty", "custody", "legal"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "legal"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
       "name": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
-      "pct": 90.6281306414,
+      "pct": 97.45102,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "BlackRock and United States Treasury",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDPT reserve examination for May 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Deloitte USDPT reserve examination for June 2026",
+        "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
       },
       {
         "label": "Anchorage Digital USDPT reserve-attestation index",
         "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
-      },
-      {
-        "label": "BlackRock Select Treasury Based Liquidity Fund",
-        "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       }
     ],
-    "rationale": "Deloitte's reasonable-assurance examination reports 1,500,372 redeemable USDPT, $1,603,106 of reserves, and a $102,734 surplus at 2026-05-31, with no nonredeemable tokens or timing differences. Its exact reserve schedule reports $150,241 of demand deposits and $1,452,865 in money market fund CUSIP 09248U874; the percentages are normalized from those two amounts. BlackRock identifies that CUSIP as TFFXX, a Treasury-based liquidity fund.",
-    "compositionBasis": "Deloitte assets-and-liabilities examination, with the reported money market fund CUSIP resolved against BlackRock's official fund page",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $122,245 against 21,581 redeemable USDPT (Solana only) - $119,129 in a single money market fund (CUSIP 46655R119) and $3,116 cash in FDIC-insured demand deposits (uninsured portion $0). Surplus $100,664 (~566% collateralization on a near-zero-supply token).",
+    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve categories and values in the examination are identified. The report does not name the depository institutions, but that provider-level omission does not leave an unidentified reserve slice.",
     "knownUnknownExposurePct": 0,
@@ -354,14 +361,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "Demand deposits at FDIC-insured depository institutions",
-        "pct": 9.3718693586,
+        "pct": 2.54898,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The examination identifies the deposit category and exact value; the depository institutions are not tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
         "reserveName": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
-        "pct": 90.6281306414,
+        "pct": 97.45102,
         "disposition": "untracked-exogenous-asset",
         "rationale": "TFFXX is an identified regulated money market fund rather than another tracked stablecoin."
       }

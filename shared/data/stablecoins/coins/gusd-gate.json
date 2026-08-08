@@ -21,9 +21,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.gate.com/gusd",
-    "provider": "Gate",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "provider": "Gate exchange-wide zk-Merkle proof-of-reserves (GUSD appears only inside a pooled stablecoin bucket with no per-asset ratio and no named attestor; this is an exchange custody proof of customer assets, not evidence that GUSD issuance is backed by segregated issuer reserves)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "links": [
     {
@@ -108,7 +108,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -118,7 +117,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock.",
     "upgradeability": {

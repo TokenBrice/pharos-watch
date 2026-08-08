@@ -136,8 +136,6 @@
     "reviewer": "Kimi T20 wave-2 unknown reduction",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "native",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

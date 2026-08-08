@@ -230,8 +230,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Facilitator-managed crypto and stablecoin collateral",

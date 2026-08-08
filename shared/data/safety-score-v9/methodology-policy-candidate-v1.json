@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.1",
+  "releaseVersion": "9.12",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -834,9 +834,9 @@
       },
       "mintMergedSignals": {
         "resolvedIncidentQualityCaps": {
-          "recent": 79,
-          "aging": 85,
-          "dated": 90
+          "recent": 55,
+          "aging": 70,
+          "dated": 85
         },
         "resolvedIncidentDecayMinMonths": {
           "aging": 24,

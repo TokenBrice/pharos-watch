@@ -31,7 +31,7 @@ const SIGNAL_ROWS = [
       signal: "Resolved-incident decay",
       effect: "Caps the component",
       meaning:
-        "A resolved mint incident caps the component and the cap relaxes with the incident's age. It never reaches the clean-record ladder, so a resolved exploit is never scored as a clean record. An active incident keeps its own critical path.",
+        "A resolved mint incident caps the component and the cap relaxes with the incident's age: while recent the mint reads no better than a concentrated admin, from two years as a partially bounded admin, and from four years as a bounded admin. It never reaches the clean-record rung, so a resolved exploit is never scored as a clean record, and the cap decays only with age — not with how severe the incident was. An active incident keeps its own critical path.",
     },
   },
   {
@@ -158,8 +158,11 @@ export function MintAuthorityScoreMethodologySection() {
         <p>
           An issuer whose minting is economically unbounded but reconciled against reserves under attestation sits on
           the reconciled rung. A privileged-mint incident from eighteen months ago is resolved, so it raises no active
-          incident signal — but the resolved-incident cap still holds the component below the bounded-admin rung, and
-          the cap relaxes on the incident&apos;s second and fourth anniversaries.
+          incident signal — but the resolved-incident cap holds the component down to the concentrated-admin rung, the
+          same class V9 gives a mint whose issuance authority is neither bounded nor independently constrained, which
+          is what an unbacked mint demonstrated. The cap relaxes to the partially-bounded rung on the incident&apos;s
+          second anniversary and to the bounded-admin rung on its fourth, at which point it is above the issuer&apos;s
+          own clean posture and the penalty has expired.
         </p>
         <p>
           Under the retired standalone engine the same asset carried a permanent cap in the teens. Under the merged

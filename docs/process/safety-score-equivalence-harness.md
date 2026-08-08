@@ -26,6 +26,15 @@ Two properties make the replay equal to production:
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops the volatile identity/timestamp key family (`VOLATILE_KEYS`) at every depth and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
 
+> **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**
+> The redemption payload fingerprint hashes the *whole* stored row, not a V9-relevant projection of it.
+> Adding, renaming, removing, or reordering a field on a redemption row therefore rotates the
+> fingerprint even when no value the evaluator reads has changed — and an existing capture stops
+> matching. Treat it like a registry edit: cut a fresh baseline capture on the new shape and diff
+> against that, rather than reading the resulting drift as a scoring result or reaching for
+> `--allow-registry-mismatch`. A declared-but-inert passthrough field is not exempt: inertness is a
+> property of the evaluator, and the fingerprint is taken before the evaluator runs.
+
 ## Prerequisites
 
 - A Wrangler session authorized for the production Cloudflare account with D1 read on `stablecoin-db`: interactive `npx wrangler login`, or `CLOUDFLARE_API_TOKEN` in the environment. An expired session fails the export with:
@@ -119,6 +128,10 @@ npm run safety-score-v9:replay -- \
 Name every artifact `replay-<commit>-<capture stamp>.json`. The commit is what the diff attributes drift to; a replay whose provenance is unclear is not evidence.
 
 The replay writes canonical byte-stable JSON. The published response lives at `pipeline.candidate`; its `cards` array carries one card per asset.
+
+### `--allow-registry-mismatch`
+
+A capture records the registry fingerprint of the tree it was taken from, and the replay refuses to score it against a different registry. That refusal is what makes an ordinary replay a clean code-only measurement, so it must stay on by default. It also means a frozen capture stops replaying the moment a curation commit edits `shared/data/stablecoins/coins/*.json` — which is exactly what a release batch does. `--allow-registry-mismatch` is the operator's explicit acceptance of that mismatch: the replay proceeds against the local registry rows and adopts the capture's registry identity so the pipeline's internal identity checks stay coherent. The resulting diff no longer isolates the code change — it measures **code and curation together**, and it must be partitioned by attribution (which drift entries belong to a methodology change, which to each curation commit, which to neither) before any of it is read as an equivalence result. An entry that lands in no attribution class is a finding, not noise. The flag is replay-only; the production publication path never sets it and its fingerprint check is unchanged.
 
 ## (c) Diff a baseline replay against a candidate replay
 

@@ -69,7 +69,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "apyUSD is an ERC-4626-style strategy wrapper over apxUSD. Ethereum and Base wrappers are UUPS proxies whose mint-critical upgrade paths are controlled by the same 3/6 Safe through chain-local Apyx AccessManagers; durable base issuance is inherited from the reviewed apxUSD issuer authority.",
     "inheritedFrom": "apxusd-apyx",
@@ -278,8 +278,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "apyUSD is the ERC-4626 wrapper of apxUSD. Row-level on-chain verification on 2026-07-20: the Ethereum wrapper is a native UUPS deployment (asset() = apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; no getCCIPPool or LayerZero endpoint() surface). The Base deployment is a Chainlink CCIP burn/mint representation: its getCCIPPool() returns BurnMintTokenPool 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d, whose getToken() returns the Base wrapper and whose owner() is the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2; pool bytecode matches the apxUSD CCIP pools byte-for-byte in size.",
@@ -407,11 +405,12 @@
     }
   },
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://accountable.apyx.fi/",
-    "provider": "Accountable",
+    "type": "independent-audit",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions (latest report June 2026 as of 2026-08-08; the Accountable real-time dashboard runs on Apyx-deployed infrastructure and is treated as secondary, not independent assurance)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "launchDate": "2026-02-20"
 }

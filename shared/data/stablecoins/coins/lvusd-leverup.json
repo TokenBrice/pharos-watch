@@ -101,8 +101,6 @@
     "reviewer": "Grok T34 wave-2 unknown reduction",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
@@ -172,7 +170,7 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
     "upgradeability": {

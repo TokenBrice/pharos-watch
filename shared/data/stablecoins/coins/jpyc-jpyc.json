@@ -191,7 +191,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "JPYC is a centralized FiatToken-style ERC-20. Minting requires being a configured minter with allowance; the sole ever-configured minter (0x11f14c2b…) currently has zero allowance on all three chains. Effective mint authority runs through the minterAdmin contract (owned by a 2/3 Safe) which calls configureMinter. The token owner (3/5 Safe) controls upgrades and minterAdmin replacement. Owner Safe and minterAdmin owner Safe confirmed unchanged on Ethereum, Polygon, and Avalanche.",
     "upgradeability": {

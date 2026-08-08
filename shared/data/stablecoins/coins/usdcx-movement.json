@@ -82,7 +82,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDCx is issued through Circle's xReserve architecture and transfers to USDC through Circle-controlled CCTP/Gateway rails. The route is reviewed as issuer-native burn/mint evidence; the penalty-only Safety Score blend can only drag weak routes and cannot lift USDCx's Decentralization score.",
@@ -129,7 +128,7 @@
   "governanceQuality": "single-entity",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "USDCx is Movement's USDC representation issued 1:1 through Circle's xReserve contract. A current Circle xReserve attester authorizes mint messages, while Movement-native 4-of-6 multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1 can immediately replace attesters and upgrade the compatible-policy Move package. No permissionless free-mint path exists.",
@@ -234,9 +233,9 @@
       }
     ],
     "reconciliation": "continuous",
-    "supervision": "prudential",
+    "supervision": "none",
     "review": {
-      "evidence": "At Movement block 74981963 and ledger version 174443182, USDCx minting required signatures from live xReserve attester 0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466. Roles.admin and the package ObjectCore.owner both resolved to Movement-native 4-of-6 multisig account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, not an EOA. Its owners were 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0xf0f7478905b9ee62bcb5ee938bb1da4e78809422d3fc35a52a995acf61177fba, 0x8f74be8a4e703502f222c17eecd74737b4eb9f84915ff723f6d5adafd12d843, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x53d163b14e497aabd0fa8e2f40cb783e3fd364fe2620c430dfd08144f06e4cc9. Package policy 1 allowed compatible function-body upgrades without an on-chain delay. Reserve reconciliation: Circle xReserve locks USDC on Ethereum and issues signed attestations used to mint or burn the corresponding USDCx supply, providing transaction-level third-party reconciliation for Movement's 1:1 representation. Prudential supervision: the backing asset is issued by Circle Internet Financial, LLC under the New York Department of Financial Services stablecoin framework, and Circle also publishes recurring Deloitte reserve examinations for USDC. Reviewed 2026-07-15.",
+      "evidence": "At Movement block 74981963 and ledger version 174443182, USDCx minting required signatures from live xReserve attester 0x2d4b0769063a340abaae3647366096e8b2a8b249f8bb2686d8418860592b2bb8dd6f3114c56b682f15135b60a84abf59c315ec54c49a0bb93d7d092a21bcf466. Roles.admin and the package ObjectCore.owner both resolved to Movement-native 4-of-6 multisig account 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, not an EOA. Its owners were 0xe409dcf645fed5437e8d824853846c997bbc603864062a3ef58da467e705a09f, 0x49ca66964d9932cac56acd3fe4a06fc614dfc3dfa2469cdb172d2e9ae0b8157a, 0xf0f7478905b9ee62bcb5ee938bb1da4e78809422d3fc35a52a995acf61177fba, 0x8f74be8a4e703502f222c17eecd74737b4eb9f84915ff723f6d5adafd12d843, 0xc9153e132398b925c78aac2edafd5c0f4b701b3e58244a5163434cb7596b6321, and 0x53d163b14e497aabd0fa8e2f40cb783e3fd364fe2620c430dfd08144f06e4cc9. Package policy 1 allowed compatible function-body upgrades without an on-chain delay. Reserve reconciliation: Circle xReserve locks USDC on Ethereum and issues signed attestations used to mint or burn the corresponding USDCx supply, providing transaction-level third-party reconciliation for Movement's 1:1 representation. Prudential supervision: the backing asset is issued by Circle Internet Financial, LLC under the New York Department of Financial Services stablecoin framework, and Circle also publishes recurring Deloitte reserve examinations for USDC. Reviewed 2026-07-15. M-2 evidence review 2026-08-08: supervision downgraded prudential -> none - no named regime supervises the Movement deployment or its admin multisig; Circle's NYDFS supervision covers Circle's own USDC issuance (credited on usdc-circle) and no primary source places the xReserve representation inside that perimeter. Reconciliation stays continuous on its own evidence: Circle xReserve locks USDC on Ethereum and gates USDCx mint/burn on signed attestations, transaction-level third-party reconciliation documented in the sourced xReserve technical flow.",
       "reviewer": "Codex Safety Score V9 registry pass",
       "reviewedAt": "2026-07-15",
       "disposition": "scoreable",

@@ -65,33 +65,16 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brl1.io/en/como_funciona",
-    "provider": "BRL1 self-published proof of reserves",
+    "provider": "BRL1 self-published proof of reserves (latestReport removed 2026-08: the May 2026 report file and the current brl1.io report link are Google Drive documents gated behind a Google sign-in, so the report cannot be publicly re-verified)",
     "attestorTier": "self",
     "cadence": "ad-hoc",
-    "attestorJurisdiction": "Brazil",
-    "latestReport": {
-      "periodEnd": "2026-05-01",
-      "publishedAt": "2026-05-01",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "BRL1 proof-of-reserves report - May 2026",
-          "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
-        }
-      ]
-    }
+    "attestorJurisdiction": "Brazil"
   },
   "liveReservesConfig": {
     "adapter": "single-asset",
@@ -116,7 +99,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "BRL1's sole Polygon deployment is an ERC1967 proxy using UUPS ERC20F logic. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 is the sole MINTER_ROLE holder and can mint without a supply cap. DEFAULT_ADMIN_ROLE is held by EOA 0xccfc24f563fbd798f171d16cc0706529c4739217, which can immediately grant MINTER_ROLE or UPGRADER_ROLE. No UPGRADER_ROLE holder exists at the cutoff; the previously identified 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 account holds BURNER_ROLE only.",
     "upgradeability": {

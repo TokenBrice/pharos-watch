@@ -102,7 +102,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -119,7 +118,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "proofOfReserves": {
     "type": "real-time",
@@ -128,12 +126,12 @@
     "attestorTier": "none",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Pharos live-reserves capture 2026-07-15T12:13Z",
       "confidence": "verified",
       "sources": [
         {

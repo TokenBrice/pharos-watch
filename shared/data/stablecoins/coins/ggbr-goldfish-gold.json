@@ -20,17 +20,17 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://goldfishgold.com/collateral",
-    "provider": "Goldfish designated collateral wallet on Ethereum",
+    "provider": "Goldfish designated collateral wallet on Ethereum (proves only a related-party ION.au token balance versus GGBR supply; underlying in-situ gold quantity and extractability are not independently attested)",
     "attestorTier": "self",
     "cadence": "real-time",
     "latestReport": {
       "periodEnd": "2026-07-22",
       "publishedAt": "2026-07-22",
       "assuranceMethod": "onchain-proof",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "GPT SOL-EVD-A wave6",
-      "confidence": "verified",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR remediation pass 2026-08 (downgraded from full/verified: wallet ratio check does not reconcile gold to liabilities)",
+      "confidence": "probable",
       "sources": [
         {
           "label": "Goldfish collateral model and designated wallet (accessed 2026-07-22)",
@@ -67,7 +67,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -77,7 +76,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "GGBR is minted exclusively through the GoldfishTokenFactory contract (MINT_OPERATOR_ROLE + DEFAULT_ADMIN held by a single issuer EOA). The GoldfishToken contract itself is administered by a 2-of-3 Safe that controls setMinterContract() and UUPS upgrades. Redemptions burn through the same factory.",
     "upgradeability": {

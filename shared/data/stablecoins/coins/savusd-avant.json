@@ -131,7 +131,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external validated-network exposure.",
@@ -615,7 +614,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "avusd-avant",
     "summary": "savUSD is an immutable, deposit-only receipt over avUSD on Avalanche. Its local share minting is bounded by deposited avUSD, its base-asset mint authority is inherited from the separately reviewed avUSD profile, and its active peripheral burn/mint controllers are covered by the reviewed bridge-route inventory.",

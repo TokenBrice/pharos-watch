@@ -105,8 +105,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "DUSD is issued only on Ethereum by the Dialectic USD Machine. A Wormhole NTT route mirrors a small slice onto Ink: the Ethereum NTT manager runs in LOCKING mode, so bridged units are collateralized by DUSD locked on Ethereum and Ethereum totalSupply already reflects the full share supply.",

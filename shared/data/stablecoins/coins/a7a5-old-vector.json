@@ -16,9 +16,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.a7a5.io/legal/transparency.md",
-    "provider": "A7A5",
-    "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "provider": "A7A5 docs transparency page (no reserve artefact has ever been published: the page is two marketing sentences, the docs corpus contains no reserve report, and the only audit is a smart-contract code audit)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "mechanismArchetype": "fiat-cash",
   "llamaId": "258",
@@ -141,10 +141,9 @@
     "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
     "yieldType": "governance-set"
   },
-  "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
     "upgradeability": {

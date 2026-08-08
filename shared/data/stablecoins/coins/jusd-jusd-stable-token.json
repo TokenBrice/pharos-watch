@@ -121,7 +121,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

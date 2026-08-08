@@ -81,7 +81,7 @@
     "type": "real-time",
     "url": "https://reserve.mento.org/",
     "provider": "Mento Reserve dashboard",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "oracleRisk": {
@@ -253,8 +253,6 @@
     "reviewer": "Codex T65 access review",
     "reviewedAt": "2026-07-31"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

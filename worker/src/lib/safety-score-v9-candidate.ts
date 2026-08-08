@@ -125,6 +125,13 @@ export interface BuildSafetyScoreV9CandidateInput {
   extension?: unknown;
   policy?: V9ValidatedPolicyEnvelope;
   releaseCandidateId?: string;
+  /**
+   * Replay-only: accept a capture whose registry fingerprint does not match the
+   * local registry. Only reaches the baseline extension builder, so it is inert
+   * when an explicit `extension` is supplied. See
+   * `BuildSafetyScoreV9BaselineExtensionOptions.allowRegistryMismatch`.
+   */
+  allowRegistryMismatch?: boolean;
 }
 
 export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
@@ -491,7 +498,11 @@ function buildSafetyScoreV9CandidatePipeline(
   const policyVersion = v9PolicyVersion(policy);
   let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(
     fixedInput,
-    input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
+    input.extension ??
+      buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
+        fixedInput,
+        input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {},
+      ),
   );
   const compilation =
     compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(

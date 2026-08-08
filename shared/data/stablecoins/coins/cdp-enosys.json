@@ -494,8 +494,6 @@
       ]
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "FXRP",

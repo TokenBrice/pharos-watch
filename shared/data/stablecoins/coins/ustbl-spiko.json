@@ -18,12 +18,11 @@
   "geckoId": "spiko-us-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: annual certification plus pre-publication asset-composition checks; reports are sent on written request only, none published; the fund page's 'four audits annually' is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {
@@ -96,7 +95,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USTBL mint and burn are permission-gated on every deployment. On Ethereum, Polygon, Base, Etherlink and Arbitrum a PermissionManager ADMIN group with exactly one 3-of-6 Safe member authorizes minting and can upgrade both the token and the PermissionManager; on Starknet the same authority is a 3-of-5 Argent multisig; on Stellar it is a single-key account that owns both the token and the PermissionManager, which is the weakest control in the set.",
     "upgradeability": {
@@ -528,8 +527,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USTBL is one of Spiko's tokenized fund shares deployed across multiple chains. Spiko announced Chainlink CCIP as its interoperability standard for compliance-aware cross-chain transfers, so Pharos scores the route as external validated-network exposure.",

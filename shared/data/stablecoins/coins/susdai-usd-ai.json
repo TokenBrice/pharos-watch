@@ -140,7 +140,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "sUSDai is native on Arbitrum (ERC-4626 vault). Ethereum, Base, and Plasma deployments are satellite OTokens minted by USD.AI's own LayerZero OAdapter under BRIDGE_ADMIN_ROLE (owner is the reviewed 3-of-3 Safe).",

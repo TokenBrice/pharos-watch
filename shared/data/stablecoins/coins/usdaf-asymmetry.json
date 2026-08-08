@@ -481,7 +481,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USDaf has one tracked Ethereum contract, an immutable Liquity-v2-style BoldToken with renounced ownership that is minted natively by six fixed BorrowerOperations and six fixed ActivePools. No source-verified cross-chain route exists in reviewed Asymmetry docs; the Across candidate did not resolve to a material durable supply route. Scored as single-chain/native.",

@@ -40,12 +40,12 @@
     "cadence": "real-time",
     "provider": "Chainlink Proof of Reserve",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-07-30",
+      "publishedAt": "2026-07-31",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
-      "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - issuer API response timestamped 2026-07-30T23:15Z, re-opened 2026-07-31",
       "confidence": "verified",
       "sources": [
         {
@@ -135,8 +135,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
@@ -158,7 +156,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "KRWQ's canonical Ethereum token is a TransparentUpgradeableProxy over a Frax-style ERC20 with an owner-managed minter set: minterMint(address,uint256) is uncapped for any address in the minters mapping, and the owner (3/5 Safe 0x56398b89) can addMinter/removeMinter at will. Two active minters are KRWTCustodianWithOracle contracts, both owned by that same Safe. Base, Polygon and Fraxtal do not run lock/unlock adapters: each is a native mint-and-burn LayerZero OFT (KRWQOFT is OFTUpgradeable; token() returns itself and approvalRequired() is false), so its owner Safe can setPeer a new trusted remote and cause unbounded KRWQ to be credited on that chain. Every deployment is a transparent proxy; on Ethereum and Base the ProxyAdmin is owned by the chain's Safe, but on Polygon and Fraxtal the ProxyAdmin is owned by a single EOA (0x9fEAB70f), which can replace the implementation unilaterally. Codex and Morph are note-only (no public RPC).",
     "controls": [

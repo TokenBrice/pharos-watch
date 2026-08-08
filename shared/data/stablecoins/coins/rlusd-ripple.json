@@ -27,17 +27,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
     "latestReport": {
-      "periodEnd": "2026-05-29",
-      "publishedAt": "2026-06-25",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte RLUSD Reserves Report - May 2026",
-          "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+          "label": "Deloitte RLUSD Reserves Report - June 2026",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/5a9121caa4206788930869cac0f868e5841d7fae.pdf/RLUSD_Attestation_Report_-_June'26_FINAL.pdf"
         }
       ]
     }
@@ -171,7 +171,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
     "upgradeability": {
@@ -332,37 +332,63 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. dollars and other cash equivalents",
-      "pct": 100,
+      "name": "U.S. Treasury bills",
+      "pct": 69.663811,
       "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury and NYDFS-approved regulated financial institutions",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
-      "liquidityHorizon": "one-day",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "seven-days",
       "maturityDaysMax": 92
+    },
+    {
+      "name": "Government money-market funds",
+      "pct": 14.329615,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "U.S. government money-market funds",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash and deposit accounts",
+      "pct": 16.006574,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "U.S. regulated financial institutions",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-19",
-    "reviewer": "Kimi rescue lane 1f (2026-07-19)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte RLUSD Reserves Report - May 2026",
-        "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        "label": "Deloitte RLUSD Reserves Report - June 2026",
+        "url": "https://cdn.sanity.io/files/ior4a5y3/production/5a9121caa4206788930869cac0f868e5841d7fae.pdf/RLUSD_Attestation_Report_-_June'26_FINAL.pdf"
       },
       {
         "label": "Ripple RLUSD transparency",
         "url": "https://ripple.com/solutions/stablecoin/transparency/"
-      },
-      {
-        "label": "Ripple RLUSD User Terms (reserve asset classes and three-month Treasury bill covenant)",
-        "url": "https://ripple.com/legal/stablecoin/"
       }
     ],
-    "rationale": "Deloitte's May examination reports $1.162351093 billion of Treasury bills, $345.319216 million of government money market funds, and $269.247197 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $3.915600 million timing adjustment, gross reserve assets normalize to 65.41%, 19.44%, and 15.15%, respectively; the registry retains their aggregate live-feed identity for deterministic reconciliation. The CUSIP-level table shows the longest Treasury bill maturing August 6, 2026 (69 days after the report date), and the examined NYDFS DFS-imposed Conditions plus the RLUSD User Terms restrict Treasury bills to three months or less from maturity; the registry records the 92-day covenant bound (maximum three-calendar-month span) as maturityDaysMax. Composition re-verified against the same May 2026 report on 2026-07-19; percentages unchanged.",
-    "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of May 29, 2026",
-    "compositionAsOf": "2026-05-29",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-29, PDF read this pass): reserve market value $1,512,689,493 against 1,411,034,124 outstanding RLUSD - U.S. Treasury bills $1,053,797,154 (14 CUSIPs maturing Jul-Sep 2026), government money-market funds $216,762,573, and cash at U.S. regulated institutions $242,129,766. Excess $101,655,369 (~107.2%). The prior single aggregated cash-equivalents row is split into the report's three examined categories. Row identities carry the ripple-transparency live adapter's exact slice names so V9 classifies live rows against this examined composition (same three-category taxonomy).",
+    "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No material asset-class exposure is unclassified; the public report does not identify the depository institutions, money market funds, or custodians.",
     "knownUnknownExposurePct": 0
@@ -418,7 +444,6 @@
       }
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "RLUSD is issued by Ripple on Ethereum and XRPL as issuer-native stablecoin deployments, not as a holder-facing third-party bridge wrapper. Cross-chain route risk is therefore reviewed as issuer-native mint/redeem exposure.",

@@ -2006,8 +2006,6 @@
     "reviewer": "GPT SOL-EVD-A wave6",
     "reviewedAt": "2026-07-22"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "River documents satUSD as an omnichain asset and bridge built on LayerZero's OFT standard, including cross-chain collateral and minting flows. Because route finality depends on the LayerZero/OFT stack, satUSD is scored as external-lock-mint.",
@@ -2460,7 +2458,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "satUSD mint authority is resolved through the fully enumerated Ethereum and Base ward histories plus the reviewed deployment inventory for every other tracked chain. Chain-local SatoshiXApp contracts mint CDP debt, while the same River owner EOA controls UUPS upgrades and can appoint unrestricted wards.",
     "upgradeability": {

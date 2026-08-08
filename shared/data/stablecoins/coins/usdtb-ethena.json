@@ -21,12 +21,12 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-    "provider": "Big Four accounting firm via Anchorage Digital Bank",
+    "provider": "Deloitte & Touche LLP via Anchorage Digital Bank (firm identity signature-verified from the June 2026 report PDF)",
     "attestorTier": "big4",
     "cadence": "monthly",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
@@ -34,8 +34,8 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "USDtb Reserve Report - May 2026",
-          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+          "label": "USDtb Reserve Report - June 2026",
+          "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
         }
       ]
     }
@@ -154,7 +154,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves. Ethereum issuance uses a MINTER_BURNER_ROLE and immediate proxy admin controlled by issuer EOAs; the native Solana Token-2022 mint has a distinct wallet authority. LayerZero OFT routes are reviewed separately as bridge controls.",
     "upgradeability": {
@@ -314,7 +314,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
@@ -323,13 +322,12 @@
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund (BVI)",
       "riskFactors": [
         "counterparty",
-        "duration",
         "liquidity",
         "custody",
-        "smart-contract"
+        "concentration"
       ],
       "liquidityHorizon": "one-day"
     },
@@ -340,34 +338,31 @@
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed USD settlement counterparties",
       "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody"
+        "counterparty"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the usdtb-transparency adapter's slice identities - BUIDL and assets-in-motion - so V9 can classify live rows; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
     "confidence": "verified",
     "sources": [
       {
         "label": "USDtb current backing and supply",
-        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
+        "url": "https://usdtb.money/api/backing"
+      },
+      {
+        "label": "USDtb Reserve Report - June 2026 (Deloitte via Anchorage)",
+        "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
       },
       {
         "label": "USDtb transparency dashboard",
         "url": "https://usdtb.money/transparency"
-      },
-      {
-        "label": "USDtb reserve introduction",
-        "url": "https://docs.usdtb.money/introduction.md"
       }
     ],
-    "rationale": "The current issuer endpoint reports BUIDL held at the published Anchorage custody address plus assetsInMotion, and the transparency dashboard presents assetsInMotion as USD. The BUIDL row is linked to the tracked fund; the settlement-float counterparty and timing remain undisclosed.",
-    "compositionBasis": "USDtb backing-and-supply endpoint",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Curated rows mirror the live usdtb-transparency adapter's slice identities (BUIDL held at the published Anchorage custody address, plus the USD assets-in-motion settlement float the endpoint reports). The Deloitte June 30, 2026 examination (read directly this pass: $777.2M reserves vs $775.1M redeemable USDtb - $766.9M BUIDL at fair value, $10.2M FDIC-insured demand deposits) is recorded on the proofOfReserves latestReport and corroborates the ~98.7% BUIDL concentration; the float's banking counterparty and settlement timing remain undisclosed. compositionAsOf is intentionally absent: the live endpoint is a rolling basis, not the examined balance-sheet date.",
+    "compositionBasis": "USDtb backing-and-supply endpoint (live-adapter classification scaffold)",
     "scope": "full-composition",
     "knownUnknownExposure": "The assets-in-motion USD settlement float has no disclosed banking counterparty or settlement timing.",
     "knownUnknownExposurePct": 1.2,

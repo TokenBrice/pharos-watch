@@ -42,7 +42,6 @@ describe("build-l2beat-bridge-route-candidates", () => {
       reviewRows: [{
         coinId: "fixture",
         symbol: "FX",
-        deploymentModel: "third-party-bridge",
         currentBridgeRouteTier: null,
         suggestedBridgeRouteTier: "external-lock-mint",
         protocols: [{

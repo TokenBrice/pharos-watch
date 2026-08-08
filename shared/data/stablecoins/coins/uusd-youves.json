@@ -668,7 +668,6 @@
       "decimals": 12
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
@@ -695,7 +694,6 @@
     "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-31"
   },
-  "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
@@ -833,7 +831,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "uUSD is minted by Youves vaults on Tezos: users lock XTZ/tzBTC/USDt/SIRS collateral at collateral-specific target ratios to mint uUSD, and the Youves DAO contract (Murmuration-derived, YOU governance) is set as administrator over the minting engine, with a keyholder break-glass guardian.",
     "controls": [

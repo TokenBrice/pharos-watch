@@ -60,9 +60,9 @@
     "branchCount": 105
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1305,
-    "maxFunctionLines": 179,
-    "branchCount": 72
+    "fileLines": 1378,
+    "maxFunctionLines": 238,
+    "branchCount": 80
   },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 163,
@@ -340,9 +340,9 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2396,
-    "maxFunctionLines": 252,
-    "branchCount": 277
+    "fileLines": 2415,
+    "maxFunctionLines": 260,
+    "branchCount": 278
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

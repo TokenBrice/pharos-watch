@@ -98,8 +98,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "JTRSY uses Centrifuge V3's native burn-and-mint share bridge. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the official deployment registry lists the complete Ethereum, Base, Arbitrum, Avalanche, Plume, BNB Chain, Monad, and Solana inventory.",
@@ -407,7 +405,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "JTRSY is a non-upgradeable Centrifuge Tranche token using a ward-based auth system, identical architecture to JAAA. Active wards are Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), and Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Mint authority ultimately resolves to the Centrifuge protocol 4-of-9 Safe via Root's ProtocolGuardian.",
     "upgradeability": {

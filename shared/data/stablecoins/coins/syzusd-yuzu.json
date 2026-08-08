@@ -137,8 +137,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "unproven",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",

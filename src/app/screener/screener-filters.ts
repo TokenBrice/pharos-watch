@@ -295,11 +295,19 @@ export function hasLoadingScoreFilterData(
   state: ScreenerScoreFilterLoadingState,
 ): boolean {
   const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
+  // Every filter listed here reads the same `reportCards` query. Since safety
+  // 9.1 the two mint filters do too — the route bucket stays curated, but the
+  // score and its band are re-sourced from the published V9 mint component. They
+  // were left out when the mint data moved, so an active mint-score filter
+  // silently narrowed the table during the first report fetch with no loading
+  // affordance at all.
   const reportActive =
     filters.safetyGrades.length > 0 ||
     filters.safetyBackingMin > 0 ||
     filters.safetyExitMin > 0 ||
-    filters.safetyControlMin > 0;
+    filters.safetyControlMin > 0 ||
+    filters.mintAuthorityScoreMin > 0 ||
+    filters.mintAuthorityScores.length > 0;
 
   return (
     (dewsActive && state.dewsLoading && !state.dewsHasData) ||

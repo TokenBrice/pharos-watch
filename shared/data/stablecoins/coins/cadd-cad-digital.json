@@ -37,7 +37,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "CADD uses ERC20F with role-gated minting and UUPS upgrades. Ethereum and Base share the same implementation and EIP-7702 delegated role holders: minter 0x4b37dd8b, default admin 0xb3a77dd7, and upgrader 0x9367b51c. All three delegate to Fireblocks' verified UniversalGaslessDelegate; the off-chain signer custody policy remains undisclosed.",
     "upgradeability": {
@@ -183,22 +183,22 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
-    "provider": "Baker Tilly",
+    "provider": "Baker Tilly WM LLP (Vancouver)",
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada",
     "latestReport": {
-      "periodEnd": "2026-04-30",
-      "publishedAt": "2026-05-21",
-      "assuranceMethod": "attestation",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-20",
+      "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "owner-triage",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Baker Tilly CADD reasonable-assurance report - April 2026",
-          "url": "https://drive.google.com/file/d/1ZMyKTB4oq6bZDNmT8WiatYDyTYmCPXQi/view?usp=sharing"
+          "label": "Baker Tilly WM CADD CSAE 3000 reasonable-assurance report - June 2026",
+          "url": "https://drive.google.com/file/d/1OKE8d0upGDiH0QePMFWfmPffNWyiUrm9/view"
         },
         {
           "label": "CADD reserve attestations",
@@ -312,7 +312,6 @@
     }
   ],
   "custodyModel": "institutional-regulated",
-  "deploymentModel": "native-multichain",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

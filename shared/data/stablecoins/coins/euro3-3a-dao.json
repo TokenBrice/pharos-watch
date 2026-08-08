@@ -448,7 +448,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Authorized vault contracts (VaultFactory 0x47608470... and a second contract) are registered as minters in MintableTokenOwner and call mint() on the token. The MintableTokenOwner is owned by an OwnerProxy, which is owned by a single EOA (0x84d28251143df55df1768870fc26983f50364557) \u2014 no multisig. This EOA can add/revoke minters and transfer control unilaterally, making this a concentrated-admin posture.",
     "upgradeability": {
@@ -530,7 +530,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EURO3 has no cross-chain bridge route. It is minted natively and independently on each chain (Polygon and Linea) by 3A's local CDP vault contracts: supply is created when users open EURO3 loans against that chain's whitelisted collateral and burned when they repay or redeem. Both token contracts are verified as a plain MintableToken (ERC20, Ownable) exposing only mint()/burn(), with the owner being a per-chain MintableTokenOwner that registers that chain's VaultFactory/vault minters. There is no OFT/CCIP/NTT/Hyperlane/Axelar or any cross-chain function in either contract, and the deployments use different addresses (ruling out deterministic omnichain-token patterns), so each chain's supply carries no cross-chain dependency. Holders can move EURO3 via third-party aggregators (Symbiosis, MetaMask Bridge, etc.), but that is not the durable issuance/supply path.",

@@ -18,12 +18,11 @@
   "geckoId": "spiko-uk-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-treasury-bills-pound",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor of the Spiko SICAV certifying annual accounts (prospectus art. 24: annual certification plus pre-publication asset-composition checks; reports are sent on written request only, none published; the fund page's 'four audits annually' is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {
@@ -104,7 +103,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum plus UKTBL-specific Chainlink CCIP pools on Ethereum, Polygon, Base, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts, with no pending Soroban owner/admin transfer at ledger 63675179. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds.",
     "controls": [
@@ -1161,8 +1160,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "UKTBL is natively issued by Spiko on its declared deployments, while Chainlink CCIP token pools hold group-2 UKTBL mint authority on Ethereum, Polygon, Base, and Arbitrum; Etherlink's current UKTBL group-2 set has no CCIP pool. This establishes an external validated-network transfer rail, although this review did not capture the current lane-by-lane rate-limit values.",

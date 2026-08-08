@@ -57,8 +57,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "PC0000089 has one tracked zkSync deployment in the local catalog, and reviewed Tradable materials do not show holder-facing supply moving through a separate bridge route. The row is triaged as single-chain/native.",

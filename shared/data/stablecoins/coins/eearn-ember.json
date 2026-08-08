@@ -42,7 +42,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "eEARN is a UUPS USDC vault-share wrapper: current shares are minted against deposited USDC, base USDC issuance is inherited from Circle, and the local implementation can be replaced through the CTG One Governance timelock, whose proposer, executor, and canceller roles are each held by a single externally owned account behind a one-day delay.",
     "inheritedFrom": "usdc-circle",
@@ -274,8 +274,6 @@
       "decimals": 6
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "eEARN has one tracked Ethereum vault contract used by Royco Dawn. No separate bridge route is modeled for Pharos, so the asset is reviewed as a native single-chain vault token.",

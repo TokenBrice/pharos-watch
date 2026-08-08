@@ -562,7 +562,6 @@
       "reviewedAt": "2026-07-16"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-top",
   "governanceQuality": "dao-governance",
   "reserves": [

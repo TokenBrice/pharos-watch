@@ -84,7 +84,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "WARS is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
     "upgradeability": {
@@ -287,7 +287,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
@@ -460,14 +459,14 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-    "provider": "Ripio wARS collateral attestations by local public accountants",
+    "provider": "Pablo Eduardo Soto, Contador Público, CPCECABA T.275 F.153 (sole-practitioner certification under Argentine Technical Resolution 37 Section VI; the document states it does not constitute an audit or a review and expresses no professional opinion)",
     "attestorTier": "niche",
-    "cadence": "quarterly",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Argentina",
     "latestReport": {
       "periodEnd": "2026-03-31",
       "publishedAt": "2026-04-22",
-      "assuranceMethod": "attestation",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
       "reviewer": "OpenAI Codex backing review",

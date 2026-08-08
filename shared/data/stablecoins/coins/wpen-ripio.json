@@ -95,7 +95,6 @@
     "reviewer": "Kimi T18 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Ripio issues wPEN natively on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis: every deployment is an EIP-1167 clone of one Ripio master implementation, and per-chain MINTER_ROLE is held only by Ripio-administered accounts. No third-party bridge carries the representation.",

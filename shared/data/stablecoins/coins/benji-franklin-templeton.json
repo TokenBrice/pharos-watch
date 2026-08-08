@@ -128,8 +128,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "BENJI is described by Franklin Templeton as natively issued on blockchains for fund recordkeeping, with separate published contract deployments rather than a holder-facing bridge route. Pharos treats the current route profile as native issuance on each supported network.",

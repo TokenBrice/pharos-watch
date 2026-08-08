@@ -118,7 +118,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USTB is an ERC-1967 upgradeable proxy with issuance controlled by a single issuer EOA that owns both the token and the ProxyAdmin. The EOA custody model is consistent with enterprise MPC/HSM; chain state confirmed unchanged.",
     "controls": [
@@ -218,7 +218,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USTB shares are issued as tokens on Ethereum, Solana, and Plume or held in book-entry form. Superstate documentation does not identify a bridge route controlling durable supply, so Pharos treats route risk as native issuance on the supported ledgers.",

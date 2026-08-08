@@ -123,7 +123,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURE is minted via Monerium's licensed EMI flow; the Ethereum token owner is a 3/6 Safe (Monerium-operated); proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
     "upgradeability": {
@@ -225,7 +225,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Monerium documents EURe e-money tokens as live on multiple chains and its SDK describes euro payments minting tokens to wallets and burning tokens for bank payouts. The route is reviewed as issuer-native issuance/redemption, not a third-party bridge.",

@@ -69,28 +69,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://freedomdollar.com/",
-    "provider": "Freedom Dollar",
+    "provider": "Freedom Dollar (latestReport removed 2026-08: the page's own reserve widget says 'Last updated: 07/08/2025' - over a year stale - so the prior 2026-07-30 review verified only that the URL loads, not that reserve data is current)",
     "attestorTier": "self",
-    "cadence": "real-time",
-    "latestReport": {
-      "periodEnd": "2026-07-30",
-      "publishedAt": "2026-07-30",
-      "assuranceMethod": "self-verification",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
-      "reviewer": "Kimi T39 Safety Score V9 reserve research",
-      "confidence": "probable",
-      "sources": [
-        {
-          "label": "Freedom Dollar live reserve disclosure",
-          "url": "https://freedomdollar.com/"
-        },
-        {
-          "label": "Zano public daemon RPC (get_asset_info)",
-          "url": "https://node.zano.org/json_rpc"
-        }
-      ]
-    }
+    "cadence": "ad-hoc"
   },
   "custodyProfile": {
     "providers": [
@@ -178,7 +159,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "FUSD is a native Zano Confidential Asset (asset id 8614…4f8f), not a smart contract: Zano has no contract VM, so issuance is a consensus-level EMIT operation that only the holder of the asset-owner key 497d6b7a…c7c1 can sign. That single key can emit up to the descriptor's total_max_supply of 1e15 fUSD against 11.4M fUSD outstanding — a ceiling roughly 87 million times circulation, so the mint is unbounded in practice — and it can hand ownership to any other key. The white paper's over-collateralization and 'DAO' framing is an off-chain operating policy: Zano consensus checks only the owner signature and the max-supply ceiling, never the ZANO reserve. total_max_supply is immutable post-deployment, so no cap-raise path exists.",
     "upgradeability": {

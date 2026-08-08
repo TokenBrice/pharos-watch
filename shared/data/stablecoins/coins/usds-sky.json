@@ -361,7 +361,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDS is native on Ethereum. SkyLink uses governance-controlled token gateways over the canonical Arbitrum and OP-stack messaging systems for Arbitrum, Base, OP Mainnet, and Unichain, while the Solana representation uses a LayerZero OFT lock/mint route.",

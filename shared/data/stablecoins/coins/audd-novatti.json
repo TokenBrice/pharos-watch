@@ -38,17 +38,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-06",
+      "periodEnd": "2026-07-31",
+      "publishedAt": "2026-08-06",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (July AUP PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "William Buck AUDD Agreed-Upon Procedures Report - June 2026",
-          "url": "https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf"
+          "label": "William Buck AUDD Agreed-Upon Procedures Report - July 2026",
+          "url": "https://cdn.audd.digital/dam/reports/AUDC+Agreed+upon+procedures+report+Jul26_.pdf"
         }
       ]
     }
@@ -220,7 +220,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Novatti issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL); per-chain mint authority resolves to issuer-controlled accounts, and the XRPL issuer account is cryptographically locked (no residual mint capability). No third-party bridge carries any representation.",

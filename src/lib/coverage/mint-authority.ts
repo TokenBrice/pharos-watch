@@ -4,6 +4,7 @@ import {
   breakdownItem,
   createBreakdownCounter,
   createPresetStatus,
+  DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
   type CoverageLegendItem,
 } from "./shared";
@@ -22,12 +23,25 @@ import {
  * The curation-route buckets stay curated (they describe *which* review path an
  * asset is on). Safety 9.1 re-sources only the score buckets, which now come
  * from the published V9 mint component instead of a browser recomputation.
+ *
+ * That split is why this feature degrades in halves rather than all at once.
+ * When the report-cards query has no data the curated route bucket is still
+ * true, so the cell keeps it; but the score and its band are simply not known
+ * yet, and reporting them as "not rated" would be indistinguishable from a
+ * genuine NR. They collapse into the shared `data-unavailable` band instead, so
+ * the score dimension shows a Data n/a affordance the way every other
+ * query-backed feature already does.
  */
 function resolveMintAuthority(
   summary?: MintAuthorityCoverageSummary | null,
   publishedMint?: PublishedMintComponent | null,
+  scoreDataAvailable = true,
 ): CoverageStatus {
   const status = resolveMintAuthorityStatus(summary);
+  if (!scoreDataAvailable) {
+    return { ...createPresetStatus(status), score: null, scoreBand: DATA_UNAVAILABLE_KIND };
+  }
+
   const score = resolveMintAuthorityScoreDisplay(publishedMint);
   return {
     ...createPresetStatus(status),
@@ -54,6 +68,10 @@ function formatMintAuthority(
     ...MINT_AUTHORITY_SCORE_FILTER_VALUES.map((band) =>
       breakdownItem(`score-${band}`, MINT_AUTHORITY_SCORE_FILTER_CONFIG[band].label, scoreBandCount(band)),
     ),
+    // Without this the score bands would all read zero when the report-cards
+    // query is down, which looks like "nothing is rated" rather than "the scores
+    // have not arrived".
+    breakdownItem(`score-${DATA_UNAVAILABLE_KIND}`, "data n/a", scoreBandCount(DATA_UNAVAILABLE_KIND)),
   ];
 }
 

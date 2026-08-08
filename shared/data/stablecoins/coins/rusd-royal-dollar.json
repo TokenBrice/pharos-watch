@@ -230,7 +230,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {

@@ -26,17 +26,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-23",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap XUSD reserve account examination - May 31, 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+          "label": "KK Yap XUSD reserve account examination - June 30, 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
         }
       ]
     }
@@ -162,7 +162,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "StraitsX XUSD uses Circle-style MasterMinter deployments on Ethereum and BNB Chain with separate chain-local 3/5 owner and master-minter Safes. The BNB Chain token is a legacy ZeppelinOS proxy controlled by another 3/5 Safe; the Solana mint authority is a 3/10 multisig.",
     "upgradeability": {
@@ -488,7 +488,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XUSD is issuer-minted natively by StraitsX on all three tracked networks: Ethereum and BNB Chain use the Circle-style MasterMinter pattern with chain-local 3-of-5 owner and master-minter Safes, and the Solana mint/freeze authority is the reviewed 3-of-10 SPL multisig. No third-party bridge carries the XUSD claim; cross-chain movement is issuer-native burn/mint through StraitsX rails.",

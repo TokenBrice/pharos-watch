@@ -19,7 +19,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
+    "reviewedAt": "2026-08-08",
     "reviewer": "Codex T43 safety-v9 unknown-reduction w2",
     "confidence": "verified",
     "sources": [
@@ -36,9 +36,9 @@
         "url": "https://stablecorp.ca/transparency"
       }
     ],
-    "rationale": "2026-07-31 re-open: Stablecorp balances API reports totalSupply=totalFiatReserves=1,652,020.55 CAD as of 2026-07-30T23:10Z (full fiat-reserve parity). The transparency page links monthly independent QCAD attestations, and the OSC QCAD Digital Trust order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes current instrument weights. Envelope remains 100% eligible CAD reserve assets with knownUnknownExposurePct=100 pending class split.",
-    "compositionBasis": "Stablecorp live total-reserves disclosure, monthly attestation index, and the regulatory order's eligible-asset envelope",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "2026-07-31 re-open: Stablecorp balances API reports totalSupply=totalFiatReserves=1,652,020.55 CAD as of 2026-07-30T23:10Z (full fiat-reserve parity). The transparency page links monthly independent QCAD attestations, and the OSC QCAD Digital Trust order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes current instrument weights. Envelope remains 100% eligible CAD reserve assets with knownUnknownExposurePct=100 pending class split. Lockstep pin 2026-08-08: compositionAsOf anchored to the May 31, 2026 Davidson & Company reasonable-assurance attestation (direct bank confirmations; 100% Canadian-dollar fiat reserves within the OSC order's eligible-asset envelope); the balances-API parity read of 2026-07-30 (totalSupply = totalFiatReserves = 1,652,020.55 CAD) is retained as corroboration.",
+    "compositionBasis": "Davidson & Company CSAE 3000 attestation as of May 31, 2026 (100% CAD fiat parity), corroborated by the live balances API",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
     "knownUnknownExposurePct": 100,

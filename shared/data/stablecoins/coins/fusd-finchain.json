@@ -19,9 +19,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://fusd.finchain.global/#reserves",
-    "provider": "FinChain reserve dashboard",
+    "provider": "FinChain reserve dashboard (reserve section is captioned 'as of February 2026' and figures do not render statically - no live feed observed as of 2026-08-08)",
     "attestorTier": "self",
-    "cadence": "real-time",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Bermuda"
   },
   "links": [
@@ -137,7 +137,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "FinChain's existing on-chain review identifies CCIP bridge pools among the FUSD minter set, and the issuer documents multichain FUSD deployments. Because cross-chain supply movement depends on Chainlink CCIP messaging/pools, FUSD is scored as external-validated-network.",
@@ -296,7 +295,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "FUSD mint surface confirmed: Ethereum MINTER_ROLE has 4 holders (FinChain mint proxy, TokenBridgeSender, 2x CCIP BurnMintTokenPool); proxy admin is OZ ProxyAdmin owned by EOA 0xc61f22aa. Same ProxyAdmin (0x29A48097) found on Avalanche and Sonic. DEFAULT_ADMIN is the same EOA.",
     "controls": [

@@ -3,17 +3,13 @@ import { inferResilienceDefaults, inferGovernanceQuality } from "../report-card-
 import { BACKING_TYPE_VALUES, GOVERNANCE_TYPE_VALUES } from "@shared/types/core";
 import {
   type BackingType,
-  type ChainTier,
   type CollateralQuality,
   type CustodyModel,
-  type DeploymentModel,
   type GovernanceQuality,
   type GovernanceType,
 } from "@shared/types";
 
 type ResilienceDefaults = {
-  chainTier: ChainTier;
-  deploymentModel: DeploymentModel;
   collateralQuality: CollateralQuality;
   custodyModel: CustodyModel;
 };
@@ -23,56 +19,38 @@ type ResilienceDefaults = {
 // here rather than only transitively through resilience-score consumers.
 const EXPECTED: Record<`${BackingType}:${GovernanceType}`, ResilienceDefaults> = {
   "rwa-backed:centralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "rwa",
     custodyModel: "institutional-regulated",
   },
   "rwa-backed:centralized-dependent": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "rwa",
     custodyModel: "institutional-regulated",
   },
   "rwa-backed:decentralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },
   "crypto-backed:centralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },
   "crypto-backed:centralized-dependent": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "eth-lst",
     custodyModel: "onchain",
   },
   "crypto-backed:decentralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },
   "algorithmic:centralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },
   "algorithmic:centralized-dependent": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },
   "algorithmic:decentralized": {
-    chainTier: "ethereum",
-    deploymentModel: "single-chain",
     collateralQuality: "native",
     custodyModel: "onchain",
   },

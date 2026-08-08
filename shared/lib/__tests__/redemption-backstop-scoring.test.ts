@@ -219,22 +219,23 @@ describe("applyCapacityConstraintScoreEffects", () => {
     });
   });
 
-  it("applies minimum-size penalties only above retail-size thresholds", () => {
+  it("applies minimum-size penalties from the threshold upward", () => {
     expect(
       applyCapacityConstraintScoreEffects({
         capacityScore: 100,
         scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 10_000,
+        minRedeemUsd: 9_999,
       }),
     ).toEqual({
       score: 100,
       capsApplied: [],
     });
+    // Boundary values belong to their own band (unified at-or-above matching).
     expect(
       applyCapacityConstraintScoreEffects({
         capacityScore: 100,
         scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 10_001,
+        minRedeemUsd: 10_000,
       }),
     ).toEqual({
       score: 90,
@@ -244,7 +245,7 @@ describe("applyCapacityConstraintScoreEffects", () => {
       applyCapacityConstraintScoreEffects({
         capacityScore: 100,
         scoringCapacityUsd: 10_000_000,
-        minRedeemUsd: 1_000_001,
+        minRedeemUsd: 1_000_000,
       }),
     ).toEqual({
       score: 75,

@@ -2,7 +2,7 @@
   "id": "meusd-mezo",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "MUSD is minted on Mezo through the Liquity-style CDP route (BorrowerOperations opens troves against BTC at a 110% minimum collateral ratio; InterestRateManager mints accrued interest), with the mintList allowlist administered by the Mezo protocol owner, a 5-of-9 Safe that owns the token contract on Mezo, Ethereum, and Base. On Ethereum and Base the only mint authority besides that owner Safe is the Wormhole NTT manager (burning spoke), which mints against guardian-attested cross-chain messages.",
     "economicCapSemantics": "unbounded",
