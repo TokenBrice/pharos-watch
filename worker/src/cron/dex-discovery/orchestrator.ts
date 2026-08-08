@@ -16,10 +16,17 @@ import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
+  readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
+  writeDiscoveryTargetCursors,
 } from "./persistence";
+import {
+  advanceDiscoveryTargetCursor,
+  discoveryTargetCursorKey,
+  selectDiscoveryTargetWindow,
+} from "./target-window";
 import {
   buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
@@ -51,7 +58,7 @@ interface DiscoveryCandidate {
 // Keep discovery comfortably below the wrapper timeout so partial staging runs
 // degrade cleanly instead of dying mid-flight and leaving stale progress behind.
 export const DEX_DISCOVERY_RUN_BUDGET_MS = 12 * 60_000;
-const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
+export const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
 export const DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS = 20_000;
 
 function summarizeDiscoveryError(err: unknown): string {
@@ -69,6 +76,7 @@ function hasDiscoveryFinalizationWindow(deadlineMs: number): boolean {
 async function fenceFailedDiscoveryAttempt(
   db: D1Database,
   candidate: DiscoveryCandidate,
+  deployments: readonly ContractDeployment[],
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<number> {
@@ -78,7 +86,7 @@ async function fenceFailedDiscoveryAttempt(
       db,
       buildFailedCrawlDeploymentOutcomes({
         stablecoinId: candidate.stablecoinId,
-        deployments: candidate.targets,
+        deployments,
         nowSec,
       }),
       signal,
@@ -240,9 +248,30 @@ export async function syncDexDiscovery(
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
+  let windowedCoins = 0;
+  let windowedDeploymentsDeferred = 0;
+  let targetCursors = new Map<string, string>();
+  let targetCursorsChanged = false;
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
   const dexScreenerRunState = createDexScreenerDiscoveryRunState();
+  const persistTargetCursors = async () => {
+    if (!targetCursorsChanged) return;
+    try {
+      await writeDiscoveryTargetCursors(db, targetCursors, signal);
+      targetCursorsChanged = false;
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "dex_discovery.target_cursor_write_failed",
+        job: "sync-dex-discovery",
+        message: "Failed to persist deployment-window resume markers",
+        error: err,
+      });
+    }
+  };
   const finalizeDexScreenerOutcome = async () => {
     try {
       await finalizeDexScreenerDiscoveryRun(db, dexScreenerRunState);
@@ -270,10 +299,13 @@ export async function syncDexDiscovery(
 
     const liquidityCoverage = await readLiquidityCoverage(db);
     const metaById = await readDiscoveryMeta(db, signal);
+    targetCursors = await readDiscoveryTargetCursors(db, signal);
     runSeq = await incrementRunSeq(db, signal);
 
     const eligibleCoins: DiscoveryCandidate[] = [];
+    const activeIds = new Set<string>();
     for (const coin of ACTIVE_STABLECOINS) {
+      activeIds.add(coin.id);
       const coverage = liquidityCoverage.get(coin.id);
       const tier = computeEffectiveTier(
         coin.id,
@@ -301,6 +333,12 @@ export async function syncDexDiscovery(
     eligibleCoins.sort(
       (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
     );
+
+    for (const stablecoinId of [...targetCursors.keys()]) {
+      if (activeIds.has(stablecoinId)) continue;
+      targetCursors.delete(stablecoinId);
+      targetCursorsChanged = true;
+    }
 
     const deadlineMs = Date.now() + DEX_DISCOVERY_RUN_BUDGET_MS;
     const knownPoolIds = new Set<string>();
@@ -335,6 +373,20 @@ export async function syncDexDiscovery(
         },
       });
 
+      // A footprint whose bounded provider queries cannot finish inside the
+      // per-coin budget is crawled one resumable window at a time. Without this
+      // the first stage consumed the whole budget every run and the chains only a
+      // later stage can serve were never queried at all.
+      const targetWindow = selectDiscoveryTargetWindow({
+        targets: candidate.targets,
+        cursor: targetCursors.get(candidate.stablecoinId),
+        budgetMs: DEX_DISCOVERY_PER_COIN_BUDGET_MS,
+      });
+      if (targetWindow.windowed) {
+        windowedCoins += 1;
+        windowedDeploymentsDeferred += candidate.targets.length - targetWindow.targets.length;
+      }
+
       try {
         // Persist the attempt boundary before any network work. If the crawl is
         // aborted, budget-discarded, or cannot persist its result, an older
@@ -350,7 +402,7 @@ export async function syncDexDiscovery(
         const result = await crawlCoin(
           db,
           candidate.stablecoinId,
-          candidate.targets,
+          targetWindow.targets,
           cgApiKey,
           knownPoolIds,
           signal,
@@ -371,6 +423,18 @@ export async function syncDexDiscovery(
 
           coinsCrawled += 1;
           poolsDiscovered += result.pools.length;
+          if (targetWindow.windowed) {
+            const nextCursor = advanceDiscoveryTargetCursor(
+              targetWindow.targets,
+              new Set(result.checkedDeploymentKeys ?? []),
+            );
+            if (nextCursor != null && targetCursors.get(candidate.stablecoinId) !== nextCursor) {
+              targetCursors.set(candidate.stablecoinId, nextCursor);
+              targetCursorsChanged = true;
+            }
+          } else if (targetCursors.delete(candidate.stablecoinId)) {
+            targetCursorsChanged = true;
+          }
           for (const chain of result.unresolvedChains) {
             allUnresolvedChains.add(chain);
           }
@@ -396,9 +460,20 @@ export async function syncDexDiscovery(
         deploymentOutcomesWritten += await fenceFailedDiscoveryAttempt(
           db,
           candidate,
+          targetWindow.targets,
           nowSec,
           signal,
         );
+        // The window was attempted and fenced as inaccessible, so advance past it.
+        // Holding the cursor here would let one failing window block the rest of
+        // the footprint from ever being crawled again.
+        const failedWindowCursor = targetWindow.windowed
+          ? discoveryTargetCursorKey(targetWindow.targets[targetWindow.targets.length - 1]!)
+          : null;
+        if (failedWindowCursor != null && targetCursors.get(candidate.stablecoinId) !== failedWindowCursor) {
+          targetCursors.set(candidate.stablecoinId, failedWindowCursor);
+          targetCursorsChanged = true;
+        }
         // Count crawl errors as misses so perpetually-failing coins get demoted
         // instead of staying at T1 and consuming budget every run.
         // Skip demotion for coins with existing pool coverage to avoid permanent
@@ -420,6 +495,7 @@ export async function syncDexDiscovery(
     }
 
     await finalizeDexScreenerOutcome();
+    await persistTargetCursors();
 
     if (hasDiscoveryFinalizationWindow(deadlineMs)) {
       cleanup = await cleanupStaging(db, nowSec, signal);
@@ -442,6 +518,8 @@ export async function syncDexDiscovery(
         cleanup,
         runSeq,
         deploymentOutcomesWritten,
+        windowedCoins,
+        windowedDeploymentsDeferred,
         dexscreener: {
           attemptedRequests: dexScreenerRunState.attemptedRequests,
           successfulRequests: dexScreenerRunState.successfulRequests,
@@ -464,6 +542,8 @@ export async function syncDexDiscovery(
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,
+        windowedCoins,
+        windowedDeploymentsDeferred,
         dexscreener: {
           attemptedRequests: dexScreenerRunState.attemptedRequests,
           successfulRequests: dexScreenerRunState.successfulRequests,
@@ -493,6 +573,8 @@ export async function syncDexDiscovery(
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,
+        windowedCoins,
+        windowedDeploymentsDeferred,
         dexscreener: {
           attemptedRequests: dexScreenerRunState.attemptedRequests,
           successfulRequests: dexScreenerRunState.successfulRequests,
