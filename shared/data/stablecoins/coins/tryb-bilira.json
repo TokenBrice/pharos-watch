@@ -331,11 +331,10 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "TRYB is issued by BiLira using a FiatTokenProxy pattern on Ethereum. The ETH owner is a Gnosis Safe 1.3.0 (3 signers, 2-of-3, no modules); the masterMinter controlling minting allowances is a separate Gnosis Safe 1.3.0 (6 signers, 3-of-6, no modules). No proxy admin (admin slot=0). Both on-chain controls confirmed.",
     "controls": [

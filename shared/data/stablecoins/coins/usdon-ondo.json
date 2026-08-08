@@ -146,7 +146,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDon is an Ondo Global Markets asset, and Ondo documents a LayerZero-based token bridge for Global Markets assets across Ethereum, BNB Chain, Solana, and HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
@@ -253,7 +252,7 @@
   "governanceQuality": "single-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDon (ETH) is an ERC1967 proxy (impl=USDon contract with AccessControlEnumerable); ProxyAdmin (0x5244…) is owned by a TimelockController (2h delay, 0x3715…); MINTER_ROLE held by GMTokenManager (0x2c15…) and a 3-of-6 Safe (0x7607…); DEFAULT_ADMIN = Timelock. BSC is structurally equivalent.",
     "upgradeability": {

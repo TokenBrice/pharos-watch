@@ -149,7 +149,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
@@ -398,7 +397,6 @@
       ]
     }
   },
-  "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "liveReservesConfig": {
     "adapter": "lista",

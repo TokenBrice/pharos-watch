@@ -128,8 +128,6 @@
     "reviewer": "OpenAI Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
@@ -210,7 +208,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Finalized Solana state at slot 432837826 sets the MOVEUSD SPL mint and freeze authorities to the mint address, an off-curve program-derived address. Finalized transaction 4G6Asw...PE4wH3 at slot 432775304 proves that the executable program EmiytJ3z...oiA1KC can sign for that PDA and invoke MintToChecked. MOVEUSD therefore has an active, concentrated program-controlled mint route rather than a burned authority.",
     "upgradeability": {

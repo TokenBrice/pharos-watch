@@ -58,7 +58,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "infiniFi publishes an Ethereum iUSD ReceiptToken, a direct LayerZero OFT on BNB Chain, and a Tempo TIP-20 iUSD with an OFT Adapter. The Tempo adapter's lock/unlock side is the weakest documented durable cross-chain route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",

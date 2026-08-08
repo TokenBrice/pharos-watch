@@ -202,7 +202,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "AEUR is issuer-documented as available on Ethereum and BNB Chain, with no public bridge route required for holder-facing supply. The multichain posture is reviewed as issuer-native issuance/redemption exposure.",

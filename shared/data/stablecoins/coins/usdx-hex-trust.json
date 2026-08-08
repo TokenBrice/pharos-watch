@@ -114,7 +114,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "USDX is an issuer-operated UUPS/OFT token on Ethereum, Flare, and Songbird. The active MINTER_ROLE set is two EOAs on Ethereum and one shared EOA on Flare and Songbird; the default admin can grant roles, while a secondary UPGRADE_ADMIN_ROLE EOA is also present on Ethereum and Flare.",
     "upgradeability": {

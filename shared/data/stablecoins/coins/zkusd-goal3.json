@@ -64,8 +64,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "zkUSD has one tracked ZKsync contract and no source-verified cross-chain route. The ZKsync signal is canonical chain infrastructure context, so this is reviewed as native to the current deployment.",
@@ -123,7 +121,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "zkUSD is issued through Goal3's lockdrop portal on ZKsync Era. The token and minting portal are UUPS proxies owned by EOA 0x49a67aff9d3807351b8bb450f37ffc98af9def4d, with no permissionless mint route or upgrade delay.",
     "controls": [

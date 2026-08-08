@@ -146,7 +146,7 @@ Do the research manually, or use the maintained skills when they match the task:
 - `reserve-research`: populate `reserves[]` composition for a single coin.
 - Mint Authority does not have a publication skill yet. Use the Phase 5f review rubric below; `scripts/maintenance/audit-mint-authority.ts` is only a local candidate producer.
 - `write-ai-summaries` (Claude-only): draft or refresh the `data/ai-summaries.json` entry.
-- `resilience-classify`: pick `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` overrides.
+- `resilience-classify`: pick `collateralQuality` and `custodyModel` overrides.
 - `pre-launch-update` (Claude-only): refresh milestones, launch phase, and featured content for pre-launch entries.
 - `coingecko-id-verif`: confirm a `geckoId` resolves to the correct asset before saving.
 
@@ -186,8 +186,6 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `tradedContracts`
 - `dependencies`
 - `canBeBlacklisted`
-- `chainTier`
-- `deploymentModel`
 - `collateralQuality`
 - `custodyModel`
 - `governanceQuality`
@@ -258,7 +256,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 `infrastructures[]` is project taxonomy. `dependencies[]` is reserve/mechanism dependency.
 
-L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review `chainTier`, `deploymentModel`, and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
+L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review bridge-route and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
 
 Use `infrastructures[]` only when the coin directly belongs to a supported technical lineage:
 
@@ -634,6 +632,8 @@ When authoring `mintAuthority`, verify:
 - direct chain reads, proxy/admin reads, cap/facilitator registries, bridge route checks, and Safe state include observed block or source notes when they are part of the evidence.
 - wrapper or variant rows use `mintPath: "wrapped-or-variant-inherited"` and set `inheritedFrom` or `variantOf`; if both are present they must match.
 - `authorityPosture: "none-resolved"` is only for non-privileged user/protocol minting, or inherited wrappers whose reviewed parent is also `none-resolved`.
+- `authorityPosture: "none-resolved-mint"` is the mint-scoped alternative: use it when no control can mint or authorize minting on this asset but other control domains exist (upgrade or parameter authority, or an inherited parent mint authority). It requires the same non-privileged `mintPath` and places no condition on the parent. Prefer it over an adverse posture for share wrappers whose own token has no minter.
+- `reconciliation: "continuous" | "periodic"` and `supervision: "prudential"` are scored economic-control claims — between them they lift the V9 mint component from 25 to 55/70/80 — so each requires at least one `mintAuthority.review` source and a review evidence sentence stating what is reconciled against what, or which named regime supervises the issuer. `unknown`, `not-applicable`, and `none` record an absence and need no such sentence. Do not set a scored value from a homepage link alone.
 
 If you use the local scanner POC, run it as a candidate producer only:
 
@@ -792,7 +792,7 @@ Commit the sitemap output separately or amend it into the source commit without 
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run check:redemption-backstops`
-- L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score`, `npm run candidates:l2beat-bridge-routes`, and `npm run check:l2beat-snapshot-coverage`
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run check:l2beat-snapshot-coverage`
 - dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 

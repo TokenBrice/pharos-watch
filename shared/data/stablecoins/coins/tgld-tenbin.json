@@ -142,7 +142,6 @@
   },
   "custodyModel": "institutional-unregulated",
   "collateralQuality": "exotic",
-  "deploymentModel": "single-chain",
   "governanceQuality": "multisig",
   "reserves": [
     {

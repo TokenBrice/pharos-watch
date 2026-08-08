@@ -133,8 +133,6 @@
     "reviewer": "Kimi Safety Score V9 access review T60",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "NUSD is Synapse's legacy intermediate bridge/liquidity token, with the current Synapse token list publishing deployments across thirteen registry-supported chains. Its supply and peg depend on Synapse liquidity and bridge settlement rather than issuer-native redemption, so the liquidity-or-intent route remains the conservative tier.",
@@ -650,7 +648,7 @@
   ],
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "NUSD is the Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard.",
     "upgradeability": {

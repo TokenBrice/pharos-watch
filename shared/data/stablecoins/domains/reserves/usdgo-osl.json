@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Money market funds (CUSIPs 38151N205 and 46655R119)",
-      "pct": 74.18761643789395,
+      "pct": 79.050766,
       "risk": "very-low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed money market fund issuers",
@@ -17,7 +17,7 @@
     },
     {
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
-      "pct": 25.31551743668213,
+      "pct": 19.856381,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -33,7 +33,7 @@
     },
     {
       "name": "Cash at FDIC-insured depository institutions",
-      "pct": 0.4968661254239206,
+      "pct": 1.092853,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major commercial banks",
@@ -46,22 +46,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - May 31, 2026",
-        "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        "label": "Anchorage USDGO Reserve Report - June 30, 2026",
+        "url": "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf"
       },
       {
         "label": "Anchorage USDGO reserve attestations",
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
       }
     ],
-    "rationale": "Anchorage's May 31 examination reports $240,981,509 of money market funds, $82,231,670 of BUIDL, and $1,613,956 of cash against $324,827,135 of reserve assets. The exact normalized weights are 74.18761643789395%, 25.31551743668213%, and 0.4968661254239206%; BUIDL is the only tracked canonical dependency.",
-    "compositionBasis": "Anchorage examination of the USDGO Reserve Report as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $861,072,523 against 859,224,943 redeemable USDGO (Solana + Morph) - money market funds $680,684,425 (CUSIP 38151N205 $99,111,018; CUSIP 46655R119 $581,573,407), BUIDL at fair value $170,977,843 (Avalanche, self-custodied; private unregistered BVI fund with no secondary market), and $9,410,255 cash at FDIC-insured institutions ($9,160,255 uninsured). Surplus $1,847,580.",
+    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The two money market fund CUSIPs are disclosed but their issuer names and underlying portfolio composition are not identified in the report.",
     "knownUnknownExposurePct": 0

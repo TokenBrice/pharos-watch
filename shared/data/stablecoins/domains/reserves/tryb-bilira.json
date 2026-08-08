@@ -12,7 +12,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-08",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -25,9 +25,9 @@
         "url": "https://www.bilira.co/en/audit-reports"
       }
     ],
-    "rationale": "BiLira states that a customer deposits Turkish lira to an affiliated bank account and BiLira mints an equivalent amount of TRYB. Its current disclosure states that TRYB is redeemable 1:1 for Turkish lira and that reserves are held in Turkish bank accounts; the issuer publishes recurring reports. The reviewed sources support a complete fiat-bank-reserve category but not a bank-by-bank allocation.",
-    "compositionBasis": "BiLira issuer disclosure of 1:1 Turkish-lira reserves held in Turkish bank accounts",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "BiLira states that a customer deposits Turkish lira to an affiliated bank account and BiLira mints an equivalent amount of TRYB. Its current disclosure states that TRYB is redeemable 1:1 for Turkish lira and that reserves are held in Turkish bank accounts; the issuer publishes recurring reports. The reviewed sources support a complete fiat-bank-reserve category but not a bank-by-bank allocation. Lockstep pin 2026-08-08: compositionAsOf anchored to the 21 May 2026 Corpus Denetim examination that latestReport records - the artefact verifies bank-held TRY reserves against supply, which is the record's single composition category; the issuer-disclosure read of 2026-07-14 is retained as corroboration.",
+    "compositionBasis": "Corpus Denetim examination as of 21 May 2026 (TRY reserves held in Turkish bank accounts), corroborated by issuer disclosure",
+    "compositionAsOf": "2026-05-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve category is disclosed as Turkish-lira bank reserves, but the reviewed sources do not name each reserve bank or publish its share.",
     "knownUnknownExposurePct": 0

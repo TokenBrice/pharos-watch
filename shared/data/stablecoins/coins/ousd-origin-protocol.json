@@ -118,7 +118,7 @@
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "OUSD is minted 1:1 when users deposit USDC into the Origin OUSD Vault, but the protocol also runs a Curve AMO that pre-mints OUSD into protocol-owned liquidity and deploys USDC into Morpho/Curve strategies under privileged owner/Governor/Strategist roles.",
     "upgradeability": {

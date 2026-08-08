@@ -79,10 +79,10 @@
   },
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
-    "provider": "Solomon Labs and Ceffu attestations",
+    "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+    "provider": "Solomon Labs documentation (no published reserve attestation artefact exists; the former asset-attestations docs URL serves an empty shell, and current docs state USDv reserves are USDG and USDC with direct short-dated US Treasury exposure being added — the earlier Ceffu-custodied basis-trade narrative is gone from the docs)",
     "attestorTier": "self",
-    "cadence": "ad-hoc"
+    "cadence": "none"
   },
   "links": [
     {
@@ -137,8 +137,6 @@
     "reviewer": "Kimi T21 unknown-reduction wave 2 access review",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
@@ -354,7 +352,7 @@
   ],
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDv is minted by Solomon's own Solana program D4AiKFxj via its Deposit instruction, which CPI-signs SPL mintTo with the program-owned PDA 7XAdHs5Q (the SPL mint authority); the freeze authority is null. Direct mint/redeem is restricted to Solomon-approved entities. The program is BPF-upgradeable and its upgrade authority is a 3-of-9 Squads v4 multisig vault with no timelock, so mint logic can be replaced by that multisig. Backing collateral sits off-chain with Ceffu.",
     "upgradeability": {

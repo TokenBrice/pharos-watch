@@ -74,7 +74,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Rejected-redo re-review 2026-07-30 from scratch: IDRT is issuer-minted natively on Ethereum, BSC, and Polygon — on each chain the token is a non-upgradeable Ownable ERC20 whose owner() is PT Rupiah Token Indonesia's 4-of-6 Safe (re-verified on-chain 2026-07-30 at Ethereum block 25648595, BSC block 113088269, Polygon block 91163184; identical 6-owner signer set and threshold 4 on all three chains), so there is no bridge minter on those chains; Across remains only a liquidity/intent transfer path for canonical tokens. The Harmony deployment is a legacy '1IDRT' lock-mint representation minted by a Harmony bridge contract (re-verified minter 0xbadb6897... at Harmony block 92211006) and dormant since 2021.",
@@ -271,7 +270,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "IDRT is a non-upgradeable Ownable ERC20 on Ethereum, BSC, and Polygon. On all three chains the token owner() is the same 4-of-6 Safe multisig (same six signers cross-chain). The owner() controls mint and burn. Harmony is excluded from this assessment (chain inactive).",
     "controls": [

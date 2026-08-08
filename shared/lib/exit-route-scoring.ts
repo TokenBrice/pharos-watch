@@ -326,18 +326,18 @@ export function resolveExitDelayBandMultiplier(delaySec: number, bands: readonly
 }
 
 /**
- * Resolve a penalty band by descending threshold. `comparison` is load-bearing:
- * the queue-backlog ladder matches at-or-above its threshold, while the
- * minimum-redeem ladder has always matched strictly above it — a route whose
- * minimum sits exactly on a threshold takes the gentler band.
+ * Resolve a penalty band by descending threshold. Both descending ladders —
+ * queue backlog and minimum redeem — match at-or-above their threshold, so a
+ * value sitting exactly on a threshold takes that threshold's band. The
+ * minimum-redeem ladder previously matched strictly above, which let a route
+ * whose minimum landed exactly on a boundary take the gentler band; the two
+ * ladders are unified on the stricter reading.
  */
 export function resolveExitThresholdBandMultiplier(
   value: number,
   bands: readonly ExitThresholdBand[],
-  comparison: "at-or-above" | "above" = "at-or-above",
 ): number | null {
-  const match = bands.find((band) => (comparison === "above" ? value > band.threshold : value >= band.threshold));
-  return match?.multiplier ?? null;
+  return bands.find((band) => value >= band.threshold)?.multiplier ?? null;
 }
 
 /** Blend coverage completion and absolute size into the capacity component. */

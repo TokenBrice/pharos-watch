@@ -253,7 +253,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "PYUSD is issuer-minted by Paxos-operated infrastructure; the Ethereum token (PaxosTokenV2 / AdminUpgradeabilityProxy) delegates supply control to a dedicated SupplyControl contract whose owner and the token's defaultAdmin are the same Paxos EOA. All addressable controls confirmed at block 25294757.",
     "upgradeability": {
@@ -414,7 +414,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "PYUSD has issuer-backed native deployments on Ethereum, Solana, Arbitrum, and Stellar; all other EVM/Tron expansion is the PYUSD0 omnichain representation minted by Stargate Hydra (LayerZero) adapters that hold supply-controller rights on each PaxosTokenV2 deployment. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",

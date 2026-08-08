@@ -643,6 +643,151 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/none-resolved/);
   });
 
+  it("lets none-resolved-mint keep non-mint control domains that none-resolved forbids", () => {
+    const controls = [
+      {
+        label: "Upgrade admin",
+        role: "proxy-admin" as const,
+        authorityType: "contract" as const,
+        directMintAbility: "upgrade-only" as const,
+        evidence: "The fixture models an upgrade admin that holds no mint ability.",
+      },
+    ];
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls,
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+
+    // The same controls under the whole-of-chain value stay rejected.
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved",
+          confidence: "verified",
+          controls,
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved cannot include mint-capable controls/);
+  });
+
+  it("rejects none-resolved-mint when a control can mint or authorize minting", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped-minter",
+        mintAuthority: makeMintAuthority({
+          mintPath: "immutable-user-collateralized",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls: [
+            {
+              label: "Real minter",
+              role: "direct-minter",
+              authorityType: "contract",
+              directMintAbility: "direct",
+            },
+          ],
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved-mint cannot include a control that can mint/);
+  });
+
+  it("requires none-resolved-mint to use a non-privileged mintPath", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-mint-scoped-path",
+        mintAuthority: makeMintAuthority({
+          mintPath: "issuer-direct-mint",
+          authorityPosture: "none-resolved-mint",
+          confidence: "verified",
+          controls: undefined,
+        }),
+      }),
+    ], "fixture")).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
+  });
+
+  it("binds scored economic-control claims to review evidence", () => {
+    const withoutEvidence = (overrides: Record<string, unknown>) =>
+      makeMintAuthority({
+        ...overrides,
+        review: {
+          sources: [mintAuthoritySource],
+          evidence: "The reviewer checked this.",
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-24",
+        },
+      });
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-recon-bare", mintAuthority: withoutEvidence({ reconciliation: "periodic" }) }),
+    ], "fixture")).toThrow(/reconciliation periodic requires a review evidence sentence/);
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-super-bare", mintAuthority: withoutEvidence({ supervision: "prudential" }) }),
+    ], "fixture")).toThrow(/supervision prudential requires a review evidence sentence/);
+
+    // Both claims at once are named together in a single issue.
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-both-bare",
+        mintAuthority: withoutEvidence({ reconciliation: "continuous", supervision: "prudential" }),
+      }),
+    ], "fixture")).toThrow(/reconciliation continuous and supervision prudential/);
+  });
+
+  it("leaves non-scoring reconciliation and supervision values unbound", () => {
+    // `unknown`, `not-applicable` and `none` record an absence rather than a
+    // claim, so they must stay authorable without an evidence sentence.
+    for (const overrides of [
+      { reconciliation: "not-applicable" },
+      { reconciliation: "unknown" },
+      { supervision: "none" },
+      { supervision: "unknown" },
+    ]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeCoin({
+          id: "fixture-inert-claim",
+          mintAuthority: makeMintAuthority({
+            ...overrides,
+            review: {
+              sources: [mintAuthoritySource],
+              evidence: "The reviewer checked this.",
+              reviewer: "Fixture Reviewer",
+              reviewedAt: "2026-05-24",
+            },
+          }),
+        }),
+      ], "fixture")).not.toThrow();
+    }
+  });
+
+  it("accepts a scored economic-control claim carrying a substantive evidence sentence", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-recon-evidenced",
+        mintAuthority: makeMintAuthority({
+          reconciliation: "periodic",
+          supervision: "prudential",
+          review: {
+            sources: [mintAuthoritySource],
+            evidence:
+              "Monthly attestations reconcile circulating supply against segregated reserves, and the issuer holds an e-money licence from the named competent authority.",
+            reviewer: "Fixture Reviewer",
+            reviewedAt: "2026-05-24",
+          },
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
   it("keeps unknown mint paths paired with unknown posture unless evidence supports compromise", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({
@@ -1241,4 +1386,66 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
       expect(() => parseStablecoinMetaAssets([raw], fixture)).not.toThrow();
     });
   }
+});
+
+describe("StablecoinMeta schema — PoR / composition lockstep", () => {
+  const reserves = [{ name: "US Treasury bills", pct: 100, risk: "low" }];
+  const latestReport = {
+    periodEnd: "2026-06-30",
+    publishedAt: "2026-07-10",
+    assuranceMethod: "examination",
+    scope: "assets-only",
+    liabilityReconciliation: "none",
+    reviewer: "Fixture Reviewer",
+    confidence: "verified",
+    sources: [{ label: "Attestation", url: "https://example.com/attestation" }],
+  };
+  const reserveReview = (compositionAsOf: string) => ({
+    reviewedAt: "2026-07-12",
+    reviewer: "Fixture Reviewer",
+    confidence: "verified",
+    sources: [{ label: "Attestation", url: "https://example.com/attestation" }],
+    rationale: "The fixture models a curated composition drawn from the attestation.",
+    compositionBasis: "Attestation breakdown table",
+    compositionAsOf,
+    scope: "full-composition",
+    knownUnknownExposure: "None identified.",
+    knownUnknownExposurePct: 0,
+  });
+  const coin = (compositionAsOf: string) =>
+    makeCoin({
+      id: "fixture-lockstep",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport },
+      reserveReview: reserveReview(compositionAsOf),
+    });
+
+  it("accepts a composition dated to the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-06-30")], "fixture")).not.toThrow();
+  });
+
+  it("rejects a composition dated after the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-07-12")], "fixture")).toThrow(/PoR lockstep/);
+  });
+
+  it("rejects a composition dated before the report period end", () => {
+    expect(() => parseStablecoinMetaAssets([coin("2026-05-31")], "fixture")).toThrow(/PoR lockstep/);
+  });
+
+  it("stays silent when either side of the pair is absent", () => {
+    const noComposition = makeCoin({
+      id: "fixture-lockstep-no-composition",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por", latestReport },
+    });
+    expect(() => parseStablecoinMetaAssets([noComposition], "fixture")).not.toThrow();
+
+    const noReport = makeCoin({
+      id: "fixture-lockstep-no-report",
+      reserves,
+      proofOfReserves: { type: "self-reported", url: "https://example.com/por" },
+      reserveReview: reserveReview("2026-06-30"),
+    });
+    expect(() => parseStablecoinMetaAssets([noReport], "fixture")).not.toThrow();
+  });
 });

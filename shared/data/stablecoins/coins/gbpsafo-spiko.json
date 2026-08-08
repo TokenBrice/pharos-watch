@@ -18,12 +18,11 @@
   "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.spiko.io/spiko-pound",
-    "provider": "PwC",
+    "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
+    "provider": "PricewaterhouseCoopers Audit, statutory auditor (SAFO, the Spiko Amundi Overnight Swap Fund, was authorised by the AMF on 2026-02-23 and its first financial year has not closed, so no PwC certification exists yet; the spiko.io fund pages are unlaunched placeholders with dummy data and the 'four audits annually' claim is template marketing text)",
     "attestorTier": "big4",
-    "cadence": "quarterly",
-    "attestorJurisdiction": "France",
-    "attestorLicense": "AMF UCITS SICAV sub-fund"
+    "cadence": "annual",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {
@@ -104,7 +103,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
     "upgradeability": {
@@ -196,8 +195,6 @@
       "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI."
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko describes its own infrastructure for issuing, operating, and monitoring regulated fund tokens across EVM networks, Starknet, and Stellar with minimal external dependencies. For GBPSAFO, no separate bridge protocol was verified, so the reviewed route is issuer-operated multichain issuance rather than a third-party bridge rail.",

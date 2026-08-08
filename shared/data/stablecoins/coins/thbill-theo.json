@@ -94,7 +94,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "thBILL is Ethereum-native (pinned proxy) and reaches Arbitrum, Base, HyperEVM, and Stable through Theo's documented LayerZero OFT V2 contract (shared address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, endpoint/peers read 2026-07-20 and 2026-07-29), administered by the Theo 4-of-6 Admin Multisig.",

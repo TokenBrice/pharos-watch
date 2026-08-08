@@ -126,8 +126,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "mMEV is issued natively by Midas on Ethereum, Plume, and Etherlink. Row-level on-chain verification on 2026-07-20: each deployment is a Midas-administered transparent proxy (EIP-1967 impl/admin slots read on all three chains), no LayerZero endpoint() surface exists on any of them, and the verified mint-authority review (2026-07-13) confirms each chain mints through its own Midas deposit-vault minter holding M_MEV_MINT_OPERATOR_ROLE plus Midas admin EOAs under chain-local 1-of-3 Safes. No third-party bridge carries the representation; cross-chain movement is issuer-operated.",
@@ -345,7 +343,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "mMEV has independently mintable deployments on Ethereum, Plume, and Etherlink. A chain-local deposit vault and EOA 0x2facac0cda0225d7acca792821164b398c26bbd2 can mint on every deployment, while EOA 0x0383a2a62cd962a4780f615b5fa2a0ffc07ed1d2 is an additional Ethereum minter. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and shared admin EOA can change those grants immediately; proxy upgrades pass through a two-day chain-local timelock.",
     "upgradeability": {

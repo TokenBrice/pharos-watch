@@ -19,24 +19,28 @@
   "geckoId": "macropod",
   "cmcSlug": "macropod",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://www.macropod.com/transparency",
-    "provider": "Macropod Global",
-    "attestorTier": "self",
+    "provider": "Hall Chadwick Melbourne Audit quarterly agreed-upon-procedures reports for Catena Digital Pty Ltd t/a Macropod Global (ASRS 4400, no opinion expressed and the report notes the firm was not required to be independent; monthly self-reports continue alongside)",
+    "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-07-01",
-      "publishedAt": "2026-07-01",
-      "assuranceMethod": "self-verification",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-08-05",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (June AUP PDF read: reserves agreed at minimum equal to on-chain AUDM across all four networks without exception; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Macropod AUDM reserve verification as of July 1, 2026",
-          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+          "label": "Hall Chadwick Melbourne Audit AUDM agreed-upon procedures report - June 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd2b088312392d65d478_June%202026%20-%20Agreed-Upon%20Procedures%20Report.pdf"
+        },
+        {
+          "label": "Macropod transparency page (monthly self-reports)",
+          "url": "https://www.macropod.com/transparency"
         }
       ]
     }
@@ -241,8 +245,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
@@ -276,7 +278,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Macropod centrally mints AUDM for approved clients: Ethereum, Base, and Redbelly share the same UUPS implementation and code-empty DEFAULT_ADMIN and MINTER_ROLE EOAs, while the Solana Token-2022 mint has a distinct System Program-owned wallet as mint authority.",
     "upgradeability": {

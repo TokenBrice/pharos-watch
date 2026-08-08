@@ -506,7 +506,6 @@
     "reconciliation": "unknown",
     "supervision": "none"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Abracadabra documents MIM Beaming as LayerZero OFT-powered omnichain transfers, but on-chain reads on 2026-07-20 confirm the twelve long-standing MIM deployments are plain owner-gated tokens whose owners are Abracadabra team Safes (signer sets shared with the Ethereum 5/11 Safe), i.e. issuer-native burn-mint per chain; only the newer Berachain deployment is a LayerZero OFT representation.",

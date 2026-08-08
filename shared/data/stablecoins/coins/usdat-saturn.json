@@ -23,8 +23,8 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.saturn.credit/insights/saturn-protocol",
-    "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)",
-    "attestorTier": "niche",
+    "provider": "Saturn Protocol reserve analytics API (in-house, live same-day JSON of USDC/M/USDAT composition dominated by M0's $M; the previously recorded Accountable + Chainlink attribution is unsubstantiated - CSP and bundles show only the M0 stack and Chainlink CCIP messaging, no PoR vendor)",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "links": [
@@ -410,8 +410,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "single-chain",
-  "chainTier": "ethereum",
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

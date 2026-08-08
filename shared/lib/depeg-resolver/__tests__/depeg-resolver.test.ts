@@ -85,6 +85,90 @@ describe("structuralClass", () => {
     expect(structuralClass(coin({ authorityPosture: "unbounded-or-compromised" }))).toBe("fragile");
     expect(structuralClass(coin({ collateralQuality: "exotic", mechanismArchetype: "cdp" }))).toBe("fragile");
   });
+
+  it("keeps a reconciled unbounded minter fragile, including over a robust archetype", () => {
+    // The curated vocabulary gained `unbounded-reconciled` as a refinement of
+    // the unbounded class. Re-annotating a supervised issuer from
+    // `unbounded-or-compromised` to it must not reclassify the coin, or ~110
+    // assets would silently change stratum and move DDR duration percentiles.
+    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
+    expect(
+      structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-reconciled" })),
+    ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-or-compromised" })));
+  });
+
+  it("reads none-resolved-mint as benign but not as non-inflatable", () => {
+    // The mint-scoped value states only that *this* asset has no minter. It is
+    // therefore not a fragile posture — it must not by itself force fragile the
+    // way the unbounded/concentrated rungs do.
+    expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "none-resolved-mint" }))).toBe(
+      "robust",
+    );
+    // But it is not whole-of-chain `none-resolved` either: with no robust
+    // archetype and no immutable mint path it carries no robustness of its own,
+    // because the wrapper's parent can still print.
+    expect(structuralClass(coin({ authorityPosture: "none-resolved-mint" }))).toBe("fragile");
+    expect(structuralClass(coin({ authorityPosture: "none-resolved" }))).toBe("robust");
+  });
+});
+
+describe("DDR curated-posture set membership — pinned", () => {
+  // `FRAGILE_POSTURES`, `RISKY_POSTURES` and `SEVERE_SURGE_POSTURES` are module
+  // private, so membership is pinned through the behaviour each set drives. The
+  // curated vocabulary grew twice (`unbounded-reconciled`, `none-resolved-mint`)
+  // and both times the intended set membership was preserved silently; this
+  // fails loudly if a later edit changes it.
+  const surging = () => baseSupply({ mintSurge: true, change7dPct: 40 });
+  const deepBelow = () => event({ direction: "below", peakDeviationBps: -2000 });
+  const k1 = (posture: string) =>
+    resolveOutlook(
+      deepBelow(),
+      coin({ authorityPosture: posture as DdrCoinStructural["authorityPosture"] }),
+      surging(),
+      baseLive(),
+    ).factors.find((factor) => factor.code === "K1_supply_weaponization") ?? null;
+
+  it("keeps unbounded-reconciled fragile, risky, and severe-surge eligible", () => {
+    expect(structuralClass(coin({ authorityPosture: "unbounded-reconciled" }))).toBe("fragile");
+    expect(k1("unbounded-reconciled")).toMatchObject({ severity: "severe" });
+  });
+
+  it("keeps concentrated-admin fragile and risky but never severe on surge alone", () => {
+    expect(structuralClass(coin({ authorityPosture: "concentrated-admin" }))).toBe("fragile");
+    expect(k1("concentrated-admin")).toMatchObject({ severity: "elevated" });
+  });
+
+  it("keeps none-resolved-mint out of every adverse set", () => {
+    // Not fragile, not risky, not severe-surge: a benign posture. The asset can
+    // still reach K1 through its mintPath or published mint band — this pins
+    // only that the *posture* contributes nothing adverse.
+    expect(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "none-resolved-mint" }))).toBe(
+      "robust",
+    );
+    expect(k1("none-resolved-mint")).toBeNull();
+    expect(k1("none-resolved")).toBeNull();
+    expect(
+      resolveOutlook(
+        deepBelow(),
+        coin({ authorityPosture: "none-resolved-mint", mintAuthorityScoreBand: "concentrated" }),
+        surging(),
+        baseLive(),
+      ).factors.find((factor) => factor.code === "K1_supply_weaponization"),
+    ).toMatchObject({ severity: "elevated" });
+  });
+
+  it("does not grant the R1 non-inflatable anchor to the mint-scoped value", () => {
+    const anchorFor = (posture: string) =>
+      resolveOutlook(
+        event({ direction: "below", peakDeviationBps: -300 }),
+        coin({ authorityPosture: posture as DdrCoinStructural["authorityPosture"] }),
+        baseSupply(),
+        baseLive(),
+      ).factors.find((factor) => factor.code === "R1_noninflatable_supply") ?? null;
+
+    expect(anchorFor("none-resolved")).toMatchObject({ severity: "strong" });
+    expect(anchorFor("none-resolved-mint")).toBeNull();
+  });
 });
 
 describe("resolveOutlook — acceptance cases", () => {

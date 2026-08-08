@@ -19,9 +19,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",
-    "provider": "Monerium financial information",
+    "provider": "Monerium financial information (entity-wide safeguarded-assets table sourced from semi-annual and annual audited statements; aligned with the eure-monerium sibling record)",
     "attestorTier": "self",
-    "cadence": "ad-hoc",
+    "cadence": "semi-annual",
     "attestorJurisdiction": "Iceland",
     "attestorLicense": "EMI (Central Bank of Iceland)"
   },
@@ -102,7 +102,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "GBPe is minted through Monerium's licensed EMI flow. Ethereum is a direct token and the five other tracked deployments are UUPS proxies; three chain-local 3-of-6 Safes with the same six owners control the complete deployment set.",
     "upgradeability": {
@@ -294,7 +294,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Monerium issues GBPe natively on each supported chain; per-chain owner() reads (2026-07-20) resolve to Monerium owner Safes rather than bridge contracts. Cross-chain movement is issuer-native burn/mint through linked Monerium accounts, not a public third-party bridge.",

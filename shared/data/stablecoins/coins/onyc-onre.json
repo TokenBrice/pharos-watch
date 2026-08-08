@@ -73,8 +73,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
   "reserves": [
@@ -316,13 +314,13 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://docs.onre.finance/security-and-verification/independent-attestations",
-    "provider": "Apex Group",
+    "provider": "Apex Insurance Fund Services Ltd. monthly agreed-upon-procedures NAV statements (cover pages state 'Un-audited'; administrator-level independence - Apex administers the NAV it reports; unbroken monthly series Nov 2025 through Jun 2026, view-only Google Drive links)",
     "attestorTier": "niche",
     "cadence": "monthly"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, which is signed by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The program remains upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, controlled without delay by autonomous 3-of-6 multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN. The prior record incorrectly classified the off-curve vault PDA as an EOA.",
     "upgradeability": {

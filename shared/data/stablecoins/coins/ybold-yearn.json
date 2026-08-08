@@ -190,8 +190,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "yBOLD is tracked only as an Ethereum Yearn vault wrapper for BOLD. The reviewed Yearn docs do not expose a separate bridge route for the vault share, so the row is single-chain/native.",

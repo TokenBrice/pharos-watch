@@ -158,7 +158,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "upgradeability": {
       "model": "custom",
@@ -439,7 +439,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "YLDS is issued natively by Figure Certificate Company on Provenance (uylds.fcc) and Stellar (Figure-operated issuer account per ylds.com's stellar.toml); the Ethereum and Solana deployments are Hastra wYLDS — a 1:1 YLDS-backed wrapper from the Figure/Provenance-incubated Hastra protocol moving over Chainlink CCIP (Ethereum admin = 4-of-7 Safe; Solana mint authority EOA documented in the mint-authority review).",

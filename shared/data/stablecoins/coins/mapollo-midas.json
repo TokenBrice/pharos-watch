@@ -112,8 +112,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
@@ -233,7 +231,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "mAPOLLO is minted by the MApolloDepositVault proxy and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE. Its token, deposit vault, shared access control, data feed, and manual aggregator are transparent proxies under one ProxyAdmin owned by a two-day Midas timelock.",
     "upgradeability": {

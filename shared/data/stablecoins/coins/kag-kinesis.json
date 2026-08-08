@@ -20,16 +20,16 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kinesis.money/trust-security/",
-    "provider": "Bureau Veritas (Inspectorate International)",
+    "provider": "Bureau Veritas Commodities UK Ltd (Inspectorate International; commodity vault inspection under agreed procedures with no opinion - the token-vs-metal comparison exists only in the issuer cover letter, whose signatory heads both Kinesis and the vault operator ABX)",
     "attestorTier": "niche",
     "cadence": "semi-annual",
     "latestReport": {
       "periodEnd": "2026-04-20",
       "publishedAt": "2026-06-03",
-      "assuranceMethod": "audit",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
-      "liabilityReconciliation": "unknown",
-      "reviewer": "Inspectorate International",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (reconciliation set to none: the token-vs-metal comparison appears only in the issuer cover letter, not in Bureau Veritas's findings)",
       "confidence": "verified",
       "sources": [
         {
@@ -67,7 +67,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -101,7 +100,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "KAG is a Fireblocks ERC20F UUPS proxy on Ethereum. mint() is onlyRole(MINTER_ROLE) with no on-chain cap, held by a single EOA (0xe560c473…). A separate single EOA (0x24945ec1…) holds DEFAULT_ADMIN_ROLE, which is the role admin for every role, so it can grant itself UPGRADER_ROLE and replace the implementation. No UPGRADER_ROLE holder currently exists. KAG and KAU use the same ERC20F implementation but distinct minter/admin EOAs and distinct DenyList registries. Minting is operationally gated off-chain by Kinesis deposits of allocated silver bullion, not by contract logic.",
     "upgradeability": {

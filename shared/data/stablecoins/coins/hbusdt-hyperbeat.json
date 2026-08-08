@@ -40,11 +40,11 @@
   "detailProvider": "coingecko",
   "geckoId": "hyperbeat-usdt",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "self-reported",
     "url": "https://accountable.hyperbeat.org/",
-    "provider": "Accountable",
-    "attestorTier": "niche",
-    "cadence": "real-time"
+    "provider": "Accountable instance (dashboard backend returned persistent HTTP 503 across two consecutive days of checks 2026-08-07/08, port and sibling API paths unreachable, and archive.org has never captured rendered content - the claimed live proof-of-solvency feed is not retrievable, unlike every other verified Accountable deployment)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
@@ -61,7 +61,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "hbUSDT is a Midas-built vault share (contract hbUSDT extends mTBILL) whose mint() is gated by HB_USDT_MINT_OPERATOR_ROLE on MidasAccessControl. The sole role holder is Hyperbeat's permissionless Depositor: any user can call deposit() with an enabled deposit token and the Depositor mints shares at the pricer rate. depositCap is 0, which disables the cap check entirely, so user minting is currently unbounded. A 3/5 Hyperbeat Safe controls the Depositor through a Solmate RolesAuthority and can set the deposit cap, swap the pricer, pause deposits, and change accepted tokens. A single Midas EOA holds DEFAULT_ADMIN_ROLE on MidasAccessControl and can grant HB_USDT_MINT_OPERATOR_ROLE to any address. Token upgrades run through a Midas ProxyAdmin owned by a 2-day OpenZeppelin timelock.",
     "inheritedFrom": "usdt-tether",
@@ -321,8 +321,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

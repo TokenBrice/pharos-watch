@@ -16,6 +16,10 @@ annotation disagrees with the mint posture V9 derives and publishes. Safety 9.1
 demoted the curated field to a validated annotation: it never scores, so a
 disagreement is curation work rather than a score effect.
 
+Assets whose card publishes no breakdowns (NR) derive no posture at all. They are
+reported in a separate \`nrCards\` bucket and excluded from the disagreement
+count: an NR card is a rating gap, not a curation disagreement.
+
 Options:
   --replay <path>    V9 replay artifact or publication payload with cards (required)
   --output <path>    Strict curated-mint-posture queue JSON (required)
@@ -64,6 +68,7 @@ export function buildV9MintPostureQueueFromCards(cards: readonly PublishedCard[]
       assetId,
       curatedPosture: TRACKED_META_BY_ID.get(assetId)?.mintAuthority?.authorityPosture,
       derivedPosture: typeof mint?.posture === "string" ? mint.posture : null,
+      publishesBreakdowns: card.breakdowns != null,
     });
   }
   return buildV9CuratedMintPostureQueue(inputs);
@@ -87,7 +92,8 @@ export function runV9MintPostureQueueCli(
   const queue = buildV9MintPostureQueueFromCards(readV9PublishedCards(io.readJson(values.replay)));
   io.writeText(values.output, `${JSON.stringify(queue, null, 2)}\n`);
   io.stdout.write(
-    `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s).\n`,
+    `Curated mint-posture queue: ${queue.entries.length} disagreement(s) across ${queue.reviewedAssetCount} asset(s); ` +
+      `${queue.nrCards.length} NR card(s) excluded.\n`,
   );
   if (values["require-clear"] === true && queue.entries.length > 0) {
     throw new Error(`${queue.entries.length} curated mint-posture disagreement(s) remain`);

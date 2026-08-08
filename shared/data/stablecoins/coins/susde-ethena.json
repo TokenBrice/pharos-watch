@@ -227,7 +227,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
     "inheritedFrom": "usde-ethena",
@@ -291,7 +291,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Those reviewed routes depend on LayerZero V2 messaging, the Ethereum source adapter, and destination token or adapter controls; Plasma, TON, and X Layer remain unresolved because the API does not list them.",

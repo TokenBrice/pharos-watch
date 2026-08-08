@@ -140,8 +140,6 @@
     "reviewer": "Pharos access research agent (unknown-reduction wave 2, T09)",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildL2BeatChainCoverageAudit,
   buildL2BeatBridgeRouteReviewAudit,
-  buildL2BeatStablecoinSafetyAudit,
   getL2BeatInfrastructureContext,
 } from "../chains/l2beat-audit";
 import { findL2BeatInteropProtocolReferences } from "../chains/l2beat-interop";
@@ -35,49 +34,6 @@ describe("L2BEAT audit helpers", () => {
     });
   });
 
-  it("builds advisory Safety Score review rows without deployment-model mutation", () => {
-    const audit = buildL2BeatStablecoinSafetyAudit({
-      generatedAt: "2026-06-12T00:00:00.000Z",
-      stablecoins: [
-        { id: "base-native", symbol: "BASE", contracts: [{ chain: "base" }] },
-        {
-          id: "multi-route",
-          symbol: "MULTI",
-          contracts: [{ chain: "ethereum" }, { chain: "base" }],
-          deploymentModel: "single-chain",
-        },
-        { id: "l3-token", symbol: "L3", contracts: [{ chain: "apechain" }] },
-      ],
-    });
-
-    expect(audit.summary).toMatchObject({
-      stablecoinCount: 3,
-      stablecoinsWithL2BeatDeployments: 3,
-      matchedDeploymentCount: 3,
-    });
-    expect(audit.reviewRows.find((row) => row.coinId === "base-native")).toMatchObject({
-      suggestedChainTier: "stage1-l2",
-      reasons: ["chain-tier-stage1-candidate"],
-    });
-    expect(audit.reviewRows.find((row) => row.coinId === "multi-route")).toMatchObject({
-      reasons: ["deployment-model-multichain-review"],
-    });
-    expect(audit.reviewRows.find((row) => row.coinId === "l3-token")?.reasons).toContain("layer3-host-chain-review");
-  });
-
-  it("flags L2BEAT under-review deployments from structured context", () => {
-    const audit = buildL2BeatStablecoinSafetyAudit({
-      generatedAt: "2026-06-12T00:00:00.000Z",
-      stablecoins: [
-        { id: "celo-native", symbol: "CELO", contracts: [{ chain: "celo" }] },
-      ],
-    });
-
-    expect(audit.reviewRows.find((row) => row.coinId === "celo-native")).toMatchObject({
-      reasons: ["l2beat-under-review", "weak-l2beat-chain-environment"],
-    });
-  });
-
   it("builds bridge-route review rows from L2BEAT Interop protocol references", () => {
     const audit = buildL2BeatBridgeRouteReviewAudit({
       generatedAt: "2026-06-12T00:00:00.000Z",
@@ -94,7 +50,6 @@ describe("L2BEAT audit helpers", () => {
             rwa: false,
             navToken: false,
           },
-          deploymentModel: "third-party-bridge",
           pegMechanism: "Cross-chain issuance uses Chainlink CCIP burn/mint pools.",
         },
         {
@@ -109,7 +64,6 @@ describe("L2BEAT audit helpers", () => {
             rwa: false,
             navToken: false,
           },
-          deploymentModel: "native-multichain",
           bridgeRouteRisk: {
             tier: "issuer-native-burn-mint",
             summary: "Issuer-native route.",
@@ -130,10 +84,9 @@ describe("L2BEAT audit helpers", () => {
     });
     expect(audit.reviewRows[0]).toMatchObject({
       coinId: "ccip-token",
-      deploymentModel: "third-party-bridge",
       currentBridgeRouteTier: null,
       suggestedBridgeRouteTier: "external-lock-mint",
-      reasons: ["bridge-route-risk-missing", "l2beat-protocol-reference", "third-party-bridge-review"],
+      reasons: ["bridge-route-risk-missing", "external-protocol-route-review", "l2beat-protocol-reference"],
     });
     expect(audit.reviewRows[0].protocols.map((protocol) => protocol.slug)).toContain("ccip");
   });

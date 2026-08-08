@@ -27,17 +27,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-23",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex XSGD reserve report review",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 31 May 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bcf4afadd295291e1be8_XSGD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+          "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 30 June 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
         }
       ]
     }
@@ -174,7 +174,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
     "upgradeability": {
@@ -349,7 +349,6 @@
       "reviewedAt": "2026-07-29"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XSGD is issuer-minted natively by StraitsX on all eight networks (per-chain masterMinter/owner reads verified on the EVM deployments; Solana SPL multisig, Hedera HTS, and XRPL issued asset are issuer rails); no third-party bridge carries the claim.",

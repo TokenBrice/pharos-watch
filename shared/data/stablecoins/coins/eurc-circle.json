@@ -28,17 +28,17 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-05-29",
-      "publishedAt": "2026-06-29",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-29",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR remediation pass 2026-08 (refreshed to the June 2026 report; PDF confirmed live, same Deloitte engagement as USDC)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte EURC examination report - May 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+          "label": "Deloitte EURC examination report - June 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf"
         }
       ]
     }
@@ -231,7 +231,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURC has seven independently mintable native deployments. Ethereum, Base, Avalanche, World Chain, and Cronos use Circle FiatTokenV2_2 custom proxies with chain-local MasterMinter, token-owner, and proxy-admin controls. Solana and Stellar each use a 2-of-4 issuer multisig. Every EVM mint or upgrade path has zero on-chain delay and a code-empty single-account authority; off-chain custody behind those accounts is unknown.",
     "controls": [
@@ -778,7 +778,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EURC uses Circle CCTP V2 native burn-and-mint transfers across supported networks including Ethereum, Avalanche, Base, and Solana, so durable cross-chain movement depends on Circle issuer-native mint/burn infrastructure rather than a third-party liquidity bridge.",

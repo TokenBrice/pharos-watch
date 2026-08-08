@@ -41,7 +41,7 @@ Scores are derived from curated `mintAuthority` metadata in `shared/data/stablec
 Primary fields:
 
 - `mintPath` - route family, such as immutable user collateral, permissioned minter, issuer direct mint, bridge/OFT synthetic, M0 minter, or inherited wrapper.
-- `authorityPosture` - reviewed posture band: none resolved, bounded admin, partially bounded admin, concentrated admin, unbounded or compromised, or unknown.
+- `authorityPosture` - reviewed posture band: none resolved (whole-of-chain), none resolved mint (mint-scoped), bounded admin, partially bounded admin, unbounded reconciled, concentrated admin, unbounded or compromised, or unknown.
 - `confidence` - evidence quality: verified, probable, manual-review, or unknown.
 - `controls[]` - mint-capable or mint-adjacent control paths, including role, authority type, direct mint ability, threshold, signer count, timelock, cap status, cap-mutability evidence, Safe module/guard state, key-custody attestation, sources, and evidence.
 - `inheritedFrom` - parent stablecoin id for wrappers and variants that inherit mint authority from a reviewed parent.

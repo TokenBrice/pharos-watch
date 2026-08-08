@@ -36,11 +36,26 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://stablecorp.ca/transparency",
-    "provider": "Kingston Ross Pasnak LLP",
+    "provider": "Davidson & Company LLP (Vancouver; Nexia International member) - the monthly CSAE 3000 reasonable-assurance attestations are signed by Davidson, not by Kingston Ross Pasnak LLP as previously recorded",
     "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada",
-    "attestorLicense": "Canadian chartered professional accounting firm"
+    "attestorLicense": "Canadian chartered professional accounting firm",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "PoR verification sweep 2026-08 (SEDAR+ filing read: 'in our opinion, the Monthly Attestation as of May 1, 2026 and May 31, 2026, is fairly stated in all material respects', with direct bank confirmations; criteria from the OSC exemptive-relief decision of 2025-11-20)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Davidson & Company QCAD reasonable-assurance attestation - May 2026 (SEDAR+ doc cdb08e008e109f2cfd9f81ad62011f100ac1bd0d95a48ed4861aaaaaba974b5c)",
+          "url": "https://stablecorp.ca/transparency"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -186,7 +201,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
@@ -225,7 +239,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "QCAD token ownership and immediate proxy upgrades on Ethereum and Base use distinct chain-local 3/6 Safe instances. The token-owner Safes and proxy-admin Safes have different signer compositions; no modules or guards were detected. Stablecorp's issuance backend mints through the Safe-controlled token contracts.",
     "controls": [

@@ -190,7 +190,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "GBPm is a legacy StableTokenV3 (cGBP) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
     "upgradeability": {
@@ -310,8 +310,6 @@
       "reviewedAt": "2026-07-21"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "GBPm is part of Mento's local stablecoin system and is documented as available directly on supported chains. No holder-facing bridge or lockbox route was resolved for GBPm, so Pharos treats route risk as native issuance on the relevant chain deployments.",

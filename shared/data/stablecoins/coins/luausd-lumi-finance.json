@@ -124,7 +124,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "LUAUSD mint is onlyOwner. The token's owner is an ERC1967Proxy (0xb422502…) whose own owner is a 3-of-5 Gnosis Safe L2 v1.3.0 (0x7e502e2…) on Arbitrum with no modules and no guard.",
     "upgradeability": {
@@ -215,8 +215,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "LUAUSD has one tracked Arbitrum contract and no token-specific bridge controls in reviewed issuer docs. The Arbitrum signal is canonical chain infrastructure, not a separate stablecoin route.",

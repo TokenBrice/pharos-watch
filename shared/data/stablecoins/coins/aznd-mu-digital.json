@@ -201,8 +201,6 @@
     "yieldSource": "Mu Digital loAZND vault",
     "yieldType": "lending-vault"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "AZND moves between Ethereum and Monad as a native LayerZero V2 Omnichain Fungible Token (burn-on-source / mint-on-destination), confirmed by the verified Ethereum implementation (0x2E49c14A) inheriting @layerzerolabs/oft-evm-upgradeable OFTUpgradeable whose _debit burns and _credit mints, wired to the canonical LZ V2 EndpointV2, and by a live ETH<->Monad message flow on LayerZeroScan (15+ delivered, ~24 messages/24h). It is a pure OFT, not an OFT Adapter/lockbox. The OApp runs a custom (non-default) DVN security stack on the Monad pathway (EID 30390) using named LayerZero DVNs (Deutsche Telekom, LayerZero Labs, Canary, plus Frax/Horizen), placing it in the external-validated-network tier. (Exact required/optional DVN counts and threshold were not independently byte-confirmed from getConfig.)",
@@ -320,7 +318,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AZND primary issuance is KYC-gated by Mu Digital, while the Monad token's mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA. The Monad AccessManager default admin can change that role set. Ethereum AZND is a UUPS LayerZero OFT spoke whose owner can change trusted peers and whose AccessManager default admin can upgrade mint-critical logic; both controls currently resolve to the same Mu Digital EOA.",
     "upgradeability": {

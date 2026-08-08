@@ -18,23 +18,23 @@
   "geckoId": "mxnb",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf",
-    "provider": "BDO Mexico (Castillo Miranda y Compania)",
+    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+    "provider": "BDO Mexico (Castillo Miranda y Compania) quarterly financial valuation reports, signed by a corporate-finance/valuation partner acting as consultants under IVSC valuation standards; the report expressly does not confirm reserve accounts with banks and expresses no assurance opinion",
     "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-06-23",
-      "assuranceMethod": "attestation",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-16",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "owner-triage",
+      "reviewer": "PoR verification sweep 2026-08 (Q2 PDF read; composition review advanced in lockstep; reserves MXN 35,333,251.88 vs 34,828,276.31 circulating)",
       "confidence": "probable",
       "sources": [
         {
-          "label": "BDO Mexico MXNB Q1 2026 valuation report",
-          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+          "label": "BDO Mexico MXNB Q2 2026 valuation report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
         },
         {
           "label": "MXNB attestation index",
@@ -109,7 +109,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Juno/Bitso documents MXNB issuance and redemption through issuer APIs and lists MXNB on Arbitrum as an issuer stablecoin rather than a wrapped bridge asset. No separate bridge protocol was verified, so the route is reviewed as issuer-native mint/redeem across supported chains.",
@@ -279,22 +278,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex SOL-ULTRA Cohort A reserve research",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "BDO Mexico MXNB Q1 2026 valuation report",
-        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        "label": "BDO Mexico MXNB Q2 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
       },
       {
-        "label": "MXNB transparency",
+        "label": "MXNB attestation index",
         "url": "https://mxnb.mx/en-US/transparency"
       }
     ],
-    "rationale": "BDO Mexico's Q1 2026 valuation report identifies MXNB reserves as bank-account balances at Nvio and Hey Banco and reports MXN 26,952,974.94 in reserves against MXN 24,820,871.35 of MXNB in circulation as of March 31, 2026. BDO describes its work as validation of company-provided bank statements rather than direct bank confirmation. MXNB's issuer transparency page separately reports aggregate MXN reserves exceeding circulation as of July 19, 2026, without a newer category or provider split. The direct report supports a single 100% bank-deposit category for its report date, while retaining the report's verification limitation.",
-    "compositionBasis": "BDO Mexico Q1 2026 valuation of MXNB reserve bank-account balances, with current issuer aggregate balance disclosure",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "BDO Mexico (Castillo Miranda y Compania) Q2 2026 financial valuation as of 30 June 2026 (published 2026-07-16, PDF read this pass): a single aggregate line 'Reserves on bank accounts' MXN 35,333,251.88 against MXN 34,828,276.31 of MXNB in circulation (surplus 504,975.57). The engagement is consultancy under IVSC standards, expressly does not confirm balances with banks, and restricts use to management; its scope paragraph still says 'as of March 31, 2026' (stale copy-paste). No bank names or instrument split are disclosed - composition stays one bank-deposit category at probable confidence.",
+    "compositionBasis": "BDO Mexico Q2 2026 valuation of MXNB reserve bank-account balances",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies Nvio and Hey Banco but does not disclose the balance at each institution, account terms, deposit protection, or direct bank confirmation. The issuer's current transparency page provides only aggregate reserves and circulation.",
     "knownUnknownExposurePct": 0,
@@ -372,7 +371,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "MXNB is a FiatToken-fork proxy. On Ethereum and Arbitrum, masterMinter() = owner() = EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Proxy admin is also EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. All three are issuer-controlled EOAs with no multisig.",
     "controls": [

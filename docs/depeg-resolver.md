@@ -112,7 +112,7 @@ Each anchor is rated `weak` or `strong`.
 
 | # | Recovery anchor | Strong when |
 |---|---|---|
-| **R1** | Non-inflatable supply | `none-resolved` authority / immutable user-collateralized mint path — supply cannot be printed (LUSD / BOLD) |
+| **R1** | Non-inflatable supply | `none-resolved` authority / immutable user-collateralized mint path — supply cannot be printed (LUSD / BOLD). Mint-scoped `none-resolved-mint` does **not** qualify: the wrapper cannot print, but its parent can |
 | **R2** | Hard collateral + live redemption | Native or very-low-risk collateral, **and** a live redemption path: either `rcr ≥ 0.1` with a known route family **or** measured V9 executable exit above threshold (`completionRatio ≥ 0.1`, `executableUsd ≥ $100k`, functioning `primaryRoute`) when the V9 safety context is `v9-identified` |
 | **R3** | No supply / flow anomaly | Flat supply, no mint surge, calm supply and flow sub-signals — a pure market dislocation |
 | **R4** | No single freeze point | Decentralized governance, on-chain custody, not blacklistable — nobody can block recovery |

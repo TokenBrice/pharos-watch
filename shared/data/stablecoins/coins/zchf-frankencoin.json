@@ -558,7 +558,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "Frankencoin has no owner; minting is performed by minter plugins and positions that pass the protocol's veto-governed minter registry.",
     "upgradeability": {
@@ -632,7 +632,6 @@
       "reviewedAt": "2026-07-17"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",
   "notices": [

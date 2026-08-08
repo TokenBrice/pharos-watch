@@ -152,7 +152,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USSD uses Frax/LayerZero OFT-style omnichain infrastructure for cross-chain USSD minting, while CCTP v2 remains a secondary USDC redemption rail. The durable cross-chain risk is therefore the external LayerZero route plus scoped CCTP redemption exposure, not issuer-native CCTP alone. 2026-07-20 cohort dc-1 pass: Sonic row confirmed native; other-chain rows confirmed as the uniform USSD cross-chain deployment (uniform address, admin, implementation reads).",
@@ -456,7 +455,7 @@
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USSD is a Sonic Labs dollar built on Frax's frxUSD infrastructure. The tracked direct mint path is a BrandedCustodian that accepts local frxUSD and calls the USSD token's MINTER_ROLE; external Frax routes expose a broader issuer-administered set of approved USD assets and tokenized Treasury reserves.",
     "upgradeability": {

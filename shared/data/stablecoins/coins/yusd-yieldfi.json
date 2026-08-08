@@ -138,7 +138,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault. Deposits mint shares, and the Manager additionally exposes a discretionary manageAssetAndShares mint/burn path with no supply ceiling. That path is gated on the Administrator's BRIDGE, LOCKBOX, or YIELD roles, which at Ethereum block 25575158 are held by eleven contracts. Two externally owned accounts hold ADMIN and can grant or revoke every non-ADMIN role instantly, so the operator set and therefore the uncapped mint path are under unilateral EOA control; only adding a new ADMIN is delayed, by a four-hour timelock. Base USDC mint authority remains inherited from Circle, and non-Ethereum yUSD is a LayerZero OFT representation with no independent local mint path.",
     "inheritedFrom": "usdc-circle",
@@ -413,7 +413,6 @@
       "unresolvedQuestions": []
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "YUSD is deployed on many chains and L2BEAT points its route signal at Across. Across is an intent/liquidity framework with non-minting route execution, so Pharos scores this as a liquidity-or-intent route rather than a canonical bridge or issuer-native path. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native YToken; other-chain rows confirmed YieldFi yUSD LayerZero OFT representations with uniform deployment/admin reads.",

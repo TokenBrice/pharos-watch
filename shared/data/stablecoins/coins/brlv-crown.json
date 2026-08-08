@@ -17,20 +17,20 @@
   "detailProvider": "coingecko",
   "geckoId": "crown-brlv",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.crown-brlv.com/transparencia/",
-    "provider": "Fact Finance",
-    "attestorTier": "niche",
-    "cadence": "daily",
+    "provider": "Fact Finance Ltda technical verification memos (an RWA oracle firm, not an audit practice; signer is a technical lead, not a licensed accountant; the 'daily audits' claim is marketing copy with no daily artefact, and the monthly memo series shows no June or July 2026 report)",
+    "attestorTier": "none",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
       "periodEnd": "2026-05-31",
       "publishedAt": "2026-05-31",
-      "assuranceMethod": "attestation",
-      "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
-      "confidence": "verified",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (memo carries no assurance standard, no opinion, and no accountant signature; series stalled after May 2026)",
+      "confidence": "probable",
       "sources": [
         {
           "label": "Fact Finance BRLV proof-of-reserves report - May 2026",
@@ -90,8 +90,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "BRLV has a Base canonical deployment and an Ethereum bridged variant in the existing on-chain review. The route is limited to Base/Ethereum and maps to the Base canonical bridge family, so it is scored as canonical-rollup-bridge.",
@@ -221,7 +219,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "BRLV is issued by Crown on Base and Ethereum through UUPS/AccessControl deployments. The Base and Ethereum tokens share DEFAULT_ADMIN EOA 0x239d4a, whose role can authorize minting and can create token UPGRADE_ROLE holders. Base's live direct minters are two EIP-7702 delegated EOAs plus Crown's canonical gateway and rewards proxies; the latter two have separate immediate UUPS role-admin paths.",
     "upgradeability": {

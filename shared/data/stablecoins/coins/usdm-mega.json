@@ -275,7 +275,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdtb-ethena",
     "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb, so it inherits the backing and issuance dependency on USDtb. Each USDM deployment is also a UUPS-upgradeable OFT whose 4-of-9 owner Safe can add or remove direct minters and replace mint-critical logic without a timelock.",

@@ -357,6 +357,54 @@ describe("hasLoadingScoreFilterData", () => {
       ),
     ).toBe(true);
   });
+
+  // Since safety 9.1 the mint score and band are read from the published V9
+  // mint component, so both mint filters depend on the report-cards query.
+  it("keeps the mint score threshold in loading state until report cards resolve", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 65 },
+        { ...loaded, reportLoading: true, reportHasData: false },
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps the mint band filter in loading state until report cards resolve", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] },
+        { ...loaded, reportLoading: true, reportHasData: false },
+      ),
+    ).toBe(true);
+  });
+
+  it("does not gate the mint filters on the DEWS query", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] },
+        { ...loaded, dewsLoading: true, dewsHasData: false },
+      ),
+    ).toBe(false);
+  });
+
+  it("releases the mint filters once report cards have data", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 65, mintAuthorityScores: ["hardened"] },
+        { ...loaded, reportLoading: true, reportHasData: true },
+      ),
+    ).toBe(false);
+  });
+
+  // The curated route bucket is not re-sourced, so it must not gate on a query.
+  it("does not gate the curated mint route filter on any query", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["no-privileged-mint"] },
+        { ...loaded, reportLoading: true, reportHasData: false },
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("SCREENER_URL_SCHEMA codec", () => {

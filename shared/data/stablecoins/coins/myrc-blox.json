@@ -44,17 +44,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Malaysia",
     "latestReport": {
-      "periodEnd": "2025-07-31",
-      "publishedAt": "2025-08-29",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-23",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex T61 reserve review",
+      "reviewer": "PoR remediation pass 2026-08 (record was ~11 months stale; June 2026 report verified live at cdn.blox.my, Last-Modified 2026-07-23; July 2026 report not yet published as of 2026-08-08)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
-          "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
+          "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2026-06-30)",
+          "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
         }
       ]
     }
@@ -123,8 +123,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "MYRC is presented by BLOX as a ringgit-backed stablecoin available on multiple chains, with no source-resolved external bridge or lockbox route. Pharos treats the current bridge-route profile as native issuance on the listed deployments.",
@@ -250,56 +248,66 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
-      "pct": 100,
-      "risk": "medium",
+      "name": "MYR cash at Malaysian banks",
+      "pct": 81.964029,
+      "risk": "very-low",
       "assetClass": "cash",
-      "issuerOrObligor": "Blox Blockchain Sdn Bhd and undisclosed Malaysian financial institutions",
+      "issuerOrObligor": "Undisclosed Malaysian banks (trustee accounts)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Halogen Shariah MYR Liquid Fund",
+      "pct": 18.035971,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Halogen Capital (Securities Commission Malaysia-licensed asset manager)",
       "riskFactors": [
         "counterparty",
         "liquidity",
-        "custody",
-        "concentration",
-        "legal"
+        "custody"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28; Codex T61 re-review 2026-07-31",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
+        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2026-06-30)",
+        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
+      },
+      {
         "label": "BLOX MYRC transparency",
         "url": "https://www.blox.my/myrc/transparency"
-      },
-      {
-        "label": "MYRC whitepaper",
-        "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
-      },
-      {
-        "label": "BLOX MYRC product page",
-        "url": "https://www.blox.my"
-      },
-      {
-        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
-        "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-31: the live BLOX MYRC page still states 1:1 MYR backing in trustee accounts and independent Malaysian-accountant audits. The 2025-08-29 Tommy Ung & Partners PLT reasonable-assurance examination reports 1,211,350.50 MYRC in circulation against 1,211,350.50 MYR held, with a reserve breakdown of 100% cash and bank deposits readily withdrawable for redemption. Current institutions, account segregation, balances, and later-period attestation are not disclosed; the structured envelope is nevertheless now precisely 100% cash/MYR with immediate stated liquidity.",
-    "compositionBasis": "BLOX disclosures and Tommy Ung & Partners PLT reserve attestation identifying 100% MYR cash deposits",
-    "compositionAsOf": "2026-07-31",
+    "rationale": "Tommy Ung & Partners PLT ISAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 (report dated 2026-07-21, PDF read this pass): MYR 1,817,790.25 cash (81.96%) and MYR 400,000.00 in the Halogen Shariah MYR Liquid Fund (18.04%), totalling MYR 2,217,790.25 exactly equal to 2,217,790.25 MYRC in circulation (zero surplus). Circulation = 6,365,298.65 total supply less 4,147,508.40 authorized-but-not-issued. The report restricts distribution to the Company and discloses BLOX is in Open Beta and not in any Malaysian regulatory sandbox. The prior 100%-cash composition (from the 2025-07-31 report) no longer holds.",
+    "compositionBasis": "Tommy Ung & Partners PLT examination as of 30 June 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The latest independent report identifies 100% cash/MYR bank deposits, but current financial institutions, provider shares, balances, and legal segregation terms are not disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
-        "pct": 100,
+        "reserveName": "MYR cash at Malaysian banks",
+        "pct": 81.964029,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The latest independent reserve report identifies the full reserve as MYR cash/bank deposits; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
+        "rationale": "The June 2026 examination identifies MYR cash at banks; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Halogen Shariah MYR Liquid Fund",
+        "pct": 18.035971,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Halogen Shariah MYR Liquid Fund is a Securities Commission Malaysia-licensed money-market fund, not a tracked stablecoin dependency."
       }
     ]
   },
@@ -348,7 +356,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan. The Ethereum MYRC token is a non-proxy immutable ERC-20 (EIP-1967 implementation and admin slots are zero; verified source has no upgrade surface).",
     "upgradeability": {
@@ -426,12 +434,12 @@
         "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
       }
     ],
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent). Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer.",
+      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent). Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer. Reconciliation review (2026-08-08): the monthly reports the 2026-07-15 pass recorded as absent after 2025-11-30 do exist, published under cdn.blox.my/attestations. Tommy Ung & Partners PLT (AF 002378), Chartered Accountants Malaysia, issue ISAE 3000 (Revised) reasonable-assurance opinions that MYR-denominated assets held equal or exceed MYRC in circulation - verified for 2025-11-30 (831,090.83 MYRC) and 2026-06-30 (2,217,790.25 MYRC, signed 2026-07-21), with reports present for every month probed in between. Recurring third-party reconciliation is therefore established. Supervision stays non-prudential: Blox's own product term sheet states MYRC does not constitute electronic money or a payment instrument unless and until Blox obtains Bank Negara Malaysia approval.",
       "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Blox docs",
@@ -456,6 +464,14 @@
         {
           "label": "Securities Commission Malaysia public register",
           "url": "https://www.sc.com.my/regulation/licensing/licensed-and-registered-persons"
+        },
+        {
+          "label": "Tommy Ung & Partners PLT: MYRC reserve report, ISAE 3000 reasonable-assurance opinion, 30 June 2026",
+          "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
+        },
+        {
+          "label": "Blox product term sheet: MYRC is not electronic money pending Bank Negara Malaysia approval",
+          "url": "https://www.blox.my/policies/product-term-sheet"
         }
       ]
     }

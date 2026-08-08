@@ -1291,8 +1291,6 @@
     "reviewedAt": "2026-07-30",
     "upstreamSuppressionRationale": "USDXL has a USDT0 PSM facilitator and CDP collateral including bridged assets that may themselves be freezeable. Those upstream freezes can impair mint/redeem/liquidity value but do not blacklist or transfer-restrict the USDXL token itself. Recorded as reserve/dependency risk, not USDXL holder freeze."
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDXL is minted natively on HyperEVM through HypurrFi's CDP facilitators, and the Hyperliquid row is the USDXL HyperCore spot token deployed by the same Last team (deployer is an owner of the HyperEVM 2/2 proxy-admin Safe). Cross-chain movement between HyperEVM and HyperCore uses the platform-native Core/EVM system-address link operated by the issuer; the L2BEAT-reviewed Hyperliquid USDC deposit bridge does not carry USDXL, so reviewed risk is issuer-native burn/mint.",
@@ -1438,7 +1436,7 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDXL is a GHO-style CDP synthetic dollar on HypurrFi (an Aave-v3 fork on HyperEVM) in wind-down: pooled new borrows are suspended and settlement targets July 15, 2026. The token's GHO AccessControl roles have no members (facilitator set and bucket caps are frozen); the only remaining mint-relevant control is the 2/2 proxy-admin Safe's upgrade power.",
     "upgradeability": {

@@ -19,7 +19,7 @@
     "type": "real-time",
     "url": "https://app.reservoir.xyz/reserves",
     "provider": "Reservoir Protocol (on-chain live balance sheet)",
-    "attestorTier": "niche",
+    "attestorTier": "self",
     "cadence": "real-time"
   },
   "variantOf": "rusd-reservoir",
@@ -890,7 +890,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "wsrUSD is a non-upgradeable Savingcoin ERC-4626 wrapper minted by depositing rUSD. Its active MANAGER role is held by Reservoir Safe 0x4E8a4894... (3-of-5), while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32... and can grant or revoke MANAGER. Base mint authority is inherited from rUSD.",
     "inheritedFrom": "rusd-reservoir",

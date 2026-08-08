@@ -123,7 +123,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "StandX documents DUSD as chain-native on Solana and BNB Chain with StandX Gateway components handling minting and redemption. No third-party bridge route was verified, so the reviewed topology is issuer-native mint/redeem on each supported chain.",
@@ -308,7 +307,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "StandX DUSD uses an on-chain Gateway for USDT/USDC deposits. Solana mint authority is a PDA of an immutable program, and BSC's sole MINTER_ROLE is the Gateway controller proxy under a 3-of-4 DEFAULT_ADMIN Safe; the terminal Settler/RSV backend signer set is issuer-undisclosed and is the manual-review cap on this profile.",
     "controls": [

@@ -19,12 +19,31 @@
   "geckoId": "matrixdock-silver",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.matrixdock.com/xagm",
-    "provider": "Bureau Veritas",
+    "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20",
+    "provider": "Bureau Veritas (XAGm silver first entered the semi-annual Matrixdock audit programme with the July 2026 cycle — one XAGm audit to date, so no recurring cadence is claimed; certificate hosted on Matrixdock's GitBook, not matrixdock.com)",
     "attestorTier": "niche",
-    "cadence": "semi-annual",
+    "cadence": "ad-hoc",
     "attestorJurisdiction": "Singapore",
-    "attestorLicense": "Bullion vault inspection and assurance"
+    "attestorLicense": "Bullion vault inspection and assurance",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-17",
+      "assuranceMethod": "audit",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR remediation pass 2026-08 (PDF read directly: 100% physical audit of 508 gold and 66 silver bars against the Parcel Ownership List dated 30 June 2026 at Brink's HK/SG and Malca-Amit SG, no anomalies; no token-liability reconciliation performed)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Matrixdock Gold Bureau Veritas Audit Jul 2026 (covers XAUm gold and XAGm silver)",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
+        },
+        {
+          "label": "Matrixdock press release - two years of independent verification (2026-07-21)",
+          "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -64,7 +83,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "XAGm has issuer-controlled Ethereum and Sui operator paths. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay. Ethereum's owner controls delayed UUPS upgrades; Sui's State owner holds the MToken package UpgradeCap.",
     "upgradeability": {
@@ -333,8 +352,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XAGm is tracked on Ethereum and Sui, and Matrixdock says the Sui deployment is natively issued rather than a wrapped bridge asset. The deployment model is corrected to native-multichain and the route is scored as issuer-native mint/redeem exposure.",

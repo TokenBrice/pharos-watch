@@ -34,12 +34,11 @@
   "detailProvider": "defillama",
   "geckoId": "gaib-aid",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://aid.gaib.ai/transparency",
-    "provider": "McMillan Woods (Hong Kong) CPA Limited",
-    "attestorTier": "regional",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Hong Kong"
+    "provider": "GAIB transparency dashboard (the claimed monthly McMillan Woods (Hong Kong) CPA attestation exists only in GAIB blog marketing — no attestation report is retrievable anywhere, McMillan Woods appears nowhere in GAIB's docs corpus, and the docs promise only forward-looking quarterly third-party audits)",
+    "attestorTier": "self",
+    "cadence": "none"
   },
   "links": [
     {
@@ -157,7 +156,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AID uses role-gated issuer minting. On Ethereum, two contract MINTER_ROLE holders are confirmed active (4099 and 3162 bytes). DEFAULT_ADMIN is held by both a 3/5 Safe and an EOA (confirmed no bytecode). On Arbitrum, Base, and BSC, the same DEFAULT_ADMIN Safe and EOA are confirmed; MINTER_ROLE has no active grants on those chains (different impl, bridge-minted).",
     "controls": [
@@ -411,7 +410,6 @@
       "risk": "low"
     }
   },
-  "deploymentModel": "native-multichain",
   "launchDate": "2025-10-31",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

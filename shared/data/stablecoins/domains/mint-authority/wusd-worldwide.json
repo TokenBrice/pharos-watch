@@ -2,7 +2,7 @@
   "id": "wusd-worldwide",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "WUSD is issuer-minted by WSPN on Ethereum, Polygon, and Viction through ERC20F AccessControl tokens: a single WSPN DEFAULT_ADMIN EOA governs roles on every chain, mint rights sit with one WSPN operator EOA plus chain-local mint/burn operator contracts, and no supply cap exists in the token. The UUPS upgrade role is unassigned on Ethereum/Polygon and held by the deployer EOA on Viction.",
     "upgradeability": {

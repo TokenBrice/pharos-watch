@@ -18,10 +18,10 @@
   "detailProvider": "defillama",
   "geckoId": "cad-coin",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://loon.finance/transparency/",
-    "provider": "Loon monthly third-party attestation for CAD reserves held at ATB Financial",
-    "attestorTier": "niche",
+    "provider": "Monthly scanned ATB Financial bank-confirmation forms for PayTrie AB Inc, requested by HDCPA Professional Corporation (no accountant's report, opinion, or signature; no CADC circulation figure appears, so liabilities are not reconciled)",
+    "attestorTier": "none",
     "cadence": "monthly",
     "attestorJurisdiction": "Canada"
   },
@@ -85,7 +85,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana mint remains separately owned by the SPL Token program.",
     "upgradeability": {
@@ -517,7 +517,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "CADC is a Canadian dollar stablecoin issued by Loon/Paytrie and made available on supported chains through direct network launches. I did not resolve a separate bridge, lockbox, or liquidity route for durable supply, so Pharos treats current route risk as native issuance on each deployment.",

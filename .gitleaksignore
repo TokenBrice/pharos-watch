@@ -238,6 +238,9 @@ f40fa3bdae23aaf46fc5f1fc4e7e911e79751e51:shared/data/stablecoins/coins/fxd-fatho
 f57a1164d7304722f23cad9e5af2dee1b2bb57d4:agents/research/2026-04-14-pmusd-rwfx-audit.md:generic-api-key:24
 f8117d3717081df80d8f137f4d0e6e587ba16461:shared/data/stablecoins/usd-major.json:generic-api-key:1978
 f87059c301ab363b10339b92f2f20269019f11d2:worker/src/cron/__tests__/yield-aave-onchain-source.test.ts:generic-api-key:47
+adc2c7fb4e9ab377978cc111e2cd2ed57066f16a:shared/data/stablecoins/coins/xagm-matrixdock.json:generic-api-key:22
+adc2c7fb4e9ab377978cc111e2cd2ed57066f16a:shared/data/stablecoins/coins/xagm-matrixdock.json:generic-api-key:39
+ed446b560c9908be9586d0c3a9c9e8f6abd37219:shared/data/stablecoins/coins/xaum-matrixdock.json:generic-api-key:39
 b115cf007e6743925c81f7a57c6085f6aab4d1f1:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:4047
 fc59649ec551ec54fbbfcd4a06f52dcaca72df20:worker/src/api/__tests__/yield-history.test.ts:generic-api-key:151
 af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:109

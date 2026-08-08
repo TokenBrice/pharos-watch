@@ -201,8 +201,6 @@
     "reviewer": "Kerne Protocol submitter; Pharos pre-launch intake",
     "reviewedAt": "2026-07-03"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

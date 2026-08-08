@@ -32,8 +32,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://brale.xyz/stablecoins/SBC",
-    "provider": "Abdo",
-    "attestorTier": "regional",
+    "provider": "Michael Coglianese, CPA, P.C. (MCCPA), Lincolnshire, IL (replaced Abdo before mid-2026; note the June 2026 report file bundles an examination opinion covering only 2026-05-31, signed 2026-07-13, with an unexamined management assertion for 2026-06-30 figures)",
+    "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
@@ -43,7 +43,7 @@
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR remediation pass 2026-08 (2026-05-31 remains the newest independently examined period; June 2026 figures are management-asserted only)",
       "confidence": "verified",
       "sources": [
         {
@@ -203,7 +203,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "SBC is issued by Brale (FinCEN MSB / US money transmitter) via UUPS-upgradeable AccessControl token contracts. The tracked EVM deployments use chain-local UPGRADER_ROLE authorities: a 6-signer legacy multisig on Ethereum, 3-of-6 Safes on Polygon and Avalanche, and the Brale issuance EOA on Arbitrum, Optimism, Base, and Celo.",
     "controls": [
@@ -602,7 +602,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Brale documents stablecoin issuance APIs that can mint and redeem branded stablecoins across supported networks, including SBC. The route is reviewed as issuer-native burn/mint rather than an unaffiliated bridge route.",

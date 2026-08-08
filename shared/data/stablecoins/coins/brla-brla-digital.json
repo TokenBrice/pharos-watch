@@ -21,13 +21,13 @@
     "type": "independent-audit",
     "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
     "provider": "UHY Bendoraytes & Cia Auditores Independentes",
-    "attestorTier": "niche",
+    "attestorTier": "regional",
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
       "periodEnd": "2026-06-30",
       "publishedAt": "2026-07-21",
-      "assuranceMethod": "attestation",
+      "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
       "reviewer": "OpenAI Codex Safety Score V9 backing review",
@@ -96,7 +96,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
@@ -116,10 +115,9 @@
       }
     }
   },
-  "chainTier": "established-alt-l1",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "BRLA is issued by Avenia (formerly BRLA Digital); mint() on every tracked chain is gated solely by OPERATOR_ROLE (0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929), verified functionally by eth_call mint() on all four chains. Current holders, reconstructed from full event histories and hasRole/eth_getCode reads: Polygon 12 (deployer EOA 0x08abf5f6, operator EOA 0xb35fdcb2, and 10 issuer-owned contracts/proxies), Gnosis 5 (3 EOAs + 2 backend proxies), Celo 4 (3 EOAs + 1 backend proxy), Moonbeam 5 (3 EOAs + 2 backend proxies). The two EOAs listed here previously (0x36cd3733, 0x55127198) hold the BLACKLISTED role (0xf48dee1a\u2026), not mint rights \u2014 mint() from 0x36cd3733 reverts 'missing role 0x97667070\u2026'. No bridge or third-party contract holds mint rights on any chain; issuance is issuer-direct per chain.",
     "upgradeability": {

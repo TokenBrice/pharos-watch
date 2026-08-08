@@ -70,6 +70,17 @@ export function resolveV9MintPostureBand(posture: string | null | undefined): V9
 }
 
 /**
+ * Curated-only posture values V9 never derives, so they cannot live in
+ * `POSTURE_BANDS` (which is keyed by the derived vocabulary). `none-resolved-mint`
+ * is the mint-scoped sibling of `none-resolved` and states the same fact about
+ * the mint path, so it shares the hardened band — which is also what makes a
+ * mint-scoped annotation agree with V9's mint-scoped derivation.
+ */
+const CURATED_ONLY_POSTURE_BANDS: Partial<Record<MintAuthorityPosture, V9MintPostureBand>> = {
+  "none-resolved-mint": "hardened",
+};
+
+/**
  * Project the curated `authorityPosture` annotation onto the derived posture
  * vocabulary. The curated field predates V9's split of unbounded minting into
  * reconciled and unreconciled rungs, so it can only ever claim the adverse
@@ -77,5 +88,5 @@ export function resolveV9MintPostureBand(posture: string | null | undefined): V9
  */
 export function curatedMintPostureBand(posture: MintAuthorityPosture | null | undefined): V9MintPostureBand | null {
   if (posture == null || posture === "unknown") return null;
-  return POSTURE_BANDS[posture as V9MintPosture] ?? null;
+  return CURATED_ONLY_POSTURE_BANDS[posture] ?? POSTURE_BANDS[posture as V9MintPosture] ?? null;
 }

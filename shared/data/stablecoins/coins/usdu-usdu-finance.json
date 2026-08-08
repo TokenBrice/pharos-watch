@@ -36,7 +36,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -80,7 +79,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "USDU cannot be minted by users directly; only DAO-approved/whitelisted adapter contracts (Curve, TermMax, Morpho) can mint or burn USDU, and the set of approved adapters is curated under USDU Finance DAO risk governance.",
     "economicCapSemantics": "unbounded",

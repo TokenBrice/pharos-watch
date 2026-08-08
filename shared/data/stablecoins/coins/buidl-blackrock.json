@@ -129,7 +129,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "BUIDL is uncapped across all reviewed issuance deployments. Six EVM token and trust-service pairs share one immediate EOA master/upgrader. Solana issuance uses an issuer-signed PDA path whose three mint-critical programs share a separate immediate EOA upgrade key. Aptos issuance is controlled by an issuer and a master/package-owner account with compatible immediate upgrades.",
     "upgradeability": {
@@ -438,7 +438,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",

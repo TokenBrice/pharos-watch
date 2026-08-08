@@ -55,7 +55,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
@@ -202,11 +201,10 @@
     "yieldSource": "ISC purchasing-power basket appreciation",
     "yieldType": "nav-appreciation"
   },
-  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "ISC is a standard Solana SPL token whose mint and freeze authority is immutable 2-of-3 SPL Token multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. Its three signers are on-curve externally signable public keys. The mint and multisig are governed only by the immutable Token Program; no custom upgradeable program sits in the issuance path.",
     "upgradeability": {

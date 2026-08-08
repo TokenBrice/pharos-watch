@@ -15,9 +15,9 @@
   "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://u.tech/",
-    "provider": "United Stables transparency dashboard",
-    "attestorTier": "self",
+    "url": "https://u.tech/por",
+    "provider": "Chainlink Proof of Reserve feed on BNB Chain (u-por, linked from the issuer PoR page since July 2026; Ceffu provides custody per Ceffu's announcement, but no downloadable custodian attestation was retrievable and the feed's heartbeat/source metadata could not be verified)",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "mechanismArchetype": "fiat-cash",
@@ -117,7 +117,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "U is issuer-operated on Ethereum, BSC, and Tron. Ethereum/BSC use chain-local instances of the same 2/4 Safe; Tron uses a native 2/4 account permission. Those authorities directly control token minting, AutoOwner mint endpoints, and all mint-critical upgrades without a timelock.",
     "upgradeability": {
@@ -393,8 +393,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -420,14 +420,21 @@
         {
           "label": "Tron U token proxy",
           "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+        },
+        {
+          "label": "United Stables proof of reserve page (Chainlink oracle address)",
+          "url": "https://u.tech/por/"
+        },
+        {
+          "label": "Chainlink reference data directory, BNB Chain: United Stables U Reserves, porAuditor Stablemint Labs",
+          "url": "https://reference-data-directory.vercel.app/feeds-bsc-mainnet.json"
         }
       ],
-      "evidence": "Deployment-wide review covered Ethereum, BSC, and Tron token proxies plus their AutoOwner mint endpoints. Ethereum and BSC use chain-local 2/4 Safe instances with identical signers; Tron uses a native 2/4 account permission. The owner paths can mint directly, change AutoOwner limits, and immediately administer the mixed transparent/UUPS upgrade surfaces. AutoOwner's 20,000,000 U limit is per call without a cumulative or time-window bound. Current Safe/API, explorer source, storage, owner, permission, and whitelist reads were pinned on 2026-07-13.",
+      "evidence": "Deployment-wide review covered Ethereum, BSC, and Tron token proxies plus their AutoOwner mint endpoints. Ethereum and BSC use chain-local 2/4 Safe instances with identical signers; Tron uses a native 2/4 account permission. The owner paths can mint directly, change AutoOwner limits, and immediately administer the mixed transparent/UUPS upgrade surfaces. AutoOwner's 20,000,000 U limit is per call without a cumulative or time-window bound. Current Safe/API, explorer source, storage, owner, permission, and whitelist reads were pinned on 2026-07-13. Reconciliation review (2026-08-08): United Stables runs a live third-party Chainlink Proof of Reserve oracle - the United Stables U Reserves feed on BNB Chain returned 1,213,382,949 updated 2026-08-07, with Chainlink recording porType Off-chain, porSource Third-party and porAuditor Stablemint Labs - so reserve backing is continuously published by a party other than the issuer. Supervision is not prudential: the issuer terms state United Stables Limited has not obtained registration, authorization or licensing under MiCA, the Hong Kong Stablecoins Ordinance, the GENIUS Act or any securities or stablecoin law, and the only published report is a Ceffu custodian attestation of off-exchange custody balances rather than an accounting-firm reserve attestation against liabilities.",
       "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "reviewedAt": "2026-08-08"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

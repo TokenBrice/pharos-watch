@@ -100,19 +100,19 @@ describe("shared band resolution", () => {
     expect(resolveExitDelayBandMultiplier(Number.POSITIVE_INFINITY, bands)).toBeNull();
   });
 
-  it("keeps the queue ladder at-or-above and the minimum-redeem ladder strictly above", () => {
+  it("matches both descending ladders at-or-above their threshold", () => {
     const queue = EXIT_ROUTE_SCORING_TABLES.queueBacklogBands;
-    expect(resolveExitThresholdBandMultiplier(1, queue, "at-or-above")).toBe(0.65);
-    expect(resolveExitThresholdBandMultiplier(0.5, queue, "at-or-above")).toBe(0.8);
-    expect(resolveExitThresholdBandMultiplier(0, queue, "at-or-above")).toBe(0.9);
+    expect(resolveExitThresholdBandMultiplier(1, queue)).toBe(0.65);
+    expect(resolveExitThresholdBandMultiplier(0.5, queue)).toBe(0.8);
+    expect(resolveExitThresholdBandMultiplier(0, queue)).toBe(0.9);
 
-    // Load-bearing divergence between the two ladders: a minimum sitting
-    // exactly on a threshold takes the gentler band.
+    // Unified boundary semantics: a minimum sitting exactly on a threshold
+    // takes that threshold's band rather than the gentler one below it.
     const minimum = EXIT_ROUTE_SCORING_TABLES.minimumRedeemBands;
-    expect(resolveExitThresholdBandMultiplier(1_000_000, minimum, "above")).toBe(0.9);
-    expect(resolveExitThresholdBandMultiplier(1_000_001, minimum, "above")).toBe(0.75);
-    expect(resolveExitThresholdBandMultiplier(10_000, minimum, "above")).toBeNull();
-    expect(resolveExitThresholdBandMultiplier(10_001, minimum, "above")).toBe(0.9);
+    expect(resolveExitThresholdBandMultiplier(1_000_000, minimum)).toBe(0.75);
+    expect(resolveExitThresholdBandMultiplier(999_999, minimum)).toBe(0.9);
+    expect(resolveExitThresholdBandMultiplier(10_000, minimum)).toBe(0.9);
+    expect(resolveExitThresholdBandMultiplier(9_999, minimum)).toBeNull();
   });
 });
 

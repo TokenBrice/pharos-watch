@@ -108,7 +108,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

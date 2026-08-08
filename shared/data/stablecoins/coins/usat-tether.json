@@ -119,7 +119,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -135,7 +134,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions. The token and its transparent ProxyAdmin are both controlled immediately by the same legacy 3/5 multisig contract.",
     "upgradeability": {
@@ -260,17 +259,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-26",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USA₮ Reserve Report - May 2026",
-          "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+          "label": "Deloitte USA₮ Reserve Report - June 2026",
+          "url": "https://learn.anchorage.com/06.30.26_USAT-Stablecoin-Attestation-Report.pdf"
         }
       ]
     }

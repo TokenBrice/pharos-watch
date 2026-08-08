@@ -3,40 +3,49 @@
   "reserves": [
     {
       "name": "SGD cash",
-      "pct": 56.476785,
+      "pct": 47.860269,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed MAS-permitted safeguarding institution",
-      "riskFactors": ["counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
       "name": "Short-dated MAS/government SGD bills or eligible overnight reverse repos",
-      "pct": 43.523215,
+      "pct": 52.139731,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "Monetary Authority of Singapore or an eligible highly rated overnight reverse-repo counterparty",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-29",
-    "reviewer": "OpenAI Codex reserve curation after independent review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 31 May 2026",
-        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bcf4afadd295291e1be8_XSGD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+        "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 30 June 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
       },
       {
         "label": "StraitsX reserve-backing disclosures",
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "Curated 2026-07-29 after independent review: KK Yap & Associates SSAE 3000 (Revised) examination as of 31 May 2026 11:59 PM ST reports Cash SGD 15,013,117 and Bonds/notes ≤3 months residual maturity issued by MAS/government (or overnight reverse repos against AA-/Aa3 counterparties) SGD 11,569,694, totaling SGD 26,582,811 marked-to-market reserves versus SGD 26,568,488 XSGD in circulation. Percentages 56.476785% cash and 43.523215% short-dated MAS/government bills or eligible overnight reverse repos are calculated against that reserve total and re-derived during curation. StraitsX legal disclosures (effective 18 July 2026) independently corroborate 100% reserve backing in segregated trust accounts at MAS-permitted FIs (CIMB, DBS, SCB or other permitted FIs), held on trust for token-holders and excluded from the issuer's unsecured-creditor estate. The examination does not split the second category between bills and repos, establish a fixed liquidity horizon for that mixed category, or name the safeguarding institution. StraitsX /xsgd attestation list still tops out at 31 May 2026 as of this review (no later public report located).",
-    "compositionBasis": "KK Yap & Associates independent examination as of 31 May 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 11:59 PM SGT (report dated 2026-07-29, PDF read this pass): S$11,330,779 cash and S$12,343,929 of <=3-month MAS/government bonds or eligible overnight reverse repos (single combined category by design), totalling S$23,674,708 marked-to-market reserves against S$23,661,169 XSGD in circulation (coverage ~100.06%). The examination affirms MAS asset-category, daily mark-to-market, segregated-trust and pegged-currency requirements but does not split the bills/repo category or name the safeguarding institution.",
+    "compositionBasis": "KK Yap & Associates independent examination as of 30 June 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The independent examination discloses the complete current reserve allocation between cash and a defined short-dated MAS/government-bill or eligible overnight-repo category. It does not split that second category between bills and repos, identify the safeguarding institution, or publish provider-level allocation.",
     "knownUnknownExposurePct": 0,
@@ -44,14 +53,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "SGD cash",
-        "pct": 56.476785,
+        "pct": 47.860269,
         "disposition": "untracked-exogenous-asset",
         "rationale": "SGD cash is an external fiat reserve asset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Short-dated MAS/government SGD bills or eligible overnight reverse repos",
-        "pct": 43.523215,
+        "pct": 52.139731,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The independent report identifies this as a permitted SGD sovereign-bill or highly rated overnight reverse-repo reserve category; neither component is a tracked stablecoin dependency."
       }

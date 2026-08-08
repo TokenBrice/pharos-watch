@@ -102,7 +102,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
   "collateralQuality": "exotic",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -365,7 +364,7 @@
     "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Pinned Rootstock block 9077990 reads enumerate both and only direct USDRIF minters (RIF MocCore 0xA27024... and DOC bucket 0x697535...), the UUPS implementation, and the token's Governor; both LayerZero administration endpoints resolve to a 3-of-4 Rootstock multisig and a 2-of-4 Arbitrum Safe. Follow-up at Rootstock block 9114517 (2026-07-27): the recursive upgrade chain terminates in governance. ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def (EIP-1967 admin of both the Governor 0x3b8853... and VotingMachine 0x65a568... proxies) has owner() = 0x131564703310a294c1bfdc09d10ec0659f18e253, a transparent proxy whose own admin is the same ProxyAdmin and whose implementation is the Blockscout-verified Money on Chain UpgradeDelegator 0x6d1cca35aa431f2af0f0f2b9050c582b823ac731. In that verified source, upgrade(), upgradeAndCall(), and changeProxyAdmin() are all gated by onlyAuthorizedChanger(), which requires governor.isAuthorizedChanger(msg.sender); the UpgradeDelegator's governor() returns Governor 0x3b8853..., whose owner() is VotingMachine 0x65a568.... The Governor and VotingMachine proxy-upgrade path is therefore constrained by the same MOC token voting as the ordinary changer flow — upgrades execute only through MOC-vote-accepted changer contracts, with no enumerated keyholder bypass.",
+      "evidence": "Pinned Rootstock block 9077990 reads enumerate both and only direct USDRIF minters (RIF MocCore 0xA27024... and DOC bucket 0x697535...), the UUPS implementation, and the token's Governor; both LayerZero administration endpoints resolve to a 3-of-4 Rootstock multisig and a 2-of-4 Arbitrum Safe. Follow-up at Rootstock block 9114517 (2026-07-27): the recursive upgrade chain terminates in governance. ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def (EIP-1967 admin of both the Governor 0x3b8853... and VotingMachine 0x65a568... proxies) has owner() = 0x131564703310a294c1bfdc09d10ec0659f18e253, a transparent proxy whose own admin is the same ProxyAdmin and whose implementation is the Blockscout-verified Money on Chain UpgradeDelegator 0x6d1cca35aa431f2af0f0f2b9050c582b823ac731. In that verified source, upgrade(), upgradeAndCall(), and changeProxyAdmin() are all gated by onlyAuthorizedChanger(), which requires governor.isAuthorizedChanger(msg.sender); the UpgradeDelegator's governor() returns Governor 0x3b8853..., whose owner() is VotingMachine 0x65a568.... The Governor and VotingMachine proxy-upgrade path is therefore constrained by the same MOC token voting as the ordinary changer flow — upgrades execute only through MOC-vote-accepted changer contracts, with no enumerated keyholder bypass. M-2 evidence binding 2026-08-08: reconciliation continuous is structural - pinned Rootstock reads (blocks 9077990 and 9114517) prove the only USDRIF minters are the MoC protocol contracts (RIF MocCore and the DOC bucket), which mint exclusively against on-chain collateral under the sourced RIF On Chain V3 deployment; supply cannot exceed protocol-accounted collateral by construction.",
       "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Kimi data review",
       "reviewedAt": "2026-07-27",
       "disposition": "scoreable",
@@ -499,6 +498,5 @@
         ]
       }
     ]
-  },
-  "deploymentModel": "third-party-bridge"
+  }
 }

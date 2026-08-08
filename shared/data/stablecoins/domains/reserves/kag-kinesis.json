@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
@@ -31,9 +31,9 @@
         "url": "https://kinesis.money/audit-april-2026/"
       }
     ],
-    "rationale": "Kinesis states that KAG represents one ounce of fully allocated 999-fine silver, with biannual Bureau Veritas physical audits checked against the blockchain record and redemption through Brinks and Loomis. The April 2026 audit page identifies the latest listed gold-and-silver audit, but does not publish a KAG-only quantity split in the reviewed text.",
-    "compositionBasis": "Kinesis allocated-bullion and April 2026 audit disclosures",
-    "compositionAsOf": "2026-04-30",
+    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): silver 3,688,827.985 ozt fine equivalent as at ledger date 20 April 2026 vs 3,683,448.057 KAG per the issuer cover letter (excess matches the five ~1000ozt reserve bars). The BV report reconciles physical holdings to vault records only; the token comparison is the issuer's own cover-letter assertion. Composition is a single allocated-silver category.",
+    "compositionBasis": "Bureau Veritas April 2026 physical audit (ledger date 20 April 2026)",
+    "compositionAsOf": "2026-04-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve category is fully allocated physical silver, but the reviewed page does not expose current KAG-only bar quantities, vault-level shares, or redemption inventory.",
     "knownUnknownExposurePct": 0,

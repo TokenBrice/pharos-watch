@@ -88,7 +88,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
@@ -115,7 +114,6 @@
     "reviewedAt": "2026-07-15",
     "upstreamSuppressionRationale": "USDC and cbBTC collateral can carry issuer-side freeze or redemption risk for HYUSD backing, but neither issuer holds the tracked mint's SPL Token freeze authority or can alter ordinary HYUSD transfers. This explicit false is limited to direct holder control on the sole tracked HYUSD mint and does not suppress collateral or protocol risk."
   },
-  "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {

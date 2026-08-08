@@ -52,7 +52,7 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "JPYm is minted CDP-style via immutable BorrowerOperations on Celo; token owner on both Celo and Monad is the same 4/6 Mento Safe (Celo) / 4/7 Safe (Monad) at 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no modules or guard.",
     "controls": [
@@ -206,8 +206,6 @@
     "reconciliation": "continuous",
     "supervision": "none"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

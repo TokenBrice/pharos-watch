@@ -208,7 +208,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "CHFm is minted by Mento's immutable BorrowerOperations and ActivePool contracts for borrower debt and accrued interest. The token owner and proxy admin, plus the SystemParams ProxyAdmin owner, resolve to the same immediate 4/6 Mento Safe.",
     "controls": [
@@ -334,6 +334,8 @@
         }
       ]
     },
+    "supervision": "none",
+    "reconciliation": "not-applicable",
     "review": {
       "sources": [
         {
@@ -347,15 +349,17 @@
         {
           "label": "Safe Transaction Service - Celo",
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Mento V3 docs: CDP mechanism - USDm collateral locked per FX currency, no off-chain reserve leg",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
         }
       ],
-      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock.",
+      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock. Reconciliation review (2026-08-08): CHFm is issued only as CDP debt - borrowers lock USDm in per-currency TroveManager/StabilityPool contracts and mint the FX stable - so the mint path creates no off-chain reserve claim to reconcile, and reconciliation is not-applicable rather than unresolved. No named financial regulator and no third-party attestor appears in the Mento reserve documentation.",
       "reviewer": "Codex Safety Score V9 review",
-      "reviewedAt": "2026-07-13"
+      "reviewedAt": "2026-08-08"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "CHFm now has a Celo native token and a Monad spoke connected through Mento's Wormhole NTT deployment. The Celo NTT manager locks CHFm for the outbound path while the Monad spoke uses burn/mint, leaving cross-chain supply dependent on Wormhole's external validation network.",

@@ -37,7 +37,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "USP's Funding Manager reads Piku's Oracle Module at 0x433471901bA1A8BDE764E8421790C7D9bAB33552. Its verified implementation exposes authorized functions to set issuance and redemption prices, and Piku describes it as a manual price feed. A live Chainlink-compatible adapter at 0xb52eb13139905eb11c472100a1e86cb1961b8ef3 returned the same price at the reviewed block, but Piku does not disclose an independent source, cadence, or enforced failover; a separate documented adapter address reverted on standard reads.",
@@ -99,7 +98,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters. The token owner is a confirmed EOA (0x3D7DBEC2…). The only active minter is the Piku Funding Manager contract and cap = max uint256. The token ProxyAdmin is controlled by a 2/3 Safe; the Funding Manager and Oracle workflow modules resolve through a separate root InverterBeacon controlled by a 1/1 Safe.",
     "upgradeability": {

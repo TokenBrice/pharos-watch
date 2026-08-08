@@ -121,7 +121,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDN's sole minter and rebaser is the SMARDEX protocol UUPS proxy. Its 2-of-3 governance Safe can grant the currently empty upgrade-role chain and then replace the protocol implementation immediately; the direct USDN token and fixed fallback implementation are immutable.",
     "upgradeability": {
@@ -245,8 +245,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "eth-lst",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

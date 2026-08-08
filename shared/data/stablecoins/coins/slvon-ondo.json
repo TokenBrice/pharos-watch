@@ -17,7 +17,7 @@
   "geckoId": "ishares-silver-trust-ondo-tokenized-stock",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency",
     "provider": "Ankura Trust Company",
     "attestorTier": "niche",
     "cadence": "daily-nav"
@@ -67,7 +67,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. Ethereum, BSC, and HyperEVM use upgradeable token deployments administered through 2-hour timelocks; each reviewed timelock has a 5-of-9 Safe as an admin. The Solana Token-2022 mint authority is Ondo's GM program PDA, while a single EOA can upgrade that program without an on-chain delay.",
     "upgradeability": {
@@ -492,8 +492,6 @@
       ]
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "SLVon is an Ondo Global Markets token, and Ondo documents its token bridge as a LayerZero-based bridge for Global Markets assets, including bridging to HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",

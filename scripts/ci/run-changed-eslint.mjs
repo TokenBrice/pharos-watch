@@ -35,6 +35,10 @@ export function runChangedEslint({
       "--cache-location",
       ".cache/eslint/",
       "--max-warnings=0",
+      // Changed-file runs pass paths explicitly, so ESLint warns when one is
+      // covered by a globalIgnores entry (.claude/**, agents/**, caches). Those
+      // are deliberately unlinted, and the warning would fail --max-warnings=0.
+      "--no-warn-ignored",
       ...rest,
     ],
     { env, stdio: "inherit" },

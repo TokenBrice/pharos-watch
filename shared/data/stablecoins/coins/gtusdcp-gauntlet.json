@@ -58,7 +58,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "gtUSDCp has three direct immutable Morpho vault deployments; shares mint only against each chain's USDC deposits. Ethereum and Base parameter owners are 4-of-7 Gauntlet Safes, while Arbitrum uses the same seven signers at a 3-of-7 threshold.",
     "inheritedFrom": "usdc-circle",
@@ -164,8 +164,8 @@
         "evidence": "Inherited from reviewed usdc-circle parent."
       }
     ],
-    "reconciliation": "periodic",
-    "supervision": "prudential",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -198,7 +198,7 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC.",
+      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
       "reviewer": "Codex Safety Score V9 registry pass",
       "reviewedAt": "2026-07-15"
     }
@@ -241,8 +241,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

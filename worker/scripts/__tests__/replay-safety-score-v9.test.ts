@@ -218,6 +218,42 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     }
   });
 
+  it("replays a registry-fingerprint mismatch only behind --allow-registry-mismatch", async () => {
+    // A capture frozen before a curation commit carries the registry
+    // fingerprint of the tree it was captured from. Simulate that by rewriting
+    // the fingerprint and dropping the derived base identity so the normalizer
+    // re-derives it from the rewritten payload, exactly like a real capture
+    // replayed after the registry moved.
+    const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
+    const staleCapture = { ...capture, registryFingerprint: "b".repeat(64) };
+
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-replay-registry-"));
+    try {
+      const input = resolve(dir, "stale-registry.json");
+      const output = resolve(dir, "output.json");
+      writeTestFile(input, JSON.stringify(staleCapture));
+      const args = ["--input", input, "--output", output, "--published-at", String(PUBLISHED_AT_SEC)];
+
+      await expect(runSafetyScoreV9ReplayCli(args)).rejects.toThrow(
+        /registry fingerprint .* does not match fixed input/,
+      );
+
+      await runSafetyScoreV9ReplayCli([...args, "--allow-registry-mismatch"]);
+      const replayed = JSON.parse(readTestFile(output)) as {
+        pipeline: {
+          extension: { registryFingerprint: string };
+          candidate: { cards: { id: string }[] };
+        };
+      };
+      // The override makes the replay adopt the capture's registry identity, so
+      // the trusted compile path's extension-vs-input equality check still holds.
+      expect(replayed.pipeline.extension.registryFingerprint).toBe("b".repeat(64));
+      expect(replayed.pipeline.candidate.cards.map((card) => card.id)).toEqual(["usdc-circle"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("accepts only explicit whole-second times and v9-rc-N overrides", async () => {
     expect(parseSafetyScoreV9PublishedAtSec(PUBLISHED_AT_ISO)).toBe(PUBLISHED_AT_SEC);
     expect(parseSafetyScoreV9PublishedAtSec(String(PUBLISHED_AT_SEC))).toBe(PUBLISHED_AT_SEC);

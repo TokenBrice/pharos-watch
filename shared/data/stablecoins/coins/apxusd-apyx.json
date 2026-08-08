@@ -119,7 +119,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "apxUSD moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard. Row-level on-chain verification on 2026-07-20 confirmed the per-chain surfaces: Ethereum is the native home deployment (ApxUSD.sol, minted natively via the reviewed MinterV0/AccessManager path; no getCCIPPool or LayerZero endpoint() surface on the token), with the CCIP Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 locking Ethereum supply. Base (token getCCIPPool() = BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2) and BNB Chain (getCCIPPool() = BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49) are CCIP burn/mint representations; both pools return their chain's token from getToken(), are owned by the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, and carry identical 13813-byte bytecode. No LayerZero endpoint() surface was found on any deployment.",
@@ -291,7 +290,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Ethereum issuance uses MinterV0 and an OZ AccessManager: the 3/6 operator Safe holds the request/execute role, while MinterV0 reaches the token mint selector only after a four-hour delay. Base and BSC mint only through their configured Chainlink CCIP pools. The same signer set controls all three UUPS deployments through chain-local Safe instances, with a three-day Ethereum upgrade delay, seven-day Base delay, and no BSC delay.",
     "upgradeability": {
@@ -777,11 +776,12 @@
     }
   },
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://accountable.apyx.fi/",
-    "provider": "Accountable",
+    "type": "independent-audit",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Wolf & Company, P.C. monthly AICPA attestation opinions covering the platform's backing assets, of which apxUSD is the collateralized base token (latest report June 2026 as of 2026-08-08; the Accountable dashboard names apxUSD but runs on Apyx-deployed infrastructure and is treated as secondary)",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "launchDate": "2026-02-18",
   "mechanismArchetype": "rwa-credit-fund"

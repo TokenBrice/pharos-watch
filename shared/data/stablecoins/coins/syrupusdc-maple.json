@@ -21,8 +21,8 @@
   "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm",
+    "url": "https://maple.finance/transparency",
+    "provider": "The Network Firm (PoR programme launched 2026-05-07; maple.finance/transparency serves live AUM/treasury figures, but the announced TNF collateralization report itself remains 'coming soon' and is not yet published there)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "United States"
@@ -71,7 +71,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, and Base are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
@@ -320,7 +319,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "inheritedFrom": "usdc-circle",
     "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",

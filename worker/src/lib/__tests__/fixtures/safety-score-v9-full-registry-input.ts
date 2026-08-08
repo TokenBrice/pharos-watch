@@ -8,8 +8,13 @@ import {
   type NativeSafetyScoreV9Input,
 } from "../../safety-score-v9-native-input";
 
-// Keep reviewed registry evidence current at this deterministic V9 calibration snapshot.
-const CLOCK_SEC = 1_786_060_800;
+// Keep reviewed registry evidence current at this deterministic V9 calibration
+// snapshot. The clock must not predate the newest curated review date in the
+// registry: `researchReviewObservationState` rejects a reviewedAt later than the
+// scoring clock, so authoring a review advances this snapshot with it.
+// 2026-08-08: the reviewed mint reconciliation/supervision pass dated 14 assets
+// 2026-08-08, one day past the previous 2026-08-07 snapshot.
+const CLOCK_SEC = 1_786_147_200;
 const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
 function resourceRoute(assetId: string) {

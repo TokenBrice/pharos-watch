@@ -22,18 +22,22 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",
-    "provider": "ht.digital",
+    "provider": "ht.digital (Harris & Trotter digital) quarterly assurance reports alongside weekly self-published reserve reports; the quarterly series has a confirmed gap - the newest assurance report remains period 2026-04-30 (published 2026-06-19, full registry extracted 2026-08-08) while weekly self-reports run through 2026-08-03, so latestReport tracks the weekly series the composition review is anchored on",
     "attestorTier": "niche",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-04-30",
-      "publishedAt": "2026-06-19",
-      "assuranceMethod": "attestation",
+      "periodEnd": "2026-07-27",
+      "publishedAt": "2026-07-27",
+      "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex Safety Score V9 reserve review",
+      "reviewer": "PoR verification sweep 2026-08 (aligned to the transparency-API snapshot the composition review is built on; the quarterly ht.digital assurance series has a confirmed gap - newest remains period 2026-04-30 published 2026-06-19, while weekly self-published reserve reports run through 2026-08-03)",
       "confidence": "verified",
       "sources": [
+        {
+          "label": "Falcon transparency (weekly reserve reports and live API)",
+          "url": "https://app.falcon.finance/transparency"
+        },
         {
           "label": "HT Digital independent assurance report on Falcon USDf reserves - April 30, 2026",
           "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
@@ -206,7 +210,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDf uses an Ethereum transparent proxy whose ProxyAdmin is owned by a 4/6 Safe. Ethereum minting is delegated to a PreCollateralizedMinter; BSC, Base, and XDC use immutable Chainlink BurnMintERC20 deployments whose local token pools and default-admin Safes have been enumerated on-chain.",
     "upgradeability": {
@@ -549,7 +553,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDf uses Chainlink CCIP BurnMintTokenPools on BSC, Base, and XDC. Each verified pool directly holds the local MINTER_ROLE and is owned by a chain-local instance of the same reviewed 4/6 Safe; supply movement remains dependent on CCIP validation.",

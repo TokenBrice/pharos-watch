@@ -165,7 +165,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EUSD is a Reserve Protocol RToken: permissionless 1:1 basket mint/redeem. Protocol-level controls (pause, freeze, basket changes) require OWNER/PAUSER/FREEZER roles on a central Auth contract whose DEFAULT_ADMIN is a 3-of-5 Gnosis Safe; no on-chain timelock.",
     "controls": [
@@ -286,7 +286,6 @@
     "reconciliation": "not-applicable",
     "supervision": "none"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "eUSD is Ethereum-native (Reserve RToken); its Base and Arbitrum deployments are canonical-rollup-bridge lock-mint representations (Base L2StandardBridge and the Arbitrum Nitro token bridge, controller contracts read on-chain 2026-07-19/20).",

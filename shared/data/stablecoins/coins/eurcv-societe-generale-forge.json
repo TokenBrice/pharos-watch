@@ -28,12 +28,12 @@
     "attestorLicense": "EMI (MiCA)",
     "attestorTier": "self",
     "latestReport": {
-      "periodEnd": "2026-07-15",
+      "periodEnd": "2026-07-14",
       "publishedAt": "2026-07-15",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - SG-FORGE daily disclosure of 2026-07-14 (published next day)",
       "confidence": "verified",
       "sources": [
         {
@@ -249,7 +249,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "EURCV Ethereum mint is restricted to SG-FORGE's immutable registrar EOA. The token is a UUPS SmartCoin V4 proxy: the immutable technical EOA executes upgrades only after the registrar has authorized the candidate implementation; there is no separate proxy-admin slot.",
     "upgradeability": {
@@ -343,7 +343,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [
     {

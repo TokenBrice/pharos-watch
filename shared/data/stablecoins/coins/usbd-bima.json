@@ -290,7 +290,6 @@
     "reviewer": "GPT SOL-CORP-C wave6",
     "reviewedAt": "2026-07-22"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USBD is a native LayerZero Omnichain Fungible Token (OFT): its verified Ethereum DebtToken source imports @layerzerolabs/oft-evm/contracts/OFT.sol and is declared `contract DebtToken is OFT`, taking a LayerZero V2 endpoint in its constructor (send/quoteSend/lzReceive/setPeer present), so cross-chain supply moves via burn-on-source / mint-on-destination over LayerZero messaging — a regular OFT, not a lockbox adapter or a third-party liquidity bridge (the L2BEAT 'Across' reference is just a bridge that can route USBD, not its issuance path). Re-verified on-chain 2026-07-20: all six tracked deployments are a byte-identical 19,637-byte DebtToken OFT at the same CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c; endpoint() returns the LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c on ethereum/bsc and chain-specific LayerZero endpoints on hemi and sonic (0x6f475642a6e85809b1c36fa62763669b1b48dd5b, eid() 30329/30332), nibiru (0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd, eid 30369), and plume (0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, eid 30370); owner() is the same documented EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 on all six chains (eth_getCode = 0 on ethereum; the OFT owner/delegate reviewed under mintAuthority). OFT peer wiring is sparse: peers() on the ethereum token returns non-zero only for sonic (30332) and plume (30370). Native CDP minting via BorrowerOperations exists per chain (reviewed on ethereum 2026-07-14; Bima registry also lists markets on hemi/plume/sonic/bsc/nibiru). Per-application DVN security stack remains unreviewed, so cross-chain routes stay external-validated-network. DefiLlama additionally reports USBD supply under the raw chain labels GOAT and CORE, which do not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data.",
@@ -642,7 +641,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USBD is a Liquity-v1-fork CDP minted via BorrowerOperations against overcollateralized BTC LST/LRT vaults (150% MCR, per-collateral maxSystemDebt ceilings). No contract in the mint path is a proxy, but mint logic remains mutable by privilege: the BimaCore owner EOA (0xaca5d659364636284041b8d3acad8a57f6e7b8a5) can call DebtToken.authorizedMint() for an unbounded amount, repoint setLendingVaultAdapterAddress() at any contract (which then gets unbounded mint()), deploy new minting TroveManagers through the owner-gated Factory, and raise maxSystemDebt via TroveManager.setParameters(). The USBD token/OFT owner is a separate EOA (0xe3fbba95bb35be804696624dd1e9344a86e3cbc4).",
     "controls": [

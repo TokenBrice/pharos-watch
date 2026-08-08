@@ -259,7 +259,7 @@ export function resolveMintAuthorityStatusKind(
 
   if (
     summary.mintPath === "immutable-user-collateralized" &&
-    summary.authorityPosture === "none-resolved"
+    (summary.authorityPosture === "none-resolved" || summary.authorityPosture === "none-resolved-mint")
   ) {
     return "no-privileged-mint";
   }

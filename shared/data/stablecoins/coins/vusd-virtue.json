@@ -469,8 +469,6 @@
       }
     ]
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
@@ -605,7 +603,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "VUSD is on IOTA Rebased (Move VM). The package at 0xd3b63e...904f is immutable, but contains an admin module. An AdminCap object (0x38a7b38d...) is held by EOA/address 0xf67d0193e9cd65c3c8232dbfe0694eb9e14397326bdc362a4fe9d590984f5a12. AdminCap gates set_supply_limit, add_version, remove_module, and set_beneficiary \u2014 active admin privileges over mint supply.",
     "upgradeability": {

@@ -291,8 +291,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. The sole Celo deployment was verified on-chain as native Mento Broker issuance; the separate ValidatorsProxy authorization is latent under its current implementation, and no bridge representation carries the claim.",

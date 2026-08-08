@@ -140,8 +140,6 @@
     "reviewer": "Codex T64 access review",
     "reviewedAt": "2026-07-31"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ZARm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",

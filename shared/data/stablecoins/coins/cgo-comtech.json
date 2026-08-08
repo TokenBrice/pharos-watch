@@ -36,10 +36,11 @@
   "geckoId": "comtech-gold",
   "cmcSlug": "comtech-gold",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://comtechgold.com/proof-of-gold-audit",
-    "attestorTier": "niche",
-    "cadence": "monthly"
+    "provider": "ComTech FZCO self-signed gold-stock letters with issuer DMCC Tradeflow screenshots; quarterly custodian audits advertised but newest routine-audit entry is 2025-03-21",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {
@@ -65,7 +66,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "CGO's sole XDC token and its CGOController are direct, immutable deployments. The token owner is CGOController 0x21f74fbf81d68291704805d085982000babbf096. At the cutoff, the controller's owner, initiator, executor, and minter-wallet addresses all resolved to the same immediate 2-of-4 Safe at 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. Normal minting requires one Safe transaction to initiate a unique bar/warrant pair and a second Safe transaction to mint exactly 1,000 CGO, but there is no cumulative or time-window cap. The Safe can immediately replace all operational addresses or transfer token ownership to a new address, bypassing the controller's per-operation bound and exposing the token's uncapped owner-only mint function.",
     "upgradeability": {
@@ -203,7 +204,5 @@
       "address": "0x8f9920283470f52128bf11b0c14e798be704fd15",
       "decimals": 18
     }
-  ],
-  "deploymentModel": "single-chain",
-  "chainTier": "established-alt-l1"
+  ]
 }

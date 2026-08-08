@@ -43,8 +43,6 @@
     "attestorTier": "self",
     "cadence": "real-time"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "oracleRisk": {

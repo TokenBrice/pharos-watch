@@ -125,7 +125,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "UTY moves cross-chain via LayerZero's OFT standard in a hub-and-spoke design: Base is the hub holding the canonical UTY/yUTY ERC-7540 vault token, where a ShareOFTAdapter lockbox LOCKS tokens sent cross-chain (not burned); Avalanche and Katana are spoke chains where UTY is a mint/burn OFT against the locked hub balance. Each pathway is verified by at least 2 independent LayerZero DVNs (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind). On-chain confirmed: Base 0xBA515304... is the ERC4626/7540 vault; Avalanche 0xBA515304... (same CREATE2 address) is a LayerZero OFT spoke. Note: the registry's older Avalanche address 0xdbc5192a... is a separate legacy native-mint deployment, distinct from the live OFT spoke.",
@@ -283,7 +282,6 @@
     "reviewer": "GPT SOL-NR-A wave6",
     "reviewedAt": "2026-07-22"
   },
-  "chainTier": "established-alt-l1",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "reserves": [

@@ -69,6 +69,23 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * producer must itself be listed — an omitted import can change fact output
  * without changing the build identity. When adding an import to any listed
  * file, add its score-bearing transitive sources here too.
+ *
+ * `shared/lib/math.ts` (clampScore, roundScore, bandFromThresholds) and the
+ * `shared/lib/methodology-versions/` subtree reached through the two version
+ * re-export shims were closure holes: a rounding rule or a published methodology
+ * version could change with no movement in the build identity. Both are listed
+ * now.
+ *
+ * Deliberately still open: the *literal* transitive closure of the listed
+ * producers is ~131 further modules, almost all worker I/O infrastructure
+ * (`db.ts`, `cron-lease.ts`, `fetch-retry.ts`, `chain-registry.ts`) reached
+ * through the fact-set producers. Those shape when and how facts are fetched,
+ * not what the pure evaluator computes from them, and listing them would churn
+ * the manifest on every unrelated worker edit. Widening the list to them is a
+ * separate decision about what "score-bearing" means here, not an oversight.
+ * `shared/lib/format.ts` and the `methodology-changelogs/{liquidity-score,
+ * redemption-backstop}/v*.ts` entries sit just past this boundary for the same
+ * reason: they feed version *labels* rather than scoring behaviour.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
@@ -79,6 +96,12 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/exit-route-identity.ts",
   "shared/lib/exit-route-output.ts",
   "shared/lib/liquidity-score-version.ts",
+  "shared/lib/math.ts",
+  "shared/lib/methodology-versions/base.ts",
+  "shared/lib/methodology-versions/constants.ts",
+  "shared/lib/methodology-versions/current-version.json",
+  "shared/lib/methodology-versions/liquidity-score.ts",
+  "shared/lib/methodology-versions/redemption-backstop.ts",
   "shared/lib/p4-exit-route-capacity.ts",
   "shared/lib/redemption-backstop-capacity.ts",
   "shared/lib/redemption-backstop-configs/collateral-redeem.ts",

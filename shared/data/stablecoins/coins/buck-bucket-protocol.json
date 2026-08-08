@@ -2767,7 +2767,6 @@
       "decimals": 9
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
@@ -2894,7 +2893,6 @@
       ]
     }
   },
-  "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {

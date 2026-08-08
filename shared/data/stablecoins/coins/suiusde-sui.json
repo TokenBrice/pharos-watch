@@ -85,8 +85,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Ethena USDe backing",
@@ -181,7 +179,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "suiUSDe minting is controlled via a Treasury shared object that wraps the TreasuryCap. The single AdminRole holder (0xe3dbc438…) also holds the package UpgradeCap, giving one EOA full mint and upgrade authority.",
     "upgradeability": {

@@ -37,8 +37,8 @@
   "pythFeedId": "0x7e10170c23d7df62d301b2ade26854200ee584f3f3b84cb2e5195adf35c5b97f",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm",
+    "url": "https://maple.finance/transparency",
+    "provider": "The Network Firm (PoR programme launched 2026-05-07; maple.finance/transparency serves live AUM/treasury figures, but the announced TNF collateralization report itself remains 'coming soon' and is not yet published there)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "United States"
@@ -84,7 +84,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
@@ -194,7 +193,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "inheritedFrom": "usdt-tether",
     "summary": "syrupUSDT is Maple's ERC-4626 strategy-vault receipt for USDT lent to institutional borrowers; shares are minted against USDT deposits and do not create base USDT supply, so its mint authority is inherited from USDT (usdt-tether). The vault token is an immutable non-proxy contract with no upgrade path.",

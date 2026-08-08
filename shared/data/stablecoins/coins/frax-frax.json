@@ -311,7 +311,6 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Legacy FRAX is Ethereum-native; its tracked EVM deployments are Frax's own CrossChainCanonicalFRAX tokens administered by per-chain Frax 3-of-5 Safes (owner/timelock reads 2026-07-20, supply historically via Multichain swap-ins and FraxFerry), with the Fraxtal predeploy (WFRAX gas-token wrapper) native to Fraxtal. Peripheral non-EVM routes: NEAR via Rainbow Bridge lock-mint, Osmosis via Axelar, Solana via Wormhole. An EOA-administered ZKsync Era deployment is the one weak controller in the set.",

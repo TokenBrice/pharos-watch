@@ -139,7 +139,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Anzen documents the USDz/sUSDz bridge as powered by LayerZero for Ethereum, Base, and Blast, so cross-chain supply movement uses an external omnichain lock/burn-and-mint route.",
@@ -431,7 +430,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDz uses immutable bytecode on all five tracked deployments, but its control plane is chain-local. Ethereum deposit minting is SPCT-gated under a 2/6 admin Safe; Base's 2/7 owner Safe controls OFT peers; and 2/6 Arbitrum, 2/7 Blast, and 2/6 Manta owner Safes can replace each chain's currently uncapped direct minter.",
     "upgradeability": {

@@ -24,6 +24,15 @@ import {
 } from "@/lib/coverage";
 import { buildV9DependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
 
+/**
+ * Features whose whole cell becomes "Data n/a" when their query is missing, and
+ * which the matrix therefore names in its unavailable-feeds notice.
+ *
+ * `mintAuthority` is deliberately absent even though it is query-backed: only
+ * its score dimension degrades, while the curated route bucket stays true and
+ * keeps rendering. Naming it here would tell the reader the mint cells are Data
+ * n/a when they are not.
+ */
 const FEATURE_QUERY_AVAILABLE_KEYS = [
   "price",
   "safety",
@@ -74,7 +83,11 @@ const COVERAGE_FEATURE_QUERY_KEYS = {
   flows: "mintBurnFlows",
   blacklist: null,
   dependency: "reportCards",
-  mintAuthority: null,
+  // Half query-backed since safety 9.1: the curated route bucket needs no query,
+  // but the score and band are read from the published V9 mint component. It was
+  // left as `null` when the mint data moved, so a failed or blanked report-cards
+  // fetch silently rendered every mint score as unrated.
+  mintAuthority: "reportCards",
 } as const satisfies Record<CoverageFeatureKey, CoverageMatrixQueryKey | null>;
 
 function getCoverageMatrixQueries(input: CoverageMatrixModelInput) {

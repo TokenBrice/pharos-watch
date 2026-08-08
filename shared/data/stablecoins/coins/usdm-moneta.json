@@ -38,7 +38,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
-    "provider": "Charli3",
+    "provider": "Charli3 daily reserve verification feed (attribution confirmed via docs, but the portal.charli3.io endpoint rejects non-browser TLS handshakes on repeated checks and the only archive capture is a 2024 unrendered shell - statically unverifiable)",
     "attestorTier": "niche",
     "cadence": "real-time"
   },
@@ -151,7 +151,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -159,7 +158,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "established-alt-l1",
   "custodyModel": "institutional-regulated",
   "notices": [
     {
@@ -170,7 +168,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves; the mint is enforced on-chain by a PlutusV2 policy gated on a one-shot state-thread token whose counter datum reconciles cumulative supply, but the validator that guards the controlling token has not been decompiled, so the terminal signer set remains unattributed.",
     "controls": [
