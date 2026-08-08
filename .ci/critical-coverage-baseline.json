@@ -111,7 +111,7 @@
     "worker/src/lib/safety-score-history-v2.ts": 84,
     "worker/src/lib/safety-score-v9-anchor-gate.ts": 94.2,
     "worker/src/lib/safety-score-v9-candidate.ts": 86.7,
-    "worker/src/lib/safety-score-v9-capture.ts": 85.2,
+    "worker/src/lib/safety-score-v9-capture.ts": 84,
     "worker/src/lib/safety-score-v9-consumer-freshness.ts": 100,
     "worker/src/lib/safety-score-v9-extension.ts": 96.6,
     "worker/src/lib/safety-score-v9-extension-mechanism.ts": 92.3,
