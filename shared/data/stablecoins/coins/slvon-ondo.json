@@ -492,8 +492,6 @@
       ]
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "SLVon is an Ondo Global Markets token, and Ondo documents its token bridge as a LayerZero-based bridge for Global Markets assets, including bridging to HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",

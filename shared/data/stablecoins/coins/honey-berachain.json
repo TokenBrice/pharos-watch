@@ -102,7 +102,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -119,7 +118,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "proofOfReserves": {
     "type": "real-time",

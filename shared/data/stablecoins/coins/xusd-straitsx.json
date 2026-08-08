@@ -488,7 +488,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XUSD is issuer-minted natively by StraitsX on all three tracked networks: Ethereum and BNB Chain use the Circle-style MasterMinter pattern with chain-local 3-of-5 owner and master-minter Safes, and the Solana mint/freeze authority is the reviewed 3-of-10 SPL multisig. No third-party bridge carries the XUSD claim; cross-chain movement is issuer-native burn/mint through StraitsX rails.",

@@ -102,7 +102,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
   "collateralQuality": "exotic",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -499,6 +498,5 @@
         ]
       }
     ]
-  },
-  "deploymentModel": "third-party-bridge"
+  }
 }

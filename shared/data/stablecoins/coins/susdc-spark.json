@@ -357,7 +357,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "native",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

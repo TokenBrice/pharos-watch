@@ -240,8 +240,6 @@
       ]
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Spiko announced Chainlink CCIP integration for regulated money-market fund tokens across multiple blockchains. EURSAFO therefore carries external CCIP validation assumptions instead of an issuer-only native route.",

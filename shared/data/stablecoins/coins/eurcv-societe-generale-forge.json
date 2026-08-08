@@ -343,7 +343,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "reserves": [
     {

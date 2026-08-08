@@ -851,7 +851,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)",

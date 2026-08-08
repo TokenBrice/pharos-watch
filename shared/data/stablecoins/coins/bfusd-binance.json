@@ -105,8 +105,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",

@@ -352,7 +352,6 @@
     },
     "economicCapSemantics": "unbounded"
   },
-  "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
   "reserves": [

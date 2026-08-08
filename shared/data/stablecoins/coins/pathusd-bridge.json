@@ -184,8 +184,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",

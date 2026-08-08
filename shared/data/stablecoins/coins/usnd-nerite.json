@@ -61,7 +61,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "stage1-l2",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",
   "infrastructures": [

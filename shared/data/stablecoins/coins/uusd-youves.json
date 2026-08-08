@@ -668,7 +668,6 @@
       "decimals": 12
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
@@ -695,7 +694,6 @@
     "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-31"
   },
-  "chainTier": "established-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {

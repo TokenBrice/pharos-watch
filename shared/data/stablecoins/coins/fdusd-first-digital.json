@@ -623,7 +623,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

@@ -349,7 +349,6 @@
       "reviewedAt": "2026-07-29"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XSGD is issuer-minted natively by StraitsX on all eight networks (per-chain masterMinter/owner reads verified on the EVM deployments; Solana SPL multisig, Hedera HTS, and XRPL issued asset are issuer rails); no third-party bridge carries the claim.",

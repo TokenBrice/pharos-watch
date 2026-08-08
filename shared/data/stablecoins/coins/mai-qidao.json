@@ -167,7 +167,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. Current tracked deployments are QiDao-administered native MAI contracts with per-chain Safe owners; Fraxtal's native MAI was permanently sunset under QIP250 (ownership renounced, zero supply). Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",

@@ -157,7 +157,6 @@
     "candidates:annotations": "tsx scripts/maintenance/build-annotation-candidates.ts",
     "candidates:ai-summaries": "tsx scripts/maintenance/build-ai-summary-staleness-candidates.ts",
     "candidates:l2beat-bridge-routes": "tsx scripts/maintenance/build-l2beat-bridge-route-candidates.ts",
-    "candidates:l2beat-safety-score": "tsx scripts/maintenance/build-l2beat-safety-score-candidates.ts",
     "backfill:ai-summary-provenance": "node scripts/maintenance/backfill-ai-summary-provenance.mjs",
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
     "generate:public-datasets": "tsx scripts/maintenance/generate-public-datasets.ts",

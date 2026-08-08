@@ -440,7 +440,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "liveReservesConfig": {
     "adapter": "re-metrics",

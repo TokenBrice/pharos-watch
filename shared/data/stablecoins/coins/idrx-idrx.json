@@ -96,7 +96,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint and Lisk deployment. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",

@@ -632,7 +632,6 @@
       "reviewedAt": "2026-07-17"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",
   "notices": [

@@ -529,7 +529,6 @@
     "knownUnknownExposure": "The vault's complete assets() enumeration contains only the two identified tracked assets. Borrower and fractional-reserve strategy risk remains a mechanism-level exposure rather than an unidentified reserve slice.",
     "knownUnknownExposurePct": 0
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "cUSD is Ethereum-native (Cap vault) with an additional issuer-native TIP-20 deployment on Tempo; MegaETH is reached through a LayerZero OFT V2 whose only peer is the Ethereum OFT Adapter lockbox, with both ends administered by Cap's 3-of-5 Safe through 1-day timelocks.",

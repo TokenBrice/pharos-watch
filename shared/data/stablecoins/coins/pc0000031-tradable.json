@@ -61,8 +61,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "PC0000031 is tracked only on ZKsync in Pharos. The reviewed Tradable product docs and deal page do not document a separate cross-chain route for this tokenized asset row.",

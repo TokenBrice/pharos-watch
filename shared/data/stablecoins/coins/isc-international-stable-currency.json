@@ -55,7 +55,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
@@ -202,7 +201,6 @@
     "yieldSource": "ISC purchasing-power basket appreciation",
     "yieldType": "nav-appreciation"
   },
-  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

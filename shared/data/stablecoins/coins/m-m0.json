@@ -385,7 +385,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT or Hyperlane implementing hub lock/release plus spoke mint/burn logic. The 2026-07-20 cohort resolved the non-native route controls with on-chain reads, including Solana's documented M Portal program. The 2026-07-22 pass also maps DefiLlama's Hyperliquid supply label to the same chain-999 HyperEVM deployment and control domain; see per-route evidence.",

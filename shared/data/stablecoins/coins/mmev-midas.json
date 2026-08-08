@@ -126,8 +126,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "mMEV is issued natively by Midas on Ethereum, Plume, and Etherlink. Row-level on-chain verification on 2026-07-20: each deployment is a Midas-administered transparent proxy (EIP-1967 impl/admin slots read on all three chains), no LayerZero endpoint() surface exists on any of them, and the verified mint-authority review (2026-07-13) confirms each chain mints through its own Midas deposit-vault minter holding M_MEV_MINT_OPERATOR_ROLE plus Midas admin EOAs under chain-local 1-of-3 Safes. No third-party bridge carries the representation; cross-chain movement is issuer-operated.",

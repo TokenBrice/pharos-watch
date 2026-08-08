@@ -186,8 +186,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "bbqUSDC is tracked as one Ethereum MetaMorpho vault token. The reviewed Steakhouse and Morpho source set does not show a durable bridge route for this vault share.",

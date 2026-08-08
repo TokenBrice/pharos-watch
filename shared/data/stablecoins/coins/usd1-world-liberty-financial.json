@@ -310,7 +310,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USD1 cross-chain transfers use Chainlink CCIP Burn/Mint pools on nine catalog deployments with token-specific directory and on-chain pool evidence; the Tron deployment is the issuer's own upgradeable TRC20 token with no CCIP route, so it is native issuance. Those pools establish an external validated-network control path without proving that every token on Ethereum or BNB Chain was issued through CCIP rather than the issuer's native mint authority.",

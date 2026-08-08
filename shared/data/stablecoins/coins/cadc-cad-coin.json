@@ -517,7 +517,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "CADC is a Canadian dollar stablecoin issued by Loon/Paytrie and made available on supported chains through direct network launches. I did not resolve a separate bridge, lockbox, or liquidity route for durable supply, so Pharos treats current route risk as native issuance on each deployment.",

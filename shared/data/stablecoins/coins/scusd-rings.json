@@ -82,7 +82,6 @@
     "reviewer": "Grok T34 wave-2 unknown reduction",
     "reviewedAt": "2026-07-30"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",

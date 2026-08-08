@@ -112,8 +112,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

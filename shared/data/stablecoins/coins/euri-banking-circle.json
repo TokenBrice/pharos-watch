@@ -209,7 +209,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
     "adapter": "curated-validated",

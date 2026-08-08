@@ -230,7 +230,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Telcoin describes eUSD as bank-issued Digital Cash connected directly to on-chain balances, with public launch materials identifying native issuance on public chains. Because reviewed evidence points to issuer-native bank mint/redeem rails rather than a third-party bridge wrapper, eUSD is scored as issuer-native-burn-mint.",

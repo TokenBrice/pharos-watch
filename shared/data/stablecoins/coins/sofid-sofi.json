@@ -218,7 +218,6 @@
       }
     ]
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "mintAuthority": {

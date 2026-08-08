@@ -168,7 +168,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDai documentation shows an Arbitrum hub and public ecosystem references to LayerZero. The reviewed route is therefore an external interoperability-network path rather than purely issuer-native or canonical rollup bridging.",

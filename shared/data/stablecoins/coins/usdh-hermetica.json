@@ -94,7 +94,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Ethereum Settlement Wallet (contents not itemized in attestation)",

@@ -241,8 +241,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

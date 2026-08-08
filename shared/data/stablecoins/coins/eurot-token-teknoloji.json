@@ -193,8 +193,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EUROT is described by Token Teknoloji as created on its supported blockchains with euro backing for each token issued. No separate cross-chain mint, lockbox, or liquidity bridge route was resolved, so Pharos treats the profile as native issuance on each listed chain.",

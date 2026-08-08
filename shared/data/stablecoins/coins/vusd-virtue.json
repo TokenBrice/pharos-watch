@@ -469,8 +469,6 @@
       }
     ]
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

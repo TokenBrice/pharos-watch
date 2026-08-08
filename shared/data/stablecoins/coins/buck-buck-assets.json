@@ -72,7 +72,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

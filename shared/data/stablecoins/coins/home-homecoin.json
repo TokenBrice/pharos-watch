@@ -74,8 +74,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
-  "chainTier": "ethereum",
   "custodyModel": "institutional-unregulated",
   "proofOfReserves": {
     "type": "self-reported",

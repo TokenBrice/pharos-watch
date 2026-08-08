@@ -307,7 +307,6 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "collateralQuality": "rwa",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Tokenized treasury collateral",
@@ -398,6 +397,5 @@
       }
     }
   },
-  "chainTier": "unproven",
   "launchDate": "2026-01-27"
 }

@@ -123,8 +123,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "MYRC is presented by BLOX as a ringgit-backed stablecoin available on multiple chains, with no source-resolved external bridge or lockbox route. Pharos treats the current bridge-route profile as native issuance on the listed deployments.",

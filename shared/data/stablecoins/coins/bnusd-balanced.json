@@ -1209,8 +1209,6 @@
       ]
     }
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "bnUSD is minted on ICON (canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb, ~99% of supply) and every tracked off-ICON deployment is a burn-mint representation settled through Balanced's own xCall messaging: on Base, Avalanche, Arbitrum, BSC, and the newly verified Optimism deployment (0xdccd213951d8214fbaca720728474e2cef9d247b) only the chain's xCall contract can invoke handleCallMessage to mint, per the verified BalancedDollar source; on Injective the CW20 bnUSD minter is the cw_xcall contract. Token UUPS ownership and xCallManager ownership sit with the Balanced ops EOA 0x9920c455 (EVM) / inj106a2du (Injective). All rows re-verified on-chain 2026-07-20. DefiLlama's ICON/Archway/Havah raw chain labels (~98.9% of supply) have no Pharos chain mapping and remain an accepted unmatched-label pool routed to the policy maintainer.",

@@ -131,7 +131,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external validated-network exposure.",

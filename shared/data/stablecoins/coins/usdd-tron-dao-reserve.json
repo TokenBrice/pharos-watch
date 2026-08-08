@@ -613,8 +613,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "liveReservesConfig": {
     "adapter": "usdd-data-platform",

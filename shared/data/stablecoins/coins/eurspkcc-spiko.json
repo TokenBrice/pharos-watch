@@ -895,8 +895,6 @@
       "unresolvedQuestions": []
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "EURSPKCC is issued natively by Spiko on all six chains: every deployment was re-verified on-chain 2026-07-20 as the canonical Spiko fund share (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's 3/5 Argent multisig; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP (BurnWithFromMintTokenPool per EVM chain, enumerated as bridge-admin controls in the 2026-07-15 mint-authority sweep), so the profile tier reflects an external validated-network transfer rail over issuer-native deployments.",

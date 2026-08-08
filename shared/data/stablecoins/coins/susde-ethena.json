@@ -291,7 +291,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Those reviewed routes depend on LayerZero V2 messaging, the Ethereum source adapter, and destination token or adapter controls; Plasma, TON, and X Layer remain unresolved because the API does not list them.",

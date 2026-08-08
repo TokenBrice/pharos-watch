@@ -198,8 +198,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Wormhole is Securitize and VanEck's official interoperability provider for VBILL, powering token transfers between Securitize-issued deployments on Ethereum, Avalanche, BNB Chain, and Solana.",

@@ -389,7 +389,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "AUSD is natively issued by Agora on every tracked deployment (same deterministic contract family; per-network supply reconciled in the monthly Grant Thornton reserve attestations). In late 2025 Agora adopted LayerZero's OFT standard (AUSD0) to connect deployments by burn/mint; on EVM chains an Agora-owned adapter (0x9CaB7Ede13dc56652E44D2404E969C212f22689b, the on-chain BRIDGE_MINTER_ROLE holder) is deployed at the same address on 10 chains and relays through LayerZero Endpoint V2, so material cross-chain routes are externally validated rather than issuer-attested. Ethereum is the canonical home chain. Immutable zkEVM, Solana, and Sui are verified native deployments with no separately confirmed live bridge route at review time. Plasma and Plume carry the AUSD0 OFT token at the same deterministic address (Plasma runs a distinct OFT-era implementation). The 2024 Wormhole NTT integration was superseded by LayerZero OFT.",

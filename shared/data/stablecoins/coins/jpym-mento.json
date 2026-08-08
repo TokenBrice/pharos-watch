@@ -206,8 +206,6 @@
     "reconciliation": "continuous",
     "supervision": "none"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

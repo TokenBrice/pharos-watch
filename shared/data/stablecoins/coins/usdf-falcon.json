@@ -549,7 +549,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDf uses Chainlink CCIP BurnMintTokenPools on BSC, Base, and XDC. Each verified pool directly holds the local MINTER_ROLE and is owned by a chain-local instance of the same reviewed 4/6 Safe; supply movement remains dependent on CCIP validation.",

@@ -439,7 +439,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

@@ -157,8 +157,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "gtUSDC has one tracked Ethereum vault contract. The Across/World candidate signal did not resolve to a durable gtUSDC bridge route, so this is reviewed as a native single-chain vault token.",

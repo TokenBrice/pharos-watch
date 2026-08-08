@@ -284,8 +284,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

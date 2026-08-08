@@ -706,7 +706,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. Deployments not supported by these primary sources remain unresolved.",

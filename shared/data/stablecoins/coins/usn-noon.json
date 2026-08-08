@@ -358,7 +358,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "reserves": [

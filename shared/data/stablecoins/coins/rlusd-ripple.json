@@ -418,7 +418,6 @@
       }
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "RLUSD is issued by Ripple on Ethereum and XRPL as issuer-native stablecoin deployments, not as a holder-facing third-party bridge wrapper. Cross-chain route risk is therefore reviewed as issuer-native mint/redeem exposure.",

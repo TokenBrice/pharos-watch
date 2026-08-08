@@ -439,7 +439,6 @@
       ]
     }
   },
-  "deploymentModel": "canonical-bridge",
   "reserves": [
     {
       "name": "WFPS (Wrapped Frankencoin Pool Share)",

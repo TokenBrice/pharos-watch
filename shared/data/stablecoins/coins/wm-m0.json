@@ -285,7 +285,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "wrapper",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
     "summary": "wM is Ethereum-native (M0 WrappedM) and reaches Arbitrum, Base, and Solana through M0's own Wormhole-NTT Portal (hub lock/release, spoke mint/burn) and Plume through the Hyperlane-based M0 Portal Lite — all issuer-operated routes with the portal contracts verified on-chain 2026-07-20; the audited Wrapped M V2 migrations on Ethereum, Arbitrum, and Base were verified 2026-08-07.",

@@ -137,7 +137,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "FinChain's existing on-chain review identifies CCIP bridge pools among the FUSD minter set, and the issuer documents multichain FUSD deployments. Because cross-chain supply movement depends on Chainlink CCIP messaging/pools, FUSD is scored as external-validated-network.",

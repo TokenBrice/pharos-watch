@@ -129,8 +129,6 @@
     "reviewedAt": "2026-07-31",
     "upstreamSuppressionRationale": "USDT.e/Tether controls can impair JUSD collateral or redemption through the StablecoinBridge, but the reviewed JUSD token has no native holder-balance control; the upstream asset and bridge remain separately represented as reserve and bridge failure domains."
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "collateralQuality": "native",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

@@ -73,8 +73,6 @@
       "decimals": 8
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "dao-governance",

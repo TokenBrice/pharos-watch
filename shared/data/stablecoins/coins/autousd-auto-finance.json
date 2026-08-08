@@ -263,8 +263,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "autoUSD has one tracked Ethereum autopool contract and no modeled bridge route in Pharos. The Royco Dawn market wraps that Ethereum vault token into senior and junior tranche vaults.",

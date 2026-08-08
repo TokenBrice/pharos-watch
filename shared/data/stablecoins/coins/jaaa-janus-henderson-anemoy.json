@@ -96,8 +96,6 @@
     "reviewer": "Codex 2026-05-14 execution-ready expansion",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "JAAA represents fund shares issued by the Janus Henderson/Anemoy/Centrifuge tokenization stack. The reviewed sources support tokenized fund issuance rather than a user-facing external bridge route, so the multichain posture is treated as issuer-native at probable confidence.",

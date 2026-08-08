@@ -146,7 +146,7 @@ Do the research manually, or use the maintained skills when they match the task:
 - `reserve-research`: populate `reserves[]` composition for a single coin.
 - Mint Authority does not have a publication skill yet. Use the Phase 5f review rubric below; `scripts/maintenance/audit-mint-authority.ts` is only a local candidate producer.
 - `write-ai-summaries` (Claude-only): draft or refresh the `data/ai-summaries.json` entry.
-- `resilience-classify`: pick `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` overrides.
+- `resilience-classify`: pick `collateralQuality` and `custodyModel` overrides.
 - `pre-launch-update` (Claude-only): refresh milestones, launch phase, and featured content for pre-launch entries.
 - `coingecko-id-verif`: confirm a `geckoId` resolves to the correct asset before saving.
 
@@ -186,8 +186,6 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `tradedContracts`
 - `dependencies`
 - `canBeBlacklisted`
-- `chainTier`
-- `deploymentModel`
 - `collateralQuality`
 - `custodyModel`
 - `governanceQuality`
@@ -258,7 +256,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 `infrastructures[]` is project taxonomy. `dependencies[]` is reserve/mechanism dependency.
 
-L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review `chainTier`, `deploymentModel`, and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
+L2BEAT `type`, `category`, `hostChain`, stage, and risk fields are chain-route context. Use them to review bridge-route and host-chain exposure, but do not copy them into `infrastructures[]` and do not turn host chains into `dependencies[]` unless there is an actual stablecoin collateral/mechanism/wrapper dependency.
 
 Use `infrastructures[]` only when the coin directly belongs to a supported technical lineage:
 
@@ -792,7 +790,7 @@ Commit the sitemap output separately or amend it into the source commit without 
 You can also run the individual checks directly when iterating:
 
 - new redemption config -> `npm run check:redemption-backstops`
-- L2BEAT-backed chain route review -> `npm run candidates:l2beat-safety-score`, `npm run candidates:l2beat-bridge-routes`, and `npm run check:l2beat-snapshot-coverage`
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run check:l2beat-snapshot-coverage`
 - dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 

@@ -176,7 +176,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "GRAMS moves cross-chain through an issuer-operated burn/mint mechanism built into its own StableCoin contract: externalTransfer() routes tokens to the supply manager and burns them on the source chain, and externalTransferFrom() mints on the destination, both restricted to the issuer's onlySupplyManager role plus whenNotPaused and KYC/freeze compliance controls. There is no third-party bridge protocol (no LayerZero/OFT, Axelar ITS, Hyperlane, or Wormhole/NTT) and the identical multichain address reflects the same custom issuer contract (shared with Token Teknoloji's USDOT/EUROT/TRYT family), not an omnichain standard. The durable cross-chain supply path is issuer-native burn-mint.",

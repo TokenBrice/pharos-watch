@@ -38,8 +38,6 @@
       "decimals": 6
     }
   ],
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

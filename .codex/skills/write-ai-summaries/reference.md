@@ -11,7 +11,7 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 - **Classification flags**: `flags.backing`, `flags.governance`, `flags.pegCurrency`, `flags.yieldBearing`, `flags.navToken`
 - **Collateral & mechanism**: `collateral` (free-text description), `pegMechanism` (how peg is maintained)
 - **Reserve composition**: `reserves[]` — slices with `name`, `pct`, `coinId` + `depType` for dependency tracking, and the V9 scoring fields (`assetClass`, `issuerOrObligor`, `liquidityHorizon`, `maturityDaysMax`, `riskFactors`) that make a reserve-structure paragraph specific. For many coins this lives in the sidecar `shared/data/stablecoins/domains/reserves/<id>.json`, alongside `reserveReview` and `custodyProfile` — not the base file
-- **Resilience sub-factors**: `custodyModel`, `chainTier`, `collateralQuality`, `governanceQuality`, `deploymentModel` — valid values live in `shared/types/core.ts` (the source file wins). These drive the Selector and DDR verdicts, not V9 grades
+- **Resilience sub-factors**: `custodyModel`, `collateralQuality`, `governanceQuality` — valid values live in `shared/types/core.ts` (the source file wins). These drive the Selector and DDR verdicts, not V9 grades
 - **Jurisdiction**: `jurisdiction.country`, `jurisdiction.regulator`, `jurisdiction.license`
 - **Proof of reserves**: `proofOfReserves.type` (independent-audit / real-time / self-reported), `.provider`
 - **Dependencies**: `dependencies[]` — upstream stablecoins with `weight` and `type` (wrapper / mechanism / collateral)

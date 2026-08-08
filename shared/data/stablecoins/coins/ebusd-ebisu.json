@@ -1185,7 +1185,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ebUSD is natively issued by independent Ebisu CDP deployments on both Ethereum and Plasma (each with its own BorrowerOperations branches); the LayerZero OFT adapters in ebisufinance/ebisu-oft are a transfer layer, not the supply-carrying route.",

@@ -64,8 +64,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "nOPAL is listed across issuer-controlled deployments and Nest docs do not expose a separate public bridge topology. The reviewed route is issuer-native multichain issuance with probable confidence pending more explicit chain-route documentation.",

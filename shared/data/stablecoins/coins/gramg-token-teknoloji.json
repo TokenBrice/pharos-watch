@@ -230,7 +230,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "launchDate": "2022-11-01",

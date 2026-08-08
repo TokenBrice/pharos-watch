@@ -211,7 +211,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USDU has independent native deployments on BSC and Solana, each minted by the issuer on that chain (BSC owner is the reviewed 3-of-5 Safe); no live cross-chain supply route exists.",

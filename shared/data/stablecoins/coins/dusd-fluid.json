@@ -70,8 +70,6 @@
     "reviewer": "Codex Safety Score V9 access review; Kimi T06 wave-2 re-verification",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Fluid DUSD supply is confined to its canonical Arbitrum deployment; the single reviewed route is native issuance. No bridge route carries the claim.",

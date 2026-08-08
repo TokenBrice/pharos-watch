@@ -223,8 +223,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "sUSD1+ has one tracked BNB Chain deployment and is modeled as a staked wrapper of USD1+. No separate bridge route for the wrapper was verified, so the secondary row is triaged as single-chain/native.",

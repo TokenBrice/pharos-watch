@@ -218,7 +218,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USTB shares are issued as tokens on Ethereum, Solana, and Plume or held in book-entry form. Superstate documentation does not identify a bridge route controlling durable supply, so Pharos treats route risk as native issuance on the supported ledgers.",

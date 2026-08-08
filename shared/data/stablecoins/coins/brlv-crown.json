@@ -90,8 +90,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "BRLV has a Base canonical deployment and an Ethereum bridged variant in the existing on-chain review. The route is limited to Base/Ethereum and maps to the Base canonical bridge family, so it is scored as canonical-rollup-bridge.",

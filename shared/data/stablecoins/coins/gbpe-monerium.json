@@ -294,7 +294,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Monerium issues GBPe natively on each supported chain; per-chain owner() reads (2026-07-20) resolve to Monerium owner Safes rather than bridge contracts. Cross-chain movement is issuer-native burn/mint through linked Monerium accounts, not a public third-party bridge.",

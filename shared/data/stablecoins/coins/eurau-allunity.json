@@ -280,7 +280,6 @@
       "reviewedAt": "2026-07-21"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "AllUnity says EURAU integrates Chainlink CCIP for native zero-slippage burn/mint transfers across supported chains. Because durable cross-chain supply movement depends on CCIP's external interoperability network and issuer controls, the route is scored as external-validated-network.",

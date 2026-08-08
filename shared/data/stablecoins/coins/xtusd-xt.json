@@ -103,8 +103,6 @@
     "reviewedAt": "2026-05-12"
   },
   "implementationLaunchDate": "2022-07-07",
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "custodyModel": "cex",
   "reserves": [
     {

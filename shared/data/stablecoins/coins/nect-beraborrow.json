@@ -974,7 +974,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
@@ -1000,7 +999,6 @@
     "reviewer": "Kimi T44 unknown-reduction wave-2",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
   "collateralQuality": "exotic",
   "infrastructures": [
     "liquity-v2"

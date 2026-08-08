@@ -859,7 +859,6 @@
     "reviewer": "Codex T07 safety-v9 unknown-reduction w2 access review",
     "reviewedAt": "2026-07-31"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

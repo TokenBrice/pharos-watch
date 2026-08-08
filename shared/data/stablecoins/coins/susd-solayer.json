@@ -196,8 +196,6 @@
       ]
     }
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

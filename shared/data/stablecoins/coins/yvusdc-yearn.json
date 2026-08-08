@@ -138,8 +138,6 @@
       "decimals": 6
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

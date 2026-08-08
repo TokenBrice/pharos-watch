@@ -96,7 +96,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "governanceQuality": "single-entity",
   "liveReservesConfig": {
@@ -116,7 +115,6 @@
       }
     }
   },
-  "chainTier": "established-alt-l1",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",

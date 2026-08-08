@@ -220,7 +220,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Novatti issues AUDD natively on every tracked chain (Stellar, Ethereum, Solana, XDC, Base, Hedera, Redbelly, XRPL); per-chain mint authority resolves to issuer-controlled accounts, and the XRPL issuer account is cryptographically locked (no residual mint capability). No third-party bridge carries any representation.",

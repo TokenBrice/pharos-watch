@@ -85,8 +85,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "Ethena USDe backing",

@@ -63,8 +63,6 @@
     "reviewer": "SONG-2 Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

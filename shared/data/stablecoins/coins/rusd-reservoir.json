@@ -339,8 +339,6 @@
     "reconciliation": "continuous",
     "supervision": "none"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Reservoir rUSD is deployed across many chains and issuer docs list official contract addresses. No external bridge protocol was resolved, so reviewed evidence supports issuer/protocol-native multichain minting rather than a liquidity bridge.",

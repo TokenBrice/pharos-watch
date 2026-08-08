@@ -73,8 +73,6 @@
       "decimals": 6
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "multisig",

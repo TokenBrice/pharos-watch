@@ -158,7 +158,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "wrapper",
   "reserves": [

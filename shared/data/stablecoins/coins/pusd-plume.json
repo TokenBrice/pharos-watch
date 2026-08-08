@@ -114,7 +114,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",

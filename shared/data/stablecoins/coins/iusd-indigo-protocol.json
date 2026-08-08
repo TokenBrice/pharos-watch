@@ -228,7 +228,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
@@ -262,7 +261,6 @@
     "reviewer": "Codex Safety Score V9 access review; re-verified by Kimi T21 unknown-reduction wave 2",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "mature-alt-l1",
   "governanceQuality": "dao-governance",
   "reserves": [
     {

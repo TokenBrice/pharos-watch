@@ -306,7 +306,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Aegis has YUSD deployments on Ethereum, BNB Chain, and Avalanche, and issuer route evidence identifies LayerZero-powered bridging to Avalanche. The bridge route is therefore treated as external lock/burn-and-mint infrastructure.",

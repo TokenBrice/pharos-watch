@@ -144,7 +144,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USDKG has no cross-chain bridge: it is a standalone Tether-style token issued and burned natively on each chain by the issuer (Gold Dollar / OJSC Virtual Asset Issuer) via issue()/redeem() functions, with separate, non-identical contract addresses on Ethereum (0xe820...45e3) and Tron (TXZo12...nwEG). Supply on each chain is independently issuer-minted against gold reserves with no cross-chain dependency, so the route is single-chain-or-native rather than opaque.",

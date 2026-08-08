@@ -219,7 +219,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "sfrxUSD is native on Ethereum and Fraxtal; the six other tracked deployments are FraxZero LayerZero OFTs. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the Fraxtal hub and lockboxes provide the economic route. The OFT representations are external-validated bridge supply and are not direct Frax balance-sheet liabilities.",

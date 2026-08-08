@@ -264,7 +264,6 @@
       "reviewedAt": "2026-07-17"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDY is natively issued by Ondo on Ethereum, Plume, Solana, Sui, Aptos, Stellar, and Noble. On Arbitrum, Mantle, and Sei the token is a LayerZero burn/mint representation minted by Ondo's own OApp (LayerZero EndpointV2-verified, Ondo Safe-owned; verified on-chain 2026-07-20). Cosmos deployments on Osmosis, Mantra, and Injective are IBC vouchers of Noble-native ausdy whose Noble-side ICS-20 escrows match voucher supplies exactly (verified 2026-07-20). DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",

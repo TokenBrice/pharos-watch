@@ -218,7 +218,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "BRZ is an issuer-managed multichain real-backed token. No third-party route control was resolved from issuer docs; reviewed evidence supports issuer mint/redeem operations across supported chains rather than wrapped bridge supply.",

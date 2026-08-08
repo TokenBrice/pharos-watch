@@ -421,8 +421,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "ACRED has issuer-native Securitize deployments on all six tracked chains. Wormhole supplies the external validated messaging layer for near-instant native transfers through Securitize's own smart contracts; it does not create wrapped representations or control ordinary local issuance.",

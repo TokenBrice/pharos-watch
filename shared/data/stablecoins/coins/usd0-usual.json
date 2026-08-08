@@ -275,7 +275,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Usual documents USD0 cross-chain transfers across Ethereum, Arbitrum, Base, and BNB Chain using Chainlink CCIP for messaging and LayerZero for omnichain token transfers.",

@@ -413,7 +413,6 @@
       "unresolvedQuestions": []
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "YUSD is deployed on many chains and L2BEAT points its route signal at Across. Across is an intent/liquidity framework with non-minting route execution, so Pharos scores this as a liquidity-or-intent route rather than a canonical bridge or issuer-native path. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native YToken; other-chain rows confirmed YieldFi yUSD LayerZero OFT representations with uniform deployment/admin reads.",

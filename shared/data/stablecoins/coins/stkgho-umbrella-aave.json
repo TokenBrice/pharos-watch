@@ -199,7 +199,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

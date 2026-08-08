@@ -251,8 +251,6 @@
       ]
     }
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "reserves": [

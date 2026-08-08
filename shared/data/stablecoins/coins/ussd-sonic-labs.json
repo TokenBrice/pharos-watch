@@ -152,7 +152,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USSD uses Frax/LayerZero OFT-style omnichain infrastructure for cross-chain USSD minting, while CCTP v2 remains a secondary USDC redemption rail. The durable cross-chain risk is therefore the external LayerZero route plus scoped CCTP redemption exposure, not issuer-native CCTP alone. 2026-07-20 cohort dc-1 pass: Sonic row confirmed native; other-chain rows confirmed as the uniform USSD cross-chain deployment (uniform address, admin, implementation reads).",

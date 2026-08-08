@@ -70,8 +70,6 @@
     "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

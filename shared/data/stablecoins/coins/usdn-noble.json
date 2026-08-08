@@ -408,7 +408,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
     "adapter": "m0",

@@ -93,8 +93,6 @@
     "reviewer": "OpenAI Codex review",
     "sourceFreeRationale": "Agoric Inter Protocol PSM collateral design"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",

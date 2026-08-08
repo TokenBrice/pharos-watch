@@ -82,7 +82,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDCx is issued through Circle's xReserve architecture and transfers to USDC through Circle-controlled CCTP/Gateway rails. The route is reviewed as issuer-native burn/mint evidence; the penalty-only Safety Score blend can only drag weak routes and cannot lift USDCx's Decentralization score.",

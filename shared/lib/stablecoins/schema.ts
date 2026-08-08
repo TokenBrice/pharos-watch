@@ -162,8 +162,6 @@ const StablecoinMetaAssetSchemaShape = {
   dependencyReview: DependencyReviewSchema.optional(),
   canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
   blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
-  chainTier: StablecoinMetaEnumSchemas.chainTier.optional(),
-  deploymentModel: StablecoinMetaEnumSchemas.deploymentModel.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
   custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
   governanceQuality: StablecoinMetaEnumSchemas.governanceQuality.optional(),

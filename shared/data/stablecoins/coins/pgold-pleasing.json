@@ -71,7 +71,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "PGOLD has issuer-native mint surfaces on Arbitrum and Ethereum, an Arbitrum-to-ApeChain LayerZero lock/mint route, and Chainlink CCIP routes whose directory lists an Arbitrum lock/release pool and Ethereum and Pharos burn/mint pools. The external validator and token-pool controls make external-lock-mint the conservative aggregate tier.",

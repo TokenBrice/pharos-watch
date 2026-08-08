@@ -80,8 +80,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

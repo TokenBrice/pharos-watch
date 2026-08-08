@@ -54,7 +54,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDB is a Blast-native asset whose supply tracks stablecoins escrowed in the Ethereum USDYieldManager and minted through Blast's dedicated L1BlastBridge/L2BlastBridge pair. The route is external lock/mint infrastructure because holder-facing USDB supply depends on bridge-admin and yield-manager controls.",
@@ -177,7 +176,6 @@
     "reviewer": "TERRA-ULTRA access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "stage1-l2",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "liveReservesConfig": {
     "adapter": "blast-usdb-yield-manager",

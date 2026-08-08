@@ -243,8 +243,6 @@
     "reconciliation": "continuous",
     "supervision": "none"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "AUDm has a single Celo deployment in the reviewed metadata and Mento's docs describe Mento stables as available on Celo. No material bridge route is resolved for this row.",

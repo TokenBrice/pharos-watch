@@ -211,7 +211,6 @@
     "reviewer": "GPT SOL-NR-A wave6",
     "reviewedAt": "2026-07-22"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "reserves": [
     {

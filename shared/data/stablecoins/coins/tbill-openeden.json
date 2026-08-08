@@ -198,7 +198,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "OpenEden TBILL is issued on multiple chains for eligible investors; reviewed sources show issuer-controlled tokenization and mint/redeem access rather than a public third-party bridge route.",

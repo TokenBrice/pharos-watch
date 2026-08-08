@@ -94,8 +94,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "reserves": [
     {
       "name": "USDC held in the WEMIX3.0 Treasury",

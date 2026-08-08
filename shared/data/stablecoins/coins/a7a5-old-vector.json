@@ -141,7 +141,6 @@
     "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
     "yieldType": "governance-set"
   },
-  "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",

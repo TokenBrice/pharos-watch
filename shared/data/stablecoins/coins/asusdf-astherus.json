@@ -105,8 +105,6 @@
     "reviewer": "Grok T01 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "wrapper",

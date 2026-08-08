@@ -238,8 +238,6 @@
       "reviewedAt": "2026-07-16"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "USDm is tracked on Celo plus additional chains; candidate evidence points to Celo/canonical bridge infrastructure rather than a separate issuer bridge. The route is scored as canonical bridge exposure with probable confidence.",

@@ -366,7 +366,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "deploymentModel": "native-multichain",
   "reserves": [
     {
       "name": "dForce crypto collateral and major-stablecoin reserve pool",

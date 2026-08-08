@@ -409,7 +409,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-unregulated",
   "liveReservesConfig": {
     "adapter": "curated-validated",

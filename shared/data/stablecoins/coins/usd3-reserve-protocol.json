@@ -77,7 +77,6 @@
     "reviewedAt": "2026-07-30",
     "upstreamSuppressionRationale": "Collateral tokens inside the USD3 basket (USDC via Aave, Compound, and Steakhouse wrappers; USDS via Savings USDS) are issuer-freezable upstream assets; an upstream freeze could impair redemption liquidity or claim value, but it cannot freeze or restrict a holder's USD3 balance or transfers on either deployment. Those exposures remain reserve-quality and dependency risks, not USD3 blacklistability."
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "USD3 is issued natively on Ethereum by Reserve Protocol. Its Base deployment is an immutable OptimismMintableERC20 representation whose constructor-set bridge is the canonical Base L2StandardBridge and whose remote token is Ethereum USD3; it is not issuer-native multichain issuance or a liquidity bridge.",

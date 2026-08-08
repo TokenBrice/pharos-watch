@@ -137,7 +137,6 @@
       ]
     }
   },
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "cgUSD has one tracked Base deployment: a direct, non-proxy ERC-4626 rebasing vault administered by a TimelockController (10s delay, 2-of-11 Safe proposer). Users mint natively on Base by depositing USDC/USDT, and no reviewed Cygnus source shows durable supply depending on a cross-chain bridge route. Scored as single-chain/native.",
@@ -301,6 +300,5 @@
     "yieldSource": "cgUSD daily T-bill rebase",
     "yieldType": "rebase"
   },
-  "chainTier": "stage1-l2",
   "launchDate": "2024-02-20"
 }

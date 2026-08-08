@@ -894,7 +894,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "VNXAU is a VNX-issued multichain gold token with seven independently mintable native deployments. All seven were verified on-chain 2026-07-20: the four EVM deployments are VNXDGR proxies owned by VNX's chain-local VNXManager/role-0 EOAs, the Solana SPL mint authority is VNX's issuer keypair, the Tezos FA2 contract is owned by VNX's tz1 account, and the Stellar asset is issued by VNX's own account. No independent bridge protocol carries the claim, so route risk is issuer-native multichain issuance.",

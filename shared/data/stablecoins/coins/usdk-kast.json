@@ -278,7 +278,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDK is a Solana M extension, not native unbridged issuance. Its mint-authority PDA wraps Portal-delivered M in an extension vault; M0 documents that Solana M is minted by the M0 Portal against M locked in the Ethereum HubPortal through Wormhole NTT.",

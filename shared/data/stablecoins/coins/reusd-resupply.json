@@ -146,7 +146,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "governanceQuality": "dao-governance",
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",

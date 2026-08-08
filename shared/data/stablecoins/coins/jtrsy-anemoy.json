@@ -98,8 +98,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "JTRSY uses Centrifuge V3's native burn-and-mint share bridge. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the official deployment registry lists the complete Ethereum, Base, Arbitrum, Avalanche, Plume, BNB Chain, Monad, and Solana inventory.",

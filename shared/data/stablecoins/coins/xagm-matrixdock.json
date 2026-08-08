@@ -333,8 +333,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XAGm is tracked on Ethereum and Sui, and Matrixdock says the Sui deployment is natively issued rather than a wrapped bridge asset. The deployment model is corrected to native-multichain and the route is scored as issuer-native mint/redeem exposure.",

@@ -171,8 +171,6 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "MXNe is issuer-minted natively by Brale on Base (MINTER_ROLE verified on-chain), Solana, and Stellar; no bridge carries the claim.",

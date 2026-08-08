@@ -128,8 +128,6 @@
     "reviewer": "OpenAI Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

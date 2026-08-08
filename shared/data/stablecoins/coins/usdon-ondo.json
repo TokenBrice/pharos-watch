@@ -146,7 +146,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDon is an Ondo Global Markets asset, and Ondo documents a LayerZero-based token bridge for Global Markets assets across Ethereum, BNB Chain, Solana, and HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",

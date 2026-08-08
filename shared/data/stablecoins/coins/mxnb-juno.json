@@ -109,7 +109,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Juno/Bitso documents MXNB issuance and redemption through issuer APIs and lists MXNB on Arbitrum as an issuer stablecoin rather than a wrapped bridge asset. No separate bridge protocol was verified, so the route is reviewed as issuer-native mint/redeem across supported chains.",

@@ -83,8 +83,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

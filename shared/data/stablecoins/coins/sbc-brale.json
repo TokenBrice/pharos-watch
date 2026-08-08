@@ -602,7 +602,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Brale documents stablecoin issuance APIs that can mint and redeem branded stablecoins across supported networks, including SBC. The route is reviewed as issuer-native burn/mint rather than an unaffiliated bridge route.",

@@ -436,7 +436,6 @@
     "reviewer": "Kimi T23 unknown-reduction wave-2 research",
     "reviewedAt": "2026-07-30"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

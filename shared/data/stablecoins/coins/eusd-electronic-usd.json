@@ -286,7 +286,6 @@
     "reconciliation": "not-applicable",
     "supervision": "none"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "eUSD is Ethereum-native (Reserve RToken); its Base and Arbitrum deployments are canonical-rollup-bridge lock-mint representations (Base L2StandardBridge and the Arbitrum Nitro token bridge, controller contracts read on-chain 2026-07-19/20).",

@@ -63,7 +63,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "bUSD0 inherits USD0's multichain route surface. Usual documents USD0 and USUAL deployments across Ethereum, Arbitrum, Base, and BNB Chain with Chainlink CCIP and LayerZero supporting unified liquidity, so the bridge route is scored as an external validated-network dependency.",

@@ -245,8 +245,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "collateralQuality": "eth-lst",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",

@@ -410,8 +410,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "single-chain",
-  "chainTier": "ethereum",
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

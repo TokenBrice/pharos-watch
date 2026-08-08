@@ -293,7 +293,6 @@
     "reviewer": "Codex Wave 8 access review",
     "reviewedAt": "2026-07-15"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "WMXN is natively issuer-minted by Ripio on all six tracked chains (same contract address everywhere; MINTER_ROLE held by the issuer EOA 0x466c02e2 plus Ripio's rate-limited minter contracts). Cross-chain transfers use Ripio's own verified burn-mint bridge (0x465e6423 depositForBridge/burnFrom -> fulfillBridgeMint -> LimitedMinterBridge 0x46167cb0 mintTo, 100,000 WMXN/day cap per chain, BRIDGE_OPERATOR EOAs 0x5ca3f8ee/0xbc924f70, admins issuer EOA + 4/7 Safe 0x2b839174), re-verified on-chain 2026-07-20. No third-party or externally validated bridge holds mint rights on any tracked deployment.",

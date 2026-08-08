@@ -166,7 +166,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "AUDF is integrated with LayerZero and Stargate for cross-chain interoperability. Because Stargate/LayerZero introduces external bridge and messaging infrastructure, Pharos scores AUDF as external lock/mint route exposure rather than native-only issuance.",

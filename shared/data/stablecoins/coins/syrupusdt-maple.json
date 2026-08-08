@@ -84,7 +84,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",

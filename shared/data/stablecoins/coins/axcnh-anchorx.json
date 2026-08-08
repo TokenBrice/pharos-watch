@@ -118,7 +118,6 @@
       "risk": "very-low"
     }
   },
-  "deploymentModel": "native-multichain",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",

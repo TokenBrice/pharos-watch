@@ -65,8 +65,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Ondo Global Markets assets use the Ondo Bridge, which documents LayerZero OFT architecture for GM assets in addition to USDY. Because IAUon is an Ondo GM asset and route accounting depends on that external OFT stack, it is scored as external-lock-mint.",

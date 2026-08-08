@@ -354,8 +354,6 @@
       "reviewedAt": "2026-07-13"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "CHFm now has a Celo native token and a Monad spoke connected through Mento's Wormhole NTT deployment. The Celo NTT manager locks CHFm for the outbound path while the Monad spoke uses burn/mint, leaving cross-chain supply dependent on Wormhole's external validation network.",

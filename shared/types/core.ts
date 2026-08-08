@@ -658,17 +658,6 @@ export interface DependencyWeight {
   type?: DependencyType;
 }
 
-export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
-export type ChainTier = (typeof CHAIN_TIER_VALUES)[number];
-
-export const DEPLOYMENT_MODEL_VALUES = [
-  "single-chain",
-  "canonical-bridge",
-  "third-party-bridge",
-  "native-multichain",
-] as const;
-export type DeploymentModel = (typeof DEPLOYMENT_MODEL_VALUES)[number];
-
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
 export type CollateralQuality = (typeof COLLATERAL_QUALITY_VALUES)[number];
 
@@ -894,8 +883,6 @@ export const VARIANT_KIND_VALUES = [
 ] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
 export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
-export const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
-export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
 export const GovernanceQualitySchema = z.enum(GOVERNANCE_QUALITY_VALUES);
@@ -1048,8 +1035,6 @@ export interface StablecoinMeta {
   dependencyReview?: DependencyReview;
   canBeBlacklisted?: BlacklistabilityStatus;
   blacklistabilityReview?: BlacklistabilityReview;
-  chainTier?: ChainTier;
-  deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;

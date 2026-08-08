@@ -226,7 +226,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

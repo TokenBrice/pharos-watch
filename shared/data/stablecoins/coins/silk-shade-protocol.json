@@ -132,8 +132,6 @@
     "reviewer": "Kimi T08 wave-2 access review",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "dao-governance",

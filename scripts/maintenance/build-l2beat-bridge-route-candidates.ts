@@ -82,11 +82,10 @@ function renderProtocolList(row: L2BeatBridgeRouteReviewRow): string {
 function renderReviewRows(rows: readonly L2BeatBridgeRouteReviewRow[]): string[] {
   if (rows.length === 0) return ["_None._"];
   return [
-    "coin | deploymentModel | current tier | suggested tier | L2BEAT protocols | reasons | notes",
-    "--- | --- | --- | --- | --- | --- | ---",
+    "coin | current tier | suggested tier | L2BEAT protocols | reasons | notes",
+    "--- | --- | --- | --- | --- | ---",
     ...rows.map((row) => [
       `${row.symbol} (${row.coinId})`,
-      row.deploymentModel,
       row.currentBridgeRouteTier,
       row.suggestedBridgeRouteTier,
       renderProtocolList(row),

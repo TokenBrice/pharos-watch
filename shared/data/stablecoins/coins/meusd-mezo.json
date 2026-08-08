@@ -347,7 +347,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [
     "liquity-v1"

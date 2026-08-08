@@ -528,8 +528,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USTBL is one of Spiko's tokenized fund shares deployed across multiple chains. Spiko announced Chainlink CCIP as its interoperability standard for compliance-aware cross-chain transfers, so Pharos scores the route as external validated-network exposure.",

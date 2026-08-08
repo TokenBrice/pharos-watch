@@ -122,8 +122,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "mRe7YIELD is a Midas liquid yield token with multichain distribution, and the workflow candidate identifies Across as the material route surface. Because Across is an intent/liquidity framework, the route is reviewed as liquidity-route risk. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; Etherlink row confirmed uniform Midas deployment; Starknet row remains unresolved (non-EVM).",

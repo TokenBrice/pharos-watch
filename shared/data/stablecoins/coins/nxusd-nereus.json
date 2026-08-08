@@ -485,8 +485,6 @@
     "reviewer": "GPT SOL-CORP-C wave6; Kimi T57 wave-2 re-verification",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Nereus issued distinct owner-mintable NXUSD contracts on Avalanche and Polygon. No lockbox or third-party bridge contract was identified, so the two deployments are treated as issuer-native issuance rather than one bridged token.",

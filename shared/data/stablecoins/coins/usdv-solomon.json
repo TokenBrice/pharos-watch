@@ -137,8 +137,6 @@
     "reviewer": "Kimi T21 unknown-reduction wave 2 access review",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",

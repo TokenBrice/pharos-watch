@@ -520,7 +520,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "TrueUSD has four issuer-native mintable deployments (Ethereum, BSC, Avalanche, Tron) whose controllers match the reviewed mintAuthority profile; the Polygon, Arbitrum, and Optimism deployments are canonical-bridge lock-mint representations (Polygon PoS ChildChainManager, Arbitrum L2ERC20Gateway, OP L2StandardBridge), the Fantom deployment is a legacy Multichain representation controlled by the defunct Multichain MPC EOA, and the NEAR deployment is a Rainbow Bridge factory representation.",

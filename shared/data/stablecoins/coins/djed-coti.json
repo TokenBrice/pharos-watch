@@ -154,8 +154,6 @@
     },
     "economicCapSemantics": "bounded"
   },
-  "chainTier": "mature-alt-l1",
-  "deploymentModel": "single-chain",
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",

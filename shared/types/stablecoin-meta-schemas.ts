@@ -105,10 +105,8 @@ import {
 } from "./core";
 import {
   BridgeRouteRiskTierSchema,
-  ChainTierSchema,
   CollateralQualitySchema,
   CustodyModelSchema,
-  DeploymentModelSchema,
   GovernanceQualitySchema,
   OracleRiskTierSchema,
 } from "./core";
@@ -1286,8 +1284,6 @@ export const FeaturedContentSchema: z.ZodType<FeaturedContent> = z
   .strict();
 
 export const StablecoinMetaEnumSchemas = {
-  chainTier: ChainTierSchema,
-  deploymentModel: DeploymentModelSchema,
   collateralQuality: CollateralQualitySchema,
   custodyModel: CustodyModelSchema,
   governanceQuality: GovernanceQualitySchema,

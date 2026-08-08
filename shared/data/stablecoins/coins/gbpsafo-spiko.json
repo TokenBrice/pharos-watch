@@ -196,8 +196,6 @@
       "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI."
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko describes its own infrastructure for issuing, operating, and monitoring regulated fund tokens across EVM networks, Starknet, and Stellar with minimal external dependencies. For GBPSAFO, no separate bridge protocol was verified, so the reviewed route is issuer-operated multichain issuance rather than a third-party bridge rail.",

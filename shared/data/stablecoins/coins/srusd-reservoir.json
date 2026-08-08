@@ -197,8 +197,6 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "srUSD is a Reservoir wrapper with Ethereum and Berachain deployments. Reviewed Reservoir materials show protocol-owned contract deployments but do not point to a third-party bridge, so Pharos classifies the route as issuer/protocol-native at probable confidence.",

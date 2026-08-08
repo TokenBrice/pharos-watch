@@ -59,8 +59,6 @@
     "reviewer": "Codex RWA expansion review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified. 2026-07-20 cohort dc-1 pass: Plume and Ethereum rows both confirmed issuer-native Nest deployments (uniform address + uniform owner reads).",

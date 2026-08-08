@@ -139,7 +139,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Anzen documents the USDz/sUSDz bridge as powered by LayerZero for Ethereum, Base, and Blast, so cross-chain supply movement uses an external omnichain lock/burn-and-mint route.",

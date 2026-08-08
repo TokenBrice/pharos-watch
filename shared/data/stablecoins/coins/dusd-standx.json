@@ -123,7 +123,6 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "StandX documents DUSD as chain-native on Solana and BNB Chain with StandX Gateway components handling minting and redemption. No third-party bridge route was verified, so the reviewed topology is issuer-native mint/redeem on each supported chain.",

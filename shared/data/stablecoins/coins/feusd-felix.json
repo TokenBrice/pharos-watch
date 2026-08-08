@@ -726,7 +726,6 @@
       ]
     }
   },
-  "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "infrastructures": [
     "liquity-v2"

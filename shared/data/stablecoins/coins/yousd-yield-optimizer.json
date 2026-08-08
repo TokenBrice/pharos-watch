@@ -49,7 +49,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "yoUSD is issued independently as a local ERC-4626 vault on Base, Ethereum, and Arbitrum. YO's gateway documentation says deposits and redemptions occur independently on each chain and shares received on one chain can only be redeemed there, so no bridge control carries the issuance claim.",

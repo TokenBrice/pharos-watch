@@ -130,8 +130,6 @@
     "reviewer": "Grok T16 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "unproven",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "WEUSD moves cross-chain via PicWe's own issuer-operated burn-on-source / mint-on-destination route. PicWe's cross-chain-transfer docs state \"Source chain burns, target chain mints\" over a self-built native bridge (\"No Wormhole. No LayerZero. No third-party risk\") with PicWe-operated keepers signing and verifying every cross-chain message. On-chain this is confirmed: the EVM token (identical CREATE2 address 0xdd73... on bsc/base/arbitrum/plume) is a plain ERC20 + AccessControl with no LayerZero/Wormhole/OFT interface, so cross-chain mints flow purely through MINTER_ROLE held by a PicWe admin EOA plus the mint/redeem contract, and on Movement through the weusd_cross_chain_gas cross_mint_role_contract relayer (batchMintWeUSDCrossChain). The durable supply path is therefore issuer-native burn/mint, not an external validated network, canonical bridge, or liquidity route. Trust posture is weak: keeper validation has no published external attestation or audit, control keys are concentrated PicWe EOAs with no multisig/timelock, and the token trades off-peg (~$0.91) under disputed backing.",

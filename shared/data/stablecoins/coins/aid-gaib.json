@@ -411,7 +411,6 @@
       "risk": "low"
     }
   },
-  "deploymentModel": "native-multichain",
   "launchDate": "2025-10-31",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",

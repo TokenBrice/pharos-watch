@@ -209,7 +209,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "Ethereum sDAI is the native ERC-4626 savings vault. The Base and OP Mainnet contracts are immutable OptimismMintableERC20 representations whose BRIDGE is the chain-local L2StandardBridge and whose REMOTE_TOKEN is Ethereum sDAI, so both routes use the canonical OP Stack lock/mint bridge rather than a Sky PSM or third-party bridge. A near-synchronous 2026-07-21 totalSupply snapshot attributes 144,534.700637683482349953 sDAI, or 0.0984226812% of canonical Ethereum supply, to the two bridge representations.",

@@ -287,7 +287,6 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",

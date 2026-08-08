@@ -446,7 +446,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
     "adapter": "single-asset",

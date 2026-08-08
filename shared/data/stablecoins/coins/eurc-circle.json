@@ -778,7 +778,6 @@
       ]
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EURC uses Circle CCTP V2 native burn-and-mint transfers across supported networks including Ethereum, Avalanche, Base, and Solana, so durable cross-chain movement depends on Circle issuer-native mint/burn infrastructure rather than a third-party liquidity bridge.",

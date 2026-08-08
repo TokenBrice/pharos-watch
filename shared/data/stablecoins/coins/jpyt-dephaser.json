@@ -293,8 +293,6 @@
       ]
     }
   },
-  "chainTier": "stage1-l2",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "JPYT is minted natively on each OP Stack chain by DePhaser's per-chain DepositManager contracts (sole MINTER_ROLE holders) against stablecoin deposits routed into Aave; the reviewed mint profile supersedes the earlier canonical-bridge guess.",

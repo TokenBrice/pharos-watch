@@ -63,7 +63,7 @@ IN SCOPE (flag concrete, sourced problems):
 - reserves: composition array vs current disclosed reserves and vs the coin's own collateral/oneLiner prose (flag drift and internal contradictions).
 - issuance-date: launchDate / announcedDate / expectedLaunchDate accuracy; expectedLaunchDate in the past for a still-pre-launch coin (stale); launchDate in the future for an active coin.
 - lifecycle-status: status (active/frozen/pre-launch), frozenAt, obituary facts, launchPhase correctness vs reality.
-- resilience: deploymentModel / bridgeRouteRisk.tier / custodyModel / chainTier / collateralQuality only when the FACTUAL basis is wrong (e.g. labelled native-multichain but actually a third-party bridge). Note these feed scoring.
+- resilience: bridgeRouteRisk.tier / custodyModel / collateralQuality only when the FACTUAL basis is wrong (e.g. labelled native-multichain but actually a third-party bridge). Note these feed scoring.
 
 STRONGLY PREFER internal-consistency checks (no web needed, high signal): field-vs-field contradictions inside the same file (oneLiner vs collateral vs reserves; flags vs yieldConfig; collateral currency vs pegCurrency; address length anomalies; archetype vs pegMechanism).
 

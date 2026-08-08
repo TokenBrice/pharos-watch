@@ -189,8 +189,6 @@
       "decimals": 18
     }
   ],
-  "chainTier": "ethereum",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "steakUSDC is tracked only as an Ethereum Morpho vault token in Pharos. The reviewed Steakhouse and Morpho sources do not show a durable bridge route for the vault share.",

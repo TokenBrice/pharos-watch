@@ -253,7 +253,6 @@
       "reviewedAt": "2026-07-20"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDO's documented cross-chain route is Chainlink CCIP. CCIP provides token transfers through Chainlink oracle-network validation and rate-limited token pools, so Pharos scores the route as an external validated network rather than an issuer-only or canonical rollup bridge.",

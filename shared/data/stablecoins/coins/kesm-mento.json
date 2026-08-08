@@ -311,8 +311,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "KESm supply is confined to its canonical Celo deployment; the single reviewed route is native Mento Broker issuance against the shared Mento Reserve. No bridge route carries the claim.",

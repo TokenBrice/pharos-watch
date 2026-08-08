@@ -309,7 +309,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, and Robinhood Chain, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation. Pinned totalSupply reads on 2026-07-21 sum to 3,244,471,126.287402 USDG across Paxos's six official native deployments. X Layer holds 1,852,539,363.075967 USDG, or 57.09834642% of that native supply, so the chain:xlayer common-mode exposure is measured and remains above the 10% materiality threshold. USDG0 is excluded from this denominator because it is a representation rather than additional Paxos-native issuance.",

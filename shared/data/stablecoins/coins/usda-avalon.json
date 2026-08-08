@@ -990,7 +990,6 @@
       "disposition": "scoreable"
     }
   },
-  "deploymentModel": "third-party-bridge",
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {

@@ -447,7 +447,6 @@
       ]
     }
   },
-  "deploymentModel": "third-party-bridge",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

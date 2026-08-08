@@ -251,7 +251,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, and Tempo. The three EVM deployments share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Tempo is an issuer-announced native TIP-20 deployment rather than an unaffiliated bridge representation.",

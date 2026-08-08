@@ -890,8 +890,6 @@
       "disposition": "scoreable"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "crvUSD is native on Ethereum and uses canonical bridges for Arbitrum, Base, Optimism, ZKsync, Polygon, Gnosis, Taiko, Fraxtal, and Sonic. Its BNB Chain representation instead depends on Curve's X-DAO LayerZero bridge and minter, so that external messaging route determines the aggregate tier.",

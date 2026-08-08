@@ -36,7 +36,6 @@
       "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

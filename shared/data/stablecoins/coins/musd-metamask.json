@@ -134,7 +134,6 @@
       "decimals": 6
     }
   ],
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "mUSD is an M0 extension token deployed at the same address on Ethereum, Linea, and Monad. Every mUSD unit is minted by wrapping M0's $M one-for-one, verified on-chain by mToken() and by $M balances held inside the mUSD contract. Ethereum is the hub: $M there is minted by the M0 MinterGateway with no proxy and no portal, so mUSD on Ethereum is native issuance. On Linea and Monad the local $M is a cross-chain representation whose sole mint authority is the M0 Portal at 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, and essentially all local $M sits inside the mUSD wrapper, so those deployments carry M0 Portal burn-mint bridge risk.",

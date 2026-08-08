@@ -296,8 +296,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",

@@ -137,7 +137,6 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "native-multichain",
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",

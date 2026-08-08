@@ -293,7 +293,6 @@
     "reviewer": "Codex Wave 8 access review",
     "reviewedAt": "2026-07-15"
   },
-  "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",

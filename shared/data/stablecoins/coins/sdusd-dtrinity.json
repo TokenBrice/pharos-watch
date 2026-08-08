@@ -100,8 +100,6 @@
     "reviewer": "Kimi T24 unknown-reduction wave-2 research",
     "reviewedAt": "2026-07-30"
   },
-  "chainTier": "ethereum",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "sdUSD is a staked wrapper around dTRINITY dUSD with deployments on Ethereum and Fraxtal. L2BEAT candidate data points to Across-style route liquidity for this family, and no issuer-native bridge-control document was verified, so the wrapper is conservatively scored as a liquidity/intent route.",

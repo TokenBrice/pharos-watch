@@ -438,7 +438,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-top",
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",

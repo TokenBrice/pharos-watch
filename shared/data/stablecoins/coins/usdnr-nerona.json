@@ -272,7 +272,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
     "summary": "USDNR is an M0-extension stablecoin; its Ethereum and Fluent deployments are transparent proxies administered by Nerona's own ProxyAdmin (identical admin on both chains, read 2026-07-20). No third-party bridge carries the representation.",
@@ -357,7 +356,6 @@
       }
     ]
   },
-  "chainTier": "ethereum",
   "liveReservesConfig": {
     "adapter": "m0-wrapper-underlying",
     "version": 1,

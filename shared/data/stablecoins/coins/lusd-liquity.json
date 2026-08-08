@@ -282,7 +282,6 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "LUSD can only be minted on Ethereum mainnet. The Arbitrum One, OP Mainnet, Base, and zkSync Era deployments are canonical-bridge representations whose mint controllers were verified on-chain 2026-07-17 at pinned finalized blocks (Arbitrum ERC-20 gateway, OP Mainnet and Base L2StandardBridge, zkSync Era shared bridge). The Polygon deployment's route semantics remain unresolved at a negligible measured supply share.",

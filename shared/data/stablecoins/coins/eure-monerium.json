@@ -225,7 +225,6 @@
       "reviewedAt": "2026-07-15"
     }
   },
-  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Monerium documents EURe e-money tokens as live on multiple chains and its SDK describes euro payments minting tokens to wallets and burning tokens for bank payouts. The route is reviewed as issuer-native issuance/redemption, not a third-party bridge.",
