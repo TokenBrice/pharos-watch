@@ -10,6 +10,7 @@ import {
   Users,
   Vault,
 } from "lucide-react";
+import { revealAnchorId } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
 import type {
   MintAuthorityDetailControlViewModel,
@@ -171,9 +172,16 @@ export function MintAuthorityRail({
             <ControlChip key={control.key} control={control} />
           ))}
           {hiddenControlCount > 0 ? (
-            <span className="text-[10px] text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => {
+                const details = revealAnchorId("mint-primary-controls");
+                details?.scrollIntoView({ block: "nearest" });
+              }}
+              className="pharos-focus-ring rounded-sm text-[10px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+            >
               +{hiddenControlCount} more in Primary controls
-            </span>
+            </button>
           ) : null}
         </span>
       </div>

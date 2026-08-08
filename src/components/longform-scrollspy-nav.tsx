@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useJoinedKey } from "@/hooks/use-joined-key";
+import { revealAnchorId } from "@/lib/anchor-reveal";
 
 interface LongformSection {
   id: string;
@@ -70,7 +71,7 @@ function getHashSectionId() {
 }
 
 function scrollToSection(sectionId: string, railNode: HTMLDivElement | null, stickyOffsetPx?: number) {
-  const sectionNode = document.getElementById(sectionId);
+  const sectionNode = revealAnchorId(sectionId);
   if (!sectionNode) return;
 
   const nextTop = window.scrollY + sectionNode.getBoundingClientRect().top - getScrollOffset(railNode, stickyOffsetPx);

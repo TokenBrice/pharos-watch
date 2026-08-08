@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,21 +17,43 @@ export function ModuleDisclosure({
   label,
   count,
   defaultOpen = false,
+  id,
   className,
   summaryClassName,
   children,
+  deferredChildren,
 }: {
   label: string;
   /** Optional item count rendered after the label, e.g. "Sources (5)". */
   count?: number;
   /** Initial state only — the element stays uncontrolled after mount. */
   defaultOpen?: boolean;
+  /** Anchor id on the <details> so hash navigation can reveal + open it. */
+  id?: string;
   className?: string;
   summaryClassName?: string;
   children: ReactNode;
+  /**
+   * Heavy content (charts, big tables) mounted only once the disclosure first
+   * opens, then kept mounted. Crawl-relevant text belongs in `children`, which
+   * always mounts.
+   */
+  deferredChildren?: ReactNode;
 }) {
+  const [hasOpened, setHasOpened] = useState(defaultOpen);
   return (
-    <details className={cn("group", className)} open={defaultOpen ? true : undefined}>
+    <details
+      id={id}
+      className={cn("group scroll-mt-24", className)}
+      open={defaultOpen ? true : undefined}
+      onToggle={
+        deferredChildren != null && !hasOpened
+          ? (event) => {
+              if (event.currentTarget.open) setHasOpened(true);
+            }
+          : undefined
+      }
+    >
       <summary
         className={cn(
           "pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9",
@@ -47,6 +69,7 @@ export function ModuleDisclosure({
         <ChevronDown aria-hidden="true" className="h-3 w-3 shrink-0 transition-transform group-open:rotate-180" />
       </summary>
       {children}
+      {deferredChildren != null && hasOpened ? deferredChildren : null}
     </details>
   );
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
+import { revealAnchorTarget } from "@/lib/anchor-reveal";
 
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome
@@ -18,6 +19,7 @@ function alignSection(sectionId: string) {
     target && target.offsetParent === null
       ? (document.querySelector<HTMLElement>(`[data-anchor-twin="${CSS.escape(sectionId)}"]`) ?? target)
       : target;
+  revealAnchorTarget(element);
   element?.scrollIntoView({ block: "start" });
 }
 

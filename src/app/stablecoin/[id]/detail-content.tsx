@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { ReactNode, Ref, RefObject } from "react";
 import Link from "next/link";
 import { ChartPie, Droplet, HeartPulse, Hourglass, Scale, Sparkles } from "lucide-react";
@@ -36,6 +37,7 @@ import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/li
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import { revealAnchorId } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
@@ -228,6 +230,13 @@ export function DetailContent({
   staticHasCollateralUsage,
   viewModel,
 }: DetailContentProps) {
+  // Direct loads with a hash land before lazy sections settle; opening the
+  // enclosing disclosures for the hash target keeps deep links honest now
+  // that module detail folds by default.
+  useEffect(() => {
+    const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    if (hash) revealAnchorId(hash);
+  }, []);
   const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
   const heroModel = buildStablecoinDetailHeroViewModel({
     coin: viewModel.coin,
