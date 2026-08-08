@@ -17,6 +17,9 @@ const APP_GLOBALS = join(ROOT, "src/app/globals.css");
 // Relative posix-style paths (for stable match regardless of OS separator).
 const ALLOWED_SERIF_FILES = new Set<string>([
   "src/components/ai-summary.tsx",
+  // The clamped-prose client half of the AI summary carries the same serif
+  // editorial carve-out as its parent.
+  "src/components/ai-summary-prose.tsx",
   // Cemetery obituaries use Newsreader display titles as an intentional
   // editorial carve-out (Design Council B11), matching the Digest register.
   "src/components/cemetery-tombstones.tsx",

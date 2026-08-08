@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buildAiDisclosureLine } from "@/components/ai-disclosure";
+import { AiSummaryProse } from "@/components/ai-summary-prose";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
@@ -30,9 +31,9 @@ export function AiSummary({
         <DetailSectionTitle>{title}</DetailSectionTitle>
       </CardHeader>
       <CardContent>
-        <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
+        <AiSummaryProse textLength={text.length}>
           <TermText text={text} />
-        </p>
+        </AiSummaryProse>
         {/* Provenance footer (Figma coin template): mono uppercase dateline +
             disclosure with the policy link at the far edge. */}
         <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-border/40 pt-3">
