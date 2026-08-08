@@ -318,65 +318,59 @@
   "reserves": [
     {
       "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
-      "pct": 98.8,
-      "risk": "low",
+      "pct": 98.683281,
+      "risk": "very-low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund (BVI)",
       "riskFactors": [
         "counterparty",
-        "duration",
         "liquidity",
         "custody",
-        "smart-contract"
+        "concentration"
       ],
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "Assets in motion (settlement float)",
-      "pct": 1.2,
-      "risk": "low",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed USD settlement counterparties",
+      "name": "Cash in demand deposit accounts at FDIC-insured institutions",
+      "pct": 1.316719,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "FDIC-insured depository institutions",
       "riskFactors": [
         "counterparty",
-        "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USDtb current backing and supply",
-        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
+        "label": "USDtb Reserve Report - June 2026 (Deloitte via Anchorage)",
+        "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
       },
       {
         "label": "USDtb transparency dashboard",
         "url": "https://usdtb.money/transparency"
-      },
-      {
-        "label": "USDtb reserve introduction",
-        "url": "https://docs.usdtb.money/introduction.md"
       }
     ],
-    "rationale": "The current issuer endpoint reports BUIDL held at the published Anchorage custody address plus assetsInMotion, and the transparency dashboard presents assetsInMotion as USD. The BUIDL row is linked to the tracked fund; the settlement-float counterparty and timing remain undisclosed.",
-    "compositionBasis": "USDtb backing-and-supply endpoint",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass) states reserves of $777,181,625 against 775,079,189 redeemable USDtb: BUIDL at fair value $766,948,324 (Solana $446,833,580, BSC $110,439,491, Avalanche $209,675,253 - ~98.7% of reserves in a single BVI-domiciled tokenized fund with no secondary market) and $10,233,301 cash in demand deposits at FDIC-insured institutions ($9,983,301 uninsured). Surplus $2,102,436. The prior assets-in-motion settlement float row came from the live API and is not a category in the examined report.",
+    "compositionBasis": "Deloitte examination of the USDtb Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The assets-in-motion USD settlement float has no disclosed banking counterparty or settlement timing.",
-    "knownUnknownExposurePct": 1.2,
+    "knownUnknownExposure": "The June 30, 2026 examination classifies the full reserve into two identified categories (BUIDL and FDIC-insured demand deposits); the prior undisclosed settlement-float exposure is not a category in the examined report.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
-        "reserveName": "Assets in motion (settlement float)",
-        "pct": 1.2,
-        "disposition": "insufficient-evidence",
-        "rationale": "The issuer reports this amount as USD assets in motion but does not identify its banking counterparty or settlement timeline."
+        "reserveName": "Cash in demand deposit accounts at FDIC-insured institutions",
+        "pct": 1.316719,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FDIC-insured demand deposits are external bank reserves rather than a tracked stablecoin dependency (per the June 30, 2026 examination)."
       }
     ]
   },

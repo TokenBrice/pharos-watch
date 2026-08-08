@@ -3,58 +3,35 @@
   "reserves": [
     {
       "name": "USD cash",
-      "pct": 64.16989,
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed safeguarding institution",
-      "riskFactors": ["counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USD fixed deposits",
-      "pct": 4.007484,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed safeguarding institution",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "U.S. Treasury securities with no more than three months residual maturity",
-      "pct": 31.822626,
-      "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
-      "riskFactors": ["duration", "liquidity", "custody"],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 364
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SOL-8 Safety Score V9 blocker challenge",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "StraitsX XUSD reserve attestations",
-        "url": "https://www.straitsx.com/xusd"
+        "label": "KK Yap XUSD reserve account examination - June 30, 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
       },
       {
         "label": "StraitsX reserve-backing disclosures",
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
-      },
-      {
-        "label": "StraitsX XUSD reserve asset description",
-        "url": "https://www.straitsx.com/blog-post/straitsxs-xusd-marks-first-anniversary-with-unprecedented-growth-expanding-utility-and-global-reach"
-      },
-      {
-        "label": "KK Yap XUSD reserve account examination - May 31, 2026",
-        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
       }
     ],
-    "rationale": "The May 31, 2026 independent examination reports the marked-to-market reserve as USD 40,031,286 cash, USD 2,500,000 fixed deposits, and USD 19,852,000 short-dated U.S. Treasury securities. Percentages are calculated against the report's USD 62,383,286 total reserve.",
-    "compositionBasis": "May 31, 2026 KK Yap independent examination",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "KK Yap & Associates SSAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 11:59 PM SGT (report dated 2026-07-29, PDF read this pass): reserves are 100% cash - US$46,694,407 cash, US$0 fixed deposits, US$0 Treasuries - against US$46,615,142 XUSD in circulation (coverage ~100.17%). The May 31 composition (64.2% cash / 4.0% fixed deposits / 31.8% Treasuries) no longer holds; the portfolio moved entirely to cash by June 30.",
+    "compositionBasis": "KK Yap & Associates independent examination as of 30 June 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The examination discloses the complete reserve asset-class allocation. The safeguarding institution and any provider-level allocation remain undisclosed.",
     "knownUnknownExposurePct": 0
