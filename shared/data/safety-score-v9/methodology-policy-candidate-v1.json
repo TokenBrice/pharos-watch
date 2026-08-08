@@ -834,9 +834,9 @@
       },
       "mintMergedSignals": {
         "resolvedIncidentQualityCaps": {
-          "recent": 79,
-          "aging": 85,
-          "dated": 90
+          "recent": 55,
+          "aging": 70,
+          "dated": 85
         },
         "resolvedIncidentDecayMinMonths": {
           "aging": 24,

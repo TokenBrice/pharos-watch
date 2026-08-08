@@ -46,8 +46,14 @@ describe("Safety Score v9 methodology policy", () => {
     // fine multisig quorum ladder, and Safe module modifier. Calibrated against
     // the Wave-1 release baseline to zero letter-grade flips; see the drift
     // report attached to the 9.1 changelog entry.
+    // 9.12 (2026-08-08): `resolvedIncidentQualityCaps` moves 79/85/90 ->
+    // 55/70/85. 9.1 shipped the decay mechanism at the strongest ladder that
+    // flipped no grade, which was a calibration constraint rather than a
+    // judgment; the severity is now chosen on merit and every rung is an
+    // existing V9 posture value. One disclosed grade flip (pyusd-paypal A- -> B)
+    // and one score-only move (reusd-resupply 47 -> 45).
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "01e81cdcc4925f3af8057ac3e5e595dfdbb00396decc1ddc2b6b015d187c5be7",
+      "2be861b54240f278f849b7f7569bac633b7c87abb87a7f8ee3abf8593db8af93",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
