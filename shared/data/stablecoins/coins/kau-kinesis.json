@@ -20,9 +20,24 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kinesis.money/audits/",
-    "provider": "Bureau Veritas (Inspectorate International)",
+    "provider": "Bureau Veritas Commodities UK Ltd (Inspectorate International; commodity vault inspection under agreed procedures with no opinion - the token-vs-metal comparison exists only in the issuer cover letter, whose signatory heads both Kinesis and the vault operator ABX)",
     "attestorTier": "niche",
-    "cadence": "semi-annual"
+    "cadence": "semi-annual",
+    "latestReport": {
+      "periodEnd": "2026-04-20",
+      "publishedAt": "2026-06-03",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-only",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (April 2026 BV artefact read: 2,567,133.466g fine gold at ledger date 20 April 2026 vs 2,565,133.465 KAU per issuer cover letter; BV verifies metal only)",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kinesis April 2026 Bureau Veritas audit (gold and silver)",
+          "url": "https://kinesis.money/audit-april-2026/"
+        }
+      ]
+    }
   },
   "links": [
     {

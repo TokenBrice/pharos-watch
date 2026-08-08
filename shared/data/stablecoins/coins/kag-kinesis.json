@@ -28,8 +28,8 @@
       "publishedAt": "2026-06-03",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
-      "liabilityReconciliation": "unknown",
-      "reviewer": "Inspectorate International",
+      "liabilityReconciliation": "none",
+      "reviewer": "PoR verification sweep 2026-08 (reconciliation set to none: the token-vs-metal comparison appears only in the issuer cover letter, not in Bureau Veritas's findings)",
       "confidence": "verified",
       "sources": [
         {

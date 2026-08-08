@@ -2,42 +2,65 @@
   "id": "audd-novatti",
   "reserves": [
     {
-      "name": "AUD bank deposits",
-      "pct": 100,
+      "name": "AUD cash at Westpac (AMAL Trustees Pty Ltd ATF AMAL Bare Trust)",
+      "pct": 68.943181,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Banking Circle and Westpac Banking Corporation (AMAL bare trust)",
-      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "issuerOrObligor": "Westpac Banking Corporation (AMAL Trustees bare trust)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "AUD cash at Banking Circle (AUDC Reserve Account)",
+      "pct": 31.056819,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Banking Circle",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "William Buck AUDD Agreed-Upon Procedures Report - June 2026",
-        "url": "https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf"
+        "label": "William Buck AUDD Agreed-Upon Procedures Report - July 2026",
+        "url": "https://cdn.audd.digital/dam/reports/AUDC+Agreed+upon+procedures+report+Jul26_.pdf"
       },
       {
-        "label": "AUDD transparency and assurance archive",
+        "label": "AUDD transparency",
         "url": "https://www.audd.digital/transparency/"
       }
     ],
-    "rationale": "The live single-asset adapter publishes one aggregate AUD bank deposits row, so the reviewed classification is keyed to that exact 100% identity. The June 30, 2026 reserve report preserves the underlying detail: AUD 2,076,942.59 of cash at Banking Circle and AUD 11,176,571.25 of cash at Westpac under the AMAL bare trust, for AUD 13,253,513.84 total reserves against AUD 13,038,732.34 on-chain (15.67% and 84.33% of the reserve). The report does not disclose deposit terms or deposit-insurance coverage.",
-    "compositionBasis": "AUDC reserve report subject to William Buck agreed-upon procedures as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "William Buck ASRS 4400 AUP as of 31 July 2026 11:59pm UTC (signed 2026-08-06, PDF read this pass; expressly no opinion, no independence requirement): AUD 11,216,439.45 at Westpac in the AMAL Trustees bare trust and AUD 5,052,667.03 at Banking Circle, totalling AUD 16,269,106.48 against 16,121,117.78 AUDD on-chain across eight networks (excess AUD 147,988.70), agreed without exception. 100% cash.",
+    "compositionBasis": "William Buck agreed-upon procedures report as of 31 July 2026",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete cash reserve and account institutions; detailed deposit terms and deposit-insurance coverage are not disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "AUD bank deposits",
-        "pct": 100,
+        "reserveName": "AUD cash at Westpac (AMAL Trustees Pty Ltd ATF AMAL Bare Trust)",
+        "pct": 68.943181,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "AUD cash at banks is an external reserve asset rather than a tracked stablecoin dependency."
+        "rationale": "Trustee-held AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "AUD cash at Banking Circle (AUDC Reserve Account)",
+        "pct": 31.056819,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       }
     ]
   },

@@ -26,20 +26,20 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "France",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-04-01",
-      "assuranceMethod": "attestation",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-03",
+      "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (Q2 PDF read: KPMG negative assurance stating it is neither an audit nor a review - method corrected from attestation; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG EUROP Q1 2026 attestation",
-          "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+          "label": "KPMG attestation on EUROP tokens and reserves - 30 June 2026",
+          "url": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf"
         },
         {
-          "label": "Schuman Financial reserve audit index",
+          "label": "Schuman reserve audits index",
           "url": "https://schuman.io/reserve-audits/"
         }
       ]

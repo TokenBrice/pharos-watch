@@ -25,17 +25,17 @@
     "attestorJurisdiction": "South Africa",
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
-      "periodEnd": "2026-02-27",
-      "publishedAt": "2026-03-03",
+      "periodEnd": "2026-07-01",
+      "publishedAt": "2026-07-02",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR remediation pass 2026-08 (a newer Kempen AUP report dated 1 July 2026 exists - kempengroup.co.za uploads/2026/07 - and is queued for a coherent refresh together with the reserve-composition review; latestReport stays on the period the curated composition was verified against)",
+      "reviewer": "PoR verification sweep 2026-08 (July AUP PDF read; composition review advanced in lockstep; publishedAt from the upload timestamp embedded in the report URL)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kempen ZARP agreed-upon procedures report - February 2026",
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+          "label": "Kempen ZARP agreed-upon procedures report - 1 July 2026",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
         },
         {
           "label": "ZARP transparency page (report index)",
@@ -372,52 +372,65 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "ZAR fiat reserves",
-      "pct": 100,
-      "risk": "low",
+      "name": "ZAR cash at Old Mutual Wealth Trust Company (JHB) (Pty) Ltd",
+      "pct": 98.761008,
+      "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "ZARP Stablecoin (Pty) Ltd.; Old Mutual Wealth Trust Company; Standard Bank",
+      "issuerOrObligor": "Old Mutual Wealth Trust Company (JHB) (Pty) Ltd",
       "riskFactors": [
         "counterparty",
-        "liquidity",
         "custody",
-        "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "ZAR cash at Standard Bank (call deposit and current accounts)",
+      "pct": 1.238992,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Standard Bank of South Africa",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28; Kimi T59 re-review 2026-07-30",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "ZARP Stablecoin documentation",
-        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+        "label": "Kempen ZARP agreed-upon procedures report - 1 July 2026",
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
       },
       {
-        "label": "ZARP Stablecoin website FAQ (treasury managed by Old Mutual Wealth, independent auditor verification)",
-        "url": "https://www.zarpstablecoin.com/"
-      },
-      {
-        "label": "Kempen ZARP agreed-upon procedures report",
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+        "label": "ZARP transparency page (report index)",
+        "url": "https://www.zarpstablecoin.com/transparency/"
       }
     ],
-    "rationale": "The live single-asset adapter publishes one aggregate ZAR fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents. Kempen's February 2026 agreed-upon procedures verified balances in an Old Mutual Wealth trust account and ZARP's Standard Bank call-deposit/current accounts and reconciled liabilities across Ethereum, Solana, Base, and Polygon. The report does not establish a redemption settlement time or a complete cash-versus-cash-equivalent split. Write-time re-open 2026-07-28: Kempen AUP PDF still verifies ZAR collateral in Standard Bank + Old Mutual Wealth accounts totaling R87,291,970 against issued ZARP on 27 Feb 2026; ZARP docs introduction still states treasury reserve of rand currency equivalents managed by Old Mutual Wealth. Write-time re-open 2026-07-30: ZARP docs introduction and the zarpstablecoin.com FAQ both still state that rands are held in a treasury managed by Old Mutual Wealth with independent auditors verifying at least R1 per ZARP in circulation; the composition remains 100% ZAR fiat reserves, with 2026-02-27 retained as the last independently verified composition date.",
-    "compositionBasis": "ZARP treasury and Kempen reserve-assurance disclosures",
-    "compositionAsOf": "2026-02-27",
+    "rationale": "Kempen Audit ISRS 4400 (Revised) AUP as of 1 July 2026 10:00 (PDF read this pass; expressly no opinion): AUP-verified balances of R91,205,857.45 at Old Mutual Wealth Trust Company (JHB) and R1,144,210 at Standard Bank (call+current), totalling R92,350,067.45 against 83,196,465.61 ZARP in circulation (gross on-chain 83,586,533 less treasury/frozen). NOTE: the attached management reserve report states a single unbroken total of ZAR 91,142,415.00 - a R1,207,652.45 gap versus the AUP-verified components that the document does not reconcile; percentages here use the AUP-verified figures.",
+    "compositionBasis": "Kempen Audit agreed-upon procedures report as of 1 July 2026",
+    "compositionAsOf": "2026-07-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve is identified as rand currency equivalents, but the reviewed sources do not provide a current bank-account or cash-equivalent category split, provider shares, or legal segregation terms.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "ZAR fiat reserves",
-        "pct": 100,
+        "reserveName": "ZAR cash at Old Mutual Wealth Trust Company (JHB) (Pty) Ltd",
+        "pct": 98.761008,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Rand bank balances are external reserve assets rather than a tracked stablecoin dependency."
+        "rationale": "ZAR trust-company cash is an external fiat reserve, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ZAR cash at Standard Bank (call deposit and current accounts)",
+        "pct": 1.238992,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ZAR bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       }
     ]
   },

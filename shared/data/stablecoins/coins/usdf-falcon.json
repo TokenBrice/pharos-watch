@@ -22,18 +22,22 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",
-    "provider": "ht.digital (Harris & Trotter digital: quarterly assurance reports - latest period 2026-04-30, next cycle slightly overdue as of 2026-08-08 - alongside weekly self-published reserve reports current through 2026-08-03; latestReport tracks the quarterly assurance artefact)",
+    "provider": "ht.digital (Harris & Trotter digital) quarterly assurance reports alongside weekly self-published reserve reports; the quarterly series has a confirmed gap - the newest assurance report remains period 2026-04-30 (published 2026-06-19, full registry extracted 2026-08-08) while weekly self-reports run through 2026-08-03, so latestReport tracks the weekly series the composition review is anchored on",
     "attestorTier": "niche",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-04-30",
-      "publishedAt": "2026-06-19",
-      "assuranceMethod": "attestation",
+      "periodEnd": "2026-07-27",
+      "publishedAt": "2026-07-27",
+      "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Codex Safety Score V9 reserve review",
+      "reviewer": "PoR verification sweep 2026-08 (aligned to the transparency-API snapshot the composition review is built on; the quarterly ht.digital assurance series has a confirmed gap - newest remains period 2026-04-30 published 2026-06-19, while weekly self-published reserve reports run through 2026-08-03)",
       "confidence": "verified",
       "sources": [
+        {
+          "label": "Falcon transparency (weekly reserve reports and live API)",
+          "url": "https://app.falcon.finance/transparency"
+        },
         {
           "label": "HT Digital independent assurance report on Falcon USDf reserves - April 30, 2026",
           "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"

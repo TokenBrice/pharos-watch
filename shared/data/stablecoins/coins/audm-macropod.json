@@ -26,21 +26,21 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-07-01",
-      "publishedAt": "2026-07-01",
-      "assuranceMethod": "self-verification",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-08-05",
+      "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (the Hall Chadwick quarterly AUP report - periodEnd 2026-06-30, published 2026-08-05 - is queued for a coherent refresh together with the reserve-composition review; latestReport stays on the period the curated composition was verified against)",
+      "reviewer": "PoR verification sweep 2026-08 (June AUP PDF read: reserves agreed at minimum equal to on-chain AUDM across all four networks without exception; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Macropod AUDM reserve verification as of July 1, 2026",
-          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
-        },
-        {
           "label": "Hall Chadwick Melbourne Audit AUDM agreed-upon procedures report - June 2026",
           "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd2b088312392d65d478_June%202026%20-%20Agreed-Upon%20Procedures%20Report.pdf"
+        },
+        {
+          "label": "Macropod transparency page (monthly self-reports)",
+          "url": "https://www.macropod.com/transparency"
         }
       ]
     }

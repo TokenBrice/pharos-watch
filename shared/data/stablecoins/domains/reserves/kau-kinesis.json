@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
     "confidence": "verified",
     "sources": [
       {
@@ -31,9 +31,9 @@
         "url": "https://kinesis.money/audit-april-2026/"
       }
     ],
-    "rationale": "Kinesis states that KAU represents one gram of fully allocated 9999 gold, with biannual Bureau Veritas physical audits checked against the blockchain record and redemption through Brinks and Loomis. The April 2026 audit page identifies the latest listed gold-and-silver audit, but does not publish a KAU-only quantity split in the reviewed text.",
-    "compositionBasis": "Kinesis allocated-bullion and April 2026 audit disclosures",
-    "compositionAsOf": "2026-04-30",
+    "rationale": "Bureau Veritas (Inspectorate International) April 2026 cycle (artefact read this pass): gold 2,567,133.466g fine equivalent (6,051 items across 13 vaults) as at ledger date 20 April 2026 vs 2,565,133.465 KAU per the issuer cover letter (excess matches the two 1kg reserve bars). BV reconciles physical holdings to vault records only; the token comparison is the issuer's cover-letter assertion. Composition is a single allocated-gold category.",
+    "compositionBasis": "Bureau Veritas April 2026 physical audit (ledger date 20 April 2026)",
+    "compositionAsOf": "2026-04-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve category is fully allocated physical gold, but the reviewed page does not expose current KAU-only bar quantities, vault-level shares, or redemption inventory.",
     "knownUnknownExposurePct": 0,

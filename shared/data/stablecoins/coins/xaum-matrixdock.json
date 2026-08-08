@@ -26,17 +26,21 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "Bullion vault inspection and assurance",
     "latestReport": {
-      "periodEnd": "2026-01-07",
-      "publishedAt": "2026-01-15",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-17",
       "assuranceMethod": "audit",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "PoR verification sweep 2026-08 (Jan 2026 certificate read: 100% physical inventory of 482 bars vs the Parcel Ownership List; XAUm tokens and circulating supply appear nowhere in the document, so the previous full-reconciliation scope was wrong - the bar-vs-token comparison is issuer-asserted in the blog only)",
+      "reviewer": "PoR verification sweep 2026-08 (July 2026 certificate read directly: physical inventory of 508 gold bars vs the Parcel Ownership List dated 30 June 2026; no token reconciliation performed; scope corrected and composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Matrixdock H2 2025 XAUm physical gold audit",
-          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-releases-latest-semi-annual-physical-gold-audit-report-"
+          "label": "Matrixdock Gold Bureau Veritas Audit Jul 2026 (covers XAUm gold and XAGm silver)",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
+        },
+        {
+          "label": "Matrixdock press release - two years of independent verification (2026-07-21)",
+          "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
         }
       ]
     }
