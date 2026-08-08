@@ -26,17 +26,17 @@
     "attestorJurisdiction": "Singapore",
     "attestorLicense": "ACRA-registered public accountants",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-29",
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-23",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (June PDF read: SSAE 3000 reasonable-assurance opinion, 46,615,142 XUSD circulating; semi-monthly series substantially honoured, one gap at 15 Feb 2026)",
+      "reviewer": "SOL-8 Safety Score V9 blocker challenge",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KK Yap XUSD reserve account examination - June 30, 2026",
-          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c789f7ac035cdb7e226fc_XUSD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf"
+          "label": "KK Yap XUSD reserve account examination - May 31, 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
         }
       ]
     }

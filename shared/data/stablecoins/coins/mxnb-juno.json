@@ -18,23 +18,23 @@
   "geckoId": "mxnb",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf",
+    "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf",
     "provider": "BDO Mexico (Castillo Miranda y Compania) quarterly financial valuation reports, signed by a corporate-finance/valuation partner acting as consultants under IVSC valuation standards; the report expressly does not confirm reserve accounts with banks and expresses no assurance opinion",
     "attestorTier": "regional",
     "cadence": "quarterly",
     "attestorJurisdiction": "Mexico",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-16",
+      "periodEnd": "2026-03-31",
+      "publishedAt": "2026-06-23",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-08 (Q2 PDF read: reserves MXN 35,333,251.88 vs 34,828,276.31 circulating; scope paragraph still says 'as of March 31, 2026' - copy-paste from Q1)",
-      "confidence": "verified",
+      "reviewer": "PoR verification sweep 2026-08 (series reclassified as consultant valuation reports; a Q2 2026 report exists - periodEnd 2026-06-30, published 2026-07-16 - and is queued for a coherent refresh together with the reserve-composition review)",
+      "confidence": "probable",
       "sources": [
         {
-          "label": "BDO Mexico MXNB Q2 2026 valuation report",
-          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
+          "label": "BDO Mexico MXNB Q1 2026 valuation report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
         },
         {
           "label": "MXNB attestation index",
