@@ -16,6 +16,28 @@
   "variantKind": "strategy-vault",
   "collateral": "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
   "pegMechanism": "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; protocol withdrawals are requested onchain and serviced through a FIFO queue as liquidity becomes available",
+  "mechanismArchetype": "rwa-credit-fund",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Claude mechanism-review wave batch F (syrupUSDC archetype re-review)",
+    "rationale": "Re-derived 2026-08-08 from Maple's own product and legal disclosures, which expressly deny the fiat-cash reading inherited from the USDC parent: \"The syrupUSDC token is not a stablecoin and is not backed by USDC; its value is derived from a dynamic pool of underlying loan assets managed through the Maple Protocol\", and the risk disclosure adds that syrupUSDC is \"not backed by USDC, USDT or USDG on a one-to-one basis\" and that \"There is no guarantee that you will be able to redeem your syrupUSDC ... for the amount of USDC ... you originally deposited\". Holders receive a proportional share of a pooled portfolio of overcollateralized fixed-rate loans to institutional borrowers plus futures-basis and DeFi liquidity strategies, issued by Maple International Operations SPC on behalf of Secured Loan Segregated Portfolio 1, with borrower defaults and Maple-declared impairments allocated pro rata to holders and exits served by a FIFO withdrawal queue. NAV is above par and moves with accrued interest and impairments, not a par claim: at finalized Ethereum block 25712144 totalAssets was 1,097,396,508.837583 USDC against 932,088,023.135769 shares (1.177352869685 USDC per share). That is a pooled credit-fund claim, so rwa-credit-fund is the matching archetype and archetypeOverride records the intentional departure from the usdc-circle accounting parent.",
+    "sources": [
+      {
+        "label": "Maple syrupUSDC Product Disclosures & Disclaimers (not a stablecoin, not backed by USDC, dynamic loan pool)",
+        "url": "https://docs.maple.finance/legal/syrupusdc-product-disclosures-and-disclaimers.md"
+      },
+      {
+        "label": "Maple syrupUSDC/syrupUSDT/syrupUSDG Risk Disclosures (no one-to-one backing, no redemption guarantee, segregated-portfolio issuer, pro-rata loss sharing)",
+        "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+      },
+      {
+        "label": "Maple syrupUSDC/USDT/USDG lender introduction (Maple Direct underwriting, futures basis and DeFi liquidity strategies)",
+        "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "syrupusdc",
   "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",

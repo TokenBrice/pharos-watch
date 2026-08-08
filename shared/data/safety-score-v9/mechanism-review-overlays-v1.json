@@ -12774,51 +12774,97 @@
     },
     {
       "assetId": "syrupusdc-maple",
-      "archetype": "fiat-cash",
+      "archetype": "rwa-credit-fund",
       "reviewedAt": "2026-08-08",
       "sources": [
         {
-          "label": "Maple syrupUSDC/syrupUSDT/syrupUSDG risk disclosure (issuer and segregated-portfolio structure, exclusive lender claim, loan/default loss allocation, and FIFO withdrawal queue)",
-          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
-        },
-        {
-          "label": "Maple syrupUSDC product disclosure (dynamic loan-pool claim; expressly not a stablecoin and not backed 1:1 by USDC)",
+          "label": "Maple syrupUSDC Product Disclosures and Disclaimers (expressly not a stablecoin, not backed by USDC, dynamic loan-pool value)",
           "url": "https://docs.maple.finance/legal/syrupusdc-product-disclosures-and-disclaimers.md"
         },
         {
-          "label": "Maple syrupUSDC/syrupUSDT lender FAQ (segregated SPV, non-custodial pool contracts, Anchorage/BitGo/Zodia examples, and onchain collateral addresses)",
-          "url": "https://docs.maple.finance/syrupusdc-usdt-for-lenders/faq"
+          "label": "Maple syrupUSDC/syrupUSDT/syrupUSDG Risk Disclosures (no one-to-one backing, no redemption guarantee, segregated-portfolio issuer ring-fenced by statute, exclusive lender claim, pro-rata default loss sharing, FIFO withdrawal queue, no guaranteed maximum withdrawal period)",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
         },
         {
-          "label": "Anchorage Digital Maple case study (qualified-custody relationship and more than $200 million of Maple borrower collateral facilitated through tri-party pledge accounts)",
+          "label": "Maple syrupUSDC/USDT/USDG Defaults and Impairments (impairment markdown, collateral sale into the pool, forfeited and pro-rated recoveries)",
+          "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-defaults-and-impairments.md"
+        },
+        {
+          "label": "Maple syrupUSDC/USDT/USDG lender introduction (Maple Direct underwriting, liquid digital-asset collateral, futures basis and DeFi liquidity strategies, segregated-portfolio separation)",
+          "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md"
+        },
+        {
+          "label": "Maple syrupUSDC/USDT/USDG lender FAQ (live 2026-08-08; overcollateralized loans, withdrawal timing, no custodian naming)",
+          "url": "https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md"
+        },
+        {
+          "label": "Maple Margin Calls and Liquidations (Initial Collateral Level, Margin Call Level with 24-hour cure, Liquidation Level, OTC-desk execution, rare-liquidation record)",
+          "url": "https://docs.maple.finance/maple-institutional-for-lenders/defaults-and-impairments-1.md"
+        },
+        {
+          "label": "Maple Collateral and Yield Disclosure (syrupGlobals field schema and parsing; no maturity or tenor field exists in the published surface)",
+          "url": "https://docs.maple.finance/integrate/technical-resources/collateral-and-yield-disclosure.md"
+        },
+        {
+          "label": "Maple GraphQL API used for the live itemized syrupGlobals collateral, loan, and daily AUM measurements",
+          "url": "https://api.maple.finance/v2/graphql"
+        },
+        {
+          "label": "Maple pool accounting documentation (totalAssets composition, linear issuanceRate interest accrual, unrealizedLosses on impairment)",
+          "url": "https://docs.maple.finance/technical-resources/pools/accounting/pool-accounting.md"
+        },
+        {
+          "label": "Anchorage Digital Maple case study (undated marketing artifact; $200M of Maple borrower collateral via triparty pledge accounts, Anchorage Digital Bank custody of Maple tokens and treasury)",
           "url": "https://learn.anchorage.com/Anchorage%20Digital_Maple%20Finance_Case%20Study%20.pdf"
         },
         {
-          "label": "Maple 2026-05-07 Proof of Reserves announcement (Network Firm programme design; report and yes/no collateralization answer still described as coming soon)",
+          "label": "Maple 2026-05-07 Proof of Reserves announcement (Network Firm programme design; approved-custodian question unnamed and the fully-collateralized answer still coming soon)",
           "url": "https://maple.finance/insights/introducing-proof-of-reserves"
         },
         {
-          "label": "Maple transparency page (live 2026-08-08 protocol analytics; no Network Firm report or reserve-to-liability reconciliation exposed)",
+          "label": "Maple transparency page (live 2026-08-08 protocol, treasury, and yield analytics; no reserve report or reconciliation exposed)",
           "url": "https://maple.finance/transparency"
         },
         {
-          "label": "Ethereum PublicNode RPC used for finalized-block syrupUSDC ERC-4626 reads",
+          "label": "Ethereum PublicNode RPC used for the finalized-block syrupUSDC ERC-4626 pin",
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "Reviewed 2026-08-08. The active runtime archetype is fiat-cash because syrupUSDC is a variant of USDC and resolveMechanismArchetype() inherits the parent's archetype when no direct override exists; the raw coin JSON itself has no mechanismArchetype. Claim and segregation is limited, not adequate: Maple's issuer disclosure states that Maple International Operations SPC issues syrupUSDC for Secured Loan Segregated Portfolio 1, that assets and liabilities are statutorily ring-fenced, and that lender claims are exclusive to that portfolio, but no regulator filing, legal opinion, offering document, or independent examination of this claim structure was found. A finalized Ethereum read at block 25711697 (hash 0xd325c2935bdbd8cef5b9570b213f3e3e94d62c11a99dda53efbee6784aba9fc0, timestamp 2026-08-08T17:20:23Z) independently anchored the wrapper mechanics: asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply was 932,088,023.135769 shares, and totalAssets was 1,097,387,662.324412 USDC. Custody continuity is limited: Maple names Anchorage, BitGo, and Zodia as institutional custody solutions and says loan collateral addresses are disclosed onchain; Anchorage independently documents its Maple relationship and more than $200 million of Maple borrower collateral through tri-party pledge accounts. Current provider allocations, the complete active custodian/venue set, reuse or staking terms by position, and substitute-provider/failure arrangements remain undisclosed. Assurance and reconciliation is unavailable, replacing the existing limited grade: Maple's May 2026 announcement repeatedly describes the Network Firm report, the yes/no fully-collateralized answer, and regular dashboard reports prospectively (including 'coming soon'), while the live 2026-08-08 transparency page contains issuer-operated protocol, treasury, and yield analytics but no Network Firm report, signed opinion, dated scope, liability figure, or reserve-to-liability reconciliation. The programme announcement and dashboard therefore remain explicitly insufficient under the mechanism-overlay evidence standard. Archetype caveat: Maple expressly says syrupUSDC is not a stablecoin, is not backed 1:1 by USDC, and derives value from a dynamic portfolio of overcollateralized institutional loans plus basis, market-neutral, and DeFi strategies; rwa-credit-fund is the better economic archetype, but changing the variant classification is outside this overlay-only batch.",
-      "metrics": {},
+      "notes": "Reviewed 2026-08-08. Archetype reclassified from the inherited fiat-cash label to rwa-credit-fund in the same batch: Maple's product disclosure states that \"The syrupUSDC token is not a stablecoin and is not backed by USDC; its value is derived from a dynamic pool of underlying loan assets managed through the Maple Protocol\", and the risk disclosure adds that the tokens are \"not backed by USDC, USDT or USDG on a one-to-one basis\" and that \"There is no guarantee that you will be able to redeem your syrupUSDC ... for the amount of USDC ... you originally deposited\". Two measurements anchor this review. (1) A finalized Ethereum read at block 25712144 (hash 0x64ac62d504fe905b9e6547e546b14c05e7590ccb9c0ca9ed2d233d90e91e93a7, timestamp 2026-08-08T18:49:59Z): asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals 6, totalAssets 1,097,396,508.837583 USDC, totalSupply 932,088,023.135769 shares, i.e. 1.177352869685 USDC per share, confirming an above-par NAV claim rather than a par redemption claim. (2) A live Maple GraphQL syrupGlobals query on 2026-08-08 returned collateralRatio 1.47741202, collateralValue 2,007,130,359.80 USD and loansValue 1,358,543,112.23 USD, with a daily aumTimeSeries whose 2026-08-07 point itemized loansUsd 1,619,631,581.69, collateralUsd 1,998,437,946.93, assetsUsd 37,005,404.12 and assetsInStrategiesUsd 0.00. creditQuality is limited: the itemized issuer API quantifies aggregate overcollateralization and Maple documents a monitored margin-call ladder (Initial Collateral Level, Margin Call Level with 24 hours to cure, Liquidation Level with unilateral liquidation rights), but no borrower identity, external rating, collateral composition, concentration, delinquency, or realized-loss series is published for this portfolio, so it cannot reach adequate. seniority is limited: the risk disclosure states that \"The assets and liabilities of each entity are ring-fenced by statute\" and that \"Lender claims are exclusively against the assets of the segregated portfolio in which they have deposited\", loans are secured under Master Lending Agreements with posted collateral, and the collateral-to-loans ratio is measurable; there is however no tranching, no published priority waterfall against other portfolio liabilities, and no perfected-security-interest opinion, and holders sit pari passu with pro-rata loss sharing. legalEnforceability is limited: the issuing vehicle is named exactly (Maple International Operations SPC acting on behalf of and for the account of Secured Loan Segregated Portfolio 1) with statutory ring-fencing and exclusive-portfolio recourse, corroborated by the on-chain pro-rata ERC-4626 share read; no offering document, legal opinion, regulatory register entry, or independent examination of that claim structure was found, so adequate is not met. valuationCadence is limited: Maple documents deterministic pool accounting (totalAssets = cash + sum of strategy assets under management; outstandingInterest(t) = accountedInterest + issuanceRate x (t - domainStart); unrealizedLosses incremented on impairment with separate deposit and withdrawal exchange rates), and the issuer API publishes the itemized portfolio at a one-day cadence, which is the measured valuationCadenceDays; loans are carried at amortized cost with no mark-to-market, impairment recognition is discretionary to Maple with no published cadence, and there is no independent NAV administrator or valuation agent. maturityAndLiquidity is limited: withdrawals run through a queue-based Withdrawal Manager on a first-in, first-out basis, \"Most withdrawals are processed in under 24 hours, but could take up to 30 days\", the strategy is described as short duration, and the daily API series measures the cash sleeve against the loan book (37,005,404.12 USD against 1,619,631,581.69 USD on 2026-08-07); it cannot reach adequate because no numeric portfolio maturity ladder or per-loan tenor is published and the risk disclosure contradicts the FAQ by stating \"There is no guaranteed maximum withdrawal period\". recovery is limited: Maple publishes an explicit loss and recovery mechanism - a default reduces pool value by outstanding principal and accrued interest and then sells collateral back into the pool, impairment marks value down before technical default, lenders who withdraw during an impairment take a permanent loss and forfeit claims to future recoveries, remaining lenders receive pro-rated recoveries, and Maple pursues restructuring or legal process - and the measured collateral surplus quantifies the primary recovery resource; there is no first-loss tranche, insurance, recapitalization commitment, published recovery-rate history for this portfolio, or independent verification, and default and impairment declaration is entirely issuer-discretionary. custody is unavailable: the reviewed 2026-08-08 disclosure surface does not identify the custodians holding syrupUSDC loan collateral. The Anchorage Digital case study is a third-party marketing artifact, is undated, and quantifies only \"$200M of Maple borrower collateral facilitated by Anchorage Digital via triparty pledge accounts\" plus Anchorage Digital Bank custody of Maple's own MAPLE/SYRUP tokens and treasury, which is neither the syrupUSDC segregated portfolio nor a current allocation; the Proof of Reserves announcement asks \"Is the collateral held with approved custodians?\" without naming any, and its fully-collateralized answer is still marked \"coming soon\"; the live transparency page publishes only protocol, treasury, and yield analytics. The earlier fiat-cash review cited a lender FAQ naming Anchorage, BitGo, and Zodia at https://docs.maple.finance/syrupusdc-usdt-for-lenders/faq; that URL now 404s and the relocated FAQ names no custodian, so the naming is no longer pinnable to a live issuer source and the component is recorded as nondisclosure rather than carried forward as a quality claim.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": 1
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The metric applies to a loan portfolio, but no numeric weighted-average maturity, weighted-average life, per-loan tenor, or maturity ladder is published for syrupUSDC. Searched https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md, https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq.md, https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction.md, https://maple.finance/transparency, and the itemized syrupGlobals field schema at https://docs.maple.finance/integrate/technical-resources/collateral-and-yield-disclosure.md, which exposes collateral, loan, asset, and APY fields but no maturity field. Only qualitative short-duration language is published.",
+          "sourceUrl": "https://docs.maple.finance/integrate/technical-resources/collateral-and-yield-disclosure.md"
+        }
+      },
       "components": {
-        "claimAndSegregation": {
+        "creditQuality": {
           "quality": "limited"
         },
-        "custodyContinuity": {
+        "seniority": {
           "quality": "limited"
         },
-        "assuranceAndReconciliation": {
+        "legalEnforceability": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "quality": "limited"
+        },
+        "custody": {
           "applicability": "unavailable",
-          "rationale": "Searched Maple's Proof of Reserves announcement and the live transparency page on 2026-08-08. The announcement describes reports, an independent fully-collateralized answer, and recurring publication prospectively (including 'coming soon'), while the live page exposes no Network Firm report, signed opinion, dated scope, liabilities figure, or reserve-to-liability reconciliation.",
-          "sourceUrl": "https://maple.finance/transparency"
+          "rationale": "Searched Maple's syrupUSDC risk disclosure, lender FAQ, lender introduction, Proof of Reserves announcement, and the live 2026-08-08 transparency page. None identifies the custodians holding syrupUSDC loan collateral, current provider allocations, the complete active custodian set, segregation or reuse terms, or substitute-provider and failure arrangements; the Proof of Reserves programme asks whether collateral is held with approved custodians without naming them and its collateralization report is still coming soon. The only custodian-specific artifact is Anchorage Digital's undated marketing case study, which quantifies $200M of Maple borrower collateral via triparty pledge accounts against a measured $2,007,130,359.80 of syrup collateral and is an explicitly insufficient evidence class under the mechanism-overlay evidence standard. The lender FAQ that previously named Anchorage, BitGo, and Zodia at https://docs.maple.finance/syrupusdc-usdt-for-lenders/faq now returns 404 and its live replacement names no custodian.",
+          "sourceUrl": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
+        },
+        "recovery": {
+          "quality": "limited"
         }
       }
     },

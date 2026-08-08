@@ -7,7 +7,9 @@ import {
 
 const EVIDENCE_ONLY_TARGETS = {
   "usdgo-osl": ["custodyContinuity"],
-  "syrupusdc-maple": ["assuranceAndReconciliation"],
+  // Reclassified 2026-08-08 from the inherited fiat-cash archetype to
+  // rwa-credit-fund; custody is the reviewed nondisclosure component.
+  "syrupusdc-maple": ["custody"],
   "susdt-spark": ["assuranceAndReconciliation", "custodyContinuity"],
   "moveusd-cfx": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
   "uusd-anything-labs": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
