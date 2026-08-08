@@ -154,7 +154,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves. Ethereum issuance uses a MINTER_BURNER_ROLE and immediate proxy admin controlled by issuer EOAs; the native Solana Token-2022 mint has a distinct wallet authority. LayerZero OFT routes are reviewed separately as bridge controls.",
     "upgradeability": {

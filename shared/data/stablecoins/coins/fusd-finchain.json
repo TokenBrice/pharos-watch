@@ -296,7 +296,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "FUSD mint surface confirmed: Ethereum MINTER_ROLE has 4 holders (FinChain mint proxy, TokenBridgeSender, 2x CCIP BurnMintTokenPool); proxy admin is OZ ProxyAdmin owned by EOA 0xc61f22aa. Same ProxyAdmin (0x29A48097) found on Avalanche and Sonic. DEFAULT_ADMIN is the same EOA.",
     "controls": [

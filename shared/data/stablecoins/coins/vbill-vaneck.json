@@ -77,7 +77,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "VBILL is a Securitize-administered fund token; its Ethereum implementation exposes issueTokens surfaces gated by owner(). Owner confirmed as EOA 0x59c1eA...76Ee at block 25295081; eth_getCode returns empty (EOA). Issuer-context EOA is expected for enterprise MPC/HSM custody.",
     "upgradeability": {

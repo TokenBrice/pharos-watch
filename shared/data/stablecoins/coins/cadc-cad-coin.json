@@ -85,7 +85,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana mint remains separately owned by the SPL Token program.",
     "upgradeability": {

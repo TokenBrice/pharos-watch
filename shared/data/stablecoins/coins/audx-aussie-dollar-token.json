@@ -302,7 +302,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
     "upgradeability": {

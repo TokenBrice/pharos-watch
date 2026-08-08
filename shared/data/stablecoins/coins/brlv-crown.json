@@ -221,7 +221,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "BRLV is issued by Crown on Base and Ethereum through UUPS/AccessControl deployments. The Base and Ethereum tokens share DEFAULT_ADMIN EOA 0x239d4a, whose role can authorize minting and can create token UPGRADE_ROLE holders. Base's live direct minters are two EIP-7702 delegated EOAs plus Crown's canonical gateway and rewards proxies; the latter two have separate immediate UUPS role-admin paths.",
     "upgradeability": {

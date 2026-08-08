@@ -146,7 +146,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDY issuance is Ondo-operated; Ethereum AccessControl role reads identify a 4/7 Safe as the default admin/minter role holder.",
     "upgradeability": {

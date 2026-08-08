@@ -204,7 +204,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "TUSD has four independently mintable issuer-native deployments. Ethereum uses a 2/3 Safe, BSC and Avalanche use chain-local 2/3 Safes with the same three owners, and Tron uses a single native account. Each final owner can bypass the configured mint pools and approvals, replace the mint key, and immediately upgrade both the token and controller proxies.",
     "upgradeability": {

@@ -206,7 +206,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "FDUSD has six issuer-native mint domains. A shared 4-of-6 signer set controls the Ethereum, BSC, and Arbitrum tokens and proxy admins; BSC also exposes a 2,000,000-FDUSD-per-call operator module. Sui uses a 4-of-7 native multisig over the TreasuryCap and UpgradeCap, Solana uses an immutable 4-of-6 SPL multisig mint authority, and TON uses a 4-of-6 multisig that can mint and replace Jetton code immediately.",
     "upgradeability": {

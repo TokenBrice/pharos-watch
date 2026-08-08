@@ -132,7 +132,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account (Ze3CQhTMi6...), and the program upgrade authority is a Solstice-operated EOA (BzMuMbtah9...). All mint-capable controls confirmed on-chain.",
     "controls": [

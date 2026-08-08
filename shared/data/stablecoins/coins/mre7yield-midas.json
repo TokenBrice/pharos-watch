@@ -353,7 +353,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "mRe7YIELD is independently mintable on Ethereum and Etherlink: Ethereum authorizes two EOAs and a deposit-vault proxy, while Etherlink authorizes one shared EOA and its chain-local vault. Both EVM proxy paths use two-day timelocks, but the Starknet deployment is self-replaceable with zero delay through a single-key governance account, making the effective deployment-wide upgrade delay zero.",
     "upgradeability": {

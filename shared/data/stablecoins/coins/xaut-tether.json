@@ -156,7 +156,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "XAUT is issuer-minted by Tether Gold; the Ethereum implementation exposes onlyOwner mint/redeem and the token owner is a verified 3/6 legacy multisig contract.",
     "upgradeability": {

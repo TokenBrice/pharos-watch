@@ -289,7 +289,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDe minting uses signed-order flows through the EthenaMinting contract. At Ethereum block 25576200, the one-day TimelockController owned the USDe token and held the active minter contract's default-admin role; the 5/10 Ethena Safe held its proposer, canceller, and executor roles.",
     "upgradeability": {

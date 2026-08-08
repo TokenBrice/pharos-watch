@@ -322,7 +322,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, which is signed by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The program remains upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, controlled without delay by autonomous 3-of-6 multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN. The prior record incorrectly classified the off-curve vault PDA as an EOA.",
     "upgradeability": {

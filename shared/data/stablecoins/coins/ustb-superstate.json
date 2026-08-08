@@ -118,7 +118,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USTB is an ERC-1967 upgradeable proxy with issuance controlled by a single issuer EOA that owns both the token and the ProxyAdmin. The EOA custody model is consistent with enterprise MPC/HSM; chain state confirmed unchanged.",
     "controls": [

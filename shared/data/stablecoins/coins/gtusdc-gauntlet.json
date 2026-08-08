@@ -33,7 +33,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "gtUSDC is an immutable MetaMorpho V1 vault (no proxy); shares minted only against USDC deposits. Vault owner is a Gauntlet Safe 4/7 (v1.3.0). No upgrade path. Base USDC issuance inherited from Circle.",
     "inheritedFrom": "usdc-circle",

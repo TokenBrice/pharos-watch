@@ -58,7 +58,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "gtUSDCp has three direct immutable Morpho vault deployments; shares mint only against each chain's USDC deposits. Ethereum and Base parameter owners are 4-of-7 Gauntlet Safes, while Arbitrum uses the same seven signers at a 3-of-7 threshold.",
     "inheritedFrom": "usdc-circle",

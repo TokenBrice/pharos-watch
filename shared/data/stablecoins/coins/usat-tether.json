@@ -135,7 +135,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USAT's verified HadronToken source exposes owner-only mint and redeem functions. The token and its transparent ProxyAdmin are both controlled immediately by the same legacy 3/5 multisig contract.",
     "upgradeability": {

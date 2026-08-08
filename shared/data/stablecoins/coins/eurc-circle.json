@@ -231,7 +231,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EURC has seven independently mintable native deployments. Ethereum, Base, Avalanche, World Chain, and Cronos use Circle FiatTokenV2_2 custom proxies with chain-local MasterMinter, token-owner, and proxy-admin controls. Solana and Stellar each use a 2-of-4 issuer multisig. Every EVM mint or upgrade path has zero on-chain delay and a code-empty single-account authority; off-chain custody behind those accounts is unknown.",
     "controls": [

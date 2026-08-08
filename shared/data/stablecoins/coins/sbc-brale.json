@@ -203,7 +203,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "SBC is issued by Brale (FinCEN MSB / US money transmitter) via UUPS-upgradeable AccessControl token contracts. The tracked EVM deployments use chain-local UPGRADER_ROLE authorities: a 6-signer legacy multisig on Ethereum, 3-of-6 Safes on Polygon and Avalanche, and the Brale issuance EOA on Arbitrum, Optimism, Base, and Celo.",
     "controls": [

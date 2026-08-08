@@ -233,7 +233,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "mAPOLLO is minted by the MApolloDepositVault proxy and an EOA holding M_APOLLO_MINT_OPERATOR_ROLE. Its token, deposit vault, shared access control, data feed, and manual aggregator are transparent proxies under one ProxyAdmin owned by a two-day Midas timelock.",
     "upgradeability": {

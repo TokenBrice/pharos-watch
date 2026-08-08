@@ -67,7 +67,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. Ethereum, BSC, and HyperEVM use upgradeable token deployments administered through 2-hour timelocks; each reviewed timelock has a 5-of-9 Safe as an admin. The Solana Token-2022 mint authority is Ondo's GM program PDA, while a single EOA can upgrade that program without an on-chain delay.",
     "upgradeability": {

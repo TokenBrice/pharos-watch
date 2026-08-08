@@ -161,7 +161,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "mHYPER has independently mintable deployments on Ethereum, Monad, Plasma, and Katana. The same EOA can mint on all four chains; Ethereum and Plasma also authorize deposit-vault proxies, and Ethereum, Monad, and Plasma authorize immutable LayerZero adapters. Chain-local transparent proxies remain upgradeable through 1-of-3 Safes and two-day Midas timelocks.",
     "upgradeability": {

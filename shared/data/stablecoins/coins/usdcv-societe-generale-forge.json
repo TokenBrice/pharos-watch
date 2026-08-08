@@ -212,7 +212,7 @@
   "custodyModel": "institutional-top",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDCV Ethereum mint is gated by the registrar EOA (0x7de0bb…da69) immutable in the shared SmartCoin V4 implementation (same as EURCV); no proxy admin; Solana deployment is issuer-controlled and not separately scored.",
     "upgradeability": {

@@ -319,7 +319,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "probable",
     "summary": "IAUon uses issuer-controlled minting across Ethereum, BSC, HyperEVM, and Solana. The three EVM tokens are BeaconProxy deployments whose shared Ondo beacons are upgradeable through 2-hour TimelockControllers; on BSC and HyperEVM those timelocks propose via a 4-of-7 Ondo Safe, execute/cancel via a 1-of-9 Ondo Safe plus one EOA, and are administered by a 5-of-9 Ondo Safe. Direct minters are the per-chain GMTokenManager (administered by the chain timelock) and the per-chain OndoOFT (owned by an OndoOwner contract whose DEFAULT_ADMIN_ROLE is the 4-of-7 Safe). On Solana the mint authority is the Ondo GM program PDA and the GM program's upgrade authority is a bare system account whose off-chain key custody is not on-chain verifiable.",
     "controls": [

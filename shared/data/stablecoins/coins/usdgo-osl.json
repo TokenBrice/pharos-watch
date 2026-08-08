@@ -145,7 +145,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "USDGO is a Solana Token-2022 issuer token. C2QJ... is the externally signable mint and permanent-delegate authority; a finalized mint transaction confirms it as the sole on-chain signer. Separate configuration, pause, freeze, and fee-withdrawal EOAs cannot mint. The shared Token-2022 program remains upgradeable through a 4/6 Squads V3 multisig with no enforced delay.",
     "upgradeability": {

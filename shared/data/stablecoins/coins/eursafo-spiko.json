@@ -108,7 +108,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "EURSAFO is the EUR share class of Spiko's AMF-authorized UCITS fund. Tokens are minted by Spiko's daily-operator relayer contracts (two UUPS proxies) under a PermissionManager (custom RBAC), with a Gnosis Safe 1.4.1 (8/3) as the super-admin that controls upgrades and permission assignments.",
     "upgradeability": {

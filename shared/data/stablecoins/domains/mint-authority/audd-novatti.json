@@ -2,7 +2,7 @@
   "id": "audd-novatti",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "AUDD is issued by AUDC Pty Ltd (Novatti, AFSL 700123); minting and 1:1 AUD redemption run through the issuer's centralized backend against segregated AUD cash and Treasury bills at Australian ADIs.",
     "controls": [

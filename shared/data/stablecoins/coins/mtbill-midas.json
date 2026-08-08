@@ -153,7 +153,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "mTBILL has independently mintable deployments on Ethereum, Base, Rootstock, Plume, and Etherlink. Five deposit vaults, two shared EOAs, and two chain-specific Safes currently hold M_TBILL_MINT_OPERATOR_ROLE. Each chain's 1-of-3 DEFAULT_ADMIN_ROLE Safe and the shared admin EOA can change those grants immediately, while proxy upgrades pass through a two-day chain-local timelock.",
     "upgradeability": {

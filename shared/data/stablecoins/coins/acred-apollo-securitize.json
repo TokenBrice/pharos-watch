@@ -90,7 +90,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "ACRED has three independent immediate-upgrade domains. Four EVM token/trust-service pairs share one uncapped MASTER EOA; Solana uses two ISSUER paths through Securitize's shared issuer/controller stack, including a configurable on-ramp PDA, and four mint-critical programs share one upgrade EOA; Aptos has two issuer EOAs plus a master that also owns the upgradable package.",
     "upgradeability": {

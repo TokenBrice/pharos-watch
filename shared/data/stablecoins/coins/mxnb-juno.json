@@ -372,7 +372,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "MXNB is a FiatToken-fork proxy. On Ethereum and Arbitrum, masterMinter() = owner() = EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Proxy admin is also EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. All three are issuer-controlled EOAs with no multisig.",
     "controls": [

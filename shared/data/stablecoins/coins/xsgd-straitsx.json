@@ -174,7 +174,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "StraitsX tokens use a Circle-style MasterMinter pattern on Ethereum; token and master-minter controls resolve to verified 3/5 Safes, and the Solana mint authority resolves to a 3/10 multisig.",
     "upgradeability": {

@@ -53,7 +53,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "spUSDT is a Spark ERC-4626 savings wrapper over USDT. Wrapper shares are minted against deposited USDT and inherit Tether USDT's reviewed issuer/multisig mint authority for base supply. The wrapper is UUPS-upgradeable by the Spark SubProxy through Sky governance's enforceable 48-hour DSPause path.",
     "inheritedFrom": "usdt-tether",

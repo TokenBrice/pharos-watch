@@ -389,7 +389,7 @@
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "tGBP uses transparent proxies on five EVM chains and a standard SPL Token mint on Solana. EOA 0xAF4fCE...595C0 controls EVM minting and four live ProxyAdmin paths; Avalanche's ProxyAdmin is self-owned. Solana minting is controlled by a 1-of-2 SPL multisig.",
     "upgradeability": {

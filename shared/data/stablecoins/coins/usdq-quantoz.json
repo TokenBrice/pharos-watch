@@ -299,7 +299,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDQ is issuer-minted on both Ethereum (3/5 multisig owner, no modules) and Polygon (2/5 multisig owner, no modules) via the same HadronToken onlyOwner mint function. Polygon can independently mint. Both chain proxy admins are 3/5 multisigs, no modules.",
     "controls": [

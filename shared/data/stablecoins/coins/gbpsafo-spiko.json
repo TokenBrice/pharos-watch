@@ -104,7 +104,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
     "upgradeability": {

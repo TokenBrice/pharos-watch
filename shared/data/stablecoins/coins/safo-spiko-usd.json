@@ -216,7 +216,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "SAFO tokens are UUPS-upgradeable ERC-20s governed by a per-chain Permission Manager (PM) contract. On Ethereum, the PM's ADMIN group (group 0) is held by a legacy 6-signer multisig (threshold 3) at 0x4eaa52b6. The mint requirement on the Ethereum token is group 0 or group 2; only the multisig currently holds group 0 (group 2 was previously assigned to an EOA that has since been removed). The PM itself is upgradeable but has no separate proxy admin, so upgrades require group 0 approval by this multisig.",
     "upgradeability": {

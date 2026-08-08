@@ -158,7 +158,7 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "spUSDC shares are minted against deposited USDC in Spark's Ethereum and Avalanche ERC-4626 vaults and inherit Circle's reviewed USDC issuer mint authority. Both vaults are UUPS proxies: Ethereum upgrades resolve through Spark's SubProxy and Sky's 48-hour DSPause path, while Avalanche upgrades resolve through the Spark executor driven by its LayerZero governance receiver.",
     "inheritedFrom": "usdc-circle",

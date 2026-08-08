@@ -191,7 +191,7 @@
   ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "mGLOBAL has two live direct-minter controls on Ethereum: backend EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. A 1-of-3 Safe and a separate EOA can immediately rotate mint operators through DEFAULT_ADMIN_ROLE. The token, vault, and shared MidasAccessControl proxies share a ProxyAdmin owned by a two-day timelock.",
     "upgradeability": {

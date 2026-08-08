@@ -257,7 +257,7 @@
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "reUSD currently grants MINTER_ROLE to a collateral-deposit layer, an immutable redemption contract with no mint call, and a CCIP burn/mint pool. A two-day TimelockController holds token admin and UUPS upgrade roles; a 3-of-5 Safe is its sole proposer, executor, and canceller.",
     "upgradeability": {

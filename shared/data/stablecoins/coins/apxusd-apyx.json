@@ -291,7 +291,7 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "Ethereum issuance uses MinterV0 and an OZ AccessManager: the 3/6 operator Safe holds the request/execute role, while MinterV0 reaches the token mint selector only after a four-hour delay. Base and BSC mint only through their configured Chainlink CCIP pools. The same signer set controls all three UUPS deployments through chain-local Safe instances, with a three-day Ethereum upgrade delay, seven-day Base delay, and no BSC delay.",
     "upgradeability": {

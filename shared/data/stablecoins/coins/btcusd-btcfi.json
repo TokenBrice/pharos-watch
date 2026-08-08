@@ -402,7 +402,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "manual-review",
     "summary": "BtcUSD's canonical Bifrost issuance runs through the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647, a non-proxy contract that holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral; the token's DEFAULT_ADMIN_ROLE EOA can grant or revoke that role but cannot mint directly. On Base, the ERC20_Bridged proxy's two owners mint the bridged representation, and its proxy admin resolves to an EOA. The Bifrost AccessControl is non-enumerable and public Bifrost RPCs cannot serve full-history role-grant logs, so membership exclusivity and the unverified Base owner contract cap this review at manual-review.",
     "upgradeability": {

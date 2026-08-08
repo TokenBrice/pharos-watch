@@ -168,7 +168,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. The later Solana deployment remains within Securitize's regulated issuance platform.",
     "upgradeability": {

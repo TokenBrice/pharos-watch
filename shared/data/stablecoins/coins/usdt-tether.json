@@ -428,7 +428,7 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
     "summary": "USDT is issuer-minted by Tether; on Ethereum the token owner is a 3/6 legacy multisig-style owner set with direct supply authority.",
     "upgradeability": {
