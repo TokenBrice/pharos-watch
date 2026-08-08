@@ -23,12 +23,12 @@
     "provider": "Accountable",
     "attestorTier": "niche",
     "latestReport": {
-      "periodEnd": "2026-07-15",
-      "publishedAt": "2026-07-15",
+      "periodEnd": "2026-07-28",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Solstice attestation API observed at the 2026-07-28 review",
       "confidence": "verified",
       "sources": [
         {

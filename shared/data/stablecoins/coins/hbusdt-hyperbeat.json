@@ -40,11 +40,11 @@
   "detailProvider": "coingecko",
   "geckoId": "hyperbeat-usdt",
   "proofOfReserves": {
-    "type": "real-time",
+    "type": "self-reported",
     "url": "https://accountable.hyperbeat.org/",
-    "provider": "Accountable (dashboard origin returned persistent HTTP 503 across 5+ checks on 2026-08-08 - an AWS ELB backend outage, not an edge blip; re-verify availability next sweep)",
-    "attestorTier": "niche",
-    "cadence": "real-time"
+    "provider": "Accountable instance (dashboard backend returned persistent HTTP 503 across two consecutive days of checks 2026-08-07/08, port and sibling API paths unreachable, and archive.org has never captured rendered content - the claimed live proof-of-solvency feed is not retrievable, unlike every other verified Accountable deployment)",
+    "attestorTier": "none",
+    "cadence": "none"
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

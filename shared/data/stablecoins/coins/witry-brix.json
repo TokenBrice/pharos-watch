@@ -327,12 +327,12 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-21",
-      "publishedAt": "2026-07-21",
+      "periodEnd": "2026-07-28",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Accountable dashboard snapshot observed at the 2026-07-28 review",
       "confidence": "verified",
       "sources": [
         {

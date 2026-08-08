@@ -24,12 +24,12 @@
     "cadence": "real-time",
     "provider": "Mento Reserve dashboard",
     "latestReport": {
-      "periodEnd": "2026-07-15",
-      "publishedAt": "2026-07-15",
+      "periodEnd": "2026-07-27",
+      "publishedAt": "2026-07-27",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Mento reserve API re-read 2026-07-27",
       "confidence": "verified",
       "sources": [
         {

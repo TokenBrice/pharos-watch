@@ -448,10 +448,10 @@
         "evidence": "At finalized Solana slot 433002244, getAccountInfo for cUSDO mint BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs returned this same public key as mintAuthority and freezeAuthority. Its account is system-program owned, not a Token-2022 multisig or program account."
       }
     ],
-    "reconciliation": "continuous",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, the three EVM cUSDO deployments resolved through zero-admin-slot EIP-1967 proxies to the listed implementations. The same no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on all three, and verified source makes UUPS upgrades depend on UPGRADE_ROLE. These wrappers mint cUSDO only against their chain's USDO asset, so base-USDO issuance remains inherited from usdo-openeden. At finalized Solana slot 433002244, cUSDO's Token-2022 mint and freeze authority was the direct system-account signer FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i. Reserve reconciliation: cUSDO is a wrapped form of USDO, and OpenEden's transparency materials describe Chainlink Proof of Reserve as an independent, real-time verification feed for USDO reserve coverage; this is recurring third-party reconciliation rather than issuer-only reporting. Prudential supervision: the Bermuda Monetary Authority registry lists OpenEden Digital Limited (registration number 202403468) with a Class F digital-asset-business licence effective 2026-05-26, matching the legal entity identified for the USDO/cUSDO product. Reviewed 2026-07-15. Economic-control adjudication (2026-07-20): each cUSDO ERC-4626 wrapper mints shares only against USDO actually deposited into that chain's vault and exposes no privileged net-claim mint entry point, so the wrapper cap is economically bounded; base USDO issuance discretion is scored on the parent usdo-openeden profile.",
+      "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, the three EVM cUSDO deployments resolved through zero-admin-slot EIP-1967 proxies to the listed implementations. The same no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on all three, and verified source makes UUPS upgrades depend on UPGRADE_ROLE. These wrappers mint cUSDO only against their chain's USDO asset, so base-USDO issuance remains inherited from usdo-openeden. At finalized Solana slot 433002244, cUSDO's Token-2022 mint and freeze authority was the direct system-account signer FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i. Reserve reconciliation: cUSDO is a wrapped form of USDO, and OpenEden's transparency materials describe Chainlink Proof of Reserve as an independent, real-time verification feed for USDO reserve coverage; this is recurring third-party reconciliation rather than issuer-only reporting. Prudential supervision: the Bermuda Monetary Authority registry lists OpenEden Digital Limited (registration number 202403468) with a Class F digital-asset-business licence effective 2026-05-26, matching the legal entity identified for the USDO/cUSDO product. Reviewed 2026-07-15. Economic-control adjudication (2026-07-20): each cUSDO ERC-4626 wrapper mints shares only against USDO actually deposited into that chain's vault and exposes no privileged net-claim mint entry point, so the wrapper cap is economically bounded; base USDO issuance discretion is scored on the parent usdo-openeden profile. M-1 evidence review 2026-08-08: supervision 'prudential' upgraded to primary evidence - BMA register entry read directly (OpenEden Digital Limited, Class F, reg. 202403468, effective 2026-05-26; previously a time-limited Class M expiring 2026-03-31, with an unverifiable ~8-week register gap before Class F took effect) under the DABA prudential regime (BR 98/2018: audited financial statements, business plan, compliance certificate). Reconciliation downgraded continuous -> periodic: no issuer artefact names a reconciliation series; the only named series is the Chainlink usdo-por feed with a daily 86400s heartbeat and porAuditor 'Cross-chain' (no accounting firm), whose declared scope (U.S. Treasury bills only) and value (24,718,359.89 on 2026-08-08) diverge ~9% from the issuer API's full-basket figure (27,161,572.74 incl. RLUSD/USDC/BUIDL/VBILL); the docs transparency page is 7 months stale and still future-tense about a public dashboard.",
       "reviewer": "OpenAI Codex control verification; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
@@ -497,8 +497,16 @@
           "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
         },
         {
-          "label": "Bermuda Monetary Authority regulated-entities registry",
+          "label": "BMA regulated-entities register: OpenEden Digital Limited, Digital Assets Business, Class F, reg. 202403468, effective 26 May 2026",
           "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "BMA Digital Asset Business (Prudential Standards) (Annual Return) Rules 2018 (BR 98/2018)",
+          "url": "https://cdn.bma.bm/documents/2023-11-27-15-56-27-Digital-Asset-Business-Prudential-Standards-Annual-Return-Rules-2018.pdf"
+        },
+        {
+          "label": "Chainlink USDO Reserves feed metadata (usdo-por: 86400s heartbeat, porAuditor Cross-chain)",
+          "url": "https://reference-data-directory.vercel.app/feeds-ethereum-mainnet-base-1.json"
         }
       ]
     },

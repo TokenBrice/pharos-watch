@@ -48,7 +48,7 @@
     "url": "https://flyingtulip.com/ftusd/dashboard/",
     "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Flying Tulip dashboard"
+    "provider": "Flying Tulip dashboard (reads reserve state client-side via on-chain contract calls; no server reserves API exists in any of the 36 page bundles and archive captures are pre-hydration shells, so the dashboard is statically unverifiable by design)"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",

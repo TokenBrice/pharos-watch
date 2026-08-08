@@ -40,12 +40,12 @@
     "cadence": "real-time",
     "provider": "Chainlink Proof of Reserve",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-07-30",
+      "publishedAt": "2026-07-31",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - issuer API response timestamped 2026-07-30T23:15Z, re-opened 2026-07-31",
       "confidence": "verified",
       "sources": [
         {

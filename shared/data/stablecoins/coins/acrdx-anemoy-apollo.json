@@ -40,12 +40,12 @@
     "attestorTier": "niche",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-24",
-      "publishedAt": "2026-07-27",
+      "periodEnd": "2026-07-27",
+      "publishedAt": "2026-07-28",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Grok wave8 phase1 reserve re-verify",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Chronicle dashboard holdings observed at the 2026-07-27/28 review",
       "confidence": "verified",
       "sources": [
         {

@@ -38,7 +38,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
-    "provider": "Charli3 daily reserve verification feed (attribution confirmed, but the portal.charli3.io feed endpoint fails at the TLS layer as of 2026-08-08 - re-verify)",
+    "provider": "Charli3 daily reserve verification feed (attribution confirmed via docs, but the portal.charli3.io endpoint rejects non-browser TLS handshakes on repeated checks and the only archive capture is a 2024 unrendered shell - statically unverifiable)",
     "attestorTier": "niche",
     "cadence": "real-time"
   },

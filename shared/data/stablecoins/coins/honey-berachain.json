@@ -126,12 +126,12 @@
     "attestorTier": "none",
     "cadence": "real-time",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "PoR verification sweep 2026-08 (lockstep alignment: snapshot dates pinned to the dated observation the composition review itself records) - Pharos live-reserves capture 2026-07-15T12:13Z",
       "confidence": "verified",
       "sources": [
         {

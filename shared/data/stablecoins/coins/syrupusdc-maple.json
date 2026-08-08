@@ -21,8 +21,8 @@
   "pythFeedId": "0xe616297dab48626eaacf6d030717b25823b13ae6520b83f4735bf8deec8e2c9a",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm (PoR programme launched 2026-05-07; the recorded URL is the launch announcement - the live TNF-verified feed is referenced at app.maple.finance pool pages but could not be confirmed at a stable public path; re-verify)",
+    "url": "https://maple.finance/transparency",
+    "provider": "The Network Firm (PoR programme launched 2026-05-07; maple.finance/transparency serves live AUM/treasury figures, but the announced TNF collateralization report itself remains 'coming soon' and is not yet published there)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "United States"
