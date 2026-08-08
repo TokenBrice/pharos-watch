@@ -1,6 +1,7 @@
 "use client";
 
 import { ScanSearch, Sigma } from "lucide-react";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9PreBreakdownCard,
@@ -116,14 +117,15 @@ export function ScoreConstructionPanel({
     );
   }
 
+  // In-flow (below xl) the construction arithmetic is detail, not verdict —
+  // it folds behind the standard disclosure; the rail keeps its at-a-glance
+  // expanded copy at xl+.
   return (
     <section className="border-b border-border/40 pb-3 xl:hidden" aria-label="How this score is built">
-      <div className="flex items-center gap-2">
-        <Sigma className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 className="text-sm font-semibold">How this score is built</h3>
-      </div>
-      {waterfall ? <div className="mt-2">{waterfall}</div> : null}
-      {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
+      <ModuleDisclosure label="How this score is built">
+        {waterfall ? <div className="mt-2">{waterfall}</div> : null}
+        {whyNotHigher ? <div className="mt-3 border-t border-border/40 pt-3">{whyNotHigher}</div> : null}
+      </ModuleDisclosure>
     </section>
   );
 }

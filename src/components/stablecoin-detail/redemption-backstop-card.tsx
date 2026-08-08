@@ -15,6 +15,7 @@ import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -119,8 +120,11 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         </div>
 
-        {/* ── primary capacity column beside stacked secondary detail (balances the full width) ── */}
-        <div className="grid items-start gap-3 xl:grid-cols-2">
+        {/* ── detail layer: capacity/fee/confidence fold behind the standard
+               disclosure — the score, route chips, and access row above are
+               the summary read ── */}
+        <ModuleDisclosure label="Capacity, fees & confidence">
+        <div className="mt-2 grid items-start gap-3 xl:grid-cols-2">
           {/* ── Capacity card (earns the card treatment — has detail) ── */}
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
@@ -160,6 +164,14 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         </div>
 
+        {/* ── distill: Notes (filtered for redundancy with capacity) ── */}
+        {viewModel.filteredNotes.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+            {viewModel.filteredNotes.join(". ")}
+          </div>
+        ) : null}
+        </ModuleDisclosure>
+
         {/* ── colorize + distill: Sub-scores collapsed with color ── */}
         <ScoringBreakdownDisclosure>
           <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
@@ -174,13 +186,6 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
             })}
           </div>
         </ScoringBreakdownDisclosure>
-
-        {/* ── distill: Notes (filtered for redundancy with capacity) ── */}
-        {viewModel.filteredNotes.length > 0 ? (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            {viewModel.filteredNotes.join(". ")}
-          </div>
-        ) : null}
 
         <ShowYourWorkPanel kind="redemption" entry={entry} stablecoinId={entry.stablecoinId} />
 

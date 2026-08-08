@@ -101,8 +101,8 @@ describe("MintAuthoritySection", () => {
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Safety Score V9 mint component");
     expect(html).toContain("Scoring breakdown");
+    expect(html).toContain("Primary controls");
     expect(html).toContain("Derived posture");
     expect(html).toContain("Component score");
     expect(html).toContain("Partially bounded admin");
@@ -170,15 +170,19 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
+    // An active incident keeps the loud in-summary callout.
     expect(html).toContain("Mint incident 2024-06-13");
     expect(html).toContain("Privileged mint authority created unbacked supply");
-    expect(html).toContain("Centralized mint (critical) &lt;= 10");
+    // Structural caps render inside the scoring breakdown with their reason.
+    expect(html).toContain("Centralized mint (critical)");
+    expect(html).toContain("&lt;= 10");
+    expect(html).toContain("Economically effective minting is unbounded or compromised.");
     expect(html).toContain("Incident report");
     expect(html).toContain("https://example.com/incident");
     expect(html).toContain("Single-key address - custody unverifiable");
   });
 
-  it("features repeat mint incidents with a count header", () => {
+  it("folds resolved incidents into a calm incident history ledger", () => {
     const html = renderToStaticMarkup(
       <MintAuthoritySection
         profile={{
@@ -203,12 +207,14 @@ describe("MintAuthoritySection", () => {
       />,
     );
 
-    expect(html).toContain("Repeat mint incidents (2)");
-    expect(html).toContain("2025-10-04");
+    // Resolved incidents are a historical record behind the disclosure, not a
+    // red alarm: red stays reserved for active incidents.
+    expect(html).toContain("Incident history");
+    expect(html).toContain("Mint incident 2025-10-04");
     expect(html).toContain("Second exploit borrowed stablecoin with no collateral.");
-    expect(html).toContain("2024-01-30");
+    expect(html).toContain("Mint incident 2024-01-30");
     expect(html).toContain("First exploit turned the borrow route into bad debt.");
-    expect(html).not.toContain("Mint incident 2025-10-04");
+    expect(html).not.toContain("border-red-500/25");
   });
 
   it("renders verification gaps when review questions remain", () => {
