@@ -10,6 +10,8 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
 const AS_OF_SEC = 1_785_456_000;
+const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-09T00:00:00.000Z";
+const REGISTRY_FIXTURE_CLOCK_SEC = Date.parse(REGISTRY_FIXTURE_CAPTURED_AT) / 1_000;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
   { assetId: "stusds-sky", parentId: "usds-sky" },
@@ -389,7 +391,10 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         return [assetId, meta] as const;
       }),
     );
-    const input = fixedInput(activeAssetIds);
+    const input = fixedInput(activeAssetIds, {}, {
+      clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
+      capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+    });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
     const evaluatedById = new Map(
@@ -464,10 +469,17 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     );
     const localSupplyUsd = 48_488_933;
     const parentSupplyUsd = 45_340_688.25;
-    const input = fixedInput(activeAssetIds, {
-      [assetId]: localSupplyUsd,
-      [parentId]: parentSupplyUsd,
-    });
+    const input = fixedInput(
+      activeAssetIds,
+      {
+        [assetId]: localSupplyUsd,
+        [parentId]: parentSupplyUsd,
+      },
+      {
+        clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
+        capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+      },
+    );
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(
       normalizeFixedInput(input),
@@ -521,7 +533,10 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         return [id, meta] as const;
       }),
     );
-    const input = fixedInput(activeAssetIds);
+    const input = fixedInput(activeAssetIds, {}, {
+      clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
+      capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
+    });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
     const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;
     const controlReview = asset.controlReview;
