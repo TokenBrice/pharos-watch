@@ -179,7 +179,7 @@ export function buildCoverageRow({
     flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
     blacklist: blacklistFeature.resolve(coin, blacklistStatus),
     dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
-    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary, publishedMint),
+    mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary, publishedMint, hasData("mintAuthority")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {
