@@ -97,7 +97,7 @@ describe("DEX deployment outcomes", () => {
 
     const inaccessible = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
-      deployments: [{ ...DEPLOYMENT, chain: "cardano" }],
+      deployments: [{ ...DEPLOYMENT, chain: "stellar" }],
       pools: [],
       providerChecks: [],
       nowSec: 100,
@@ -107,8 +107,8 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(329);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(119);
+    expect(outcomes).toHaveLength(88);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(50);
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {
