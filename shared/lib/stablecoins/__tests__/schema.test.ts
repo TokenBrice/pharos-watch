@@ -1003,6 +1003,15 @@ describe("StablecoinMeta schema — mint authority", () => {
 });
 
 describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1)", () => {
+  function variantMintAuthority(parentId: string) {
+    return makeMintAuthority({
+      mintPath: "wrapped-or-variant-inherited",
+      authorityPosture: "none-resolved",
+      inheritedFrom: parentId,
+      controls: undefined,
+    });
+  }
+
   it("accepts a coin with matching variantOf and pegReferenceId", () => {
     const json = [
       makeCoin({
@@ -1086,6 +1095,43 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
       },
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/pegReferenceId/);
+  });
+
+  it("requires risk-absorption variants to declare whether the wrapper operator is native or third-party", () => {
+    const parentId = "risk-parent";
+    const parent = makeCoin({
+      id: parentId,
+      mintAuthority: makeMintAuthority({
+        mintPath: "immutable-user-collateralized",
+        authorityPosture: "none-resolved",
+        controls: undefined,
+      }),
+    });
+    const child = makeCoin({
+      id: "risk-child",
+      flags: { ...baseFlags, navToken: true },
+      variantOf: parentId,
+      variantKind: "risk-absorption",
+      pegReferenceId: parentId,
+      mintAuthority: variantMintAuthority(parentId),
+    });
+
+    expect(() => parseStablecoinMetaAssets([parent, child], "fixture")).toThrow(/wrapperOperator/);
+    expect(() => parseStablecoinMetaAssets([
+      parent,
+      { ...child, wrapperOperator: "third-party" },
+    ], "fixture")).not.toThrow();
+  });
+
+  it("rejects wrapperOperator on unambiguous variant kinds", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "strategy-child",
+        variantOf: "strategy-parent",
+        variantKind: "strategy-vault",
+        wrapperOperator: "third-party",
+      }),
+    ], "fixture")).toThrow(/wrapperOperator/);
   });
 });
 

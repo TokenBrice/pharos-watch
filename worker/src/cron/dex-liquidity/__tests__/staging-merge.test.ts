@@ -760,6 +760,49 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
   });
 
+  it("retains Horizon as the source family for a priced Stellar pool", async () => {
+    const now = 1710000000;
+    const poolId = "328306d8d623aa358415f29fca051afbbe8f0c591c28bbcb78e80907deffb2a7";
+    const mockDb = createMockDb([
+      {
+        pool_id: `stellar:${poolId}`,
+        stablecoin_id: "eurc-circle",
+        source: "horizon",
+        chain: "stellar",
+        protocol: "stellar-sdex",
+        dex_id: "stellar-sdex",
+        symbol: "EURC / USDC",
+        tvl_usd: 220,
+        volume_24h: null,
+        quality_multiplier: null,
+        pool_type: "stellar-constant-product",
+        fee_tier: 30,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2",
+        quote_token: "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
+        quote_symbol: "USDC",
+        price_usd: 1.1,
+        locked_liq_pct: null,
+        raw_json: null,
+        discovered_at: now,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+    const metric = metrics.get("eurc-circle");
+
+    expect(result.mergedCount).toBe(1);
+    expect(metric.topPools).toHaveLength(1);
+    expect(metric.topPools[0]).toMatchObject({
+      poolId: `stellar:${poolId}`,
+      source: "horizon",
+      tvlUsd: 220,
+    });
+  });
+
   it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {
     const now = 1710000000;
     const evmPoolAddress = "0x0000000000000000000000000000000000000456";

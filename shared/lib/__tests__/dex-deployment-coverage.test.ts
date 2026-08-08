@@ -24,9 +24,10 @@ describe("DEX deployment coverage ownership", () => {
       }
     }
 
-    expect(unsupported).toHaveLength(329);
-    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(119);
-    expect(exclusivelyUnsupported).toHaveLength(20);
+    expect(unsupported).toHaveLength(65);
+    expect(new Set(unsupported.map((row) => row.stablecoinId)).size).toBe(44);
+    expect(exclusivelyUnsupported).toHaveLength(6);
+    expect(getDexDiscoveryProviders("stellar")).toEqual(["horizon"]);
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {
@@ -46,7 +47,7 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(20);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(6);
     expect(DEX_COVERAGE_WAIVERS.every((waiver) => waiver.owner.length > 0 && waiver.expiresAt > REVIEW_AT_SEC)).toBe(
       true,
     );

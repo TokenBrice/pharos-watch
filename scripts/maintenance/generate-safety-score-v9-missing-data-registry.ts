@@ -229,7 +229,7 @@ const WORK_TYPES: Record<V9MissingDataWorkType, WorkTypeDefinition> = {
     title: "Mechanism risk component review",
     stream: "MECH",
     instructions:
-      "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash and T-bill components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
+      "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash, T-bill, and commodity-claim components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
     completionCriteria:
       "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.",
     recommendedSkill: "reserve-research",
@@ -394,12 +394,25 @@ export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9Missing
   return SCORE_PROJECTION_WORK_TYPE_BY_REASON[reasonCode] ?? null;
 }
 
+/**
+ * Archetypes whose mechanism components are curated directly from issuer
+ * disclosure under the ratified strict evidence standard, rather than waiting
+ * on a measured-metric producer capability.
+ */
+const DIRECT_CURATION_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set([
+  "fiat-cash",
+  "tbill",
+  "commodity-claim",
+]);
+
 export function mechanismResolutionMode(
   entry: Pick<V9EvidenceGapQueueEntryV2, "archetype" | "path">,
 ): V9MissingDataResolutionMode {
   // Wave-7 D3 ratified direct overlay curation for every fiat-cash and
-  // T-bill mechanism component under the strict evidence standard.
-  if (entry.archetype === "fiat-cash" || entry.archetype === "tbill") return "agent-curation";
+  // T-bill mechanism component under the strict evidence standard. v9.14 adds
+  // commodity-claim, whose components are curated from the same class of
+  // issuer disclosure (bar lists, vault terms, redemption terms).
+  if (DIRECT_CURATION_MECHANISM_ARCHETYPES.has(entry.archetype)) return "agent-curation";
   return "issuer-or-onchain-evidence";
 }
 
@@ -445,7 +458,7 @@ export function scoreProjectionResolutionMode(
   }
   if (workType === "EXIT_DEX_COVERAGE" || workType === "EXIT_RUNTIME_ROUTE") return "producer-runtime";
   if (workType === "MECHANISM_REVIEW") {
-    return archetype === "fiat-cash" || archetype === "tbill" ? "agent-curation" : "issuer-or-onchain-evidence";
+    return DIRECT_CURATION_MECHANISM_ARCHETYPES.has(archetype) ? "agent-curation" : "issuer-or-onchain-evidence";
   }
   return "agent-curation";
 }

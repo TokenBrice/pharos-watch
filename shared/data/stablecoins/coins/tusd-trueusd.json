@@ -332,7 +332,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x93fde11c8107127A80ce95100dF611790E4413c9",
+        "address": "0x93fde11c8107127a80ce95100df611790e4413c9",
         "label": "Ethereum TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -343,23 +343,23 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xdb13f2A1Ece32Ae876eD8f2AC9e8c3671643D2E0",
-            "0x3e6bF90E716d2ca36a186168bfee5dF9ea4A6c94",
-            "0x382D7a2A4847bd6c7D333bFa420B70Db63B869dE"
+            "0xdb13f2a1ece32ae876ed8f2ac9e8c3671643d2e0",
+            "0x3e6bf90e716d2ca36a186168bfee5df9ea4a6c94",
+            "0x382d7a2a4847bd6c7d333bfa420b70db63b869de"
           ],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xd5D82B6aDDc9027B22dCA772Aa68D5d74cdBdF44",
-          "masterCopy": "0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F",
+          "fallbackHandler": "0xd5d82b6addc9027b22dca772aa68d5d74cdbdf44",
+          "masterCopy": "0x34cfac646f301356faa8b21e94227e3583fe3f5f",
           "observedBlock": 25526129,
           "observedAt": "2026-07-13",
           "source": "onchain",
           "version": "1.1.1"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 25526129,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712143,
         "failureDomainKeys": ["safe:ethereum:0x93fde11c8107127a80ce95100df611790e4413c9"],
         "bypassSurfaces": [
           "Owner-only requestMint/finalizeMint bypasses approvals and pool limits.",
@@ -373,13 +373,17 @@
           {
             "label": "Ethereum TUSD owner Safe",
             "url": "https://etherscan.io/address/0x93fde11c8107127A80ce95100dF611790E4413c9#readProxyContract"
+          },
+          {
+            "label": "Ethereum observation block 25712143",
+            "url": "https://etherscan.io/block/25712143"
           }
         ],
-        "evidence": "At Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), the token proxy used implementation 0xdbc9...c27e and owner 0x0000...3cc9; that controller proxy used implementation 0x3c39...3776 and both owner/proxyOwner were this 2/3 Safe. On-chain Safe reads returned the listed owners, no modules, zero guard/module guard, and the recorded fallback handler."
+        "evidence": "At Ethereum block 25712143, controller owner() and proxyOwner() still returned this 2-of-3 Safe. The exact-cutoff block 25526129 review resolved the token and controller proxy implementations and returned the listed Safe owners, no modules, zero guard/module guard, and the recorded fallback handler."
       },
       {
         "chain": "bsc",
-        "address": "0x48261f89e4d0B70632e0f46f20124b7Da27d5885",
+        "address": "0x48261f89e4d0b70632e0f46f20124b7da27d5885",
         "label": "BSC TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -390,23 +394,23 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x13873fa4B7771F3492825B00D1c37301fF41C348",
-            "0x9F8413454C182369c0200F6cC1031903477F752E",
-            "0x621Fe33CCF74038dB90B18365cb450d677D4b3D8"
+            "0x13873fa4b7771f3492825b00d1c37301ff41c348",
+            "0x9f8413454c182369c0200f6cc1031903477f752e",
+            "0x621fe33ccf74038db90b18365cb450d677d4b3d8"
           ],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xf48f2B2d2a534E402487b3ee7C18c33AeC0Fe5e4",
-          "masterCopy": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
           "observedBlock": 109812367,
           "observedAt": "2026-07-13",
           "source": "onchain",
           "version": "1.3.0"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 109812367,
+        "observedAt": "2026-08-08",
+        "observedBlock": 114787751,
         "failureDomainKeys": [
           "safe-signers:tusd-bsc-avalanche:0x13873fa4b7771f3492825b00d1c37301ff41c348:0x9f8413454c182369c0200f6cc1031903477f752e:0x621fe33ccf74038db90b18365cb450d677d4b3d8"
         ],
@@ -422,13 +426,17 @@
           {
             "label": "BSC TUSD TokenController proxy",
             "url": "https://bscscan.com/address/0xb25e3c3493fc61bdd02661bcc27058022716c66a#code"
+          },
+          {
+            "label": "BSC observation block 114787751",
+            "url": "https://bscscan.com/block/114787751"
           }
         ],
-        "evidence": "At BSC block 109812367 (hash 0x958afa5b82a24f0ee89387646d589882bf448dbb5fac8dce521b4911ae834202), the token proxy implementation was 0x0d7a...7711 and owner was controller 0xb25e...c66a. The controller implementation was 0xcac1...4677 and both owner/proxyOwner were this 2/3 Safe. On-chain reads found the listed owners, no modules, zero guard/module guard, and no execution delay."
+        "evidence": "At BSC block 114787751, controller owner() and proxyOwner() still returned this 2-of-3 Safe. The exact-cutoff block 109812367 review resolved the token and controller proxy implementations and returned the listed Safe owners, no modules, zero guard/module guard, and no execution delay."
       },
       {
         "chain": "avalanche",
-        "address": "0x17189844773712e89954CF01B71f724d473BDBB1",
+        "address": "0x17189844773712e89954cf01b71f724d473bdbb1",
         "label": "Avalanche TUSD controller owner and proxy-admin Safe",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -439,23 +447,23 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x13873fa4B7771F3492825B00D1c37301fF41C348",
-            "0x9F8413454C182369c0200F6cC1031903477F752E",
-            "0x621Fe33CCF74038dB90B18365cb450d677D4b3D8"
+            "0x13873fa4b7771f3492825b00d1c37301ff41c348",
+            "0x9f8413454c182369c0200f6cc1031903477f752e",
+            "0x621fe33ccf74038db90b18365cb450d677d4b3d8"
           ],
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x017062A1dE2fE6b99Be3d9D37841fED19f573804",
-          "masterCopy": "0xfb1bffC9d739B8D520DaF37dF666da4C687191EA",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
           "observedBlock": 90233120,
           "observedAt": "2026-07-13",
           "source": "onchain",
           "version": "1.3.0"
         },
-        "observedAt": "2026-07-13",
-        "observedBlock": 90233120,
+        "observedAt": "2026-08-08",
+        "observedBlock": 92342897,
         "failureDomainKeys": [
           "safe-signers:tusd-bsc-avalanche:0x13873fa4b7771f3492825b00d1c37301ff41c348:0x9f8413454c182369c0200f6cc1031903477f752e:0x621fe33ccf74038db90b18365cb450d677d4b3d8"
         ],
@@ -475,9 +483,13 @@
           {
             "label": "TrustToken Avalanche TokenController source",
             "url": "https://github.com/smartcontractkit/trusttoken-smart-contracts/blob/da82d843e58429faf77e320c51f245e4dc03c4ec/contracts/avalanche/AvalancheTokenController.sol"
+          },
+          {
+            "label": "Avalanche observation block 92342897",
+            "url": "https://snowscan.xyz/block/92342897"
           }
         ],
-        "evidence": "At Avalanche block 90233120 (hash 0xf877fd5e314a603d15a48db4b8775613f9efe1979911875c2e2922c1ddaa4651), the token proxy implementation was 0x1bd4...c315 and owner was controller 0xc3a2...dc1c. The controller implementation was 0x0008...13e1 and both owner/proxyOwner were this 2/3 Safe. On-chain reads found the same signer set as BSC, no modules, zero guard/module guard, and no execution delay."
+        "evidence": "At Avalanche block 92342897, controller owner() and proxyOwner() still returned this 2-of-3 Safe. The exact-cutoff block 90233120 review resolved the token and controller proxy implementations and returned the same signer set as BSC, no modules, zero guard/module guard, and no execution delay."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -514,9 +526,9 @@
           "url": "https://snowscan.xyz/address/0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c#code"
         }
       ],
-      "evidence": "Exact-cutoff review used Ethereum block 25526129, Tron block 84434937, BSC block 109812367, and Avalanche block 90233120. On every native deployment the token proxy owner was its TokenController proxy, while the final controller owner also owned the controller proxy. The controller source permits owner requestMint/finalizeMint without approval or pool subtraction and owner-controlled mint-key, threshold, limit, and proxy upgrades. Ethereum was a 2/3 Safe; Tron was a 1/1 native account; BSC and Avalanche were separate 2/3 Safes sharing all three owners. No enabled Safe modules, guards, module guards, or timelocks were found. The smaller Polygon, Arbitrum, Optimism, and Fantom contracts remain separately scoped as unresolved bridge routes rather than being asserted as issuer-native mint paths.",
+      "evidence": "Exact-cutoff review used Ethereum block 25526129, Tron block 84434937, BSC block 109812367, and Avalanche block 90233120. Fresh reads on 2026-08-08 confirmed the same controller owner/proxyOwner identities at Ethereum block 25712143, BSC block 114787751, and Avalanche block 92342897. The controller source permits owner requestMint/finalizeMint without approval or pool subtraction and owner-controlled mint-key, threshold, limit, and proxy upgrades. Ethereum is a 2-of-3 Safe; Tron is a 1-of-1 native account; BSC and Avalanche are separate 2-of-3 Safes sharing all three owners. No enabled Safe modules, guards, module guards, or timelocks were found. Smaller Polygon, Arbitrum, Optimism, and Fantom contracts remain separately scoped bridge routes rather than issuer-native mint paths.",
       "reviewer": "Codex Safety Score V9 TUSD authority audit / SOL-IV calibration",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

@@ -44,12 +44,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; no newer report found)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "BRL1 proof-of-reserves report - May 2026",
+        "label": "BRL1 proof-of-reserves report - May 2026 (Google Drive, sign-in gated)",
         "url": "https://drive.google.com/file/d/18kpNQpQUytwBvN_KbNBOIYPaJA6G6oMe/view?usp=drive_link"
       },
       {
@@ -57,8 +57,8 @@
         "url": "https://brl1.io/en/como_funciona"
       }
     ],
-    "rationale": "BRL1's latest linked proof-of-reserves report discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. The May 2026 report is issuer-produced and not independently audited, so the exact composition retains probable confidence. Write-time re-open 2026-07-28: PoR PDF (Google Drive) still shows LFT 86.16%, Repo 13.75%, bank 0.09% totaling R$6,756,133.64 vs 6,583,047.54 BRL1 at 2026-05-01; como_funciona page still describes reserve/redemption disclosures.",
-    "compositionBasis": "BRL1 issuer proof-of-reserves report",
+    "rationale": "Re-checked 2026-08-08: the latest linked proof-of-reserves report remains the May 2026 self-published PDF (Google Drive sign-in gated). It discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. No newer public report was located. The report is issuer-produced and not independently audited, so the exact composition retains probable confidence.",
+    "compositionBasis": "BRL1 issuer proof-of-reserves report (May 2026)",
     "compositionAsOf": "2026-05-01",
     "scope": "full-composition",
     "knownUnknownExposure": "All reported reserve categories are classified; the repo counterparty and current post-report allocation changes are not disclosed.",
@@ -99,8 +99,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "prohibited",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (R11 revisit; no newer report found)",
     "confidence": "probable",
     "sources": [
       {

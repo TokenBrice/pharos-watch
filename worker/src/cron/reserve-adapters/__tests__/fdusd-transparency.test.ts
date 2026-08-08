@@ -10,14 +10,25 @@ const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "fdusd-transparency.html"), "utf8");
 
 describe("adaptFdusdTransparency", () => {
+  // The canonical `www.firstdigitallabs.com` host answers Worker/automation traffic
+  // with a Cloudflare 403 challenge, so the reviewed same-provider Webflow origin
+  // (pinned as the config fallback in registry.test.ts) is the fetchable capture
+  // surface. Keep the fixture provenance aligned with the path production uses.
+  it("captures the fixture from the reviewed Webflow fallback origin", () => {
+    expect(SAMPLE_HTML).toContain("<!-- source: https://firstdigitallabs.webflow.io/transparency -->");
+  });
+
   it("maps the transparency badges into Pharos reserve slices", () => {
     const result = adaptFdusdTransparency(SAMPLE_HTML);
+    // Mapped issuer labels are normalized ("US Treasury Bills"); reviewed buckets
+    // outside FDUSD_LABEL_MAP ("Fixed Deposit") pass through verbatim.
     expect(result.slices).toEqual([
-      { name: "U.S. Treasury Bills", pct: 86.4, risk: "very-low" },
-      { name: "Cash", pct: 13.6, risk: "very-low" },
+      { name: "U.S. Treasury Bills", pct: 85.3, risk: "very-low" },
+      { name: "Cash", pct: 10.4, risk: "very-low" },
+      { name: "Fixed Deposit", pct: 4.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
-      sliceCount: 2,
+      sliceCount: 3,
       asOf: "May 31, 2026",
       sourceTimestamp: Date.UTC(2026, 4, 31) / 1000,
       freshnessMode: "verified",

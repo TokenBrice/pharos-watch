@@ -96,11 +96,7 @@
       },
       {
         "label": "JuiceDollar disclaimer",
-        "url": "https://docs.juicedollar.com/disclaimer"
-      },
-      {
-        "label": "JuiceDollar terms",
-        "url": "https://juicedollar.com/terms"
+        "url": "https://docs.juicedollar.com/disclaimer.html"
       },
       {
         "label": "CitreaScan verified JUSD source",
@@ -119,7 +115,7 @@
         "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
       },
       {
-        "label": "Citrea Public RPC",
+        "label": "Citrea Public RPC (block 11058127 code, storage, minter and allowance reads)",
         "url": "https://rpc.mainnet.citrea.xyz"
       },
       {
@@ -127,8 +123,8 @@
         "url": "https://api.juicedollar.com/ecosystem/stablecoin/info"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The current JuiceDollar token has no native holder blacklist or transfer pause; minter-only burnFrom remains allowance-gated for ordinary holders, and reviewed active minter contracts constrain burns to protocol participants or msg.sender. The live StablecoinBridge held 10,506.645477 USDT.e against 10,508.038 JUSD supply, making substantially all JUSD dependent on Tether-controlled reserve assets. That exact positive reserve exposure resolves JUSD as Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "evidence": "Re-verified at Citrea block 11058127 (2026-08-08T19:49:23Z). The canonical JUSD contract remained direct non-proxy bytecode with a zero EIP-1967 implementation slot. Its pinned verified source uses ordinary OpenZeppelin ERC-20 transfer paths and exposes no blacklist, freeze, pause, seizure, or holder-transfer hook. burnFrom(address,uint256) is minter-only but always calls _spendAllowance: the official function reference likewise states that burning from another address requires allowance. Live reads showed StablecoinBridgeUSDT 0x5cc0e668f8ba61e111b6168e19d17d3c65040614 is a minter but has allowance zero from an ordinary address. The token reports an implicit maximum allowance to its Equity reserve for any owner, but Equity is not thereby a minter; minters receive implicit allowance only from another minter, a registered position, or the reserve itself, not an ordinary holder. The reviewed disclaimer concerns interface availability and liability and establishes no issuer custody or account-freeze power. Direct holder freeze is therefore false; the positive USDT.e reserve remains a separate upstream dependency.",
+    "reviewer": "Codex C10 wave1 control review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "native",

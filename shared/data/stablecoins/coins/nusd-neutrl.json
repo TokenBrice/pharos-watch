@@ -101,7 +101,7 @@
   "reserves": [
     {
       "name": "Stablecoin reserves",
-      "pct": 62.1,
+      "pct": 56.28,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Undisclosed stablecoin issuers",
@@ -116,7 +116,7 @@
     },
     {
       "name": "JLP (Jupiter Perps LP token)",
-      "pct": 14.6,
+      "pct": 17.29,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Jupiter Perpetuals protocol and liquidity providers",
@@ -131,7 +131,7 @@
     },
     {
       "name": "OTC aggregate positions",
-      "pct": 15.6,
+      "pct": 17.35,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed OTC counterparties",
@@ -147,7 +147,7 @@
     },
     {
       "name": "Other reserve assets",
-      "pct": 4.5,
+      "pct": 5.52,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed Neutrl reserve counterparties",
@@ -163,7 +163,7 @@
     },
     {
       "name": "Protocol Owned Liquidity",
-      "pct": 3.1,
+      "pct": 3.55,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Neutrl protocol-owned liquidity",
@@ -190,49 +190,58 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
     "confidence": "verified",
-    "sources": [{ "label": "Neutrl Accountable dashboard", "url": "https://accountable.neutrl.finance/" }],
-    "rationale": "The 2026-07-20 Accountable type_split snapshot exposes six named reserve buckets and weights ($67.78M total): Stablecoin 62.1%, JLP 14.6%, OTC Aggregate 15.6%, Other 4.5%, Protocol Owned Liquidity 3.1%, and a residual ETH 0.01%. The OTC Aggregate weight drifted from the 2026-07-14 capture (10.6%) beyond the live-overlay tolerance, so the envelope is restated on the adapter's exact renamed identities and current weights; the accountable adapter refreshes weights at runtime. The source does not identify stablecoin constituents, OTC counterparties, JLP positions, or the composition and custody of the Other and Protocol Owned Liquidity buckets.",
-    "compositionBasis": "Accountable type_split categories and weights captured 2026-07-20 from the issuer's live reserve API",
-    "compositionAsOf": "2026-07-20",
+    "sources": [
+      {
+        "label": "Neutrl Accountable dashboard API (type_split snapshot 2026-08-08)",
+        "url": "https://cache.accountable.capital/dashboard/neutrl"
+      },
+      {
+        "label": "Neutrl Accountable dashboard",
+        "url": "https://accountable.neutrl.finance/"
+      }
+    ],
+    "rationale": "Re-opened 2026-08-08: Neutrl Accountable dashboard type_split snapshot (total reserves $56,860,690.76, supply $54,789,136.33, collateralization 103.78%) exposes six named reserve buckets. Curated slice names mirror the adapter renameMap verbatim. Weights refreshed to the 2026-08-08 capture: Stablecoin 56.28%, JLP 17.29%, OTC Aggregate 17.35%, Other 5.52%, Protocol Owned Liquidity 3.55%, ETH 0.01%. The stablecoin bucket remains an aggregate; the stablecoin_split API sub-buckets (USDe, USDT, USDC, sUSDS) are not used as primary slices because the configured adapter bucket is type_split.",
+    "compositionBasis": "Accountable type_split categories and weights captured 2026-08-08 from the issuer's live reserve API",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
     "knownUnknownExposure": "Stablecoin constituents, OTC counterparties, JLP underlying positions, and the composition and custody of the Other and Protocol Owned Liquidity categories are not disclosed in the reviewed snapshot.",
-    "knownUnknownExposurePct": 99.9,
+    "knownUnknownExposurePct": 99.99,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoin reserves",
-        "pct": 62.1,
+        "pct": 56.28,
         "disposition": "basket-needs-split",
         "rationale": "No constituent weights are available for a canonical dependency mapping."
       },
       {
         "reserveIndex": 1,
         "reserveName": "JLP (Jupiter Perps LP token)",
-        "pct": 14.6,
+        "pct": 17.29,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard names the JLP category but does not expose the current underlying position or custody detail needed for a tracked dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "OTC aggregate positions",
-        "pct": 15.6,
+        "pct": 17.35,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard reports an aggregate OTC category without identifying current counterparties, contracts, or settlement terms."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Other reserve assets",
-        "pct": 4.5,
+        "pct": 5.52,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard does not disclose the asset classes or providers included in the Other category."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Protocol Owned Liquidity",
-        "pct": 3.1,
+        "pct": 3.55,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard names protocol-owned liquidity but does not expose pool identities, underlying assets, or custody details."
       },
@@ -258,7 +267,12 @@
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
     "confidence": "manual-review",
-    "sources": [{ "label": "Neutrl Accountable dashboard", "url": "https://accountable.neutrl.finance/" }],
+    "sources": [
+      {
+        "label": "Neutrl Accountable dashboard",
+        "url": "https://accountable.neutrl.finance/"
+      }
+    ],
     "uncertainty": "The Accountable reserve dashboard tracks Neutrl's reserve wallets and category balances but does not name the custody providers, account segregation, insolvency treatment, or rehypothecation terms behind the Stablecoin, OTC, JLP, Other, and Protocol Owned Liquidity buckets.",
     "knownUnknownExposurePct": 100
   },

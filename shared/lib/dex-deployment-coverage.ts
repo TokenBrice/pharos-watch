@@ -1,7 +1,7 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 
 export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
-export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve";
+export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
 
 /**
  * The chains on which Curve counts as a registered token-pool discovery
@@ -24,7 +24,11 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
   "sonic",
   "taiko",
   "zksync",
+  "kava",
 ]);
+
+/** Native Horizon liquidity-pool discovery is currently scoped to Stellar. */
+export const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 
 export interface DexCoverageWaiver {
   stablecoinId: string;
@@ -37,24 +41,10 @@ export interface DexCoverageWaiver {
 const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
   ["usdn-noble", "noble"],
   ["usdh-hermetica", "stacks"],
-  ["ctusd-citrea", "citrea"],
-  ["usdm-moneta", "cardano"],
-  ["hollar-hydrated", "hydration"],
-  ["usda-anzens", "cardano"],
   ["uusd-youves", "tezos"],
-  ["cgo-comtech", "xdc"],
-  ["jusd-juicedollar", "citrea"],
   ["usdx-kava", "osmosis"],
-  ["cdp-enosys", "flare"],
-  ["vcred-vcred", "hemi"],
-  ["iusd-indigo-protocol", "cardano"],
-  ["djed-coti", "cardano"],
-  ["pathusd-bridge", "tempo"],
-  ["fxd-fathom", "xdc"],
   ["silk-shade-protocol", "secret"],
   ["hchf-hedera-swiss-franc", "hedera"],
-  ["iusd-initia", "initia"],
-  ["usdcx-movement", "movement"],
 ] as const;
 
 const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
@@ -81,6 +71,7 @@ export function getDexDiscoveryProviders(chain: string): DexDiscoveryProvider[] 
   if (GT_CHAIN_MAP[chain]) providers.push("geckoterminal");
   if (DS_CHAIN_MAP[chain]) providers.push("dexscreener");
   if (CURVE_NATIVE_DISCOVERY_CHAINS.has(chain)) providers.push("curve");
+  if (HORIZON_DISCOVERY_CHAINS.has(chain)) providers.push("horizon");
   return providers;
 }
 

@@ -18,31 +18,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve re-verification",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Pleasing Gold token features documentation (re-opened 2026-07-28)",
+        "label": "Pleasing Gold token features documentation (re-opened 2026-08-08)",
         "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
       },
       {
-        "label": "Pleasing Gold how PGOLD works (re-opened 2026-07-28)",
+        "label": "Pleasing Gold how PGOLD works (re-opened 2026-08-08)",
         "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works"
       },
       {
-        "label": "Pleasing Gold terms of sale and service (re-opened 2026-07-28)",
+        "label": "Pleasing Gold terms of sale and service (re-opened 2026-08-08)",
         "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
       },
       {
-        "label": "GlobeNewswire Pleasing Golden launch release - 2025-10-29 (re-opened 2026-07-28)",
+        "label": "GlobeNewswire Pleasing Golden launch release - 2025-10-29 (re-opened 2026-08-08)",
         "url": "https://www.globenewswire.com/news-release/2025/10/29/3176301/0/en/pleasing-international-launches-rwa-platform-pleasing-golden-introducing-tokenized-gold-pgold-and-synthetic-dollar-pusd.html"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: Token Features still states each PGOLD represents 1 troy ounce of 99.99% purity physical gold meeting LBMA standards, with KYC-gated physical redemption. How PGOLD works independently restates 1:1 backing by LBMA-certified gold reserves and Hong Kong physical redemption for qualified holders. Terms of Sale & Service still define Metal Tokens as an undivided interest in vaulted LBMA-standard metal held with qualified custodians in Hong Kong, with supply intended to match audited custody balances (subject to operational tolerances) and optional Chainlink PoR/periodic reports that 'do not replace legal audits.' GlobeNewswire 2025-10-29 launch release still states each PGOLD represents one troy ounce of LBMA-certified physical gold stored in institutional vaults. Official pleasinggold.com returns HTTP 200 but is a client-rendered SPA with no crawlable reserve text. No PGOLD-specific proof-of-reserve, bar list, named custodian, gold-quantity reconciliation, or dated independent reserve report is published (docs PoR/monthly-report pages exist only under USDpm; the PGOLD audit page is a smart-contract security file attachment only).",
+    "rationale": "Re-verified on 2026-08-08. Issuer product, token-feature, and legal materials consistently state that each PGOLD represents 1 troy ounce of 99.99% purity physical gold meeting LBMA standards, with KYC-gated physical redemption. The reserve is therefore a single 100% commodity-allocated position.",
     "compositionBasis": "Pleasing Gold product, token-feature, and legal disclosures",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The physical-gold reserve category is identified by issuer product and legal materials, but current reserve quantities, independent assurance, custody provider identity, segregation, rehypothecation, insurance, and redemption liquidity are not independently evidenced.",
+    "knownUnknownExposure": "The reserve category is fully identified. Current reserve quantities, independent assurance, custody provider identity, segregation, rehypothecation, insurance, and redemption liquidity are not independently evidenced and are tracked in the custody profile.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

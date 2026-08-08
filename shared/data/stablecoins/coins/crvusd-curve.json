@@ -778,9 +778,9 @@
         "url": "https://sonicscan.org/address/0x7fff4c4a827c84e32c5e175052834111b2ccd270#code"
       }
     ],
-    "evidence": "Re-verified 2026-07-22. The Ethereum token and all ten tracked bridge representations were reviewed through verified source, proxy/controller reads, or canonical bridge mappings. No current implementation exposed an active holder blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause controlled by Curve. The representations do expose bridge mint/burn and, on several chains, proxy or bridge-owner upgrade surfaces: Gnosis is owned by OmniBridge, Polygon uses the PoS child-token implementation, Taiko maps through ERC20Vault to Ethereum crvUSD, Fraxtal names L2StandardBridge, Sonic names Sonic Gateway as minter, and BNB Chain names the Curve X-DAO LayerZero bridge/minter pair. Those are bridge-control risks rather than evidence of a current holder-level restriction. WBTC/cbBTC and stablecoin collateral issuer controls remain recorded separately as backing exposure.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical crvUSD Stablecoin remained a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified Vyper source has ordinary transfer and allowance-gated transferFrom/burnFrom paths without blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause. The ten tracked bridge representations were previously reviewed through verified source or canonical mappings and likewise exposed bridge mint/burn or upgrade controls rather than a current Curve-controlled holder restriction. Collateral-issuer and bridge impairment remain separate upstream/deployment risks and do not make the direct blacklist verdict inherited.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -805,7 +805,7 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC",
+        "address": "0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
         "label": "crvUSD ControllerFactory",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -813,25 +813,27 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The factory mints crvUSD inventory to each controller only when an admin-set market debt ceiling is created or raised; user borrowing remains bounded by that inventory and the controller's collateral checks.",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712135,
         "sources": [
           {
             "label": "crvUSD ControllerFactory",
             "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
           }
         ],
-        "evidence": "At Ethereum block 25530324, crvUSD.minter() returned the ControllerFactory and ControllerFactory.admin() returned 0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79. Verified factory source shows _set_debt_ceiling() calls STABLECOIN.mint() only for the increase over residual inventory. Token and factory EIP-1967 slots are unset."
+        "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned this ControllerFactory and factory.admin() returned immutable intermediary 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79. Verified source mints inventory only when a market debt ceiling is created or raised; the factory cannot raise its own ceilings. Token and factory EIP-1967 implementation slots remained zero."
       },
       {
         "chain": "ethereum",
-        "address": "0x40907540d8a6C65c637785e8f8B742ae6b0b9968",
+        "address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
         "label": "Curve DAO Agent for crvUSD factory",
         "role": "governor",
         "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedBlock": 25530324,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712135,
         "sources": [
           {
             "label": "crvUSD ControllerFactory admin Etherscan",
@@ -842,19 +844,20 @@
             "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code"
           }
         ],
-        "evidence": "At Ethereum block 25530324, the immutable Vyper factory-admin contract's dao() is this Curve DAO Aragon Agent. Verified intermediary source restricts execute(), factory ownership transfer, and emergency replacement to dao(), allowing DAO governance to call factory set_debt_ceiling() and raise market inventory. Blockscout identifies the Agent as an AppProxyUpgradeable with implementation 0x3A93C17FC82CC33420d1809dDA9Fb715cc89dd37."
+        "evidence": "At Ethereum block 25712135, the immutable factory-admin intermediary's dao() still returned this Curve DAO Aragon Agent. Verified intermediary source allows DAO governance to call factory set_debt_ceiling(), authorizing higher market inventory, while the Agent's own governance execution path remains separately governed."
       },
       {
         "chain": "ethereum",
-        "address": "0x467947EE34aF926cF1DCac093870f613C96B1E0C",
+        "address": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
         "label": "crvUSD emergency multisig",
         "role": "cap-admin",
         "authorityType": "multisig",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "threshold": 5,
         "signerCount": 9,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
         "observedBlock": 25530324,
         "sources": [
           {
@@ -869,6 +872,9 @@
         "evidence": "At Ethereum block 25530324, getThreshold() returned 5, getOwners() returned nine owners, and getModulesPaginated() returned no enabled modules. The intermediary's verified reduce_debt_ceiling() function accepts the emergency address but asserts the new ceiling cannot exceed the current ceiling; arbitrary execute() remains DAO-only."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -884,9 +890,9 @@
           "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
         }
       ],
-      "evidence": "Ethereum RPC at block 25530324 and verified Vyper source establish the full mint path: immutable token minter -> immutable ControllerFactory -> per-market debt-ceiling inventory. Factory admin is the immutable intermediary at 0xb740..., whose DAO path can raise ceilings while its 5-of-9 emergency path can only reduce them or change bounded controller parameters. The DAO Agent is upgradeable, but it is an upstream governance executor and cannot change the immutable token or factory mint logic.",
+      "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned the immutable ControllerFactory, whose admin intermediary still resolved dao() to the Curve DAO Agent. Verified Vyper source establishes the path from token minter to per-market debt-ceiling inventory: DAO governance can raise ceilings, while the separately anchored 5-of-9 emergency multisig can only reduce them or adjust bounded controller parameters. The DAO Agent is an upstream governance executor and cannot change the immutable token or factory mint logic.",
       "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

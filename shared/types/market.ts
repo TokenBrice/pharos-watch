@@ -171,6 +171,7 @@ export const LiquidityPoolSourceFamilySchema = z.enum([
   "gecko_terminal",
   "dexscreener",
   "cg_tickers",
+  "horizon",
   "direct_api",
 ]);
 export type LiquidityPoolSourceFamily = z.infer<typeof LiquidityPoolSourceFamilySchema>;

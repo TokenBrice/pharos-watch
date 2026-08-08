@@ -146,4 +146,44 @@ describe("adaptM0Current", () => {
       totalCashScaled: 0,
     });
   });
+
+  // Observed 2026-08-08: protocol-api.m0.org answers every `Collateral*` query with
+  // its gateway error envelope (`{"status":false,"statusCode":500,"message":"fetch
+  // failed"}`) while the rest of the schema still resolves. HTTP 500 already throws
+  // in the transport, but the envelope must never be adapted into a snapshot if the
+  // gateway ever returns it with a 200, and a null resolver result must fail loudly.
+  it("refuses the M0 gateway error envelope instead of publishing an empty snapshot", () => {
+    expect(() => adaptM0Collateral(
+      { status: false, statusCode: 500, message: "fetch failed", result: {} } as never,
+    )).toThrow(/missing CollateralCurrent/);
+  });
+
+  it("refuses a null CollateralCurrent resolver result", () => {
+    expect(() => adaptM0Collateral({ data: { CollateralCurrent: null } } as never))
+      .toThrow(/missing CollateralCurrent/);
+  });
+
+  it("emits no publishable slices when every collateral bucket reports zero", () => {
+    const result = adaptM0Collateral({
+      data: {
+        CollateralCurrent: {
+          totalCash: 0,
+          eligibleTreasuries: 0,
+          nonEligibleTreasuries: 0,
+          totalTreasuries: 0,
+          totalTokenCollateral: 0,
+          eligibleTokenCollateral: 0,
+          nonEligibleTokenCollateral: 0,
+          remainingTerm: 0,
+          yieldToMaturity: 0,
+        },
+      },
+    });
+
+    expect(result.slices).toEqual([]);
+    const adapter = getReserveAdapter("m0") ?? undefined;
+    const report = validateAdapterOutput(result, { adapter });
+    expect(report.valid).toBe(false);
+    expect(report.warnings.map((warning) => warning.code)).toContain("empty-slices");
+  });
 });

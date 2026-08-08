@@ -37,14 +37,14 @@ export interface DexScreenerPoolsStageDependencies {
   shouldAttemptFetch: typeof shouldAttemptFetch;
   recordOutcome: typeof recordOutcome;
   dsRateLimit: typeof dsRateLimit;
-  fetchDsTokenPoolsWithStatus: typeof fetchDsTokenPairsWithStatus;
+  fetchDsTokenPairsWithStatus: typeof fetchDsTokenPairsWithStatus;
 }
 
 const defaultDexScreenerPoolsStageDependencies: DexScreenerPoolsStageDependencies = {
   shouldAttemptFetch,
   recordOutcome,
   dsRateLimit,
-  fetchDsTokenPoolsWithStatus: fetchDsTokenPairsWithStatus,
+  fetchDsTokenPairsWithStatus,
 };
 
 interface SelectDexScreenerTargetsOptions {
@@ -139,20 +139,15 @@ export async function crawlDexScreenerPoolsStage({
     runState.attemptedRequests++;
 
     try {
-      const result = await dependencies.fetchDsTokenPoolsWithStatus(
+      const result = await dependencies.fetchDsTokenPairsWithStatus(
         chain,
         address,
         context.buildStageSignal(DISCOVERY_STAGE_TIMEOUT_MS.dexscreener),
         DISCOVERY_STAGE_TIMEOUT_MS.dexscreener,
         0,
       );
-      providerChecks.push({
-        chain,
-        address,
-        provider: "dexscreener",
-        status: result.ok ? "success" : "failure",
-      });
       if (!result.ok) {
+        providerChecks.push({ chain, address, provider: "dexscreener", status: "failure" });
         if (result.hardRefusal) {
           runState.hardRefusal = {
             status: result.status ?? null,
@@ -193,6 +188,7 @@ export async function crawlDexScreenerPoolsStage({
         continue;
       }
       runState.successfulRequests++;
+      let observedPoolCount = 0;
 
       for (const pair of result.pairs) {
         const tvl = pair.liquidity?.usd ?? 0;
@@ -217,10 +213,10 @@ export async function crawlDexScreenerPoolsStage({
         }
 
         const poolId = canonicalExitRouteScopedKey(chain, poolAddress);
-        if (context.hasKnownPool(poolId)) continue;
-
         const { side, priceUsd } = getChainAwareDsTrackedTokenPriceUsd(pair, address, chain);
         if (!side) continue;
+        observedPoolCount++;
+        if (context.hasKnownPool(poolId)) continue;
 
         context.addPool(
           toStagedPool(context, {
@@ -265,6 +261,13 @@ export async function crawlDexScreenerPoolsStage({
           });
         }
       }
+      providerChecks.push({
+        chain,
+        address,
+        provider: "dexscreener",
+        status: "success",
+        observedPoolCount,
+      });
     } catch (err) {
       if (context.signal?.aborted) throw err;
       console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);

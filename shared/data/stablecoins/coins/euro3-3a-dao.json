@@ -416,9 +416,9 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "evidence": "Re-verified 2026-07-31 across both material deployments. Polygon block 91165643: EURO3 0xa0e4c84693266a9d3bbef2f394b33712c76599ab owner() = MintableTokenOwner 0xb3857f86a95516902c953d530d3e5c29b1518a85; Linea block 31573724: EURO3 0x3f817b28da4940f018c6b5c0a11c555ebb1264f9 owner() = MintableTokenOwner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082. Sourcify exact-match sources show both are non-proxy OpenZeppelin ERC-20 MintableToken contracts with onlyOwner mint and no pause, blacklist, allowlist, freeze, seizure, or transfer hook. The owner chain (MintableTokenOwner -> OwnerProxy -> 3A operator EOA 0x84d28251143df55df1768870fc26983f50364557) can change minters but cannot directly freeze holder balances. 3A's accepted collateral includes USDC.e, USDT, and DAI; those upstream issuers/bridges retain their own freeze and custody failure domains, so EURO3 remains inherited rather than direct-freezable.",
-    "reviewer": "Codex T46 access re-verification",
-    "reviewedAt": "2026-07-31",
+    "evidence": "Re-verified 2026-08-08 across both tracked deployments. At Polygon block 91675721, EURO3 0xa0e4c84693266a9d3bbef2f394b33712c76599ab returned owner 0xb3857f86a95516902c953d530d3e5c29b1518a85; at Linea block 31656728, EURO3 0x3f817b28da4940f018c6b5c0a11c555ebb1264f9 returned owner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082. Both retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Sourcify exact-match MintableToken source is OpenZeppelin ERC-20 plus onlyOwner mint and has no pause, blacklist, freeze, allowlist, seizure, arbitrary-holder burn, or transfer hook. The owner chain can change minters but cannot change deployed transfer logic, so direct blacklistability is false. Freezeable collateral remains backing risk only.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08",
     "sources": [
       {
         "label": "Sourcify exact-match Polygon MintableToken",

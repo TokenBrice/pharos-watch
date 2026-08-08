@@ -92,7 +92,7 @@
           {
             "provider": "Fathom CentralizedOraclePriceFeed",
             "path": "15-minute delayed storage with priceLife=3600; implementation 0x839864c09b6e1f04914d009b35a60ea4a66ca6d0",
-            "address": "0xB7Bcc2A1B1bD61469b3c4dA32a76CA7E39fE8ac2",
+            "address": "0xb7bcc2a1b1bd61469b3c4da32a76ca7e39fe8ac2",
             "chain": "xdc",
             "stalenessBoundSec": 3600,
             "observedAt": "2026-07-14",
@@ -105,7 +105,7 @@
           {
             "provider": "FathomPriceOracle",
             "path": "Implementation 0x4ecd5ab25d9b7a93e56d3bb4f9a179d77958bba7 -> XDC/USD aggregator 0x8d470BDE66eE52981D7D29Bc2e6FCa3b4DC17879",
-            "address": "0xFd129c0cb51F4e245eA4A326847489E06822D1A2",
+            "address": "0xfd129c0cb51f4e245ea4a326847489e06822d1a2",
             "chain": "xdc",
             "observedAt": "2026-07-14",
             "observedBlock": 104920353,
@@ -117,7 +117,7 @@
           {
             "provider": "Fathom configured single-node aggregator",
             "path": "Sole reporter 0x7ee0d8c9a1374e3d5ce33d48cd09578251af708f -> latestRoundData; upstream implementation 0x38634a4a034ce3b3289a2be8fe4f348f5fff385a is unverified",
-            "address": "0x8d470BDE66eE52981D7D29Bc2e6FCa3b4DC17879",
+            "address": "0x8d470bde66ee52981d7d29bc2e6fca3b4dc17879",
             "chain": "xdc",
             "observedAt": "2026-07-14",
             "observedBlock": 104920353,
@@ -178,7 +178,7 @@
           {
             "provider": "Fathom CentralizedOraclePriceFeed",
             "path": "15-minute delayed storage with priceLife=3600; implementation 0x15f0998edc963bc8cfe17ca296d4693cc3a5e4ec",
-            "address": "0xf00EB5361eabF8d9e77B5A83682B681590B0B96c",
+            "address": "0xf00eb5361eabf8d9e77b5a83682b681590b0b96c",
             "chain": "xdc",
             "stalenessBoundSec": 3600,
             "observedAt": "2026-07-14",
@@ -191,7 +191,7 @@
           {
             "provider": "FathomPriceOracle",
             "path": "Implementation 0x50bcaf3f1a3eab320d09471cb7c1f6eca1eb31dc -> CGO/USD aggregator 0x90473A2Fa1d9eb8fe6c45072D933218f828AF834",
-            "address": "0x2429cD19Df47cF550D0b45884B83688A172B5b49",
+            "address": "0x2429cd19df47cf550d0b45884b83688a172b5b49",
             "chain": "xdc",
             "observedAt": "2026-07-14",
             "observedBlock": 104920353,
@@ -203,7 +203,7 @@
           {
             "provider": "Fathom configured single-node aggregator",
             "path": "Sole reporter 0x7ee0d8c9a1374e3d5ce33d48cd09578251af708f -> latestRoundData; upstream implementation 0x38634a4a034ce3b3289a2be8fe4f348f5fff385a is unverified",
-            "address": "0x90473A2Fa1d9eb8fe6c45072D933218f828AF834",
+            "address": "0x90473a2fa1d9eb8fe6c45072d933218f828af834",
             "chain": "xdc",
             "observedAt": "2026-07-14",
             "observedBlock": 104920353,
@@ -260,7 +260,7 @@
           {
             "provider": "Fathom CentralizedOraclePriceFeed",
             "path": "Same delayed-feed implementation and XDC/USD FathomPriceOracle as WXDC; no psXDC/XDC exchange-rate feed",
-            "address": "0x0fa8feB532a25beEB338b5Cb24816eA6EB99dB53",
+            "address": "0x0fa8feb532a25beeb338b5cb24816ea6eb99db53",
             "chain": "xdc",
             "stalenessBoundSec": 3600,
             "observedAt": "2026-07-14",
@@ -273,7 +273,7 @@
           {
             "provider": "FathomPriceOracle",
             "path": "Shared WXDC path: implementation 0x4ecd5ab25d9b7a93e56d3bb4f9a179d77958bba7 -> XDC/USD aggregator 0x8d470BDE66eE52981D7D29Bc2e6FCa3b4DC17879",
-            "address": "0xFd129c0cb51F4e245eA4A326847489E06822D1A2",
+            "address": "0xfd129c0cb51f4e245ea4a326847489e06822d1a2",
             "chain": "xdc",
             "observedAt": "2026-07-14",
             "observedBlock": 104920353,
@@ -345,19 +345,15 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Fathom docs",
-        "url": "https://docs.fathom.fi/"
+        "label": "Fathom Terms of Service (confirmed protocol payments are irreversible)",
+        "url": "https://docs.fathom.fi/terms-of-service"
       },
       {
-        "label": "Fathom stablecoin source",
-        "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/FathomStablecoin.sol"
-      },
-      {
-        "label": "AdminControls source",
-        "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/AdminControls.sol"
+        "label": "Pinned official FathomStablecoin source",
+        "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/59b41c447903497c0d74985bd18f7ec77e3b5e5e/contracts/main/stablecoin-core/FathomStablecoin.sol"
       },
       {
         "label": "XDCScan FXD proxy",
@@ -368,11 +364,10 @@
         "url": "https://xdcscan.com/address/0xb82ad475fc113671840d510b60cbae5630a07f3b#code"
       }
     ],
-    "evidence": "The current FathomStablecoin implementation source shows no per-address blacklist or freeze mapping, and Fathom AdminControls can pause core modules including bookKeeper, positionManager, and stablecoinAdapter. At XDC block 105233053 (2026-07-22 transfer-fact reads) the transparent proxy's ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b was owned by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c, which can unilaterally and immediately replace the token implementation and thereby introduce holder-level transfer restrictions; reach is protocol-wide over the single native XDC deployment with no inherited bridge or wrapper exposure. The controlling authority is therefore that EOA plus the AdminControls operator set, and the failure domain is the Fathom admin/upgrade path on XDC.",
-    "reviewer": "Kimi T23 unknown-reduction wave-2 research",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08 at XDC block 105873757. The FXD transparent proxy still resolves to implementation 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. The pinned current FathomStablecoin implementation is an ordinary ERC-20 surface with mint/burn authorization but no pause, blacklist, freeze, seize, transfer whitelist, or privileged arbitrary-holder burn. Fathom's current Terms additionally state that confirmed protocol payments are irreversible and that the operator has no ability to reverse them. ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b remains immediately controlled by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c, so future logic can add restrictions; that upgrade risk is recorded as restrictable in the transfer overlay and is not a live holder-seizure power. The direct blacklistability verdict is therefore No.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
   },
-  "canBeBlacklisted": "possible",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

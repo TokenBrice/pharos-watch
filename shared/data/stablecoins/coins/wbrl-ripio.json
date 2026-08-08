@@ -385,7 +385,7 @@
       },
       {
         "chain": "multichain",
-        "address": "0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6",
+        "address": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
         "label": "Ripio WBRL cross-chain minter-router contract",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -424,26 +424,26 @@
       "reviewedAt": "2026-08-08"
     }
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Blockscout verified LatamStable implementation",
         "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?tab=contract"
       },
       {
-        "label": "Ethereum WBRL token",
-        "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        "label": "Sourcify-verified Polygon LatamStable implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?fields=sources"
       },
       {
-        "label": "Website",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "The Blockscout-verified LatamStable implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (source re-opened 2026-07-30) contains no per-address blacklist or freeze mapping; its holder-facing restriction surface is a global ERC20Pausable pause gated by PAUSER_ROLE plus UPGRADER_ROLE-gated UUPS upgrades that can replace the transfer logic. eth_call reads at Ethereum block 25648267 (2026-07-30) show PAUSER_ROLE held by Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b and paused() false; the same admin set (that EOA and the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68) controls upgrades. All six deployments (ethereum, base, worldchain, bsc, polygon, gnosis) are EIP-1167 clones of this one implementation, so the restriction reach is protocol-wide with no inherited bridge or wrapper exposure (issuer-native burn-mint on every chain).",
-    "reviewer": "Kimi T23 unknown-reduction wave-2 research",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08 across all six deterministic-address ERC-1967 deployments. Ethereum block 25712393, Base 49714331, Worldchain 33441185, BSC 114794465, Polygon 91675323, and Gnosis 47624683 all resolve implementation slot 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d and paused() false; Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b holds PAUSER_ROLE on every deployment. Both verified LatamStable revisions route _update through ERC20PausableUpgradeable, so this EOA can halt every holder transfer. The Polygon/BSC/Gnosis revision additionally exposes COMPLIANCE_ROLE-gated blockUser/unblockUser and checks blocked senders and recipients when enforcement is enabled. A live global pause alone is a direct holder restriction and resolves the access verdict to Yes; the compliance-bearing deployments add holder-selective reach.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",

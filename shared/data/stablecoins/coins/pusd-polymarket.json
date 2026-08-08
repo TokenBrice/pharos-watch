@@ -38,9 +38,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Polymarket pUSD documentation",
@@ -63,9 +62,9 @@
         "url": "https://www.circle.com/legal/usdc-terms"
       }
     ],
-    "evidence": "Fresh Polygon replay at block 91165530 (2026-07-30T23:15:15Z) read the PUSD proxy's EIP-1967 implementation slot as 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() as 0x47ebfac3353314c788b96cdcbf41daadfe03629c (the Polymarket Timelock). The verified CollateralToken source is a Solady ERC-20/UUPS wrapper: it defines wrap, unwrap, burn, minter/wrapper administration, and _authorizeUpgrade onlyOwner, but no blacklist, pause, seizure, or transfer-hook path; Polymarket's current docs likewise describe pUSD as a transferable standard ERC-20. The immutable CollateralOnramp source only gates wrapping with per-asset pause state and cannot freeze existing pUSD balances. However, the Timelock can upgrade the token, and the reserve sidecar contains Circle USDC and USDC.e; Circle's current USDC Terms expressly reserve address blocking and freezing of associated USDC. The direct PUSD holder-freeze path is therefore not evidenced, but inherited Circle reserve exposure and upgrade/admin control keep the bounded posture at possible.",
-    "reviewer": "Codex T37 access replay",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-verified 2026-08-08 at Polygon block 91673086. The pUSD proxy implementation remained 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f and owner() remained Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. The verified CollateralToken implementation defines wrap, unwrap, allowance-gated burn, role administration, and UUPS authorization but no blacklist, holder freeze, seizure, arbitrary-holder burn, pause, or transfer-hook restriction. The immutable CollateralOnramp can pause new wrapping per collateral but cannot freeze existing pUSD balances. Circle can restrict reserve USDC, and the Timelock can replace pUSD logic; those are reserve and future-upgrade risks captured separately, not a current direct holder-blacklist mechanism.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
   },
   "liveReservesConfig": {
     "adapter": "pusd-vault",
@@ -161,7 +160,7 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "polygon",
-        "address": "0x93070a847efEf7F70739046A929D47a521F5B8ee",
+        "address": "0x93070a847efef7f70739046a929d47a521f5b8ee",
         "capDescription": "CollateralToken.wrap() accepts only USDC or USDC.e and transfers the same amount to the immutable vault before completing the mint.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",

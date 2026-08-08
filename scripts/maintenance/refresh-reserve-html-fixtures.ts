@@ -41,8 +41,11 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     fixture: "buck-io.html",
   },
   {
-    name: "First Digital FDUSD transparency",
-    url: "https://www.firstdigitallabs.com/transparency",
+    // The canonical `www.firstdigitallabs.com/transparency` host answers automation
+    // with a Cloudflare 403 challenge, so refreshes target the issuer's own Webflow
+    // origin — the same-provider fallback the live-reserves config already uses.
+    name: "First Digital FDUSD transparency (Webflow origin)",
+    url: "https://firstdigitallabs.webflow.io/transparency",
     fixture: "fdusd-transparency.html",
   },
   {

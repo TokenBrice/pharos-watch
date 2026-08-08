@@ -2,6 +2,7 @@ import { batchExecute } from "../../lib/db";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { toErrorMessage } from "../../lib/error-utils";
+import { tryParseJson } from "../../lib/json-parse";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
@@ -34,6 +35,7 @@ const STAGING_DELETE_TTL_SEC = 30 * 60 * 60;
 const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
 const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
+const TARGET_CURSOR_KEY = "discovery_target_cursors";
 const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
 
 // Canonical pool_id shapes observed in dex_pool_staging:
@@ -375,4 +377,59 @@ export async function incrementRunSeq(db: D1Database, signal?: AbortSignal): Pro
     throw new Error(`Invalid kv_config value for ${RUN_SEQ_KEY}: ${String(value)}`);
   }
   return parsed;
+}
+
+/**
+ * Read the per-coin deployment-window resume markers. One kv_config row holds the
+ * whole map so a run pays a single read and a single write instead of one per
+ * coin. A malformed payload degrades to "no cursor", which restarts every
+ * rotation from the first deployment rather than stalling the crawl.
+ */
+export async function readDiscoveryTargetCursors(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<Map<string, string>> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT value FROM kv_config WHERE key = ?")
+        .bind(TARGET_CURSOR_KEY)
+        .first<{ value?: string }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+
+  const cursors = new Map<string, string>();
+  const parsed = tryParseJson(row?.value, "dex discovery target cursors");
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return cursors;
+  for (const [stablecoinId, cursor] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof cursor === "string" && cursor.length > 0) {
+      cursors.set(stablecoinId, cursor);
+    }
+  }
+  return cursors;
+}
+
+export async function writeDiscoveryTargetCursors(
+  db: D1Database,
+  cursors: ReadonlyMap<string, string>,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `INSERT INTO kv_config (key, value)
+           VALUES (?, ?)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        )
+        .bind(TARGET_CURSOR_KEY, JSON.stringify(Object.fromEntries(cursors)))
+        .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
 }

@@ -187,8 +187,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 phase1 reserve re-verify",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave8 phase1 reserve re-verify; Kimi R05 bounded-unknown acceptance",
     "confidence": "verified",
     "sources": [
       {
@@ -212,8 +212,8 @@
         "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
       }
     ],
-    "rationale": "Write-time re-open of Chronicle's live Apollo ACRDX Proof of Asset dashboard (slug anemoy-tokenized-apollo-acrdx; legacy proofofassets URL 404s) on 2026-07-28 reports Portfolio Holdings of USD 42,247,796 Apollo Diversified Credit-I Fund shares (dashboard label typo: Difersified), USD 1,188,950 cash, and USD 70,838.76 cryptocurrency, totaling USD 43,507,585 gross holdings. Two-decimal weights via largest-remainder on those gross values are 97.11%, 2.73%, and 0.16% (sum 100); the dominant reserve is the disclosed Apollo fund share rather than look-through private credit. The same dashboard reports NAV USD 43,468,112, share price USD 1.019554, and 42,634,425 outstanding shares. Independent on-chain corroboration: Ethereum Blockscout logs for Chronicle VAO consumer 0x9a3bF392...D7488 show Poked val 1019554312938520000 (USD 1.01955431293852 per share) and matching UPoked proofURI through 2026-07-27T23:03:23Z, reconciling to the dashboard share price. Anemoy and Centrifuge launch disclosures independently state ACRDX is a feeder providing tokenized access to Apollo Diversified Credit Fund. Gross holdings exceed reported NAV by about USD 39,473; the dashboard does not explain that residual. Cash counterparties and the cryptocurrency token remain undisclosed. Holdings document dataDate in Chronicle metadata is 2026-07-24; oracle verification timestamp used for compositionAsOf is 2026-07-27.",
-    "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV, share price, and on-chain Chronicle VAO Poked value",
+    "rationale": "Write-time re-open of Chronicle's live Apollo ACRDX Proof of Asset dashboard on 2026-08-08 confirms the same three category buckets reported on 2026-07-28: Apollo Diversified Credit-I Fund shares, cash, and an unidentified cryptocurrency balance. Two-decimal weights remain 97.11%, 2.73%, and 0.16% (sum 100). The 0.16% cryptocurrency slice is verified by Chronicle only at the aggregate level; the underlying token is not identified. Because the exposure is small (well below 1% of gross holdings) and no further granular disclosure is available, it is accepted as a bounded known-unknown rather than blocking the entire reserve review. Cash counterparties and the gross-holdings-to-NAV residual also remain undisclosed.",
+    "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV and on-chain Chronicle VAO Poked value; the 2026-08-08 re-open confirmed the same weights reported by the 2026-07-27 attestation",
     "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Chronicle labels USD 70,838.76, or 0.16% of gross holdings, only as cryptocurrency; it does not identify the token. Cash counterparties, the look-through obligor schedule inside the Apollo fund share, and the ~USD 39,473 gross-holdings-to-NAV difference are also unexplained, while the feeder-level asset categories and weights are reported.",
@@ -238,7 +238,7 @@
         "reserveName": "Unspecified cryptocurrency balance",
         "pct": 0.16,
         "disposition": "basket-needs-split",
-        "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token."
+        "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token. The exposure is bounded at 0.16% of gross holdings, so the reserve review proceeds with an explicit basket-needs-split disposition rather than blocking on this slice."
       }
     ]
   },

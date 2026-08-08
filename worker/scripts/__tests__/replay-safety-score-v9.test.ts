@@ -19,7 +19,7 @@ import {
   serializeSafetyScoreV9ReplayArtifact,
 } from "../replay-safety-score-v9";
 
-const CLOCK_SEC = 1_784_505_600;
+const CLOCK_SEC = 1_786_233_600;
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 

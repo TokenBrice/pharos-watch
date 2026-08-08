@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { crawlCoinGeckoPoolsStage } from "./crawl-coingecko-pools";
@@ -12,6 +13,7 @@ import {
 } from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
+import { crawlHorizonPoolsStage } from "./crawl-horizon-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
@@ -20,6 +22,14 @@ export interface CrawlResult {
   pools: StagedPool[];
   unresolvedChains: string[];
   deploymentOutcomes: DexDeploymentOutcomeWrite[];
+  /** Deployments a provider stage actually queried, keyed like the census rows. */
+  checkedDeploymentKeys: string[];
+}
+
+function checkedDeploymentKeys(providerChecks: readonly DexDeploymentProviderCheck[]): string[] {
+  return [
+    ...new Set(providerChecks.map((check) => canonicalExitRouteAssetKey(check.chain, check.address))),
+  ];
 }
 
 export async function crawlCoin(
@@ -74,6 +84,7 @@ export async function crawlCoin(
         providerChecks,
         nowSec,
       }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
     });
   }
 
@@ -105,6 +116,7 @@ export async function crawlCoin(
         providerChecks,
         nowSec,
       }),
+      checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
     });
   }
 
@@ -119,6 +131,9 @@ export async function crawlCoin(
   const curveStage = await crawlCurvePoolsStage({ coinTargets, context });
   providerChecks.push(...curveStage.providerChecks);
 
+  const horizonStage = await crawlHorizonPoolsStage({ coinTargets, context });
+  providerChecks.push(...horizonStage.providerChecks);
+
   return await finalizeOwnRun({
     pools,
     unresolvedChains: coinGeckoStage.unresolvedChains,
@@ -129,5 +144,6 @@ export async function crawlCoin(
       providerChecks,
       nowSec,
     }),
+    checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
   });
 }

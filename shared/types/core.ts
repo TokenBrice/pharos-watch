@@ -901,6 +901,9 @@ export const VARIANT_KIND_VALUES = [
   "bond-maturity",
 ] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
+
+export const WRAPPER_OPERATOR_VALUES = ["parent-protocol", "third-party"] as const;
+export type WrapperOperator = (typeof WRAPPER_OPERATOR_VALUES)[number];
 export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);
 export const CustodyModelSchema = z.enum(CUSTODY_MODEL_VALUES);
@@ -1062,6 +1065,8 @@ export interface StablecoinMeta {
   infrastructures?: Infrastructure[];
   variantOf?: string;
   variantKind?: VariantKind;
+  /** Required for risk-absorption variants, whose product taxonomy does not establish wrapper ownership. */
+  wrapperOperator?: WrapperOperator;
   /** When true, this coin's mechanismArchetype is an intentional departure from its parent's archetype. */
   archetypeOverride?: boolean;
   reserves?: ReserveSlice[];

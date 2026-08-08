@@ -2,93 +2,101 @@
   "id": "avusd-avant",
   "reserves": [
     {
-      "name": "Dynamic leveraged avUSD market-neutral strategy portfolio",
-      "pct": 100,
+      "name": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
+      "pct": 99.99,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Avant Protocol market-neutral strategy contracts across Aave, Morpho, Kamino, Ethena, and other DeFi protocols",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration", "leverage"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Residual hedged crypto, altcoin and derivative exposure",
+      "pct": 0.01,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Avant Protocol and external DeFi and trading counterparties",
-      "riskFactors": ["basis", "counterparty", "credit", "custody", "liquidity", "market", "smart-contract", "concentration"],
+      "issuerOrObligor": "Avant Protocol market-neutral strategy contracts",
+      "riskFactors": ["market", "basis", "counterparty", "smart-contract", "leverage"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Avant core tokens",
-        "url": "https://docs.avantprotocol.com/overview/core-tokens"
-      },
-      {
-        "label": "Avant reserve fund and avUSD backing",
-        "url": "https://docs.avantprotocol.com/security/reserve-fund"
-      },
-      {
-        "label": "Avant yield-generation strategies",
-        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation"
-      },
-      {
-        "label": "Avant avUSD portfolio API",
+        "label": "Avant Protocol avUSD transparency API (breakdown, location, leverage, NAV)",
         "url": "https://app.avantprotocol.com/api/metrics/avusd"
       },
       {
-        "label": "Avant avUSD reserve-fund API",
-        "url": "https://app.avantprotocol.com/api/reserve-fund/balance?product=avusd"
+        "label": "Avant Protocol docs - The Role of avUSD",
+        "url": "https://docs.avantprotocol.com/avusd/the-role-of-avusd"
       },
       {
-        "label": "Avant terms of use",
-        "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use"
+        "label": "RWA.xyz avUSD asset page",
+        "url": "https://app.rwa.xyz/assets/avUSD"
       }
     ],
-    "rationale": "Re-opened primary sources on 2026-07-28. Core-tokens still states avUSD is minted and redeemed 1:1 versus USDC. Reserve-fund docs still state that capital backing unstaked avAssets (including avUSD) is deployed into underlying strategies, and that the separate USD Reserve Fund is a loss backstop held in base-token form rather than the full backing stock. Yield-generation docs still describe market-neutral basis trades and multi-strategy deployment with a public transparency dashboard. Independently, the issuer avUSD metrics API (re-fetched 2026-07-28) returns a liability-aware transparency snapshot with periodEnd 2026-07-21T23:59:59+00:00: netNav 115903039.8680991 USD; leverage assetsUsd 961033819.0467469 and liabilitiesUsd 1208224702.799266; breakdown rows Stablecoins 115875654.649396, Other 10940396.9552925, ETH & Derivatives 3872.714028516711, AVAX & Derivatives 2096.497147409503, BTC & Derivatives 3.34879932509148, and Perpetuals -10918995.371568. The separately reported USD reserve-fund balance API returns about 1.07e6 USD at 0xd98e1faf532b9c481c56741ab3ac47ec18d8f43a and is not modeled as whole backing. A static positive-weight split would erase the portfolio's liabilities and hedge structure, so the structural 100% leveraged market-neutral basket with known-unknown disposition is retained.",
-    "compositionBasis": "Issuer avUSD transparency balance sheet at 2026-07-21 and strategy documentation, re-opened 2026-07-28",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "R02 refresh 2026-08-08: Avant publishes a live transparency API for avUSD that reports NAV, leverage, asset/liability totals, and a net breakdown by asset category as of 2026-08-04. The NAV of $123.4M is composed of a net stablecoin exposure of $123.39M (99.99%), $11.47M in Other altcoins, $3.76K in ETH & derivatives, $2.50K in AVAX & derivatives, $3.24 in BTC & derivatives, and -$11.46M in perpetual hedges. The Other and perpetual positions largely offset, leaving a residual non-stablecoin net exposure of ~$15K (0.01%). Because the stablecoin exposure is net of both long and short stablecoin positions and spans many stablecoins (USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC, etc.), it is treated as a stablecoin basket rather than a single linked stablecoin. The small residual hedged-crypto exposure captures the net of altcoin, derivative and perpetual positions.",
+    "compositionBasis": "Avant Protocol live transparency API net asset breakdown dated 2026-08-04; Avant docs describing avUSD as a receipt for USDC/USDT deposits deployed in market-neutral on-chain strategies.",
+    "compositionAsOf": "2026-08-04",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current constituent identities, positive and negative weights, venue exposures, hedge effectiveness, and net liability attribution remain intentionally unresolved in the static record and require a liability-aware live adapter.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The live API publishes category-level net exposures and gross long/short stablecoin values, but does not provide a clean supply-weighted split of net stablecoin exposure by individual tracked stablecoin, nor does it disclose off-chain custody terms, segregation, or bankruptcy remoteness.",
+    "knownUnknownExposurePct": 99.99,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Dynamic leveraged avUSD market-neutral strategy portfolio",
-        "pct": 100,
+        "reserveName": "Net stablecoin exposure (long stablecoin positions net of stablecoin borrowings)",
+        "pct": 99.99,
         "disposition": "basket-needs-split",
-        "rationale": "The live portfolio contains mutable positive and negative strategy positions that cannot be represented as durable gross reserve weights without liability-aware normalization."
+        "rationale": "The net stablecoin exposure is a basket of multiple long and short stablecoin positions across USDe, USDT, USDC, PYUSD, USDG, syrupUSDT, syrupUSDC and others. The issuer publishes gross long/short values but not a net allocation by individual tracked stablecoin that can be represented as reserve slices.",
+        "candidateCoinIds": [
+          "usde-ethena",
+          "usdt-tether",
+          "usdc-circle",
+          "pyusd-paypal",
+          "usdg-paxos",
+          "syrupusdt-maple",
+          "syrupusdc-maple",
+          "susde-ethena",
+          "ausd-agora",
+          "usdat-saturn"
+        ]
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Residual hedged crypto, altcoin and derivative exposure",
+        "pct": 0.01,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The residual is the net of altcoin, crypto-derivative and perpetual-hedge positions that largely offset; it is treated as an untracked exogenous hedged-crypto exposure."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Avant strategy wallets and external trading venues",
+        "name": "Avant Protocol strategy contracts and treasury wallets",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Avant secure asset management",
-        "url": "https://docs.avantprotocol.com/security/secure-asset-management"
-      },
-      {
-        "label": "Avant reserve fund",
-        "url": "https://docs.avantprotocol.com/security/reserve-fund"
-      },
-      {
-        "label": "Avant yield-generation strategies",
-        "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation"
-      },
-      {
-        "label": "Avant avUSD portfolio API",
+        "label": "Avant Protocol avUSD transparency API (location breakdown)",
         "url": "https://app.avantprotocol.com/api/metrics/avusd"
+      },
+      {
+        "label": "Avant Protocol docs - The Role of avUSD",
+        "url": "https://docs.avantprotocol.com/avusd/the-role-of-avusd"
       }
     ],
-    "uncertainty": "Avant describes MPC-secured strategy wallets and active deployment across external protocols and trading venues. It does not publish provider shares, complete venue identities, legal segregation, bankruptcy remoteness, or position-level collateral reuse limits.",
+    "uncertainty": "The live API shows assets deployed across Aave, Morpho, Kamino, Curvance, Jupiter, Ethena, Euler, Silo and other DeFi protocols, plus bridges/exchanges and treasury wallets. Avant docs state strategies are executed on-chain and with partners such as 0xPartners, but do not disclose legal segregation, bankruptcy remoteness, or rehypothecation terms.",
     "knownUnknownExposurePct": 100
   }
 }

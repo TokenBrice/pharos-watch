@@ -155,102 +155,88 @@
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",
-      "pct": 94.4,
+      "pct": 94.5,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "BlackOpal LiquidStone II FIDC (Brazilian credit-card receivables) via Nest vault",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "legal",
-        "custody",
-        "concentration"
-      ],
+      "riskFactors": ["credit", "liquidity", "legal", "custody", "concentration"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Nest Treasury vault (nTBILL)",
+      "pct": 3.3,
+      "risk": "low",
+      "coinId": "ntbill-nest",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Nest Treasury Vault (short-term U.S. Treasury exposure)",
+      "riskFactors": ["duration", "custody", "counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Nest pending deposits",
+      "pct": 0.6,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "BlackOpal LiquidStone II FIDC (OALS2T pending deposit) via Nest vault",
+      "riskFactors": ["credit", "liquidity", "legal", "custody", "concentration"],
       "liquidityHorizon": "seven-days"
     },
     {
       "name": "Liquid USDT balances",
-      "pct": 0.3,
+      "pct": 1.1,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether Operations Limited",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Nest Treasury vault (nTBILL)",
-      "pct": 4.5,
-      "risk": "low",
-      "coinId": "ntbill-nest",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "Nest Treasury Vault (short-term U.S. Treasury exposure)",
-      "riskFactors": [
-        "duration",
-        "custody",
-        "counterparty",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
       "name": "Liquid USDC balances",
-      "pct": 0.5,
+      "pct": 0.4,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, Inc.",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "immediate"
     },
     {
       "name": "pUSD liquid balance",
-      "pct": 0.3,
+      "pct": 0.1,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Plume pUSD issuer and its reserve custodians",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 GROK-RESEARCH phase1 reserve",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Nest vault positions API (re-opened 2026-07-28; position.value only, pending deposits excluded per nest-vault-positions adapter)",
+        "label": "Nest vault positions API (re-opened 2026-08-08; includes settled positions and pending transactions per nest-vault-positions adapter)",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
       },
       {
-        "label": "On-chain vault balances matching API amounts (ETH block ~25627275, Plume ~83763409, BSC ~112517833; OALS2T/nTBILL/USDC/USDT/pUSD)",
-        "url": "https://ethereum.publicnode.com"
+        "label": "Nest vault price/NAV API (2026-08-08)",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
       },
       {
-        "label": "Nest available vaults nOPAL composition (snapshot 2026-07-27 17:20 UTC; structural corroboration; page defers live weights to API)",
+        "label": "Nest vault last-price-update API (2026-08-08)",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/last-price-update"
+      },
+      {
+        "label": "Nest available vaults nOPAL composition (structural corroboration; page defers live weights to API)",
         "url": "https://docs.nest.credit/about/available-vaults/"
       },
       {
@@ -262,19 +248,26 @@
         "url": "https://www.blackopal.finance/"
       }
     ],
-    "rationale": "Write-time re-open of Nest nest-opal-vault positions API (2026-07-28) values settled position.value holdings at $45,863,704.95: BlackOpal LiquidStone II OALS2T $43,277,205.40, nTBILL $2,070,452.07, USDT $124,201.81, USDC $242,740.12, and pUSD $149,105.56. Normalized 1-dp slices are 94.4% / 4.5% / 0.3% / 0.5% / 0.3% (sum 100). Adapter-aligned methodology excludes a $1,339,000 PendingDeposit on ETH OALS2T (not in position.value). Independent public RPC balanceOf reads on the nOPAL vault 0x119d…9165 reproduce the API token amounts for Plume+ETH OALS2T, Plume nTBILL, Plume/ETH USDC, Plume pUSD, ETH USDT, and BSC USDT. Nest available-vaults (2026-07-27 snapshot) names the same nOPAL sleeves (LiquidStone, Nest Treasury, Nest Basis, liquid assets) and defers execution-time weights to the API/app; BlackOpal independently describes LiquidStone II as a Brazilian FIDC true-sale short-dated credit-card receivable fund with an on-chain liquid sleeve. Zero nBASIS creates no slice. Obligor-level FIDC composition remains unpublished, so the dominant private-credit slice stays known-unknown.",
-    "compositionBasis": "Nest live vault-positions API position.value totals re-opened 2026-07-28, corroborated by on-chain balanceOf amounts and Nest/BlackOpal structural disclosures",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Re-opened 2026-08-08: Nest nest-vault-positions API reports NAV $62,237,423.92 with settled position.value holdings and a $350,000 PendingDeposit on ETH OALS2T. Compiled per the nest-vault-positions adapter (which includes pending deposits for nOPAL reconciliation), normalized 1-dp slices are: BlackOpal LiquidStone II OALS2T $58,814,530.29 (94.5%), nTBILL $2,073,202.02 (3.3%), pending OALS2T deposit $350,000 (0.6%), USDT $667,111.26 (1.1%), USDC $257,650.46 (0.4%), and pUSD $87,523.88 (0.1%), summing to 100.0%. Slice names mirror the adapter's verbatim output. The nBASIS sleeve carries a zero balance and creates no slice. Obligor-level FIDC composition remains unpublished, so the private-credit slices (settled + pending) stay known-unknown.",
+    "compositionBasis": "Nest live vault-positions API, price/NAV API, and last-price-update API re-opened 2026-08-08, compiled per the nest-vault-positions adapter; corroborated by Nest/BlackOpal structural disclosures",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The LiquidStone II FIDC's obligor-level receivable composition, FIDC service providers, and any fund-level financial audit are not public; OALS2T valuation prices are Nest/API-supplied even where token amounts are on-chain-verified. The stablecoin and nTBILL legs are fully identified. A Nest Basis Vault (nBASIS) target component currently carries a zero balance and creates no slice. A $1,339,000 OALS2T PendingDeposit is excluded from curated weights (adapter/position.value only) and contributes to the live NAV vs settled-positions gap.",
-    "knownUnknownExposurePct": 94.4,
+    "knownUnknownExposure": "The LiquidStone II FIDC's obligor-level receivable composition, FIDC service providers, and any fund-level financial audit are not public; OALS2T valuation prices are Nest/API-supplied even where token amounts are on-chain-verified. The stablecoin and nTBILL legs are fully identified. A Nest Basis Vault (nBASIS) target component currently carries a zero balance and creates no slice.",
+    "knownUnknownExposurePct": 95.1,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Nest private and structured credit vaults",
-        "pct": 94.4,
+        "pct": 94.5,
         "disposition": "insufficient-evidence",
         "rationale": "The BlackOpal LiquidStone II position is identified at fund level and token amounts are on-chain-verified, but no current position-level receivable or obligor composition is published."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Nest pending deposits",
+        "pct": 0.6,
+        "disposition": "insufficient-evidence",
+        "rationale": "The pending OALS2T deposit is identified by assetSlug as destined for the LiquidStone II position, but it is not yet settled and no obligor-level composition is published."
       }
     ]
   },

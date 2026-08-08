@@ -114,6 +114,7 @@
   --mechanism-synthetic-delta-neutral: oklch(0.68 0.13 182);
   --mechanism-algorithmic: oklch(0.7 0.18 15);
   --mechanism-rwa-credit-fund: oklch(0.7 0.15 50);
+  --mechanism-commodity-claim: oklch(0.72 0.13 88);
 
   /* ── Interactive States ───────────────────────────────────────── */
   --interactive-hover: oklch(0.95 0.005 260);
@@ -226,6 +227,7 @@
   --mechanism-synthetic-delta-neutral: oklch(0.76 0.12 182);
   --mechanism-algorithmic: oklch(0.76 0.16 15);
   --mechanism-rwa-credit-fund: oklch(0.78 0.14 50);
+  --mechanism-commodity-claim: oklch(0.8 0.12 88);
 
   /* ── Featured Surfaces (Dark) ─────────────────────────────────── */
   --surface-featured-gradient:

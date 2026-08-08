@@ -30,7 +30,8 @@ export function renderArchetype(
     archetype === "tbill" ||
     archetype === "cdp" ||
     archetype === "algorithmic" ||
-    archetype === "rwa-credit-fund"
+    archetype === "rwa-credit-fund" ||
+    archetype === "commodity-claim"
   ) {
     return (
       <ThreeStepArchetypeDiagram

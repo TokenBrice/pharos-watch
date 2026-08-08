@@ -31,6 +31,7 @@ const SOURCE_LABELS: Record<string, string> = {
   gecko_terminal: "GeckoTerminal",
   dexscreener: "DexScreener",
   cg_tickers: "CG Tickers",
+  horizon: "Stellar Horizon",
 };
 
 export function getLiquidityCoverageBadge(coverageClass: LiquidityCoverageClass) {

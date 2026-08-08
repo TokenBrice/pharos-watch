@@ -114,7 +114,7 @@ describe("Safety Score v9 wrapper-local risk", () => {
         measuredUnwind: "critical",
         lossAbsorptionEmergencyControls: "high",
       },
-      "strategy-vault",
+      "native-staked",
     );
     localFacts.facts.custodyEscrow = {
       disposition: "issuer-undisclosed",
@@ -181,7 +181,7 @@ describe("Safety Score v9 wrapper-local risk", () => {
         withdrawalTerms: "moderate",
         lossAbsorptionEmergencyControls: "moderate",
       },
-      "native-staked",
+      "strategy-vault",
     );
     sbold.facts.measuredUnwind = {
       disposition: "producer-failed",
@@ -223,8 +223,9 @@ describe("Safety Score v9 wrapper-local risk", () => {
     expect(profiles["wm-m0"]).toMatchObject({ form: "pure", factsComplete: true, limit: 88.1 });
     expect(profiles["sdai-sky"]).toMatchObject({ form: "native-staked", factsComplete: true });
     expect(profiles["sbold-k3-capital"]).toMatchObject({
-      form: "native-staked",
+      form: "strategy-vault",
       treatment: "fallback-discount",
+      limit: 74,
     });
     expect(profiles["susdai-usd-ai"]).toMatchObject({
       form: "strategy-vault",

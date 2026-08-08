@@ -33,12 +33,8 @@ export const V9ResolvedMechanismArchetypeSchema = z.union([
 ]);
 export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArchetypeSchema>;
 
-/**
- * The wrapper form of a variant asset (from registry meta), threaded onto the
- * compiled facts so the scorer can tier the wrapper-strategy parent cap:
- * `strategy-vault` is a third-party aggregator, `savings-passthrough` /
- * `risk-absorption` are the protocol's own native savings/staking layer. Absent
- * for non-variant assets.
+/** Product taxonomy for a tracked parent-linked asset. Wrapper ownership and
+ * parent-cap form are compiled separately into `wrapperLocalFacts.form`.
  */
 export const V9VariantKindSchema = z.enum(VARIANT_KIND_VALUES).nullable().optional();
 
@@ -1392,17 +1388,19 @@ function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.Refinemen
     });
   }
   if (asset.wrapperLocalFacts?.applicability === "wrapper") {
-    const expectedForm =
+    const allowedForms =
       asset.variantKind === "pure-wrapper"
-        ? "pure"
-        : asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption"
-          ? "native-staked"
-          : "strategy-vault";
-    if (asset.wrapperLocalFacts.form !== expectedForm) {
+        ? ["pure"]
+        : asset.variantKind === "savings-passthrough"
+          ? ["native-staked"]
+          : asset.variantKind === "risk-absorption"
+            ? ["native-staked", "strategy-vault"]
+            : ["strategy-vault"];
+    if (!allowedForms.includes(asset.wrapperLocalFacts.form)) {
       ctx.addIssue({
         code: "custom",
         path: ["wrapperLocalFacts", "form"],
-        message: `Wrapper form must be ${expectedForm} for the compiled variant/dependency facts`,
+        message: `Wrapper form must be one of ${allowedForms.join(", ")} for the compiled variant/dependency facts`,
       });
     }
   }

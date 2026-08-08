@@ -24,6 +24,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/aggregation.ts",
   "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
   "shared/lib/safety-score-v9/archetypes/cdp.ts",
+  "shared/lib/safety-score-v9/archetypes/commodity-claim.ts",
   "shared/lib/safety-score-v9/archetypes/fiat-cash.ts",
   "shared/lib/safety-score-v9/archetypes/index.ts",
   "shared/lib/safety-score-v9/archetypes/rwa-credit-fund.ts",

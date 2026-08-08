@@ -21,7 +21,7 @@
     },
     {
       "name": "Cash",
-      "pct": 2.1,
+      "pct": 2.099885,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
@@ -50,7 +50,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-08",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -75,7 +75,7 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "KAST identifies USDK as an M0 extension, and the first-party M0 Protocol API reports the inherited current collateral mix as 97.9% eligible tokenized Treasury collateral and 2.1% cash after adapter normalization. The token time series identifies USTB as the eligible token collateral; the wrapper keeps the M0 issuer, custody, and smart-contract context.",
+    "rationale": "KAST identifies USDK as an M0 extension, and the first-party M0 Protocol API reports the inherited collateral mix as 97.9% eligible tokenized Treasury collateral, 2.1% cash, and a 0.000115% non-eligible token residual. The Treasury slice links to the tracked USTB token, and the residual is classified as an 'other' exposure with an explicit undisclosed obligor. The wrapper retains the M0 issuer, custody, and smart-contract context. The API reports the eligible-collateral and cash shares at one-decimal display precision while the non-eligible residual sits below it, so the cash slice carries the exact complement 2.099885% (100 - 97.9 - 0.000115) rather than the displayed 2.1%: this is a full composition, so the three slices must total exactly 100%, and both cash figures round to the API's displayed 2.1%.",
     "compositionBasis": "Exact live M0 collateral capture for USDK and documented M0-extension relationship",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

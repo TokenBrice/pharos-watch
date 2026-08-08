@@ -469,8 +469,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -486,7 +486,7 @@
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ],
-    "rationale": "Quantoz's June 30 reserve overview reports USDQ at 30% allocated cash and 70% government bonds, with a 101.23% reserve ratio. The USDQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States.",
+    "rationale": "Quantoz's Reserve Status Overview dated June 30, 2026 (the latest published snapshot as of 2026-08-08) reports USDQ at 30% allocated cash and 70% government bonds, with a 101.23% reserve ratio. The USDQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States. The snapshot is 39 days old as of the review date, so it sits outside the 31-day V9 admission window.",
     "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",

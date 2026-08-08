@@ -24,7 +24,7 @@ describe("Safety Score v9 methodology policy", () => {
   it("loads the committed V9 policy with a frozen semantic digest", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.12");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.13");
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the
@@ -52,8 +52,16 @@ describe("Safety Score v9 methodology policy", () => {
     // judgment; the severity is now chosen on merit and every rung is an
     // existing V9 posture value. One disclosed grade flip (pyusd-paypal A- -> B)
     // and one score-only move (reusd-resupply 47 -> 45).
+    // 9.13 (2026-08-08): risk-absorption wrapper ownership selects an existing
+    // parent-cap tier outside the policy formula, so the semantic digest is unchanged.
+    // 9.14 engine phase (2026-08-08): `semantic.backing.archetypes` gains the
+    // `commodity-claim` rubric (reserveWeight 0.55; title-and-allocation 0.15,
+    // custody-continuity 0.10, assurance-and-reconciliation 0.13,
+    // physical-redemption 0.07). Vocabulary only — no existing archetype rubric,
+    // signal, weight, or ceiling changes, and no asset resolves to the new
+    // archetype until the phase-2 migration, so no score or grade moves.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "2be861b54240f278f849b7f7569bac633b7c87abb87a7f8ee3abf8593db8af93",
+      "1f90b1c1bc0cdc3ee6919f3758ff003d26fb88ebb9c61b3d197f03e094bbd54c",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

@@ -137,8 +137,16 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
   });
 
   it("fails a max-score adverse pin above its bound", () => {
+    // The production contract retired its last max-score pin (U released
+    // 2026-08-08 after pre-drifting in production), so the rule kind is
+    // exercised through an injected contract, mirroring the pair-rule test.
+    const contract: V9AnchorContract = {
+      ...SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
+      adverse: [{ kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" }],
+    };
     const report = evaluateSafetyScoreV9AnchorGate({
       cards: withScore(passingCards(), "u-united-stables", 33),
+      contract,
     });
     expect(report.decision).toBe("no-go");
     const entry = verdict(report, "adverse:u-united-stables");

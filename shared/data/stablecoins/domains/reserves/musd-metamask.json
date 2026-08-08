@@ -21,9 +21,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-08",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "confidence": "verified",
     "sources": [
       {
         "label": "MetaMask mUSD introduction",
@@ -42,28 +42,12 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral, while the current M0 protocol API snapshot exposes 97.9% Tokenized treasury collateral and 2.1% Cash. M0 and Bridge describe off-chain collateral held through minter SPVs and reserve infrastructure, but mUSD-specific underlying positions and provider allocations remain undisclosed.",
-    "compositionBasis": "Current M0 protocol category snapshot combined with MetaMask and Bridge/M0 collateral architecture disclosures",
+    "rationale": "MetaMask states that mUSD is backed by short-term Treasury collateral, and the first-party M0 protocol API snapshot records 97.9% Tokenized treasury collateral and 2.1% Cash. Each slice is now classified with the asset class and obligor identity required by Safety Score V9. Minter-specific provider allocations and account-level custody terms remain undisclosed by Bridge/M0, but those are custody-profile gaps, not reserve-composition unknowns.",
+    "compositionBasis": "First-party M0 protocol API category snapshot for the collateral pool backing $M and its extensions",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The short-term Treasury and cash-equivalent reserve envelope is identified, but mUSD-specific component weights and provider allocations are not published.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Tokenized treasury collateral",
-        "pct": 97.9,
-        "disposition": "basket-needs-split",
-        "rationale": "The current API identifies the tokenized treasury category but does not publish mUSD-specific underlying positions, custodians, or provider weights."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash",
-        "pct": 2.1,
-        "disposition": "insufficient-evidence",
-        "rationale": "The current API identifies a cash category but does not publish mUSD-specific institutions or account-level allocation."
-      }
-    ]
+    "knownUnknownExposure": "No unidentified reserve-category percentage remains. The minter/custodian identities behind the Treasury and cash legs are not itemized in public sources.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

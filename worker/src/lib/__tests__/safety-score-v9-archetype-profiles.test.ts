@@ -9,6 +9,7 @@ import {
   projectV9MechanismProfile,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
+import { resolveWrapperForm } from "../safety-score-v9-fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
@@ -25,7 +26,7 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 30) / 1_000;
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 9) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -71,9 +72,25 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     });
   });
 
+  // v9.14 phase-1 guard. The `commodity-claim` archetype is registered but no
+  // asset resolves to it yet, so this case must keep asserting the *fiat-cash*
+  // projection byte-for-byte. Phase 2 migrates XAUT: `mechanismArchetype`
+  // becomes `commodity-claim`, the overlay's `profileReview` is rewritten as
+  // four direct components (titleAndAllocation limited, custodyContinuity
+  // unavailable, assuranceAndReconciliation adequate, physicalRedemption
+  // limited — the same facts this test pins), and this expectation moves with it.
   it("carries XAUT allocated-commodity facts and explicit issuer nondisclosure into backing", () => {
     const overlay = namedOverlay("xaut-tether");
+    expect(overlay.archetype).toBe("fiat-cash");
     expect(overlay.profileReview?.profile).toBe("allocated-commodity-claim");
+    expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("fiat-cash");
+    // No asset is on the new archetype in the engine-only phase.
+    expect(
+      [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim"),
+    ).toEqual([]);
+    expect(
+      mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim"),
+    ).toEqual([]);
     const profile = projectV9MechanismProfile(overlay.profileReview!);
     const coverage = evaluateV9MechanismProfileCoverage(overlay.profileReview!);
     const review = buildSafetyScoreV9MechanismReview(
@@ -175,6 +192,7 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     });
     expect(sdaiAsset.variantKind).toBe("savings-passthrough");
     expect(sboldAsset.variantKind).toBe("risk-absorption");
+    expect(sboldAsset.wrapperOperator).toBe("third-party");
     expect(susdaiAsset.variantKind).toBe("strategy-vault");
     expect(iusdInfiniFiAsset.mechanismArchetype).toBe("rwa-credit-fund");
     expect(iusdInfiniFiAsset).not.toHaveProperty("variantOf");
@@ -202,6 +220,14 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         undefined,
       ),
     ).toBe("pure");
+
+    expect(
+      resolveWrapperForm({
+        variantKind: sboldAsset.variantKind,
+        wrapperOperator: sboldAsset.wrapperOperator,
+        dependencies: { edges: [] },
+      } as never),
+    ).toBe("strategy-vault");
   });
 
   it("retains product-shaped exit families instead of treating delayed exits as absent", () => {

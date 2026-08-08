@@ -190,6 +190,7 @@
   },
   "variantOf": "usde-ethena",
   "variantKind": "risk-absorption",
+  "wrapperOperator": "third-party",
   "pegReferenceId": "usde-ethena",
   "collateral": "Senior tranche (ERC-4626 meta-vault) over Strata's CDO-style risk-tranched strategy that stakes USDe into Ethena sUSDe; the junior tranche (jrUSDe) provides first-loss capital and is paid a dynamic risk premium, giving senior holders principal protection and a benchmark-rate yield floor with uncapped sUSDe upside, while a junior-exhausting insolvency event can still impair senior principal",
   "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",

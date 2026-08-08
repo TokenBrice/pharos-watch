@@ -366,20 +366,20 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Solana mainnet USDH mint account",
-        "url": "https://explorer.solana.com/address/USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX"
+        "label": "Solana finalized mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
       },
       {
-        "label": "Hubble Protocol documentation",
-        "url": "https://docs.hubbleprotocol.io"
+        "label": "Pinned SPL Token transfer, burn, and freeze-authority processor",
+        "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs"
       },
       {
-        "label": "Hubble Peg Stability Module documentation",
-        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
+        "label": "Hubble USDH documentation (censorship-resistant, decentralized stablecoin)",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437979676. The tracked USDH mint retains freezeAuthority = null, so no direct Solana token-account freeze path exists. Current reviewed composition is 94.4468% Circle USDC held through Hubble's Peg Stability Module, with the balance issued against CDP collateral. Circle can freeze that reserve asset and impair the dominant USDH exit path, so USDH resolves Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDH remains an 82-byte legacy SPL Token mint owned by Tokenkeg with freezeAuthority null. Pinned Tokenkeg logic requires holder/delegate authorization for transfers and burns, requires a current freeze authority to freeze an account, and prevents a disabled freeze authority from being restored. Hubble positively documents USDH as a censorship-resistant, decentralized stablecoin minted by users through the protocol and held in any Solana wallet; it identifies no off-chain issuer account-control rail. Hubble governance can upgrade the borrowing program but cannot replace immutable Tokenkeg or restore the mint's disabled freeze authority. Circle can freeze USDC held by the PSM and thereby impair reserves or exits, but it cannot freeze or seize a holder's USDH balance. The direct holder-seizure verdict is therefore No.",
+    "reviewer": "OpenAI Codex C09 control/access review",
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -399,18 +399,63 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Hubble CDP vault collateral basket",
-      "pct": 5.5532,
+      "name": "mSOL CDP collateral",
+      "pct": 3.1323,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Hubble borrower vaults and supported Solana collateral issuers",
+      "issuerOrObligor": "Marinade Finance (mSOL) posted in Hubble borrowing market0",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "SOL CDP collateral",
+      "pct": 1.1633,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Native SOL posted in Hubble borrowing market0",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "kUSDH-USDC Orca kToken CDP collateral",
+      "pct": 0.7250,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Kamino Finance kUSDH-USDC Orca kToken posted in Hubble borrowing market2",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "daoSOL CDP collateral",
+      "pct": 0.2264,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Drift Protocol / DAO DAO (daoSOL) posted in Hubble borrowing market0",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "BTC CDP collateral",
+      "pct": 0.2250,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped/bridged BTC collateral posted in Hubble borrowing market0",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Other CDP collateral (STSOL, ETH, cSOL, RAY, LDO, FTT)",
+      "pct": 0.0812,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido stSOL, Ethereum ETH, Solend cSOL, Raydium RAY, Lido LDO, FTX Token FTT posted in Hubble borrowing market0",
       "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex Safety Score V9 NR-recovery wave 3; R13 CDP split pass",
     "confidence": "verified",
     "sources": [
       {
@@ -426,23 +471,62 @@
         "url": "https://github.com/hubbleprotocol/hubble-common"
       },
       {
-        "label": "Solana mainnet RPC",
+        "label": "Solana mainnet RPC (PSM and borrowing-market reads, slot 438037097)",
         "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Scope Hubble feed OraclePrices account",
+        "url": "https://explorer.solana.com/address/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C"
       }
     ],
-    "rationale": "A finalized Solana read through Hubble's official SDK at slot 434386680 returned 1,069,376.821209 USDC both deposited and minted through the PSM, plus 62,876.204453 USDH borrowed across the three configured borrowing markets. Those issuance-path liabilities reconcile to circulating supply within 0.0041% and normalize to 94.4468% PSM USDC and 5.5532% CDP-backed USDH. The material PSM slice is therefore exact; current constituent weights inside the sub-material CDP branch remain unsplit.",
-    "compositionBasis": "Finalized Hubble SDK state for PSM minted USDH and all configured borrowing-market debt at Solana slot 434386680",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "A finalized Solana read through Hubble's official SDK at slot 434386680 returned 1,069,376.821209 USDC both deposited and minted through the PSM, plus 62,876.204453 USDH borrowed across the three configured borrowing markets. Those issuance-path liabilities reconcile to circulating supply within 0.0041% and normalize to 94.4468% PSM USDC and 5.5532% CDP-backed USDH. The 2026-08-08 R13 pass split the sub-material CDP branch using active depositedCollateral from borrowing-market states at Solana slot 438037097 priced through the Scope Hubble feed (with CoinGecko spots for SRM, FTT and LDO placeholder prices). The resulting weights are mSOL 56.41%, SOL 20.95%, kUSDH-USDC Orca kToken 13.06%, daoSOL 4.08%, BTC 4.05%, and a grouped 'other' slice 1.46% (STSOL, ETH, cSOL, RAY, LDO, FTT).",
+    "compositionBasis": "Finalized Hubble SDK state for PSM minted USDH and all configured borrowing-market debt at Solana slot 434386680; CDP collateral split from active depositedCollateral at Solana slot 438037097",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 5.5532% CDP-backed issuance branch is verified in aggregate, but its current collateral-asset value weights are not fully reproducible because retired collateral slots remain in market state without current public token labels or usable prices.",
-    "knownUnknownExposurePct": 5.5532,
+    "knownUnknownExposure": "All active USDH issuance paths and their direct backing assets are identified; the CDP collateral split uses active depositedCollateral and excludes inactive/retired collateral slots whose value is negligible relative to the active basket.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
-        "reserveName": "Hubble CDP vault collateral basket",
-        "pct": 5.5532,
-        "disposition": "basket-needs-split",
-        "rationale": "Borrowing-market debt is exact, but the complete current value split across active and retired collateral slots cannot be reproduced without false precision. This bounded branch remains explicitly unsplit."
+        "reserveName": "mSOL CDP collateral",
+        "pct": 3.1323,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "mSOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "SOL CDP collateral",
+        "pct": 1.1633,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native SOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "kUSDH-USDC Orca kToken CDP collateral",
+        "pct": 0.7250,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Kamino kUSDH-USDC Orca kToken is a protocol position rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "daoSOL CDP collateral",
+        "pct": 0.2264,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "daoSOL is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "BTC CDP collateral",
+        "pct": 0.2250,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Other CDP collateral (STSOL, ETH, cSOL, RAY, LDO, FTT)",
+        "pct": 0.0812,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The grouped residual cryptoassets are exogenous rather than tracked stablecoin dependencies."
       }
     ]
   },

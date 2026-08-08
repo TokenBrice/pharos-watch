@@ -87,8 +87,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Unitas Terms of Service",
@@ -107,9 +108,9 @@
         "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
       }
     ],
-    "evidence": "Unitas's Terms of Service reserve the right to freeze, burn, or otherwise restrict USDu and sUSDu under a user's control for legal or terms violations, while the same terms describe the tokens as issued through open-source contracts and state that Unipay cannot unilaterally modify user balances. This is a material issuer/operational restriction signal, but it does not by itself prove a live token-level blacklist or freeze function across the BNB and Solana deployments. The inherited status is retained for the documented centralized operational rails and the unresolved contract-level boundary.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-08-08. Section 5 of Unipay Pte. Ltd.'s binding Unitas Terms of Service explicitly reserves the issuer's right, without prior notice, to freeze, burn, or otherwise restrict USDu or sUSDu under a user's control when it believes the user violated the terms or applicable law. That exact-token issuer power is sufficient for a direct true freeze-reach finding under the access-review contract even though the currently verified BSC ERC-20 and Solana Token-2022 transfer paths themselves remain permissionless and expose no native freeze authority. The prior inherited verdict was invalid because USDU has no upstream stablecoin parent; the legal authority belongs to its own issuer.",
+    "reviewer": "OpenAI Codex C04 access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -326,7 +327,7 @@
   "reserves": [
     {
       "name": "Binance",
-      "pct": 49,
+      "pct": 15.02,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Binance off-exchange settlement venue (Copper/Ceffu-style custody route)",
@@ -342,7 +343,7 @@
     },
     {
       "name": "Solana",
-      "pct": 48.5,
+      "pct": 47.57,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Solana on-chain collateral and hedge positions",
@@ -358,7 +359,7 @@
     },
     {
       "name": "Bnb_smartchain",
-      "pct": 2.5,
+      "pct": 2.24,
       "risk": "high",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "BNB Smart Chain on-chain collateral and hedge positions",
@@ -371,13 +372,31 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Bitcoin",
+      "pct": 35.17,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin/WBTC held as on-chain collateral in Unitas reserves",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "Accountable Unitas dashboard API (reserves_split snapshot 2026-08-08)",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
+      },
       {
         "label": "Accountable Unitas proof-of-solvency dashboard",
         "url": "https://accountable.unitas.so/"
@@ -395,33 +414,40 @@
         "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
       }
     ],
-    "rationale": "Accountable's zkTLS dashboard API exposed a venue-level reserves_split on 2026-07-19 (Binance 49%, Solana 48.5%, Bnb_smartchain 2.5%), superseding the prior unresolved aggregate basket; the slices are restated on those exact adapter identities so the reviewed classification overlays the live rows. The same bucket returned empty on 2026-07-20, so the venue weights are bounded to the last dated capture while Unitas's documented delta-neutral envelope (on-chain collateral plus off-exchange perpetual hedges via Copper/Ceffu-style settlement) bounds what each venue slice contains.",
-    "compositionBasis": "Accountable dashboard API reserves_split venue allocation captured 2026-07-19; per-venue instrument composition undisclosed",
-    "compositionAsOf": "2026-07-19",
+    "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition.",
+    "compositionBasis": "Accountable dashboard API reserves_split venue/instrument allocation captured 2026-08-08; per-venue instrument composition undisclosed",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: collateral assets, long and short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue remain undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized.",
+    "knownUnknownExposurePct": 64.83,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Binance",
-        "pct": 49,
+        "pct": 15.02,
         "disposition": "basket-needs-split",
         "rationale": "The Binance venue bucket aggregates off-exchange custodied collateral and hedge positions without disclosing current instrument-level composition."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Solana",
-        "pct": 48.5,
+        "pct": 47.57,
         "disposition": "basket-needs-split",
         "rationale": "The Solana venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Bnb_smartchain",
-        "pct": 2.5,
+        "pct": 2.24,
         "disposition": "basket-needs-split",
         "rationale": "The BNB Smart Chain venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Bitcoin",
+        "pct": 35.17,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Bitcoin/WBTC is an external cryptoasset held as collateral, not a tracked stablecoin dependency."
       }
     ]
   },
@@ -480,7 +506,8 @@
         "Binance": "high",
         "Solana": "high",
         "Bnb_smartchain": "high",
-        "Aster": "high"
+        "Aster": "high",
+        "Bitcoin": "medium"
       }
     }
   },

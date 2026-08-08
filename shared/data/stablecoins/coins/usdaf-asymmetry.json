@@ -562,8 +562,8 @@
         "url": "https://app.asymmetry.finance/api/stats"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The renounced, non-proxy USDaf BoldToken exposes no mutable pause, holder blacklist, seizure, or arbitrary-holder burn; its fixed core-contract recipient guard is not discretionary censorship. Current reserve stats nevertheless include tracked sUSDS, sfrxUSD, scrvUSD, tBTC, and wBTC exposures with possible, direct, or inherited issuer/custodian controls. Those positive reserve relationships resolve USDaf as Upstream rather than No.",
-    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "evidence": "At Ethereum block 25712463 (2026-08-08T19:53:59Z; hash 0x618ff702108d99dab9aefdef506ad07bb2bf95a86f571ea65db27698420510af), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots; its runtime code remained the verified direct BoldToken deployment. The pinned and verified source exposes ordinary holder transfer and allowance transferFrom behavior, a fixed core-contract recipient guard, and fixed protocol mint/burn routes, but no mutable pause, holder blacklist, seizure, or arbitrary-holder burn. The reviewed project materials and holder terms identify protocol and reserve risks but no separate issuer power to freeze existing USDaf balances. Direct holder freeze is therefore false; reserve-asset controls remain upstream dependencies rather than token access controls.",
+    "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -574,7 +574,7 @@
   "reserves": [
     {
       "name": "ysyBOLD",
-      "pct": 79.5,
+      "pct": 79.4,
       "risk": "medium",
       "coinId": "bold-liquity",
       "depType": "collateral",
@@ -590,7 +590,7 @@
     },
     {
       "name": "scrvUSD",
-      "pct": 9.9,
+      "pct": 10.0,
       "risk": "medium",
       "coinId": "scrvusd-curve",
       "depType": "collateral",
@@ -666,7 +666,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
+    "reviewedAt": "2026-08-08",
     "reviewer": "SOL-III Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
@@ -683,9 +683,9 @@
         "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
       }
     ],
-    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
-    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. Slices are mirrored verbatim from the live adapter branch names so curated classification overlays the live feed. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
+    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-08-08",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
     "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
     "knownUnknownExposurePct": 0

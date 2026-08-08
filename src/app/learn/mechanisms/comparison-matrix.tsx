@@ -115,6 +115,15 @@ const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
     oracleDep: "—",
     jurisdictionDep: "High",
   },
+  "commodity-claim": {
+    collateralLocation: "Vaulted metal",
+    redemptionRight: "Physical delivery",
+    yieldSource: "—",
+    primaryFailureMode: "Vault or title failure",
+    governanceDep: "Low",
+    oracleDep: "—",
+    jurisdictionDep: "High",
+  },
 };
 
 export function MechanismComparisonMatrix() {

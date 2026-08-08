@@ -20,28 +20,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 re-verify",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge Building Inc Stablecoin Terms (re-opened 2026-07-28)",
+        "label": "Bridge Building Inc Stablecoin Terms",
         "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
       },
       {
-        "label": "Bridge stablecoins reserve and custody FAQ (re-opened 2026-07-28)",
+        "label": "Bridge stablecoins reserve and custody FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "CASH product site reserve FAQ (re-opened 2026-07-28)",
+        "label": "Phantom CASH documentation",
+        "url": "https://docs.phantom.com/cash"
+      },
+      {
+        "label": "CASH product site reserve FAQ",
         "url": "https://www.usecash.xyz/"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28 (HTTP 200): Bridge Building Inc Stablecoin Terms §02 still require Reserve market value ≥ outstanding Bridge Stablecoins × $1 and list eligible classes as (a) U.S. T-bills ≤3 months maturity, (b) overnight reverse repos fully collateralized by U.S. Treasuries, (c) U.S. government money-market funds, (d) deposit accounts, (e) tokenized versions of those assets, and (f) tokenized assets themselves backed by (a)-(e). Bridge FAQ independently restates 1:1 USD backing via short-dated U.S. Treasuries, overnight Treasury repo, money market funds, and cash. usecash.xyz FAQ quotes the same eligible-class envelope and 1:1 BBI Reserve rule. None of the three pages, nor public search for a CASH-specific attestation or reserve report, publishes current category weights; Bridge's transparency/reserves API endpoints require credentials. Composition therefore remains one evidenced aggregate basket (100%) with basket-needs-split disposition rather than an unsupported split.",
-    "compositionBasis": "Bridge issuer terms, issuance FAQ, and CASH product site; current category weights undisclosed",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "R02 refresh 2026-08-08 (HTTP 200): Bridge Building Inc Stablecoin Terms §02 still require Reserve market value ≥ outstanding Bridge Stablecoins × $1 and list eligible classes as (a) U.S. T-bills ≤3 months maturity, (b) overnight reverse repos fully collateralized by U.S. Treasuries, (c) U.S. government money-market funds, (d) deposit accounts, (e) tokenized versions of those assets, and (f) tokenized assets themselves backed by (a)-(e). Bridge FAQ independently restates 1:1 USD backing via short-dated U.S. Treasuries, overnight Treasury repo, money market funds, and cash, with reserves held in segregated, bankruptcy-remote accounts custodied by BlackRock and Fidelity. Phantom docs confirm CASH is issued by Bridge on Solana and point to usecash.xyz for reserve disclosures. usecash.xyz FAQ quotes the same eligible-class envelope and 1:1 BBI Reserve rule. None of the reviewed pages, nor public search for a CASH-specific attestation or reserve report, publishes current category weights; Bridge's transparency/reserves API endpoints require credentials. Composition therefore remains one evidenced aggregate basket (100%) with basket-needs-split disposition rather than an unsupported split.",
+    "compositionBasis": "Bridge issuer terms, issuance FAQ, Phantom CASH docs, and CASH product site; current category weights undisclosed",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH. Re-open on 2026-07-28 found no public dated CASH-specific independent attestation, audit, or reserve-to-liability reconciliation; FAQ states quarterly audits/transparency reports will be issued, and reporting-and-transparency docs describe fee-gated attestations and auth-gated reserve APIs.",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH. The 2026-08-08 review found no public dated CASH-specific independent attestation, audit, or reserve-to-liability reconciliation; FAQ states quarterly audits/transparency reports will be issued, and reporting-and-transparency docs describe fee-gated attestations and auth-gated reserve APIs.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -69,23 +73,27 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave8 re-verify",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge Building Inc Stablecoin Terms (re-opened 2026-07-28)",
+        "label": "Bridge Building Inc Stablecoin Terms",
         "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
       },
       {
-        "label": "Bridge stablecoins reserve and custody FAQ (re-opened 2026-07-28)",
+        "label": "Bridge stablecoins reserve and custody FAQ",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "CASH product site reserve FAQ (re-opened 2026-07-28)",
+        "label": "Phantom CASH documentation",
+        "url": "https://docs.phantom.com/cash"
+      },
+      {
+        "label": "CASH product site reserve FAQ",
         "url": "https://www.usecash.xyz/"
       }
     ],
-    "uncertainty": "Write-time re-open 2026-07-28: FAQ still states reserves are held in segregated, bankruptcy-remote accounts custodied by BlackRock and Fidelity; Terms still require segregation from BBI operating assets at depository institutions/securities custodians; usecash.xyz still states bankruptcy-remote accounts at leading custodians. Provider shares, account-level placement, Superstate/Lead Bank roles (named only in Open Issuance marketing, not in Terms/FAQ for CASH), and rehypothecation terms remain undisclosed."
+    "uncertainty": "R02 refresh 2026-08-08: FAQ still states reserves are held in segregated, bankruptcy-remote accounts custodied by BlackRock and Fidelity; Terms still require segregation from BBI operating assets at depository institutions/securities custodians; usecash.xyz still states bankruptcy-remote accounts at leading custodians. Provider shares, account-level placement, Superstate/Lead Bank roles (named only in Open Issuance marketing, not in Terms/FAQ for CASH), and rehypothecation terms remain undisclosed."
   }
 }

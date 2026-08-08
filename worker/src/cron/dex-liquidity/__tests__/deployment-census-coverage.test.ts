@@ -1,13 +1,51 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
   buildDexPlaceholderScoreDetailsJson,
   classifyDexPlaceholderCoverage,
+  resolveDexDeploymentCensusMaxAgeSec,
   type DexDeploymentCensusRow,
 } from "../deployment-census-coverage";
+import {
+  DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC,
+  estimateDiscoverySweepWindowCount,
+} from "../../dex-discovery/target-window";
 
 const NOW_SEC = 1_800_000_000;
+
+/** A footprint whose 2s-paced GeckoTerminal tail cannot fit one per-coin budget. */
+const OVERSIZED_FOOTPRINT: ContractDeployment[] = [
+  "ethereum",
+  "arbitrum",
+  "base",
+  "optimism",
+  "polygon",
+  "avalanche",
+  "bsc",
+  "linea",
+  "scroll",
+  "mantle",
+  "mode",
+  "manta",
+  "zksync",
+  "sonic",
+  "taiko",
+  "unichain",
+].map((chain, index) => ({
+  chain,
+  address: `0x${(index + 1).toString(16).padStart(40, "0")}`,
+  decimals: 18,
+}));
+
+/** Registry coins the discovery crawl can only sweep across several runs. */
+function windowedActiveCoins(): { id: string; deployments: ContractDeployment[] }[] {
+  return ACTIVE_STABLECOINS.map((meta) => ({
+    id: meta.id,
+    deployments: [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])],
+  })).filter(({ deployments }) => estimateDiscoverySweepWindowCount(deployments) > 1);
+}
 
 function deployment(
   chain = "ethereum",
@@ -253,7 +291,7 @@ describe("DEX placeholder deployment-census coverage", () => {
       deployments: [
         deployment(),
         deployment("starknet", "0x0000000000000000000000000000000000000003"),
-        deployment("stellar", "GSTELLARASSETISSUER"),
+        deployment("tezos", "KT1TEZOSASSET"),
       ],
       outcomeRows: [outcome()],
       nowSec: NOW_SEC,
@@ -273,7 +311,33 @@ describe("DEX placeholder deployment-census coverage", () => {
       providerInaccessibleCount: 2,
       missingOutcomeCount: 0,
       unsupportedChainDeploymentCount: 2,
-      unsupportedChains: ["starknet", "stellar"],
+      unsupportedChains: ["starknet", "tezos"],
+    });
+  });
+
+  it("accepts Horizon as the registered provider for an exact Stellar outcome", () => {
+    const address = "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment("stellar", address)],
+      outcomeRows: [
+        outcome({
+          chain: "stellar",
+          contract_address: address,
+          provider_set_json: JSON.stringify(["horizon"]),
+        }),
+      ],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification).toMatchObject({
+      state: "complete-empty",
+      census: {
+        expectedDeploymentCount: 1,
+        reviewedDeploymentCount: 1,
+        verifiedNoPoolsCount: 1,
+        unsupportedChainDeploymentCount: 0,
+        unsupportedChains: [],
+      },
     });
   });
 
@@ -330,6 +394,45 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
+  it("judges a windowed footprint against its own sweep period", () => {
+    // Older than the global bound, younger than this footprint's sweep bound.
+    const ageSec = DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC + 3_600;
+    expect(resolveDexDeploymentCensusMaxAgeSec(OVERSIZED_FOOTPRINT)).toBeGreaterThan(ageSec);
+
+    const rows = OVERSIZED_FOOTPRINT.map((deployed) =>
+      outcome({
+        chain: deployed.chain,
+        contract_address: deployed.address,
+        observed_at: NOW_SEC - ageSec,
+        discovery_last_crawl_at: NOW_SEC - ageSec - 60,
+      }),
+    );
+    const windowed = classifyDexPlaceholderCoverage({
+      deployments: OVERSIZED_FOOTPRINT,
+      outcomeRows: rows,
+      nowSec: NOW_SEC,
+    });
+
+    expect(windowed.state).toBe("complete-empty");
+    expect(windowed.census).toMatchObject({
+      staleOutcomeCount: 0,
+      maxAgeSec: resolveDexDeploymentCensusMaxAgeSec(OVERSIZED_FOOTPRINT),
+    });
+
+    // The same row age on a footprint one crawl finishes is still stale.
+    const singleRun = classifyDexPlaceholderCoverage({
+      deployments: [OVERSIZED_FOOTPRINT[0]!],
+      outcomeRows: [rows[0]!],
+      nowSec: NOW_SEC,
+    });
+
+    expect(singleRun.state).toBe("discovery-deferral");
+    expect(singleRun.census).toMatchObject({
+      staleOutcomeCount: 1,
+      maxAgeSec: DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+    });
+  });
+
   it("keeps unavailable and unreviewed censuses explicit unknown", () => {
     const unavailable = classifyDexPlaceholderCoverage({
       deployments: [deployment()],
@@ -357,5 +460,46 @@ describe("DEX placeholder deployment-census coverage", () => {
         unsupportedReasons: { deploymentCensusNoReviewedScope: 1 },
       },
     });
+  });
+});
+
+describe("resolveDexDeploymentCensusMaxAgeSec", () => {
+  it("keeps the global bound for footprints one crawl finishes", () => {
+    expect(resolveDexDeploymentCensusMaxAgeSec([])).toBe(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+    expect(
+      resolveDexDeploymentCensusMaxAgeSec([
+        deployment(),
+        deployment("base", "0x0000000000000000000000000000000000000002"),
+      ]),
+    ).toBe(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+  });
+
+  it("allows a windowed footprint one estimated sweep plus half a sweep of slack", () => {
+    const windows = estimateDiscoverySweepWindowCount(OVERSIZED_FOOTPRINT);
+    expect(windows).toBeGreaterThan(1);
+
+    const bound = resolveDexDeploymentCensusMaxAgeSec(OVERSIZED_FOOTPRINT);
+    expect(bound).toBe(Math.ceil(windows * DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC * 1.5));
+    expect(bound).toBeGreaterThan(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+  });
+
+  it("never shrinks as a footprint grows", () => {
+    let previous = 0;
+    for (let length = 0; length <= OVERSIZED_FOOTPRINT.length; length++) {
+      const bound = resolveDexDeploymentCensusMaxAgeSec(OVERSIZED_FOOTPRINT.slice(0, length));
+      expect(bound).toBeGreaterThanOrEqual(previous);
+      previous = bound;
+    }
+  });
+
+  it("extends the bound for every tracked coin the crawl has to window", () => {
+    const windowed = windowedActiveCoins();
+    expect(windowed.length).toBeGreaterThan(0);
+
+    for (const coin of windowed) {
+      expect(resolveDexDeploymentCensusMaxAgeSec(coin.deployments)).toBeGreaterThan(
+        DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+      );
+    }
   });
 });

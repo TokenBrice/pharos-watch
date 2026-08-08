@@ -8,6 +8,7 @@ export const MECHANISM_ARCHETYPE_VALUES = [
   "synthetic-delta-neutral",
   "algorithmic",
   "rwa-credit-fund",
+  "commodity-claim",
 ] as const;
 export type MechanismArchetype = (typeof MECHANISM_ARCHETYPE_VALUES)[number];
 

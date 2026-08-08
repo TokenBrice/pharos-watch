@@ -27,7 +27,7 @@ describe("the discovery Curve stage stays inside the registered provider set", (
     // registry credits it for; those extra chains must not be crawled for
     // deployment outcomes.
     const stageOnly = CURVE_CHAINS.filter((chain) => !CURVE_NATIVE_DISCOVERY_CHAINS.has(chain));
-    expect(stageOnly).toEqual(["optimism", "avalanche", "fantom", "kava", "gnosis"]);
+    expect(stageOnly).toEqual(["optimism", "avalanche", "fantom", "gnosis"]);
   });
 
   it("leaves no discovery-crawled chain needing a non-identity Curve API path", () => {

@@ -276,7 +276,7 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewer": "PoR verification sweep 2026-08; R13 reserve pass",
     "confidence": "verified",
     "sources": [
       {
@@ -288,11 +288,11 @@
         "url": "https://www.blox.my/myrc/transparency"
       }
     ],
-    "rationale": "Tommy Ung & Partners PLT ISAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 (report dated 2026-07-21, PDF read this pass): MYR 1,817,790.25 cash (81.96%) and MYR 400,000.00 in the Halogen Shariah MYR Liquid Fund (18.04%), totalling MYR 2,217,790.25 exactly equal to 2,217,790.25 MYRC in circulation (zero surplus). Circulation = 6,365,298.65 total supply less 4,147,508.40 authorized-but-not-issued. The report restricts distribution to the Company and discloses BLOX is in Open Beta and not in any Malaysian regulatory sandbox. The prior 100%-cash composition (from the 2025-07-31 report) no longer holds.",
+    "rationale": "Tommy Ung & Partners PLT ISAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 (report dated 2026-07-21, PDF read this pass): MYR 1,817,790.25 cash (81.96%) and MYR 400,000.00 in the Halogen Shariah MYR Liquid Fund (18.04%), totalling MYR 2,217,790.25 exactly equal to 2,217,790.25 MYRC in circulation (zero surplus). Circulation = 6,365,298.65 total supply less 4,147,508.40 authorized-but-not-issued. The report restricts distribution to the Company and discloses BLOX is in Open Beta and not in any Malaysian regulatory sandbox. The prior 100%-cash composition (from the 2025-07-31 report) no longer holds. R13 re-open 2026-08-08: no July 2026 attestation was publicly accessible; the June 2026 composition remains the freshest available.",
     "compositionBasis": "Tommy Ung & Partners PLT examination as of 30 June 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The latest independent report identifies 100% cash/MYR bank deposits, but current financial institutions, provider shares, balances, and legal segregation terms are not disclosed.",
+    "knownUnknownExposure": "The latest independent report identifies 81.96% MYR cash/bank deposits and 18.04% Halogen Shariah MYR Liquid Fund, but the specific Malaysian financial institutions, provider shares, account segregation, and legal terms are not disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

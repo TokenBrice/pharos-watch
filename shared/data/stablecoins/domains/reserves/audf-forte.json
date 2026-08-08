@@ -17,30 +17,30 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve curation batch R10",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "MVAB Assurance AUDF Reserves Report - December 2025",
-        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
+        "label": "Horizon Nexus (Audit) AUDF Reserves Report - May 2026",
+        "url": "https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf"
       },
       {
-        "label": "Forte AUD transparency page",
-        "url": "https://www.forteaud.com/transparency"
+        "label": "Forte AUD reserves reports index",
+        "url": "https://www.forteaud.com/reserves"
       },
       {
         "label": "Forte AUD product site",
         "url": "https://www.forteaud.com/"
       },
       {
-        "label": "Forte AUD Terms of Use December 2024",
-        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
+        "label": "Forte AUD Terms of Use January 2026",
+        "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
       }
     ],
-    "rationale": "Re-opened 2026-07-30: full-text re-read of the MVAB Assurance independent auditor's report on the AUDF Reserves Report as at 31 December 2025 11:59pm AEDT. Management asserts AUD 4,125,000 total AUDF issued (Ethereum 3,960,000 + Polygon 165,000; Avalanche nil) against AUD 4,132,465.51 cash in a single Australian-dollar reserve bank account; MVAB opines that cash balance is prepared in all material respects under the stated accounting policies (signed Melbourne 8 January 2026). Notes state AUD reserves are owned/managed by Forte Securities Australia Pty Ltd, segregated from operational funds, and unencumbered. No other reserve asset classes are disclosed. No newer monthly PDF was verified beyond the December 2025 report. Bank identity remains undisclosed.",
-    "compositionBasis": "MVAB independent audit of the AUDF reserve bank-account cash balance as of 2025-12-31",
-    "compositionAsOf": "2025-12-31",
+    "rationale": "Re-reviewed 2026-08-08 against the Horizon Nexus (Audit) Pty Ltd independent auditor's report on the AUDF Reserves Report as at 31 May 2026 11:59pm AEST. Management asserts AUD 5,136,311.71 of AUDF in circulation across Ethereum, Polygon, Base, Avalanche and Redbelly against an equal AUD cash balance in a single Australian-dollar reserve bank account; Horizon Nexus opines that the cash balance is prepared, in all material respects, in accordance with the stated accounting policies (signed Melbourne 1 June 2026). Notes state AUD reserves are owned/managed by Forte Securities Australia Pty Ltd, segregated from operational funds, and unencumbered. No other reserve asset classes are disclosed. Bank identity remains undisclosed.",
+    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-05-31",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset class is identified as an AUD bank-account cash balance. The bank identity, provider concentration, and account terms remain undisclosed custody details.",
     "knownUnknownExposurePct": 0,
@@ -65,19 +65,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve curation batch R10",
     "confidence": "probable",
     "sources": [
       {
-        "label": "MVAB Assurance AUDF Reserves Report - December 2025",
-        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
+        "label": "Horizon Nexus (Audit) AUDF Reserves Report - May 2026",
+        "url": "https://vuvuzela-iguana-ecmf.squarespace.com/s/AUDF-Reserves-Report-May-2026.pdf"
       },
       {
-        "label": "Forte AUD Terms of Use December 2024",
-        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
+        "label": "Forte AUD Terms of Use January 2026",
+        "url": "https://www.forteaud.com/s/ForteAUDTermsofUseJanuary2026.pdf"
       }
     ],
-    "uncertainty": "Management and MVAB describe one segregated, unencumbered AUDF reserve bank account in Australia but do not name the bank, disclose provider allocations, establish statutory bankruptcy remoteness or trust status for token holders, or state anti-rehypothecation / successor-custody terms. Binding terms deny holders a security interest or trust/fiduciary claim on reserves."
+    "uncertainty": "Management and Horizon Nexus describe one segregated, unencumbered AUDF reserve bank account in Australia but do not name the bank, disclose provider allocations, establish statutory bankruptcy remoteness or trust status for token holders, or state anti-rehypothecation / successor-custody terms. Binding terms deny holders a security interest or trust/fiduciary claim on reserves."
   }
 }

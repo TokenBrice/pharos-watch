@@ -87,6 +87,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "id"
   | "variantOf"
   | "variantKind"
+  | "wrapperOperator"
   | "archetypeOverride"
   | "mechanismArchetype"
   | "implementationLaunchDate"
@@ -2345,6 +2346,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         assetIssuerKey,
         archetype,
         variantKind: meta.variantKind ?? null,
+        ...(meta.wrapperOperator === undefined ? {} : { wrapperOperator: meta.wrapperOperator }),
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
         mechanismRiskReview,
         ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),

@@ -132,8 +132,8 @@
   "custodyModel": "institutional-regulated",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
-    "confidence": "manual-review",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
     "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
     "economicCapSemantics": "unknown",
     "reconciliation": "unknown",
@@ -141,7 +141,7 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-30",
+      "observedAt": "2026-08-08",
       "sources": [
         {
           "label": "Koios script_info — USDA minting policy plutusV2",
@@ -153,7 +153,7 @@
         },
         {
           "label": "Koios policy_asset_list for USDA policy",
-          "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
         }
       ]
     },
@@ -165,6 +165,7 @@
         "directMintAbility": "direct",
         "chain": "cardano",
         "canRaiseCap": "unknown",
+        "observedAt": "2026-08-08",
         "sources": [
           {
             "label": "Anzens USDA homepage",
@@ -172,16 +173,16 @@
           },
           {
             "label": "Koios policy_asset_list for USDA policy",
-            "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+            "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
           }
         ],
-        "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy."
+        "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy. On 2026-08-08, Koios policy_asset_list returned the single USDA asset under policy fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 with raw supply 4,452,382,510,000 at six decimals. The policy remains PlutusV2, but its embedded signer/control parameters are not decoded by the public sources, so canRaiseCap remains unknown rather than inferred."
       }
     ],
     "review": {
-      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding. 2026-07-20 (Kimi P2 dc-2): Koios script_info confirms the minting policy is a plutusV2 script created in tx 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish only custody-adjacent statements (EMURGO key-management blog; BitGo custodial services for USDA mint/burn operations) and no script parameterization, so the controlling signing keys remain unestablished from public sources. Re-reviewed 2026-07-27 (Kimi data review): anzens.com and Anzens/EMURGO channels still publish no script parameterization, admin-control inventory, or reserve attestation URL, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review; the controlling signing keys embedded as PlutusV2 script parameters remain the recorded structural unknown. Reconciliation is recorded as periodic: EMURGO announced an independent examination of USDA reserve assets (first proof-of-reserves report), which is a point-in-time supply-vs-reserve reconciliation engagement rather than a continuous feed; no attestation URL is publicly published. M-2 evidence review 2026-08-08: reconciliation downgraded periodic -> unknown - the claimed series is four images-only Medium-hosted examination posts in 16 months, newest period 2026-01-31 (~6 months stale while supply fell ~62%), with no readable signing firm, period, or opinion, no transparency surface on anzens.com, and contested machine-verifiability across three research passes. A stalled, unverifiable series cannot support recurring-reconciliation credit.",
-      "reviewer": "Kimi data review",
-      "reviewedAt": "2026-07-27",
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 is a PlutusV2 script. Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters that are not observable from chain state without full script-parameter decoding. Koios script_info confirms the policy was created in transaction 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish custody-adjacent statements but no script parameterization or admin-control inventory, so the controlling signing keys remain unestablished from public sources. Rechecked 2026-08-08: Koios still returns type=plutusV2 and one policy asset, USDA, with raw supply 4,452,382,510,000 at six decimals; the Cardano Token Registry independently maps the same policy-plus-asset name to USDA. The public evidence still does not establish a hard supply ceiling or identify the embedded authorization threshold, so economicCapSemantics and canRaiseCap remain unknown. Reconciliation also remains unknown: the claimed series is four image-only Medium-hosted examination posts in 16 months, newest period 2026-01-31 (about six months stale while supply fell materially), with no machine-readable report naming the firm, period, or opinion and no current transparency surface on anzens.com. A stalled, unverifiable series cannot support recurring-reconciliation credit.",
+      "reviewer": "OpenAI Codex C07 control review; Kimi data review",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Anzens USDA homepage",
@@ -189,7 +190,11 @@
         },
         {
           "label": "Koios policy_asset_list for USDA policy",
-          "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+        },
+        {
+          "label": "Koios script_info — USDA PlutusV2 minting policy",
+          "url": "https://api.koios.rest/api/v1/script_info"
         },
         {
           "label": "Cardano Token Registry — Anzens USDA",
@@ -208,7 +213,11 @@
           "url": "https://medium.com/@emurgo_io"
         }
       ],
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Which signing keys, threshold, and authorization conditions are embedded in the PlutusV2 minting policy, and can that authority expand USDA supply without an independently enforced ceiling?",
+        "Does Anzens publish a current, recurring, independently verifiable reserve reconciliation that identifies the reporting period, examiner, liabilities, reserve assets, and conclusion?"
+      ]
     }
   },
   "reserves": [

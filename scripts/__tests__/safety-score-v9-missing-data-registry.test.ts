@@ -70,6 +70,10 @@ describe("Safety Score v9 missing-data work routing", () => {
     ["tbill", "navValuation"],
     ["tbill", "durationAndLiquidity"],
     ["tbill", "lossRecoveryDesign"],
+    ["commodity-claim", "titleAndAllocation"],
+    ["commodity-claim", "custodyContinuity"],
+    ["commodity-claim", "assuranceAndReconciliation"],
+    ["commodity-claim", "physicalRedemption"],
   ] as const)("routes ratified %s %s evidence to agent curation", (archetype, componentKey) => {
     expect(
       mechanismResolutionMode({
@@ -88,7 +92,7 @@ describe("Safety Score v9 missing-data work routing", () => {
     ).toBe("issuer-or-onchain-evidence");
   });
 
-  it.each(["fiat-cash", "tbill"] as const)(
+  it.each(["fiat-cash", "tbill", "commodity-claim"] as const)(
     "routes %s score-projection mechanism gaps to agent curation",
     (archetype) => {
       expect(scoreProjectionResolutionMode("MECHANISM_REVIEW", archetype)).toBe("agent-curation");
@@ -97,6 +101,7 @@ describe("Safety Score v9 missing-data work routing", () => {
 
   it("directs mechanism review work to the overlay under the ratified evidence standard", () => {
     const definition = workTypeDefinition("MECHANISM_REVIEW");
+    expect(definition.instructions).toContain("Fiat-cash, T-bill, and commodity-claim components");
     expect(definition.instructions).toContain("ratified strict evidence standard");
     expect(definition.instructions).toContain("unavailable disposition that remains bounded and non-scoring");
     expect(definition.instructions).not.toContain("methodology capability");

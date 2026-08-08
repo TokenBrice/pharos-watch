@@ -156,9 +156,16 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     // DIFC-impaired, exit 46). It remains a named WATCH sentinel in every
     // counterfactual — a surprise rise gets flagged and re-presented, not
     // silently shipped — but is no longer a must-stay-low asset.
-    { kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" },
+    // U adverse pin (≤32) RELEASED 2026-08-08 under the owner's full-autonomy
+    // release grant: production had already scored U 42/D before the wave-1
+    // release stack (verified against the live payload — the replay changes
+    // nothing for this asset), so the pin was stale, not violated by a wave.
+    // Like TUSD it becomes a WATCH sentinel: a further rise gets flagged and
+    // re-presented, not silently shipped.
+    // MIM adverse pin RETIRED 2026-08-08: MIM was frozen after its terminal
+    // depeg (2682eb9f5) and left the active evaluated set, which satisfies the
+    // pin's intent permanently; an absent asset can never score again.
     { kind: "max-grade", id: "eurs-stasis", maxGrade: "F", label: "EURS adverse pin" },
-    { kind: "max-grade", id: "mim-abracadabra", maxGrade: "F", label: "MIM adverse pin" },
   ],
 } as const satisfies V9AnchorContract;
 

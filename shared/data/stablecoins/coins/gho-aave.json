@@ -234,9 +234,9 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "The verified immutable Ethereum GHO token exposes standard transfer and transferFrom operations without a holder blacklist, balance freeze, seizure, or global pause function. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; their token-pool mint, burn, and route controls do not establish a holder-level blacklist on GHO balances. This is a direct-token finding and does not suppress bridge-route or reserve impairment risk.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
@@ -246,7 +246,7 @@
     "upgradeability": {
       "model": "immutable",
       "implementationAddresses": [
-        "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f"
+        "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
       ],
       "canChangeMintLogic": false,
       "observedAt": "2026-07-14",
@@ -265,7 +265,7 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "address": "0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
         "label": "Aave Ethereum ACL Admin executor",
         "role": "bucket-admin",
         "authorityType": "dao-governor",
@@ -291,7 +291,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x5513224daaEABCa31af5280727878d52097afA05",
+        "address": "0x5513224daaeabca31af5280727878d52097afa05",
         "label": "CoreGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",
@@ -309,7 +309,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xb639D208Bcf0589D54FaC24E655C79EC529762B8",
+        "address": "0xb639d208bcf0589d54fac24e655c79ec529762b8",
         "label": "FlashMinter Facilitator",
         "role": "facilitator",
         "authorityType": "contract",
@@ -327,7 +327,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x2bd010Ab5393AB51b601B99C4B33ba148d9466e9",
+        "address": "0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
         "label": "GhoDirectFacilitator Plasma",
         "role": "facilitator",
         "authorityType": "contract",
@@ -345,7 +345,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xE9ac5231fAecb633dA0Fe85Fcb2785b8363427d2",
+        "address": "0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
         "label": "GhoDirectFacilitator GSMs Mainnet",
         "role": "facilitator",
         "authorityType": "contract",
@@ -363,7 +363,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0x2cE01c87Fec1b71A9041c52CaED46Fc5f4807285",
+        "address": "0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
         "label": "LidoGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",
@@ -381,7 +381,7 @@
       },
       {
         "chain": "ethereum",
-        "address": "0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA",
+        "address": "0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
         "label": "HorizonGhoDirectMinter",
         "role": "facilitator",
         "authorityType": "contract",

@@ -18,7 +18,8 @@ describe("MechanismExplainersHub", () => {
 
     expect(html).toMatch(/<h1\b/);
 
-    expect(MECHANISM_ARCHETYPE_VALUES).toHaveLength(6);
+    // 7 since methodology v9.14 registered `commodity-claim`.
+    expect(MECHANISM_ARCHETYPE_VALUES).toHaveLength(7);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       expect(html).toContain(`href="/learn/mechanisms/${archetype}/"`);
       expect(html).toContain(MECHANISM_ARCHETYPE_LABELS[archetype]);

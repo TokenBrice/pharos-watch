@@ -117,6 +117,14 @@ const reviews: readonly V9MechanismRiskReview[] = [
     custody: strongFact("rwa-custody"),
     recovery: strongFact("recovery"),
   },
+  // Appended, never inserted: earlier cases index into `reviews` positionally.
+  {
+    archetype: "commodity-claim",
+    titleAndAllocation: strongFact("title"),
+    custodyContinuity: strongFact("vault-custody"),
+    assuranceAndReconciliation: strongFact("bar-list"),
+    physicalRedemption: strongFact("delivery"),
+  },
 ];
 
 describe("Safety Score v9 archetype backing adapters", () => {
@@ -142,7 +150,119 @@ describe("Safety Score v9 archetype backing adapters", () => {
     const results = reviews.map((review) => evaluateV9Backing(asset(), review, V9_CANDIDATE_POLICY_V1));
     expect(results.map((result) => result.archetype)).toEqual(reviews.map((review) => review.archetype));
     expect(results.every((result) => result.rateability === "rateable" && result.score !== null)).toBe(true);
-    expect(new Set(results.map((result) => result.traceDigest)).size).toBe(6);
+    expect(new Set(results.map((result) => result.traceDigest)).size).toBe(7);
+  });
+
+  describe("commodity-claim (v9.14)", () => {
+    const commodityReview = reviews.find(
+      (review): review is Extract<V9MechanismRiskReview, { archetype: "commodity-claim" }> =>
+        review.archetype === "commodity-claim",
+    )!;
+
+    it("locks the four-component set against the policy rubric", () => {
+      expect(commodityReview).toBeDefined();
+      // The evaluator throws when the adapter's component keys and the policy's
+      // weighted keys disagree, so a passing evaluation is itself the contract
+      // check; this asserts the intended vocabulary explicitly.
+      expect(Object.keys(commodityReview).sort()).toEqual([
+        "archetype",
+        "assuranceAndReconciliation",
+        "custodyContinuity",
+        "physicalRedemption",
+        "titleAndAllocation",
+      ]);
+      const rubric = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.archetypes["commodity-claim"];
+      expect(rubric.reserveWeight).toBe(0.55);
+      expect(rubric.componentWeights).toEqual({
+        "title-and-allocation": 0.15,
+        "custody-continuity": 0.1,
+        "assurance-and-reconciliation": 0.13,
+        "physical-redemption": 0.07,
+      });
+      // Physical redemption is deliberately non-serial: a claim on allocated
+      // metal is still a claim when delivery is unreachable, and the Exit
+      // pillar owns exitability.
+      expect([...rubric.serialComponentKeys].sort()).toEqual(["custody-continuity", "title-and-allocation"]);
+      expect(Object.keys(rubric.structuralComponents).sort()).toEqual([
+        "custody-continuity",
+        "title-and-allocation",
+      ]);
+    });
+
+    it("publishes one mechanism contribution per component under the commodity archetype", () => {
+      const result = evaluateV9Backing(asset(), commodityReview, V9_CANDIDATE_POLICY_V1);
+      expect(result.archetype).toBe("commodity-claim");
+      expect(result.rateability).toBe("rateable");
+      expect(
+        result.contributions
+          .filter((contribution) => contribution.source === "mechanism")
+          .map((contribution) => contribution.componentKey),
+      ).toEqual([
+        "mechanism:assurance-and-reconciliation",
+        "mechanism:custody-continuity",
+        "mechanism:physical-redemption",
+        "mechanism:title-and-allocation",
+      ]);
+    });
+
+    it("fails closed on a missing title claim but stays rateable without redemption evidence", () => {
+      const gap: V9FactGapV2 = {
+        gapId: "gap:title",
+        reasonCode: "critical-unresolved",
+        ownerDomain: "backing",
+        policyRuleId: "commodity.title.required",
+        observationState: "missing",
+        path: { kind: "local-component", componentKey: "title-and-allocation" },
+        message: "Title to allocated metal is unresolved",
+        evidenceRefIds: [],
+      };
+      const missing: V9MechanismFactV1 = {
+        status: {
+          applicability: { state: "required", policyRuleId: "commodity.title.required", rationale: null, gapId: null },
+          observationState: "missing",
+          evidenceRefIds: [],
+          gapIds: [gap.gapId],
+        },
+        quality: null,
+        failureDomains: [],
+      };
+
+      expect(
+        evaluateV9Backing(asset([gap]), { ...commodityReview, titleAndAllocation: missing }, V9_CANDIDATE_POLICY_V1)
+          .rateability,
+      ).toBe("NR");
+      const withoutRedemption = evaluateV9Backing(
+        asset([{ ...gap, gapId: "gap:redemption", path: { kind: "local-component", componentKey: "physical-redemption" } }]),
+        {
+          ...commodityReview,
+          physicalRedemption: { ...missing, status: { ...missing.status, gapIds: ["gap:redemption"] } },
+        },
+        V9_CANDIDATE_POLICY_V1,
+      );
+      expect(withoutRedemption.rateability).toBe("rateable");
+      expect(withoutRedemption.score).not.toBeNull();
+    });
+
+    it("grades a failed title claim as a critical unsafe-backing signal", () => {
+      const result = evaluateV9Backing(
+        asset(),
+        { ...commodityReview, titleAndAllocation: { ...strongFact("title"), quality: "failed" } },
+        V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.structuralReasons).toContainEqual(
+        expect.objectContaining({ kind: "unsafe-backing", severity: "critical" }),
+      );
+    });
+
+    it("does not treat a failed physical-redemption grade as a structural backing signal", () => {
+      const result = evaluateV9Backing(
+        asset(),
+        { ...commodityReview, physicalRedemption: { ...strongFact("delivery"), quality: "failed" } },
+        V9_CANDIDATE_POLICY_V1,
+      );
+      expect(result.structuralReasons).toEqual([]);
+      expect(result.rateability).toBe("rateable");
+    });
   });
 
   it("returns a reason-coded NR for an unknown archetype", () => {

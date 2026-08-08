@@ -42,14 +42,25 @@ describe("dexscreener", () => {
     );
   });
 
-  it("uses the all-pairs endpoint for single-token discovery", async () => {
+  it("uses the all-pairs endpoint and normalizes mixed rows for single-token discovery", async () => {
+    const validPair = {
+      chainId: "blast",
+      dexId: "thruster",
+      pairAddress: "0xpair",
+      baseToken: { address: "0xabc", name: "USD Blast", symbol: "USDB" },
+      quoteToken: { address: "0xdef", name: "Wrapped Ether", symbol: "WETH" },
+      priceUsd: "1.0001",
+      liquidity: { usd: 100_000, base: 50_000, quote: 25 },
+      volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
+      pairCreatedAt: Date.now(),
+    };
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify([]), { status: 200 }),
+      new Response(JSON.stringify([validPair, { pairAddress: "0xbroken" }]), { status: 200 }),
     );
 
     await expect(fetchDsTokenPairsWithStatus("blast", "0xabc", undefined, 8_000, 0)).resolves.toEqual({
       ok: true,
-      pairs: [],
+      pairs: [validPair],
     });
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.dexscreener.com/token-pairs/v1/blast/0xabc",
@@ -64,7 +75,7 @@ describe("dexscreener", () => {
     );
   });
 
-  it("returns final non-OK status details for diagnostics", async () => {
+  it("returns final discovery 429 details and classifies the response as a hard refusal", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response("rate limited", {
         status: 429,
@@ -72,12 +83,12 @@ describe("dexscreener", () => {
       }),
     );
 
-    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
+    await expect(fetchDsTokenPairsWithStatus("base", "0xabc")).resolves.toEqual({
       ok: false,
       pairs: [],
       status: 429,
       contentType: "text/html",
-      error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
+      error: "HTTP 429 for https://api.dexscreener.com/token-pairs/v1/base/0xabc; body starts with: rate limited",
       hardRefusal: true,
     });
   });
@@ -90,7 +101,7 @@ describe("dexscreener", () => {
       }),
     );
 
-    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toMatchObject({
+    await expect(fetchDsTokenPairsWithStatus("base", "0xabc")).resolves.toMatchObject({
       ok: false,
       status: 403,
       hardRefusal: true,
@@ -118,12 +129,12 @@ describe("dexscreener", () => {
       }),
     );
 
-    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toMatchObject({
+    await expect(fetchDsTokenPairsWithStatus("base", "0xabc")).resolves.toMatchObject({
       ok: false,
       pairs: [],
       status: 500,
       contentType: "text/html",
-      error: `HTTP 500 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: ${"x".repeat(160)}`,
+      error: `HTTP 500 for https://api.dexscreener.com/token-pairs/v1/base/0xabc; body starts with: ${"x".repeat(160)}`,
     });
     expect(bytesPulled).toBeLessThanOrEqual(2048);
     expect(cancelCalled).toBe(true);

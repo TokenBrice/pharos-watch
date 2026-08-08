@@ -42,6 +42,26 @@ interface WrapperLocalFactBuildInputs {
   supply: V9AssetFactsV2["supply"];
 }
 
+export function resolveWrapperForm(
+  asset: AssetBuildContext["asset"],
+  dependencies?: V9EffectiveDependenciesV3,
+): V9ApplicableWrapperLocalFacts["form"] | null {
+  if (asset.variantKind === "pure-wrapper") return "pure";
+  if (asset.variantKind === "savings-passthrough") return "native-staked";
+  if (asset.variantKind === "risk-absorption") {
+    return asset.wrapperOperator === "third-party" ? "strategy-vault" : "native-staked";
+  }
+  if (
+    asset.variantKind === "strategy-vault" ||
+    dependencies?.edges.some(
+      (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
+    )
+  ) {
+    return "strategy-vault";
+  }
+  return null;
+}
+
 function uniqueEvidenceRefIds(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareText);
 }
@@ -271,10 +291,7 @@ function buildWrapperStructuralDimensions(
       ["pure-wrapper-has-no-local-strategy"],
       reviewedFormEvidence,
     );
-  } else if (
-    context.asset.variantKind === "savings-passthrough" ||
-    context.asset.variantKind === "risk-absorption"
-  ) {
+  } else if (form === "native-staked") {
     const riskAbsorption = context.asset.variantKind === "risk-absorption";
     strategyComplexity = reviewedWrapperFact(
       context,
@@ -286,7 +303,7 @@ function buildWrapperStructuralDimensions(
       ],
       reviewedFormEvidence,
     );
-  } else if (context.asset.variantKind === "strategy-vault") {
+  } else if (form === "strategy-vault") {
     const highComplexity =
       input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
       (custody?.knownUnknownExposureShare ?? 0) > 0;
@@ -627,15 +644,7 @@ export function buildWrapperLocalFacts(
   const wrapperEdge = input.dependencies.edges.find(
     (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
   );
-  const form =
-    context.asset.variantKind === "pure-wrapper"
-      ? "pure"
-      : context.asset.variantKind === "savings-passthrough" ||
-          context.asset.variantKind === "risk-absorption"
-        ? "native-staked"
-        : context.asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
-          ? "strategy-vault"
-          : null;
+  const form = resolveWrapperForm(context.asset, input.dependencies);
   const formEvidenceRefIds = uniqueEvidenceRefIds([
     ...input.implementation.status.evidenceRefIds,
     ...input.dependencies.status.evidenceRefIds,
@@ -705,6 +714,9 @@ export function buildWrapperLocalFacts(
     formSignals: [
       `wrapper-form:${form}`,
       `wrapper-form-source:${context.asset.variantKind ?? "serial-wrapper-dependency"}`,
+      ...(context.asset.wrapperOperator === undefined
+        ? []
+        : [`wrapper-operator:${context.asset.wrapperOperator}`]),
     ],
     formEvidenceRefIds: reviewedFormEvidence,
     facts: {

@@ -110,10 +110,10 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Solana mainnet RPC getAccountInfo for the USDv SPL mint at finalized slot 436225130",
+        "label": "Solana mainnet RPC getAccountInfo for the USDv SPL mint at finalized slot 438054830",
         "url": "https://api.mainnet-beta.solana.com"
       },
       {
@@ -121,21 +121,17 @@
         "url": "https://solscan.io/token/Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C"
       },
       {
-        "label": "Solomon Reserves and Peg Stability (reserve portfolio of USDG and USDC; re-fetched 2026-07-30)",
-        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves"
+        "label": "Solomon Terms of Use (interface-only, non-custodial operator)",
+        "url": "https://solomonlabs.org/terms-of-use"
       },
       {
-        "label": "Solomon Acquire and Redeem USDv (direct mint/redeem restricted to approved counterparties)",
-        "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming"
-      },
-      {
-        "label": "Solomon protocol-data API (on-chain USDC and USDT reserve balances; snapshot updated 2026-07-30T00:14:08Z)",
-        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
+        "label": "Pinned SPL Token transfer and freeze-authority processor",
+        "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs"
       }
     ],
-    "evidence": "Re-reviewed 2026-07-30. Token level: getAccountInfo on the USDv SPL mint Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C at finalized slot 436225130 returns freezeAuthority null, so no party can freeze or blacklist a holder's USDv token account; the mint authority is program PDA 7XAdHs5Q under Solomon's upgradeable mint/redeem program. The sUSDV staking-wrapper mint pTA4St7D5WshfLUPBXoaxn5m8e3k2ort2DVt3gUTa17 likewise returns freezeAuthority null at finalized slot 436226057, so the yield-bearing wrapper inherits the same non-freezable token posture. Access layer: Solomon documents that direct mint and redeem are restricted to approved counterparties, so redemption access is permissioned even though secondary-market transfers are unrestricted. Upstream exposure: the issuer's reserve documentation names USDG and USDC as reserve assets, and the live protocol-data API shows on-chain USDC ($81,295.31) and USDT ($17,543.76) reserve balances at the 2026-07-30T00:14:08Z snapshot; Circle, Paxos (USDG issuer), and Tether all operate freeze/blacklist-capable tokens, so upstream reserve assets can be frozen at their issuers' discretion. This establishes possible upstream and redemption-route access exposure, not a claim that any party can freeze standalone USDv balances.",
-    "reviewer": "Kimi T21 unknown-reduction wave 2 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDv is an 82-byte legacy SPL Token mint owned by Tokenkeg and its freezeAuthority option is zero. The pinned Tokenkeg processor requires holder/delegate authorization for transfers and a current freeze authority for account freezes; a disabled freeze authority cannot be restored. Solomon's current Terms describe Solomon as an interface-only, non-custodial operator that cannot sign or cause user transactions and disclose interface geofencing/wallet screening rather than a power over already-issued USDv. Reserve-asset issuer controls can impair USDv backing or redemption but cannot freeze a standalone holder's USDv token account, so the direct holder-seizure verdict is No; the dedicated transfer overlay separately records the permissionless current transfer logic.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "exotic",
   "custodyModel": "cex",

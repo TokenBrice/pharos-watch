@@ -196,6 +196,8 @@ export function slicesFromValues(
     risk: ReserveSlice["risk"];
     coinId?: string;
     depType?: ReserveSlice["depType"];
+    assetClass?: ReserveSlice["assetClass"];
+    issuerOrObligor?: string;
     blacklistable?: boolean;
   }>,
   decimals = 1,
@@ -210,6 +212,8 @@ export function slicesFromValues(
     risk: value.risk,
     ...(value.coinId ? { coinId: value.coinId } : {}),
     ...(value.depType ? { depType: value.depType } : {}),
+    ...(value.assetClass ? { assetClass: value.assetClass } : {}),
+    ...(value.issuerOrObligor ? { issuerOrObligor: value.issuerOrObligor } : {}),
     ...(value.blacklistable != null ? { blacklistable: value.blacklistable } : {}),
   })), decimals);
 }

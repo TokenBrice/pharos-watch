@@ -213,7 +213,10 @@ export default function MethodologyPage() {
             Dependencies are causal inputs rather than a standalone score. A serial wrapper cannot escape its parent;
             basket exposure is weighted and bounded according to reviewed materiality. Wrapper-local custody, control,
             transfer, and redemption facts remain visible alongside the inherited limit, so the downstream claim can
-            be worse than its parent but cannot become safer by averaging in unrelated strengths.
+            be worse than its parent but cannot become safer by averaging in unrelated strengths. When a product&apos;s
+            risk-absorption label does not establish who operates it, reviewed ownership selects the existing wrapper
+            form: third-party wrappers receive strategy-vault treatment, while parent-protocol wrappers receive
+            native-staked treatment.
           </p>
           <p>
             Yield tokens get flagged, not folded. Pharos tracks yield-bearing and NAV tokens through a separate

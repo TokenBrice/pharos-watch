@@ -33,6 +33,7 @@ vi.mock("../crawl-sources", () => ({
     ],
     unresolvedChains: [],
     deploymentOutcomes: [],
+    checkedDeploymentKeys: [],
   })),
 }));
 
@@ -76,9 +77,11 @@ vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryMeta: vi.fn(async () => new Map()),
+  readDiscoveryTargetCursors: vi.fn(async () => new Map()),
   recordDiscoveryAttemptFence: vi.fn(async () => {}),
   updateDiscoveryMeta: vi.fn(async () => {}),
   upsertStagedPools: vi.fn(async () => {}),
+  writeDiscoveryTargetCursors: vi.fn(async () => {}),
 }));
 
 import {
@@ -96,6 +99,7 @@ import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
+  readDiscoveryTargetCursors,
   recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
@@ -152,6 +156,7 @@ describe("syncDexDiscovery", () => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map());
+    vi.mocked(readDiscoveryTargetCursors).mockResolvedValue(new Map());
     vi.mocked(incrementRunSeq).mockResolvedValue(2);
     vi.mocked(recordDiscoveryAttemptFence).mockResolvedValue();
     vi.mocked(updateDiscoveryMeta).mockResolvedValue();
@@ -163,6 +168,7 @@ describe("syncDexDiscovery", () => {
       ],
       unresolvedChains: [],
       deploymentOutcomes: [],
+      checkedDeploymentKeys: [],
     });
   });
 
@@ -213,6 +219,7 @@ describe("syncDexDiscovery", () => {
         pools: [makeStagedPool("ethereum:0xpool1")],
         unresolvedChains: [],
         deploymentOutcomes: [],
+        checkedDeploymentKeys: [],
       };
     });
 

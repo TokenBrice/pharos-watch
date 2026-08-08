@@ -71,7 +71,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "HLUSD issuance is controlled by HeLa's on-chain governance roles: MintProposer initiates mint requests, MintVoter approval satisfies the configured quorum, and Admin configures role/quorum parameters.",
     "controls": [
       {
@@ -79,8 +79,19 @@
         "role": "direct-minter",
         "authorityType": "dao-governor",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "HeLa HLUSD stablecoin governance",
+            "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+          },
+          {
+            "label": "HeLa mainnet endpoint documentation",
+            "url": "https://docs.helalabs.com/network-endpoints-and-explorer/network-endpoints-and-explorer"
+          }
+        ],
         "evidence": "HeLa governance docs define HLUSD minting as a chain-runtime quorum action: MintProposer addresses propose mints to whitelisted users and MintVoter addresses approve until mintQuorum is reached; proposals and votes execute inside the HeLa runtime (not an EVM contract). The HeLa mainnet EVM gateway (mainnet-rpc.helachain.com, chain id 8668) is live, but the native role state is exposed only through the HeLa runtime API/CLI (hela managest), so individual role-holder addresses remain unenumerated through standard JSON-RPC.",
         "failureDomainKeys": [
           "protocol:hela-runtime-stablecoin-governance"
@@ -91,8 +102,15 @@
         "role": "minter-admin",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "HeLa HLUSD stablecoin governance",
+            "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+          }
+        ],
         "evidence": "HeLa governance docs state the Admin role proposes and votes on all other roles and configures mintQuorum, burnQuorum, whitelistQuorum, blacklistQuorum, and configQuorum within the HeLa runtime's on-chain proposal system; the initial Chain Initiator assignment is single-use and afterwards all role management flows through propose-vote governance.",
         "failureDomainKeys": [
           "protocol:hela-runtime-stablecoin-governance"
@@ -105,7 +123,22 @@
         "directMintAbility": "unknown",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "2026-07-30 exhaustive search: HeLa stablecoin-governance docs define only mint/burn/whitelist/blacklist/config/setroles actions and do not describe runtime bytecode upgrade, an upgrade executor address, threshold, or timelock. HeLa architecture and runtime-EVM docs state modular consensus/execution layers that can be upgraded independently but name no upgrade origin. Tokenomics states $HELA holders may participate in protocol upgrades without publishing threshold, delay, or executor. Whitepaper confirms layer-independent upgradeability without an authority model. Public mainnet EVM gateway (mainnet-rpc.helachain.com, chain id 8668; eth_chainId 0x21dc observed 2026-07-30) and helascan.io do not expose native runtime admin/upgrade state; HLUSD is the runtime-native gas asset (CoinGecko platforms empty), not a standard ERC-20 proxy. HelaNetwork GitHub (helanetwork-core, helanetwork-evm-runtime) publishes build artifacts without a documented mainnet upgrade authority. Disposition: unavailable (issuer-undisclosed).",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "HeLa architecture (independent layer upgrades)",
+            "url": "https://docs.helalabs.com/build-on-hela/hela-architecture"
+          },
+          {
+            "label": "HeLa tokenomics (protocol upgrades claim)",
+            "url": "https://docs.helalabs.com/ecosystem-overview/hela-tokenomics"
+          },
+          {
+            "label": "HeLa mainnet RPC",
+            "url": "https://mainnet-rpc.helachain.com"
+          }
+        ],
+        "evidence": "2026-08-08 re-check: HeLa stablecoin-governance docs still define only mint/burn/whitelist/blacklist/config/setroles actions and publish neither a runtime bytecode-upgrade executor nor its threshold or delay. Architecture documentation confirms that execution layers can be upgraded independently, while tokenomics only says $HELA holders may participate in protocol upgrades. The live public gateway returned chain id 8668 and block 660832, but standard JSON-RPC exposes no runtime role or upgrade-admin state. The authority model therefore remains issuer-undisclosed rather than guessed.",
         "failureDomainKeys": [
           "protocol:hela-runtime-stablecoin-governance"
         ]
@@ -115,7 +148,7 @@
       "model": "unknown",
       "canChangeMintLogic": "unknown",
       "controlRef": "HeLa runtime upgrade authority (unresolved)",
-      "observedAt": "2026-07-30",
+      "observedAt": "2026-08-08",
       "sources": [
         {
           "label": "HLUSD governance",
@@ -136,12 +169,12 @@
       ]
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved. HeLa chain uses a non-standard EVM-compatible runtime not accessible via standard publicnode/ankr RPC endpoints. Follow-up 2026-07-20: the authority model is resolved as HeLa runtime quorum governance (protocol-level propose/vote roles per the HeLa stablecoin-governance documentation). A public HeLa EVM gateway (mainnet-rpc.helachain.com) is now documented and live; the runtime-native role roster is not exposed through it, so per-address enumeration stays out of scope for this encoding. Re-check 2026-07-27: the current stablecoin-governance and network-endpoints documentation still publish only the EVM gateway and explorer, with no native runtime query endpoint, no live MintProposer/MintVoter/Admin roster, no quorum values, and no identified runtime code-upgrade authority; the documented model also sets no numeric mint cap (minting is quorum-gated only), so the economic cap is recorded as unbounded. Re-check 2026-07-30: blacklist/freeze path is independently confirmed (BlacklistProposer/BlacklistVoter + whitepaper §6.2); mint/admin controls remain role-model known with unenumerated holders; runtime upgrade authority remains issuer-undisclosed after docs, whitepaper, tokenomics, explorer, live RPC, and public GitHub review. Confidence stays manual-review because live role membership and the upgrade path are not verifiable from public sources.",
-      "reviewer": "Grok T10 safety-v9 unknown-reduction w2",
-      "reviewedAt": "2026-07-30",
+      "evidence": "The documented model is clear but the live controller inventory is not: MintProposer/MintVoter may propose and approve arbitrary mint amounts to whitelisted users once mintQuorum is reached, and Admin governs the role/quorum configuration. No numeric supply cap is documented, so economic cap semantics remain unbounded; as a runtime-governed native asset, reserve reconciliation is not applicable. On 2026-08-08 the official EVM gateway was live at chain id 8668 and block 660832, but it exposes neither the runtime-native role roster/current quorum values nor the runtime code-upgrade authority. Current governance, architecture, endpoint, tokenomics, whitepaper, explorer, and public repository review still identify no upgrade executor, threshold, or timelock. The review is therefore explicitly unresolved rather than scoreable.",
+      "reviewer": "OpenAI Codex C09 control review",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "HLUSD governance",
@@ -165,8 +198,11 @@
         }
       ],
       "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
-      "disposition": "scoreable",
-      "unresolvedQuestions": []
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "What are the current MintProposer, MintVoter, and Admin holder addresses and configured quorum values on the HeLa runtime?",
+        "Which address or governance executor can upgrade the HLUSD runtime logic, and what threshold and delay govern that action?"
+      ]
     }
   },
   "collateralQuality": "rwa",

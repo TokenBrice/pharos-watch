@@ -110,17 +110,21 @@
         "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
       },
       {
-        "label": "Lumi Finance",
-        "url": "https://lumi.finance/"
+        "label": "Lumi Finance LUAUSD documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
       },
       {
-        "label": "CoinGecko metadata",
-        "url": "https://api.coingecko.com/api/v3/coins/lumi-finance-luausd"
+        "label": "Arbiscan LUAUSD contract",
+        "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c#code"
+      },
+      {
+        "label": "Arbitrum observation block 492494540",
+        "url": "https://arbiscan.io/block/492494540"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 against the Sourcify exact-match UtilityToken source (chain 42161, 0x1dd6b5f9281c6b4f043c02a83a46c2772024636c): the contract exposes onlyOwner mint and allowance-based burnFrom, but no holder freeze, blacklist, pause, seize, or arbitrary burn function, and transfers are unrestricted. Lumi's protocol materials and the reviewed reserve metadata describe USDT/USDC stablecoin collateral, so FreezeWatch retains inherited upstream exposure while keeping the token-level direct-control finding conservative.",
-    "reviewer": "Kimi T20 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified 2026-08-08 against the Sourcify exact-match UtilityToken source and Lumi's official protocol documentation. The sole tracked LUAUSD deployment is direct, non-proxy code: EIP-1967 implementation and admin slots were zero at Arbitrum block 492494540. UtilityToken is OpenZeppelin ERC20 + ERC20Burnable + Ownable; onlyOwner applies to mint and ownership transfer, burnFrom requires holder allowance, transfer and transferFrom are unmodified ERC-20 paths, and there is no pause, freeze, blacklist, seize, arbitrary burn, allowlist, or transfer hook. owner() returned controller 0xb422502156118aa49eff0d4da26fdedccb186049, but that controller cannot replace the direct token bytecode or bypass its transfer rules. Lumi's official materials describe LUAUSD as an on-chain protocol currency minted from staked LUA and traded in permissionless pools; they establish no separate issuer terms power to freeze or seize LUAUSD balances. Conclusion: reviewedStatus=false for the tracked token's holder balance/transfer freeze surface.",
+    "reviewer": "OpenAI Codex C07 access review; Kimi T20 wave-2 unknown reduction",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

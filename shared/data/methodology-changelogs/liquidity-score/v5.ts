@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.99",
+    title: "Stellar classic-AMM discovery",
+    date: "2026-08-08",
+    effectiveAt: 1786147200,
+    summary:
+      "Stellar Horizon now supplies bounded, case-preserving classic-AMM discovery for active Stellar deployments, while Soroban contract-token identities remain explicitly unavailable.",
+    impact: [
+      "Classic Stellar CODE:ISSUER assets can contribute Horizon pool observations after exact reserve-identity validation; legacy bare-issuer metadata is combined with the tracked asset code without lowercasing",
+      "A Horizon row receives price and TVL only when the counter-asset is another active tracked classic Stellar stablecoin with a usable peg reference and the implied tracked price passes the shared plausibility gate",
+      "Horizon remains a capped secondary discovery family with 0.55 fallback-price confidence, the common retained-pool admission rules, and a bounded 200-row response rather than an exhaustive liquidity claim",
+      "Soroban contract-token deployments fail closed as provider-degraded, and order-book or Soroban DEX liquidity remains outside this provider",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.98",
     title: "Trust-filtered DEX primary-price handoff",
     date: "2026-07-31",

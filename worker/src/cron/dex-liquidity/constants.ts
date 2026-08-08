@@ -206,6 +206,6 @@ export function dexPriceConfidenceForSourceFamily(
 ): number {
   if (sourceFamily === "dl" || sourceFamily === "direct_api") return 1.0;
   if (sourceFamily === "cg_onchain" || sourceFamily === "gecko_terminal") return 0.85;
-  if (sourceFamily === "dexscreener" || sourceFamily === "cg_tickers") return 0.55;
+  if (sourceFamily === "dexscreener" || sourceFamily === "cg_tickers" || sourceFamily === "horizon") return 0.55;
   return 0.3;
 }

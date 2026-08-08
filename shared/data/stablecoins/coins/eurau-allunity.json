@@ -112,11 +112,6 @@
       "decimals": 6
     },
     {
-      "chain": "stellar",
-      "address": "EURAU-CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
-      "decimals": 7
-    },
-    {
       "chain": "tempo",
       "address": "0x20c0000000000000000000009a4a4b17e0dc6651",
       "decimals": 6
@@ -138,7 +133,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "EURAU is controlled by two AllUnity EOAs across all six EVM chains (ETH, ARB, OP, Base, Polygon, BSC): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
+    "summary": "EURAU uses the same uncapped EOA minter and EOA DEFAULT_ADMIN across all six EVM deployments; the admin can grant roles, pause, and immediately upgrade the UUPS logic. Solana issuance is delegated to an AllUnity program-controlled Token-2022 mint authority, while AllUnity's regulated issuer backend controls the off-chain issuance workflow and other native lanes. The previously modeled Stellar issuer string is checksum-invalid and was removed rather than treated as a controller.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -153,12 +148,12 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25580320,
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712415,
       "sources": [
         {
-          "label": "Ethereum EURAU proxy at block 25580320",
-          "url": "https://eth.blockscout.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+          "label": "Ethereum EURAU verified proxy/implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
         },
         {
           "label": "Arbitrum EURAU proxy at block 486145773",
@@ -188,14 +183,16 @@
     },
     "controls": [
       {
-        "chain": "ethereum",
+        "chain": "multichain",
         "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
         "label": "EURAU EOA MINTER_ROLE (all EVM chains)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712415,
         "sources": [
           {
             "label": "Ethereum EURAU token",
@@ -206,27 +203,76 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           }
         ],
-        "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) = true at: Ethereum block 25580320; Arbitrum block 486145773; Optimism block 154514391; Base block 48919106; Polygon block 90615043; BNB Chain block 111262337. eth_getCode on Ethereum = no bytecode (EOA). Same AllUnity backend EOA across all six EVM chains."
+        "evidence": "Fresh hasRole reads confirm this codeless address is the sole MINTER_ROLE holder at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046. The verified mint function has no numeric supply ceiling, so its direct ability is economically unbounded; the minter itself cannot change role administration or upgrade logic."
       },
       {
-        "chain": "ethereum",
+        "chain": "multichain",
         "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
         "label": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712415,
         "sources": [
           {
             "label": "Ethereum EURAU token",
             "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) = true at: Ethereum block 25580320; Arbitrum block 486145773; Optimism block 154514391; Base block 48919106; Polygon block 90615043; BNB Chain block 111262337. eth_getCode on Ethereum = no bytecode (EOA). The verified UUPS implementation authorizes upgrades through DEFAULT_ADMIN_ROLE with no separate ProxyAdmin or timelock. Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
+        "evidence": "Fresh hasRole reads confirm this codeless address holds DEFAULT_ADMIN_ROLE and PAUSER_ROLE at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046. Every proxy still resolves to implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482, whose _authorizeUpgrade is DEFAULT_ADMIN_ROLE-gated with no ProxyAdmin or timelock. It can grant new minters or replace mint logic immediately."
+      },
+      {
+        "chain": "solana",
+        "address": "APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP",
+        "label": "EURAU Solana Token-2022 program mint authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 438052335,
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "EURAU Solana mint",
+            "url": "https://solscan.io/token/9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS"
+          }
+        ],
+        "evidence": "At finalized slot 438052335, the Token-2022 EURAU mint reports this program-owned account as mint authority, freeze authority, permanent delegate, and pausable-config authority (paused=false). The authority can issue without a numeric token cap but cannot independently change the EVM role graph."
+      },
+      {
+        "label": "AllUnity regulated issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "issuer-backend:eurau-allunity:allunity-issuance"
+        ],
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "AllUnity EURAU",
+            "url": "https://allunity.com/eurau/"
+          },
+          {
+            "label": "AllUnity Trust Center",
+            "url": "https://allunity.com/trust-center"
+          }
+        ],
+        "evidence": "AllUnity operates EURAU business-account minting and redemption as the BaFin-authorized EMT issuer across its native chain lanes. The backend controls the uncapped EVM minter and Solana authority workflow, so it can originate issuance and raise the effective amount without consuming a fixed on-chain allowance."
       }
     ],
-    "reconciliation": "unknown",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
       "sources": [
@@ -273,11 +319,21 @@
         {
           "label": "ESMA MiCA registers",
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        },
+        {
+          "label": "Stellar Horizon EURAU asset search",
+          "url": "https://horizon.stellar.org/assets?asset_code=EURAU"
+        },
+        {
+          "label": "Ethereum observation block 25712415",
+          "url": "https://eth.blockscout.com/block/25712415"
         }
       ],
-      "evidence": "All six EVM chains (ETH/ARB/OP/Base/Polygon/BSC) share contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2. On 2026-07-21, hasRole confirmed both EOA minter (MINTER_ROLE) and EOA admin (DEFAULT_ADMIN_ROLE), and EIP-1967 reads returned implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482, at Ethereum block 25580320, Arbitrum block 486145773, Optimism block 154514391, Base block 48919106, Polygon block 90615043, and BNB Chain block 111262337. The verified implementation is UUPS and _authorizeUpgrade is gated directly by DEFAULT_ADMIN_ROLE, with no ProxyAdmin or timelock. Solana (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS), Stellar, and Tempo are issuer-backend lanes; their controller identities remain unresolved separately. Reserve review: no independent attestor, cadence, or dated reserve report is public; AllUnity's Trust Center still says the reserve audit report is coming soon as of 2026-07-21. The ESMA MiCA register and BaFin authorization match AllUnity GmbH as the EMI and EURAU EMT issuer, so prudential supervision is present but independent reconciliation remains unknown.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-21"
+      "evidence": "Fresh 2026-08-08 reads show the same EOA minter and EOA DEFAULT_ADMIN/PAUSER on all six EVM deployments at Ethereum block 25712415, Arbitrum 492496443, Optimism 155309746, Base 49714461, Polygon 91675496, and BNB Chain 114795046; all implementation slots remain 0x56c19aea2192ff0ac5f6b252776480db601a1482 and paused() is false. Solana finalized slot 438052335 identifies the program-owned APJqyTzEng2jeLoyvRSZYgTpaZDBdxMetkvUSmvRMbTP as mint/freeze/permanent-delegate authority. The invalid Stellar issuer string was removed: Horizon rejects it and the only discoverable EURAU assets have unrelated issuers. AllUnity's whitepaper describes regular internal and external reserve audits and regulatory reporting, supporting periodic reconciliation, although its Trust Center still has no public dated reserve audit report. ESMA/BaFin primary records support the existing prudential-supervision classification.",
+      "reviewer": "OpenAI Codex C09 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
     }
   },
   "bridgeRouteRisk": {
@@ -471,31 +527,6 @@
           {
             "label": "EURAU mint on Solscan (verified 2026-07-20)",
             "url": "https://solscan.io/token/9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS"
-          }
-        ]
-      },
-      {
-        "id": "stellar:EURAU-CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
-        "destinationChain": "stellar",
-        "contractAddress": "EURAU-CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "2026-07-20: this row's issuer address CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI is not a valid Stellar account per Horizon (checksum-invalid, account not found). The three EURAU assets visible on Stellar (GCCK5TKC..., GCMHTNLK..., GCPW5C27...) carry unrelated home domains and are impersonation assets, not AllUnity issuance. AllUnity announced a Stellar launch (April 2026) but publishes no stellar.toml or canonical issuer account; left unresolved rather than guessed.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sources": [
-          {
-            "label": "AllUnity Stellar launch announcement",
-            "url": "https://allunity.com/news/eurau-launches-on-the-stellar-network/"
-          },
-          {
-            "label": "Stellar Horizon EURAU asset search (no canonical issuer found 2026-07-20)",
-            "url": "https://horizon.stellar.org/assets?asset_code=EURAU"
           }
         ]
       },

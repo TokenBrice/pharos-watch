@@ -79,7 +79,7 @@
     },
     {
       "chain": "ethereum",
-      "address": "0x9b9E2De4cB4ca479943F36DfFc72c7253bb1f66a",
+      "address": "0x9b9e2de4cb4ca479943f36dffc72c7253bb1f66a",
       "decimals": 18
     },
     {
@@ -126,7 +126,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, with token owner resolving to a 4/6 Mento Safe. Monad deployment confirmed: same Safe address (0x5809...Ba458) is the owner, 4-of-7 on Monad (one additional signer). NEAR deployment is a bridge token controlled by EOA a11bd.near (plain wallet account, no staking lock).",
+    "summary": "USDm minting on Celo routes through the authorized Mento Broker, while the same 4-of-6 Mento Safe can authorize minters and immediately replace token logic on both Celo and Monad. The NEAR representation has one FullAccess key that can replace its bridge-token contract. These self-controlled paths make issuance economically unbounded.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -140,8 +140,9 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Mento USDm token owner Safe (Celo + Monad)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 72722357,
+      "delaySec": 0,
+      "observedAt": "2026-08-08",
+      "observedBlock": 74314266,
       "sources": [
         {
           "label": "Celo forno RPC",
@@ -150,39 +151,72 @@
         {
           "label": "Celo explorer cUSD token",
           "url": "https://celoscan.io/token/0x765de816845861e75a25fca122bb6898b8b1282a"
+        },
+        {
+          "label": "Celo StableToken proxy verified source",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x765de816845861e75a25fca122bb6898b8b1282a"
         }
       ]
     },
     "controls": [
       {
         "chain": "celo",
-        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "address": "0x777a8255ca72412f0d706dc03c9d1987306b4cad",
+        "label": "Mento Broker — authorized Celo USDm minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 74314266,
+        "sources": [
+          {
+            "label": "Celo USDm verified proxy",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x765de816845861e75a25fca122bb6898b8b1282a"
+          },
+          {
+            "label": "Mento Broker verified contract",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          }
+        ],
+        "evidence": "At Celo block 74314266, USDm isMinter(0x777a8255ca72412f0d706dc03c9d1987306b4cad) returned true. The verified Mento Broker is therefore the active contract minter; its issuance path is governed by Mento exchange and reserve logic but has no immutable token-level numeric supply ceiling."
+      },
+      {
+        "chain": "celo",
+        "address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
         "label": "Mento USDm token owner Safe (Celo + Monad)",
-        "role": "minter-admin",
+        "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 4,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
-            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
-            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
-            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
-            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
-            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+            "0xb1074d0f9e54763e073c7fdb25b622b4326327cb",
+            "0x95be2b73d313768d3b2dfeeca3213ed0a6434060",
+            "0x66b94446f5ff3f0d8673c1f502a298b50ba2f0ce",
+            "0x6dec25d7be9bf6c6fc302977629f2e801e98611c",
+            "0x7a678c8f9e8a7ac08c8c6f34d38126f3219958f2",
+            "0x628ffa32ab958c5b9ce74d8b81d73f335c3776b0"
           ],
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
           "version": "1.4.1+L2",
-          "observedBlock": 69286148,
-          "source": "safe-api"
+          "observedBlock": 74314266,
+          "observedAt": "2026-08-08",
+          "source": "onchain"
         },
+        "observedAt": "2026-08-08",
+        "observedBlock": 74314266,
         "sources": [
           {
             "label": "Mento reserve docs",
@@ -191,30 +225,53 @@
           {
             "label": "Safe Transaction Service - Celo",
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          },
+          {
+            "label": "Celo Forno RPC",
+            "url": "https://forno.celo.org"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
           }
         ],
-        "evidence": "Lane Celo owner reads returned this Safe at block 67746454, isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true, and the Celo Safe API returned threshold 4, six owners (one signer rotated out per prior data drift fix), no modules, zero guard. Monad confirmed at block 80,612,848 (rpc.monad.xyz): owner() on USDm proxy 0xbc69212b8e4d445b2307c9d32dd68e2a4df00115 returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458 (same Safe address); getOwners() on Monad returned 7 signers (includes one additional signer 0x91606e52... not present on Celo), threshold=4. Proxy admin on Monad: 0x97b239f52f773944dead5250db57322b05875ef5 (ProxyAdmin v2.0 contract)."
+        "evidence": "At Celo block 74314266, USDm owner(), proxy _getOwner(), and the EIP-1967 admin slot all returned this Safe; _getImplementation() returned 0x815795c30d0758a297b08cd4e0643620c974c318 and isMinter(Broker) was true. On-chain Safe reads and the Safe Transaction Service returned the same six owners, threshold 4, no modules, and zero guard. At Monad block 94280759, the USDm owner and ProxyAdmin owner were the same address and its Monad Safe copy also returned the same six owners and threshold 4. The Safe can authorize minters and replace mint logic immediately, so it can raise or remove issuance bounds."
       },
       {
         "chain": "near",
-        "address": "cusd.token.a11bd.near",
-        "label": "NEAR cUSD bridge token (EOA-controlled)",
-        "role": "direct-minter",
+        "label": "NEAR cUSD bridge-token FullAccess key",
+        "role": "proxy-admin",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
+        "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
-        "evidence": "NEAR rpc.mainnet.near.org confirmed: cusd.token.a11bd.near is a deployed contract (code_hash 2K5PmiMQ...). Parent account a11bd.near is a plain EOA (code_hash 11111..., no contract, no staking lock, ~11.69 NEAR balance). As the parent account on NEAR, a11bd.near controls the subaccount cusd.token.a11bd.near. No owner/controller view method is exposed on the bridge contract.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "near-access-key:ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 210490105,
         "sources": [
           {
             "label": "NEAR RPC account view",
             "url": "https://rpc.mainnet.near.org"
+          },
+          {
+            "label": "NEAR FullAccess key semantics",
+            "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
+          },
+          {
+            "label": "NEAR contract-upgrade semantics",
+            "url": "https://docs.near.org/smart-contracts/release/upgrade"
           }
-        ]
+        ],
+        "evidence": "At finalized NEAR height 210490105, cusd.token.a11bd.near had deployed code hash 2K5PmiMQgfCZWirws2FS5mUNVc1UfHQdQD5ZSRUQB2GR and exactly one FullAccess key, ed25519:BnTCngEURgq83qHXB94ZmLgb6ea93o25TDKQNCip7mtb. The same key is also present on a11bd.near, while a separate parent key does not automatically control the child. NEAR's primary documentation confirms a FullAccess key can call any method, add keys, and redeploy contract code, so this single key can replace bridge-token mint logic even though the current contract exposes no owner view."
       }
     ],
-    "reconciliation": "unknown",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Mento reserve docs",
@@ -229,13 +286,29 @@
           "url": "https://reserve.mento.org/"
         },
         {
-          "label": "USDm Celo token owner() re-read 2026-07-16 = 4-of-6 Mento Safe",
-          "url": "https://celoscan.io/address/0x765de816845861e75a25fca122bb6898b8b1282a#readContract"
+          "label": "USDm Celo verified proxy",
+          "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x765de816845861e75a25fca122bb6898b8b1282a"
+        },
+        {
+          "label": "Celo Forno RPC",
+          "url": "https://forno.celo.org"
+        },
+        {
+          "label": "Monad RPC",
+          "url": "https://rpc.monad.xyz"
+        },
+        {
+          "label": "NEAR RPC",
+          "url": "https://rpc.mainnet.near.org"
+        },
+        {
+          "label": "NEAR FullAccess key semantics",
+          "url": "https://docs.near.org/protocol/accounts-contracts/access-keys"
         }
       ],
-      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed. USDm (Mento Dollar) reserve backing is published only on Mento's own reserve dashboard (self-verification, no independent third-party attestor), so reconciliation is unknown, and no financial regulator supervises the Mento protocol, so supervision is none. Unlike the Mento FX variants whose token owner is the 48-hour Mento Timelock, the USDm Celo token owner re-read on 2026-07-16 is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no execution delay, and the NEAR deployment is minted by a plain EOA (a11bd.near); the mint admin is therefore self-controlled with no independent delay, so the encoding-derived unbounded cap is not superseded and no raiseable escape is earned. 2026-07-21 gap-fill pass: resolved the upgrade-authority structural gap directly on-chain via forno.celo.org at Celo block 72722357. USDm/cUSD on Celo is not a standard EIP-1967 transparent/UUPS proxy — both the canonical minus-1 implementation slot and the raw (un-decremented) 'eip1967.proxy.implementation' hash slot read zero. The deployed bytecode instead implements Celo's own Proxy.sol pattern, which exposes explicit getters; calling _getImplementation() (selector 0x42404e07) returned implementation 0x815795c30d0758a297b08cd4e0643620c974c318, and _getOwner() (selector 0xf7e6af80) returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458 — the same 4-of-6 Mento Safe already established as the mint/Broker administrator. The Safe can therefore both authorize Broker minters and replace the token implementation outright, with no separate timelock on the upgrade path.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16"
+      "evidence": "At Celo block 74314266, the verified USDm proxy's owner(), _getOwner(), and EIP-1967 admin slot all resolved to the 4-of-6 Mento Safe; _getImplementation() and the implementation slot both resolved to 0x815795c30d0758a297b08cd4e0643620c974c318, and the Mento Broker remained an authorized minter. The same Safe address owned the Monad token and Monad ProxyAdmin at block 94280759, with the same six owners and 4-of-6 threshold; the prior seventh Monad signer was no longer present. Neither path has an independent timelock, so the Safe can authorize or replace mint logic and overall cap semantics are unbounded. At finalized NEAR height 210490105, the cUSD bridge-token account had exactly one FullAccess key; contrary to the previous profile, the parent account does not control a subaccount merely through account hierarchy, but the shared key directly controls this child and can redeploy its code. Mento publishes live on-chain reserve state and a continuously updating dashboard, supporting continuous reconciliation; no prudential supervisor was identified.",
+      "reviewer": "OpenAI Codex C05 control review",
+      "reviewedAt": "2026-08-08"
     }
   },
   "bridgeRouteRisk": {

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.12",
+  "releaseVersion": "9.13",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -472,6 +472,29 @@
           ],
           "structuralComponents": {
             "claim-and-segregation": {
+              "kind": "unsafe-backing",
+              "severity": "critical"
+            },
+            "custody-continuity": {
+              "kind": "unsafe-backing",
+              "severity": "high"
+            }
+          }
+        },
+        "commodity-claim": {
+          "reserveWeight": 0.55,
+          "componentWeights": {
+            "title-and-allocation": 0.15,
+            "custody-continuity": 0.1,
+            "assurance-and-reconciliation": 0.13,
+            "physical-redemption": 0.07
+          },
+          "serialComponentKeys": [
+            "title-and-allocation",
+            "custody-continuity"
+          ],
+          "structuralComponents": {
+            "title-and-allocation": {
               "kind": "unsafe-backing",
               "severity": "critical"
             },

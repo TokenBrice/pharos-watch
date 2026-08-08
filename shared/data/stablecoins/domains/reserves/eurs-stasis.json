@@ -2,78 +2,63 @@
   "id": "eurs-stasis",
   "reserves": [
     {
-      "name": "Euro cash in designated reserve accounts at licensed European financial institutions",
+      "name": "Euro cash in designated reserve accounts at Lietuvos bankas via NexPay UAB",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Licensed European financial institutions",
+      "issuerOrObligor": "Lietuvos bankas (Bank of Lithuania) via NexPay UAB",
       "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
-        "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
-      },
-      {
-        "label": "STASIS EURS transparency index",
-        "url": "https://eurs.stasis.net/transparency"
-      },
-      {
-        "label": "STASIS EURS daily NexPay reserve statement - December 12, 2025",
-        "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
+        "label": "STASIS EURS transparency page",
+        "url": "https://stasis.net/transparency"
       }
     ],
-    "rationale": "BDO Malta directly confirmed EUR 32.448 million across three designated cash reserve accounts at licensed European financial institutions on August 1, 2024. STASIS's latest published daily statement is a December 12, 2025 NexPay euro account statement, which corroborates the continued cash-account model but does not support splitting the complete reserve across current providers.",
-    "compositionBasis": "Latest complete third-party EURS cash-reserve procedures report; current provider allocation undisclosed",
-    "compositionAsOf": "2024-08-01",
+    "rationale": "STASIS's live transparency page (updated daily for the previous working day) reports 6,942,132 EURS in circulation backed by 100% EUR liquid balances and allocates the entire reserve to a Lithuanian Central Bank account held via NexPay UAB (€7,147,300.66, 100.00%). This supersedes the historical August 2024 BDO allocation and the partial December 2025 NexPay statement.",
+    "compositionBasis": "STASIS live transparency page, daily updated for the previous working day",
+    "compositionAsOf": "2026-08-07",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material reserve asset class is unclassified; current account-level provider shares are not publicly disclosed by the latest complete report set.",
+    "knownUnknownExposure": "No material reserve asset class is unclassified; the public page identifies the reserve as 100% euro cash at Lietuvos bankas via NexPay but does not publish account numbers or detailed legal segregation terms.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Euro cash in designated reserve accounts at licensed European financial institutions",
+        "reserveName": "Euro cash in designated reserve accounts at Lietuvos bankas via NexPay UAB",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The reserve is euro cash held at financial institutions rather than another tracked stablecoin."
+        "rationale": "The reserve is euro cash held at a central bank account rather than another tracked stablecoin."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "NexPay UAB (identified in the December 2025 statement)",
-        "role": "other",
+        "name": "NexPay UAB (Lietuvos bankas account)",
+        "role": "custodian",
+        "sharePct": 100,
         "jurisdiction": "Lithuania"
-      },
-      {
-        "name": "Other current EURS reserve providers (not disclosed)",
-        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
-        "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
-      },
-      {
-        "label": "STASIS EURS daily NexPay reserve statement - December 12, 2025",
-        "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
+        "label": "STASIS EURS transparency page",
+        "url": "https://stasis.net/transparency"
       }
     ],
-    "uncertainty": "The December 2025 statement identifies NexPay for one EURS reserve account, but it does not establish the complete current provider set or allocation. The three provider categories in the August 2024 BDO report are historical and are not carried forward as current providers. Current segregation across all accounts, statutory bankruptcy remoteness, provider shares, and rehypothecation terms remain unknown.",
-    "knownUnknownExposurePct": 100
+    "uncertainty": "The live page names NexPay UAB as the route to the Lithuanian Central Bank account and states reserves are held in central-bank accounts, but it does not publish the account agreement, statutory segregation, insolvency remoteness, or rehypothecation terms.",
+    "knownUnknownExposurePct": 0
   }
 }

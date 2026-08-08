@@ -116,8 +116,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "USDM implementation on HyperEVM explorer",
@@ -130,11 +131,15 @@
       {
         "label": "Monetrix mint USDM documentation",
         "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "HyperEVM public RPC",
+        "url": "https://rpc.hyperliquid.xyz/evm"
       }
     ],
-    "evidence": "Re-verified 2026-07-30: the live USDM implementation ABI on HyperEVM (0x05faf9cfa7143804e7fb0db423fde8330cd586df behind proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377) exposes pause(), unpause(), paused(), and OpenZeppelin EnforcedPause/ExpectedPause errors with Paused/Unpaused events, so a MonetrixAccessController role can halt all USDM transfers; reach is token-wide rather than per-address. The ABI shows no per-address blacklist, freeze, or seize function, and mint is restricted to MonetrixVault (NotVault). Pause authority and UUPS upgrades route through the central ACL whose UPGRADER sits behind the reviewed 48-hour timelock (0xDe54E1F99752062ef448Dcc6C7636f90214C789e), so transfer logic can change after a 48-hour delay. USDM is additionally backed by USDC at mint, so holders retain inherited upstream Circle freeze exposure on the collateral. The failure domain is the Monetrix protocol operator/governance on HyperEVM.",
-    "reviewer": "Kimi T20 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-verified 2026-08-08 at HyperEVM block 42660392: proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377 still resolves through its EIP-1967 implementation slot to 0x05faf9cfa7143804e7fb0db423fde8330cd586df, paused() returned false, and vault() returned 0x5586c2c8223c73ec0b41d6352748e6c173372e11. The verified implementation exposes pause(), unpause(), paused(), and OpenZeppelin's transfer-path pause errors, so the MonetrixAccessController pause role can halt every USDM holder transfer system-wide. The ABI has no per-address blacklist, but a live global pause is itself a direct transfer restriction. Pause authority and UUPS upgrades route through the central ACL whose UPGRADER sits behind the reviewed 48-hour timelock; USDC backing remains a separate upstream Circle exposure.",
+    "reviewer": "Codex C08 control/access audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "native",
   "custodyModel": "onchain",

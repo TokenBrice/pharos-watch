@@ -1,7 +1,8 @@
-# Mechanism-overlay evidence standard (fiat-cash, tbill, and partial metrics)
+# Mechanism-overlay evidence standard (fiat-cash, tbill, commodity-claim, and partial metrics)
 
-Status: canonical. Ratified by the owner on 2026-07-27 (wave-7 decision D3). This is the
-owner-approved evidence standard referenced by the fiat-cash/tbill overlay gate in
+Status: canonical. Ratified by the owner on 2026-07-27 (wave-7 decision D3); extended to the
+`commodity-claim` archetype by methodology v9.14. This is the owner-approved evidence standard
+referenced by the compiler-bounded overlay gate in
 `worker/src/lib/safety-score-v9-extension-mechanism.ts`. Until this document existed, curated
 overlay claims on fiat-cash and tbill mechanism components were procedurally forbidden; they
 are now admissible only under the rules below.
@@ -10,10 +11,18 @@ are now admissible only under the rules below.
 
 - Curated component claims in `shared/data/safety-score-v9/mechanism-review-overlays-v1.json`
   for the **fiat-cash** components (`claimAndSegregation`, `custodyContinuity`,
-  `assuranceAndReconciliation`) and **tbill** components (`fundClaimAndSeniority`,
-  `navValuation`, `durationAndLiquidity`, `lossRecoveryDesign`). These components are
+  `assuranceAndReconciliation`), **tbill** components (`fundClaimAndSeniority`,
+  `navValuation`, `durationAndLiquidity`, `lossRecoveryDesign`), and **commodity-claim**
+  components (`titleAndAllocation`, `custodyContinuity`, `assuranceAndReconciliation`,
+  `physicalRedemption`). These components are
   compiler-bounded by design; a curated overlay claim overrides that conservatism and is
   therefore held to the strictest sourcing bar in the scoring system.
+- For `commodity-claim`, the curated `physicalRedemption` component is also the single source
+  of the asset's `physical-redemption` mechanism-exit fact: the Exit pillar reads a projection
+  of the same statement rather than a second declaration. A `measured` component projects a
+  `supported` exit fact at the same quality, an `unavailable` component projects an
+  `issuer-undisclosed` exit fact, and a `not-applicable` component projects nothing — a
+  structurally absent redemption right is not evidence that an exit route exists.
 - The `not-applicable` / `unavailable` component-applicability states and the
   corresponding metric-applicability states on synthetic-delta-neutral and
   rwa-credit-fund overlays (wave-7 decision D2).

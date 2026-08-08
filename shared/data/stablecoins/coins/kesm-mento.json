@@ -131,6 +131,10 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
         "label": "Mento V3 stablecoin documentation",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
@@ -156,9 +160,9 @@
       }
     ],
     "sourceFreeRationale": "The current holder-facing KESm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
-    "evidence": "At Celo block 73552600 (2026-07-30T23:15:58Z), KESm's sole tracked deployment 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 returned owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147, broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() = 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() = zero. Its implementation slot resolved to verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e; the verified ABI/source exposes ordinary transfer/transferFrom, permissioned mint, and broker/exchange-scoped burn(msg.sender) and Celo-VM-only gas debiting via debitGasFees, with no blacklist, freeze, pause, seizure, governance-reachable arbitrary-holder burn, or transfer-hook mechanism. Direct KESm holder freeze access is therefore No. The controlling failure domain is the Mento Timelock's upgrade/authorization path; inherited exposure remains through the live Mento Reserve's AUSD, sUSDS, EURC, USDT, USDC, axlEUROC/axlUSDC, and related issuer-controlled collateral, so reviewedStatus remains inherited.",
-    "reviewer": "Codex T64 access review",
-    "reviewedAt": "2026-07-31"
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. KESm 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict KESm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

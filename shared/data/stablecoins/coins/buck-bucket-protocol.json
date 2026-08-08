@@ -2787,7 +2787,7 @@
         "url": "https://docs.bucketprotocol.io/mechanisms/peg-stability-module"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official Peg Stability Module nevertheless holds Circle USDC and Tether USDT in a shared vault for direct 1:1 BUCK conversions. Those issuers can freeze PSM-held balances and impair BUCK redemption liquidity, which is the resolver's Upstream condition even though neither issuer controls BUCK transfers directly.",
+    "evidence": "Re-reviewed 2026-08-08 using Sui checkpoints 304909276-304911372. BUCK remains an unregulated Sui currency with no RegulatedCoinMetadata, DenyCapV2, legacy DenyCap, holder blacklist, or token-transfer pause. Bucket's official terms describe interface-level restrictions rather than an on-chain power over holder coins. The Peg Stability Module holds Circle USDC and Tether USDT for direct BUCK conversions; those issuers can freeze PSM-held balances and impair redemption liquidity, but cannot restrict transfers of already-held BUCK coin objects. Direct holder freeze is therefore false, with the PSM exposure recorded separately as upstream risk.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },

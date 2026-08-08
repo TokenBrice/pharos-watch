@@ -57,7 +57,7 @@ import {
   buildPeg,
   buildSupply,
 } from "./safety-score-v9-fact-set-peg-supply";
-import { buildWrapperLocalFacts } from "./safety-score-v9-fact-set-wrapper";
+import { buildWrapperLocalFacts, resolveWrapperForm } from "./safety-score-v9-fact-set-wrapper";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -214,13 +214,7 @@ function quarantinedWrapperLocalFacts(
   return V9WrapperLocalFactsSchema.parse({
     schemaVersion: 1,
     applicability: "wrapper",
-    form:
-      asset.variantKind === "pure-wrapper"
-        ? "pure"
-        : asset.variantKind === "savings-passthrough" ||
-            asset.variantKind === "risk-absorption"
-          ? "native-staked"
-          : "strategy-vault",
+    form: resolveWrapperForm(asset, dependencies) ?? "strategy-vault",
     formDisposition: "producer-failed",
     formSignals: ["asset-compilation-unavailable"],
     formEvidenceRefIds: [],

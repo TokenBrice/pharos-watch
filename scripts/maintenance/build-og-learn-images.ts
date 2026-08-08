@@ -33,6 +33,7 @@ const SLUGS: MechanismArchetype[] = [
   "synthetic-delta-neutral",
   "algorithmic",
   "rwa-credit-fund",
+  "commodity-claim",
 ];
 
 const TITLES: Record<string, string> = {
@@ -42,6 +43,7 @@ const TITLES: Record<string, string> = {
   "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
   algorithmic: "Algorithmic Stablecoins, Explained",
   "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
+  "commodity-claim": "Gold and Commodity Tokens, Explained",
 };
 
 function checkPublishedPngs(): void {

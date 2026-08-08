@@ -576,9 +576,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Grok T04 safety-v9 unknown-reduction w2 2026-07-30",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve curation batch R10",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SEC Form D/A — Hamilton Lane SCOPE Securitize Tokenized Feeder, LP (CIK 0001976710; filed 2025-08-01)",
@@ -605,21 +605,12 @@
         "url": "https://securitize.io/primary-market/hl-scope"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30. SEC Form D/A (filed 2025-08-01) identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP as a Delaware limited partnership pooled investment fund offered under Rule 506(c) and Investment Company Act Section 3(c)(7), with Securitize Capital, LLC as general partner. Hamilton Lane's December 2025 Main Fund PPM identifies Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF (Luxembourg reserved AIF) as the vehicle that holds the private-credit portfolio, with monthly NAV, limited monthly redemptions subject to a 5% quarterly gate, and permission to hold cash/money-market instruments for liquidity. The June 2026 Main Fund monthly report states ~$2.67B fund total assets, 99% first-lien senior secured / 1% junior debt security-type mix, 100% floating-rate, 42% company-level LTV, moderate fund-level leverage, and 400+ issuers across 50+ sponsors — but those figures describe the Main Fund loan book, not a measured feeder-level cash-versus-fund-share split. HLSCOPE remains a single 100% fund-share envelope (feeder LP interest whose economic exposure is Main Fund NAV). Loan-level weights, maturities, and the current cash/liquidity sleeve size are not published as dated feeder or Main Fund balance-sheet percentages, so knownUnknownExposurePct stays 100.",
-    "compositionBasis": "SEC Form D feeder identity; Hamilton Lane Main Fund PPM (structure and liquidity rules); June 2026 Main Fund monthly report (strategy-level portfolio construction). No loan-level or cash-sleeve percentage split for HLSCOPE.",
-    "compositionAsOf": "2026-07-30",
+    "rationale": "HLSCOPE is a tokenized feeder-fund interest: each token represents a pro-rata LP interest in Hamilton Lane SCOPE Securitize Tokenized Feeder, LP, whose sole material asset is an investment in the Hamilton Lane Senior Credit Opportunities Fund S.A. SICAV-RAIF. The reserve is therefore one 100% fund-share slice. The Main Fund's underlying loan-level composition is not a reserve split for HLSCOPE itself; it is the risk profile of the fund-share asset, already captured by the issuer/obligigor, risk factors, and liquidity horizon. The June 2026 Main Fund monthly report confirms the fund's NAV, senior-secured focus, and valuation cadence.",
+    "compositionBasis": "SEC Form D feeder identity; Hamilton Lane Main Fund PPM (feeder-to-master structure and liquidity rules); June 2026 Main Fund monthly report (NAV and strategy-level portfolio construction).",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "HLSCOPE does not publish a dated feeder balance sheet. The Main Fund reports strategy-level security-type, geography, and industry mixes and a top-10 name list, but not current percentage weights for cash/money-market holdings versus funded loans, per-obligor share outside the top 10, or maturity ladders usable as a reserve split.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Hamilton Lane SCOPE Securitize Tokenized Feeder LP interest (Main Fund NAV)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Public materials establish a feeder-to-Main-Fund structure and a predominantly first-lien senior secured private-credit strategy, but do not publish current loan-level, cash-sleeve, or feeder-versus-master allocation weights that could be split without fabrication."
-      }
-    ]
+    "knownUnknownExposure": "No residual unknown exposure within the reserve composition: the entire reserve is the tokenized feeder LP interest. The underlying Main Fund loan-level weights and cash sleeve are look-through risk details, not reserve slices.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

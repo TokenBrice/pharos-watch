@@ -669,7 +669,9 @@ export async function mergeStagedPools(
           ? "dexscreener"
           : stagedPool.source === "cg_tickers"
             ? "cg_tickers"
-            : "gecko_terminal",
+            : stagedPool.source === "horizon"
+              ? "horizon"
+              : "gecko_terminal",
       ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {

@@ -289,19 +289,19 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDe minting uses signed-order flows through the EthenaMinting contract. At Ethereum block 25576200, the one-day TimelockController owned the USDe token and held the active minter contract's default-admin role; the 5/10 Ethena Safe held its proposer, canceller, and executor roles.",
+    "summary": "USDe minting uses signed-order flows through the EthenaMinting contract. At Ethereum block 25711751, the one-day TimelockController owned the USDe token and held the active minter contract's default-admin role; the 5/10 Ethena Safe held its proposer, canceller, and executor roles.",
     "upgradeability": {
       "model": "custom",
       "adminAddresses": [
-        "0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94"
+        "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94"
       ],
       "canChangeMintLogic": true,
       "delaySec": 86400,
-      "controlRef": "EthenaMinting V2 default-admin timelock",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25576200,
+      "controlRef": "USDe custom minter-replacement timelock",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711751,
       "sources": [
         {
           "label": "Ethena USDe contract overview",
@@ -324,17 +324,18 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
-        "label": "USDe token minter contract",
-        "role": "backend-signer",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
+        "address": "0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
+        "label": "EthenaMinting V2 token minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "EthenaMinting V2 enforces a 200,000,000 USDe global mint maximum per Ethereum block; the separate default-admin timelock can change that limit.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25576200,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
         "routeChecks": {
-          "signingModel": "At Ethereum block 25576200, replay of the complete RoleGranted and RoleRevoked event history for keccak256(\"MINTER_ROLE\") resolved 20 active EOA signers; their addresses are recorded in the review evidence.",
+          "signingModel": "A separate aggregated issuer-backend control records the 20 active MINTER_ROLE EOA callers. Complete role-event replay through block 25576200 plus zero RoleGranted or RoleRevoked logs from block 25576201 through 25711751 established that the cohort remained current at the observation block.",
           "onchainAmountBounds": "EthenaMinting V2 globalConfig() returned a 200,000,000 USDe maximum mint per block. MINTER_ROLE can invoke mint paths but cannot change that cap; the default-admin timelock can change it.",
           "pausersAdminsUpgraders": "The 86,400-second TimelockController is both the current USDe token owner and EthenaMinting V2 default admin. The 5/10 Ethena Safe holds the timelock's proposer and canceller roles."
         },
@@ -360,46 +361,81 @@
             "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "At Ethereum block 25576200, USDe minter() returned this direct-deployment EthenaMinting V2 contract and globalConfig() returned globalMaxMintPerBlock=200,000,000 USDe and globalMaxRedeemPerBlock=10,000,000 USDe. Replay of the complete RoleGranted and RoleRevoked history from deployment through the pinned block resolved 20 active MINTER_ROLE EOAs; their exact addresses are recorded in the review evidence. Verified source confines MINTER_ROLE to the capped mint entrypoints; DEFAULT_ADMIN_ROLE can change caps and role membership."
+        "evidence": "At Ethereum block 25711751, USDe minter() returned this direct-deployment EthenaMinting V2 contract and globalConfig() still returned globalMaxMintPerBlock=200,000,000 USDe and globalMaxRedeemPerBlock=10,000,000 USDe. Verified source confines MINTER_ROLE callers to the capped mint entrypoints; DEFAULT_ADMIN_ROLE can change caps and role membership."
       },
       {
         "chain": "ethereum",
-        "address": "0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862",
+        "label": "EthenaMinting V2 MINTER_ROLE signer cohort",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "cap-limited",
+        "capDescription": "The cohort invokes EthenaMinting V2's signed-order flow, which enforces a 200,000,000 USDe global mint maximum per Ethereum block.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
+        "failureDomainKeys": [
+          "issuer:ethena:usde-minter-role-signers"
+        ],
+        "routeChecks": {
+          "signingModel": "Twenty EOA callers held MINTER_ROLE. A complete RoleGranted/RoleRevoked replay through block 25576200 established the cohort, and incremental Blockscout queries found no RoleGranted or RoleRevoked logs from block 25576201 through 25711751.",
+          "onchainAmountBounds": "Every caller uses EthenaMinting V2's capped signed-order mint path; no cohort member can change globalConfig or role membership.",
+          "pausersAdminsUpgraders": "The separate 86,400-second default-admin timelock can change role membership and the global mint limit."
+        },
+        "sources": [
+          {
+            "label": "EthenaMinting V2 verified source",
+            "url": "https://etherscan.io/address/0xe3490297a08d6fc8da46edb7b6142e4f461b62d3#code"
+          },
+          {
+            "label": "Blockscout incremental RoleGranted query, blocks 25576201-25711751",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=25576201&toBlock=25711751&address=0xe3490297a08d6fc8da46edb7b6142e4f461b62d3&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Blockscout incremental RoleRevoked query, blocks 25576201-25711751",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=25576201&toBlock=25711751&address=0xe3490297a08d6fc8da46edb7b6142e4f461b62d3&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+          }
+        ],
+        "evidence": "The complete role-event replay through Ethereum block 25576200 resolved 20 active MINTER_ROLE EOAs: 0x03984ddef40850bb9862ec09037853630d7b6ae4, 0x0b23d23939a1731289eaa04f62ba1dd4ecdd5c7d, 0x24be9948466feceb22a9b77b19e404f2119fb962, 0x4d394f45dfadef5522759c511702db97690a5c12, 0x57093ffedc2f49eb3a5a11b63c0f4ca1b75c5cb7, 0x57fefb75863cc64fecf11ac99d7a5b60ebe0080f, 0x64004ae464f49c30a188c34e01b0dc66c8beb21, 0x655a1b0124b39b2d7c7f62a99627a891fad93b7b, 0x661ca83074b8ec630825d4604455325499f951a1, 0x6f1d2df2acc5f2da3167ad1967b648207cfc63db, 0x6fd5ffee1220b0458c2114d6ce7fb4de2bc8fee6, 0x71c95aaa22696d745e378486b769ee47ca23797c, 0x7d69817ea29244504c1a97b66e2c990f25df7599, 0x950c886cc6b9d420455985c3d31090aa060e96c8, 0x9b6889199627f78470ea230cc7df974239e0a5e5, 0xa22c29b20f9be2c809979ed606b24fe5286ac8f2, 0xb229d6db056750e22499191156bf4c3654df3826, 0xc3309fddfc8297c39a38d5d872a37222f98dad37, 0xcd992cfb025014c01ebc2f2311c3f87aa8411d9c, and 0xd0899998cceb5b3df5cdcfaadd43e53b8e1d553e. Incremental Blockscout queries returned zero RoleGranted and zero RoleRevoked events from block 25576201 through 25711751, so this cohort remained current at the observation block."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
         "label": "Ethena governance Safe (timelock roles)",
         "role": "governor",
         "authorityType": "safe",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "threshold": 5,
         "signerCount": 10,
         "timelockDelaySec": 86400,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25576200,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
         "routeChecks": {
           "pausersAdminsUpgraders": "The 5-of-10 Safe holds proposer, canceller, and executor roles for the current USDe-owner TimelockController. It had no enabled modules; Safe API reports guard 0x74abe7805541c28f31953b3cDA9711Dc96278D29.",
           "caps": "The Safe can propose a timelocked USDe setMinter(address) or EthenaMinting cap change, but does not directly own the token."
         },
         "safe": {
           "owners": [
-            "0x66096e581863EC2682e4E317Da41B80510a274F6",
-            "0x18d32B1AB042b5E9a3430e77fDE8B4783A019234",
-            "0xb93C042c688F1Cf038bab03C4F832F2630Bb7d8F",
-            "0x66892C66711B2640360C3123E6C23C0cFa50550F",
-            "0xE3F95F2e1aDEC092337FB5D93C1fE87558658b11",
-            "0x99682F56F4ccCF61BD7e449924f2f62D395e1E45",
-            "0x980742eDEA6b0df3566C19Ff4945c57E95449a13",
-            "0x54D0D64f7326b128959bf37Ed7B5f2510656a471",
-            "0xE987E14b2E204fdf5827a3cFCa7D476E8Df6a99E",
-            "0xe5cA87dA3A209aD85FdcbB515e1bD92644e9E1A6"
+            "0x66096e581863ec2682e4e317da41b80510a274f6",
+            "0x18d32b1ab042b5e9a3430e77fde8b4783a019234",
+            "0xb93c042c688f1cf038bab03c4f832f2630bb7d8f",
+            "0x66892c66711b2640360c3123e6c23c0cfa50550f",
+            "0xe3f95f2e1adec092337fb5d93c1fe87558658b11",
+            "0x99682f56f4cccf61bd7e449924f2f62d395e1e45",
+            "0x980742edea6b0df3566c19ff4945c57e95449a13",
+            "0x54d0d64f7326b128959bf37ed7b5f2510656a471",
+            "0xe987e14b2e204fdf5827a3cfca7d476e8df6a99e",
+            "0xe5ca87da3a209ad85fdcbb515e1bd92644e9e1a6"
           ],
           "threshold": 5,
           "enabledModules": [],
-          "guard": "0x74abe7805541c28f31953b3cDA9711Dc96278D29",
-          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
-          "observedBlock": 25576200,
-          "observedAt": "2026-07-20",
+          "guard": "0x74abe7805541c28f31953b3cda9711dc96278d29",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711751,
+          "observedAt": "2026-08-08",
           "source": "onchain"
         },
         "sources": [
@@ -420,11 +456,11 @@
             "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "At Ethereum block 25576200, USDe owner() no longer returned this Safe: the OwnershipTransferred event in block 25574214 moved ownership to 0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94 and pendingOwner() was zero. The Safe had a 5-of-10 threshold and no enabled modules; Safe API reports guard 0x74abe7805541c28f31953b3cDA9711Dc96278D29. On-chain reads confirmed this Safe has the TimelockController proposer, canceller, and executor roles."
+        "evidence": "At Ethereum block 25711751, USDe owner() returned the timelock rather than this Safe. The Safe still had a 5-of-10 threshold and no enabled modules; Safe API reported guard 0x74abe7805541c28f31953b3cda9711dc96278d29. On-chain reads confirmed this Safe still has the TimelockController proposer, canceller, and executor roles."
       },
       {
         "chain": "ethereum",
-        "address": "0xE8Dc0Fab349EA169283C48Ccfd09d797E6DB7c94",
+        "address": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
         "label": "EthenaMinting V2 default-admin timelock",
         "role": "minter-admin",
         "authorityType": "timelock",
@@ -432,8 +468,8 @@
         "timelockDelaySec": 86400,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25576200,
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
         "failureDomainKeys": [
           "ethereum:0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
         ],
@@ -455,10 +491,40 @@
             "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "At Ethereum block 25576200, this 86,400-second TimelockController was USDe owner(), held EthenaMinting V2's DEFAULT_ADMIN_ROLE, and could change mint caps and role membership or call owner-only setMinter(address). The 5-of-10 Ethena Safe held its proposer, canceller, and executor roles."
+        "evidence": "At Ethereum block 25711751, this 86,400-second TimelockController was USDe owner(), held EthenaMinting V2's DEFAULT_ADMIN_ROLE, and could change mint caps and role membership or call owner-only setMinter(address). The 5-of-10 Ethena Safe held its proposer, canceller, and executor roles."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+        "label": "USDe custom minter-replacement timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
+        "failureDomainKeys": [
+          "ethereum:0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+        ],
+        "sources": [
+          {
+            "label": "USDe verified token source with owner-only setMinter",
+            "url": "https://etherscan.io/address/0x4c9edd5852cd905f086c759e8383e09bff1e68b3#code"
+          },
+          {
+            "label": "Ethena timelock verified source",
+            "url": "https://etherscan.io/address/0xe8dc0fab349ea169283c48ccfd09d797e6db7c94#code"
+          },
+          {
+            "label": "Ethereum dRPC",
+            "url": "https://eth.drpc.org"
+          }
+        ],
+        "evidence": "At Ethereum block 25711751, this 86,400-second TimelockController owned USDe and could invoke owner-only setMinter(address). That custom replacement path can substitute the mint-critical controller without upgrading token bytecode, so it is modeled separately as the upgrade-only authority referenced by upgradeability.controlRef."
       }
     ],
-    "economicCapSemantics": "unbounded",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -496,6 +562,14 @@
           "url": "https://eth.blockscout.com/address/0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3?tab=logs"
         },
         {
+          "label": "Blockscout incremental RoleGranted query, blocks 25576201-25711751",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=25576201&toBlock=25711751&address=0xe3490297a08d6fc8da46edb7b6142e4f461b62d3&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Blockscout incremental RoleRevoked query, blocks 25576201-25711751",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=25576201&toBlock=25711751&address=0xe3490297a08d6fc8da46edb7b6142e4f461b62d3&topic0=0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b"
+        },
+        {
           "label": "Ethereum dRPC",
           "url": "https://eth.drpc.org"
         },
@@ -504,9 +578,9 @@
           "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-june-3"
         }
       ],
-      "evidence": "At Ethereum block 25576200: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned timelock 0xE8Dc0Fab; and pendingOwner() returned zero. OwnershipTransferred in block 25574214, transaction 0x684ab8b4c50bed19bb681f4678e045a93161230cfbf88f04b05b94e975547840, moved ownership from the 5/10 Safe 0x3B0AAf6e to that timelock. getMinDelay() returned 86400; the timelock held EthenaMinting V2 DEFAULT_ADMIN_ROLE; and the Safe held its PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE. The Safe had no enabled modules and Safe API reports guard 0x74abe7805541c28f31953b3cDA9711Dc96278D29. globalConfig() returned a 200,000,000 USDe global mint maximum per block and a 10,000,000 USDe global redeem maximum per block. Complete RoleGranted and RoleRevoked event replay through the pinned block resolved these 20 active MINTER_ROLE EOAs: 0x03984ddef40850bb9862ec09037853630d7b6ae4, 0x0b23d23939a1731289eaa04f62ba1dd4ecdd5c7d, 0x24be9948466feceb22a9b77b19e404f2119fb962, 0x4d394f45dfadef5522759c511702db97690a5c12, 0x57093ffedc2f49eb3a5a11b63c0f4ca1b75c5cb7, 0x57fefb75863cc64fecf11ac99d7a5b60ebe0080f, 0x64004ae464f49c30a188c34e01b0dc66c8beb21, 0x655a1b0124b39b2d7c7f62a99627a891fad93b7b, 0x661ca83074b8ec630825d4604455325499f951a1, 0x6f1d2df2acc5f2da3167ad1967b648207cfc63db, 0x6fd5ffee1220b0458c2114d6ce7fb4de2bc8fee6, 0x71c95aaa22696d745e378486b769ee47ca23797c, 0x7d69817ea29244504c1a97b66e2c990f25df7599, 0x950c886cc6b9d420455985c3d31090aa060e96c8, 0x9b6889199627f78470ea230cc7df974239e0a5e5, 0xa22c29b20f9be2c809979ed606b24fe5286ac8f2, 0xb229d6db056750e22499191156bf4c3654df3826, 0xc3309fddfc8297c39a38d5d872a37222f98dad37, 0xcd992cfb025014c01ebc2f2311c3f87aa8411d9c, and 0xd0899998cceb5b3df5cdcfaadd43e53b8e1d553e. Ethena's latest reviewed publication, issued July 1, 2026 for June 2026, describes the nineteenth monthly report from all integrated custodians and an independent third-party assessment of backing assets; the monthly reconciliation therefore qualifies as periodic. Searches of the BVI FSC and Dubai VARA public registers did not establish prudential supervision of the USDe issuer, so supervision is attestation-only.",
-      "reviewer": "Codex V9 D1 control cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25711751: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned timelock 0xe8dc0fab; getMinDelay() returned 86400; the timelock held EthenaMinting V2 DEFAULT_ADMIN_ROLE; and the 5/10 Safe held its PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE. The Safe still had no enabled modules, and Safe API reported guard 0x74abe7805541c28f31953b3cda9711dc96278d29. globalConfig() remained a 200,000,000 USDe global mint maximum per block and a 10,000,000 USDe global redeem maximum per block. Complete RoleGranted and RoleRevoked replay through block 25576200 resolved the 20 MINTER_ROLE EOAs recorded in the signer-cohort control; incremental Blockscout queries returned zero RoleGranted and zero RoleRevoked events from block 25576201 through 25711751, establishing that the cohort remained current at the observation block. Ethena's latest reviewed publication, issued July 1, 2026 for June 2026, describes the nineteenth monthly report from all integrated custodians and an independent third-party assessment of backing assets; the monthly reconciliation therefore qualifies as periodic. Searches of the BVI FSC and Dubai VARA public registers did not establish prudential supervision of the USDe issuer, so supervision is attestation-only.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

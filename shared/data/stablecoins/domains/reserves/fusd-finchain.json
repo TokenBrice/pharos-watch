@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi T35 unknown-reduction review 2026-07-30; R13 re-open",
     "confidence": "verified",
     "sources": [
       {
@@ -40,7 +40,7 @@
         "url": "https://fusd.finchain.global/#reserves"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-30 of the FinChain FUSD reserves, reserve-assets, and vendors docs: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg) under a stated minimum 100% collateralization ratio. The reserve-assets page names the tokenized share classes (TKUSD, CUMFU, FUIDL-AC), the tokenization agents (BC Technology (Hong Kong), Standard Chartered Bank (Hong Kong), Finloop Finance Technology Services), and BNY Mellon fund ratings (S&P AAAm, Moody's Aaa-mf, Fitch AAAmmf). Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. Dashboard URL re-opened (SPA shell, figures 'as of February 2026') and still presents as the real-time reserve-ratio surface linked from docs.",
+    "rationale": "Write-time re-open 2026-07-30 of the FinChain FUSD reserves, reserve-assets, and vendors docs: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg) under a stated minimum 100% collateralization ratio. The reserve-assets page names the tokenized share classes (TKUSD, CUMFU, FUIDL-AC), the tokenization agents (BC Technology (Hong Kong), Standard Chartered Bank (Hong Kong), Finloop Finance Technology Services), and BNY Mellon fund ratings (S&P AAAm, Moody's Aaa-mf, Fitch AAAmmf). Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. R13 re-open 2026-08-08: the FinChain reserve dashboard still shows only aggregate reserve-ratio placeholders ('as of July 2026') and no per-product percentage breakdown; Gitbook docs remain unchanged. No current weights can be authored without fabrication.",
     "compositionBasis": "FinChain named FUSD reserve-fund inventory",
     "scope": "full-composition",
     "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",

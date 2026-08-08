@@ -23,7 +23,10 @@ import {
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 
-const AS_OF_SEC = 1_784_505_600;
+// 2026-08-09T00:00:00Z — kept ahead of the newest reviewed registry dates the
+// usdc-circle capture below reads (mint-authority review 2026-08-08), so the
+// extension's "review is later than the scoring clock" guard stays untripped.
+const AS_OF_SEC = 1_786_233_600;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const PUBLISHED_AT_SEC = AS_OF_SEC + 10;
 
@@ -690,7 +693,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "active",
-      policyVersion: "9.12",
+      policyVersion: "9.13",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });

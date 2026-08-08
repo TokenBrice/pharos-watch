@@ -3,6 +3,7 @@ import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
+import { estimateDiscoverySweepPeriodSec } from "../dex-discovery/target-window";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
@@ -11,15 +12,47 @@ const DEX_DISCOVERY_PROVIDER_IDS = new Set([
   "geckoterminal",
   "dexscreener",
   "curve",
+  "horizon",
 ]);
 
 /**
- * The lowest-priority discovery cohort is eligible daily. Two daily windows
- * bound one missed/deferred crawl without turning an indefinitely old outcome
- * into current known-empty evidence.
+ * Freshness floor for every coin. The lowest-priority discovery cohort is
+ * eligible daily, so two daily windows bound one missed/deferred crawl without
+ * turning an indefinitely old outcome into current known-empty evidence. Coins
+ * whose footprint only sweeps across several runs raise this through
+ * `resolveDexDeploymentCensusMaxAgeSec()`.
  */
 export const DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC =
   DISCOVERY_TIERS.DORMANT_INTERVAL_SEC * 2;
+
+/**
+ * Slack on top of one estimated sweep. The static window count is a floor: a run
+ * that reaches only part of its window resumes mid-window, so a windowed tail can
+ * legitimately land a fraction of a sweep late.
+ */
+const DEX_DEPLOYMENT_CENSUS_SWEEP_HEADROOM = 1.5;
+
+/**
+ * Allowed census-row age for one coin's footprint.
+ *
+ * A footprint the discovery crawl finishes in a single run keeps the global
+ * two-dormant-window bound exactly. A footprint whose priced provider queries
+ * exceed the per-coin budget is crawled in rotating windows, so a full census
+ * sweep takes several runs and its window tail is older than two days by design.
+ * Those coins are allowed their estimated sweep period plus headroom instead of
+ * cycling through stale/missing outcomes forever. The bound is derived statically
+ * from the registry footprint, the discovery pricing table, and the tier cadence,
+ * so it needs no additional persistence.
+ */
+export function resolveDexDeploymentCensusMaxAgeSec(
+  deployments: readonly ContractDeployment[],
+): number {
+  const sweepPeriodSec = estimateDiscoverySweepPeriodSec(deployments);
+  return Math.max(
+    DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+    Math.ceil(sweepPeriodSec * DEX_DEPLOYMENT_CENSUS_SWEEP_HEADROOM),
+  );
+}
 
 export interface DexDeploymentCensusRow {
   stablecoin_id: string;
@@ -115,6 +148,8 @@ export function buildDexKnownEmptyRouteCoverage(): ExitRouteObservationCoverage 
  * Classify a zero-scoring-pool publication row against the exact active
  * deployment census. Only a complete, fresh, all-successful reviewed scope can
  * become known-empty. Every other shape remains explicit unknown evidence.
+ * Freshness uses this coin's own bound (`resolveDexDeploymentCensusMaxAgeSec`),
+ * which is the global bound for every footprint the crawl finishes in one run.
  *
  * The census reports per chain (owner ruling R1-D, 2026-07-29). A deployment on
  * a chain with no registered discovery provider is a standing scope limit, not a
@@ -129,6 +164,9 @@ export function classifyDexPlaceholderCoverage(params: {
   censusAvailable?: boolean;
 }): DexPlaceholderCoverageClassification {
   const reasonCounts: Record<string, number> = {};
+  // Freshness is per coin: a windowed footprint cannot refresh every row inside
+  // the global bound, so it is judged against its own sweep period.
+  const maxAgeSec = resolveDexDeploymentCensusMaxAgeSec(params.deployments);
   const unsupportedChainByKey = new Map<string, string>();
   const expectedKeys = new Set<string>();
   for (const deployment of params.deployments) {
@@ -206,7 +244,7 @@ export function classifyDexPlaceholderCoverage(params: {
           : Math.max(newestObservedAtSec, row.observed_at);
       if (
         row.observed_at > params.nowSec ||
-        params.nowSec - row.observed_at > DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC
+        params.nowSec - row.observed_at > maxAgeSec
       ) {
         staleOutcomeCount++;
       }
@@ -323,7 +361,7 @@ export function classifyDexPlaceholderCoverage(params: {
       unsupportedChains,
       oldestObservedAtSec,
       newestObservedAtSec,
-      maxAgeSec: DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+      maxAgeSec,
       reasonCounts,
     },
   };

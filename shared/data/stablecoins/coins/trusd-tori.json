@@ -46,11 +46,369 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: trUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tori BVI trUSD Terms and Conditions",
+        "url": "https://docs.tori.finance/legal/trusd-terms"
+      },
+      {
+        "label": "Blockscout verified trUSD implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+      },
+      {
+        "label": "Blockscout verified ToriMinting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+      },
+      {
+        "label": "Ethereum observation block 25712112",
+        "url": "https://eth.blockscout.com/block/25712112"
+      }
+    ],
+    "evidence": "At Ethereum block 25712112, the verified current trUSD implementation exposed ordinary ERC-20 transfers with no live blacklist, holder pause, seizure, or transfer-whitelist hook. ToriMinting's whitelist applies only to permissioned mint and redemption orders. Separately, Tori BVI's current primary terms reserve the right to block trUSD addresses associated with illegal activity or Terms violations and state that affected holders may forfeit rights associated with trUSD. The issuer-level legal power therefore makes the asset-level blacklistability review true even though current secondary-transfer bytecode is unrestricted; the one-day UUPS path can also replace that transfer logic.",
+    "reviewer": "OpenAI Codex C03 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "canBeBlacklisted": true,
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "trUSD is minted and redeemed through ToriMinting signed orders whose collateral and trUSD amounts are fixed off-chain by Tori's pricing system and co-signed by a live operator; the verified TrUSD, ToriMinting, StakedTrUSD, and StakingRewardsDistributor contract sources contain no price-feed, oracle, or exchange-rate oracle call. Accepted collateral is confined to USDC and USDT, so the signed-order rate only spans stablecoin quotes, and Tori publishes no oracle provider, feed, or failover documentation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "wave3-longtail-l01 (research agent)",
+      "rationale": "trUSD is issued and redeemed through KYC-whitelisted signed orders against USDC or USDT at Tori's off-chain quoted rate, while backing sits in a centrally managed delta-neutral portfolio verified in real time by Accountable. The protocol exposes no user CDP markets with per-collateral on-chain liquidation thresholds, liquidation auctions, backstops, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "sources": [
+        {
+          "label": "Tori docs — institutional minting and redemption (signed-order mint/redeem at quoted rate)",
+          "url": "https://docs.tori.finance/resources/institutional"
+        },
+        {
+          "label": "Blockscout verified ToriMinting (no oracle consumer; order carries fixed collateral_amount/trusd_amount)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+        },
+        {
+          "label": "Tori docs — introduction (delta-neutral strategies, Accountable proof of reserves)",
+          "url": "https://docs.tori.finance/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blockscout verified ToriMinting (signed-order mint/redeem; no oracle or price-feed reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+      },
+      {
+        "label": "Blockscout verified TrUSD implementation (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+      },
+      {
+        "label": "Blockscout verified StakedTrUSD implementation (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x521e98Ba48e58D34293d9628E76C1b6E366906fF"
+      },
+      {
+        "label": "Blockscout verified StakingRewardsDistributor (no oracle reference in source)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa0C49fFa4B7941830235cde974d9B2a8420CD375"
+      },
+      {
+        "label": "Tori docs — institutional minting and redemption",
+        "url": "https://docs.tori.finance/resources/institutional"
+      },
+      {
+        "label": "Tori docs — contract addresses (full deployed contract inventory, Ethereum mainnet)",
+        "url": "https://docs.tori.finance/resources/contracts"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "trUSD supply is confined to its canonical Ethereum deployment; the single reviewed route is native issuance through the whitelist-gated ToriMinting contract. Tori documents Chainlink CCIP (CCT) cross-chain support as planned only — a Lock & Release pool on Ethereum with Burn & Mint pools elsewhere — with no other live chain deployment, so no bridge route carries the claim.",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l01 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tori docs — contract addresses (Ethereum mainnet primary; other EVM chains planned/TBA; CCIP CCT planned)",
+        "url": "https://docs.tori.finance/resources/contracts"
+      },
+      {
+        "label": "DefiLlama stablecoin 401 (chainBalances: Ethereum only)",
+        "url": "https://stablecoins.llama.fi/stablecoin/401"
+      },
+      {
+        "label": "CoinGecko tori-trusd (platforms: ethereum only)",
+        "url": "https://api.coingecko.com/api/v3/coins/tori-trusd"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+        "protocol": "Tori Finance trUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "trUSD is issued only on Ethereum mainnet through the whitelist-gated ToriMinting contract; the entire captured supply is the canonical Ethereum deployment (0xd0580192e98ea6ceb9c7b6191ed2e27560911697), matching the coin's sole contracts entry. DefiLlama chainBalances and CoinGecko platforms show Ethereum only, and Tori's contracts page lists other EVM chains as planned/TBA. No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "Tori docs — contract addresses",
+            "url": "https://docs.tori.finance/resources/contracts"
+          },
+          {
+            "label": "Blockscout trUSD UUPS proxy",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+          },
+          {
+            "label": "DefiLlama stablecoin 401",
+            "url": "https://stablecoins.llama.fi/stablecoin/401"
+          }
+        ]
+      }
+    ]
+  },
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "trUSD's token minter is the verified ToriMinting contract. Three operator EOAs can execute signed, whitelisted, collateral-transfer-backed orders within per-block caps; a 3-of-5 Safe can raise those caps or authorize operators, while a one-day timelock can replace the token minter or UUPS implementation.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+      ],
+      "implementationAddresses": [
+        "0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+      ],
+      "adminAddresses": [
+        "0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "trUSD UUPS and minter-replacement timelock",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
+      "sources": [
+        {
+          "label": "Blockscout trUSD UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        },
+        {
+          "label": "Blockscout verified trUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+        },
+        {
+          "label": "Blockscout verified ToriTimelock",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e",
+        "label": "ToriMinting token minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting is bounded to 5,000,000 trUSD per block globally and per active collateral asset at observation; orders also require a live operator, whitelisted participant, valid signature and custody route, active supported asset, collateral-ratio check, and actual collateral transfer.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          },
+          {
+            "label": "Blockscout verified trUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, trUSD minter() returned this verified contract, which was unpaused. Verified source permits mint only through MINTER_ROLE operators and enforces a signed order, participant whitelist, custody route, active collateral, per-asset and global block caps, and transfer of USDC or USDT before calling token mint. The global and each active-asset mint cap were 5000000000000000000000000, or 5,000,000 trUSD per block."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2ba9857e5b1099f3809e0304a8f789659e7a8f70",
+        "label": "ToriMinting operator 1",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7713ba984fdfd4053ace737761de903b10c351ab",
+        "label": "ToriMinting operator 2",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xca4317c842b5d52fd0cb3a5b11d9f8fe8281fbce",
+        "label": "ToriMinting operator 3",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "label": "Tori administration Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x84e1091066fbcd48f2f2d8a2b7f1726812d167b3",
+            "0xfafe7fe2d5b7ffc92159df1d07ca4d27a6b99693",
+            "0xb5afef3ae424336de90ec1127ff7fec239b02b72",
+            "0x9a450e8787dd4c0d77f630d79469bbea64eb5506",
+            "0x53789955237a39024fc740a4344102d0d5117e53"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Tori administration Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0C6Bbfd2d5666d44bf28580eDEec0263692C8316/"
+          },
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, this Safe held ToriMinting DEFAULT_ADMIN_ROLE and the trUSD token's default-admin role. Safe state was 3-of-5, version 1.4.1, with no modules and zero guard. It can grant or revoke ToriMinting operators and change global, per-asset, custody, and participant controls, including raising the 5,000,000-per-block mint caps."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7af35ab3e5373da511c5f1331f44335a36da1a55",
+        "label": "trUSD UUPS and minter-replacement timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified trUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+          },
+          {
+            "label": "Blockscout verified ToriTimelock",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, this verified ToriTimelock held token TIMELOCK_ADMIN_ROLE and getMinDelay() returned 86400 seconds. Verified TrUSD source gates both setMinter and UUPS _authorizeUpgrade through TIMELOCK_ADMIN_ROLE, so the timelock can replace the current ToriMinting contract or the entire mint implementation after the delay. The Tori administration Safe held the timelock's proposer and executor roles."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Blockscout trUSD UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        },
+        {
+          "label": "Blockscout verified trUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+        },
+        {
+          "label": "Blockscout verified ToriMinting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+        },
+        {
+          "label": "Blockscout verified ToriTimelock",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+        },
+        {
+          "label": "Tori administration Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0C6Bbfd2d5666d44bf28580eDEec0263692C8316/"
+        },
+        {
+          "label": "Accountable Tori proof-of-solvency",
+          "url": "https://tori.accountable.capital"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ],
+      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
   },
   "status": "active",
   "announcedDate": "2026-03",
@@ -59,7 +417,7 @@
     {
       "type": "info",
       "title": "Primary mint/redeem is KYC-whitelisted",
-      "message": "The verified ToriMinting contract (0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E) gates every mint and redeem on both a role-held executor and an on-chain participant whitelist, so NAV mint/redeem requires completing Tori's KYC/AML verification (open application, 10 bps fee). The docs' 'no verification required' language refers only to swapping into trUSD at market rates on secondary liquidity such as Curve."
+      "message": "The verified ToriMinting contract (0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e) gates every mint and redeem on both a role-held executor and an on-chain participant whitelist, so NAV mint/redeem requires completing Tori's KYC/AML verification (open application, 10 bps fee). The docs' 'no verification required' language refers only to swapping into trUSD at market rates on secondary liquidity such as Curve."
     },
     {
       "type": "warning",
@@ -132,9 +490,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-05",
-    "reviewer": "Pharos reserve research (trUSD promotion follow-up)",
-    "confidence": "probable",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Accountable proof-of-solvency dashboard for Tori (15-minute cadence, Merkle/enclave/ZK verification; composition and custody figures as of 2026-08-05 09:15 UTC)",
@@ -154,14 +512,14 @@
       },
       {
         "label": "ToriMinting verified contract source on Blockscout (whitelist-gated mint/redeem; single on-chain custodian address)",
-        "url": "https://eth.blockscout.com/address/0xe16b821B9F6B0a6f06a2C4a61D5d1f71cFa53F1E"
+        "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable reads liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence with Merkle-root, enclave, and zero-knowledge verification. Custodian and venue identities are withheld. Independent on-chain tracing of the sole minting custodian wallet (0x63392EaB47926f6Ee3E6ACA285B367A952001CC7) shows roughly $54M of USDC/USDT outflows reaching a BiLira Pro hot wallet and a Binance deposit address, with about 28.2M USDT sitting in an unlabeled externally owned account as of the review date — so the dashboard's regulated-bank custody framing is attested but not independently verifiable, and custody is classified as CEX/off-exchange. A protocol reserve fund (funded from the 10% performance fee, size undisclosed) exists as a first-loss buffer; trUSD is uninsured.",
+    "rationale": "Composition follows the Accountable attested asset-distribution table as of 2026-08-05 (total reserves $55.48M vs $55.21M supply, 100.5% collateral ratio): money markets 60.93%, delta-neutral futures arbitrage 27.52%, cash and equivalents held as FX collateral 10.25%, on-chain buffer 1.3%. Accountable independently verifies liabilities from the trUSD contract and asset values from custodian and venue data connectors on a 15-minute cadence using Merkle-root, enclave, and zero-knowledge proofs. Because the strategy-level percentages are independently attested and sum to the reported reserve total, the reserve split is treated as verified; the undisclosed custodian/venue identities and unpublished reserve-fund size are captured as risk factors and in the coin notice rather than as unknown reserve exposure.",
     "compositionBasis": "Accountable attested asset-distribution and custody tables dated 2026-08-05; Tori strategy and institutional docs; verified ToriMinting contract source and independent on-chain flow tracing of the custodian wallet.",
     "compositionAsOf": "2026-08-05",
     "scope": "full-composition",
-    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet.",
+    "knownUnknownExposure": "Custodian bank, investment-bank, and execution-venue identities are undisclosed by policy, venue-level allocations and leverage are unpublished, and the size of the protocol reserve fund is undisclosed; the attested split cannot be independently reconciled against the on-chain flows, which terminate at exchange deposit addresses and an unlabeled wallet. These gaps affect custody/counterparty risk assessment, not the verified strategy-level composition split.",
     "knownUnknownExposurePct": 0
   },
   "milestones": [

@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "AUD cash in the Westpac AUDM Trust Class A Reserve",
-      "pct": 95.809741,
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Westpac Banking Corporation",
@@ -14,55 +14,35 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "AUD cash in the Australian Settlements Limited AUDM Trust Class A Reserve",
-      "pct": 4.190259,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Australian Settlements Limited trading as Banking Circle",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "legal"
-      ],
-      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewer": "PoR verification sweep 2026-08 (1 Aug 2026 issuer self-verification PDF read this pass)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hall Chadwick Melbourne Audit AUDM agreed-upon procedures report - June 2026",
-        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd2b088312392d65d478_June%202026%20-%20Agreed-Upon%20Procedures%20Report.pdf"
+        "label": "Macropod AUDM Reserve Verification Report as at 1 August 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd226750579d5156b5f6_260801%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20August%202026.pdf"
       },
       {
         "label": "Macropod transparency",
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "rationale": "Hall Chadwick Melbourne Audit ASRS 4400 AUP as of 30 June 2026 11:59pm (signed 2026-08-05, PDF read this pass; expressly no opinion and no independence requirement; prepared under ASIC Instrument 2025/867 para 12): AUD 4,282,521.86 at Westpac (AUDM Trust Class A Reserve) and AUD 187,297.00 at Australian Settlements Limited t/a Banking Circle, totalling AUD 4,469,818.86 against AUD 4,468,638.86 AUDM on-chain (excess AUD 1,180), agreed without exception; encumbrance check by inquiry only. Note: the attached management report is headed 'as at 1st July 2026' while the audit and findings are 30 June 2026.",
-    "compositionBasis": "Hall Chadwick agreed-upon procedures report as of 30 June 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Macropod issuer self-verification report (prepared under ASIC Corporations (Stablecoin and Wrapped Token Relief) Instrument 2025/867 paragraph 12) as at 1 August 2026 11:59pm: the entire reserve is AUD cash held by Westpac Banking Corporation in the named account 'AUDM Trust Class A Reserve' on behalf of Macropod as trustee for the AUDM Trust, totalling AUD 3,077,657.42 against AUD 3,072,149.75 AUDM on-chain across Ethereum, Redbelly, Solana and Base (excess AUD 5,507.67). The report describes review of statements, transaction records and blockchain addresses; it is a self-attestation, not an independent audit.",
+    "compositionBasis": "Macropod issuer self-verification report as at 1 August 2026",
+    "compositionAsOf": "2026-08-01",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report masks the account numbers but identifies both reserve banks and reconciles the complete reserve total to on-chain supply.",
+    "knownUnknownExposure": "The report masks the account number but identifies the single reserve bank and reconciles the complete reserve total to on-chain supply. No lending, investment or rehypothecation is disclosed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "AUD cash in the Westpac AUDM Trust Class A Reserve",
-        "pct": 95.809741,
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Trust-held AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "AUD cash in the Australian Settlements Limited AUDM Trust Class A Reserve",
-        "pct": 4.190259,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
       }
     ]
   },
@@ -71,32 +51,26 @@
       {
         "name": "Westpac Banking Corporation",
         "role": "bank",
-        "sharePct": 95.81,
-        "jurisdiction": "Australia"
-      },
-      {
-        "name": "Australian Settlements Limited trading as Banking Circle",
-        "role": "bank",
-        "sharePct": 4.19,
+        "sharePct": 100,
         "jurisdiction": "Australia"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (1 Aug 2026 issuer self-verification PDF read this pass)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Macropod AUDM reserve verification as of July 1, 2026",
-        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+        "label": "Macropod AUDM Reserve Verification Report as at 1 August 2026",
+        "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a72dd226750579d5156b5f6_260801%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20August%202026.pdf"
       },
       {
         "label": "Macropod AUDM transparency and trust disclosures",
         "url": "https://www.macropod.com/transparency"
       }
     ],
-    "uncertainty": "The reserve banks and exact shares are disclosed and the accounts are held by Macropod as trustee for the AUDM Trust. The public verification does not state whether reserve cash may be rehypothecated."
+    "uncertainty": "The reserve bank and exact balance are disclosed and the account is held by Macropod as trustee for the AUDM Trust. The public verification does not state whether reserve cash may be rehypothecated."
   }
 }

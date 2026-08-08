@@ -85,9 +85,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "FPI Ethereum token verified source (Blockscout)",
@@ -98,8 +97,12 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?fields=all"
       },
       {
+        "label": "Frax FPI overview",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
         "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
-        "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
+        "url": "https://explorer.zksync.io/address/0xd405617db7473b0a3158356be7bc9ebec6d88b85"
       },
       {
         "label": "FPI Fraxtal token address",
@@ -114,10 +117,9 @@
         "url": "https://rpc.frax.com"
       }
     ],
-    "evidence": "2026-07-30 re-review across every live deployment. Ethereum FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e (about 5.889M FPI, 52% of supply) had zero EIP-1967 implementation and admin slots at block 25648258; its Blockscout- and Sourcify-verified source exposes transfer/transferFrom plus owner-gated addMinter/removeMinter/minter_mint/minter_burn_from, with no blacklist, freeze, pause, seize, or arbitrary holder-burn path. ZKsync Era FPI 0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85 (250,000 FPI at zkSync block 71379489, about 2%) is verified CrossChainCanonicalV2, immutable (zero EIP-1967 slots), with owner(), timelock_address(), and sole minter all the codeless EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, and the same restriction-free minter-model interface. Fraxtal FPI 0xfc00000000000000000000000000000000000003 (about 5.190M FPI, 46% of supply) is an upgradeable proxy: at Fraxtal block 39317542 the implementation 0xfcc0d30000000000000000000000000000000003 answered owner() 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 and minters() reads, while selector probes for paused, blacklist, isBlacklisted, freeze, frozen, and blocklist all reverted, so the current code has no active freeze or blacklist. However, the proxy admin 0xfc0000000000000000000000000000000000000a resolves to the verified ProxyAdmin whose owner is that same address, a live 3-of-5 Safe (getThreshold 3, five owners) that can replace the FPI implementation immediately, without a timelock, over the 46% Fraxtal supply share. That instant no-timelock code replacement is a mutable holder-facing control, so the reviewed verdict remains possible rather than false: no active holder freeze exists in any deployed code, but the Fraxtal upgrade path could introduce one.",
-    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "FPI's FRAX-denominated reserves and AMO positions (reviewed 2026-07-30 for frax-frax as not holder-blacklistable) and LP or governance-token reserve slices can impair claim value or redemption liquidity if those upstream assets fail or freeze, but none of those actors has a direct holder freeze, blacklist, or transfer-restriction path on FPI token deployments. Those exposures remain reserve-quality and dependency risks, not FPI blacklistability."
+    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712273, canonical FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e remained a direct, immutable token whose verified transfer and minter paths contain no blacklist, freeze, pause, seize, allowlist, or arbitrary-holder burn. At Fraxtal block 39703046, proxy 0xfc00000000000000000000000000000000000003 used implementation 0xfcc0d30000000000000000000000000000000003 and ProxyAdmin 0xfc0000000000000000000000000000000000000a; current implementation selector and source review likewise found no active holder restriction. The verified ZKsync CrossChainCanonicalV2 deployment has the same restriction-free transfer model. Frax's FPI documentation describes protocol mint/redemption and does not establish a separate issuer legal account-freeze power. Current blacklistability is therefore false; the Fraxtal 3/5 Safe's immediate ability to introduce restrictions by upgrading code is represented separately as a restrictable deployment in the transfer overlay.",
+    "reviewer": "OpenAI Codex C06 access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
@@ -456,7 +458,7 @@
   "reserves": [
     {
       "name": "FRAX",
-      "pct": 81.7,
+      "pct": 87.05,
       "risk": "low",
       "coinId": "frax-frax",
       "depType": "collateral",
@@ -473,7 +475,7 @@
     },
     {
       "name": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
-      "pct": 10.7,
+      "pct": 11.44,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Convex, Curve FPI/FRAX liquidity pool, and Frax Finance",
@@ -488,22 +490,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "FXS",
-      "pct": 6.2,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Frax Share token and market liquidity",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "Fraxswap V2 FRAX/FPIS",
-      "pct": 1.4,
+      "pct": 1.5,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Fraxswap V2 FRAX/FPIS liquidity pool",
@@ -516,11 +504,25 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "FXS",
+      "pct": 0.01,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Frax Share token and market liquidity",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -536,33 +538,33 @@
         "url": "https://frax.com/transparency"
       }
     ],
-    "rationale": "The first-party FPI collateral endpoint reports the current FRAX, staked Convex FPI/FRAX LP, FXS, and Fraxswap FRAX/FPIS positions. The exact fixed capture was normalized into four rows, with each LP, governance-token, market, and upstream-stablecoin failure domain retained rather than folding the portfolio into a single FRAX claim.",
-    "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The first-party FPI collateral endpoint was re-read on 2026-08-08 (block 25711761). Ferry/liability entries (FPI tokens locked in FraxFerry) were excluded because they represent bridged supply rather than reserve assets. The remaining reserve positions — Ethereum and Fraxtal comptroller FRAX balances plus the FPI Controller FRAX balance, staked Convex FPI/FRAX LP, Fraxswap V2 FRAX/FPIS, and a negligible FXS dust balance — were normalized to four classified rows. Each LP, governance-token, market, and upstream-stablecoin failure domain is retained rather than folding the portfolio into a single FRAX claim.",
+    "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-08-08; ferry/liability entries excluded from the reserve mix",
+    "compositionAsOf": "2026-08-08",
     "scope": "full-composition",
-    "knownUnknownExposure": "All positive positions returned by the current first-party endpoint are identified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
+    "knownUnknownExposure": "All positive reserve positions returned by the first-party endpoint are identified and classified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
-        "pct": 10.7,
+        "pct": 11.44,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The staked Convex LP is an identified protocol position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "FXS",
-        "pct": 6.2,
+        "reserveName": "Fraxswap V2 FRAX/FPIS",
+        "pct": 1.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "FXS is governance-token collateral rather than a tracked stablecoin dependency."
+        "rationale": "The Fraxswap LP is an identified protocol position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Fraxswap V2 FRAX/FPIS",
-        "pct": 1.4,
+        "reserveName": "FXS",
+        "pct": 0.01,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The Fraxswap LP is an identified protocol position rather than a tracked stablecoin dependency."
+        "rationale": "FXS is governance-token collateral rather than a tracked stablecoin dependency."
       }
     ]
   },

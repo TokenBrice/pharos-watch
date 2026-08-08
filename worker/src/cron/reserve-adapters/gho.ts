@@ -56,6 +56,32 @@ function riskForFacilitatorBucket(bucket: FacilitatorRiskBucket): ReserveSlice["
   return bucket === "aave-v3-direct" ? "medium" : "high";
 }
 
+function issuerForFacilitatorLabel(label: string): string {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("flashmint") || normalized.includes("flash mint")) {
+    return "Aave GHO flash mint facility";
+  }
+  if (normalized.includes("gsm") && normalized.includes("arbitrum")) {
+    return "Aave DAO Arbitrum GHO Reserve and remote GSM";
+  }
+  if (normalized.includes("gsm")) {
+    return "Aave DAO mainnet GHO stability modules";
+  }
+  if (normalized.includes("plasma")) {
+    return "Aave V3 Plasma market";
+  }
+  if (normalized.includes("horizon")) {
+    return "Aave Horizon market";
+  }
+  if (normalized.includes("lido")) {
+    return "Aave V3 Lido market";
+  }
+  if (normalized.includes("core")) {
+    return "Aave V3 Ethereum Core market";
+  }
+  return "Aave GHO facilitator";
+}
+
 interface GhoParams {
   rpcUrl?: string;
   fallbackRpcUrl?: string;
@@ -343,6 +369,9 @@ interface GhoSliceValue {
   value: number;
   risk: ReserveSlice["risk"];
   coinId?: string;
+  depType?: ReserveSlice["depType"];
+  assetClass?: ReserveSlice["assetClass"];
+  issuerOrObligor?: string;
 }
 
 export interface GhoRedemptionTelemetry {
@@ -413,6 +442,12 @@ export function buildGhoSlices(
       risk: trackedModule.risk,
       ...(trackedModule.coinId ? { coinId: trackedModule.coinId } : {}),
       ...(trackedModule.depType ? { depType: trackedModule.depType } : {}),
+      assetClass: "stablecoin",
+      issuerOrObligor: trackedModule.coinId === "usdc-circle"
+        ? "Circle (USDC issuer) held at Aave GHO Stability Module"
+        : trackedModule.coinId === "usdt-tether"
+          ? "Tether (USDT issuer) held at Aave GHO Stability Module"
+          : "Aave GHO Stability Module backing asset",
     });
   }
 
@@ -427,6 +462,8 @@ export function buildGhoSlices(
           name: facilitator.label,
           value: scale18ToUsd(share),
           risk: riskForFacilitatorBucket(bucket),
+          assetClass: "protocol-position",
+          issuerOrObligor: issuerForFacilitatorLabel(facilitator.label),
         });
       }
     } else {
@@ -436,6 +473,8 @@ export function buildGhoSlices(
         name: "Residual facilitators / reserve buffer",
         value: scale18ToUsd(residualRaw),
         risk: "high",
+        assetClass: "protocol-position",
+        issuerOrObligor: "Aave GHO facilitator pool",
       });
     }
   }

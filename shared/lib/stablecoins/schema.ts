@@ -170,6 +170,7 @@ const StablecoinMetaAssetSchemaShape = {
   infrastructures: StablecoinMetaEnumSchemas.infrastructures.optional(),
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
+  wrapperOperator: StablecoinMetaEnumSchemas.wrapperOperator.optional(),
   archetypeOverride: z
     .boolean()
     .describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.")
@@ -677,6 +678,21 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
       message: "variantOf and variantKind must both be set or both be absent",
       path: ["variantOf"],
     });
+  })
+  .superRefine((meta, ctx) => {
+    if (meta.variantKind === "risk-absorption" && meta.wrapperOperator == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "risk-absorption variants require wrapperOperator",
+        path: ["wrapperOperator"],
+      });
+    } else if (meta.variantKind !== "risk-absorption" && meta.wrapperOperator != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "wrapperOperator is only valid for risk-absorption variants",
+        path: ["wrapperOperator"],
+      });
+    }
   })
   .superRefine((meta, ctx) => {
     if (meta.variantOf != null && meta.pegReferenceId != null && meta.variantOf !== meta.pegReferenceId) {

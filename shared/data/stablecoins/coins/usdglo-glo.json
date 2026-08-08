@@ -186,7 +186,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDGLO is a GloDollarV3 ERC1967 UUPS proxy deployed at the same address across ETH/Base/Optimism/Celo/Polygon/Arbitrum; Brale issues it 1:1 through their centralized backend. Full RoleGranted/RoleRevoked history shows all roles (MINTER, DEFAULT_ADMIN, PAUSER, UPGRADER) consolidated into a single Brale-operated EOA on every chain.",
+    "summary": "USDGLO is issuer-native on six EVM chains and Stellar. The six GloDollarV3 UUPS proxies consolidate MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE in one Brale-operated EOA with no on-chain cap; the Stellar issuer account independently retains revocable and clawback-enabled authorization. Brale operates the 1:1 issuance backend and publishes monthly reserve reports.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -202,7 +202,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712335,
       "sources": [
         {
           "label": "USDGLO token (Ethereum Blockscout)",
@@ -220,18 +221,25 @@
     },
     "controls": [
       {
+        "chain": "multichain",
         "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
         "label": "Brale operator EOA (sole MINTER_ROLE + DEFAULT_ADMIN_ROLE + UPGRADER_ROLE holder on all 6 EVM chains)",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "On 2026-06-11 at ETH block 25295351 / Base 47202617 / Celo 69293825 / Polygon 88326399 / Optimism 152797996 / Arbitrum 472429769: hasRole(MINTER_ROLE, 0xb180f9…) = true and hasRole(DEFAULT_ADMIN_ROLE, 0xb180f9…) = true on all six chains; eth_getCode(0xb180f9…) returned no bytecode on all six chains (EOA, consistent with Brale enterprise key custody). Full RoleGranted/RoleRevoked Blockscout scans from deployment show all other historical holders (incl. original deployers) revoked; on Polygon the original deployer 0x03bcc9… reads hasRole(DEFAULT_ADMIN)=false. 0xb180f9… also holds PAUSER_ROLE and UPGRADER_ROLE (UUPS upgrade authority).",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712335,
+        "evidence": "At Ethereum block 25712335, Base 49713974, Optimism 155309260, Celo 74316538, Polygon 91674848, and Arbitrum 492492610, this codeless address still holds MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE on each deterministic-address deployment. The token mint has no numeric supply ceiling, and DEFAULT_ADMIN/UPGRADER authority can change authorization or logic, so this direct minter can raise the effective economic cap without a timelock or multisig.",
         "sources": [
           {
-            "label": "USDGLO RoleGranted history (Ethereum Blockscout)",
-            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x4f604735c1cf31399c6e711d5962b2b3e0225ad3&fromBlock=15921266&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+            "label": "USDGLO verified proxy/implementation (Ethereum Blockscout)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Ethereum observation block 25712335",
+            "url": "https://eth.blockscout.com/block/25712335"
           }
         ]
       },
@@ -240,8 +248,9 @@
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Brale operates the centralized 1:1 mint/redeem for USDGLO for eligible Brale customers against segregated cash and US government-backed debt; no permissionless or user-collateralized mint route exists. The single consolidated on-chain operator EOA corroborates the issuer-operated model.",
+        "canRaiseCap": true,
+        "observedAt": "2026-08-08",
+        "evidence": "Brale operates the centralized 1:1 mint/redeem backend for eligible customers against segregated cash and U.S. government-backed debt. The backend controls the uncapped EVM operator key and Stellar issuer authorization, so it can originate additional issuance rather than merely consume a fixed allowance.",
         "sources": [
           {
             "label": "Brale USDGLO proof of reserve",
@@ -249,12 +258,31 @@
           }
         ],
         "modulesOrGuardsStatus": "not-applicable"
+      },
+      {
+        "chain": "stellar",
+        "address": "GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
+        "label": "USDGLO Stellar issuer account",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 63861135,
+        "sources": [
+          {
+            "label": "Stellar Horizon USDGLO issuer account",
+            "url": "https://horizon.stellar.org/accounts/GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
+          }
+        ],
+        "evidence": "At Horizon ledger 63861135, the USDGLO issuer has one signer of weight 1, thresholds all zero, and account flags auth_revocable=true and auth_clawback_enabled=true. Stellar credit-asset issuance has no numeric protocol cap; the issuer signer can authorize balances and claw them back directly."
       }
     ],
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "none",
     "review": {
-      "evidence": "Full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Rechecked on 2026-07-14 at ETH block 25530512 / Base 48619144 / Celo 72126877 / Polygon 90215095 / OP 154214430 / ARB 483746760: hasRole(UPGRADER_ROLE, 0xb180f9…) is true and eth_getCode returns empty on every chain. ERC-1967 implementation slots resolve to 0xf8dbe4f5… (ETH/Polygon), 0x693b51c1… (Base/OP/Arbitrum), and 0x865dda29… (Celo). Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials. Mint-tier review (2026-07-15): No independent attestor exists: Brale Inc. management self-verifies monthly, with the latest report covering 2026-05-31 and published 2026-06-04. FinCEN and state money-transmitter records match Brale Inc., but MSB/transmitter licensing is AML and payments conduct status rather than prudential stablecoin-issuer supervision. Re-verified at Ethereum block 25575157 on 2026-07-20: USDGLO 0x4f604735c1cf31399c6e711d5962b2b3e0225ad3 still returns hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) = true, its ERC-1967 implementation slot still resolves to 0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f, and eth_getCode on the role holder is still empty, confirming a codeless externally owned account. Economic-control adjudication: because that single unprotected EOA simultaneously holds MINTER_ROLE, DEFAULT_ADMIN_ROLE, and UPGRADER_ROLE on every EVM deployment, with no on-chain cap, no multisig, no timelock, and no independent bound, the mint cap is economically unbounded. modulesOrGuardsStatus is not-applicable on the off-chain Brale issuance backend because it exposes no Gnosis Safe module or guard surface.",
+      "evidence": "Fresh 2026-08-08 reads confirm the same codeless Brale operator holds MINTER_ROLE, DEFAULT_ADMIN_ROLE, PAUSER_ROLE, and UPGRADER_ROLE on all six EVM deployments at Ethereum block 25712335 / Base 49713974 / Optimism 155309260 / Celo 74316538 / Polygon 91674848 / Arbitrum 492492610. ERC-1967 implementation slots remain 0xf8dbe4f52b7d4fe90cd360aa4f49b7a66783c56f (Ethereum/Polygon), 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8 (Base/Optimism/Arbitrum), and 0x865dda29597ce5f9404c5a56f643492720f2433f (Celo). Horizon ledger 63861135 confirms the Stellar issuer's single signer plus revocable and clawback flags. No on-chain supply cap, timelock, or multisig bounds either issuance lane. Brale publishes monthly reserve reports, including the June 2026 report, so reconciliation is periodic; money-transmitter/MSB status is not prudential stablecoin supervision.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -269,16 +297,16 @@
           "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
         },
         {
-          "label": "Brale USDGLO May 2026 management report",
-          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+          "label": "Brale USDGLO June 2026 reserve report",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-06-2026.pdf"
         },
         {
-          "label": "FinCEN MSB registry search",
-          "url": "https://www.fincen.gov/resources/msb-state-selector"
+          "label": "Stellar Horizon USDGLO issuer account",
+          "url": "https://horizon.stellar.org/accounts/GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
         }
       ],
-      "reviewer": "Codex SOL-V mint-tier research; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "reviewer": "OpenAI Codex C09 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     },
     "economicCapSemantics": "unbounded"

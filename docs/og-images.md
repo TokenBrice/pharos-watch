@@ -95,6 +95,7 @@ Generated for `/learn/mechanisms/[archetype]` pages. The pipeline renders the me
 | `og-learn-synthetic-delta-neutral.png` | `synthetic-delta-neutral` |
 | `og-learn-algorithmic.png` | `algorithmic` |
 | `og-learn-rwa-credit-fund.png` | `rwa-credit-fund` |
+| `og-learn-commodity-claim.png` | `commodity-claim` |
 
 ### How to renew
 

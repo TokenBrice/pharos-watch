@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CG_CHAIN_MAP,
   CHAIN_META,
+  GT_CHAIN_MAP,
   getActiveChainIds,
   getChainResilienceTier,
   resolveChainId,
@@ -76,7 +77,8 @@ describe("resolveChainId", () => {
       evmChainId: 1672,
       type: "evm",
     });
-    expect(CG_CHAIN_MAP.pharos).toBeUndefined();
+    expect(CG_CHAIN_MAP.pharos).toBe("pharos");
+    expect(GT_CHAIN_MAP.pharos).toBe("pharos");
     expect(resolveChainId("pharos")).toBe("pharos");
     expect(resolveChainId("Pharos")).toBe("pharos");
   });
