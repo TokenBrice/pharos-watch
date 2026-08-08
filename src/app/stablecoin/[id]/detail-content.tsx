@@ -19,6 +19,7 @@ import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-varian
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
+import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
@@ -206,6 +207,7 @@ function DetailSummaryRail({
           />
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
+        <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
       </div>
     </aside>
   );
