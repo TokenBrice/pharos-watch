@@ -421,10 +421,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Sourcify verified Ethereum USDT source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xdac17f958d2ee523a2206206994597c13d831ec7?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "Tether Token Terms, updated 2026-02-26",
+        "url": "https://tether.to/en/legal/"
+      }
+    ],
+    "evidence": "The canonical Ethereum implementation exposes owner-only addBlackList, removeBlackList, destroyBlackFunds, pause, and unpause functions. Tether's current Token Terms separately reserve the issuer's power to freeze Tether Tokens. This is a verified issuer and token freeze mechanism, not a classification inference.",
+    "reviewer": "Codex C01 control/access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
@@ -434,20 +443,25 @@
     "upgradeability": {
       "model": "custom",
       "adminAddresses": [
-        "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828"
+        "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828"
       ],
       "canChangeMintLogic": true,
+      "delaySec": 0,
       "controlRef": "Ethereum USDT token owner multisig",
-      "observedAt": "2026-07-13",
-      "observedBlock": 25591279,
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711756,
       "sources": [
         {
-          "label": "TetherToken verified source with owner-only deprecate(address) logic migration",
-          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+          "label": "Sourcify verified USDT deprecate logic",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xdac17f958d2ee523a2206206994597c13d831ec7?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "deprecated() == false and owner() == 0xC6CD...a828 at block 25591279",
-          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#readContract"
+          "label": "Sourcify verified owner multisig",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
         }
       ]
     },
@@ -472,26 +486,31 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828",
+        "address": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
         "label": "Ethereum USDT token owner multisig",
         "role": "direct-minter",
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 3,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
         "sources": [
           {
-            "label": "Tether transparency",
-            "url": "https://tether.to/en/transparency/"
+            "label": "Sourcify verified Ethereum USDT source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xdac17f958d2ee523a2206206994597c13d831ec7?fields=compilation,sources,proxyResolution"
           },
           {
-            "label": "Ethereum USDT contract",
-            "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+            "label": "Sourcify verified legacy MultiSigWallet source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "At Ethereum block 25294588, USDT getOwner() returned this address; required() returned 3 and getOwners() returned six legacy multisig owner slots."
+        "evidence": "At Ethereum block 25711756, USDT getOwner() returned this address; deprecated() and paused() were false. The owner contract returned required() = 3 and six owners. Verified USDT source gives that owner unrestricted issue(uint256) and deprecate(address) authority; the verified owner is a legacy MultiSigWallet, so Safe modules and guards do not apply."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -504,21 +523,26 @@
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
         },
         {
-          "label": "Tether El Salvador DASP authorization",
-          "url": "https://tether.io/news/tether-licensed-in-el-salvador-strengthening-focus-on-emerging-markets-and-innovation/"
+          "label": "Tether FAQ",
+          "url": "https://tether.to/en/faqs/"
         },
         {
-          "label": "Tether transparency",
-          "url": "https://tether.to/en/transparency/"
+          "label": "Sourcify verified Ethereum USDT source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xdac17f958d2ee523a2206206994597c13d831ec7?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Ethereum USDT contract",
-          "url": "https://etherscan.io/address/0xdAC17F958D2ee523a2206206994597C13D831ec7#code"
+          "label": "Sourcify verified owner multisig",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
         }
       ],
-      "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract. Phase 0c second pass rechecked getOwner(), required(), and getOwners() at Ethereum block 25294588.",
-      "reviewer": "Codex Phase 0c verification / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Ethereum block 25711756 confirms the current 3-of-6 owner multisig and an unrestricted owner-only issue path. The existing 2019 accidental 5B issuance remains a resolved mint incident. Tether publishes daily circulation information and quarterly reserve reports, supporting periodic reconciliation but not prudential-supervision treatment.",
+      "reviewer": "Codex C01 control/access review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
     }
   },
   "collateralQuality": "rwa",

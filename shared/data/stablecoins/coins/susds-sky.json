@@ -94,9 +94,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sky sUSDS documentation",
@@ -116,7 +115,7 @@
       },
       {
         "label": "OP Mainnet sUSDS verified implementation source and ABI",
-        "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x6f0888dda6a5e35451d5be0fabb20171715788b3"
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x6f0888dda6a5e35451d5be0fabb20171715788b3"
       },
       {
         "label": "Arbitrum sUSDS verified implementation source and ABI",
@@ -129,6 +128,18 @@
       {
         "label": "Sky USDS token documentation",
         "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+      },
+      {
+        "label": "Solscan parent USDS mint",
+        "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
+      },
+      {
+        "label": "Solana JSON-RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Independent Solana PublicNode RPC",
+        "url": "https://solana-rpc.publicnode.com"
       },
       {
         "label": "Sky savings transparency dashboard",
@@ -159,9 +170,9 @@
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "evidence": "Fresh current-head replay on 2026-07-30 found the four tracked EVM routes unchanged: Ethereum 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd at block 25648886 (2026-07-30T23:14:59Z) resolved EIP-1967 implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base 0x5875eee11cf8398102fdad704c9e96607675467a at block 49331989 (23:15:25Z) resolved 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; OP Mainnet 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 at block 154927274 (23:15:25Z) resolved 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum 0xddb46999f8891663a8f2828d25298f70416d7610 at block 489446439 (23:15:31Z) resolved 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. The verified SUsds source exposes standard ERC-20 transfer/transferFrom and ERC-4626 deposit/withdraw paths plus UUPS _authorizeUpgrade auth; it contains no holder blacklist, pause, seizure, or transfer hook. Sky's current token documentation confirms those transfer and vault interfaces. The four routes therefore have no current direct holder-facing freeze path, but ward-gated UUPS upgrade authority and inherited USDS governance remain shared failure domains that could change transfer logic or the underlying exit path. Possible is retained rather than claiming false certainty.",
-    "reviewer": "Codex T37 access replay",
-    "reviewedAt": "2026-07-31"
+    "evidence": "sUSDS is structurally linked to usds-sky by both variantOf and mintAuthority.inheritedFrom. Current-head reads on 2026-08-08 resolved the four tracked proxies as follows: Ethereum block 25711847 to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base block 49711042 to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; Optimism block 155306328 to 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum block 492469331 to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. Each EIP-1967 admin slot was zero, and each current verified implementation exposed ordinary holder transfers and ward-gated UUPS upgrades but no current blacklist, pause, seizure, or holder-freeze function. The inherited parent remains freeze-positive: finalized Solana slots 438038182 and 438038183 returned active USDS freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. Therefore the freeze disposition is inherited from usds-sky, while local UUPS transfer restrictability remains captured by the deployment overlay.",
+    "reviewer": "OpenAI Codex C01 control wave",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

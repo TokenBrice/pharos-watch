@@ -364,37 +364,43 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
+    "upstreamSuppressionRationale": "Canonical Ethereum DAI and the material Polygon child token have no direct holder blacklist, freeze, seizure, or transfer-pause path. Reserve-leg and bridge custody censorship remain upstream backing or bridge failure domains; they do not give an issuer or administrator authority to freeze balances in these reviewed DAI token contracts.",
     "sources": [
       {
-        "label": "Sky DSS Dai source (canonical Ethereum token)",
-        "url": "https://github.com/sky-ecosystem/dss/blob/master/src/dai.sol"
+        "label": "Ethereum DAI verified source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6b175474e89094c44da98b954eedeac495271d0f"
       },
       {
-        "label": "Blockscout verified Ethereum DAI source",
-        "url": "https://eth.blockscout.com/address/0x6b175474e89094c44da98b954eedeac495271d0f?tab=contract"
+        "label": "Pinned Sky DSS Dai source",
+        "url": "https://github.com/sky-ecosystem/dss/blob/fa4f6630afb0624d04a003e920b0d71a00331d98/src/dai.sol"
       },
       {
-        "label": "Sourcify verified Polygon Dai proxy",
+        "label": "Sourcify Polygon DAI proxy",
         "url": "https://sourcify.dev/server/v2/contract/137/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063?fields=all"
       },
       {
-        "label": "Sourcify verified Polygon UChildDAI implementation",
-        "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=all"
+        "label": "Sourcify Polygon UChildDAI implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x490e379c9cff64944be82b849f8fd5972c7999a7?fields=abi,metadata,sources"
       },
       {
-        "label": "Polygon public RPC (proxyOwner and transfer-surface reads at block 91165918)",
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Polygon PublicNode RPC",
         "url": "https://polygon-bor-rpc.publicnode.com"
       },
       {
-        "label": "Sky DAI module documentation",
-        "url": "https://developers.skyeco.com/protocol/tokens/dai/"
+        "label": "Skybase International terms",
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
       }
     ],
-    "evidence": "Re-verified 2026-07-31 across the canonical Ethereum deployment and material Polygon child deployment. The verified Sky DSS Dai source and Blockscout contract expose ordinary ERC-20 transfer/transferFrom/approval/permit/push/pull/move plus privileged mint/burn wards, with no holder blacklist, freeze, seizure, or global transfer-pause path. At Polygon block 91165918, the DAI child proxy 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 returned proxyOwner() = 0x0000000000000000000000000000000000000001; the Sourcify-verified UChildDAI implementation 0x490e379c9cff64944be82b849f8fd5972c7999a7 exposes bridge deposit/withdraw and ordinary ERC-20 operations but no pause, blacklist, or holder seizure surface (paused()/isBlacklisted() revert). Direct holder balances are therefore permissionless on both material deployments. DAI nevertheless inherits censorship/custody exposure from reserve legs (including USDC/USDT PSM assets, RWA custodians, and bridge custody), while the Polygon ChildChainManagerProxy remains a bridge failure domain; those upstream controls do not create a direct DAI holder freeze function.",
-    "reviewer": "Codex T46 access re-verification",
-    "reviewedAt": "2026-07-31"
+    "evidence": "At Ethereum block 25711852 (2026-08-08T17:51:23Z), canonical DAI was live non-proxy bytecode and both EIP-1967 implementation and admin slots were zero. Its exact verified source exposes ordinary holder transfer/transferFrom/permit operations and ward-gated mint. burn(address,uint256) is not auth-gated: a caller may burn another holder's balance only with that holder's allowance, so wards have no arbitrary-holder burn or seizure path. The source contains no blacklist, freeze, or global transfer-pause mechanism. At Polygon block 91670976 (2026-08-08T17:51:31Z), the material child proxy returned proxyOwner() = 0x0000000000000000000000000000000000000001 and implementation() = 0x490e379c9cff64944be82b849f8fd5972c7999a7; paused() and isBlacklisted(address) reverted, and the exact implementation source contains no holder restriction mechanism. Skybase's terms state that its interface is distinct from the Sky Protocol and that Skybase does not control or operate the protocol, so they establish no issuer-level power to freeze DAI holders. Reserve-leg and bridge custody censorship remain upstream risks, not direct DAI holder-freeze powers.",
+    "reviewer": "OpenAI Codex C01 control wave",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -404,8 +410,8 @@
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-13",
-      "observedBlock": 25526176,
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711852,
       "sources": [
         {
           "label": "Sky DSS Dai source",
@@ -417,7 +423,7 @@
         },
         {
           "label": "DAI Ethereum verified contract",
-          "url": "https://etherscan.io/address/0x6B175474E89094C44Da98b954EedeAC495271d0F#code"
+          "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
         },
         {
           "label": "Ethereum PublicNode RPC",
@@ -428,13 +434,15 @@
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x9759A6Ac90977b93B58547b4A71c78317f391a28",
+        "address": "0x9759a6ac90977b93b58547b4a71c78317f391a28",
         "label": "DaiJoin token adapter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711852,
         "capDescription": "DaiJoin mints ERC-20 DAI only against existing Vat.dai balances and burns DAI on join; it is not an unrestricted off-protocol issuer minter.",
         "sources": [
           {
@@ -444,20 +452,30 @@
           {
             "label": "Maker core accounting docs",
             "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          },
+          {
+            "label": "Ethereum observation block 25711852",
+            "url": "https://etherscan.io/block/25711852"
+          },
+          {
+            "label": "Ethereum dRPC observation endpoint",
+            "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address. DAI.wards(DaiJoin) returned 1 at Ethereum block 25294731. eth_getCode confirms contract bytecode present. DaiJoin mints ERC-20 DAI only against Vat.dai balance (no direct unrestricted minting)."
+        "evidence": "Sky Chainlog lists MCD_JOIN_DAI at this address. At Ethereum block 25711852, DAI.wards(DaiJoin) returned 1 and eth_getCode confirmed contract bytecode. DaiJoin mints ERC-20 DAI only against existing Vat.dai balance, so it has no unrestricted off-protocol mint path and cannot raise its own accounting bound."
       },
       {
         "chain": "ethereum",
-        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "address": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
         "label": "Maker/Sky Pause Proxy governance executor",
         "role": "governor",
         "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711852,
         "capDescription": "Maker/Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, collateral parameters, and debt ceilings via MCD_VAT.",
         "sources": [
           {
@@ -467,11 +485,22 @@
           {
             "label": "Maker core accounting docs",
             "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
+          },
+          {
+            "label": "Ethereum observation block 25711852",
+            "url": "https://etherscan.io/block/25711852"
+          },
+          {
+            "label": "Ethereum dRPC observation endpoint",
+            "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed) at block 25294761. MCD_VAT (0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B).wards(PauseProxy) returned 1 at block 25294731 \u2014 confirming governance authority over Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected: governance path runs through Vat, not direct DAI token. eth_getCode confirms bytecode on all addresses."
+        "evidence": "At Ethereum block 25711852, MCD_PAUSE.delay() returned 172800, MCD_VAT.wards(PauseProxy) returned 1, and eth_getCode confirmed PauseProxy bytecode. Governance can use the two-day delayed executor to authorize system modules and change Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected because this authority reaches supply through Vat rather than direct token minting."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -484,19 +513,28 @@
         },
         {
           "label": "MCD_VAT Etherscan",
-          "url": "https://etherscan.io/address/0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B#readContract"
+          "url": "https://etherscan.io/address/0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b#readContract"
+        },
+        {
+          "label": "Ethereum observation block 25711852",
+          "url": "https://etherscan.io/block/25711852"
+        },
+        {
+          "label": "Ethereum dRPC observation endpoint",
+          "url": "https://eth.drpc.org"
         }
       ],
-      "evidence": "At Ethereum block 25294731: DAI.wards(DaiJoin=0x9759A6Ac90977b93B58547b4A71c78317f391a28)=1; Vat.wards(PauseProxy=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1; MCD_PAUSE.delay()=172800 (storage slot 4). DAI.wards(PauseProxy)=0 is correct: governance authority over DAI supply runs through MCD_VAT (debt ceilings), not direct DAI token minting. All addresses confirmed as contracts.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25711852, DAI.wards(0x9759a6ac90977b93b58547b4a71c78317f391a28)=1, MCD_VAT.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1, and MCD_PAUSE.delay()=172800; both controls had bytecode. DaiJoin can mint only against existing Vat credit, while governance can raise system ceilings or authorize modules only through the two-day Pause path. The economic bound is therefore raiseable rather than unrestricted, and the on-chain Vat accounting path makes reserve reconciliation and prudential issuer supervision not applicable.",
+      "reviewer": "OpenAI Codex C01 control wave",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
     }
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano). BSC, Avalanche, Fantom, Moonriver, Moonbeam, Harmony, and Aurora remain unresolved because their live mint authority resolves only to bytecode-less EOAs (Multichain MPC, Binance peg wallet, Avalanche bridge role, Rainbow admin). Per-route bridged-supply attribution pinned on-chain 2026-07-22: Ethereum-native DAI.totalSupply() at block 25584812 = 4,638,093,582.405928 DAI (denominator). The Polygon PoS child token 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 totalSupply() at Polygon block 90651088 = 556,606,180.655442 DAI = 12.00% of DAI supply, corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). The Polygon PoS common-mode exposure is measured above the 10% materiality threshold, so the critical-dependency severity on the polygon-pos-bridge domains (protocol:polygon-pos-bridge and contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa) is retained on a measured basis, not a fail-closed default. All other bridged routes are immaterial: Arbitrum 18,565,525 DAI (0.40%), Optimism 13,715,643 DAI (0.30%), Base 2,070,150 DAI (0.04%), Gnosis OmniBridge 63,561 DAI (0.001%), with every remaining canonical/opaque route below 0.75% (DefiLlama per-chain), so Polygon PoS is the only bridge domain that reaches the materiality floor.",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude T6 DAI attribution sprint (2026-07-22)",
+    "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano), and reviewed legacy representations. All authored routes now carry explicit controller identities. Legacy EOA authorities are modeled as EOAs rather than left structurally unknown, and the Harmony legacy 1DAI minter set and controlling 1-of-45 wallet were enumerated on 2026-08-08. These peripheral routes remain external or legacy failure domains, not unresolved identities. Per-route bridged-supply attribution pinned on-chain 2026-07-22: Ethereum-native DAI.totalSupply() at block 25584812 = 4,638,093,582.405928 DAI (denominator). The Polygon PoS child token 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 totalSupply() at Polygon block 90651088 = 556,606,180.655442 DAI = 12.00% of DAI supply, corroborated by the L1 Polygon ERC20 predicate 0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). The Polygon PoS common-mode exposure is measured above the 10% materiality threshold, so the critical-dependency severity on the polygon-pos-bridge domains (protocol:polygon-pos-bridge and contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa) is retained on a measured basis, not a fail-closed default. All other bridged routes are immaterial: Arbitrum 18,565,525 DAI (0.40%), Optimism 13,715,643 DAI (0.30%), Base 2,070,150 DAI (0.04%), Gnosis OmniBridge 63,561 DAI (0.001%), with every remaining canonical/legacy route below 0.75% (DefiLlama per-chain), so Polygon PoS is the only bridge domain that reaches the materiality floor.",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude T6 DAI attribution sprint (2026-07-22); OpenAI Codex C01 control wave (2026-08-08)",
     "confidence": "verified",
     "protocols": [
       {
@@ -712,24 +750,39 @@
         "destinationChain": "avalanche",
         "canonicalChain": "ethereum",
         "contractAddress": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
-        "protocol": "Avalanche Bridge authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "DAI.e minting is gated by the token's private bridge role. The latest MigrateBridgeRole event assigns that role to 0xeb1bb70123b2f43419d070d7fde5618971cc2f8f, which has no Avalanche bytecode, so the bridge-route model cannot honestly encode it as a contract controller. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
+        "protocol": "Avalanche Bridge (legacy DAI.e)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The verified BridgeToken source makes mint() callable only by its private bridge role. Complete MigrateBridgeRole logs contain one migration, at Avalanche block 17021554 in transaction 0xc86f5d356b8a3ecdcec35993ffe7b8f61ab6227aa0f551b7beae0b0bfdd9f165, assigning 0xeb1bb70123b2f43419d070d7fde5618971cc2f8f. At block 92339782 (2026-08-08T17:51:52Z), that controller had empty bytecode and a state-preserving eth_call from it to mint(controller, 0, controller, 0, 0x00...) succeeded. Avalanche's official bridge FAQ identifies the same address as the Avalanche Bridge address. The controller is therefore a resolved EOA authority, not an unknown contract identity.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xeb1bb70123b2f43419d070d7fde5618971cc2f8f",
+        "failureDomainKeys": [
+          "protocol:avalanche-bridge",
+          "eoa:evm:0xeb1bb70123b2f43419d070d7fde5618971cc2f8f"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 92339782,
         "sources": [
           {
-            "label": "SnowScan Avalanche Bridge DAI.e",
-            "url": "https://snowscan.xyz/address/0xd586e7f844cea2f87f50152665bcbc2c279d8d70"
+            "label": "Routescan verified Avalanche DAI.e BridgeToken source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd586e7f844cea2f87f50152665bcbc2c279d8d70"
           },
           {
-            "label": "Avalanche DAI.e bridge-role migration",
-            "url": "https://snowtrace.io/tx/0xc86f5d356b8a3ecdcec35993ffe7b8f61ab6227aa0f551b7beae0b0bfdd9f165"
+            "label": "Complete DAI.e MigrateBridgeRole log query",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0xd586e7f844cea2f87f50152665bcbc2c279d8d70&topic0=0x871b00a4e20f8436702d0174eb87d84d7cd1dd5c34d4bb1b4e75438b3398d512&page=1&offset=1000"
+          },
+          {
+            "label": "Avalanche Bridge FAQ",
+            "url": "https://support.avax.network/en/articles/6092559-avalanche-bridge-faq"
+          },
+          {
+            "label": "Official Avalanche C-Chain RPC",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
           }
         ]
       },
@@ -1527,20 +1580,57 @@
         "destinationChain": "harmony",
         "canonicalChain": "ethereum",
         "contractAddress": "0xef977d2f931c1978db5f6747666fa1eacb0d0339",
-        "protocol": "Harmony Horizon bridge authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "1DAI (Horizon bridge) mint() reverts with 'MinterRole: caller does not have the Minter role' (OpenZeppelin MinterRole). The minter set cannot be enumerated within public-RPC log limits (1024-block cap; ~92M block history) and the legacy Horizon manager candidate 0x2dCCDB49382740115e2D75B29A46dC46A5FB0a48 no longer has bytecode. Mint authority cannot be honestly established; the Horizon bridge was exploited in 2022 and 1DAI is depegged legacy. Verified 2026-07-20.",
+        "protocol": "Harmony Horizon bridge (legacy 1DAI, post-exploit)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Harmony explorer's complete event query returned exactly two MinterAdded events, both at block 5388283, for 0xbadb6897cf2e35aca73b6f37361a35eeb6f71637 and 0x2fbbcef71544c461edfc311f42e3583d5f9675d1, and no MinterRemoved events. At Harmony block 92590440 (2026-08-08T17:38:11Z), isMinter() remained true for both and ethTokenAddr() returned canonical Ethereum DAI 0x6b175474e89094c44da98b954eedeac495271d0f. Runtime selectors identify the first contract as the Horizon TokenManager and the second as ERC20HmyManager. ERC20HmyManager.wallet() returned verified MultiSigWallet 0x0c1310bbd93c6977fde20dc813cff8236ba1f0dd; its current required() was 1 and getOwners() returned 45 owners. A state-preserving call from that wallet through ERC20HmyManager.mintToken(1DAI, 0, wallet, unusedReceiptId) succeeded. Both formal minter identities and the callable bridge-control path are therefore resolved, although 1DAI remains a depegged legacy token following the 2022 Horizon exploit.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "controllerChain": "harmony",
+        "controllerAddress": "0x2fbbcef71544c461edfc311f42e3583d5f9675d1",
+        "failureDomainKeys": [
+          "protocol:harmony-horizon-legacy",
+          "contract:harmony:0x2fbbcef71544c461edfc311f42e3583d5f9675d1",
+          "contract:harmony:0x0c1310bbd93c6977fde20dc813cff8236ba1f0dd",
+          "contract:harmony:0xbadb6897cf2e35aca73b6f37361a35eeb6f71637"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 92590440,
         "sources": [
           {
-            "label": "Harmony explorer 1DAI token",
+            "label": "Harmony explorer 1DAI",
             "url": "https://explorer.harmony.one/address/0xef977d2f931c1978db5f6747666fa1eacb0d0339"
+          },
+          {
+            "label": "Complete 1DAI MinterAdded log query",
+            "url": "https://explorer.harmony.one/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0xef977d2f931c1978db5f6747666fa1eacb0d0339&topic0=0x6ae172837ea30b801fbfcdd4108aa1d5bf8ff775444fd70256b44e6bf3dfc3f6&page=1&offset=1000"
+          },
+          {
+            "label": "Complete 1DAI MinterRemoved log query",
+            "url": "https://explorer.harmony.one/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0xef977d2f931c1978db5f6747666fa1eacb0d0339&topic0=0xe94479a9f7e1952cc78f2d6baab678adc1b772d936c6583def489e524cb66692&page=1&offset=1000"
+          },
+          {
+            "label": "Official Horizon BridgedToken source",
+            "url": "https://github.com/harmony-one/ethhmy-bridge/blob/23837f6ef32118809a7e5d4b13c5e9a9912d8b2a/contracts/lib/BridgedToken.sol"
+          },
+          {
+            "label": "Official Horizon TokenManager source",
+            "url": "https://github.com/harmony-one/ethhmy-bridge/blob/23837f6ef32118809a7e5d4b13c5e9a9912d8b2a/contracts/lib/TokenManager.sol"
+          },
+          {
+            "label": "Official Horizon ERC20HmyManager source",
+            "url": "https://github.com/harmony-one/ethhmy-bridge/blob/23837f6ef32118809a7e5d4b13c5e9a9912d8b2a/contracts/erc20/ERC20HmyManager.sol"
+          },
+          {
+            "label": "Verified Horizon MultiSigWallet",
+            "url": "https://explorer.harmony.one/address/0x0c1310bbd93c6977fde20dc813cff8236ba1f0dd"
+          },
+          {
+            "label": "Harmony mainnet RPC",
+            "url": "https://api.harmony.one"
           }
         ]
       },

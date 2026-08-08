@@ -352,63 +352,77 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
+    "upstreamSuppressionRationale": "USDD's canonical Tron, Ethereum, and BSC token implementations are direct deployments with zero implementation/admin slots and no blacklist, freeze, seizure, or global pause function; transfer and burn require holder authority or allowance. While the issuer governance controls mint/deny wards, it cannot retroactively add holder-level freeze logic to the immutable deployed code.",
     "sources": [
       {
-        "label": "USDD core features",
+        "label": "USDD freeze-free core-features disclosure",
         "url": "https://docs.usdd.io/introduction/core-features"
       },
       {
-        "label": "USDD deployment addresses",
+        "label": "Official USDD deployment addresses",
         "url": "https://docs.usdd.io/developers/deployment-addresses"
       },
       {
-        "label": "Etherscan USDD contract",
-        "url": "https://etherscan.io/token/0x4f8e5de400de08b164e7421b3ee387f461becd1a"
+        "label": "Sourcify verified Ethereum USDD source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=compilation,sources,proxyResolution"
       },
       {
-        "label": "BscScan USDD verified contract",
-        "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+        "label": "Sourcify verified BSC USDD source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x45e51bc23d592eb2dba86da3985299f7895d66ba?fields=compilation,sources,proxyResolution"
       },
       {
-        "label": "Tronscan USDD verified contract",
+        "label": "Tronscan verified USDD source",
         "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
       }
     ],
-    "evidence": "USDD's official core-features documentation states that no centralized authority can freeze user funds. The reviewed Tron, Ethereum, and BNB Chain direct token implementations expose Maker-style authorization, mint, burn, and ERC-20 transfer operations but no holder blacklist, balance freeze, seizure, or global pause function. This is a direct-token finding and does not characterize transfer controls in the separate transfer-review lane.",
-    "reviewer": "GPT SOL-CORP-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "USDD's official documentation explicitly describes the token as freeze-free. The canonical Tron, Ethereum, and BSC direct implementations expose wards for mint, rely, and deny, but transfer and burn require holder authority or allowance and contain no blacklist, holder freeze, seizure, or pause mechanism. Ethereum and BSC implementation and admin slots were zero, so an upgrade cannot add a hidden token-level freeze path.",
+    "reviewer": "Codex C01 control/access review",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "USDD uses direct Maker-style token and Join contracts on Tron, Ethereum, and BSC. Each Join can mint only against existing Vat credit/debt accounting; chain-local GovActionsProxy owner paths can immediately change system authorization and limits with no timelock.",
+    "summary": "USDD uses direct Maker-style token and Join contracts on Tron, Ethereum, and BSC. Each Join can mint only against existing Vat credit/debt accounting, but self-controlled chain-local GovActionsProxy owner paths can immediately authorize mint rails or remove limits with no independent timelock.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-13",
+      "observedAt": "2026-08-08",
       "sources": [
         {
-          "label": "USDD deployment addresses",
+          "label": "Official USDD deployment addresses",
           "url": "https://docs.usdd.io/developers/deployment-addresses"
         },
         {
-          "label": "Ethereum USDD verified contract",
-          "url": "https://eth.blockscout.com/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a?tab=contract"
+          "label": "Sourcify verified direct Ethereum USDD source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Ethereum USDD Join verified contract",
-          "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+          "label": "Sourcify verified direct Ethereum USDD Join source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x983dfef6d71862d809e239845da5a959492f63b8?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "BSC USDD verified contract",
-          "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+          "label": "Sourcify verified direct BSC USDD source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x45e51bc23d592eb2dba86da3985299f7895d66ba?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Tron USDD verified contract",
+          "label": "Tronscan verified direct Tron USDD source",
           "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
+        },
+        {
+          "label": "BSC observation block 114778869",
+          "url": "https://bscscan.com/block/114778869"
+        },
+        {
+          "label": "Tron observation block 85180039",
+          "url": "https://tronscan.org/#/block/85180039"
         }
       ]
     },
@@ -419,16 +433,27 @@
         "label": "USDD Tron Join (active ward / direct minter)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
+        "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 85180039,
         "sources": [
           {
-            "label": "USDD deployment addresses",
+            "label": "Official USDD deployment addresses",
             "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Tronscan verified USDD Join source",
+            "url": "https://tronscan.org/#/contract/TUajR7CbXU6hX8n3XtNkitFAD25JvP99K6/code"
+          },
+          {
+            "label": "Tron observation block 85180039",
+            "url": "https://tronscan.org/#/block/85180039"
           }
         ],
-        "evidence": "At Tron block 83506136, wards(TronJoin) on the direct USDD token returned 1 and the Tron Vat was live. The Join can mint only while consuming existing Vat credit/debt accounting; it cannot raise the system debt ceiling or authorize itself."
+        "evidence": "At Tron block 85180039, token.wards(Join) returned 1 and Join.usdd() returned TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
       },
       {
         "chain": "tron",
@@ -436,11 +461,28 @@
         "label": "USDD Tron GovActionsProxy (governance executor)",
         "role": "governor",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "timelockDelaySec": 0,
+        "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Tron Pause (TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW) authority() = GovActionsProxy (TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d); Pause delay() = 0 (no timelock). GovActionsProxy.authority() = zero address (no higher authority set); GovActionsProxy govActions() = TDLgCe2SatVew6PxSwYmqsc3zfahqXwuqX and pause() = Pause contract. This contract's cast() function is the system's governance executor. The signer set that can call cast() was not confirmed — authority()=zero means access control falls back to contract-level access checks or is operated by the deployer."
+        "observedAt": "2026-08-08",
+        "observedBlock": 85180039,
+        "sources": [
+          {
+            "label": "Tronscan verified GovActionsProxy source",
+            "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d/code"
+          },
+          {
+            "label": "Official USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Tron observation block 85180039",
+            "url": "https://tronscan.org/#/block/85180039"
+          }
+        ],
+        "evidence": "Reads ending at Tron block 85180039 returned authority() = zero, owner() = TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX, pause() = TNq6E9XsQfrzqVwam67LApZQx1omsj8dyW, and Pause.delay() = 0. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
       },
       {
         "chain": "tron",
@@ -452,13 +494,27 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 85180039,
         "sources": [
           {
-            "label": "Tronscan GovActionsProxy",
-            "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d"
+            "label": "Tronscan GovActionsProxy owner permissions",
+            "url": "https://tronscan.org/#/address/TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX/permissions"
+          },
+          {
+            "label": "Tronscan verified GovActionsProxy source",
+            "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d/code"
+          },
+          {
+            "label": "TronGrid mainnet API",
+            "url": "https://api.trongrid.io"
+          },
+          {
+            "label": "Tron observation block 85180039",
+            "url": "https://tronscan.org/#/block/85180039"
           }
         ],
-        "evidence": "GovActionsProxy.owner() returned 41b28033...eb069 (TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX) via triggerconstantcontract; trongrid getaccount shows a normal account with 1-of-1 owner and active permissions (single keypair, no Tron-native multisig). All recent GovActionsProxy transactions originate from this account; with authority()=zero, ds-auth restricts cast() to this owner."
+        "evidence": "GovActionsProxy.owner() returned TSF2rqLdrrZG7PZkDxtvu6B2PTpofidMAX and authority() returned zero. TronGrid account data shows both owner and active permissions at threshold 1 with one key, proving a 1-of-1 native account rather than a multisig. DSAuth therefore gives this owner the authenticated governance paths."
       },
       {
         "chain": "ethereum",
@@ -466,21 +522,27 @@
         "label": "USDD Ethereum Join",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
+        "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
         "sources": [
           {
-            "label": "USDD deployment addresses",
+            "label": "Official USDD deployment addresses",
             "url": "https://docs.usdd.io/developers/deployment-addresses"
           },
           {
-            "label": "Ethereum USDD Join",
-            "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+            "label": "Sourcify verified Ethereum USDD Join source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x983dfef6d71862d809e239845da5a959492f63b8?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "The direct verified Join is authorized to mint the chain-local USDD token only while consuming existing Vat credit/debt accounting. It cannot independently raise the system debt ceiling or authorize itself."
+        "evidence": "At Ethereum block 25711756, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
       },
       {
         "chain": "ethereum",
@@ -488,18 +550,24 @@
         "label": "USDD Ethereum GovActionsProxy",
         "role": "governor",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "timelockDelaySec": 0,
+        "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
         "sources": [
           {
-            "label": "Ethereum USDD GovActionsProxy",
-            "url": "https://eth.blockscout.com/address/0x3dba111255d3888c723242320595588754cf493e?tab=contract"
+            "label": "Sourcify verified Ethereum GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3dba111255d3888c723242320595588754cf493e?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "This chain-local governance executor can change Vat/Join authorization and debt limits. Its owner path is immediate and the reviewed Pause delay is zero."
+        "evidence": "At Ethereum block 25711756, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
       },
       {
         "chain": "ethereum",
@@ -511,14 +579,23 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
         "sources": [
           {
-            "label": "Ethereum USDD GovActionsProxy",
-            "url": "https://eth.blockscout.com/address/0x3dba111255d3888c723242320595588754cf493e?tab=contract"
+            "label": "Sourcify verified Ethereum GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x3dba111255d3888c723242320595588754cf493e?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum owner account",
+            "url": "https://etherscan.io/address/0x25198d0d111eeac0fb1bd1de826294d9fce84378"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
           }
         ],
-        "evidence": "GovActionsProxy.owner() returned this address and eth_getCode returned empty. The EOA can immediately execute governance changes that authorize mint rails or raise system limits."
+        "evidence": "At Ethereum block 25711756, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
       },
       {
         "chain": "bsc",
@@ -526,21 +603,27 @@
         "label": "USDD BSC Join",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
+        "capDescription": "UsddJoin.exit first executes vat.move(msg.sender,address(this),ONE*wad) and only then calls usdd.mint. The Join therefore requires pre-existing Vat credit and cannot authorize itself or raise a Vat debt ceiling.",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 114778869,
         "sources": [
           {
-            "label": "USDD deployment addresses",
+            "label": "Official USDD deployment addresses",
             "url": "https://docs.usdd.io/developers/deployment-addresses"
           },
           {
-            "label": "BSC USDD Join",
-            "url": "https://bscscan.com/address/0x6b00039d76795fd59baf17e0c9c6d87011e7edac#code"
+            "label": "Sourcify verified BSC USDD Join source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x6b00039d76795fd59baf17e0c9c6d87011e7edac?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "The direct verified Join is authorized to mint the chain-local USDD token only while consuming existing Vat credit/debt accounting. It cannot independently raise the system debt ceiling or authorize itself."
+        "evidence": "At BSC block 114778869, token.wards(Join) returned 1, Join.usdd() returned the tracked token, and Join.live() returned 1. Verified exit() consumes existing Vat credit before minting, and the Join cannot raise system limits or authorize itself."
       },
       {
         "chain": "bsc",
@@ -548,18 +631,24 @@
         "label": "USDD BSC GovActionsProxy",
         "role": "governor",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
+        "directMintAbility": "can-authorize",
         "timelockDelaySec": 0,
+        "capDescription": "The DSAuth-controlled executor can call rely to authorize new token or Vat wards, file to raise system ceilings, and customExec for arbitrary system calls. Its Pause delay is zero.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 114778869,
         "sources": [
           {
-            "label": "BSC USDD GovActionsProxy",
-            "url": "https://bscscan.com/address/0x2662e860ea672e4d31df3438114c48511229e60f#code"
+            "label": "Sourcify verified BSC GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2662e860ea672e4d31df3438114c48511229e60f?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "This chain-local governance executor can change Vat/Join authorization and debt limits. Its owner path is immediate and the reviewed Pause delay is zero."
+        "evidence": "At BSC block 114778869, authority() returned zero, owner() returned 0x25198d0d111eeac0fb1bd1de826294d9fce84378, and the linked Pause delay was zero. Verified source exposes authenticated rely, file, and customExec paths, so this executor can authorize mint rails rather than only changing parameters."
       },
       {
         "chain": "bsc",
@@ -571,16 +660,26 @@
         "timelockDelaySec": 0,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-08",
+        "observedBlock": 114778869,
         "sources": [
           {
-            "label": "BSC USDD GovActionsProxy",
-            "url": "https://bscscan.com/address/0x2662e860ea672e4d31df3438114c48511229e60f#code"
+            "label": "Sourcify verified BSC GovActionsProxy source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x2662e860ea672e4d31df3438114c48511229e60f?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "BSC owner account",
+            "url": "https://bscscan.com/address/0x25198d0d111eeac0fb1bd1de826294d9fce84378"
+          },
+          {
+            "label": "BSC observation block 114778869",
+            "url": "https://bscscan.com/block/114778869"
           }
         ],
-        "evidence": "GovActionsProxy.owner() returned this address and eth_getCode returned empty. The EOA can immediately execute governance changes that authorize mint rails or raise system limits."
+        "evidence": "At BSC block 114778869, GovActionsProxy.owner() returned this address, authority() returned zero, and eth_getCode returned empty. DSAuth therefore gives this EOA immediate governance paths that can authorize mint rails or remove system limits."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "supervision": "none",
     "reconciliation": "not-applicable",
     "review": {
@@ -590,29 +689,54 @@
           "url": "https://docs.usdd.io/system-architecture/system-architecture"
         },
         {
-          "label": "USDD deployment addresses",
+          "label": "Official USDD deployment addresses",
           "url": "https://docs.usdd.io/developers/deployment-addresses"
         },
         {
-          "label": "Etherscan USDD token source",
-          "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+          "label": "Sourcify verified Ethereum USDD source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "Ethereum USDD Join",
-          "url": "https://eth.blockscout.com/address/0x983dfef6d71862d809e239845da5a959492f63b8?tab=contract"
+          "label": "Sourcify verified Ethereum USDD Join source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x983dfef6d71862d809e239845da5a959492f63b8?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "BSC USDD token",
-          "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+          "label": "Sourcify verified Ethereum GovActionsProxy source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x3dba111255d3888c723242320595588754cf493e?fields=compilation,sources,proxyResolution"
         },
         {
-          "label": "BSC USDD Join",
-          "url": "https://bscscan.com/address/0x6b00039d76795fd59baf17e0c9c6d87011e7edac#code"
+          "label": "Sourcify verified BSC USDD source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x45e51bc23d592eb2dba86da3985299f7895d66ba?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Sourcify verified BSC USDD Join source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x6b00039d76795fd59baf17e0c9c6d87011e7edac?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Sourcify verified BSC GovActionsProxy source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x2662e860ea672e4d31df3438114c48511229e60f?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Tronscan verified GovActionsProxy source",
+          "url": "https://tronscan.org/#/contract/TXzhj9Xh8xfzerjinRyM5TfoBL7Cw5hk5d/code"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
+        },
+        {
+          "label": "BSC observation block 114778869",
+          "url": "https://bscscan.com/block/114778869"
+        },
+        {
+          "label": "Tron observation block 85180039",
+          "url": "https://tronscan.org/#/block/85180039"
         }
       ],
-      "evidence": "Deployment-wide review covered the current Tron, Ethereum, and BSC direct token/Join rails. Each Join mints only against Vat credit/debt accounting and cannot independently raise its limit; each chain-local GovActionsProxy owner can immediately change authorization and system limits with no timelock. Ethereum/BSC use the same owner EOA, while Tron uses a 1/1 native account. The tracked token and Join contracts are direct non-proxy deployments with no implementation-replacement surface; legacy BTTC predicate upgrades remain a separate peripheral bridge risk. Reconciliation review (2026-08-08): USDD 2.0 is a Maker-style on-chain system on Tron, Ethereum and BSC - USDD is minted against on-chain crypto collateral and against USDT deposited into the on-chain PSM reserve pool, with all collateral reserves recorded on chain - so the mint path creates no off-chain reserve claim and reconciliation is not-applicable rather than unresolved. No regulator or registration is claimed for the issuing entity and no third-party reserve attestation exists; the only audits are smart-contract security reviews.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-08-08"
+      "evidence": "Deployment-wide review covered the current Tron, Ethereum, and BSC direct token, Join, GovActionsProxy, and owner paths. Each Join consumes existing Vat credit before minting, but each chain's self-controlled GovActionsProxy owner can immediately authorize new wards, raise or remove system limits, and execute arbitrary system calls with no independent timelock; the economic cap is therefore unbounded rather than independently raiseable. Ethereum and BSC use the same owner EOA, while Tron uses a verified 1-of-1 native account. The tracked token and Join contracts are direct non-proxy deployments. USDD creates an on-chain collateral and Vat claim rather than an off-chain reserve claim, so reconciliation is not-applicable. No public mint-control incident or prudential issuer regime was identified.",
+      "reviewer": "Codex C01 control/access review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",

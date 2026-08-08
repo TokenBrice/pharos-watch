@@ -240,6 +240,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
         "capDescription": "Wrapper/share accounting over deposited USDe; does not mint base USDe.",
         "sources": [
           {
@@ -249,9 +251,17 @@
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "sUSDe Ethereum verified contract",
+            "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+          },
+          {
+            "label": "Ethereum dRPC observation endpoint",
+            "url": "https://eth.drpc.org"
           }
         ],
-        "evidence": "At Ethereum block 25295194, eth_getStorageAt EIP-1967 admin slot (0xb531...) = 0x0 and impl slot (0x3608...) = 0x0: this is not a proxy contract. owner() returned 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 (Ethena 5/10 admin Safe, modules=[], guard=0x0, version 1.3.0). Wrapper mints only on USDe deposit; no privileged mint surface on the wrapper."
+        "evidence": "At Ethereum block 25711751, asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3 and both EIP-1967 implementation and admin slots were zero, confirming a direct non-proxy deployment. owner() returned Ethena's 86,400-second timelock 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Wrapper shares mint only against deposited USDe; no privileged path can create unbacked wrapper shares."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -261,8 +271,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Ethereum sUSDe staking wrapper",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295194,
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711751,
       "sources": [
         {
           "label": "Ethena staking docs",
@@ -271,6 +281,14 @@
         {
           "label": "Ethena key addresses",
           "url": "https://docs.ethena.fi/solution-design/key-addresses"
+        },
+        {
+          "label": "sUSDe Ethereum verified contract",
+          "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+        },
+        {
+          "label": "Ethereum dRPC observation endpoint",
+          "url": "https://eth.drpc.org"
         }
       ]
     },
@@ -283,11 +301,19 @@
         {
           "label": "Ethena staking docs",
           "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "sUSDe Ethereum verified contract",
+          "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+        },
+        {
+          "label": "Ethereum dRPC observation endpoint",
+          "url": "https://eth.drpc.org"
         }
       ],
-      "evidence": "sUSDe Ethereum wrapper is a non-proxy contract (EIP-1967 admin=0, impl=0). owner() confirmed Ethena 5/10 admin Safe (0x3B0AAf6e...) with no modules or guard at block 25295194. Wrapper has no privileged mint; all local sUSDe shares come from deposited USDe. The local share-mint predicate is therefore deposit-bounded, while durable USDe issuance remains in the inherited parent profile. No local reserve reconciliation or named prudential supervisor applies to the wrapper.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25711751, the sUSDe contract's asset() was USDe, both EIP-1967 implementation and admin slots were zero, and owner() returned Ethena's 86,400-second timelock. The direct non-proxy wrapper has no privileged unbacked-share mint: local shares are created only against deposited USDe, so local issuance is bounded while durable USDe authority remains inherited from usde-ethena. No local reserve reconciliation or named prudential supervisor applies to the wrapper.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },
