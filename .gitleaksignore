@@ -276,3 +276,15 @@ b4189da66d36c27ac7693ba837fe5dd6b333bea5:shared/data/safety-score-v9/transfer-re
 # not credentials.
 d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27.json:generic-api-key:13
 d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:101
+
+# Wave-1 release stack (PR #801) reviewed public identifiers, not credentials:
+# Stellar asset codes with public issuer accounts (EURC/USDC fixtures), a
+# public Stellar liquidity-pool contract id, a public chain token-id fragment
+# in a transfer-review citation, and a public report-document UUID in two
+# mechanism-review citations.
+56526680f1fed0f2cf877d4f7942e1db3a8d60e8:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:782
+56526680f1fed0f2cf877d4f7942e1db3a8d60e8:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:783
+d4efe6c590e4429387ea91a9b4b73bad760042e4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:3988
+56526680f1fed0f2cf877d4f7942e1db3a8d60e8:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:180
+94639a195379b809a7262563c9d8f20c474caf16:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:4370
+94639a195379b809a7262563c9d8f20c474caf16:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:5384
