@@ -56,7 +56,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the on-chain Peg Stability Module (10 bps fee, 10,000,000 USDC cap); the PSM holds the kUSD MINTER_ROLE. A 2-of-3 Gnosis Safe is DEFAULT_ADMIN and can grant or revoke that minter role and change PSM parameters, so durable supply authority is concentrated in that multisig.",
+    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the on-chain Peg Stability Module (10 bps fee, 10,000,000 USDC cap); the PSM holds the kUSD MINTER_ROLE. On 2026-08-06 DEFAULT_ADMIN_ROLE over kUSD and all three PSM contracts moved from the 2-of-3 Gnosis Safe to an OpenZeppelin TimelockController with a 48 hour minimum delay, so parameter and role changes on those four contracts now wait 48 hours in public. The Safe holds PROPOSER, EXECUTOR and CANCELLER on that timelock and no longer holds DEFAULT_ADMIN_ROLE on them directly. Two carve-outs matter: a PauseGuardian contract can pause the PSMs instantly, outside the delay, and the staking wrapper skUSD, which holds roughly 88 percent of kUSD supply, is NOT behind the timelock and remains under instant Safe admin.",
     "controls": [
       {
         "chain": "base",
@@ -85,25 +85,86 @@
       {
         "chain": "base",
         "address": "0x52d3e450ba6c299b1b07298f1e87dd74732d4877",
-        "label": "Kerne admin Gnosis Safe (2-of-3)",
+        "label": "Kerne admin Gnosis Safe (2-of-3, timelock proposer/executor/canceller)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 2,
         "signerCount": 3,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x14f04ce02f35b29af564a98544dd7e2393993946",
+            "0x0cec7021f4c20f3d5ebb55c1ac591c15efbb7895",
+            "0xf4a43c88b7370bd6e370c7af5fe663c6d223b3fb"
+          ],
           "threshold": 2,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 49656821,
+          "observedAt": "2026-08-08",
+          "source": "onchain"
         },
         "sources": [
           {
             "label": "Kerne admin Safe on BaseScan",
             "url": "https://basescan.org/address/0x52d3e450ba6c299b1b07298f1e87dd74732d4877"
+          },
+          {
+            "label": "Custody handover transaction (2026-08-06)",
+            "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
           }
         ],
-        "evidence": "Per Kerne deployment records the DEFAULT_ADMIN_ROLE across governance-relevant contracts is a 2-of-3 Gnosis Safe (0x52d3E450), which can grant or revoke the PSM minter role and adjust PSM parameters. Owner set, modules, and guard were not independently re-read on-chain in this submission."
+        "evidence": "Read on-chain at Base block 49656821: the Safe is version 1.4.1 with 3 owners, threshold 2, zero enabled modules and no guard set (the guard storage slot is zero). Its DEFAULT_ADMIN_ROLE over kUSD and the three PSMs was given up in the 2026-08-06 handover batch (0xed24d495..., block 49623130): hasRole(DEFAULT_ADMIN_ROLE, Safe) returned false on kUSD 0x5C2EfdF0 and on 0xaBDE1138, 0x07eBb486 and 0xFf3025ec, while the same reads against the TimelockController returned true. The Safe retains PROPOSER, EXECUTOR and CANCELLER on the timelock, so it still initiates every privileged change, but on those four contracts it can no longer execute one inside 48 hours. It does still hold DEFAULT_ADMIN_ROLE directly and instantly on skUSD 0x96F5102C.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 49656821
+      },
+      {
+        "chain": "base",
+        "address": "0x36a14976980b7dd33136f6613545eb0a2c0a0d72",
+        "label": "Kerne TimelockController (48h delay, DEFAULT_ADMIN on kUSD and all three PSMs)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Raising the PSM stable cap, granting or revoking kUSD MINTER_ROLE, and every other DEFAULT_ADMIN action on kUSD and the three PSMs must be scheduled through this timelock and cannot execute for at least 48 hours. This answers the prior open question on whether the live KUSDPSM cap can be raised only after a timelock: as of 2026-08-06 it can not be raised any faster.",
+        "sources": [
+          {
+            "label": "TimelockController on BaseScan",
+            "url": "https://basescan.org/address/0x36A14976980B7Dd33136f6613545EB0A2C0a0D72"
+          },
+          {
+            "label": "Custody handover transaction (2026-08-06)",
+            "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
+          }
+        ],
+        "evidence": "Read on-chain at Base block 49656821: getMinDelay() returns 172800, a 48 hour minimum delay. hasRole(DEFAULT_ADMIN_ROLE, 0x36A14976) returned true on kUSD 0x5C2EfdF0 and on all three PSMs (0xaBDE1138, 0x07eBb486, 0xFf3025ec); the same read for the Safe returned false on all four. The timelock is self-administered, meaning its own DEFAULT_ADMIN_ROLE is held by the contract itself rather than by the Safe, so a canceller seat cannot be stripped in a single transaction. Source verified on BaseScan 2026-08-08 as an OpenZeppelin TimelockController (solc 0.8.24).",
+        "observedAt": "2026-08-08",
+        "observedBlock": 49656821
+      },
+      {
+        "chain": "base",
+        "address": "0xc47adaf51907bb1871d07e18ea21dc75ae93cc8e",
+        "label": "Kerne PauseGuardian (instant PSM pause, outside the 48h delay)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Cannot mint, cannot raise a cap and cannot change any parameter. It expresses exactly one call, pause(module), against the three PSMs, and only the Safe can invoke it. It exists so that halting never has to wait 48 hours.",
+        "sources": [
+          {
+            "label": "PauseGuardian on BaseScan",
+            "url": "https://basescan.org/address/0xC47adaf51907bB1871D07E18eA21dc75Ae93Cc8E"
+          }
+        ],
+        "evidence": "Read on-chain at Base block 49656821: hasRole(MANAGER_ROLE, 0xC47adaf5) returned true on all three PSMs (0xaBDE1138, 0x07eBb486, 0xFf3025ec). Source verified on BaseScan 2026-08-08. This is a deliberate carve-out from the timelock and should be read as one: the emergency stop is instant, everything else on those contracts is delayed.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 49656821
       }
     ],
     "review": {
@@ -121,8 +182,8 @@
       "reviewer": "Pharos on-chain review",
       "reviewedAt": "2026-07-23",
       "unresolvedQuestions": [
-        "Confirm the Safe owner set, modules, and guard on-chain at a fixed Base block.",
-        "Confirm whether the live KUSDPSM cap can be raised only after a timelock."
+        "skUSD 0x96F5102C is NOT behind the 48 hour timelock: hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true at Base block 49656821, and skUSD holds roughly 88 percent of kUSD supply. Decide whether that instant-admin surface should be scored separately from the timelocked kUSD and PSM surface.",
+        "Confirm whether the PROPOSER, EXECUTOR and CANCELLER seats the Safe holds on the timelock can themselves be changed without going through the timelock."
       ]
     }
   },
@@ -169,7 +230,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-04",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
+  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. Admin over kUSD and all three PSMs moved to a 48 hour TimelockController on 2026-08-06, proposed and executed by the 2-of-3 Gnosis Safe, which still holds instant admin over skUSD; hourly signed proof of reserves is published at kerne.fi/verify.",
   "featuredContent": [
     {
       "type": "article",
@@ -220,6 +281,13 @@
       "title": "Hexens publishes final external audit report",
       "description": "First external audit covering kUSD, skUSD, KUSDPSM, KerneVault, and esKERNE: 10 findings, 0 critical, 2 high; 8 fixed and 2 acknowledged, all 10 in KerneVault. The live KerneVault runs pre-audit bytecode with deposits closed pending a remediated redeploy.",
       "sourceUrl": "https://hexens.io/audit-reports/kerne-protocol-july-2026"
+    },
+    {
+      "date": "2026-08-06",
+      "type": "milestone",
+      "title": "Admin over kUSD and all three PSMs moved behind a 48 hour timelock",
+      "description": "DEFAULT_ADMIN_ROLE on kUSD and the live, retired and redeem-reserve PSMs was transferred from the 2-of-3 Gnosis Safe to an OpenZeppelin TimelockController (0x36A14976, getMinDelay 172800) in one atomic batch at block 49623130. The Safe keeps PROPOSER, EXECUTOR and CANCELLER. A PauseGuardian keeps emergency pause instant. skUSD is not covered and remains under instant Safe admin.",
+      "sourceUrl": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
     }
   ]
 }
