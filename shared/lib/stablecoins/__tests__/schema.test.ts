@@ -714,6 +714,80 @@ describe("StablecoinMeta schema — mint authority", () => {
     ], "fixture")).toThrow(/none-resolved-mint requires a non-privileged mintPath/);
   });
 
+  it("binds scored economic-control claims to review evidence", () => {
+    const withoutEvidence = (overrides: Record<string, unknown>) =>
+      makeMintAuthority({
+        ...overrides,
+        review: {
+          sources: [mintAuthoritySource],
+          evidence: "The reviewer checked this.",
+          reviewer: "Fixture Reviewer",
+          reviewedAt: "2026-05-24",
+        },
+      });
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-recon-bare", mintAuthority: withoutEvidence({ reconciliation: "periodic" }) }),
+    ], "fixture")).toThrow(/reconciliation periodic requires a review evidence sentence/);
+
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({ id: "fixture-super-bare", mintAuthority: withoutEvidence({ supervision: "prudential" }) }),
+    ], "fixture")).toThrow(/supervision prudential requires a review evidence sentence/);
+
+    // Both claims at once are named together in a single issue.
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-both-bare",
+        mintAuthority: withoutEvidence({ reconciliation: "continuous", supervision: "prudential" }),
+      }),
+    ], "fixture")).toThrow(/reconciliation continuous and supervision prudential/);
+  });
+
+  it("leaves non-scoring reconciliation and supervision values unbound", () => {
+    // `unknown`, `not-applicable` and `none` record an absence rather than a
+    // claim, so they must stay authorable without an evidence sentence.
+    for (const overrides of [
+      { reconciliation: "not-applicable" },
+      { reconciliation: "unknown" },
+      { supervision: "none" },
+      { supervision: "unknown" },
+    ]) {
+      expect(() => parseStablecoinMetaAssets([
+        makeCoin({
+          id: "fixture-inert-claim",
+          mintAuthority: makeMintAuthority({
+            ...overrides,
+            review: {
+              sources: [mintAuthoritySource],
+              evidence: "The reviewer checked this.",
+              reviewer: "Fixture Reviewer",
+              reviewedAt: "2026-05-24",
+            },
+          }),
+        }),
+      ], "fixture")).not.toThrow();
+    }
+  });
+
+  it("accepts a scored economic-control claim carrying a substantive evidence sentence", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        id: "fixture-recon-evidenced",
+        mintAuthority: makeMintAuthority({
+          reconciliation: "periodic",
+          supervision: "prudential",
+          review: {
+            sources: [mintAuthoritySource],
+            evidence:
+              "Monthly attestations reconcile circulating supply against segregated reserves, and the issuer holds an e-money licence from the named competent authority.",
+            reviewer: "Fixture Reviewer",
+            reviewedAt: "2026-05-24",
+          },
+        }),
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
   it("keeps unknown mint paths paired with unknown posture unless evidence supports compromise", () => {
     expect(() => parseStablecoinMetaAssets([
       makeCoin({

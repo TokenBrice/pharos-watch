@@ -181,6 +181,13 @@ const PRIVILEGED_MINT_PATH_ABILITIES: ReadonlySet<MintAuthorityDirectMintAbility
   "can-authorize",
 ] satisfies MintAuthorityDirectMintAbility[]);
 
+/**
+ * Floor for the reviewer sentence backing a scored economic-control claim. Long
+ * enough to force a statement of what was reconciled or which regime supervises,
+ * short enough that it never fights a genuinely terse but complete note.
+ */
+const MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH = 40;
+
 function hasSourceLinks(sources: readonly StablecoinLink[] | undefined): boolean {
   return (sources?.length ?? 0) > 0;
 }
@@ -1141,6 +1148,45 @@ export const MintAuthorityProfileSchema: z.ZodType<MintAuthorityProfile> = z
           code: z.ZodIssueCode.custom,
           message: "authorityPosture none-resolved-mint cannot include a control that can mint or authorize minting",
           path: ["controls", mintCapableControlIndex, "directMintAbility"],
+        });
+      }
+    }
+
+    // Evidence binding for the two economic-control facts (M-2).
+    //
+    // `reconciliation` and `supervision` were bare optional scalars: nothing
+    // coupled either to a source or to a reviewer sentence, yet between them
+    // they lift the V9 mint component from 25 to 55/70/80 and can suppress a
+    // `high` structural signal — worth up to 29 published points. Every sibling
+    // fact of that weight already binds its own evidence (`upgradeability` and
+    // `proofOfReserves.latestReport` each require `sources.min(1)`).
+    //
+    // Only the score-bearing values are gated. `unknown`, `not-applicable` and
+    // `none` assert nothing and must stay free to record an absence.
+    const claimsReconciliation = profile.reconciliation === "continuous" || profile.reconciliation === "periodic";
+    const claimsSupervision = profile.supervision === "prudential";
+    if (claimsReconciliation || claimsSupervision) {
+      const claimed = [
+        claimsReconciliation ? `reconciliation ${profile.reconciliation}` : null,
+        claimsSupervision ? "supervision prudential" : null,
+      ]
+        .filter((value): value is string => value !== null)
+        .join(" and ");
+
+      if (!profileHasSourceLinks) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${claimed} is a scored economic-control claim and requires at least one review source`,
+          path: ["review", "sources"],
+        });
+      }
+      if ((profile.review.evidence ?? "").trim().length < MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            `${claimed} requires a review evidence sentence of at least ` +
+            `${MIN_ECONOMIC_CONTROL_EVIDENCE_LENGTH} characters stating what was reconciled or which regime supervises it`,
+          path: ["review", "evidence"],
         });
       }
     }
