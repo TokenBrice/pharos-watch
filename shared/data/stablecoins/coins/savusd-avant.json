@@ -615,7 +615,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "avusd-avant",
     "summary": "savUSD is an immutable, deposit-only receipt over avUSD on Avalanche. Its local share minting is bounded by deposited avUSD, its base-asset mint authority is inherited from the separately reviewed avUSD profile, and its active peripheral burn/mint controllers are covered by the reviewed bridge-route inventory.",

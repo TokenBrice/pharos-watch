@@ -650,7 +650,7 @@
   ],
   "mintAuthority": {
     "mintPath": "bridge-or-oft-synthetic",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "NUSD is the Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard.",
     "upgradeability": {

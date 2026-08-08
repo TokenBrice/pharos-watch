@@ -108,7 +108,7 @@
   ],
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "HedgeCore sUSD uses OZ AccessControl. The hUSDC wrapper contract (0x34EEa40FB…) holds MINTER_ROLE; DEFAULT_ADMIN_ROLE is held by EOA 0x30829883…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
     "controls": [

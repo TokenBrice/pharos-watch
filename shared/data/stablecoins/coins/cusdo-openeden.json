@@ -245,7 +245,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "inheritedFrom": "usdo-openeden",
     "summary": "cUSDO's Ethereum, Base, and BSC contracts are ERC-4626 USDO wrappers whose public share issuance does not create base USDO; that base issuer path is inherited from usdo-openeden. The EVM wrappers are UUPS-upgradeable by one OpenEden EOA, while the Solana Token-2022 deployment has a direct single-signer mint and freeze authority.",

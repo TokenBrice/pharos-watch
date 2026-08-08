@@ -91,7 +91,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "stUSD is a StoneYield wrapper/share token over USDC and yield-bearing USDC positions, so base USDC mint authority is inherited from Circle. The StoneYield wrapper contract (0xb4d3c1bb…) separately holds MINTER_ROLE for stUSD issueFromWrapper; DEFAULT_ADMIN_ROLE is held by an EIP-7702 EOA (0x9ab82f8e…) delegating to 0x63c0c19a…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
     "inheritedFrom": "usdc-circle",

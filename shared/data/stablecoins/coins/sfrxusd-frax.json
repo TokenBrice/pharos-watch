@@ -114,7 +114,7 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "sfrxUSD is a savings wrapper over frxUSD; wrapper minting is share accounting while base frxUSD mint authority is inherited from the Frax custodian and Comptroller Safe path.",
     "inheritedFrom": "frxusd-frax",

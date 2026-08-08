@@ -92,7 +92,7 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the oracle. The minting policy (Plutus V1) is immutable on Cardano \u2014 the reserve-ratio enforcement cannot be bypassed; COTI only controls the oracle price feed.",
     "upgradeability": {
