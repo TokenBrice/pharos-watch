@@ -1108,13 +1108,20 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         candidateCoinIds: ["wtgxx-wisdomtree"],
       }),
     );
+    // The reviewed non-link only overlays the live slice once the reserve
+    // review's own date gate has opened, so the clock sits at or after
+    // `reserveReview.reviewedAt`/`compositionAsOf` (2026-08-08).
     const classifications = buildReviewedReserveClassifications(
       [{ ...wtgxx, coinId: "wtgxx-wisdomtree", depType: "collateral" }],
       frax,
-      Date.parse("2026-07-23T00:00:00.000Z") / 1_000,
+      Date.parse("2026-08-09T00:00:00.000Z") / 1_000,
     );
     expect(classifications).toEqual([
-      expect.objectContaining({ trackedAssetDisposition: "reviewed-non-link" }),
+      expect.objectContaining({
+        trackedAssetDisposition: "reviewed-non-link",
+        // The reviewed non-link must strip the candidate edge, never publish it.
+        trackedAssetId: null,
+      }),
     ]);
   });
 
@@ -1210,9 +1217,12 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("attributes a same-day partial mechanism component to the admission method", () => {
+    // The clock sits inside the UTC day of the committed uusd-anything-labs
+    // overlay review (2026-08-08), so the overlay exists but cannot yet be
+    // admitted; the fiat-cash fallback still publishes a partial review.
     const fixed = exactFixedInput({
       assetId: "uusd-anything-labs",
-      clockSec: Date.parse("2026-07-29T09:17:27.000Z") / 1_000,
+      clockSec: Date.parse("2026-08-08T09:17:27.000Z") / 1_000,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed);
     expect(baseline.assets[0]).toMatchObject({
@@ -1245,9 +1255,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("attributes reviewed unavailable mechanism components to issuer nondisclosure after the date gate", () => {
+    // One UTC day after the committed 2026-08-08 overlay review, so all three
+    // reviewed-unavailable fiat-cash components are admitted as bounded facts.
     const fixed = exactFixedInput({
       assetId: "uusd-anything-labs",
-      clockSec: Date.parse("2026-07-30T00:00:00.000Z") / 1_000,
+      clockSec: Date.parse("2026-08-09T00:00:00.000Z") / 1_000,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed);
     expect(baseline.assets[0]).not.toHaveProperty("mechanismReviewGapDisposition");
@@ -1271,7 +1283,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {
-    const clockSec = Date.parse("2026-07-24T00:00:00Z") / 1_000;
+    // Inside the committed usdt-tether operational-resilience review window
+    // (2026-07-23T12:37:19Z .. 2027-07-23T12:37:19Z) and at or after the
+    // reviewed control/access dates the production metadata now carries.
+    const clockSec = Date.parse("2026-08-09T00:00:00Z") / 1_000;
     const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
@@ -2874,7 +2889,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
-    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    // At or after the committed xaut-tether control/access review dates
+    // (2026-08-08), so the reviewed mint controls are clock-admissible.
+    const clockSec = Date.parse("2026-08-09T09:00:00Z") / 1_000;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = exactFixedInput({
       assetId: "xaut-tether",
@@ -3022,6 +3039,46 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         ),
       ),
     ).toBe(false);
+    // The reviewed global authority stays partitioned away from the XAUt0
+    // group: the onlyOwner mint path on the canonical proxy and the separate
+    // upgrade-only ProxyAdmin owner (3-of-6 legacy multisig, the exact
+    // `upgradeability.controlRef` target) are the only non-bridge controls.
+    expect(
+      xaut.controls
+        .filter((control) => control.controlKind !== "bridge")
+        .map((control) => ({
+          controlKind: control.controlKind,
+          scope: control.scope,
+          capabilities: control.capabilities,
+          deploymentKey: control.deploymentKey,
+          authority: control.authority,
+        })),
+    ).toEqual([
+      {
+        controlKind: "mint",
+        scope: "global",
+        capabilities: ["mint"],
+        deploymentKey: "asset:xaut-tether",
+        authority: {
+          authorityKey:
+            "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+          model: "contract",
+          threshold: null,
+        },
+      },
+      {
+        controlKind: "upgrade",
+        scope: "global",
+        capabilities: ["mint", "upgrade"],
+        deploymentKey: "asset:xaut-tether",
+        authority: {
+          authorityKey:
+            "ethereum:0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+          model: "multisig",
+          threshold: { required: 3, total: 6 },
+        },
+      },
+    ]);
 
     const evaluated = evaluateV9FactSet(
       compiled,
@@ -3080,7 +3137,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
     const fixed = exactFixedInput({
       assetId: "xaut-tether",
-      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      // At or after the committed 2026-08-08 xaut-tether control review dates.
+      clockSec: Date.parse("2026-08-09T09:00:00Z") / 1_000,
       chainSupplyByChain: {},
       omitLiveReserve: true,
     });
@@ -3131,7 +3189,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("fails closed when the XAUt0 group reaches the materiality floor", () => {
-    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    // At or after the committed 2026-08-08 xaut-tether control review dates.
+    const clockSec = Date.parse("2026-08-09T09:00:00Z") / 1_000;
     const aggregateSupplyUsd = 2_480_000_000;
     const fixed = exactFixedInput({
       assetId: "xaut-tether",
