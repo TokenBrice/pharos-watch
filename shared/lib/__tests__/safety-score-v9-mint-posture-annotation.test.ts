@@ -58,6 +58,19 @@ describe("V9 curated mint posture queue", () => {
     expect(queue.entries.every((entry) => entry.action.length > 0)).toBe(true);
   });
 
+  it("buckets NR cards instead of counting them as derived-unresolved", () => {
+    const queue = buildV9CuratedMintPostureQueue([
+      { assetId: "z-nr", curatedPosture: "bounded-admin", derivedPosture: null, publishesBreakdowns: false },
+      { assetId: "a-nr", curatedPosture: "unknown", derivedPosture: null, publishesBreakdowns: false },
+      // Same absent derivation, but the card *is* rated: still a real disagreement.
+      { assetId: "rated-unresolved", curatedPosture: "bounded-admin", derivedPosture: null },
+    ]);
+    expect(queue.nrCards).toEqual(["a-nr", "z-nr"]);
+    expect(queue.entries.map((entry) => [entry.assetId, entry.disagreement])).toEqual([
+      ["rated-unresolved", "derived-unresolved"],
+    ]);
+  });
+
   it("digests its content so two runs over one publication are byte-identical", () => {
     const inputs = [
       { assetId: "a", curatedPosture: "bounded-admin" as const, derivedPosture: "concentrated-admin" },

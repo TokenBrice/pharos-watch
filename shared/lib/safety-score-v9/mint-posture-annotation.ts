@@ -37,6 +37,14 @@ export interface V9CuratedMintPostureQueue {
   kind: "safety-score-v9-curated-mint-posture-queue";
   reviewedAssetCount: number;
   entries: readonly V9CuratedMintPostureQueueEntry[];
+  /**
+   * Assets whose card publishes no breakdowns at all — an NR card. V9 derived no
+   * mint posture for them because it rated nothing, so a curated annotation
+   * cannot disagree with a derivation that does not exist. They are reported
+   * here rather than counted as `derived-unresolved` disagreements: the action
+   * for an NR card is to close its rating gap, not to re-curate its posture.
+   */
+  nrCards: readonly string[];
   queueDigest: string;
 }
 
@@ -46,6 +54,11 @@ export interface V9CuratedMintPostureInput {
   curatedPosture: MintAuthorityPosture | null | undefined;
   /** Posture published on the V9 control breakdown's mint component. */
   derivedPosture: string | null | undefined;
+  /**
+   * False when the published card carries no `breakdowns` (NR). Defaults to
+   * true so a caller that only has postures keeps the previous behaviour.
+   */
+  publishesBreakdowns?: boolean;
 }
 
 const BAND_RANK = new Map<V9MintPostureBand, number>(
@@ -86,7 +99,15 @@ export function buildV9CuratedMintPostureQueue(
   inputs: readonly V9CuratedMintPostureInput[],
 ): V9CuratedMintPostureQueue {
   const entries: V9CuratedMintPostureQueueEntry[] = [];
+  const nrCards: string[] = [];
   for (const input of inputs) {
+    // An NR card derives no posture because nothing was rated. Treating that
+    // absence as `derived-unresolved` blamed curation for a rating gap and
+    // inflated the disagreement count.
+    if (input.publishesBreakdowns === false) {
+      nrCards.push(input.assetId);
+      continue;
+    }
     const curatedPosture = input.curatedPosture ?? "unknown";
     const curatedBand = curatedPosture === "unknown" ? null : resolveV9MintPostureBand(curatedPosture);
     const derivedBand = resolveV9MintPostureBand(input.derivedPosture);
@@ -103,11 +124,13 @@ export function buildV9CuratedMintPostureQueue(
     });
   }
   entries.sort((left, right) => compareText(left.assetId, right.assetId));
+  nrCards.sort(compareText);
   const core = {
     schemaVersion: 1 as const,
     kind: "safety-score-v9-curated-mint-posture-queue" as const,
     reviewedAssetCount: inputs.length,
     entries,
+    nrCards,
   };
   return deepFreeze({ ...core, queueDigest: sha256Hex(`${V9_CURATED_MINT_POSTURE_QUEUE_DIGEST_DOMAIN}:${stableJsonStringifyV1(core)}`) });
 }
