@@ -26,6 +26,15 @@ Two properties make the replay equal to production:
 
 `worker/scripts/diff-safety-score-v9-replays.ts` drops the volatile identity/timestamp key family (`VOLATILE_KEYS`) at every depth and matches per-asset cards by `id`, so a reordered or resized card array reports real drift instead of an index shift.
 
+> **Any redemption row-shape change is a payload identity event and needs a baseline re-cut.**
+> The redemption payload fingerprint hashes the *whole* stored row, not a V9-relevant projection of it.
+> Adding, renaming, removing, or reordering a field on a redemption row therefore rotates the
+> fingerprint even when no value the evaluator reads has changed — and an existing capture stops
+> matching. Treat it like a registry edit: cut a fresh baseline capture on the new shape and diff
+> against that, rather than reading the resulting drift as a scoring result or reaching for
+> `--allow-registry-mismatch`. A declared-but-inert passthrough field is not exempt: inertness is a
+> property of the evaluator, and the fingerprint is taken before the evaluator runs.
+
 ## Prerequisites
 
 - A Wrangler session authorized for the production Cloudflare account with D1 read on `stablecoin-db`: interactive `npx wrangler login`, or `CLOUDFLARE_API_TOKEN` in the environment. An expired session fails the export with:

@@ -53,6 +53,30 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "2ae440c9c465fff9074af09b02219960e08afb48e63a6523f871b559a86eced7"
     },
     {
+      "path": "shared/lib/math.ts",
+      "sha256": "aec837be0c25ea625ea5302e2119ed3f4bbfa7ada66b7ef3655a9b89cafe3f90"
+    },
+    {
+      "path": "shared/lib/methodology-versions/base.ts",
+      "sha256": "c4591e83724849408d897f4da075b5bf8747f1443596ef913b0883f556d1f79d"
+    },
+    {
+      "path": "shared/lib/methodology-versions/constants.ts",
+      "sha256": "cb6cfdd3c476a91191f3416d5a4a7059c100708b6e0c45b45742a047aa5bf104"
+    },
+    {
+      "path": "shared/lib/methodology-versions/current-version.json",
+      "sha256": "3a4ce6d8a62897ad1cccd3c6f92a61996f8c78566fd9ca59eb4501ae748087cb"
+    },
+    {
+      "path": "shared/lib/methodology-versions/liquidity-score.ts",
+      "sha256": "9c7b1e25922218e43566c49c93acf0cba6ab8562f7b6e5f885297c8e72db4422"
+    },
+    {
+      "path": "shared/lib/methodology-versions/redemption-backstop.ts",
+      "sha256": "6f445b24b4ea4292219cd636ed32921323b4a5da4d893bf3ae2efbdce8dcd0e3"
+    },
+    {
       "path": "shared/lib/p4-exit-route-capacity.ts",
       "sha256": "abc3986749d14c6c0c6a21b947e646ad6ae81c99558e158197882ff155847de5"
     },
@@ -493,7 +517,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "a9230e5155d34ab10721b03c3e0cab700b16718f4cb7980308f4a8ada846e464"
+  "digest": "37427a123c17f2d5515472821ceb3587ca15d0c86fe70f1d7ac1f89d7db54fdb"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
