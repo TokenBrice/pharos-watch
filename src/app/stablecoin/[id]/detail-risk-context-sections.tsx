@@ -3,7 +3,10 @@
 import type { ReactNode, Ref } from "react";
 import { ChartPie } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
+import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
+import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
+import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
@@ -11,6 +14,9 @@ import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import { buildFailureDomainsView } from "@/lib/failure-domains";
+import type { MechanismBackingView } from "@/lib/mechanism-backing";
+import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -34,6 +40,8 @@ interface DetailRiskContextSectionsProps {
   collateralUsageEntries: readonly CollateralUsageEntry[];
   frozenNote: ReactNode;
   hasCollateralUsage: boolean;
+  mechanismBacking: MechanismBackingView | null;
+  mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
   transferReview: TransferReviewView | null;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -47,6 +55,8 @@ export function DetailRiskContextSections({
   collateralUsageEntries,
   frozenNote,
   hasCollateralUsage,
+  mechanismBacking,
+  mechanismCollateralization,
   mechanismReview,
   transferReview,
   overviewGateRef,
@@ -67,6 +77,14 @@ export function DetailRiskContextSections({
     && viewModel.coin.flags.yieldBearing !== true
     && viewModel.supplyHistory.length > 0;
   const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
+  const failureDomainsView = buildFailureDomainsView(viewModel.reportCard);
+  const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
+  const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
+  const hasStructureCards =
+    mechanismCollateralization != null
+    || liveCollateralizationRatio != null
+    || liveLiquidationCapacityRatio != null
+    || failureDomainsView != null;
 
   return (
     <>
@@ -109,6 +127,20 @@ export function DetailRiskContextSections({
           ) : null}
         </section>
         {!viewModel.reportCard ? reservesPanel : null}
+        {/* The xl summary rail owns these structure cards on desktop; below
+            xl the rail is hidden, so in-flow copies keep collateralization
+            and failure-domain facts on narrow viewports. */}
+        {hasStructureCards ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:hidden">
+            <CollateralizationCard
+              reviewed={mechanismCollateralization}
+              liveRatio={liveCollateralizationRatio}
+              liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
+              liveAtSec={viewModel.reserves?.liveAt ?? null}
+            />
+            <FailureDomainsCard view={failureDomainsView} />
+          </div>
+        ) : null}
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
@@ -133,6 +165,11 @@ export function DetailRiskContextSections({
           collateralUsageEntries={collateralUsageEntries}
         />
         <MechanismReviewPanel review={mechanismReview} />
+        {mechanismBacking ? (
+          <div className="xl:hidden">
+            <BackingMechanicsCard view={mechanismBacking} />
+          </div>
+        ) : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} />
         {showPegChart ? (
           <MarketDataSection
