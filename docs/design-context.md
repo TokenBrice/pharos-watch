@@ -55,3 +55,14 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 6. **Soften the funnel, not the product** — onboarding and discovery can welcome with warmer language and roomier layouts; data surfaces remain crypto-native and practitioner-grade
 7. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone. When a page introduces a metaphor, _draw it_ (Cemetery, Alt-Peg Atlas, Chains Harbor) — but every shape must encode a data field
 8. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty
+
+## Stablecoin Detail Module Contract (2026-08-08)
+
+Every scored/evidence module on `/stablecoin/[id]/` compiles to one shape (owner decisions, 2026-08-08):
+
+- **Header**: `DETAIL_MODULE_*` constants + `DetailSectionTitle` with `MethodologyLabel`; right slot order is score (`ScorePill`) → status chip → freshness (`FreshnessIndicator`).
+- **Summary layer** (always visible): verdict line, bounded-vocabulary facts (`FactGrid`, the hero passport grammar), at most one primary visual, and **current-state** callouts only.
+- **Detail layer**: breakdowns, tables, long prose, and historical incidents fold behind `ModuleDisclosure` (named labels, native `<details>`), collapsed by default **at every breakpoint** — desktop included. The one sanctioned auto-open is the weakest Safety Score pillar at `lg+`.
+- **Footer**: `EvidenceFooter` — one line of methodology links, folded `Sources (N)` (collapsed everywhere, kept in the DOM for crawlers), right-aligned reviewed/updated stamp.
+- **Semantic color**: red/amber callouts are reserved for *active* state; resolved incidents render as calm folded history.
+- The xl summary rail keeps expanded at-a-glance compact cards (its purpose *is* the summary layer); below xl, rail-only content must have an in-flow `xl:hidden` copy — never amputated.
