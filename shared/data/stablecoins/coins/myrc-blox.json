@@ -424,12 +424,12 @@
         "evidence": "At Solana slot 425797741, getAccountInfo on mint myrcAs6b... returned mintAuthority and freezeAuthority Df8T8pvE..., a System-Program-owned non-executable account (issuer keypair, EOA-equivalent)."
       }
     ],
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent). Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer.",
+      "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE — consistent with safe-based role management applied post-deploy on all chains. Solana mint not checked (non-EVM, low supply on Solana vs EVM). Solana mint authority resolved at slot 425797741: issuer keypair (EOA-equivalent). Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer. Reconciliation review (2026-08-08): the monthly reports the 2026-07-15 pass recorded as absent after 2025-11-30 do exist, published under cdn.blox.my/attestations. Tommy Ung & Partners PLT (AF 002378), Chartered Accountants Malaysia, issue ISAE 3000 (Revised) reasonable-assurance opinions that MYR-denominated assets held equal or exceed MYRC in circulation - verified for 2025-11-30 (831,090.83 MYRC) and 2026-06-30 (2,217,790.25 MYRC, signed 2026-07-21), with reports present for every month probed in between. Recurring third-party reconciliation is therefore established. Supervision stays non-prudential: Blox's own product term sheet states MYRC does not constitute electronic money or a payment instrument unless and until Blox obtains Bank Negara Malaysia approval.",
       "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Blox docs",
@@ -454,6 +454,14 @@
         {
           "label": "Securities Commission Malaysia public register",
           "url": "https://www.sc.com.my/regulation/licensing/licensed-and-registered-persons"
+        },
+        {
+          "label": "Tommy Ung & Partners PLT: MYRC reserve report, ISAE 3000 reasonable-assurance opinion, 30 June 2026",
+          "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
+        },
+        {
+          "label": "Blox product term sheet: MYRC is not electronic money pending Bank Negara Malaysia approval",
+          "url": "https://www.blox.my/policies/product-term-sheet"
         }
       ]
     }

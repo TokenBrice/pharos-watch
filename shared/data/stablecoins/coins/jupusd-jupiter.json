@@ -322,10 +322,12 @@
         "evidence": "JupUSD is issued on Ethena Labs' Stablecoin-as-a-Service infrastructure; Ethena manages reserve operations, custody coordination (Porto/Anchorage), and rebalancing between USDtb and USDC, operating the mint/redeem framework on Jupiter's behalf. On-chain permissioning is enforced by the upgradeable JupUSD program."
       }
     ],
+    "supervision": "none",
+    "reconciliation": "continuous",
     "review": {
-      "evidence": "At finalized Solana slot 432737041, the JupUSD mint and freeze authority was the program PDA CkzLnD9r.... The program's full ProgramData account GF7fyG3M... named live upgrade authority 31wgH9C..., a zero-delay autonomous 4/9 Squads v4 vault. The classic SPL Token program and Squads v4 program are themselves immutable, leaving the JupUSD program as the only mutable executable in the observed direct mint path.",
+      "evidence": "At finalized Solana slot 432737041, the JupUSD mint and freeze authority was the program PDA CkzLnD9r.... The program's full ProgramData account GF7fyG3M... named live upgrade authority 31wgH9C..., a zero-delay autonomous 4/9 Squads v4 vault. The classic SPL Token program and Squads v4 program are themselves immutable, leaving the JupUSD program as the only mutable executable in the observed direct mint path. Reconciliation review (2026-08-08): JupUSD reserves are held in named Solana token accounts that any third party can read directly, so the collateralisation ratio is recomputable from chain state rather than taken on the issuer's word. Independent verification against mainnet RPC found six accounts holding USDtb and USDC across Anchorage Digital, Coinbase Custody and an on-chain program buffer totalling about $52.88m against a mint supply of 52,858,698.33 JUPUSD, roughly 100.05% coverage, refreshed on a 10-60s poll. No attestor, attestation section or regulatory disclosure exists on the transparency surface; the monthly attestations in press coverage belong to USDtb, the collateral issuer, not to JupUSD, so supervision is none.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "JupUSD website",
@@ -346,6 +348,14 @@
         {
           "label": "Latest successful JupUSD program upgrade",
           "url": "https://explorer.solana.com/tx/2M36bgxBjyUfYnACEAi7egTfazNKGaWaRXDPaXCN95UDNzCruHmofjEQtry2TiRc3Uhxy5mmhuRdym7jbpdK9Ygz"
+        },
+        {
+          "label": "JupUSD transparency: reserve holdings published as named Solana token accounts, verified onchain every block",
+          "url": "https://jupusd.money/transparency"
+        },
+        {
+          "label": "JupUSD reserve API: live holdings, addresses, custodians and total supply",
+          "url": "https://api.jupusd.money/api/data"
         }
       ]
     }

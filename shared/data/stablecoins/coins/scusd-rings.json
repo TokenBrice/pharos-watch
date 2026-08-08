@@ -466,6 +466,8 @@
         "evidence": "At Sonic block 75897805, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, four owners, no modules, zero guard/module guard, and the standard fallback handler."
       }
     ],
+    "supervision": "none",
+    "reconciliation": "not-applicable",
     "review": {
       "sources": [
         {
@@ -479,11 +481,19 @@
         {
           "label": "Sonic scUSD RolesAuthority",
           "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+        },
+        {
+          "label": "Trevee docs: collateral vault (Ethereum) - 1:1 minting into Veda BoringVault, on-chain-only strategy whitelist",
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum.md"
+        },
+        {
+          "label": "Trevee docs: treasury backing addresses disclosed on Ethereum and Sonic",
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
         }
       ],
-      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments.",
+      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack.",
       "reviewer": "Codex mint-authority review",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-08-08",
       "disposition": "scoreable"
     }
   },

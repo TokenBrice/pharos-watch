@@ -581,6 +581,7 @@
       }
     ],
     "supervision": "none",
+    "reconciliation": "not-applicable",
     "review": {
       "sources": [
         {
@@ -608,9 +609,9 @@
           "url": "https://bscscan.com/address/0x6b00039d76795fd59baf17e0c9c6d87011e7edac#code"
         }
       ],
-      "evidence": "Deployment-wide review covered the current Tron, Ethereum, and BSC direct token/Join rails. Each Join mints only against Vat credit/debt accounting and cannot independently raise its limit; each chain-local GovActionsProxy owner can immediately change authorization and system limits with no timelock. Ethereum/BSC use the same owner EOA, while Tron uses a 1/1 native account. The tracked token and Join contracts are direct non-proxy deployments with no implementation-replacement surface; legacy BTTC predicate upgrades remain a separate peripheral bridge risk.",
+      "evidence": "Deployment-wide review covered the current Tron, Ethereum, and BSC direct token/Join rails. Each Join mints only against Vat credit/debt accounting and cannot independently raise its limit; each chain-local GovActionsProxy owner can immediately change authorization and system limits with no timelock. Ethereum/BSC use the same owner EOA, while Tron uses a 1/1 native account. The tracked token and Join contracts are direct non-proxy deployments with no implementation-replacement surface; legacy BTTC predicate upgrades remain a separate peripheral bridge risk. Reconciliation review (2026-08-08): USDD 2.0 is a Maker-style on-chain system on Tron, Ethereum and BSC - USDD is minted against on-chain crypto collateral and against USDT deposited into the on-chain PSM reserve pool, with all collateral reserves recorded on chain - so the mint path creates no off-chain reserve claim and reconciliation is not-applicable rather than unresolved. No regulator or registration is claimed for the issuing entity and no third-party reserve attestation exists; the only audits are smart-contract security reviews.",
       "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13"
+      "reviewedAt": "2026-08-08"
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
