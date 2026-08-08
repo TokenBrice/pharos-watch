@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 interface CollateralizationCardProps {
   reviewed: MechanismCollateralizationView | null;
@@ -61,7 +62,7 @@ export function CollateralizationCard({
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Collateralization">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Collateralization</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Collateralization</h2>
         {hasLiveMetrics ? (
           <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />

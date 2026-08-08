@@ -4,6 +4,10 @@ import Link from "next/link";
 import { ArrowRight, Flame } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MintingPressureArcGauge } from "@/components/minting-pressure-gauge";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -59,9 +63,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
 
   if (query.error && !data) {
     return (
-      <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+      <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader>
-          <DetailSectionTitle as="h3" className="text-sm font-semibold tracking-normal text-muted-foreground">
+          <DetailSectionTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
             Mint &amp; Burn Flows
           </DetailSectionTitle>
         </CardHeader>
@@ -97,9 +101,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   ];
 
   return (
-    <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-5">
-        <DetailSectionTitle as="h3" className="text-sm font-semibold tracking-normal text-muted-foreground">
+        <DetailSectionTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
           Mint &amp; Burn Flows
         </DetailSectionTitle>
         <MethodologyHint

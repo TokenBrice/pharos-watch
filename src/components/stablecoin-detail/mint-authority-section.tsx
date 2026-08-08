@@ -4,8 +4,9 @@ import { CircleCheck, CircleDashed, ExternalLink, TriangleAlert } from "lucide-r
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
@@ -207,7 +208,7 @@ export function MintAuthoritySection({
               <DetailBadge>Mint control posture: NR</DetailBadge>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.summary}</p>
-            <MethodologyCardActions topic="mintAuthorityScore" />
+            <EvidenceFooter topic="mintAuthorityScore" />
           </>
         ) : (
           <>
@@ -306,30 +307,9 @@ export function MintAuthoritySection({
               </div>
             )}
 
-            {profile.sources.length > 0 ? (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Evidence sources
-                </p>
-                <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
-                  {profile.sources.map((source) => (
-                    <a
-                      key={`${source.label}:${source.url}`}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
-                    >
-                      {source.label}
-                      <ExternalLink aria-hidden className="h-3 w-3" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <MethodologyCardActions
+            <EvidenceFooter
               topic="mintAuthorityScore"
+              sources={profile.sources}
               trailing={profile.reviewedAt ? `Reviewed ${profile.reviewedAt}` : undefined}
             />
           </>

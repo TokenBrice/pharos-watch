@@ -12,8 +12,9 @@ import {
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
 import type { RedemptionBackstopEntry } from "@shared/types";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ScoringBreakdownDisclosure } from "@/components/stablecoin-detail/scoring-breakdown-disclosure";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
@@ -181,37 +182,23 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           </div>
         ) : null}
 
-        {viewModel.docSources.length > 0 ? (
-          <div className="space-y-1">
-            {viewModel.docSources.map((source) => {
-              return (
-                <div key={`${source.label}:${source.url}`} className="text-sm">
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex underline underline-offset-2 transition-colors hover:text-foreground"
-                  >
-                    {source.label}
-                  </a>
-                  {source.supports ? (
-                    <span className="ml-2 text-xs text-muted-foreground">Supports {source.supports}</span>
-                  ) : null}
-                </div>
-              );
-            })}
-            {viewModel.docsReviewedAt ? (
-              <p className="text-xs text-muted-foreground">Reviewed {viewModel.docsReviewedAt}</p>
-            ) : null}
-            {viewModel.docsProvenanceLabel ? (
-              <p className="text-xs text-muted-foreground">{viewModel.docsProvenanceLabel}</p>
-            ) : null}
-          </div>
-        ) : null}
-
         <ShowYourWorkPanel kind="redemption" entry={entry} stablecoinId={entry.stablecoinId} />
 
-        <MethodologyCardActions topic="redemptionBackstop" showWorkToggle />
+        <EvidenceFooter
+          topic="redemptionBackstop"
+          showWorkToggle
+          sources={viewModel.docSources.map((source) => ({
+            label: source.label,
+            url: source.url,
+            note: source.supports ? `Supports ${source.supports}` : undefined,
+          }))}
+          sourcesFootnote={
+            viewModel.docsProvenanceLabel ? (
+              <p className="text-xs text-muted-foreground">{viewModel.docsProvenanceLabel}</p>
+            ) : null
+          }
+          trailing={viewModel.docsReviewedAt ? `Reviewed ${viewModel.docsReviewedAt}` : undefined}
+        />
       </CardContent>
     </Card>
   );

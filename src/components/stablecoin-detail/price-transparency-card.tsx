@@ -227,7 +227,7 @@ function CompactPriceTransparencyCard({
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Price transparency">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Price Transparency</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Price Transparency</h2>
         <div className="flex items-center gap-2">
           {updatedAtLabel ? (
             <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">

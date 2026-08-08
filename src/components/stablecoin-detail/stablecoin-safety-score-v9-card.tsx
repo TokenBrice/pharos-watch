@@ -18,8 +18,14 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
@@ -612,13 +618,14 @@ export function StablecoinSafetyScoreV9Card({
         </section>
       ) : null}
       <AccessPosturePanel rows={presentation.accessRows} review={transferReview} />
+      <EvidenceFooter topic="safetyScore" />
     </div>
   );
 
   return (
-    <Card className="pharos-card-shell gap-0 overflow-hidden py-0" data-safety-model="v9">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
-        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+    <Card className={DETAIL_MODULE_SHELL_CLASS} data-safety-model="v9">
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
           Safety Score
         </DetailSectionTitle>
         <HeaderActions updatedAtMs={updatedAtMs} />

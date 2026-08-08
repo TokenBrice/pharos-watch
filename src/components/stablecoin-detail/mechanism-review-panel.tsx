@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ExternalLink, FlaskConical } from "lucide-react";
+import { ChevronDown, FlaskConical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -31,37 +32,6 @@ function ArchetypeBadge({ review }: { review: MechanismReviewView }) {
   );
 }
 
-function SourceList({
-  review,
-  listClassName,
-}: {
-  review: MechanismReviewView;
-  listClassName?: string;
-}) {
-  return (
-    <>
-      <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-        Sources ({review.sources.length})
-      </h3>
-      <ul className={cn("mt-2 space-y-2", listClassName)}>
-        {review.sources.map((source) => (
-          <li key={source.url} className="flex min-w-0 gap-2 text-xs leading-relaxed">
-            <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring min-w-0 break-words rounded-sm text-frost-blue underline-offset-2 hover:underline"
-            >
-              {source.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-}
-
 function ExplainerLink({ review }: { review: MechanismReviewView }) {
   return (
     <Link
@@ -76,8 +46,8 @@ function ExplainerLink({ review }: { review: MechanismReviewView }) {
 /**
  * Rail treatment. Reviewed notes run to ~1,700 characters on the median asset
  * and past 6,000 on the longest (usdt-tether), which does not fit a 22rem
- * column, so the prose clamps to a short lead and one control opens both the
- * full text and the sources.
+ * column, so the prose clamps to a short lead behind "Read more"; sources fold
+ * separately in the standard evidence footer.
  */
 function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
   const [open, setOpen] = useState(false);
@@ -85,7 +55,7 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Mechanism review">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Mechanism review</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Mechanism review</h2>
         <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
           {review.reviewedAt}
         </span>
@@ -107,19 +77,13 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
           aria-expanded={open}
           className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
         >
-          {open ? "Show less" : `Read more · ${review.sources.length} sources`}
+          {open ? "Show less" : "Read more"}
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
         </button>
       </div>
 
-      {open ? (
-        <div className="border-t border-border/50 px-4 py-4">
-          <SourceList review={review} />
-        </div>
-      ) : null}
-
-      <div className="border-t border-border/50 px-4 py-3">
-        <ExplainerLink review={review} />
+      <div className="px-4 pb-4">
+        <EvidenceFooter sources={review.sources} trailing={<ExplainerLink review={review} />} />
       </div>
     </section>
   );
@@ -181,15 +145,11 @@ function FullMechanismReview({ review }: { review: MechanismReviewView }) {
           </button>
         ) : null}
 
-        <div className="mt-5 border-t border-border/40 pt-4">
-          {/* Citation labels are long; two columns keep the list from running
-              the full card width as one sparse stack. */}
-          <SourceList review={review} listClassName="md:grid md:grid-cols-2 md:gap-x-8 md:space-y-0 md:gap-y-2" />
-        </div>
-
-        <p className="mt-4">
-          <ExplainerLink review={review} />
-        </p>
+        <EvidenceFooter
+          className="mt-5"
+          sources={review.sources}
+          trailing={<ExplainerLink review={review} />}
+        />
       </CardContent>
     </Card>
   );

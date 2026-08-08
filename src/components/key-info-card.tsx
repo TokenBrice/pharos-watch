@@ -1,6 +1,11 @@
 "use client";
 
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import {
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
+  DETAIL_MODULE_TITLE_CLASS,
+} from "@/components/stablecoin-detail/section-title-class";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import {
@@ -46,9 +51,9 @@ export function KeyInfoCard({
   const { governanceFullLabel, backingFullLabel, pegFullLabel } = getKeyInfoSentenceLabels(meta);
 
   return (
-    <Card className="pharos-card-shell gap-0 overflow-hidden py-0">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/40 px-4 py-5 sm:px-5">
-        <DetailSectionTitle className="text-sm font-semibold tracking-normal text-muted-foreground">
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
+      <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
           Key Information
         </DetailSectionTitle>
       </CardHeader>

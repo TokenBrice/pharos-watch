@@ -6,6 +6,7 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { ReportCardGrade } from "@shared/types";
 import type { HeroSignalRailItem } from "./hero-card-metrics";
+import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 /**
  * Compact safety summary for the detail right rail (Figma coin template):
@@ -25,7 +26,7 @@ export function RailSafetySummary({ items }: { items: HeroSignalRailItem[] }) {
   return (
     <div className="pharos-card-shell p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Safety</h2>
+        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Safety</h2>
         <Link
           href="#report-card"
           aria-label="Jump to the full safety report card"

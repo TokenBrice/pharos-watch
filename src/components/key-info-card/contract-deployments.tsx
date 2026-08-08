@@ -4,7 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import { SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -86,7 +89,7 @@ export function ContractDeployments({
       >
         <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Contracts</h2>
+            <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
             <span className="text-muted-foreground/50" aria-hidden="true">
               ·
             </span>
