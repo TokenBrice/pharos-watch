@@ -28,7 +28,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "rusd" | "prime" | "usdat";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "usdat";
 
 const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.reservoir.xyz",
@@ -106,6 +106,13 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     // USDC standalone only; other stablecoins that contain "USD" (USD1/USDT/etc)
     // match their own rules first.
     match: (item) => /\bUSDC\b/.test(item.label) || /\bSteakhouse Prime Instant\b/i.test(item.label),
+  },
+  {
+    key: "agua",
+    name: "Agua Global Carry Vault (USDC-denominated ERC-4626)",
+    risk: "high",
+    ...wrapperAssetMeta("usdc"),
+    match: (item) => /\bAgua\b/i.test(item.label),
   },
   {
     key: "rusd",
