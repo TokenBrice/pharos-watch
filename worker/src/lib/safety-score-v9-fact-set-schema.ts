@@ -25,6 +25,7 @@ import {
 } from "@shared/types/exit-route";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
+import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
 
 export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): string {
   return `reserve:${domainDigest("safety-score-v9.reserve-exposure-key.v1", {
@@ -466,6 +467,7 @@ const AssetExtensionSchema = z
     assetIssuerKey: CanonicalTextSchema.nullable().optional(),
     archetype: V9ResolvedMechanismArchetypeSchema,
     variantKind: V9VariantKindSchema,
+    wrapperOperator: z.enum(WRAPPER_OPERATOR_VALUES).optional(),
     launchedAtSec: UnixSecondsSchema.nullable(),
     mechanismRiskReview: V9MechanismRiskReviewSchema.nullable(),
     mechanismReviewGapDisposition: z

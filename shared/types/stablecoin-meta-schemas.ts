@@ -101,6 +101,7 @@ import {
   STABLECOIN_EXIT_MECHANISM_VALUES,
   STABLECOIN_PRICE_BASIS_VALUES,
   VARIANT_KIND_VALUES,
+  WRAPPER_OPERATOR_VALUES,
   YIELD_TYPE_VALUES,
 } from "./core";
 import {
@@ -1368,6 +1369,7 @@ export const StablecoinMetaEnumSchemas = {
   bridgeRouteRiskTier: BridgeRouteRiskTierSchema,
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)),
   variantKind: z.enum(VARIANT_KIND_VALUES),
+  wrapperOperator: z.enum(WRAPPER_OPERATOR_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
   marketAvailability: z.enum(MARKET_AVAILABILITY_VALUES),
   priceBasis: z.enum(STABLECOIN_PRICE_BASIS_VALUES),

@@ -9,6 +9,7 @@ import {
   projectV9MechanismProfile,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
+import { resolveWrapperForm } from "../safety-score-v9-fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
@@ -175,6 +176,7 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     });
     expect(sdaiAsset.variantKind).toBe("savings-passthrough");
     expect(sboldAsset.variantKind).toBe("risk-absorption");
+    expect(sboldAsset.wrapperOperator).toBe("third-party");
     expect(susdaiAsset.variantKind).toBe("strategy-vault");
     expect(iusdInfiniFiAsset.mechanismArchetype).toBe("rwa-credit-fund");
     expect(iusdInfiniFiAsset).not.toHaveProperty("variantOf");
@@ -202,6 +204,14 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         undefined,
       ),
     ).toBe("pure");
+
+    expect(
+      resolveWrapperForm({
+        variantKind: sboldAsset.variantKind,
+        wrapperOperator: sboldAsset.wrapperOperator,
+        dependencies: { edges: [] },
+      } as never),
+    ).toBe("strategy-vault");
   });
 
   it("retains product-shaped exit families instead of treating delayed exits as absent", () => {

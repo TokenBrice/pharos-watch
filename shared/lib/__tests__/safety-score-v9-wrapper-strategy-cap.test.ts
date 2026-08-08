@@ -10,12 +10,23 @@ import type { V9ScoringInput } from "../../types/safety-score-v9";
 const POLICY = V9_CANDIDATE_POLICY_V1;
 const DISCOUNT = POLICY.policy.semantic.formula.wrapperStrategyCap; // { pure: 3, staked: 5, vault: 10 }
 
-// resolveV9WrapperStrategyTier reads only variantKind + dependencies.edges.
 function asset(
   variantKind: V9AssetFactsV2["variantKind"],
   edges: { pathKind: string; dependencyType: string; upstreamAssetId: string }[] = [],
+  form?: "pure" | "native-staked" | "strategy-vault",
 ): V9AssetFactsV2 {
-  return { variantKind, dependencies: { edges } } as unknown as V9AssetFactsV2;
+  return {
+    variantKind,
+    dependencies: { edges },
+    ...(form === undefined
+      ? {}
+      : {
+          wrapperLocalFacts: {
+            applicability: "wrapper",
+            form,
+          },
+        }),
+  } as unknown as V9AssetFactsV2;
 }
 function resolvedWithSerial(upstreamAssetIds: string[]): V9ResolvedDependencyInputs {
   return {
@@ -57,7 +68,7 @@ describe("wrapperStrategyCap policy tiers are monotonic (pure <= staked <= vault
   });
 });
 
-describe("resolveV9WrapperStrategyTier — variantKind drives the tier", () => {
+describe("resolveV9WrapperStrategyTier — compiled form drives the current tier", () => {
   it("strategy-vault (third-party aggregator) → vault", () => {
     expect(
       resolveV9WrapperStrategyTier(asset("strategy-vault", wrapperSerialEdge), resolvedWithSerial(["usdc-circle"]), undefined),
@@ -72,6 +83,15 @@ describe("resolveV9WrapperStrategyTier — variantKind drives the tier", () => {
     expect(
       resolveV9WrapperStrategyTier(asset("risk-absorption", wrapperSerialEdge), resolvedWithSerial(["usde-ethena"]), undefined),
     ).toBe("staked");
+  });
+  it("risk-absorption operated by a third party → vault", () => {
+    expect(
+      resolveV9WrapperStrategyTier(
+        asset("risk-absorption", wrapperSerialEdge, "strategy-vault"),
+        resolvedWithSerial(["bold-liquity"]),
+        undefined,
+      ),
+    ).toBe("vault");
   });
   it("no variantKind → falls back to the backing-inheritance tier (pure stays pure)", () => {
     expect(resolveV9WrapperStrategyTier(asset(null), resolvedWithSerial([]), inherited("pure"))).toBe("pure");

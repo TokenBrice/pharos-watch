@@ -130,6 +130,23 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
+export const SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION: MethodologyChangelogEntry = {
+  version: "9.13",
+  title: "Wrapper caps follow operator ownership",
+  date: "2026-08-08",
+  effectiveAt: 1786233602,
+  summary:
+    "When a risk-absorption product's taxonomy does not reveal who operates the wrapper, its reviewed operator ownership now selects the existing parent-cap form: third-party wrappers use the strategy-vault treatment, while parent-protocol wrappers keep the native-staked treatment.",
+  impact: [
+    "No new cap tier, pillar weight, aggregation rule, or grade threshold is introduced; the change selects between the existing vault and native-staked wrapper treatments",
+    "K3 sBOLD is a third-party wrapper over BOLD and now receives the same vault fallback discount as Yearn yBOLD: on the fixed production replay its parent limit moves from 79 to 74 and its published result moves from 78/B+ to 74/B",
+    "Strata srUSDe is also classified as third-party but remains 52/C- because its own score is already below the parent cap; Aave stkGHO and Sky stUSDS remain parent-protocol wrappers and keep native-staked treatment",
+    "Every risk-absorption variant must now declare `wrapperOperator`; the field is rejected on unambiguous variant kinds, preventing product taxonomy from silently granting a third-party wrapper native treatment",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY: MethodologyChangelogEntry = {
   version: "9.12",
   title: "A resolved mint incident costs a full posture class",

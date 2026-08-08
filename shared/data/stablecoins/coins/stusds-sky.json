@@ -160,6 +160,7 @@
   },
   "variantOf": "usds-sky",
   "variantKind": "risk-absorption",
+  "wrapperOperator": "parent-protocol",
   "pegReferenceId": "usds-sky",
   "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
   "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",

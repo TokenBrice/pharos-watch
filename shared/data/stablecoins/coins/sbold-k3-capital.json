@@ -13,6 +13,7 @@
   },
   "variantOf": "bold-liquity",
   "variantKind": "risk-absorption",
+  "wrapperOperator": "third-party",
   "pegReferenceId": "bold-liquity",
   "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
   "pegMechanism": "Vault shares appreciate against BOLD as Stability Pool interest and liquidation gains are compounded; liquidation collateral is converted back to BOLD by mutable solver/swap infrastructure, so final value inherits BOLD peg and K3 execution risk",

@@ -1195,25 +1195,26 @@ export type V9WrapperStrategyTier = "pure" | "staked" | "vault";
  * rate meaningfully below its required parent, tiered by the wrapper's form:
  *  - `pure-wrapper` (a direct 1:1 wrap/unwrap claim) -> "pure" (the smallest
  *    fallback haircut): it adds a contract layer without a yield strategy.
- *  - `strategy-vault` (a third-party aggregator such as a Yearn/Gauntlet/Steakhouse
- *    vault) → "vault" (the largest haircut): it layers third-party strategy,
+ *  - third-party strategy forms (such as Yearn/Gauntlet/Steakhouse vaults and
+ *    third-party risk-absorption wrappers) → "vault" (the largest haircut): they layer third-party strategy,
  *    smart-contract and liquidity risk over an issuer it does not control.
- *  - `savings-passthrough` / `risk-absorption` (the protocol's OWN native savings
- *    or staking token, e.g. sDAI, sUSDe, scrvUSD) → "staked" (a smaller haircut):
- *    a thinner, same-protocol layer.
- * The registry `variantKind` — threaded onto the compiled facts — is the only
- * signal that separates a third-party vault from a native savings token (issuer
- * key, variantOf and inheritedFrom all collapse to the parent for both). When
- * `variantKind` is absent we fall back to the backing-inheritance tier ("pure" for
- * a 1:1 holding); an unmapped form or a bare serial-wrapper parent takes the
- * conservative "vault" haircut. A serial parent with no wrapper edge (a collateral
- * basket or a "mechanism" serial claim) returns undefined — no discount.
+ *  - native savings/staking forms operated by the parent protocol → "staked"
+ *    (a smaller haircut): a thinner, same-protocol layer.
+ * Current V3 facts carry the reviewed wrapper form directly. Retained V2 facts
+ * fall back to `variantKind`; an unmapped form or a bare serial-wrapper parent
+ * takes the conservative "vault" haircut. A serial parent with no wrapper edge
+ * (a collateral basket or a "mechanism" serial claim) returns undefined.
  */
 export function resolveV9WrapperStrategyTier(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
   resolved: V9ResolvedDependencyInputs,
   inheritedStablecoinBacking: V9InheritedStablecoinBacking | undefined,
 ): V9WrapperStrategyTier | undefined {
+  if (asset.wrapperLocalFacts?.applicability === "wrapper") {
+    if (asset.wrapperLocalFacts.form === "pure") return "pure";
+    if (asset.wrapperLocalFacts.form === "native-staked") return "staked";
+    return "vault";
+  }
   if (asset.variantKind === "pure-wrapper") return "pure";
   if (asset.variantKind === "strategy-vault") return "vault";
   if (asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption") return "staked";
