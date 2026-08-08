@@ -127,6 +127,28 @@ export const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepCo
       dashed: true,
     },
   },
+  "commodity-claim": {
+    accentColor: "var(--mechanism-commodity-claim)",
+    stressFootnote: "stress: vault or title failure; whole-bar redemption minimums",
+    ariaLabel: (symbol) =>
+      `Buyer funds allocate specific vaulted metal; ${symbol} is a title claim on numbered bars, redeemable for physical delivery in whole-bar lots.`,
+    description: (symbol) =>
+      `Buyers send funds to the issuer, which purchases metal and allocates specific numbered bars in a named vault; ${symbol} is minted as a title claim on that allocated metal, and holders can redeem for physical delivery subject to whole-bar minimums, fees, and eligibility.`,
+    defaultSteps: (symbol) => [
+      { label: "Buyer funds", subtitle: "metal purchased" },
+      { label: "Allocated vault", subtitle: "numbered bars, segregated" },
+      { label: `${symbol} minted`, subtitle: "title to specific metal" },
+    ],
+    returnArrow: {
+      fromX: 500,
+      toX: 275,
+      topY: 90,
+      peakY: 140,
+      label: "physical delivery",
+      strokeWidth: 1.2,
+      dashed: true,
+    },
+  },
 };
 
 export interface ThreeStepArchetypeDiagramProps {

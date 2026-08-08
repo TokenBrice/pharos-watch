@@ -7,6 +7,7 @@ import {
 import { V9MechanismRiskReviewSchema, type V9MechanismRiskReview } from "../../../types/safety-score-v9-backing";
 import { evaluateV9AlgorithmicBacking } from "./algorithmic";
 import { evaluateV9CdpBacking } from "./cdp";
+import { evaluateV9CommodityClaimBacking } from "./commodity-claim";
 import { evaluateV9FiatCashBacking } from "./fiat-cash";
 import { evaluateV9RwaCreditFundBacking } from "./rwa-credit-fund";
 import { evaluateV9SyntheticDeltaNeutralBacking } from "./synthetic-delta-neutral";
@@ -14,6 +15,7 @@ import { evaluateV9TbillBacking } from "./tbill";
 
 export type { V9AlgorithmicMechanismRiskReview } from "./algorithmic";
 export type { V9CdpMechanismRiskReview } from "./cdp";
+export type { V9CommodityClaimMechanismRiskReview } from "./commodity-claim";
 export type { V9FiatCashMechanismRiskReview } from "./fiat-cash";
 export type { V9RwaCreditFundMechanismRiskReview } from "./rwa-credit-fund";
 export type { V9SyntheticDeltaNeutralMechanismRiskReview, V9SyntheticVenueShare } from "./synthetic-delta-neutral";
@@ -38,6 +40,8 @@ export function evaluateV9Backing(
   switch (normalized.archetype) {
     case "fiat-cash":
       return evaluateV9FiatCashBacking(asset, normalized, policy);
+    case "commodity-claim":
+      return evaluateV9CommodityClaimBacking(asset, normalized, policy);
     case "tbill":
       return evaluateV9TbillBacking(asset, normalized, policy);
     case "cdp":

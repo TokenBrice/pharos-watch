@@ -6,11 +6,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "76d6f669f7253aaf58384f43bd8b9b3804c0a6b3f2ee08042ef654da120e4ab6"
+      "sha256": "0a6c60cc10080e31075b1bf75c4f514d32e7f8cbd455b3a82f41178d7cf7238c"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "ee01d339ccd7fdadd37f9efbc354798f099568dca754d2e005183e1c1dfcbd17"
+      "sha256": "5f55e486ec48deef0ec831ad828b8dc918bd2f923f204c8525644e69d8f0e387"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chains/index.ts",
-      "sha256": "2458f9fbf2720fc4d3393184f0fdb8920ac96fd9b15fa70a83e9bbe0e1dc2f65"
+      "sha256": "2d99575f0ba6e2aa02eb5a64d82024bb28158f60a2634b44d9b2334a62aa9910"
     },
     {
       "path": "shared/lib/classification/resolve-mechanism-archetype.ts",
@@ -62,7 +62,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "cb6cfdd3c476a91191f3416d5a4a7059c100708b6e0c45b45742a047aa5bf104"
+      "sha256": "1c9bef33de08cb4d8b4fc156a181ca4966d8acdccd70fa517c8d856bed9f6441"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -209,12 +209,16 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "fb331240190ba1cf038307443d797af73dd68471f0b34e5b86a7484ce663bbb2"
     },
     {
+      "path": "shared/lib/safety-score-v9/archetypes/commodity-claim.ts",
+      "sha256": "a7dd380c136c62b2bee5465ab59d22f92369b7673cfe9f9e21f858c0366e0ac6"
+    },
+    {
       "path": "shared/lib/safety-score-v9/archetypes/fiat-cash.ts",
       "sha256": "62543067222a433eb2cca24bb1035bf1a6496b534f8f98d29cd4edcc1b89a06e"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/index.ts",
-      "sha256": "09b0027f4de99540ceb173b97fa9509aeb68117966cd69811a3b11810ebf35aa"
+      "sha256": "7a4d689c3500d22940267f7bde720d8f0c26c10e886ef7c6a29b3a1b4324041a"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/rwa-credit-fund.ts",
@@ -338,7 +342,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "3e26c6c1e4e33a4bc0896cfe5ff79053f8506601aec8a90de7f067d20a47e09f"
+      "sha256": "0278dd57a657cb0ec93003d2115080783575a647bebb7ad495ba2f075b7b7268"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -362,7 +366,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-backing.ts",
-      "sha256": "2754c41bfce242bf13b5a45d73e48b823db161ed7d9de22607370e874316726f"
+      "sha256": "123eabd1a5dee7d396af5732627de1f1824ee5bc077df28914d1cb42c5f882c4"
     },
     {
       "path": "shared/types/safety-score-v9-fact-primitives.ts",
@@ -394,11 +398,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "e4eb2925c1b824b038e5ae7e588ec627f213e225ab1c6e23336454bb1207fd7f"
+      "sha256": "c1892c807859b135a3c41a4b0a920977a7ec1e144d1fedc8c571278a00c41048"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
-      "sha256": "562323191ea4e263db74f20653dd36565c7a019a1972df1d3216c83c1392c170"
+      "sha256": "330a33adce2c30a9971e6bf14c4c6000a0ca1225f5cdce0a4d2f0a5373980468"
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
@@ -426,7 +430,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-mechanism.ts",
-      "sha256": "b5055b47c93aae873dcc36a07c813fc3525025be0f5b775b37a5e2e1b72633d9"
+      "sha256": "468854a854cb9084962a221ab8c713004792fbb12e8916e06845a63788f06773"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",
@@ -517,7 +521,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "d2abfe89464a65c962a27073a79f1a1dad1992993a125939509e17f79a299261"
+  "digest": "5eb4b882cc2645a2eed3fc4886ae5254544b339f0662d6976fc5f0ca25a134e7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

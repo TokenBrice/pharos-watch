@@ -7,6 +7,11 @@ import {
   toMethodologyVersionLabel,
 } from "../methodology-version";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
+import { SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE } from "../../data/methodology-changelogs/safety-score/v9-activation";
+import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG,
+  SAFETY_SCORE_METHODOLOGY_VERSION,
+} from "../methodology-versions/safety-score";
 
 describe("compareMethodologyVersions", () => {
   it("orders decimal methodology versions with leading-zero hundredths before tenths", () => {
@@ -131,6 +136,19 @@ describe("createMethodologyVersion", () => {
         changelog: [],
       }),
     ).toThrow(/two-segment/i);
+  });
+});
+
+describe("Safety Score v9.14 commodity-claim entry (prepared, unpublished)", () => {
+  // `createMethodologyVersion` makes wiring an entry and bumping
+  // current-version.json one atomic act, and 9.13 set the precedent that the
+  // pair lands with the behaviour it describes. The v9.14 engine ships with zero
+  // assets on the new archetype, so the entry stays out of the published
+  // changelog until the phase-2 migration. Phase 2 deletes this case.
+  it("is authored but not yet in the published changelog", () => {
+    expect(SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.version).toBe("9.14");
+    expect(SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => entry.version)).not.toContain("9.14");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("9.13");
   });
 });
 

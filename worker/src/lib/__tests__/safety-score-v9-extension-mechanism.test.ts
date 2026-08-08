@@ -6,6 +6,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
+  deriveCommodityClaimMechanismExitFacts,
   expandOverlayReview,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismOverlayEvidence,
@@ -439,6 +440,147 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
     expect(review.structuralRedemption.quality).toBe("adequate");
+  });
+
+  describe("commodity-claim (v9.14)", () => {
+    const sourceUrl = "https://example.com/bar-list";
+
+    function commodityOverlay(components: Record<string, unknown>): MechanismReviewOverlay {
+      return MechanismReviewOverlaySchema.parse({
+        assetId: "alpha",
+        archetype: "commodity-claim",
+        reviewedAt: "2026-07-14",
+        sources: [{ label: "Vault attestation and redemption terms", url: sourceUrl }],
+        notes: "Curated allocated-metal review under the ratified strict evidence standard.",
+        metrics: {},
+        components,
+      });
+    }
+
+    it("bounds the compiler fallback and keeps the proof-of-reserves assurance shortcut", () => {
+      expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), BARE_META, "commodity-claim")).toBeNull();
+
+      const review = buildSafetyScoreV9MechanismReview(
+        fixedInputStub({ alpha: [{}] }),
+        ATTESTED_META,
+        "commodity-claim",
+      );
+      if (review?.archetype !== "commodity-claim") throw new Error("unexpected archetype");
+      expect(review.titleAndAllocation.status.observationState).toBe("bounded-unknown");
+      expect(review.titleAndAllocation.quality).toBeNull();
+      expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+      // The bar-list/inventory attestation is the same recorded report class as
+      // a cash proof-of-reserves report, so the auto-known shortcut carries over.
+      expect(review.assuranceAndReconciliation.status.observationState).toBe("known");
+      expect(review.assuranceAndReconciliation.quality).toBe("adequate");
+      // Redemption minimums, eligibility, and delivery terms are never derivable
+      // from reserve or assurance evidence; the component waits for curation.
+      expect(review.physicalRedemption.status.observationState).toBe("missing");
+      expect(review.physicalRedemption.quality).toBeNull();
+    });
+
+    it("expands curated components, merges the fallback, and rejects foreign keys", () => {
+      const fallback = buildSafetyScoreV9MechanismReview(
+        fixedInputStub({ alpha: [{}] }),
+        ATTESTED_META,
+        "commodity-claim",
+      );
+      const review = expandOverlayReview(
+        commodityOverlay({
+          titleAndAllocation: { quality: "limited" },
+          physicalRedemption: { quality: "limited" },
+          custodyContinuity: {
+            applicability: "unavailable",
+            rationale: "No vault operator, insurance terms, or successor-custody arrangement is disclosed.",
+            sourceUrl,
+          },
+        }),
+        fallback,
+      );
+      if (review.archetype !== "commodity-claim") throw new Error("unexpected archetype");
+      expect(review.titleAndAllocation).toMatchObject({ status: { observationState: "known" }, quality: "limited" });
+      expect(review.physicalRedemption).toMatchObject({ status: { observationState: "known" }, quality: "limited" });
+      expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+      // The uncurated assurance component keeps the PoR-derived fallback quality.
+      expect(review.assuranceAndReconciliation).toMatchObject({
+        status: { observationState: "known" },
+        quality: "adequate",
+      });
+
+      expect(() =>
+        expandOverlayReview(commodityOverlay({ claimAndSegregation: { quality: "adequate" } })),
+      ).toThrow(/Unknown commodity-claim mechanism component/);
+      expect(() =>
+        expandOverlayReview({
+          ...commodityOverlay({ titleAndAllocation: { quality: "adequate" } }),
+          metrics: { commodityOunces: 1 },
+        }),
+      ).toThrow(/Unknown commodity-claim mechanism metric/);
+    });
+
+    it("refuses a profile-driven commodity-claim overlay so the archetype owns its own facts", () => {
+      expect(() =>
+        MechanismReviewOverlaySchema.parse({
+          assetId: "alpha",
+          archetype: "commodity-claim",
+          reviewedAt: "2026-07-14",
+          sources: [{ label: "Vault attestation", url: sourceUrl }],
+          notes: "Profiles project to fiat-cash and must not ride the new archetype.",
+          metrics: {},
+          components: {},
+          profileReview: {
+            profile: "allocated-commodity-claim",
+            facts: {
+              holderTitle: { disposition: "supported", quality: "strong" },
+              physicalAllocation: { disposition: "supported", quality: "strong" },
+              custodianSegregation: { disposition: "supported", quality: "adequate" },
+              bankruptcyRemoteness: { disposition: "supported", quality: "limited" },
+              custodyContinuity: { disposition: "issuer-undisclosed" },
+              auditCadence: { disposition: "supported", quality: "adequate" },
+              reserveReconciliation: { disposition: "supported", quality: "strong" },
+              insurance: { disposition: "issuer-undisclosed" },
+              physicalRedemption: { disposition: "supported", quality: "limited" },
+            },
+          },
+        }),
+      ).toThrow(/incompatible with commodity-claim/);
+    });
+
+    it("projects the exit fact from the one curated physical-redemption statement", () => {
+      // Measured -> supported at the same quality the backing pillar grades.
+      expect(
+        deriveCommodityClaimMechanismExitFacts(commodityOverlay({ physicalRedemption: { quality: "limited" } })),
+      ).toEqual([{ factKey: "physical-redemption", disposition: "supported", quality: "limited" }]);
+      // Sourced nondisclosure -> bounded issuer-undisclosed, never a quality claim.
+      expect(
+        deriveCommodityClaimMechanismExitFacts(
+          commodityOverlay({
+            physicalRedemption: {
+              applicability: "unavailable",
+              rationale: "No redemption minimum, fee schedule, or eligibility rule is published.",
+              sourceUrl,
+            },
+          }),
+        ),
+      ).toEqual([{ factKey: "physical-redemption", disposition: "issuer-undisclosed", quality: null }]);
+      // A structurally absent redemption right is not evidence an exit exists,
+      // so it must not buy the bounded missing-runtime-route substitution.
+      expect(
+        deriveCommodityClaimMechanismExitFacts(
+          commodityOverlay({
+            physicalRedemption: {
+              applicability: "not-applicable",
+              rationale: "The product offers no physical delivery channel at all.",
+              sourceUrl,
+            },
+          }),
+        ),
+      ).toEqual([]);
+      // Uncurated projects nothing: the compiler fallback has no statement.
+      expect(
+        deriveCommodityClaimMechanismExitFacts(commodityOverlay({ titleAndAllocation: { quality: "adequate" } })),
+      ).toEqual([]);
+    });
   });
 
   it("rejects measured-null and unsourced structural N/A overlay claims", () => {

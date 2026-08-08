@@ -21,6 +21,7 @@ const TITLE_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
   algorithmic: "Algorithmic Stablecoins, Explained",
   "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
+  "commodity-claim": "Gold and Commodity Tokens, Explained",
 };
 
 const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
@@ -36,6 +37,8 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
     "Algorithmic stablecoins use supply controls or reflexive incentives instead of full reserves. Read why the design keeps failing and what's still being attempted.",
   "rwa-credit-fund":
     "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
+  "commodity-claim":
+    "Gold and silver tokens are title claims on specific vaulted bars, not on dollars. Learn how allocation, vault custody, bar-list audits, and physical redemption work.",
 };
 
 export function generateStaticParams() {

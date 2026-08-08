@@ -1005,6 +1005,7 @@ const V9BackingPolicySchema = z
     archetypes: z
       .object({
         "fiat-cash": V9BackingArchetypePolicySchema,
+        "commodity-claim": V9BackingArchetypePolicySchema,
         tbill: V9BackingArchetypePolicySchema,
         cdp: V9BackingArchetypePolicySchema,
         "synthetic-delta-neutral": V9BackingArchetypePolicySchema,

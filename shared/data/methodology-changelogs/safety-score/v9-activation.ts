@@ -130,6 +130,45 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
+/**
+ * v9.14 — PREPARED, NOT YET PUBLISHED.
+ *
+ * This entry is deliberately absent from the changelog array in
+ * `shared/lib/methodology-versions/safety-score.ts`. `createMethodologyVersion()`
+ * enforces `currentVersion === newest changelog entry`, so wiring an entry and
+ * bumping `current-version.json` is one atomic act, and 9.13 set the precedent
+ * that the pair lands in the same commit as the behaviour it describes
+ * (ac1602f85). The v9.14 engine lands with zero assets on the new archetype, so
+ * publishing 9.14 now would advertise a methodology version that moves no score
+ * and would relabel every score in the 9.14 window before the migration exists.
+ *
+ * Phase 2 (per-coin migration) must, in one commit:
+ *   1. set `date` / `effectiveAt` to the real v9.14 release moment,
+ *   2. append the measured mover bullets from the full-set replay,
+ *   3. add this export to the `changelog` array in
+ *      `shared/lib/methodology-versions/safety-score.ts`,
+ *   4. set `shared/lib/methodology-versions/current-version.json` to `9.14`,
+ *   5. regenerate the V9 evaluation-build manifest.
+ */
+export const SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE: MethodologyChangelogEntry = {
+  version: "9.14",
+  title: "Commodity claims get their own archetype",
+  date: "2026-08-08",
+  effectiveAt: 1786233603,
+  summary:
+    "Gold and silver tokens stop being scored as custodial cash. The new `commodity-claim` mechanism archetype asks the questions the asset actually poses — legal title to identified bars, vault custody continuity, bar-list assurance, and operable physical redemption — instead of reusing the fiat-cash reserve component names and smuggling the real semantics in through a mechanism profile.",
+  impact: [
+    "Backing mechanism components for a commodity claim are `title-and-allocation` (0.15), `custody-continuity` (0.10), `assurance-and-reconciliation` (0.13), and `physical-redemption` (0.07), against the same 0.55 reserve weight the fiat-cash archetype carries; title and custody remain the serial claims that fail closed, and title failure keeps the critical unsafe-backing signal",
+    "Physical redemption is now graded in Backing rather than existing only as a profile exit fact. It is stated once: the Exit pillar keeps reading the same curated fact to explain a missing runtime route, so the two pillars cannot disagree and no fact is counted twice",
+    "There is deliberately no price-basis component. A commodity token's reference price is the metal, and the peg layer already measures the token-versus-reference spread; adding a backing component for it would double-count. Price-coupling context belongs in the physical-redemption rationale",
+    "Gold-collateralized dollar tokens are not commodity claims and stay in their dollar archetypes with metal recorded as allocated-commodity reserve; the archetype is for direct claims on the commodity itself",
+    "Commodity-claim components follow the same ratified strict evidence standard as fiat-cash and tbill: they are compiler-bounded, only a source-cited curated overlay may claim them, and insufficient disclosure records a sourced unavailable disposition that stays bounded and non-scoring",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION: MethodologyChangelogEntry = {
   version: "9.13",
   title: "Wrapper caps follow operator ownership",

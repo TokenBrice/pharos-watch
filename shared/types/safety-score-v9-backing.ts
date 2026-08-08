@@ -60,6 +60,35 @@ const V9FiatCashMechanismRiskReviewSchema = z
   .strict();
 export type V9FiatCashMechanismRiskReview = z.infer<typeof V9FiatCashMechanismRiskReviewSchema>;
 
+/**
+ * Direct commodity claims (allocated gold, silver, and comparable metal
+ * claims). Methodology v9.14 promotes this out of the `fiat-cash` archetype:
+ * the cash-reserve component names never asked the commodity questions, and the
+ * real semantics were being smuggled in through the
+ * `allocated-commodity-claim` mechanism profile.
+ *
+ * `physicalRedemption` is a first-class component here rather than a
+ * profile-only exit fact. The fact is still *stated once*: the mechanism-exit
+ * projection consumed by the Exit pillar is derived from this component (see
+ * `getSafetyScoreV9MechanismExitFacts`), so the two pillars read one curated
+ * statement instead of two independent declarations that could disagree.
+ *
+ * There is deliberately no price-basis component: the peg pillar already owns
+ * deviation against the commodity reference, and grading it again here would
+ * double-count. Price-coupling context belongs in the `physicalRedemption`
+ * rationale.
+ */
+const V9CommodityClaimMechanismRiskReviewSchema = z
+  .object({
+    archetype: z.literal("commodity-claim"),
+    titleAndAllocation: V9MechanismFactV1Schema,
+    custodyContinuity: V9MechanismFactV1Schema,
+    assuranceAndReconciliation: V9MechanismFactV1Schema,
+    physicalRedemption: V9MechanismFactV1Schema,
+  })
+  .strict();
+export type V9CommodityClaimMechanismRiskReview = z.infer<typeof V9CommodityClaimMechanismRiskReviewSchema>;
+
 const V9TbillMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("tbill"),
@@ -419,6 +448,7 @@ export type V9RwaCreditFundMechanismRiskReview = z.infer<typeof V9RwaCreditFundM
 
 export const V9MechanismRiskReviewSchema = z.discriminatedUnion("archetype", [
   V9FiatCashMechanismRiskReviewSchema,
+  V9CommodityClaimMechanismRiskReviewSchema,
   V9TbillMechanismRiskReviewSchema,
   V9CdpMechanismRiskReviewSchema,
   V9SyntheticDeltaNeutralMechanismRiskReviewSchema,

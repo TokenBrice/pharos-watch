@@ -11,6 +11,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,
+  type V9CommodityClaimMechanismRiskReview,
   type V9FiatCashMechanismRiskReview,
   type V9MechanismFactV1,
   type V9MechanismQualityLevel,
@@ -125,6 +126,31 @@ function buildFiatCashReview(
   };
 }
 
+/**
+ * Commodity-claim compiler fallback. Mirrors the fiat-cash shape: every
+ * component is bounded-unknown from the same reserve/custody/PoR evidence,
+ * except `assuranceAndReconciliation`, which keeps the
+ * `proofOfReserves.latestReport` auto-known shortcut (a bar-list or inventory
+ * attestation is the same recorded report class). `physicalRedemption` has no
+ * compiler-derivable evidence — redemption minimums, eligibility, and delivery
+ * terms live only in issuer terms — so it stays bounded pending curation.
+ */
+function buildCommodityClaimReview(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  meta: MechanismMeta,
+): V9CommodityClaimMechanismRiskReview | null {
+  const reserves = hasReserveEvidence(fixedInput, meta);
+  const custody = reserves || meta.custodyProfile !== undefined;
+  if (!reserves && !custody && !meta.proofOfReserves) return null;
+  return {
+    archetype: "commodity-claim",
+    titleAndAllocation: boundedFact("title-and-allocation", reserves || meta.proofOfReserves !== undefined),
+    custodyContinuity: boundedFact("custody-continuity", custody),
+    assuranceAndReconciliation: assuranceFact(meta),
+    physicalRedemption: boundedFact("physical-redemption", false),
+  };
+}
+
 function buildTbillReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   meta: MechanismMeta,
@@ -201,7 +227,15 @@ const OverlaySourceSchema = z.object({ label: z.string().min(1), url: z.string()
 export const MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
-    archetype: z.enum(["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund", "fiat-cash", "tbill"]),
+    archetype: z.enum([
+      "cdp",
+      "synthetic-delta-neutral",
+      "algorithmic",
+      "rwa-credit-fund",
+      "fiat-cash",
+      "tbill",
+      "commodity-claim",
+    ]),
     reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     sources: z.array(OverlaySourceSchema).min(1),
     notes: z.string().min(1),
@@ -347,6 +381,15 @@ const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], 
   // Claims that do not meet its evidence classes stay uncurated (bounded).
   "fiat-cash": ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"],
   tbill: ["fundClaimAndSeniority", "navValuation", "durationAndLiquidity", "lossRecoveryDesign"],
+  // Commodity claims follow the same strict evidence standard as fiat-cash and
+  // tbill: components are compiler-bounded and only a curated, source-cited
+  // overlay may claim them.
+  "commodity-claim": [
+    "titleAndAllocation",
+    "custodyContinuity",
+    "assuranceAndReconciliation",
+    "physicalRedemption",
+  ],
 };
 
 const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], readonly string[]> = {
@@ -356,6 +399,7 @@ const OVERLAY_ARCHETYPE_METRICS: Record<MechanismReviewOverlay["archetype"], rea
   "rwa-credit-fund": ["weightedAverageMaturityDays", "valuationCadenceDays"],
   "fiat-cash": [],
   tbill: [],
+  "commodity-claim": [],
 };
 
 function kebabCase(value: string): string {
@@ -549,17 +593,52 @@ export function getSafetyScoreV9MechanismOverlayEvidence(
     : null;
 }
 
+export interface V9MechanismExitFactProjection {
+  factKey: "physical-redemption" | "protocol-redemption";
+  disposition: "supported" | "issuer-undisclosed" | "integration-missing" | "method-unsupported";
+  quality: V9MechanismQualityLevel | null;
+}
+
+/**
+ * The `physical-redemption` mechanism-exit fact for a commodity claim, derived
+ * from the SAME curated `physicalRedemption` component the backing pillar
+ * grades. v9.14 promotes physical redemption to a first-class backing
+ * component; the Exit pillar keeps consuming it only to explain a missing
+ * runtime route (`no-viable-exit-path` becomes the bounded
+ * `missing-runtime-route-evidence`), exactly as it did while the fact lived in
+ * the `allocated-commodity-claim` profile's `exitFacts`. Deriving rather than
+ * re-declaring is the anti-double-count rule: one curated statement, two
+ * readers, no way for a curator to assert a strong backing redemption and a
+ * different exit disposition.
+ *
+ * A `not-applicable` component projects nothing: a structurally absent
+ * redemption right is not evidence that an exit route exists, so it must not
+ * buy the bounded reason substitution. An uncurated component projects nothing
+ * either — the compiler fallback has no redemption evidence to state.
+ */
+export function deriveCommodityClaimMechanismExitFacts(
+  overlay: MechanismReviewOverlay,
+): V9MechanismExitFactProjection[] {
+  const component = overlay.components.physicalRedemption;
+  if (component === undefined) return [];
+  if (!("applicability" in component) || component.applicability === "measured") {
+    return [{ factKey: "physical-redemption", disposition: "supported", quality: component.quality }];
+  }
+  if (component.applicability === "unavailable") {
+    return [{ factKey: "physical-redemption", disposition: "issuer-undisclosed", quality: null }];
+  }
+  return [];
+}
+
 export function getSafetyScoreV9MechanismExitFacts(
   assetId: string,
   archetype: string,
   clockSec: number,
-): Array<{
-  factKey: "physical-redemption" | "protocol-redemption";
-  disposition: "supported" | "issuer-undisclosed" | "integration-missing" | "method-unsupported";
-  quality: V9MechanismQualityLevel | null;
-}> {
+): V9MechanismExitFactProjection[] {
   const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
-  if (overlay?.profileReview === undefined) return [];
+  if (overlay === null) return [];
+  if (overlay.archetype === "commodity-claim") return deriveCommodityClaimMechanismExitFacts(overlay);
+  if (overlay.profileReview === undefined) return [];
   const projection = projectV9MechanismProfile(overlay.profileReview);
   return Object.entries(projection.exitFacts)
     .map(([factKey, fact]) => ({
@@ -592,10 +671,13 @@ export function buildSafetyScoreV9MechanismReview(
         ? buildFiatCashReview(fixedInput, meta)
         : archetype === "tbill"
           ? buildTbillReview(fixedInput, meta)
-          : null;
+          : archetype === "commodity-claim"
+            ? buildCommodityClaimReview(fixedInput, meta)
+            : null;
     return expandOverlayReview(overlay, fallbackReview);
   }
   if (archetype === "fiat-cash") return buildFiatCashReview(fixedInput, meta);
   if (archetype === "tbill") return buildTbillReview(fixedInput, meta);
+  if (archetype === "commodity-claim") return buildCommodityClaimReview(fixedInput, meta);
   return null;
 }

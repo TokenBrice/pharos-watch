@@ -72,9 +72,25 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     });
   });
 
+  // v9.14 phase-1 guard. The `commodity-claim` archetype is registered but no
+  // asset resolves to it yet, so this case must keep asserting the *fiat-cash*
+  // projection byte-for-byte. Phase 2 migrates XAUT: `mechanismArchetype`
+  // becomes `commodity-claim`, the overlay's `profileReview` is rewritten as
+  // four direct components (titleAndAllocation limited, custodyContinuity
+  // unavailable, assuranceAndReconciliation adequate, physicalRedemption
+  // limited — the same facts this test pins), and this expectation moves with it.
   it("carries XAUT allocated-commodity facts and explicit issuer nondisclosure into backing", () => {
     const overlay = namedOverlay("xaut-tether");
+    expect(overlay.archetype).toBe("fiat-cash");
     expect(overlay.profileReview?.profile).toBe("allocated-commodity-claim");
+    expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("fiat-cash");
+    // No asset is on the new archetype in the engine-only phase.
+    expect(
+      [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim"),
+    ).toEqual([]);
+    expect(
+      mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim"),
+    ).toEqual([]);
     const profile = projectV9MechanismProfile(overlay.profileReview!);
     const coverage = evaluateV9MechanismProfileCoverage(overlay.profileReview!);
     const review = buildSafetyScoreV9MechanismReview(

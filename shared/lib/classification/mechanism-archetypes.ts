@@ -7,6 +7,7 @@ export const MECHANISM_ARCHETYPE_LABELS: Record<MechanismArchetype, string> = {
   "synthetic-delta-neutral": "Hedged Synthetic Dollar",
   algorithmic: "Reflexive / Unbacked",
   "rwa-credit-fund": "Tokenized Credit Fund",
+  "commodity-claim": "Allocated Commodity Claim",
 };
 
 /**
@@ -20,6 +21,7 @@ export const MECHANISM_ARCHETYPE_SHORT_LABELS: Record<MechanismArchetype, string
   "synthetic-delta-neutral": "Hedged Synthetic",
   algorithmic: "Reflexive / Unbacked",
   "rwa-credit-fund": "Credit Fund",
+  "commodity-claim": "Commodity Claim",
 };
 
 export const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> = {
@@ -29,6 +31,7 @@ export const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> =
   "synthetic-delta-neutral": "delta-neutral",
   algorithmic: "algorithmic",
   "rwa-credit-fund": "credit-fund",
+  "commodity-claim": "commodity-backed",
 };
 
 export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> = {
@@ -43,6 +46,8 @@ export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> 
     "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
   "rwa-credit-fund":
     "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
+  "commodity-claim":
+    "The token is a title claim on specific vaulted metal rather than on dollars; it tracks the commodity price and can usually be redeemed for physical delivery in whole-bar lots.",
 };
 
 export function getMechanismArchetypeLabel(value: MechanismArchetype): string {

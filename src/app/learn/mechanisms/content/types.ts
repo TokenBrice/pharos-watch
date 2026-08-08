@@ -63,4 +63,5 @@ export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
   "synthetic-delta-neutral": { kickerClass: "" },
   algorithmic: { kickerClass: "" },
   "rwa-credit-fund": { kickerClass: "" },
+  "commodity-claim": { kickerClass: "" },
 };
