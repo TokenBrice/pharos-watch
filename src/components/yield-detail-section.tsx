@@ -175,8 +175,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       ) : null}
 
       <div className="space-y-3">
+        {/* Verdict line derived from published figures (excess yield vs the
+            benchmark hurdle, PYS after adjustments) — falls back to the
+            neutral caption when the hurdle comparison is unavailable. */}
         <p className="text-sm text-muted-foreground">
-          APY trend against the current benchmark hurdle rate and peer median.
+          {excessYield != null && view.ranking.apy30d != null
+            ? `APY ${formatPercent(view.ranking.apy30d)} ${excessYield >= 0 ? "clears" : "misses"} the ${view.ranking.benchmarkLabel} hurdle (${formatSignedPercent(excessYield)}); PYS ${view.ranking.pharosYieldScore ?? "NR"} after risk adjustments.`
+            : "APY trend against the current benchmark hurdle rate and peer median."}
         </p>
 
         <YieldHistoryChart

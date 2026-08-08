@@ -16,9 +16,14 @@ import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreTier, TIER_TEXT, ratioQualityColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
-import { getConcentrationLabel, getLiquidityEvidenceLabel } from "@/components/dex-liquidity-card-model";
+import {
+  buildLiquidityVerdictLine,
+  getConcentrationLabel,
+  getLiquidityEvidenceLabel,
+} from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
@@ -44,6 +49,23 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 export function hasMeaningfulDexData(liq: DexLiquidityData | undefined): liq is DexLiquidityData {
   if (!liq) return false;
   return liq.poolCount > 0 || liq.totalTvlUsd > 0;
+}
+
+/** `getScoreTier`'s real cutoffs (80/60/40) as an unlabeled score track —
+ *  the tiers are color keys, not published vocabulary. Worst → best. */
+const DEX_SCORE_BANDS: readonly SpectrumBand[] = [
+  { key: "t0", label: "", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
+  { key: "t40", label: "", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
+  { key: "t60", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
+  { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+];
+const DEX_SCORE_CUTOFFS = [0, 40, 60, 80] as const;
+
+function dexScoreBandKey(score: number): string {
+  if (score >= 80) return "t80";
+  if (score >= 60) return "t60";
+  if (score >= 40) return "t40";
+  return "t0";
 }
 
 export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
@@ -94,6 +116,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass ?? "unobserved");
   const isRated = liq.liquidityScore != null;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
+  const verdictLine = isRated ? buildLiquidityVerdictLine(liq.scoreComponents) : null;
   const hasTvlChange24h = liq.tvlChange24h != null && Math.abs(liq.tvlChange24h) >= 0.05;
   const hasTvlChange7d = liq.tvlChange7d != null && Math.abs(liq.tvlChange7d) >= 0.05;
 
@@ -134,9 +157,22 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-6")}>
-        <p className="text-xs text-muted-foreground">
-          Aggregate DEX market score; not a single-route execution test.
-        </p>
+        {isRated ? (
+          <div className="space-y-2">
+            <ScoreBandSpectrum
+              mode="range"
+              bands={DEX_SCORE_BANDS}
+              cutoffs={DEX_SCORE_CUTOFFS}
+              activeKey={dexScoreBandKey(score)}
+              score={score}
+              ariaLabel={`Liquidity score ${score} of 100 on the score track.`}
+              className="max-w-md"
+            />
+            {/* The old opening line ("aggregate score; not an execution test")
+                lives verbatim in the liquidityScore methodology hint. */}
+            {verdictLine ? <p className="text-xs text-muted-foreground">{verdictLine}</p> : null}
+          </div>
+        ) : null}
         {query.error ? (
           <QueryStateNotice
             state="stale-with-data"
@@ -211,7 +247,17 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
         {/* ── Detail layer: market structure folds behind the standard
                disclosure — headline KPIs and the score read stay above ── */}
-        <ModuleDisclosure label="Full market breakdown">
+        <ModuleDisclosure
+          label="Full market breakdown"
+          deferredChildren={
+            /* recharts + the pools table only mount once the fold first
+               opens — closed, they were paying full render cost unseen. */
+            <div className="mt-4 space-y-4">
+              <TvlTrendChart stablecoinId={stablecoinId} />
+              {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
+            </div>
+          }
+        >
         <div className="mt-3 space-y-4">
           {/* Health indicators — grouped into a cohesive block */}
           {(liq.concentrationHhi != null ||
@@ -301,10 +347,6 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <ProtocolBar protocolTvl={liq.protocolTvl} />
 
           <ChainBar chainTvl={liq.chainTvl} />
-
-          <TvlTrendChart stablecoinId={stablecoinId} />
-
-          {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
         </div>
         </ModuleDisclosure>
 

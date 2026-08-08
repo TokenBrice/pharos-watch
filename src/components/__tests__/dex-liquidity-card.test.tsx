@@ -1,11 +1,23 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
+import { buildLiquidityVerdictLine } from "@/components/dex-liquidity-card-model";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
+
+/** The market-breakdown fold defers charts/tables until first open. */
+function openMarketBreakdown(container: HTMLElement) {
+  const details = Array.from(container.querySelectorAll("details")).find((node) =>
+    node.textContent?.includes("Full market breakdown"),
+  );
+  if (!details) throw new Error("Full market breakdown disclosure not found");
+  details.open = true;
+  fireEvent(details, new Event("toggle", { bubbles: false }));
+}
+
 
 const { useDexLiquidityMock, useDexLiquidityHistoryMock } = vi.hoisted(() => ({
   useDexLiquidityMock: vi.fn(),
@@ -99,9 +111,9 @@ describe("DexLiquidityCard", () => {
 
     expect(screen.getAllByText("DEX market liquidity").length).toBeGreaterThan(0);
     expect(screen.getByText("Mixed coverage")).toBeTruthy();
-    expect(
-      screen.getByText("Aggregate DEX market score; not a single-route execution test."),
-    ).toBeTruthy();
+    // The opening line is now the component-derived verdict (when components
+    // are published); the old disclaimer lives in the methodology hint.
+    expect(screen.queryByText("Aggregate DEX market score; not a single-route execution test.")).toBeNull();
     const effectiveLabel = screen.getByText("Effective Liquidity");
     const effectiveValue = screen.getByText("$910.71K");
     const totalAmmLabel = screen.getByText("Total AMM Liquidity TVL");
@@ -128,9 +140,10 @@ describe("DexLiquidityCard", () => {
       isLoading: false,
     });
 
-    render(<DexLiquidityCard stablecoinId="usdk-kast" />);
+    const { container } = render(<DexLiquidityCard stablecoinId="usdk-kast" />);
 
     expect(screen.getByText("No observed direct DEX market for this token in the current pipeline.")).toBeTruthy();
+    openMarketBreakdown(container);
     expect(
       screen.getByText(
         "Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.",
@@ -180,8 +193,9 @@ describe("DexLiquidityCard", () => {
       isLoading: false,
     });
 
-    render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
 
+    openMarketBreakdown(container);
     const shell = screen.getByTestId("dex-liquidity-top-pools-table");
     const table = screen.getByRole("table", { name: "Top DEX liquidity pools" });
 
@@ -190,5 +204,18 @@ describe("DexLiquidityCard", () => {
     expect(table.parentElement?.getAttribute("data-slot")).toBe("table-viewport");
     expect(table.getAttribute("data-slot")).toBe("table");
     expect(screen.getByText("USDC/USDT")).toBeTruthy();
+  });
+
+  it("derives the verdict line from score components", () => {
+    expect(
+      buildLiquidityVerdictLine({
+        tvlDepth: 29,
+        volumeActivity: 95,
+        poolQuality: 46,
+        durability: 80,
+        pairDiversity: 100,
+      }),
+    ).toBe("Diversity 100 and volume 95 carry the score; tvl depth 29 is the drag.");
+    expect(buildLiquidityVerdictLine(null)).toBeNull();
   });
 });
