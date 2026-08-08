@@ -139,7 +139,7 @@ describe("stablecoin V9 safety presentation", () => {
         category: "Redemption",
       },
       { key: "bridge:arbitrum:0x123:bridge-meta:asset:key", label: "Arbitrum bridge", category: "Bridge" },
-      { key: "mint", label: "Mint control posture", category: "Authority" },
+      { key: "mint", label: "Mint authority", category: "Authority" },
       { key: "oracle", label: "Oracle design", category: "Oracle" },
     ]);
   });
@@ -361,7 +361,7 @@ describe("stablecoin V9 safety presentation", () => {
     expect(presentation.pillars[2].breakdown?.groups[0].rows.map((row) => row.key))
       .toEqual(["mint", "oracle", "abstract"]);
     expect(presentation.pillars[2].breakdown?.groups[0].rows[0]).toMatchObject({
-      label: "Mint control posture",
+      label: "Mint authority",
     });
   });
 

@@ -178,7 +178,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Economic Control/ }));
     expect(screen.getByText("Control components")).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Mint control posture: 86 out of 100" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Mint authority: 86 out of 100" })).toBeTruthy();
     expect(screen.getByText("Binding")).toBeTruthy();
     expect(screen.getByText("Diagnostic")).toBeTruthy();
     expect(screen.queryByText("Scored inputs")).toBeNull();
