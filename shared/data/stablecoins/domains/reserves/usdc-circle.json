@@ -2,8 +2,8 @@
   "id": "usdc-circle",
   "reserves": [
     {
-      "name": "<3-Month U.S. Treasuries (Circle Reserve Fund)",
-      "pct": 11.621889,
+      "name": "<3-Month U.S. Treasuries",
+      "pct": 71.93275,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -16,53 +16,66 @@
       "maturityDaysMax": 92
     },
     {
-      "name": "U.S. Treasury Repurchase Agreements (Circle Reserve Fund)",
-      "pct": 71.616422,
-      "risk": "very-low",
-      "assetClass": "repo",
-      "issuerOrObligor": "Circle Reserve Fund repo counterparties (leading global banks)",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Cash in the Circle Reserve Fund and at regulated financial institutions (net of settlement timing)",
-      "pct": 16.761689,
+      "name": "Deposits at Systemically Important Institutions",
+      "pct": 12.491316,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Regulated financial institutions incl. systemically important banks",
+      "issuerOrObligor": "Systemically important financial institutions",
       "riskFactors": [
         "counterparty",
         "custody",
         "concentration"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Other Bank Deposits",
+      "pct": 13.852994,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Other regulated financial institutions",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Overnight Reverse Treasury Repo",
+      "pct": 1.72294,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Leading global banks",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the Circle transparency adapter's exact slice identities so V9 can classify live rows; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDC examination report - June 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf"
+        "label": "Circle transparency (weekly reserve disclosure, as of Aug 06, 2026)",
+        "url": "https://www.circle.com/transparency"
       },
       {
-        "label": "Circle transparency",
-        "url": "https://www.circle.com/transparency"
+        "label": "Deloitte USDC examination report - June 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20June%2026.pdf"
       },
       {
         "label": "BlackRock Circle Reserve Fund",
         "url": "https://www.blackrock.com/cash/en-us/products/329365/circle-reserve-fund"
       }
     ],
-    "rationale": "Deloitte's June 30, 2026 examination (opinion dated 2026-07-29, PDF read this pass) reports total USDC reserve assets of $73,344,909,176 against 73,268,560,097 USDC in circulation: $8,524,064,231 of under-3-month U.S. Treasuries and $52,527,000,000 of Treasury repurchase agreements in the Circle Reserve Fund, plus $12,293,844,945 of cash in the Fund and at regulated financial institutions net of settlement timing. Percentages are computed against the examined total; the report does not split bank deposits between systemically important and other institutions, so the prior two-way deposit split is merged into one examined cash category.",
-    "compositionBasis": "Deloitte examination of the USDC Reserve Report as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Curated rows mirror the live Circle transparency adapter's four slice identities, with weights from the Aug 06, 2026 weekly disclosure ($51.77B <3-month Treasuries, $8.99B deposits at systemically important institutions, $9.97B other bank deposits, $1.24B overnight reverse Treasury repo; $71.97B total). These rows are the classification scaffold for the live adapter (V9 matches live rows to curated identities by name and weight), so they intentionally track the weekly-disclosure taxonomy rather than the examined report's fund-holdings cut; the Deloitte June 30, 2026 examination ($73.34B reserves vs $73.27B USDC, read directly this pass) is recorded on the proofOfReserves latestReport and corroborates the same reserve total to within ~2%. compositionAsOf is intentionally absent: the weekly disclosure is a rolling live basis, not the examined balance-sheet date.",
+    "compositionBasis": "Circle weekly USDC reserve composition disclosure (live-adapter classification scaffold)",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's four-category disclosure; individual bank and repo counterparties are not named.",
     "knownUnknownExposurePct": 0

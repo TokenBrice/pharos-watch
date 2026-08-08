@@ -2,27 +2,15 @@
   "id": "audd-novatti",
   "reserves": [
     {
-      "name": "AUD cash at Westpac (AMAL Trustees Pty Ltd ATF AMAL Bare Trust)",
-      "pct": 68.943181,
+      "name": "AUD bank deposits",
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Westpac Banking Corporation (AMAL Trustees bare trust)",
+      "issuerOrObligor": "Westpac Banking Corporation (AMAL Trustees bare trust) and Banking Circle",
       "riskFactors": [
         "counterparty",
         "custody",
         "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "AUD cash at Banking Circle (AUDC Reserve Account)",
-      "pct": 31.056819,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Banking Circle",
-      "riskFactors": [
-        "counterparty",
-        "custody"
       ],
       "liquidityHorizon": "immediate"
     }
@@ -41,7 +29,7 @@
         "url": "https://www.audd.digital/transparency/"
       }
     ],
-    "rationale": "William Buck ASRS 4400 AUP as of 31 July 2026 11:59pm UTC (signed 2026-08-06, PDF read this pass; expressly no opinion, no independence requirement): AUD 11,216,439.45 at Westpac in the AMAL Trustees bare trust and AUD 5,052,667.03 at Banking Circle, totalling AUD 16,269,106.48 against 16,121,117.78 AUDD on-chain across eight networks (excess AUD 147,988.70), agreed without exception. 100% cash.",
+    "rationale": "William Buck ASRS 4400 AUP as of 31 July 2026 11:59pm UTC (signed 2026-08-06, PDF read this pass; expressly no opinion, no independence requirement): AUD 11,216,439.45 at Westpac in the AMAL Trustees bare trust and AUD 5,052,667.03 at Banking Circle, totalling AUD 16,269,106.48 against 16,121,117.78 AUDD on-chain across eight networks (excess AUD 147,988.70), agreed without exception. 100% cash. The single curated row carries the live single-asset adapter's slice identity (AUD bank deposits, 100%); the AUP-verified institution split (68.94% Westpac/AMAL bare trust / 31.06% Banking Circle) is recorded here rather than as separate rows so live classification is preserved.",
     "compositionBasis": "William Buck agreed-upon procedures report as of 31 July 2026",
     "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
@@ -50,17 +38,10 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "AUD cash at Westpac (AMAL Trustees Pty Ltd ATF AMAL Bare Trust)",
-        "pct": 68.943181,
+        "reserveName": "AUD bank deposits",
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Trustee-held AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "AUD cash at Banking Circle (AUDC Reserve Account)",
-        "pct": 31.056819,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "AUD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
+        "rationale": "Trustee-held and bank AUD cash are external fiat reserves, not tracked stablecoin dependencies."
       }
     ]
   },

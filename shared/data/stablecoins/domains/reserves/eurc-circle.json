@@ -2,11 +2,24 @@
   "id": "eurc-circle",
   "reserves": [
     {
-      "name": "Cash held at regulated financial institutions (net of settlement timing)",
-      "pct": 100,
+      "name": "Other Bank Deposits",
+      "pct": 98.56135,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Regulated financial institutions in the EEA incl. systemically important banks",
+      "issuerOrObligor": "Other regulated financial institutions in the EEA",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Deposits at Systemically Important Institutions",
+      "pct": 1.43865,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Systemically important financial institutions in the EEA",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -17,25 +30,20 @@
   ],
   "reserveReview": {
     "reviewedAt": "2026-08-08",
-    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the Circle transparency adapter's exact slice identities; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte EURC examination report - June 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf"
-      },
-      {
-        "label": "Circle transparency",
+        "label": "Circle transparency (weekly reserve disclosure, as of Aug 06, 2026)",
         "url": "https://www.circle.com/transparency"
       },
       {
-        "label": "Circle EURC reserve overview",
-        "url": "https://www.circle.com/eurc"
+        "label": "Deloitte EURC examination report - June 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20June%2026.pdf"
       }
     ],
-    "rationale": "Deloitte's June 30, 2026 examination (opinion dated 2026-07-29, PDF read this pass) reports EURC reserves of EUR 384,737,359 against 381,986,779 EURC in circulation, composed entirely of cash held at regulated financial institutions (EUR 389,833,314 less EUR 5,095,955 of net settlement timing). No securities are held. The report does not split deposits between systemically important and other institutions, so the prior two-way split is merged into one examined cash category.",
-    "compositionBasis": "Deloitte examination of the EURC Reserve Report as of June 30, 2026",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "Curated rows mirror the live Circle transparency adapter's two EURC slice identities, with weights from the Aug 06, 2026 weekly disclosure (EUR 391.19M other bank deposits, EUR 5.71M deposits at systemically important institutions). These rows are the classification scaffold for the live adapter; the Deloitte June 30, 2026 examination (EUR 384.7M all-cash reserves vs EUR 382.0M EURC, read directly this pass) is recorded on the proofOfReserves latestReport and corroborates the all-deposit composition. compositionAsOf is intentionally absent: the weekly disclosure is a rolling live basis, not the examined balance-sheet date.",
+    "compositionBasis": "Circle weekly EURC reserve composition disclosure (live-adapter classification scaffold)",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's two-category disclosure; individual deposit institutions are not named.",
     "knownUnknownExposurePct": 0

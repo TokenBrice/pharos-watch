@@ -332,7 +332,7 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. Treasury bills (<=3 months residual maturity)",
+      "name": "U.S. Treasury bills",
       "pct": 69.663811,
       "risk": "very-low",
       "assetClass": "treasury-bill",
@@ -359,7 +359,7 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "Cash deposits at U.S. regulated financial institutions",
+      "name": "Cash and deposit accounts",
       "pct": 16.006574,
       "risk": "very-low",
       "assetClass": "bank-deposit",
@@ -386,7 +386,7 @@
         "url": "https://ripple.com/solutions/stablecoin/transparency/"
       }
     ],
-    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-29, PDF read this pass): reserve market value $1,512,689,493 against 1,411,034,124 outstanding RLUSD - U.S. Treasury bills $1,053,797,154 (14 CUSIPs maturing Jul-Sep 2026), government money-market funds $216,762,573, and cash at U.S. regulated institutions $242,129,766. Excess $101,655,369 (~107.2%). The prior single aggregated cash-equivalents row is split into the report's three examined categories.",
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-29, PDF read this pass): reserve market value $1,512,689,493 against 1,411,034,124 outstanding RLUSD - U.S. Treasury bills $1,053,797,154 (14 CUSIPs maturing Jul-Sep 2026), government money-market funds $216,762,573, and cash at U.S. regulated institutions $242,129,766. Excess $101,655,369 (~107.2%). The prior single aggregated cash-equivalents row is split into the report's three examined categories. Row identities carry the ripple-transparency live adapter's exact slice names so V9 classifies live rows against this examined composition (same three-category taxonomy).",
     "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",

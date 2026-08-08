@@ -2,8 +2,8 @@
   "id": "tusd-trueusd",
   "reserves": [
     {
-      "name": "First Digital Trust Limited fund position (at cost)",
-      "pct": 99.98428,
+      "name": "USD reserves (Moore Hong Kong attested)",
+      "pct": 100,
       "risk": "high",
       "assetClass": "fund-share",
       "issuerOrObligor": "First Digital Trust Limited (Hong Kong depository institution)",
@@ -15,18 +15,6 @@
         "legal"
       ],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "USD cash",
-      "pct": 0.01572,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Undisclosed banks",
-      "riskFactors": [
-        "counterparty",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -43,26 +31,19 @@
         "url": "https://tusd.io/transparency"
       }
     ],
-    "rationale": "Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of 07 August 2026 04:30:30 PM HKT (PDF read this pass): reserves at cost are $501,850,000 in a single First Digital Trust Limited fund position (~99.98%) plus $78,900.88 cash; US Treasury bills $0. Total $501,928,900.88 against 494,515,082.75 TUSD issued (of which 412,585,497.92 held by Techteryx, public float ~81.9M). The auditor's own notes: procedures cover cost not fair value; the FDT fund invested 'all or substantially all' of the collateral in instruments 'which cannot be readily convertible to cash'; ongoing redemption litigation with FDT 'may suggest potential liquidity and credit risks'; DIFC worldwide freezing order (Oct 2025) up to US$456M.",
+    "rationale": "Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of 07 August 2026 04:30:30 PM HKT (PDF read this pass): reserves at cost are $501,850,000 in a single First Digital Trust Limited fund position (~99.98%) plus $78,900.88 cash; US Treasury bills $0. Total $501,928,900.88 against 494,515,082.75 TUSD issued (of which 412,585,497.92 held by Techteryx, public float ~81.9M). The auditor's own notes: procedures cover cost not fair value; the FDT fund invested 'all or substantially all' of the collateral in instruments 'which cannot be readily convertible to cash'; ongoing redemption litigation with FDT 'may suggest potential liquidity and credit risks'; DIFC worldwide freezing order (Oct 2025) up to US$456M. The single curated row carries the live chainlink-por adapter's slice identity (USD reserves, Moore Hong Kong attested, 100%); the report-verified split (99.98% single FDT fund position at cost / 0.02% cash) and the auditor's illiquidity, litigation, and freezing-order notes are recorded here and in the row's risk metadata rather than as separate rows so live classification is preserved.",
     "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of August 7, 2026",
     "compositionAsOf": "2026-08-07",
     "scope": "full-composition",
     "knownUnknownExposure": "The live snapshot exposes only aggregate totalTrust. Moore's report identifies a 99.98% First Digital Trust fund/other-instruments position reported at cost (fair value not examined) and 0.02% cash at Bahamian depository institutions; fund underlying assets, liquidity, counterparties, and current fair value remain undisclosed. The report notes ongoing Techteryx litigation against FDT, DIFC freezing orders up to US$456 million, and that substantially all Hong Kong depository collateral was invested for yield and is not readily convertible to cash.",
-    "knownUnknownExposurePct": 99.98428,
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "First Digital Trust Limited fund position (at cost)",
-        "pct": 99.98428,
+        "reserveName": "USD reserves (Moore Hong Kong attested)",
+        "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The single FDT fund position is reported at cost only; underlying instruments are undisclosed, illiquid per the auditor's note, and subject to redemption litigation and a DIFC freezing order."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "USD cash",
-        "pct": 0.01572,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "USD bank cash is an external fiat reserve, not a tracked stablecoin dependency."
+        "rationale": "~99.98% of the attested reserve is a single First Digital Trust fund position reported at cost with undisclosed underlying instruments, illiquidity per the auditor's note, redemption litigation, and a DIFC freezing order."
       }
     ]
   },
