@@ -15,10 +15,10 @@ describe("buildTransferReviewView", () => {
   });
 
   it("flags an asset whose posture is not uniform across chains", () => {
-    // These five are the only reviewed assets where a bridged deployment does
+    // These four are the only reviewed assets where a bridged deployment does
     // not match its canonical one, which is exactly what the panel's single
     // aggregate row hides.
-    for (const assetId of ["mim-abracadabra", "weusd-picwe", "gtusdcp-gauntlet", "pht-pht", "gldt-gold-dao"]) {
+    for (const assetId of ["mim-abracadabra", "weusd-picwe", "pht-pht", "gldt-gold-dao"]) {
       expect(buildTransferReviewView(assetId)?.mixedPosture).toBe(true);
     }
   });

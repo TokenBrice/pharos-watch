@@ -20,9 +20,10 @@ describe("page metadata helpers", () => {
 
     expect(buildStablecoinDetailDescription(usdt!)).toContain("backed by real-world assets");
     expect(buildStablecoinDetailDescription(usde!)).toContain("collateralized by crypto assets");
-    // nect-beraborrow is graded possible: the immutable DebtToken burn path is
+    // nect-beraborrow was firmed to reviewedStatus true by the C10 access
+    // review (live EMERGENCY_ROLE pause evidence). The description now carrn path is
     // reachable by any address the owner adds to the PSM-bond whitelist.
-    expect(buildStablecoinDetailDescription(nect!)).toContain("Blacklist or freeze exposure is possible");
+    expect(buildStablecoinDetailDescription(nect!)).toContain("Issuer can freeze addresses");
   });
 
   it("uses pre-launch tracker wording before live stablecoin data exists", () => {
