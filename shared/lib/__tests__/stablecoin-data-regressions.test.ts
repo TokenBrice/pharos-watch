@@ -22,6 +22,8 @@ describe("stablecoin source-data regressions", () => {
     expect(physicalGold?.riskFactors).toEqual(
       expect.arrayContaining(["market", "custody", "counterparty", "legal", "liquidity", "concentration"]),
     );
-    expect(usdkgAsset.reserveReview.compositionAsOf).toBe("2026-07-28");
+    // Lockstep pin: composition is anchored to the 2025-11-28 Kreston AUP that
+    // latestReport records, not the later live transparency-page read.
+    expect(usdkgAsset.reserveReview.compositionAsOf).toBe("2025-11-28");
   });
 });
