@@ -319,7 +319,7 @@
     {
       "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
       "pct": 98.8,
-      "risk": "very-low",
+      "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund (BVI)",
@@ -336,6 +336,7 @@
       "pct": 1.2,
       "risk": "low",
       "assetClass": "other",
+      "issuerOrObligor": "Undisclosed USD settlement counterparties",
       "riskFactors": [
         "counterparty"
       ],

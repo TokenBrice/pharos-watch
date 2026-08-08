@@ -147,6 +147,14 @@ describe("DDR curated-posture set membership — pinned", () => {
     );
     expect(k1("none-resolved-mint")).toBeNull();
     expect(k1("none-resolved")).toBeNull();
+    expect(
+      resolveOutlook(
+        deepBelow(),
+        coin({ authorityPosture: "none-resolved-mint", mintAuthorityScoreBand: "concentrated" }),
+        surging(),
+        baseLive(),
+      ).factors.find((factor) => factor.code === "K1_supply_weaponization"),
+    ).toMatchObject({ severity: "elevated" });
   });
 
   it("does not grant the R1 non-inflatable anchor to the mint-scoped value", () => {
