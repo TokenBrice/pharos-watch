@@ -1261,9 +1261,8 @@
       "decimals": 8
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "UpgradeableUsdxlToken.sol (pinned usdxl-core commit)",
@@ -1286,10 +1285,9 @@
         "url": "https://docs.hypurrfi.com/products/usdxl"
       }
     ],
-    "evidence": "At HyperEVM block 41877329, USDXL proxy 0xca79db4b… EIP-1967 implementation = 0xce233555… and admin = Safe 0xf050623d…. Live bytecode of the implementation contains no pause/blacklist/freeze selectors or strings. UpgradeableUsdxlToken is GHO-style: mint/burn are facilitator-bucket operations (burn burns msg.sender only); UpgradeableERC20 transfer/transferFrom are ordinary ERC-20 without holder deny lists. DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE remain empty (prior mint review); proxy upgrade remains the only admin surface and does not constitute a current freeze primitive. HyperCore spot route is the same Last team native asset without a separate EVM freeze surface in this review.",
-    "reviewer": "Grok T40 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "USDXL has a USDT0 PSM facilitator and CDP collateral including bridged assets that may themselves be freezeable. Those upstream freezes can impair mint/redeem/liquidity value but do not blacklist or transfer-restrict the USDXL token itself. Recorded as reserve/dependency risk, not USDXL holder freeze."
+    "evidence": "Re-reviewed 2026-08-08. The current GHO-style USDXL implementation retains ordinary ERC-20 transfers and caller-only facilitator burn, with no native holder blacklist or transfer pause; proxy upgradeability remains a separate control risk. HypurrFi's official USDXL documentation describes a partial stablecoin reserve primarily composed of USDT0 and a direct USDT0 mint route. That positive Tether-controlled reserve and PSM exposure resolves USDXL as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

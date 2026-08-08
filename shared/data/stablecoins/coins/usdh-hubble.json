@@ -362,9 +362,8 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Solana mainnet USDH mint account",
@@ -373,12 +372,15 @@
       {
         "label": "Hubble Protocol documentation",
         "url": "https://docs.hubbleprotocol.io"
+      },
+      {
+        "label": "Hubble Peg Stability Module documentation",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
       }
     ],
-    "evidence": "At finalized Solana state on 2026-07-14, the tracked USDH mint reports freezeAuthority: null. Solana's Token Program therefore has no authority able to freeze USDH token accounts. Hubble's documented CDP/vault design does not establish a separate holder-balance blacklist or arbitrary burn path on the token itself, so Reviewed No is retained.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14",
-    "upstreamSuppressionRationale": "The reviewed override is scoped to the USDH holder-facing token. Hubble docs describe a crypto-collateral CDP vault system, so this override deliberately suppresses inferred upstream freeze exposure from generic BTC/ETH/stablecoin text signals."
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437979676. The tracked USDH mint retains freezeAuthority = null, so no direct Solana token-account freeze path exists. Current reviewed composition is 94.4468% Circle USDC held through Hubble's Peg Stability Module, with the balance issued against CDP collateral. Circle can freeze that reserve asset and impair the dominant USDH exit path, so USDH resolves Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",

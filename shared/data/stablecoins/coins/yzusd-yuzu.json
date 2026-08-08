@@ -232,9 +232,8 @@
       }
     ]
   },
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Yuzu Money overview",
@@ -259,12 +258,15 @@
       {
         "label": "Plasma public RPC used for fixed-block reads",
         "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Yuzu reserve composition dashboard",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
       }
     ],
-    "evidence": "Reviewed 2026-07-30. At Plasma block 28540079 (0x1b2f8af), the EIP-1967 implementation slot of the yzUSD transparent proxy 0x6695c0f8706c5ace3bdf8995073179cca47926dc still resolved to 0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe (eth_getStorageAt) and paused() returned false (eth_call). The verified implementation (official ouroboros-contracts YuzuUSD.sol and YuzuProto.sol, pin 49676c49, re-opened 2026-07-30) exposes pause() limited to mint and redeem paths (maxDeposit/maxMint/maxWithdraw/maxRedeem gating) and a RESTRICTION_MANAGER_ROLE that only administers MINTER_ROLE and REDEEMER_ROLE grants; it contains no holder-level blacklist, freeze, seize, or transfer-blocking function, and secondary transfers remain open. Direct yzUSD holder freeze reach is therefore none. Issuer-freeze exposure through reserve assets (Tether USDT0, Maple syrup tokens, Superstate USTB, Midas mGLOBAL) is documented per slice in reserves rather than through a single parent wrapper, so no inherited-upstream verdict applies. The 48-hour-timelock transparent-proxy upgrade path that could introduce future restrictions is separately captured by the reviewed restrictable transfer posture and the mintAuthority upgrade controls.",
-    "reviewer": "Kimi T26 wave2 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "Suppression recorded 2026-07-31. Roughly a third of the reserve sits in issuer-freezable upstream assets (USDT0 and syrupUSDT via Tether, syrupUSDC via Circle, syrupUSDG via Paxos, USTB via Superstate, mGLOBAL via Midas); a freeze of any of those impairs yzUSD backing or redemption liquidity. None of those issuers can freeze or restrict a yzUSD holder balance: the verified Plasma implementation scopes pause() to mint and redeem and RESTRICTION_MANAGER_ROLE to MINTER_ROLE/REDEEMER_ROLE grants, with no holder blacklist, freeze, seize, or transfer-blocking function. Those exposures remain reserve-quality and dependency risks, not yzUSD blacklistability."
+    "evidence": "Re-reviewed 2026-08-08. The current Plasma implementation's pause is confined to mint and redeem paths, and its restriction-manager role only administers minter/redeemer roles; no current holder transfer blacklist or seizure hook was found. Current reserves nevertheless contain positive issuer-freezable exposure to USDT0, syrupUSDT, syrupUSDC, syrupUSDG, USTB, mGLOBAL, USDe, sUSDe, and AUSD. Under FreezeWatch's reserve inheritance rule, those documented slices resolve yzUSD as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "exotic",
   "reserves": [

@@ -47,9 +47,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Reserve Protocol pause/freeze states documentation",
@@ -70,12 +69,15 @@
       {
         "label": "USD3 Base OptimismMintableERC20 on Blockscout",
         "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+      },
+      {
+        "label": "Reserve Protocol DTF discovery API",
+        "url": "https://api.reserve.org/discover/dtfs"
       }
     ],
-    "evidence": "2026-07-30 fresh holder freeze/blacklist review across both material deployments. Ethereum (~99.6% of supply): at block 25648300 the USD3 ERC-1967 proxy 0x0d86883faf4ffd7aeb116390af37746f45b6f378 stores implementation RTokenP1 0x258ce833cf9ad19208372763a00aa1565dd40b3c, whose verified ABI exposes transfer/transferFrom and no blacklist, freeze, seize, or holder-restriction function. Reserve's pause-freeze-states documentation defines issuance-paused, trading-paused, and frozen as system-wide protocol interaction halts (issue/redeem revert while ERC-20 transfers are not holder-restricted), not a per-holder blacklist; at the same block Main 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 returned frozen()=false, issuancePaused()=false, and tradingPaused()=false. Base (~0.4%): at block 49328479 the canonical OptimismMintableERC20 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned BRIDGE()=0x4200000000000000000000000000000000000010 and REMOTE_TOKEN()=Ethereum USD3, holds a zero EIP-1967 implementation slot (immutable), and its Sourcify-verified ABI exposes only bridge mint/burn with no blacklist or pause. Reserve governance can replace the Ethereum RToken implementation through the 3-day TimelockController (guardian-cancelable); that is a future upgrade-control path scored in the control pillar, not a current holder freeze capability. Conclusion: no holder-level freeze or blacklist exists on current USD3 deployments.",
-    "reviewer": "Kimi T30 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "Collateral tokens inside the USD3 basket (USDC via Aave, Compound, and Steakhouse wrappers; USDS via Savings USDS) are issuer-freezable upstream assets; an upstream freeze could impair redemption liquidity or claim value, but it cannot freeze or restrict a holder's USD3 balance or transfers on either deployment. Those exposures remain reserve-quality and dependency risks, not USD3 blacklistability."
+    "evidence": "Re-reviewed 2026-08-08. Ethereum RToken and Base OptimismMintableERC20 transfers expose no current holder blacklist, seizure, or transfer pause. Reserve Protocol's Main freeze controls halt issue/redeem and protocol trading while leaving ERC-20 transfers open, so they remain operational controls rather than direct FreezeWatch transfer restrictions under the current taxonomy. The live USD3 basket is 25% sUSDS plus 75% USDC-derived Aave, Compound, and Steakhouse wrappers. Those positive issuer-freezable reserve slices resolve USD3 as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",

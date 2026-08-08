@@ -290,10 +290,9 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "upstreamSuppressionRationale": "The text/reserve resolver can infer upstream exposure from Kava CDP collateral language (legacy debt types include exchange-issued assets such as btcb-a and usdt-a), but collateral-price and seizure risk inside CDP vaults is backing risk, not a USDX holder freeze surface under FreezeWatch semantics.",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Kava x/cdp params API (live read at height 21878704)",
@@ -310,11 +309,23 @@
       {
         "label": "Tracked Osmosis IBC USDX denom",
         "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+      },
+      {
+        "label": "Kava application bank-keeper governance wiring",
+        "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L468"
+      },
+      {
+        "label": "Kava USDX bank send-enabled state",
+        "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
+      },
+      {
+        "label": "Kava live CDP inventory",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
       }
     ],
-    "evidence": "Re-derived 2026-07-30 at Kava height 21878704: /kava/cdp/v1beta1/params still reports debt denom usdx, and /kava/evmutil/v1beta1/params lists no usdx conversion pair, so USDX exists only as a Cosmos SDK bank denom on Kava with no ERC-20 or contract admin surface. The x/cdp module account holds minter/burner permissions and can seize CDP vault collateral through liquidations, but Kava module documentation describes no holder freeze, denylist, pause, or transfer-control authority over USDX bank balances, and Cosmos bank sends carry no per-denom freeze hook. The only tracked off-chain representation is the Osmosis IBC voucher ibc/C78F65...790AE, an ibc-go transfer denom that likewise exposes no freeze authority. No direct or upstream issuer freeze surface is identified.",
-    "reviewer": "Kimi T39 Safety Score V9 access review",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08 against Kava 0.28.2 / Cosmos SDK 0.47.15. Kava wires governance authority into the bank keeper, whose live MsgSetSendEnabled path can disable ordinary sends for an individual denom including usdx. Current send_enabled state is empty/default-enabled, so the control exists but has not been exercised; this supports Possible. The current 1,118-CDP inventory also places approximately 81.92% of USDX principal against custodial or issuer-controlled HBTC, BTCB, BUSD, and USDT collateral, supplying independent Upstream exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "reserves": [
     {

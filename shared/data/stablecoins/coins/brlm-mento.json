@@ -163,9 +163,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento BRLm Celo availability documentation",
@@ -204,11 +203,10 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       }
     ],
-    "sourceFreeRationale": "Explicit No: the sole tracked BRLm deployment has no holder-level freeze, blacklist, pause, seizure, arbitrary-holder burn, or transfer-hook surface in its current implementation. Proxy upgrade authority remains a mint/logic-change risk, and reserve issuers remain separate upstream failure domains.",
-    "evidence": "Re-derived 2026-07-30 23:16:45 UTC at Celo block 73552648. The sole tracked BRLm proxy 0xe8537a3d056da446677b9e9d6c5db704eaab4787 resolves through EIP-1967 to verified StableTokenV2 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E; owner() is the 172800-second Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147. The verified implementation and patched ERC20 source expose ordinary transfer/transferFrom and burn(uint256) of msg.sender only, with permissioned minting and no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. A zero-value transfer eth_call from a nonzero caller returned true. The Mento deployment docs identify this as BRLm's only mainnet deployment. Reserve-derived upstream failure domains remain asset:ausd-agora, asset:susds-sky, asset:usdt-tether, asset:eurc-circle, asset:usdc-circle, plus stETH/ETH and Celo reserve governance; they affect backing/redemption, not BRLm holder transfers.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-31",
-    "upstreamSuppressionRationale": "The explicit No verdict is limited to BRLm holder-balance controls. Mento Reserve collateral and its issuer/bridge controls remain separately represented as upstream reserve and dependency failure domains."
+    "sourceFreeRationale": "The current StableTokenV2 implementation has no direct holder blacklist, pause, seizure, arbitrary-holder burn, or transfer hook. BRLm resolves Upstream through the shared Mento Reserve rather than through a native token control.",
+    "evidence": "Re-reviewed 2026-08-08. The sole BRLm proxy still uses StableTokenV2, whose verified implementation exposes ordinary transfers and caller-only burn without a native holder blacklist, pause, seizure, or arbitrary-holder burn. The live Mento Reserve nevertheless contains material AUSD, sUSDS, USDT, EURC, and USDC exposure. Those issuer/bridge controls can impair BRLm backing and redemption, so the correct resolved status is Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

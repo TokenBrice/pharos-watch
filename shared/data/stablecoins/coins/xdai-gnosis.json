@@ -91,9 +91,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Gnosis Chain token docs (xDAI native gas token)",
@@ -116,10 +115,9 @@
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
       }
     ],
-    "evidence": "2026-07-30 re-review: xDAI is the native Gnosis Chain gas balance, not an ERC-20 with a holder registry. Ordinary transfers are ledger value transfers; there is no issuer token contract exposing blacklist, freeze, pause, or seize of native balances. Official token and bridge docs describe mint/burn only through the canonical xDAI bridge (USDS lock on Ethereum Foreign Bridge 0x4aa4…5016; Home Bridge 0x7301…0AA6 + BlockReward 0x481c…39bA), which creates or destroys native balances on bridge execution — not a selective freeze of arbitrary existing holders. The traded WXDAI wrapper 0xe91d…a97d is a plain WETH-style deposit/withdraw contract (ABI: deposit, withdraw, transfer, transferFrom only; no owner freeze) observed against Gnosis block 47473648. Bridge 4-of-7 validators and 8-of-15 governance Safes remain mint/upgrade controls (mintAuthority / bridgeRouteRisk), not holder blacklist. canBeBlacklisted=false.",
-    "upstreamSuppressionRationale": "Bridge escrow in USDS and sUSDS can freeze or impair redemption liquidity if Sky freezes those reserve tokens, but that does not create a holder-level freeze or blacklist of native xDAI balances already on Gnosis. Upstream reserve freezability remains a backing/dependency risk, not xDAI blacklistability.",
-    "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08. Native xDAI balances and the WETH-style WXDAI wrapper expose no local issuer blacklist, freeze, pause, or arbitrary seizure path. The canonical bridge backing is approximately 99% sUSDS plus liquid USDS, however, and those tracked Sky assets carry possible/direct freeze reach. A Sky-side freeze can impair the bridge escrow and xDAI exit path, so the resolved posture is Upstream rather than No even though existing native balances are not directly blacklistable.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

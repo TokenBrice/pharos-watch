@@ -149,9 +149,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Sourcify LisUSD implementation source",
@@ -164,12 +163,15 @@
       {
         "label": "Lista lisUSD contract deployment",
         "url": "https://bscscan.com/token/0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5"
+      },
+      {
+        "label": "Sourcify verified wBETH implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xfe928A7D8Be9c8cEce7e97F0Ed5704f4fA2cb42A?fields=abi,sources"
       }
     ],
-    "evidence": "Re-verified 2026-07-30 at BSC block 113085430: the lisUSD proxy 0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5 resolves through its EIP-1967 slot to the Sourcify full-match LisUSD implementation 0xf5bd9b192092517d60e90c9af17b69b134c4d7f8. The token's transfer and transferFrom enforce only zero-address, balance, and allowance checks; burn is limited to the caller's own balance or allowance; wards() roles gate mint, supply cap, and domain separator only. No blacklist, freeze, pause, or holder-selective transfer control exists in the token surface. Lista's documentation describes lisUSD as an open-source collateralized CDP stablecoin and explicitly contrasts it with fiat-backed frozen funds. Upstream PSM and collateral assets (USDT, USDC, FDUSD) carry their own issuer freeze reach, but that exposure impairs backing rather than lisUSD holder transfers.",
-    "reviewer": "Kimi T51 access review",
-    "reviewedAt": "2026-07-30",
-    "upstreamSuppressionRationale": "USDT, USDC, and FDUSD held through the Peg Stability Module and CDP collateral joins can be frozen by their issuers at the vault level, which would impair lisUSD backing and redemption value; no path lets those issuers freeze or restrict lisUSD holder transfers, so the direct token verdict is not-blacklistable with the upstream exposure tracked as dependency risk."
+    "evidence": "Re-reviewed 2026-08-08. The lisUSD implementation exposes ordinary transfers, allowance-gated burns, and ward-gated mint/cap administration without a native blacklist or holder-selective transfer control. Current collateral nevertheless includes wBETH, whose live BSC implementation exposes blacklist/isBlacklisted and pause/unpause controls, in addition to the documented USDT/USDC/FDUSD PSM exposure. Those positive reserve-side issuer controls resolve lisUSD as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "reserves": [
     {

@@ -294,9 +294,8 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Inverse sDOLA product guide",
@@ -335,10 +334,9 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "evidence": "Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose standard transfer and transferFrom paths without holder blacklist, freeze, pause, seizure, or transfer-stop methods. The Berachain ERC20Mintable representation has owner/minter and exchange-rate administration, and Ethereum's ERC-4626 wrapper has Timelock governance, but neither source supplies a holder-restriction surface. Pinned RPC reads at Ethereum 25534337, Base 48642207, Optimism 154237492, Arbitrum 483931670, and Berachain 23529521 confirmed deployed interfaces and owner state. This direct holder-control conclusion does not treat DOLA, bridge, mint, or redemption risks as balance-freeze powers.",
-    "reviewer": "Codex Safety Score V9 data research",
-    "reviewedAt": "2026-07-15",
-    "upstreamSuppressionRationale": "sDOLA's inherited DOLA and bridge exposures affect claim value or route solvency, but the verified deployed token code does not give those upstream actors a direct sDOLA holder freeze, blacklist, or transfer-restriction path."
+    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

@@ -171,9 +171,8 @@
       "decimals": 8
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "FRAX Ethereum verified source (Blockscout)",
@@ -198,12 +197,15 @@
       {
         "label": "Fraxtal WFRAX predeploy (distinct gas-token wrapper; sub-material for FRAX stablecoin)",
         "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002"
+      },
+      {
+        "label": "Frax balance sheet API",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
       }
     ],
-    "evidence": "2026-07-30 re-review of holder freeze/blacklist posture for legacy FRAX. Material chain supply (≥10% share) is Ethereum (~60.6%) and Polygon zkEVM (~27.7%). At Ethereum block 25648138, FRAXStablecoin 0x853d955acef822db058eb8505911ed77f175b99e has zero EIP-1967 implementation and admin slots (immutable non-proxy). Verified ABI/source exposes transfer/transferFrom without blacklist, freeze, pause, seize, or isBlacklisted; pool_burn_from is restricted to registered AMO pools (mint domain), not a holder-selective freeze path. Polygon zkEVM material deployment 0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d is CrossChainCanonical (ERC20Permit + Owned): at the same review window EIP-1967 slots were zero; source exposes minter_mint / self minter_burn and exchangesPaused for bridge-token swaps only — no holder blacklist or arbitrary burnFrom of third-party balances. Sub-material Fraxtal predeploy 0xfc00…0002 is WFRAX (wrapped Fraxtal gas token / ex-FXS lineage), not the L1 FRAX stablecoin claim, and is outside the freeze fact for this asset. Conclusion: no direct holder freeze/blacklist on material FRAX stablecoin deployments; canBeBlacklisted=false.",
-    "upstreamSuppressionRationale": "Balance-sheet holdings such as frxUSD, USDC, USDS, BUIDL, and other freezable or issuer-controlled reserve assets can impair claim value or redemption liquidity if those upstream tokens are frozen, but none of those issuers has a direct holder freeze, blacklist, or transfer-restriction path on material FRAX stablecoin deployments. Those exposures remain reserve-quality and dependency risks, not FRAX token blacklistability.",
-    "reviewer": "Grok T19 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "Re-reviewed 2026-08-08. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum pool_burn_from is onlyPools but delegates to ERC20Custom._burnFrom, which deducts the registered pool's allowance; a current-state simulation from an active pool against a funded holder without allowance reverted with ERC20: burn amount exceeds allowance. Direct FRAX holder control is therefore not established. The live Frax balance sheet nevertheless contains positive exposure to tracked issuer-freezable assets including frxUSD, sfrxUSD, USTB, BUIDL, USDe, USDC, and USDS. Under FreezeWatch's any-positive-reserve rule, those holdings make the resolved posture Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
