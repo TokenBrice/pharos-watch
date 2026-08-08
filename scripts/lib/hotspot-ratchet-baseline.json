@@ -35,9 +35,9 @@
     "branchCount": 45
   },
   "shared/lib/safety-score-v9/evaluate-asset.ts": {
-    "fileLines": 1682,
+    "fileLines": 1683,
     "maxFunctionLines": 224,
-    "branchCount": 161
+    "branchCount": 164
   },
   "shared/lib/safety-score-v9/formula.ts": {
     "fileLines": 1374,
@@ -45,14 +45,14 @@
     "branchCount": 128
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1906,
+    "fileLines": 1907,
     "maxFunctionLines": 434,
     "branchCount": 84
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1929,
+    "fileLines": 1927,
     "maxFunctionLines": 239,
-    "branchCount": 204
+    "branchCount": 205
   },
   "shared/types/safety-score-v9-public.ts": {
     "fileLines": 1723,
@@ -60,7 +60,7 @@
     "branchCount": 105
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1378,
+    "fileLines": 1380,
     "maxFunctionLines": 238,
     "branchCount": 80
   },
@@ -230,9 +230,9 @@
     "branchCount": 45
   },
   "worker/src/cron/dex-liquidity/staging-merge.ts": {
-    "fileLines": 754,
-    "maxFunctionLines": 376,
-    "branchCount": 86
+    "fileLines": 756,
+    "maxFunctionLines": 378,
+    "branchCount": 87
   },
   "worker/src/cron/measured-execution/curve-composite.ts": {
     "fileLines": 2188,
@@ -340,9 +340,9 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2415,
-    "maxFunctionLines": 260,
-    "branchCount": 278
+    "fileLines": 2417,
+    "maxFunctionLines": 261,
+    "branchCount": 279
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,
