@@ -102,13 +102,13 @@ describe("DEX deployment outcomes", () => {
       providerChecks: [],
       nowSec: 100,
     });
-    expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: [] });
+    expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
   });
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(88);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(50);
+    expect(outcomes).toHaveLength(65);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(44);
   });
 
   it("materializes an inaccessible outcome when a bounded crawl fails", () => {

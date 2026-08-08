@@ -67,6 +67,7 @@ export const ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api";
 export const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
 export const DEFILLAMA_COINS = "https://coins.llama.fi";
 export const DEFILLAMA_API = "https://api.llama.fi";
+export const STELLAR_HORIZON_API = "https://horizon.stellar.org";
 
 export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
 
@@ -166,6 +167,7 @@ export const CIRCUIT_SOURCE = {
   CG_DETAIL_PLATFORMS: "coingecko-detail-platforms",
   CG_MCAP: "coingecko-mcap",
   CG_ONCHAIN: "coingecko-onchain",
+  HORIZON_DISCOVERY: "stellar-horizon-discovery",
   DEXSCREENER_PRICES: "dexscreener-prices",
   DEXSCREENER_LIQUIDITY: "dexscreener-liquidity",
   DEXSCREENER_ADDRESS_PRICES: "dexscreener-address-prices",

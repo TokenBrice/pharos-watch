@@ -4,7 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 export interface StagedPool {
   poolId: string;
   stablecoinId: string;
-  source: "cg_onchain" | "gecko_terminal" | "dexscreener" | "cg_tickers";
+  source: "cg_onchain" | "gecko_terminal" | "dexscreener" | "cg_tickers" | "horizon";
   chain: string;
   protocol: string;
   dexId: string | null;
@@ -39,7 +39,7 @@ export type DexDeploymentProviderCheckStatus = "success" | "failure" | "degraded
 export interface DexDeploymentProviderCheck {
   chain: string;
   address: string;
-  provider: "coingecko" | "geckoterminal" | "dexscreener" | "curve";
+  provider: "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
 }

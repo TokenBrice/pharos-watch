@@ -13,6 +13,7 @@ import {
 } from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
+import { crawlHorizonPoolsStage } from "./crawl-horizon-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
 import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
@@ -129,6 +130,9 @@ export async function crawlCoin(
 
   const curveStage = await crawlCurvePoolsStage({ coinTargets, context });
   providerChecks.push(...curveStage.providerChecks);
+
+  const horizonStage = await crawlHorizonPoolsStage({ coinTargets, context });
+  providerChecks.push(...horizonStage.providerChecks);
 
   return await finalizeOwnRun({
     pools,

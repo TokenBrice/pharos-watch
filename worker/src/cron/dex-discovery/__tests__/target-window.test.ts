@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   advanceDiscoveryTargetCursor,
+  DEX_DISCOVERY_PER_COIN_BUDGET_MS,
+  DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC,
   discoveryTargetCursorKey,
   estimateDeploymentCrawlCostMs,
+  estimateDiscoverySweepPeriodSec,
+  estimateDiscoverySweepWindowCount,
   selectDiscoveryTargetWindow,
 } from "../target-window";
-import { DEX_DISCOVERY_PER_COIN_BUDGET_MS } from "../orchestrator";
 
 // CoinGecko on-chain chains are the cheap head of a crawl; the GeckoTerminal-only
 // chains are the 2s-paced tail that used to be starved every run.
@@ -76,6 +79,10 @@ describe("estimateDeploymentCrawlCostMs", () => {
 
   it("charges nothing for chains with no registered discovery provider", () => {
     expect(estimateDeploymentCrawlCostMs("not-a-chain")).toBe(0);
+  });
+
+  it("prices a native Horizon query for Stellar", () => {
+    expect(estimateDeploymentCrawlCostMs("stellar")).toBe(1_600);
   });
 });
 
@@ -158,6 +165,53 @@ describe("selectDiscoveryTargetWindow", () => {
     });
 
     expect(selected.targets).toHaveLength(1);
+  });
+});
+
+describe("estimateDiscoverySweepWindowCount", () => {
+  it("needs no window for an empty footprint", () => {
+    expect(estimateDiscoverySweepWindowCount([])).toBe(0);
+  });
+
+  it("sweeps a footprint that fits the per-coin budget in one window", () => {
+    expect(estimateDiscoverySweepWindowCount(CG_CHAINS.slice(0, 4).map(deployment))).toBe(1);
+  });
+
+  it("matches the runs one real rotation needs for an oversized footprint", () => {
+    const windows = estimateDiscoverySweepWindowCount(megaFootprint);
+    expect(windows).toBeGreaterThan(1);
+
+    const full = sweep(megaFootprint, windows);
+    expect(new Set(full.windows.flat())).toEqual(new Set(keysOf(megaFootprint)));
+
+    const short = sweep(megaFootprint, windows - 1);
+    expect(new Set(short.windows.flat()).size).toBeLessThan(megaFootprint.length);
+  });
+
+  it("prices a repeated deployment once, like the crawl footprint", () => {
+    expect(estimateDiscoverySweepWindowCount([...megaFootprint, ...megaFootprint])).toBe(
+      estimateDiscoverySweepWindowCount(megaFootprint),
+    );
+  });
+
+  it("never decreases as the footprint grows", () => {
+    let previous = 0;
+    for (let length = 1; length <= megaFootprint.length; length++) {
+      const windows = estimateDiscoverySweepWindowCount(megaFootprint.slice(0, length));
+      expect(windows).toBeGreaterThanOrEqual(previous);
+      previous = windows;
+    }
+    expect(previous).toBe(estimateDiscoverySweepWindowCount(megaFootprint));
+  });
+});
+
+describe("estimateDiscoverySweepPeriodSec", () => {
+  it("spends one t3 cohort cadence per window", () => {
+    // Ten two-hour discovery runs between crawls of the same t3 cohort coin.
+    expect(DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC).toBe(20 * 3600);
+    expect(estimateDiscoverySweepPeriodSec(megaFootprint)).toBe(
+      estimateDiscoverySweepWindowCount(megaFootprint) * DISCOVERY_WINDOWED_CRAWL_INTERVAL_SEC,
+    );
   });
 });
 

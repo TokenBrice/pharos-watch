@@ -53,6 +53,8 @@ export const RATE_LIMITS = {
   DEXSCREENER_MS: 1100,
   /** GeckoTerminal: 30 req/min = 1 every 2s */
   GECKO_TERMINAL_MS: 2000,
+  /** Stellar public Horizon: 3,600 req/hour = at most 1 request/second */
+  HORIZON_MS: 1000,
 } as const;
 
 async function hashIpWithSalt(ip: string, salt: string): Promise<string> {

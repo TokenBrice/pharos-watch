@@ -702,6 +702,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_DETAIL_PLATFORMS`                | `coingecko-detail-platforms`  | `GET /api/stablecoin/:id` (CoinGecko-only detail provider)                                                                |
 | `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
 | `CG_ONCHAIN`                         | `coingecko-onchain`           | `enrich-prices` CoinGecko Pro onchain exact-address augmentation plus `dex-discovery` Stage 1 onchain pool crawl          |
+| `HORIZON_DISCOVERY`                  | `stellar-horizon-discovery`   | Native Stellar classic-AMM pool discovery and bounded provider diagnostics                                                |
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` batched `/tokens/v1` exact-address DexScreener fallback                                                   |
 | `DEXSCREENER_LIQUIDITY`              | `dexscreener-liquidity`       | Optional `/token-pairs/v1` DexScreener discovery pool lookups; excluded from public-impact breaker counts                 |
@@ -1029,6 +1030,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `DEFILLAMA_BASE`                | `https://stablecoins.llama.fi`      | DefiLlama stablecoins                 |
 | `DEFILLAMA_COINS`               | `https://coins.llama.fi`            | DefiLlama coin prices                 |
 | `DEFILLAMA_API`                 | `https://api.llama.fi`              | DefiLlama yields/protocols            |
+| `STELLAR_HORIZON_API`           | `https://horizon.stellar.org`       | Stellar classic-AMM discovery         |
 | `USER_AGENT`                    | `Pharos/1.0 (stablecoin analytics)` | All outbound requests                 |
 | `MIN_VALID_ASSET_COUNT`         | 50                                  | Minimum assets from DL for valid sync |
 | `DEXSCREENER_MIN_LIQUIDITY_USD` | 50,000                              | DexScreener pool threshold            |

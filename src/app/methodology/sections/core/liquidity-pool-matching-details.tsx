@@ -16,6 +16,14 @@ export function LiquidityPoolMatchingDetails() {
           before staging and skipped again at scoring merge time if stale bad data is already present.
         </p>
         <p>
+          Stellar classic-AMM discovery uses Horizon with exact, case-preserving <code>CODE:ISSUER</code> identities.
+          Those rows receive price and TVL only when the counter-asset is another active tracked classic Stellar
+          stablecoin with a usable peg reference and the implied tracked price passes the common plausibility gate.
+          Horizon is a capped secondary source with a 200-row response bound and 0.55 fallback-price confidence;
+          Soroban contract tokens, Stellar order books, and Soroban-native DEX liquidity remain outside this provider
+          and fail closed rather than inheriting synthetic coverage.
+        </p>
+        <p>
           Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is
           unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is
           dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity
