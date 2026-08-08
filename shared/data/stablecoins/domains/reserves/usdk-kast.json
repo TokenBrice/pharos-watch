@@ -79,8 +79,17 @@
     "compositionBasis": "Exact live M0 collateral capture for USDK and documented M0-extension relationship",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserve percentages are sourced from the M0 protocol API. The non-eligible token residual's specific token or obligor is not identified, but it is captured as an explicit 'other' slice rather than an unallocated gap.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor.",
+    "knownUnknownExposurePct": 0.000115,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "Non-eligible token collateral",
+        "pct": 0.000115,
+        "disposition": "insufficient-evidence",
+        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
