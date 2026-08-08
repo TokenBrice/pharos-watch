@@ -21,7 +21,7 @@ export function AiSummaryProse({ textLength, children }: { textLength: number; c
       <p
         className={cn(
           "font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic",
-          collapsible && !open && "max-sm:line-clamp-4",
+          collapsible && !open && "line-clamp-4 sm:line-clamp-none",
         )}
       >
         {children}

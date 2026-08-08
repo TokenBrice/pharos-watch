@@ -55,14 +55,14 @@ export function ScoreBandSpectrum({
 
   return (
     <div role="img" aria-label={ariaLabel} className={cn("min-w-0", className)}>
-      <div className="relative">
+      <div className="relative py-1">
         <div className="flex gap-1">
           {bands.map((band, index) => (
             <div
               key={band.key}
-              style={{ width: `${widths[index]}%` }}
+              style={{ flexGrow: widths[index], flexBasis: 0 }}
               className={cn(
-                "h-1.5 rounded-full transition-colors",
+                "h-1.5 min-w-0 rounded-full transition-colors",
                 index === activeIndex ? band.fillClass : "bg-muted/70",
               )}
             />
@@ -71,8 +71,8 @@ export function ScoreBandSpectrum({
         {markerLeft != null ? (
           <span
             aria-hidden="true"
-            style={{ left: `${markerLeft}%` }}
-            className="absolute -top-1 h-3.5 w-0.5 -translate-x-1/2 rounded-full bg-foreground"
+            style={{ left: `${markerLeft}%`, top: 0, bottom: 0 }}
+            className="absolute w-0.5 -translate-x-1/2 rounded-full bg-foreground"
           />
         ) : null}
       </div>
@@ -81,10 +81,10 @@ export function ScoreBandSpectrum({
         {bands.map((band, index) => (
           <span
             key={band.key}
-            style={{ width: `${widths[index]}%` }}
+            style={{ flexGrow: widths[index], flexBasis: 0 }}
             className={cn(
-              "truncate text-center text-[9px] font-medium uppercase leading-tight tracking-[0.08em]",
-              index === activeIndex ? band.textClass : "max-sm:invisible text-muted-foreground/60",
+              "min-w-0 truncate text-center text-[9px] font-medium uppercase leading-tight tracking-[0.08em]",
+              index === activeIndex ? band.textClass : "text-muted-foreground/60",
             )}
           >
             {band.label}

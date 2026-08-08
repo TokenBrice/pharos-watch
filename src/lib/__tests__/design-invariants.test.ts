@@ -56,6 +56,16 @@ describe("design invariants", () => {
     expect(globals).not.toMatch(/:root\s*{[^}]*--font-pharos-display:/s);
   });
 
+  it("never uses Tailwind max-* variants (this pipeline does not emit them)", () => {
+    const files = walk(COMPONENTS_DIR);
+    const offenders: string[] = [];
+    for (const file of files) {
+      const src = readFileSync(file, "utf8");
+      if (/\bmax-(?:sm|md|lg|xl|2xl):/.test(src)) offenders.push(toPosixRel(file));
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("font-serif / Newsreader usage is confined to editorial carve-outs", () => {
     const files = walk(COMPONENTS_DIR);
     const offenders: string[] = [];
