@@ -2366,12 +2366,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.1",
+    "methodologyVersion": "9.11",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.1",
+    "version": "9.11",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2459,14 +2459,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.3"
+      "methodologyVersion": "4.31"
     }
   },
   "methodology": {
-    "version": "4.3",
-    "versionLabel": "v4.3",
-    "currentVersion": "4.3",
-    "currentVersionLabel": "v4.3",
+    "version": "4.31",
+    "versionLabel": "v4.31",
+    "currentVersion": "4.31",
+    "currentVersionLabel": "v4.31",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2654,7 +2654,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.1",
+      "methodologyVersion": "9.11",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2665,7 +2665,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.1",
+      "methodologyVersion": "9.11",
       "publishedAt": 1772000700
     }
   },

@@ -4,6 +4,7 @@ import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-ver
 import {
   SAFETY_SCORE_V9_ACTIVATION,
   SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
+  SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION,
   SAFETY_SCORE_V9_EXIT_REDUNDANCY,
   SAFETY_SCORE_V9_MERGED_MINT_GRADER,
   SAFETY_SCORE_V9_NATIVE_INPUT,
@@ -26,6 +27,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.11": (
+    <>
+      <p>{SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.1": (
     <>
       <p>{SAFETY_SCORE_V9_MERGED_MINT_GRADER.summary}</p>

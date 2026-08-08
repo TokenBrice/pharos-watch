@@ -130,6 +130,23 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
+export const SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION: MethodologyChangelogEntry = {
+  version: "9.11",
+  title: "Unified exit ladder boundary semantics",
+  date: "2026-08-08",
+  effectiveAt: 1786233600,
+  summary:
+    "The shared exit engine's two descending penalty ladders read their thresholds the same way. The queue-backlog ladder already matched at-or-above; the minimum-redeem ladder matched strictly above, so a route whose minimum landed exactly on a boundary took the gentler band. Both now match at-or-above.",
+  impact: [
+    "A route with a minimum redemption of exactly $1,000,000 takes the 0.75 capacity multiplier instead of 0.9; exactly $10,000 takes 0.9 instead of no penalty",
+    "Only routes whose reviewed minimum sits exactly on a ladder threshold can move; every other route is arithmetically identical",
+    "The comparison mode is no longer a parameter of the shared band resolver, so the two ladders cannot silently diverge again",
+    "Ladder thresholds and multipliers, component weights, pillar weights, aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_MERGED_MINT_GRADER: MethodologyChangelogEntry = {
   version: "9.1",
   title: "One mint grader: incident decay, key custody, and quorum granularity",

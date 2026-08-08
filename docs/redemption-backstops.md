@@ -6,11 +6,13 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.3`
+- **Current methodology version:** `v4.31`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.3` update: exit is scored by one engine. The route-scoring tables the redemption backstop score and the Safety Score V9 Exit pillar each carried a copy of are now a single definition in `shared/lib/exit-route-scoring.ts`, with the V9 policy artifact validated against that source in CI. The legacy `effectiveExitScore` blend, its `methodology.effectiveExitModel` envelope, and the unshipped same-notional shadow engine are removed; same-notional exit is published by the V9 Exit pillar alone. Redemption route scores and every component subscore are unchanged.
+Latest `v4.31` update: the minimum-redeem penalty ladder matches its thresholds at-or-above, unified with the queue-backlog ladder. It previously matched strictly above, so a route whose reviewed minimum landed exactly on a boundary took the gentler band; a minimum of exactly $1,000,000 now applies the 0.75 capacity multiplier instead of 0.9, and exactly $10,000 applies 0.9 instead of no penalty. The comparison mode is no longer a parameter of the shared band resolver in `shared/lib/exit-route-scoring.ts`, so the two ladders cannot diverge again. Band thresholds and multipliers, component subscores, and capacity semantics are unchanged; only routes sitting exactly on a threshold can move.
+
+Previous `v4.3` update: exit is scored by one engine. The route-scoring tables the redemption backstop score and the Safety Score V9 Exit pillar each carried a copy of are now a single definition in `shared/lib/exit-route-scoring.ts`, with the V9 policy artifact validated against that source in CI. The legacy `effectiveExitScore` blend, its `methodology.effectiveExitModel` envelope, and the unshipped same-notional shadow engine are removed; same-notional exit is published by the V9 Exit pillar alone. Redemption route scores and every component subscore are unchanged.
 
 Previous `v4.20` update: `sbold-k3-capital` now measures same-run BOLD withdrawability from the vault's Liquity V2 Stability Pool positions via `calcFragments()` instead of treating the vault's near-zero idle BOLD balance as its executable buffer. The route uses documented-bound confidence and a strategy-buffer basis because the read excludes unswapped collateral gains and K3 can temporarily restrict withdrawals at its collateral-exposure threshold. Reviewed full-supply routes with an `undisclosed-reviewed` fee can now publish their modeled capacity in `exitRouteObservations` with bounded-unknown fee evidence, but remain non-score-eligible for current redemption scoring until a numeric cost bound exists.
 

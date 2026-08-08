@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.31",
+    title: "Minimum-redeem ladder matches at-or-above",
+    date: "2026-08-08",
+    effectiveAt: 1786233600,
+    summary:
+      "The redemption backstop's minimum-redeem penalty ladder matched its thresholds strictly above, while the queue-backlog ladder matched at-or-above. A route whose reviewed minimum landed exactly on a boundary therefore took the gentler band. Both ladders now match at-or-above, and the comparison mode is no longer a parameter of the shared exit engine's band resolver.",
+    impact: [
+      "A reviewed minimum redemption of exactly $1,000,000 now applies the 0.75 capacity multiplier instead of 0.9; exactly $10,000 applies 0.9 instead of no penalty",
+      "Only routes whose reviewed minimum sits exactly on a ladder threshold can move; all other route scores are unchanged",
+      "The queue-backlog ladder is unchanged — it already matched at-or-above",
+      "Band thresholds and multipliers, component subscores, capacity semantics, model confidence, route status, and the exit-route observation envelope are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.3",
     title: "One exit engine: the legacy effective exit score retires",
     date: "2026-08-07",
