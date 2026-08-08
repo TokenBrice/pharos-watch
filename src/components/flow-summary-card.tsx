@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { resolveNetDirection, resolvePressureScore, resolvePressureState } from "@/lib/mint-burn-coin-helpers";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 interface FlowSummaryCardProps {
   stablecoinId: string;
@@ -106,10 +108,18 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         <DetailSectionTitle as="h3" className={DETAIL_MODULE_TITLE_CLASS}>
           Mint &amp; Burn Flows
         </DetailSectionTitle>
+        <div className="flex items-center gap-2">
+        <FreshnessIndicator
+          compact
+          updatedAtMs={query.dataUpdatedAt}
+          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows * 1000}
+          labelPrefix="Updated"
+        />
         <MethodologyHint
           topic="mintBurnFlows"
           buttonClassName="!h-5 !min-h-0 !w-5 rounded-md !border-border/60 !bg-muted/50 !text-muted-foreground hover:!border-border hover:!bg-muted hover:!text-foreground dark:!border-border/60 dark:!bg-muted/50 dark:!text-muted-foreground md:!h-5 md:!w-5 md:!min-h-0"
         />
+        </div>
       </div>
 
       {query.error ? (

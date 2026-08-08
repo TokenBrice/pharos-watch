@@ -160,7 +160,11 @@ describe("BlacklistSection", () => {
 
     render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
 
-    expect(screen.getByRole("status").textContent).toContain("refresh failed; showing the last available data");
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((node) => node.textContent?.includes("refresh failed; showing the last available data")),
+    ).toBe(true);
     expect(screen.getByText(/Frozen addresses/i)).toBeTruthy();
   });
 });

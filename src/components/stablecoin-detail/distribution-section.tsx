@@ -25,6 +25,8 @@ import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { CHAIN_HEX, PROTOCOL_HEX, normalizeChain, prettifyProtocol, protocolLogo } from "@/lib/dex-display-constants";
 import { cn } from "@/lib/utils";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 /* ── Types ── */
 
@@ -118,6 +120,7 @@ function DonutCard({
   data,
   total,
   notice,
+  headerEnd,
 }: {
   title: ReactNode;
   subtitle: string;
@@ -125,6 +128,7 @@ function DonutCard({
   data: DonutDatum[];
   total: number;
   notice?: ReactNode;
+  headerEnd?: ReactNode;
 }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -132,6 +136,7 @@ function DonutCard({
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{title}</DetailSectionTitle>
+        {headerEnd}
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
         {notice}
@@ -284,6 +289,14 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   return (
     <DonutCard
       title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+      headerEnd={
+        <FreshnessIndicator
+          compact
+          updatedAtMs={query.dataUpdatedAt}
+          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.stablecoins * 1000}
+          labelPrefix="Updated"
+        />
+      }
       subtitle="Circulating"
       ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}
@@ -354,6 +367,14 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   return (
     <DonutCard
       title="Liquidity by Protocol"
+      headerEnd={
+        <FreshnessIndicator
+          compact
+          updatedAtMs={query.dataUpdatedAt}
+          staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.dexLiquidity * 1000}
+          labelPrefix="Updated"
+        />
+      }
       subtitle="DEX TVL"
       ariaLabel={`DEX liquidity TVL distribution across ${data.length} protocols`}
       data={data}

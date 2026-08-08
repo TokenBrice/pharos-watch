@@ -175,6 +175,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   hasBlacklist: boolean;
   blacklistSymbol: BlacklistStablecoin | null;
   supplyHistory: SupplyHistoryPoint[];
+  /** Supply query freshness (ms) for the Market Data header chip. */
+  supplyUpdatedAt: number;
   earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;

@@ -176,6 +176,7 @@ export function DetailRiskContextSections({
             stablecoinId={viewModel.id}
             supplyHistory={viewModel.supplyHistory}
             pegCurrency={viewModel.coin.flags.pegCurrency}
+            updatedAtMs={viewModel.supplyUpdatedAt}
             frozenNote={frozenNote}
           />
         ) : (

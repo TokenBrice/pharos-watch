@@ -18,6 +18,8 @@ import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import type { BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 interface BlacklistSectionProps {
   stablecoinId: string;
@@ -57,6 +59,12 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
           <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
           </DetailSectionTitle>
+          <FreshnessIndicator
+            compact
+            updatedAtMs={state.dataUpdatedAt}
+            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 1000}
+            labelPrefix="Updated"
+          />
         </CardHeader>
         <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>
           <p className="mt-1 text-sm text-muted-foreground">
