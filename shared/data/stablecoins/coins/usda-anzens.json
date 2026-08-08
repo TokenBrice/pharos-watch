@@ -136,7 +136,7 @@
     "confidence": "manual-review",
     "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
     "economicCapSemantics": "unknown",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
@@ -179,7 +179,7 @@
       }
     ],
     "review": {
-      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding. 2026-07-20 (Kimi P2 dc-2): Koios script_info confirms the minting policy is a plutusV2 script created in tx 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish only custody-adjacent statements (EMURGO key-management blog; BitGo custodial services for USDA mint/burn operations) and no script parameterization, so the controlling signing keys remain unestablished from public sources. Re-reviewed 2026-07-27 (Kimi data review): anzens.com and Anzens/EMURGO channels still publish no script parameterization, admin-control inventory, or reserve attestation URL, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review; the controlling signing keys embedded as PlutusV2 script parameters remain the recorded structural unknown. Reconciliation is recorded as periodic: EMURGO announced an independent examination of USDA reserve assets (first proof-of-reserves report), which is a point-in-time supply-vs-reserve reconciliation engagement rather than a continuous feed; no attestation URL is publicly published.",
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding. 2026-07-20 (Kimi P2 dc-2): Koios script_info confirms the minting policy is a plutusV2 script created in tx 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish only custody-adjacent statements (EMURGO key-management blog; BitGo custodial services for USDA mint/burn operations) and no script parameterization, so the controlling signing keys remain unestablished from public sources. Re-reviewed 2026-07-27 (Kimi data review): anzens.com and Anzens/EMURGO channels still publish no script parameterization, admin-control inventory, or reserve attestation URL, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review; the controlling signing keys embedded as PlutusV2 script parameters remain the recorded structural unknown. Reconciliation is recorded as periodic: EMURGO announced an independent examination of USDA reserve assets (first proof-of-reserves report), which is a point-in-time supply-vs-reserve reconciliation engagement rather than a continuous feed; no attestation URL is publicly published. M-2 evidence review 2026-08-08: reconciliation downgraded periodic -> unknown - the claimed series is four images-only Medium-hosted examination posts in 16 months, newest period 2026-01-31 (~6 months stale while supply fell ~62%), with no readable signing firm, period, or opinion, no transparency surface on anzens.com, and contested machine-verifiability across three research passes. A stalled, unverifiable series cannot support recurring-reconciliation credit.",
       "reviewer": "Kimi data review",
       "reviewedAt": "2026-07-27",
       "sources": [
@@ -202,6 +202,10 @@
         {
           "label": "EMURGO post: Anzens publishes first proof-of-reserves report for USDA",
           "url": "https://www.linkedin.com/posts/emurgo-io_examination-over-usda-reserve-assets-report-activity-7328334550667821056-s0vH"
+        },
+        {
+          "label": "EMURGO USDA reserve examination posts (Medium, images only)",
+          "url": "https://medium.com/@emurgo_io"
         }
       ],
       "disposition": "scoreable"
