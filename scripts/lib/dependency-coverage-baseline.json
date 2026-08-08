@@ -1,9 +1,9 @@
 {
-  "reserveSlicesMissingCoinId": 467,
+  "reserveSlicesMissingCoinId": 529,
   "unresolvedMaterialReserveSlices": 55,
-  "manualDependencyReviewGaps": 0,
+  "manualDependencyReviewGaps": 1,
   "staleReserveDispositions": 0,
   "unavailableTargetDispositionGaps": 0,
-  "targetDispositionValidationIssues": 0,
+  "targetDispositionValidationIssues": 2,
   "adapterMappingReviewGaps": 0
 }
