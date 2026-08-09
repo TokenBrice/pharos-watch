@@ -3,6 +3,7 @@ import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helper
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { handleStressSignals } from "../stress-signals";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 stubCryptoForAuth();
 
@@ -15,26 +16,7 @@ describe("DEWS history repair", () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.UTC(2026, 3, 9, 12, 0, 0));
 
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`
-      CREATE TABLE stress_signals (
-        stablecoin_id TEXT NOT NULL,
-        computed_at INTEGER NOT NULL,
-        score REAL NOT NULL,
-        band TEXT NOT NULL,
-        signals_json TEXT NOT NULL,
-        PRIMARY KEY (stablecoin_id, computed_at)
-      );
-      CREATE TABLE stress_signal_history (
-        stablecoin_id TEXT NOT NULL,
-        snapshot_date INTEGER NOT NULL,
-        score REAL NOT NULL,
-        band TEXT NOT NULL,
-        signals_json TEXT NOT NULL,
-        PRIMARY KEY (stablecoin_id, snapshot_date)
-      );
-    `);
+    const sqlite = createLatestSchemaSqlite().sqlite;
 
     const signalsJson = JSON.stringify({
       supply: { value: 10, available: true },

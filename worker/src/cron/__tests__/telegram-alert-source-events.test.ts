@@ -1,9 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { StablecoinsCacheLoadResult } from "../../lib/stablecoins-cache";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import type { TelegramDispatchEvents } from "../dispatch-telegram-events";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 import {
@@ -24,10 +23,6 @@ import {
   removeHandledTelegramAlertItems,
 } from "../telegram-alert-event-lineage";
 
-const MIGRATION_SQL = readFileSync(
-  join(process.cwd(), "worker/src/test-helpers/migration-fixtures/0185_telegram_source_event_resolution.sql"),
-  "utf8",
-);
 const NOW = 1_800_000_000;
 
 const V8_IDENTITY = {
@@ -62,101 +57,9 @@ afterEach(() => {
 });
 
 function createHarness(): Harness {
-  const sqlite = new DatabaseSync(":memory:");
+  const { sqlite, db } = createLatestSchemaSqlite();
   openDatabases.push(sqlite);
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY,
-      last_active_at INTEGER NOT NULL,
-      alert_snooze_until_ts INTEGER,
-      quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
-      quiet_hours_start_utc INTEGER,
-      quiet_hours_end_utc INTEGER,
-      timezone TEXT,
-      preference_generation INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_preset_subscriptions (
-      chat_id TEXT NOT NULL,
-      preset_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      depeg_worsening_bps_step INTEGER,
-      PRIMARY KEY (chat_id, preset_id)
-    );
-    CREATE TABLE telegram_alert_jobs (
-      job_id TEXT PRIMARY KEY,
-      alert_type TEXT NOT NULL,
-      source_event_id TEXT NOT NULL,
-      severity TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      expires_at INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'discovered',
-      target_count INTEGER NOT NULL DEFAULT 0,
-      sent_count INTEGER NOT NULL DEFAULT 0,
-      enqueued_count INTEGER NOT NULL DEFAULT 0,
-      failed_count INTEGER NOT NULL DEFAULT 0,
-      last_cursor TEXT,
-      metadata TEXT
-    );
-    CREATE UNIQUE INDEX idx_taj_source_alert ON telegram_alert_jobs(source_event_id, alert_type);
-    CREATE TABLE telegram_alert_job_targets (
-      job_id TEXT NOT NULL,
-      target_key TEXT NOT NULL,
-      chat_id TEXT NOT NULL,
-      chunk_index INTEGER NOT NULL DEFAULT 0,
-      alert_type TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'planned',
-      pending_dedupe_key TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      sent_at INTEGER,
-      enqueued_at INTEGER,
-      failed_at INTEGER,
-      error_class TEXT,
-      effect_state TEXT NOT NULL DEFAULT 'unstarted',
-      effect_owner TEXT,
-      effect_generation INTEGER NOT NULL DEFAULT 0,
-      effect_claimed_at INTEGER,
-      effect_started_at INTEGER,
-      effect_completed_at INTEGER,
-      effect_claim_expires_at INTEGER,
-      source_event_id TEXT,
-      plan_generation INTEGER,
-      plan_key TEXT,
-      final_delivery_state TEXT,
-      PRIMARY KEY (job_id, target_key)
-    );
-    CREATE TABLE telegram_alert_target_plans (
-      source_event_id TEXT NOT NULL,
-      plan_generation INTEGER NOT NULL,
-      plan_key TEXT NOT NULL,
-      chat_id TEXT NOT NULL,
-      PRIMARY KEY (source_event_id, plan_generation, plan_key)
-    );
-    CREATE TABLE telegram_alert_target_plan_items (
-      source_event_id TEXT NOT NULL,
-      plan_generation INTEGER NOT NULL,
-      plan_key TEXT NOT NULL,
-      item_key TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      PRIMARY KEY (source_event_id, plan_generation, plan_key, item_key)
-    );
-  `);
-  sqlite.exec(MIGRATION_SQL);
-  sqlite.exec(`
-    ALTER TABLE telegram_alert_source_events
-      ADD COLUMN target_plan_state TEXT NOT NULL DEFAULT 'unstarted'
-      CHECK (target_plan_state IN (
-        'unstarted', 'capturing', 'planning', 'materializing', 'ready',
-        'delivery_open', 'degraded', 'expired'
-      ));
-  `);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return { sqlite, db };
 }
 
 function events(stablecoinIds = ["usdc-circle"]): TelegramDispatchEvents {
@@ -230,15 +133,15 @@ function insertPresetFollower(
 ): void {
   sqlite.prepare(
     `INSERT INTO telegram_subscribers (
-       chat_id, last_active_at, alert_snooze_until_ts,
+       chat_id, created_at, last_active_at, alert_snooze_until_ts,
        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone
-     ) VALUES (?, ?, ?, 1, 22, 6, 'Europe/Belgrade')`,
-  ).run(chatId, NOW, options.snoozeUntil ?? null);
+     ) VALUES (?, ?, ?, ?, 1, 22, 6, 'Europe/Belgrade')`,
+  ).run(chatId, NOW, NOW, options.snoozeUntil ?? null);
   sqlite.prepare(
     `INSERT INTO telegram_preset_subscriptions (
-       chat_id, preset_id, alert_dews, depeg_worsening_bps_step
-     ) VALUES (?, 'usd-top25', ?, 75)`,
-  ).run(chatId, options.enabled === false ? 0 : 1);
+       chat_id, preset_id, alert_dews, depeg_worsening_bps_step, created_at, updated_at
+     ) VALUES (?, 'usd-top25', ?, 75, ?, ?)`,
+  ).run(chatId, options.enabled === false ? 0 : 1, NOW, NOW);
 }
 
 describe("Telegram alert source-event resolution", () => {

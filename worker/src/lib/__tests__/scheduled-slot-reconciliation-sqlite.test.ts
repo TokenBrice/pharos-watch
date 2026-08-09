@@ -1,23 +1,12 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { logCronRun } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
-
 function createMigratedDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  for (const file of readdirSync(MIGRATIONS_DIR)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-owned migration fixture
-    sqlite.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
-  }
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 describe("scheduled slot reconciliation against the current D1 schema", () => {

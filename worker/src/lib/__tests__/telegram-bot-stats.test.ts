@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   buildTelegramDeliverySliStatus,
@@ -9,6 +8,7 @@ import {
   TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL,
 } from "../status/telegram-bot-stats";
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
   return {
@@ -26,25 +26,13 @@ function unavailableDeliverySli(): TelegramDeliverySliStatus {
 
 describe("Telegram delivery telemetry SQL", () => {
   it("counts a fresh execution-unknown target when the pending table is empty", () => {
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE telegram_pending_alerts (
-          delivery_state TEXT,
-          created_at INTEGER,
-          expires_at INTEGER,
-          not_before_at INTEGER,
-          delivery_started_at INTEGER
-        );
-        CREATE TABLE telegram_alert_job_targets (
-          effect_state TEXT NOT NULL,
-          created_at INTEGER,
-          effect_started_at INTEGER,
-          effect_completed_at INTEGER
-        );
-        INSERT INTO telegram_alert_job_targets (effect_state, created_at)
-        VALUES ('execution_unknown', 100);
-      `);
+          sqlite.exec(`
+      INSERT INTO telegram_alert_job_targets
+        (job_id, target_key, chat_id, alert_type, pending_dedupe_key, effect_state, created_at)
+        VALUES ('stats-job', 'stats-target', 'stats-chat', 'dews', 'stats-key', 'execution_unknown', 100);
+    `);
       const bindCount = TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL.match(/\?/g)?.length ?? 0;
       const row = sqlite
         .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)

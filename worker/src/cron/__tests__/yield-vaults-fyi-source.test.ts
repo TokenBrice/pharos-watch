@@ -38,6 +38,7 @@ import {
   reserveMonthlyCredits,
 } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -101,14 +102,7 @@ function creditLedgerDb(initialValue: string | null) {
 }
 
 function sqliteCreditLedgerDb() {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

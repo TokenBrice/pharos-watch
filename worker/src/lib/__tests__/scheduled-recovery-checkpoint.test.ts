@@ -1,9 +1,6 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   advanceScheduledCheckpoint,
   beginScheduledCheckpoint,
@@ -31,83 +28,8 @@ const CHILD_PREREQUISITES = {
   "reserve-post-sync-watchdog": ["sync-live-reserves"],
 } as const;
 
-const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../test-helpers/migration-fixtures");
-
-
 function createHarness() {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cron_runs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      job TEXT NOT NULL,
-      started_at INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      metadata TEXT,
-      slot_started_at INTEGER
-    );
-    CREATE TABLE cron_slot_executions (
-      slot_key TEXT NOT NULL,
-      slot_started_at INTEGER NOT NULL,
-      state TEXT NOT NULL,
-      result_status TEXT,
-      execution_owner TEXT NOT NULL,
-      execution_generation INTEGER NOT NULL,
-      invocation_id TEXT,
-      worker_version TEXT,
-      started_at INTEGER NOT NULL,
-      finished_at INTEGER,
-      updated_at INTEGER NOT NULL,
-      metadata TEXT,
-      PRIMARY KEY (slot_key, slot_started_at)
-    );
-    CREATE TABLE cron_run_progress (
-      job TEXT PRIMARY KEY,
-      started_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      stage TEXT,
-      lease_owner TEXT,
-      slot_started_at INTEGER
-    );
-    CREATE TABLE cron_leases (
-      job TEXT PRIMARY KEY,
-      lease_owner TEXT NOT NULL,
-      lease_until INTEGER NOT NULL,
-      heartbeat_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE reserve_sync_state (
-      stablecoin_id TEXT PRIMARY KEY,
-      adapter_key TEXT NOT NULL,
-      breaker_key TEXT NOT NULL,
-      last_attempted_at INTEGER,
-      last_success_at INTEGER,
-      last_status TEXT NOT NULL,
-      warning_count INTEGER NOT NULL DEFAULT 0,
-      warnings TEXT,
-      last_error TEXT,
-      metadata TEXT NOT NULL DEFAULT '{}',
-      last_attempt_id TEXT,
-      pending_attempt_id TEXT,
-      last_success_attempt_id TEXT
-    );
-    CREATE TABLE reserve_sync_attempt_history (
-      stablecoin_id TEXT NOT NULL,
-      attempted_at INTEGER NOT NULL,
-      adapter_key TEXT NOT NULL,
-      breaker_key TEXT NOT NULL,
-      attempt_id TEXT,
-      status TEXT NOT NULL,
-      warnings TEXT,
-      warning_count INTEGER NOT NULL,
-      last_error TEXT,
-      metadata TEXT NOT NULL
-    );
-    CREATE UNIQUE INDEX idx_reserve_attempt_test
-      ON reserve_sync_attempt_history(stablecoin_id, attempt_id)
-      WHERE attempt_id IS NOT NULL;
-  `);
-  sqlite.exec(readFileSync(resolve(MIGRATIONS_DIR, "0173_scheduled_recovery_checkpoints.sql"), "utf8"));
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 describe("scheduled recovery checkpoint", () => {
@@ -220,10 +142,10 @@ describe("scheduled recovery checkpoint", () => {
     });
     await setScheduledCheckpointChildDisposition(db, checkpoint, "sync-live-reserves", "completed", 1_510);
     sqlite.prepare(
-      "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'ok', ?, ?)",
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, slot_started_at) VALUES (?, ?, 0, 'ok', ?, ?)",
     ).run("sync-live-reserves", 1_505, JSON.stringify({ childDisposition: "completed" }), 1_500);
     sqlite.prepare(
-      "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'degraded', ?, ?)",
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, slot_started_at) VALUES (?, ?, 0, 'degraded', ?, ?)",
     ).run(
       "sync-redemption-backstops",
       1_506,
@@ -396,7 +318,7 @@ describe("scheduled recovery checkpoint", () => {
        ) VALUES ('fourHourlyReserveSync', 1800, 'finished', 'degraded', 'slot-owner-1', 1, 1800, 1810, 1810)`,
     ).run();
     sqlite.prepare(
-      "INSERT INTO cron_runs (job, started_at, status, metadata, slot_started_at) VALUES (?, ?, 'degraded', ?, ?)",
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, slot_started_at) VALUES (?, ?, 0, 'degraded', ?, ?)",
     ).run(
       "sync-live-reserves",
       1_805,

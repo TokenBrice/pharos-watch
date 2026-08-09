@@ -3,39 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
 import { setSubscriptionSnooze } from "../snooze";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
 
 function createSubscriptionDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY,
-      last_active_at INTEGER NOT NULL DEFAULT 0,
-      preference_generation INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_subscriptions (
-      chat_id TEXT NOT NULL,
-      stablecoin_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      alert_freeze INTEGER NOT NULL DEFAULT 0,
-      alert_dews_override INTEGER NOT NULL DEFAULT 0,
-      alert_depeg_override INTEGER NOT NULL DEFAULT 0,
-      alert_safety_override INTEGER NOT NULL DEFAULT 0,
-      alert_launch_override INTEGER NOT NULL DEFAULT 0,
-      alert_reserve_override INTEGER NOT NULL DEFAULT 0,
-      alert_freeze_override INTEGER NOT NULL DEFAULT 0,
-      dews_min_band TEXT,
-      safety_mode TEXT,
-      depeg_worsening_bps_step INTEGER,
-      alert_snooze_until_ts INTEGER,
-      PRIMARY KEY (chat_id, stablecoin_id)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -70,8 +43,9 @@ describe("setSubscriptionSnooze clear invariants", () => {
     const { sqlite, db } = createSubscriptionDb();
     try {
       sqlite.prepare(
-        "INSERT INTO telegram_subscribers (chat_id, last_active_at, preference_generation) VALUES (?, ?, ?)",
-      ).run("42", NOW_SEC - 60, 7);
+        `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, preference_generation)
+         VALUES (?, ?, ?, ?)`,
+      ).run("42", NOW_SEC - 600, NOW_SEC - 60, 7);
       sqlite.prepare(
         `INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_snooze_until_ts)
          VALUES (?, ?, ?)`,

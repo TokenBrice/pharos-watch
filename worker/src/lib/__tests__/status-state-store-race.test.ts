@@ -1,23 +1,25 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { reconcileStatusState } from "../status-state-store";
-import { makeStatefulDb } from "./_helpers/stateful-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("reconcileStatusState concurrency (regression)", () => {
+  const openDatabases: import("node:sqlite").DatabaseSync[] = [];
+
+  afterEach(() => {
+    for (const sqlite of openDatabases.splice(0)) sqlite.close();
+  });
+
   it("does not skip transitions when two callers reconcile simultaneously against the same row", async () => {
-    const { db } = makeStatefulDb({
-      seed: {
-        scope: "global",
-        current_status: "healthy",
-        raw_status: "healthy",
-        last_evaluated_at: 1000,
-        last_changed_at: 1000,
-        consecutive_healthy: 5,
-        consecutive_degraded: 0,
-        consecutive_stale: 0,
-        confidence: 0.9,
-        causes_json: "[]",
-      },
-    });
+    const { sqlite, db } = createLatestSchemaSqlite();
+    openDatabases.push(sqlite);
+    sqlite
+      .prepare(
+        `INSERT INTO status_state
+         (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
+          consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
+         VALUES ('global', 'healthy', 'healthy', 1000, 1000, 5, 0, 0, 0.9, '[]', 1000)`,
+      )
+      .run();
     // Simulate two in-flight calls that should both see the seed and both
     // try to write; at most one will win, but both must be observable via
     // the persisted state (no transition loss for the winning write).

@@ -2,28 +2,13 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEndpointDefinitionByKey, type EndpointDefinition, type EndpointKey } from "@shared/lib/api-endpoints";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   auditCatalogActionResponse,
   auditCatalogActionResponseSafely,
   getCatalogActionAuditOwner,
 } from "../catalog-action-audit";
 
-const AUDIT_SCHEMA = `
-  CREATE TABLE admin_action_audit (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at INTEGER NOT NULL,
-    actor TEXT NOT NULL,
-    action TEXT NOT NULL,
-    target TEXT,
-    result TEXT NOT NULL CHECK (result IN ('ok', 'error')),
-    http_status INTEGER,
-    details_json TEXT,
-    intent_key TEXT
-  );
-  CREATE UNIQUE INDEX idx_admin_action_audit_action_intent
-    ON admin_action_audit (action, intent_key)
-    WHERE intent_key IS NOT NULL;
-`;
 
 interface AuditRow {
   action: string;
@@ -65,8 +50,7 @@ afterEach(() => {
 
 describe("catalog action canonical audit", () => {
   it("records only allowlisted scope and outcome metadata", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const plaintextBodySecret = "plaintext-body-secret";
     const authSecret = "bearer-auth-secret";
@@ -115,8 +99,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("keeps one row for a same-key replay and adds a row for an explicit new intent", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
 
@@ -146,7 +129,15 @@ describe("catalog action canonical audit", () => {
 
   it("lets a replay backfill a transiently missing first audit", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    // Model the table being transiently absent by dropping the real one and
+    // restoring its production DDL verbatim mid-test.
+    const auditDdl = (sqlite
+      .prepare("SELECT sql FROM sqlite_master WHERE tbl_name = 'admin_action_audit' AND sql IS NOT NULL")
+      .all() as Array<{ sql: string }>)
+      .map((row) => `${row.sql};`)
+      .join("\n");
+    sqlite.exec("DROP TABLE admin_action_audit");
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const req = request("/api/backfill-depegs?dry-run=true", "reconcile-intent");
@@ -158,7 +149,7 @@ describe("catalog action canonical audit", () => {
       response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
     });
     expect(firstAudited).toBe(false);
-    sqlite.exec(AUDIT_SCHEMA);
+    sqlite.exec(auditDdl);
     await auditCatalogActionResponse({
       db,
       endpoint: definition,
@@ -172,8 +163,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("records an explicit mint/burn live request as live despite preview-only catalog metadata", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
 
     await auditCatalogActionResponse({
@@ -187,8 +177,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("does not let a pre-idempotency failure replace the original intent outcome", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const intentKey = "operator-known-idempotency-key";
@@ -228,8 +217,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("lets the original success replace an earlier replay-unknown placeholder", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const req = request("/api/backfill-depegs?dry-run=false", "racing-intent");
@@ -267,8 +255,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("distinguishes an absent batch target from an unsafe configured target", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
     const unsafeTarget = "../../secret-token";
@@ -295,8 +282,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("does not let a request-mismatch conflict replace the original intent outcome", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const definition = endpoint("backfill-depegs");
 
@@ -328,8 +314,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("classifies accepted, queued, definite-error, and execution-unknown outcomes", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const cases = [
       {
@@ -384,8 +369,7 @@ describe("catalog action canonical audit", () => {
   });
 
   it("leaves richer handler-owned auditing to the handler", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(AUDIT_SCHEMA);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const canonical = endpoint("trigger-digest");
     const handlerOwned: EndpointDefinition = {

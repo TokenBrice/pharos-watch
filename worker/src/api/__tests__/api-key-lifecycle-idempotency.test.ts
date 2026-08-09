@@ -1,4 +1,3 @@
-import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
@@ -8,50 +7,12 @@ import {
   handleApiKeysRoute,
   handleApiKeyUpdateRoute,
 } from "../api-keys";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 stubCryptoForAuth();
 
 function setup() {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE api_keys (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      key_prefix TEXT NOT NULL,
-      secret_hash TEXT NOT NULL,
-      name TEXT NOT NULL,
-      owner_email TEXT,
-      tier TEXT NOT NULL,
-      traffic_class TEXT NOT NULL,
-      rate_limit_per_minute INTEGER NOT NULL,
-      is_active INTEGER NOT NULL,
-      expires_at INTEGER,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      last_used_at INTEGER,
-      last_used_route TEXT,
-      pepper_version INTEGER NOT NULL DEFAULT 1
-    );
-    CREATE TABLE api_key_audit_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      api_key_id INTEGER NOT NULL,
-      action TEXT NOT NULL,
-      actor TEXT NOT NULL,
-      detail_json TEXT,
-      created_at INTEGER NOT NULL
-    );
-    CREATE TABLE admin_idempotency_keys (
-      action TEXT NOT NULL,
-      idempotency_key TEXT NOT NULL,
-      request_hash TEXT NOT NULL,
-      response_status INTEGER NOT NULL,
-      response_body TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      reservation_owner TEXT,
-      reservation_generation INTEGER NOT NULL DEFAULT 0,
-      execution_started_at INTEGER,
-      PRIMARY KEY (action, idempotency_key)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

@@ -7,6 +7,7 @@ import {
   type PendingAlertScopeItem,
 } from "../../lib/telegram-pending-provenance";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   revalidatePendingAlertPreferences,
   type PendingPreferenceRevalidation,
@@ -23,63 +24,7 @@ let sqlite: DatabaseSync;
 let db: D1Database;
 
 beforeEach(() => {
-  sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY,
-      preference_generation INTEGER NOT NULL DEFAULT 0,
-      alert_snooze_until_ts INTEGER,
-      global_alert_dews INTEGER NOT NULL DEFAULT 0,
-      global_alert_depeg INTEGER NOT NULL DEFAULT 0,
-      global_alert_safety INTEGER NOT NULL DEFAULT 0,
-      global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
-      global_alert_freeze INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_subscriptions (
-      chat_id TEXT NOT NULL,
-      stablecoin_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      alert_freeze INTEGER NOT NULL DEFAULT 0,
-      alert_dews_override INTEGER NOT NULL DEFAULT 0,
-      alert_depeg_override INTEGER NOT NULL DEFAULT 0,
-      alert_safety_override INTEGER NOT NULL DEFAULT 0,
-      alert_launch_override INTEGER NOT NULL DEFAULT 0,
-      alert_reserve_override INTEGER NOT NULL DEFAULT 0,
-      alert_freeze_override INTEGER NOT NULL DEFAULT 0,
-      alert_snooze_until_ts INTEGER,
-      PRIMARY KEY (chat_id, stablecoin_id)
-    );
-    CREATE TABLE telegram_preset_subscriptions (
-      chat_id TEXT NOT NULL,
-      preset_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (chat_id, preset_id)
-    );
-    CREATE TABLE telegram_recap_preferences (
-      chat_id TEXT PRIMARY KEY,
-      chat_kind TEXT NOT NULL DEFAULT 'private',
-      enabled INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_recap_targets (
-      recap_key TEXT PRIMARY KEY,
-      chat_id TEXT NOT NULL,
-      preference_generation INTEGER NOT NULL,
-      pending_dedupe_key TEXT,
-      status TEXT NOT NULL
-    );
-  `);
+  sqlite = createLatestSchemaSqlite().sqlite;
   db = createSqliteD1(sqlite);
 });
 
@@ -92,8 +37,9 @@ function insertSubscriber(options: {
 } = {}): void {
   sqlite.prepare(
     `INSERT INTO telegram_subscribers (
-       chat_id, preference_generation, alert_snooze_until_ts, global_alert_dews
-     ) VALUES (?, ?, ?, ?)`,
+       chat_id, created_at, last_active_at, preference_generation,
+       alert_snooze_until_ts, global_alert_dews
+     ) VALUES (?, 0, 0, ?, ?, ?)`,
   ).run(
     CHAT_ID,
     options.generation ?? 1,
@@ -122,7 +68,9 @@ function insertDirect(options: {
 
 function insertPreset(presetId = "usd-top10"): void {
   sqlite.prepare(
-    "INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews) VALUES (?, ?, 1)",
+    `INSERT INTO telegram_preset_subscriptions
+       (chat_id, preset_id, alert_dews, created_at, updated_at)
+     VALUES (?, ?, 1, 0, 0)`,
   ).run(CHAT_ID, presetId);
 }
 
@@ -185,12 +133,14 @@ function recapRow(options: { generation?: number; markupPolicyJson?: string | nu
 
 function insertRecapTarget(generation = 1, enabled = 1): void {
   sqlite.prepare(
-    "INSERT INTO telegram_recap_preferences (chat_id, chat_kind, enabled) VALUES (?, 'private', ?)",
+    `INSERT INTO telegram_recap_preferences (chat_id, chat_kind, enabled, created_at, updated_at)
+     VALUES (?, 'private', ?, 0, 0)`,
   ).run(CHAT_ID, enabled);
   sqlite.prepare(
     `INSERT INTO telegram_recap_targets
-       (recap_key, chat_id, preference_generation, pending_dedupe_key, status)
-     VALUES (?, ?, ?, ?, 'queued')`,
+       (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation,
+        watchlist_fingerprint, pending_dedupe_key, status, created_at, updated_at)
+     VALUES (?, ?, '2026-07-11', 0, 0, ?, 'fingerprint-v1', ?, 'queued', 0, 0)`,
   ).run("recap:42:2026-07-11:v1", CHAT_ID, generation, "recap:42:2026-07-11:v1");
 }
 

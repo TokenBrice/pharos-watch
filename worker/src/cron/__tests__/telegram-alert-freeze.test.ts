@@ -1,18 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { loadFreshFreezeAlerts } from "../telegram-alert-freeze";
 import { dispatchFreezeAlertOutbox } from "../telegram-freeze-outbox";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-
-function applyMigrations(sqlite: DatabaseSync): void {
-  const migrations = join(process.cwd(), "worker/migrations");
-  for (const file of readdirSync(migrations).filter((file) => file.endsWith(".sql")).sort()) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-owned migration fixture
-    sqlite.exec(readFileSync(join(migrations, file), "utf8"));
-  }
-}
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function db(rows: unknown[], latestRun: number | null): D1Database {
   return {
@@ -72,8 +62,7 @@ describe("freeze Telegram source gate", () => {
 
 describe("freeze dedicated outbox", () => {
   it("advances no-audience freeze events without durable outbox work", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    applyMigrations(sqlite);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const now = 2_000_000_000;
       sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);
@@ -106,8 +95,7 @@ describe("freeze dedicated outbox", () => {
   });
 
   it("captures only opted-in direct/global chats, queues canonical terminal lineage, and never inserts generic target plans", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    applyMigrations(sqlite);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const now = 2_000_000_000;
       sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);
@@ -156,8 +144,7 @@ describe("freeze dedicated outbox", () => {
   });
 
   it("freezes cohort membership across paged resumes and preserves the original expiry", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    applyMigrations(sqlite);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
       const now = 2_000_000_000;
       sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')").run(now - 5);

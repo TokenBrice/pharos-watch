@@ -9,6 +9,7 @@ import {
   markFreshTelegramAlertTargetsSending,
   reconcileUnknownFreshTelegramAlertTargets,
 } from "../telegram-alert-target-effects";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 interface TargetRow {
   status: string;
@@ -29,65 +30,7 @@ interface TargetRow {
 }
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_alert_job_targets (
-      job_id TEXT NOT NULL,
-      target_key TEXT NOT NULL,
-      chat_id TEXT NOT NULL,
-      chunk_index INTEGER NOT NULL DEFAULT 0,
-      alert_type TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'planned',
-      pending_dedupe_key TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      sent_at INTEGER,
-      enqueued_at INTEGER,
-      failed_at INTEGER,
-      error_class TEXT,
-      effect_state TEXT NOT NULL DEFAULT 'unstarted',
-      effect_owner TEXT,
-      effect_generation INTEGER NOT NULL DEFAULT 0,
-      effect_claimed_at INTEGER,
-      effect_started_at INTEGER,
-      effect_completed_at INTEGER,
-      effect_claim_expires_at INTEGER,
-      final_delivery_state TEXT,
-      final_delivery_at INTEGER,
-      final_delivery_error TEXT,
-      PRIMARY KEY (job_id, target_key)
-    );
-    CREATE TABLE telegram_pending_alerts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      chat_id TEXT NOT NULL,
-      message_html TEXT NOT NULL,
-      disable_notification INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      not_before_at INTEGER,
-      last_error_class TEXT,
-      retry_after_sec INTEGER,
-      updated_at INTEGER,
-      dedupe_key TEXT UNIQUE,
-      chunk_index INTEGER DEFAULT 0,
-      priority INTEGER NOT NULL DEFAULT 50,
-      source_type TEXT NOT NULL DEFAULT 'risk_alert',
-      alert_type TEXT,
-      expires_at INTEGER,
-      processing_owner TEXT,
-      processing_started_at INTEGER,
-      processing_expires_at INTEGER,
-      delivery_state TEXT NOT NULL DEFAULT 'pending',
-      delivery_owner TEXT,
-      delivery_generation INTEGER NOT NULL DEFAULT 0,
-      delivery_started_at INTEGER,
-      delivery_completed_at INTEGER,
-      delivery_claim_expires_at INTEGER,
-      source_event_id TEXT,
-      alert_scope_json TEXT,
-      preference_generation INTEGER,
-      markup_policy_json TEXT
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   sqlite
     .prepare(
       `INSERT INTO telegram_alert_job_targets (

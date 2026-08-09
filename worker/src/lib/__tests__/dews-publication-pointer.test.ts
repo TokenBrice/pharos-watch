@@ -8,6 +8,7 @@ import {
   readDewsPublishedGenerationResult,
   writeDewsPublishedGeneration,
 } from "../dews-publication-pointer";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const nowSec = 1_778_400_000;
 const pointerKey = "dews:published-generation";
@@ -43,33 +44,7 @@ function openSqlitePublicationDb(): {
   sqlite: DatabaseSync;
   db: D1Database;
 } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE surface_publication_generations (
-      surface TEXT NOT NULL,
-      generation_id TEXT NOT NULL,
-      started_at INTEGER NOT NULL,
-      validated_at INTEGER,
-      published_at INTEGER,
-      state TEXT NOT NULL,
-      candidate_rows INTEGER,
-      published_rows INTEGER,
-      expected_rows INTEGER,
-      previous_generation_id TEXT,
-      input_watermarks_json TEXT,
-      dependency_snapshot_json TEXT,
-      validation_summary_json TEXT,
-      artifact_checksum TEXT,
-      artifact_cache_key TEXT,
-      failure_reason TEXT,
-      PRIMARY KEY (surface, generation_id)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

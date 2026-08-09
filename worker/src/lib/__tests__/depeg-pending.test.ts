@@ -8,6 +8,7 @@ import {
   isExtremeMovePending,
   parsePendingReason,
 } from "../depeg-helpers";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("pending reason helpers", () => {
   it("buildPendingReason orders flags canonically", () => {
@@ -121,29 +122,7 @@ describe("buildUpsertPendingDepegStmt", () => {
   });
 
   it("refreshes same-direction rows and resets opposite-direction rows when executed", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`
-      CREATE TABLE depeg_pending (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        stablecoin_id TEXT NOT NULL,
-        symbol TEXT NOT NULL,
-        peg_type TEXT NOT NULL,
-        direction TEXT NOT NULL,
-        first_seen_bps INTEGER NOT NULL,
-        first_seen_at INTEGER NOT NULL,
-        first_price REAL NOT NULL,
-        peg_reference REAL NOT NULL,
-        reason TEXT NOT NULL DEFAULT 'large-cap',
-        last_seen_bps INTEGER,
-        last_seen_at INTEGER,
-        last_price REAL,
-        peak_seen_bps INTEGER,
-        peak_price REAL,
-        updated_at INTEGER
-      );
-      CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
-    `);
+    const sqlite = createLatestSchemaSqlite().sqlite;
 
     const d1Recorder = makePreparedStatementRecorder();
 

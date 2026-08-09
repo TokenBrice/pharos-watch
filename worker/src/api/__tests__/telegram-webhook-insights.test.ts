@@ -13,6 +13,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
@@ -223,36 +224,24 @@ describe("buildTopMessage", () => {
   });
 
   it("excludes staged and failed /top yield rows behaviorally", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE yield_data (
-          stablecoin_id TEXT NOT NULL,
-          symbol TEXT NOT NULL,
-          is_best INTEGER NOT NULL,
-          current_apy REAL NOT NULL,
-          apy_30d REAL NOT NULL,
-          yield_source TEXT NOT NULL,
-          pharos_yield_score REAL,
-          source_tvl_usd REAL,
-          publication_generation_id TEXT,
-          publication_state TEXT
-        );
-      `);
-      const insertYield = sqlite.prepare(
+            const insertYield = sqlite.prepare(
         `INSERT INTO yield_data (
-          stablecoin_id, symbol, is_best, current_apy, apy_30d, yield_source,
+          stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d, yield_source,
+          yield_type, data_source, updated_at,
           pharos_yield_score, source_tvl_usd, publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'lending', 'defillama', 1, ?, ?, ?, ?)`,
       );
-      insertYield.run("usdt-tether", "USDT", 1, 9, 9, "Failed source", 99, 100_000_000, "gen-failed", "failed");
-      insertYield.run("usde-ethena", "USDe", 1, 8, 8, "Staged source", 88, 90_000_000, "gen-staged", "staged");
+      insertYield.run("usdt-tether", "usdt-source", "USDT", 1, 9, 9, 9, "Failed source", 99, 100_000_000, "gen-failed", "failed");
+      insertYield.run("usde-ethena", "usde-source", "USDe", 1, 8, 8, 8, "Staged source", 88, 90_000_000, "gen-staged", "staged");
       insertYield.run(
         "usdc-circle",
+        "usdc-source",
         "USDC",
         1,
         4.4,
+        4.3,
         4.2,
         "Published source",
         31,
@@ -260,7 +249,7 @@ describe("buildTopMessage", () => {
         "gen-published",
         "published",
       );
-      insertYield.run("dai-makerdao", "DAI", 1, 3.1, 3, "Legacy source", 22, 8_000_000, null, null);
+      insertYield.run("dai-makerdao", "dai-source", "DAI", 1, 3.1, 3.05, 3, "Legacy source", 22, 8_000_000, null, null);
 
       const message = await buildTopMessage(createSqliteD1(sqlite), "yield");
 

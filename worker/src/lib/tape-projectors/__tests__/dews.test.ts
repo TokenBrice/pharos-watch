@@ -4,6 +4,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
 import { writeDewsPublishedGeneration } from "../../dews-publication-pointer";
 import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 
 const SEC = 1_700_000_000;
 
@@ -33,64 +34,7 @@ function openDewsProjectorSqlite(): {
   sqlite: DatabaseSync;
   db: D1Database;
 } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE stress_signals (
-      stablecoin_id TEXT NOT NULL,
-      computed_at INTEGER NOT NULL,
-      score REAL NOT NULL,
-      band TEXT NOT NULL,
-      signals_json TEXT NOT NULL DEFAULT '{}',
-      PRIMARY KEY (stablecoin_id, computed_at)
-    );
-    CREATE TABLE surface_publication_generations (
-      surface TEXT NOT NULL,
-      generation_id TEXT NOT NULL,
-      started_at INTEGER NOT NULL,
-      validated_at INTEGER,
-      published_at INTEGER,
-      state TEXT NOT NULL,
-      candidate_rows INTEGER,
-      published_rows INTEGER,
-      expected_rows INTEGER,
-      previous_generation_id TEXT,
-      input_watermarks_json TEXT,
-      dependency_snapshot_json TEXT,
-      validation_summary_json TEXT,
-      artifact_checksum TEXT,
-      artifact_cache_key TEXT,
-      failure_reason TEXT,
-      PRIMARY KEY (surface, generation_id)
-    );
-    CREATE TABLE tape_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      event_id TEXT NOT NULL,
-      type TEXT NOT NULL,
-      severity TEXT NOT NULL,
-      ts INTEGER NOT NULL,
-      ends_at INTEGER,
-      coin_id TEXT,
-      issuer_id TEXT,
-      peg_currency TEXT,
-      chain TEXT,
-      title TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      source_table TEXT NOT NULL,
-      source_row_id TEXT NOT NULL,
-      transition TEXT NOT NULL,
-      source_url TEXT,
-      methodology_version TEXT,
-      created_at INTEGER NOT NULL
-    );
-    CREATE UNIQUE INDEX idx_tape_source_key
-      ON tape_events(source_table, source_row_id, transition);
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -101,8 +45,8 @@ function seedStressSignal(
   band: string,
 ): void {
   sqlite.prepare(
-    `INSERT INTO stress_signals (stablecoin_id, computed_at, score, band)
-     VALUES ('usdt-tether', ?, ?, ?)`,
+    `INSERT INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json)
+     VALUES ('usdt-tether', ?, ?, ?, '[]')`,
   ).run(computedAt, score, band);
 }
 

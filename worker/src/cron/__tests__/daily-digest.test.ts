@@ -5,6 +5,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-he
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker } from "../../test-helpers/cron";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -2868,34 +2869,21 @@ describe("collectYieldAnomalies", () => {
   });
 
   it("excludes staged and failed yield anomalies behaviorally", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE yield_data (
-          stablecoin_id TEXT NOT NULL,
-          symbol TEXT NOT NULL,
-          is_best INTEGER NOT NULL,
-          current_apy REAL NOT NULL,
-          apy_7d REAL NOT NULL,
-          apy_30d REAL NOT NULL,
-          warning_signals TEXT,
-          publication_generation_id TEXT,
-          publication_state TEXT,
-          updated_at INTEGER NOT NULL DEFAULT 0
-        );
-      `);
-      const freshUpdatedAt = Math.floor(Date.now() / 1000) - 600;
+            const freshUpdatedAt = Math.floor(Date.now() / 1000) - 600;
       const insertYield = sqlite.prepare(
         `INSERT INTO yield_data (
-          stablecoin_id, symbol, is_best, current_apy, apy_7d, apy_30d,
+          stablecoin_id, source_key, symbol, is_best, current_apy, apy_7d, apy_30d,
+          yield_source, yield_type, data_source,
           warning_signals, publication_generation_id, publication_state, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Test source', 'lending', 'defillama', ?, ?, ?, ?)`,
       );
-      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed", freshUpdatedAt);
-      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged", freshUpdatedAt);
+      insertYield.run("usdt-tether", "usdt-source", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed", freshUpdatedAt);
+      insertYield.run("dai-makerdao", "dai-source", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged", freshUpdatedAt);
       insertYield.run(
         "usdc-circle",
+        "usdc-source",
         "USDC",
         1,
         5.1,

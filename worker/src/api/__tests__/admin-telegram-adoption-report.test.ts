@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { handleAdminTelegramAdoptionReport } from "../admin-telegram-adoption-report";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("admin Telegram adoption report", () => {
   afterEach(() => vi.useRealTimers());
@@ -9,16 +10,8 @@ describe("admin Telegram adoption report", () => {
   it("returns only suppressed aggregate data behind admin auth", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-10T12:00:00Z"));
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     sqlite.exec(`
-      CREATE TABLE telegram_adoption_daily (
-        day TEXT, campaign TEXT, placement TEXT, stage TEXT, feature TEXT,
-        latency_bucket TEXT, outcome TEXT, count INTEGER, first_seen_at INTEGER, last_seen_at INTEGER
-      );
-      CREATE TABLE telegram_adoption_retention_daily (
-        cohort_day TEXT, measurement_day TEXT, window_days INTEGER, feature TEXT,
-        cohort_size INTEGER, retained_count INTEGER, measured_at INTEGER, quality TEXT
-      );
       INSERT INTO telegram_adoption_daily VALUES
         ('2026-07-09', 'landing', 'hero', 'cta_click', '', '', 'success', 4, 1, 1);
     `);

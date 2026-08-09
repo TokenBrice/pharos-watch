@@ -2,27 +2,10 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { readPendingCapacity } from "../telegram-pending";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function setup(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_pending_alerts (
-      chat_id TEXT NOT NULL,
-      message_html TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      not_before_at INTEGER,
-      expires_at INTEGER,
-      delivery_state TEXT NOT NULL,
-      delivery_started_at INTEGER
-    );
-    CREATE TABLE telegram_alert_job_targets (
-      pending_dedupe_key TEXT,
-      created_at INTEGER NOT NULL,
-      effect_state TEXT NOT NULL,
-      effect_started_at INTEGER,
-      effect_completed_at INTEGER
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -45,12 +28,13 @@ describe("Telegram delivery lifecycle capacity SQL", () => {
 
       const insertFresh = sqlite.prepare(
         `INSERT INTO telegram_alert_job_targets
-           (pending_dedupe_key, created_at, effect_state, effect_started_at)
-         VALUES (?, ?, ?, ?)`,
+           (job_id, target_key, chat_id, alert_type,
+            pending_dedupe_key, created_at, effect_state, effect_started_at)
+         VALUES ('capacity-job', ?, 'capacity-chat', 'dews', ?, ?, ?, ?)`,
       );
-      insertFresh.run("fresh-sending", now - 120, "sending", now - 60);
-      insertFresh.run("fresh-sending-aged", now - 1_300, "sending", now - 1_000);
-      insertFresh.run("fresh-explicit-unknown", now - 180, "execution_unknown", now - 120);
+      insertFresh.run("fresh-sending", "fresh-sending", now - 120, "sending", now - 60);
+      insertFresh.run("fresh-sending-aged", "fresh-sending-aged", now - 1_300, "sending", now - 1_000);
+      insertFresh.run("fresh-explicit-unknown", "fresh-explicit-unknown", now - 180, "execution_unknown", now - 120);
 
       const result = await readPendingCapacity(db, now);
 
@@ -86,8 +70,10 @@ describe("Telegram delivery lifecycle capacity SQL", () => {
           SELECT value + 1 FROM sequence WHERE value < 5001
         )
         INSERT INTO telegram_alert_job_targets
-          (pending_dedupe_key, created_at, effect_state, effect_started_at)
-        SELECT 'unknown-' || value, ${now - 1_000}, 'execution_unknown', ${now - 1_000}
+          (job_id, target_key, chat_id, alert_type,
+           pending_dedupe_key, created_at, effect_state, effect_started_at)
+        SELECT 'capacity-job', 'unknown-' || value, 'capacity-chat', 'dews',
+               'unknown-' || value, ${now - 1_000}, 'execution_unknown', ${now - 1_000}
           FROM sequence;
       `);
 

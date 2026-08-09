@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildFallbackStatusState,
@@ -15,7 +16,194 @@ import {
 } from "../status-reliability";
 import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
 import { decideNextStatus } from "../status-reliability-decision";
-import { makeStatefulDb } from "./_helpers/stateful-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
+type StatusLevel = "healthy" | "degraded" | "stale";
+
+interface StatusStateRow {
+  scope: string;
+  current_status: StatusLevel;
+  raw_status: StatusLevel;
+  last_evaluated_at: number;
+  last_changed_at: number;
+  consecutive_healthy: number;
+  consecutive_degraded: number;
+  consecutive_stale: number;
+  confidence: number;
+  causes_json: string | null;
+}
+
+interface DiscrepancyStateRow {
+  scope: string;
+  consecutive_divergent: number;
+  last_divergent_at: number | null;
+  last_alert_at: number | null;
+  consecutive_probe_failures: number;
+  last_probe_failure_at: number | null;
+  last_probe_alert_at: number | null;
+  updated_at: number;
+}
+
+interface StatefulDbOptions {
+  failOnSql?: string;
+  failMessage?: string;
+  failBatchAfterApplyOnce?: boolean;
+  failFirstOnSql?: string;
+  failRunAfterApplyOnceOnSql?: string;
+  seed?: Partial<StatusStateRow>;
+}
+
+const openDatabases: DatabaseSync[] = [];
+
+function writeStatusStateRow(sqlite: DatabaseSync, seed: Partial<StatusStateRow>): void {
+  const lastEvaluatedAt = seed.last_evaluated_at ?? 0;
+  sqlite
+    .prepare(
+      `INSERT INTO status_state
+       (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
+        consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      seed.scope ?? "global",
+      seed.current_status ?? "healthy",
+      seed.raw_status ?? "healthy",
+      lastEvaluatedAt,
+      seed.last_changed_at ?? 0,
+      seed.consecutive_healthy ?? 0,
+      seed.consecutive_degraded ?? 0,
+      seed.consecutive_stale ?? 0,
+      seed.confidence ?? 1,
+      seed.causes_json ?? "[]",
+      lastEvaluatedAt,
+    );
+}
+
+/**
+ * Real-schema status-reliability harness. `db` is a normal SQLite-backed D1
+ * with narrowly scoped fault injection; `store` is a live view of the same
+ * tables so assertions read what production SQL actually persisted.
+ */
+function makeStatefulDb(options: StatefulDbOptions = {}) {
+  const { sqlite } = createLatestSchemaSqlite();
+  openDatabases.push(sqlite);
+  if (options.seed) writeStatusStateRow(sqlite, options.seed);
+
+  const inner = createSqliteD1(sqlite);
+  let batchPostApplyFailureUsed = false;
+  let firstSqlFailureUsed = false;
+  let runPostApplyFailureUsed = false;
+
+  function createStatement(sql: string, boundValues: unknown[] = []): D1PreparedStatement {
+    const bound = boundValues.length > 0
+      ? inner.prepare(sql).bind(...boundValues)
+      : inner.prepare(sql);
+    return {
+      bind: (...args: unknown[]) => createStatement(sql, args),
+      all: async <T>() => bound.all<T>(),
+      first: async <T>() => {
+        if (options.failFirstOnSql && !firstSqlFailureUsed && sql.includes(options.failFirstOnSql)) {
+          firstSqlFailureUsed = true;
+          throw new Error(options.failMessage ?? "transient read failed");
+        }
+        return bound.first<T>();
+      },
+      run: async () => {
+        if (options.failOnSql && sql.includes(options.failOnSql)) {
+          throw new Error(options.failMessage ?? "missing migration");
+        }
+        const result = await bound.run();
+        if (
+          options.failRunAfterApplyOnceOnSql &&
+          !runPostApplyFailureUsed &&
+          sql.includes(options.failRunAfterApplyOnceOnSql)
+        ) {
+          runPostApplyFailureUsed = true;
+          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+        }
+        return result;
+      },
+    } as unknown as D1PreparedStatement;
+  }
+
+  const db = {
+    prepare: (sql: string) => createStatement(sql),
+    batch: async (statements: D1PreparedStatement[]) => {
+      sqlite.exec("BEGIN IMMEDIATE");
+      let postApplyFailureThisCall = false;
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        if (options.failBatchAfterApplyOnce && !batchPostApplyFailureUsed) {
+          batchPostApplyFailureUsed = true;
+          postApplyFailureThisCall = true;
+          throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+        }
+        sqlite.exec("COMMIT");
+        return results;
+      } catch (error) {
+        // A post-apply failure models D1 losing the response after the writes
+        // landed, so the rows stay committed and the caller must retry safely.
+        sqlite.exec(postApplyFailureThisCall ? "COMMIT" : "ROLLBACK");
+        throw error;
+      }
+    },
+    exec: async (sql: string) => {
+      sqlite.exec(sql);
+      return { count: 0, duration: 0 };
+    },
+    dump: async () => new ArrayBuffer(0),
+  } as unknown as D1Database;
+
+  const store = {
+    get stateRow(): StatusStateRow | null {
+      return (sqlite.prepare("SELECT * FROM status_state WHERE scope = 'global'").get() ??
+        null) as StatusStateRow | null;
+    },
+    set stateRow(row: StatusStateRow | null) {
+      sqlite.prepare("DELETE FROM status_state WHERE scope = 'global'").run();
+      if (row) writeStatusStateRow(sqlite, row);
+    },
+    get transitions() {
+      return sqlite.prepare("SELECT * FROM status_transitions ORDER BY id").all() as Array<
+        Record<string, unknown>
+      >;
+    },
+    get probes() {
+      return sqlite.prepare("SELECT * FROM status_probe_runs ORDER BY id").all() as Array<
+        Record<string, unknown>
+      >;
+    },
+    get discrepancy(): DiscrepancyStateRow | null {
+      return (sqlite.prepare("SELECT * FROM status_discrepancy_state WHERE scope = 'global'").get() ??
+        null) as DiscrepancyStateRow | null;
+    },
+    set discrepancy(row: DiscrepancyStateRow | null) {
+      sqlite.prepare("DELETE FROM status_discrepancy_state WHERE scope = 'global'").run();
+      if (!row) return;
+      sqlite
+        .prepare(
+          `INSERT INTO status_discrepancy_state
+           (scope, consecutive_divergent, last_divergent_at, last_alert_at,
+            consecutive_probe_failures, last_probe_failure_at, last_probe_alert_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          row.scope,
+          row.consecutive_divergent,
+          row.last_divergent_at,
+          row.last_alert_at,
+          row.consecutive_probe_failures,
+          row.last_probe_failure_at,
+          row.last_probe_alert_at,
+          row.updated_at,
+        );
+    },
+  };
+
+  return { db, store, sqlite };
+}
 
 function makeFailingDb(): D1Database {
   return {
@@ -52,6 +240,7 @@ function makeFailingDb(): D1Database {
 describe("status-reliability", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    for (const sqlite of openDatabases.splice(0)) sqlite.close();
   });
 
   it("initializes state and clamps invalid confidence", async () => {
@@ -269,44 +458,18 @@ describe("status-reliability", () => {
   });
 
   it("lists recent transitions with bounds and safely parses invalid causes", async () => {
-    const { db, store } = makeStatefulDb();
-    store.transitions.push(
-      {
-        id: 1,
-        scope: "global",
-        previous_status: null,
-        next_status: "healthy",
-        raw_status: "healthy",
-        transition_type: "init",
-        reason: "init",
-        confidence: 1,
-        causes_json: "[]",
-        created_at: 100,
-      },
-      {
-        id: 2,
-        scope: "global",
-        previous_status: "healthy",
-        next_status: "degraded",
-        raw_status: "degraded",
-        transition_type: "degrade",
-        reason: "degrade",
-        confidence: 0.8,
-        causes_json: "not-json",
-        created_at: 200,
-      },
-      {
-        id: 3,
-        scope: "global",
-        previous_status: "degraded",
-        next_status: "healthy",
-        raw_status: "healthy",
-        transition_type: "recover",
-        reason: "recover",
-        confidence: 0.9,
-        causes_json: '[{"code":"ok","layer":"availability","severity":"info","message":"ok"}]',
-        created_at: 300,
-      },
+    const { db, sqlite } = makeStatefulDb();
+    const insertTransition = sqlite.prepare(
+      `INSERT INTO status_transitions
+       (id, scope, previous_status, next_status, raw_status, transition_type,
+        reason, confidence, causes_json, created_at)
+       VALUES (?, 'global', ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    insertTransition.run(1, null, "healthy", "healthy", "init", "init", 1, "[]", 100);
+    insertTransition.run(2, "healthy", "degraded", "degraded", "degrade", "degrade", 0.8, "not-json", 200);
+    insertTransition.run(
+      3, "degraded", "healthy", "healthy", "recover", "recover", 0.9,
+      '[{"code":"ok","layer":"availability","severity":"info","message":"ok"}]', 300,
     );
 
     const rows = await listRecentStatusTransitions(db, 999, { from: 150, to: 300 });

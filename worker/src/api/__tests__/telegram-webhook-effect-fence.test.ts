@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   TelegramWebhookEffectFence,
   createTelegramWebhookIntent,
@@ -15,61 +16,11 @@ import { resumeStoredPendingClearIntent } from "../telegram-webhook-pending-gate
 const NOW = 1_700_000_000;
 
 function createFixture(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
+  const sqlite = createLatestSchemaSqlite().sqlite;
   sqlite.exec(`
     PRAGMA foreign_keys = ON;
-    CREATE TABLE telegram_processed_updates (
-      update_id INTEGER PRIMARY KEY,
-      received_at INTEGER NOT NULL,
-      processed_at INTEGER,
-      update_type TEXT,
-      chat_id TEXT,
-      status TEXT NOT NULL DEFAULT 'processing',
-      error_class TEXT,
-      effect_state TEXT NOT NULL DEFAULT 'unstarted',
-      effect_key TEXT,
-      effect_started_at INTEGER,
-      claim_owner TEXT,
-      claim_generation INTEGER NOT NULL DEFAULT 0,
-      intent_version INTEGER,
-      intent_kind TEXT,
-      intent_mutates INTEGER NOT NULL DEFAULT 0,
-      intent_payload TEXT,
-      intent_recorded_at INTEGER,
-      mutation_applied_at INTEGER,
-      effect_completed_at INTEGER,
-      effect_kind TEXT,
-      effect_ordinal INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_webhook_operation_mutations (
-      update_id INTEGER PRIMARY KEY NOT NULL,
-      claim_generation INTEGER NOT NULL,
-      applied_at INTEGER NOT NULL,
-      FOREIGN KEY (update_id) REFERENCES telegram_processed_updates(update_id) ON DELETE CASCADE
-    );
-    CREATE TRIGGER trg_telegram_webhook_operation_mutation_applied
-    AFTER INSERT ON telegram_webhook_operation_mutations
-    BEGIN
-      UPDATE telegram_processed_updates
-         SET mutation_applied_at = NEW.applied_at
-       WHERE update_id = NEW.update_id
-         AND claim_generation = NEW.claim_generation;
-    END;
     CREATE TABLE domain_state (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
     INSERT INTO domain_state (id, value) VALUES (1, 'before');
-    CREATE TABLE telegram_pending_disambiguation (
-      chat_id TEXT PRIMARY KEY,
-      action_type TEXT,
-      action_payload TEXT,
-      alert_types TEXT NOT NULL,
-      resolved_ids TEXT NOT NULL,
-      ambiguous_ticker TEXT NOT NULL,
-      candidates TEXT NOT NULL,
-      remaining_tickers TEXT NOT NULL,
-      expires_at INTEGER NOT NULL,
-      initiator_user_id TEXT
-    );
-    CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
   `);
   return { sqlite, db: createSqliteD1(sqlite) };
 }

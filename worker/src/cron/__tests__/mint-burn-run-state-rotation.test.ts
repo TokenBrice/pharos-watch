@@ -1,4 +1,3 @@
-import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
@@ -7,6 +6,7 @@ import {
   resolveRotatedConfigs,
   setMintBurnRunState,
 } from "../mint-burn/run-state";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("resolveRotatedConfigs", () => {
   const configs = [
@@ -61,14 +61,7 @@ describe("resolveRotatedConfigs", () => {
   });
 
   it("retries from the same durable frontier after a crash before completion", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`CREATE TABLE mint_burn_run_state (
-      job TEXT PRIMARY KEY,
-      next_config_index INTEGER NOT NULL DEFAULT 0,
-      degraded_streak INTEGER NOT NULL DEFAULT 0,
-      last_config_key TEXT,
-      updated_at INTEGER NOT NULL
-    )`);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const fullSet = Array.from({ length: 127 }, (_, index) => ({ key: `config-${index}` }));
 

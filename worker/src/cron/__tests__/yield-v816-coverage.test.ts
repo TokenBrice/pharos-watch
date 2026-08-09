@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { getPriceDerivedApy } from "../yield-sync/sources-riskfree";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const DAY_SECONDS = 24 * 60 * 60;
 const NOW_SEC = 1_779_210_000;
@@ -9,18 +10,11 @@ describe("yield v8.16 coverage paths", () => {
   it("derives NAV-appreciation APY from supply_history anchors for v8.16 NAV additions", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_SEC * 1000));
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE supply_history (
-          stablecoin_id TEXT NOT NULL,
-          price REAL,
-          snapshot_date INTEGER NOT NULL
-        );
-      `);
-      const insert = sqlite.prepare(
-        "INSERT INTO supply_history (stablecoin_id, price, snapshot_date) VALUES (?, ?, ?)",
+            const insert = sqlite.prepare(
+        `INSERT INTO supply_history (stablecoin_id, circulating_usd, price, snapshot_date)
+         VALUES (?, 1_000_000, ?, ?)`,
       );
       for (const stablecoinId of [
         "fpi-frax",

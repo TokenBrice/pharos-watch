@@ -14,6 +14,7 @@ import {
 } from "../live-reserves-store";
 import { buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
 import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
@@ -943,30 +944,27 @@ describe("live-reserves-store", () => {
   });
 
   it("preserves history rows referenced by the current attempt closure past the age cutoff", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
     const { createSqliteD1 } = await import("../../test-helpers/sqlite-d1");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
+            // Suspended feed: current composition attempt is far older than the cutoff.
       sqlite.exec(`
-        CREATE TABLE reserve_composition (stablecoin_id TEXT PRIMARY KEY, attempt_id TEXT, fetched_at INTEGER);
-        CREATE TABLE reserve_sync_state (
-          stablecoin_id TEXT PRIMARY KEY,
-          last_attempt_id TEXT, last_success_attempt_id TEXT, pending_attempt_id TEXT
-        );
-        CREATE TABLE reserve_composition_history (stablecoin_id TEXT, attempt_id TEXT, fetched_at INTEGER);
-        CREATE TABLE reserve_sync_attempt_history (stablecoin_id TEXT, attempt_id TEXT, attempted_at INTEGER);
-      `);
-      // Suspended feed: current composition attempt is far older than the cutoff.
-      sqlite.exec(`
-        INSERT INTO reserve_composition VALUES ('usdo-openeden', 'attempt-old-current', 1000);
-        INSERT INTO reserve_sync_state VALUES ('usdo-openeden', 'attempt-old-current', 'attempt-old-current', NULL);
-        INSERT INTO reserve_composition_history VALUES
-          ('usdo-openeden', 'attempt-old-current', 1000),
-          ('usdo-openeden', 'attempt-old-unreferenced', 900);
-        INSERT INTO reserve_sync_attempt_history VALUES
-          ('usdo-openeden', 'attempt-old-current', 1000),
-          ('usdo-openeden', 'attempt-old-unreferenced', 900),
-          ('usdo-openeden', 'attempt-recent', 9_500);
+        INSERT INTO reserve_composition (stablecoin_id, slices, fetched_at, source, attempt_id)
+          VALUES ('usdo-openeden', '[]', 1000, 'adapter', 'attempt-old-current');
+        INSERT INTO reserve_sync_state
+          (stablecoin_id, adapter_key, breaker_key, last_status, last_attempt_id, pending_attempt_id)
+          VALUES ('usdo-openeden', 'adapter', 'adapter', 'ok', 'attempt-old-current', NULL);
+        INSERT INTO reserve_composition_history
+          (stablecoin_id, fetched_at, adapter_key, slices, attempt_id)
+          VALUES
+            ('usdo-openeden', 1000, 'adapter', '[]', 'attempt-old-current'),
+            ('usdo-openeden', 900, 'adapter', '[]', 'attempt-old-unreferenced');
+        INSERT INTO reserve_sync_attempt_history
+          (stablecoin_id, attempted_at, adapter_key, breaker_key, status, attempt_id)
+          VALUES
+            ('usdo-openeden', 1000, 'adapter', 'adapter', 'ok', 'attempt-old-current'),
+            ('usdo-openeden', 900, 'adapter', 'adapter', 'ok', 'attempt-old-unreferenced'),
+            ('usdo-openeden', 9500, 'adapter', 'adapter', 'ok', 'attempt-recent');
       `);
 
       const result = await pruneLiveReserveHistory(createSqliteD1(sqlite), 10_000, 1_000);

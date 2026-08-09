@@ -1,75 +1,13 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   didReserveSyncAttemptBecomeAuthoritative,
   repairAuthoritativeReserveSyncHistory,
 } from "../live-reserves-store";
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE reserve_composition (
-      stablecoin_id TEXT PRIMARY KEY,
-      slices TEXT NOT NULL,
-      fetched_at INTEGER NOT NULL,
-      source TEXT NOT NULL,
-      attempt_id TEXT,
-      metadata TEXT NOT NULL,
-      warning_count INTEGER NOT NULL,
-      warnings TEXT,
-      adapter_source_model TEXT,
-      adapter_evidence_class TEXT
-    );
-    CREATE TABLE reserve_composition_history (
-      id INTEGER PRIMARY KEY,
-      stablecoin_id TEXT NOT NULL,
-      fetched_at INTEGER NOT NULL,
-      adapter_key TEXT NOT NULL,
-      attempt_id TEXT,
-      slices TEXT NOT NULL,
-      metadata TEXT NOT NULL,
-      warnings TEXT,
-      warning_count INTEGER NOT NULL,
-      adapter_source_model TEXT,
-      adapter_evidence_class TEXT
-    );
-    CREATE UNIQUE INDEX reserve_composition_history_attempt_test
-      ON reserve_composition_history(stablecoin_id, attempt_id)
-      WHERE attempt_id IS NOT NULL;
-    CREATE TABLE reserve_sync_state (
-      stablecoin_id TEXT PRIMARY KEY,
-      adapter_key TEXT NOT NULL,
-      breaker_key TEXT NOT NULL,
-      last_attempted_at INTEGER,
-      last_success_at INTEGER,
-      last_status TEXT NOT NULL,
-      warning_count INTEGER NOT NULL,
-      warnings TEXT,
-      last_error TEXT,
-      metadata TEXT NOT NULL,
-      last_attempt_id TEXT,
-      pending_attempt_id TEXT,
-      last_success_attempt_id TEXT
-    );
-    CREATE TABLE reserve_sync_attempt_history (
-      id INTEGER PRIMARY KEY,
-      stablecoin_id TEXT NOT NULL,
-      attempted_at INTEGER NOT NULL,
-      adapter_key TEXT NOT NULL,
-      breaker_key TEXT NOT NULL,
-      attempt_id TEXT,
-      status TEXT NOT NULL,
-      warnings TEXT,
-      warning_count INTEGER NOT NULL,
-      last_error TEXT,
-      metadata TEXT NOT NULL
-    );
-    CREATE UNIQUE INDEX reserve_sync_attempt_history_attempt_test
-      ON reserve_sync_attempt_history(stablecoin_id, attempt_id)
-      WHERE attempt_id IS NOT NULL;
-  `);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function seedAuthoritativeSuccess(sqlite: DatabaseSync, attemptId: string): void {
