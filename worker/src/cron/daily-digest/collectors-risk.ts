@@ -8,7 +8,7 @@ import {
   safetyScoreHistoryIdentityFromV2Row,
   type SafetyScoreHistoryV2Row,
 } from "../../lib/safety-score-history-v2";
-import { loadIdentifiedActiveSafetyScoreSource } from "../../lib/identified-active-safety-score-source";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { digestSafetyContextFromSource } from "../../lib/digest-safety-context";
 import { SECONDS } from "../../lib/time-constants";
 import {
@@ -61,12 +61,12 @@ export async function collectSafetyScores(
   degradedReasons: string[],
 ): Promise<SafetyScoresResult> {
   try {
-    const source = await loadIdentifiedActiveSafetyScoreSource(ctx.db);
+    const source = await loadActiveSafetyScoreSource(ctx.db);
     const safetyContext = digestSafetyContextFromSource(source);
-    if (source.kind === "error") {
+    if (source.kind !== "v9") {
       markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
       console.error(
-        `[daily-digest] Canonical Safety Score ${source.expectedModel.toUpperCase()} unavailable (${source.reason}): ${source.detail}`,
+        `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
       );
       return {
         safetyScores: undefined,
@@ -132,10 +132,13 @@ export async function collectSafetyScores(
           bindingCap: grade.bindingCap,
         })),
         gradeDistribution,
-        provenance: { ...source.identity, publishedAt: source.publishedAtSec },
+        provenance: {
+          ...source.snapshot.safetyScoreIdentity,
+          publishedAt: source.snapshot.updatedAt,
+        },
       },
       safetyGrades: allGrades,
-      safetyIdentity: source.identity,
+      safetyIdentity: source.snapshot.safetyScoreIdentity,
       safetyContext,
     };
   } catch (error) {

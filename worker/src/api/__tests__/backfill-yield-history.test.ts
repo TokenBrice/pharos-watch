@@ -57,35 +57,20 @@ describe("handleBackfillYieldHistory", () => {
   });
 
   it("requires admin auth", async () => {
-    const res = await handleBackfillYieldHistory(
-      makeDb(),
-      makeApiUrl("/api/backfill-yield-history"),
-      undefined,
-      makeApiRequest("/api/backfill-yield-history"),
-    );
+    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history"), request: makeApiRequest("/api/backfill-yield-history") });
 
     expect(res.status).toBe(401);
   });
 
   it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillYieldHistory(
-      makeDb(),
-      makeApiUrl("/api/backfill-yield-history?stablecoin=not-a-real-id"),
-      true,
-      makeApiRequest("/api/backfill-yield-history?stablecoin=not-a-real-id", { adminKey: "secret" }),
-    );
+    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history?stablecoin=not-a-real-id"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=not-a-real-id", { adminKey: "secret" }) });
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Stablecoin not found" });
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillYieldHistory(
-      makeDb(),
-      makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"),
-      true,
-      makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }),
-    );
+    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history?batch=999999&batchSize=100"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?batch=999999&batchSize=100", { adminKey: "secret" }) });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ message: "No coins in this batch" });
@@ -94,12 +79,7 @@ describe("handleBackfillYieldHistory", () => {
   it("inserts Zephyr yield history row", async () => {
     const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
 
-    const res = await handleBackfillYieldHistory(
-      makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"),
-      true,
-      makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }),
-    );
+    const res = await handleBackfillYieldHistory({ db: makeDb(capturedStatements), url: makeApiUrl("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=zys-zephyr-protocol", { adminKey: "secret" }) });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

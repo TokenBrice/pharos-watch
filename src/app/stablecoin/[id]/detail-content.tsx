@@ -18,22 +18,12 @@ import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
-import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
-import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
-import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
-import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
-import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
-import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
-import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
-import { buildFailureDomainsView } from "@/lib/failure-domains";
-import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
-import { buildControlPostureView } from "@/lib/control-posture";
 import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
@@ -46,6 +36,7 @@ import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { revealAnchorId } from "@/lib/anchor-reveal";
 import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildDetailSharedModules, type DetailSharedModules } from "./detail-shared-modules";
 import { DetailHistoryExploreSections } from "./detail-history-explore-sections";
 import { DetailLiquidityActivitySections } from "./detail-liquidity-activity-sections";
 import { FeedbackModal, ReservePanel } from "./detail-lazy-sections";
@@ -162,24 +153,18 @@ function DetailNavigation({
 
 function DetailSummaryRail({
   heroModel,
-  mechanismBacking,
-  mechanismCollateralization,
   mechanismReview,
+  sharedModules,
   transferReview,
   viewModel,
 }: {
   heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
-  mechanismBacking: MechanismBackingView | null;
-  mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
+  sharedModules: DetailSharedModules;
   transferReview: TransferReviewView | null;
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
-  const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
-  const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
-  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
-  const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -192,20 +177,15 @@ function DetailSummaryRail({
             compact
           />
         ) : null}
-        <CollateralizationCard
-          reviewed={mechanismCollateralization}
-          liveRatio={liveCollateralizationRatio}
-          liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
-          liveAtSec={viewModel.reserves?.liveAt ?? null}
-        />
-        <BackingMechanicsCard view={mechanismBacking} />
-        <CustodyCard summary={viewModel.coin.custodyProfileSummary} />
-        <ControlPostureCard view={controlPosture} />
+        {sharedModules.collateralization}
+        {sharedModules.backingMechanics}
+        {sharedModules.custody}
+        {sharedModules.controlPosture}
         <TapeForCoinTeaser coinId={viewModel.id} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
         ) : null}
-        <FailureDomainsCard view={buildFailureDomainsView(viewModel.reportCard)} />
+        {sharedModules.failureDomains}
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
@@ -216,8 +196,8 @@ function DetailSummaryRail({
           />
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
-        <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
-        <RegulatoryStandingCard view={regulatoryStanding} />
+        {sharedModules.bridging}
+        {sharedModules.regulatoryStanding}
       </div>
     </aside>
   );
@@ -289,6 +269,12 @@ export function DetailContent({
   ) : viewModel.childVariants.length > 0 ? (
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
+  // One declaration per rail module, rendered by both mount sites (WS8.11).
+  const sharedModules = buildDetailSharedModules({
+    mechanismBacking,
+    mechanismCollateralization,
+    viewModel,
+  });
   const reservesLoading = viewModel.featureStates.reserves.status === "loading";
   const reservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null || reservesLoading ? (
     <ReservePanel
@@ -333,9 +319,8 @@ export function DetailContent({
               collateralUsageEntries={collateralUsageEntries}
               frozenNote={frozenNote}
               hasCollateralUsage={staticHasCollateralUsage}
-              mechanismBacking={mechanismBacking}
-              mechanismCollateralization={mechanismCollateralization}
               mechanismReview={mechanismReview}
+              sharedModules={sharedModules}
               transferReview={transferReview}
               overviewGateRef={overviewGateRef}
               reservesPanel={reservesPanel}
@@ -360,9 +345,8 @@ export function DetailContent({
         </div>
         <DetailSummaryRail
           heroModel={heroModel}
-          mechanismBacking={mechanismBacking}
-          mechanismCollateralization={mechanismCollateralization}
           mechanismReview={mechanismReview}
+          sharedModules={sharedModules}
           transferReview={transferReview}
           viewModel={viewModel}
         />

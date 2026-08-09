@@ -2,7 +2,7 @@
 
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ApiFetchError } from "@/lib/api";
 import { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
@@ -248,11 +248,17 @@ describe("ReservePanel", () => {
     );
 
     expect(screen.getByRole("status").textContent).toContain("Live reserve refresh delayed");
+    expect(screen.getByText("Live")).toBeTruthy();
+
+    // Reserve citations now fold behind the standard `Sources (N)` footer
+    // (WS8.13); they stay in the DOM while collapsed.
+    const sourcesToggle = screen.getByRole("button", { name: /Sources/ });
+    expect(sourcesToggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(sourcesToggle);
     expect(screen.getByRole("link", { name: "Source" }).getAttribute("href")).toBe("https://aave.tokenlogic.xyz/gho");
     expect(screen.getByRole("link", { name: "Evidence" }).getAttribute("href")).toBe(
       "https://aave.com/help/gho-stablecoin/stability-module",
     );
-    expect(screen.getByText("Live")).toBeTruthy();
   });
 
   it("renders static-validated reserve provenance messaging", () => {

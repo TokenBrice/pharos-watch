@@ -1,8 +1,5 @@
 import type { ExitRouteOutput } from "../types/exit-route";
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
+import { compareText } from "../types/safety-score-v9-fact-primitives";
 
 /**
  * Resolve the semantic asset identities used to value an exit output.

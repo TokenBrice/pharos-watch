@@ -1,4 +1,4 @@
-import { withErrorHandler, safeJsonParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
+import { safeJsonParse, addFreshnessHeaders, jsonResponseWithHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
@@ -20,7 +20,7 @@ import {
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 
-export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
+export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const [result, histResult, priceResult, deploymentResult, latestCron, latestSuccessfulCron] = await Promise.all([
     db
       .prepare(
@@ -207,5 +207,5 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
   }
 
-  return jsonResponse(map, headers);
-});
+  return jsonResponseWithHeaders(map, headers);
+};

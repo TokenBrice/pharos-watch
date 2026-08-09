@@ -251,12 +251,6 @@ export type DynamicAdminEndpointMatch =
       path: string;
       requestId: string;
       methods: readonly EndpointMethod[];
-    }
-  | {
-      key: "admin-telegram-chat";
-      path: string;
-      chatId: string;
-      methods: readonly EndpointMethod[];
     };
 
 const NO_DRY_RUN: StatusPageActionDryRun = {
@@ -560,10 +554,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminGet({
     key: "request-source-stats",
     path: API_PATHS.requestSourceStatsBase(),
-  }),
-  adminGet({
-    key: "yield-source-decisions",
-    path: API_PATHS.yieldSourceDecisions(),
   }),
   {
     // GET lists keys; POST creates a key. No factory matches because the admin
@@ -1020,57 +1010,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
       runbookPath: "docs/dews.md",
     },
   }),
-  // Operator controls that require context-specific query params (?job=,
-  // ?circuit=, ?leaseOwner=). Reachable via curl/wrangler or via a future
-  // contextual-button UI integration; no generic `statusPageAction` because
-  // AdminActionButton doesn't currently collect free-form query params.
-  adminMutation({
-    key: "reset-cron-lease",
-    path: API_PATHS.resetCronLease(),
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "reset-circuit-breaker",
-    path: API_PATHS.resetCircuitBreaker(),
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "kill-cron-in-flight",
-    path: API_PATHS.killCronInFlight(),
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "clear-telegram-pending",
-    path: API_PATHS.clearTelegramPending(),
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "admin-telegram-resend",
-    path: API_PATHS.adminTelegramResend(),
-    routeDependencies: [],
-    probeGroup: "manual",
-  }),
+  // Operator broadcast. Driven from the admin comms section (its JSON body does
+  // not fit the generic `AdminActionButton`), so it carries no `statusPageAction`.
   adminMutation({
     key: "admin-telegram-broadcast",
     path: API_PATHS.adminTelegramBroadcast(),
     routeDependencies: ["telegram"],
     probeGroup: "manual",
-  }),
-  adminDualModeMutation({
-    key: "admin-telegram-delivery-control",
-    path: API_PATHS.adminTelegramDeliveryControl(),
-    probeGroup: "manual",
-  }),
-  adminGet({
-    key: "admin-telegram-adoption-report",
-    path: API_PATHS.adminTelegramAdoptionReport(),
-    probeGroup: "admin",
-  }),
-  adminGet({
-    key: "status-probe-history",
-    path: API_PATHS.statusProbeHistory(),
-    probePath: API_PATHS.statusProbeHistory({ path: API_PATHS.health() }),
-    probeGroup: "admin",
   }),
 ] as const satisfies readonly BaseEndpointDefinition[];
 

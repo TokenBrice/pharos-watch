@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { PENDING_TTL_SEC, TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import { TELEGRAM_RECAP_TTL_SEC } from "@shared/lib/telegram-recap-policy";
 
@@ -12,23 +12,12 @@ const LAUNCH_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.launch / 60;
 const ADMIN_ALERT_TTL_MINUTES = TELEGRAM_ALERT_TTL_SEC.adminBroadcast / 60;
 const PERSONALIZED_RECAP_TTL_HOURS = TELEGRAM_RECAP_TTL_SEC / 3600;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
   description:
     "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
-  alternates: {
-    canonical: "/privacy/",
-  },
-  robots: INDEXABLE_ROBOTS,
-  openGraph: {
-    title: "Pharos Privacy Policy: Analytics, API & Telegram Data",
-    description:
-      "Pharos privacy policy for analytics, feedback, API access requests, Telegram alert subscriptions, portfolio-local storage, and selector share links.",
-    url: "/privacy/",
-    type: "website",
-    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
-  },
-};
+  canonical: "/privacy/",
+});
 
 export default function PrivacyPage() {
   return (

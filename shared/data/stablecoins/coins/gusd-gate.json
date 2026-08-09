@@ -227,6 +227,7 @@
     }
   },
   "custodyModel": "cex",
+  "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "Gate USD redemption yield",
     "yieldType": "governance-set"

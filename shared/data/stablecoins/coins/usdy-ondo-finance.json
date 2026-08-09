@@ -1089,6 +1089,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Short-term U.S. Treasuries and bank deposits",

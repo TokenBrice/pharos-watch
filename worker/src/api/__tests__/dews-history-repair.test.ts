@@ -41,7 +41,7 @@ describe("DEWS history repair", () => {
       { adminKey: "secret", method: "POST" },
     );
 
-    const repairResponse = await handleBackfillDEWS(db, makeApiUrl(repairRequest.url), true, repairRequest);
+    const repairResponse = await handleBackfillDEWS({ db, url: makeApiUrl(repairRequest.url), trustedAdmin: true, request: repairRequest });
     expect(repairResponse.status).toBe(200);
     const repairBody = (await repairResponse.json()) as { prunedRows: number };
     expect(repairBody.prunedRows).toBe(2);

@@ -1,3 +1,5 @@
+import { mergeAbortSignals } from "./abort-signals";
+
 export interface TimeoutSignalHandle {
   signal: AbortSignal;
   dispose: () => void;
@@ -27,38 +29,15 @@ export function createTimeoutSignal({
     timeoutController.abort(normalizedReason);
   }, timeoutMs);
 
-  let cleanupParentListener = () => {};
-  let signal: AbortSignal;
-
-  if (parentSignal && typeof AbortSignal.any === "function") {
-    signal = AbortSignal.any([parentSignal, timeoutController.signal]);
-  } else if (parentSignal) {
-    const combinedController = new AbortController();
-    const abortFromParent = () => combinedController.abort(parentSignal.reason);
-    const abortFromTimeout = () => combinedController.abort(timeoutController.signal.reason);
-
-    if (parentSignal.aborted) {
-      abortFromParent();
-    } else {
-      parentSignal.addEventListener("abort", abortFromParent, { once: true });
-    }
-    timeoutController.signal.addEventListener("abort", abortFromTimeout, { once: true });
-
-    cleanupParentListener = () => {
-      parentSignal.removeEventListener("abort", abortFromParent);
-      timeoutController.signal.removeEventListener("abort", abortFromTimeout);
-    };
-    signal = combinedController.signal;
-  } else {
-    signal = timeoutController.signal;
-  }
+  const merged = mergeAbortSignals([parentSignal, timeoutController.signal]);
 
   return {
-    signal,
+    // The timeout signal is always an input, so the merge never resolves to `undefined`.
+    signal: merged.signal ?? timeoutController.signal,
     isTimedOut: () => timedOut,
     dispose: () => {
       clearTimeout(timeoutId);
-      cleanupParentListener();
+      merged.dispose();
     },
   };
 }

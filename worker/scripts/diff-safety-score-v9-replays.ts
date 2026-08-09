@@ -67,7 +67,6 @@ export const VOLATILE_KEYS = new Set([
  * remain compared in full.
  */
 export const VERSION_ACTIVATION_KEYS = new Set([
-  "stressStateDigest",
   "stateDigest",
   "resultDigest",
   "scoreResultDigest",

@@ -424,6 +424,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Copper",

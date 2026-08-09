@@ -7,9 +7,9 @@ import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
 import {
-  loadIdentifiedActiveSafetyScoreSource,
-  type IdentifiedActiveSafetyScoreSource,
-} from "../lib/identified-active-safety-score-source";
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "../lib/safety-score-active-source";
 
 /** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
@@ -45,7 +45,6 @@ export interface StatusForCoin {
     recordedAt: number;
   } | null;
   safetyUnavailableReason?: string | null;
-  expectedSafetyScoreModel?: "v9" | null;
   liquidity: {
     score: number | null;
     totalTvlUsd: number;
@@ -72,32 +71,28 @@ export interface StatusForCoin {
 }
 
 interface TelegramSafetyState {
-  expectedModel: "v9" | null;
   unavailableReason: string | null;
-  source: Extract<IdentifiedActiveSafetyScoreSource, { kind: "v9" }> | null;
+  source: Extract<ActiveSafetyScoreSource, { kind: "v9" }> | null;
 }
 
 async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetyState> {
   let activeSource;
   try {
-    activeSource = await loadIdentifiedActiveSafetyScoreSource(db);
+    activeSource = await loadActiveSafetyScoreSource(db);
   } catch {
     return {
-      expectedModel: null,
       unavailableReason: "active-source-unavailable",
       source: null,
     };
   }
 
-  if (activeSource.kind === "error") {
+  if (activeSource.kind !== "v9") {
     return {
-      expectedModel: activeSource.expectedModel,
       unavailableReason: activeSource.reason,
       source: null,
     };
   }
   return {
-    expectedModel: "v9",
     unavailableReason: null,
     source: activeSource,
   };
@@ -193,15 +188,15 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
         ? {
             grade: safetyCard.grade,
             score: safetyCard.score,
-            model: safetyState.source.identity.model,
-            methodologyVersion: safetyState.source.identity.methodologyVersion,
-            publicationGenerationId: safetyState.source.identity.publicationGenerationId,
-            publishedAt: safetyState.source.publishedAtSec,
-            recordedAt: safetyState.source.publishedAtSec,
+            model: safetyState.source.snapshot.safetyScoreIdentity.model,
+            methodologyVersion: safetyState.source.snapshot.safetyScoreIdentity.methodologyVersion,
+            publicationGenerationId:
+              safetyState.source.snapshot.safetyScoreIdentity.publicationGenerationId,
+            publishedAt: safetyState.source.snapshot.updatedAt,
+            recordedAt: safetyState.source.snapshot.updatedAt,
           }
         : null,
     safetyUnavailableReason: safetyState.source === null ? safetyState.unavailableReason : null,
-    expectedSafetyScoreModel: safetyState.expectedModel,
     liquidity: liquidityRow
       ? {
           score: liquidityRow.liquidity_score,

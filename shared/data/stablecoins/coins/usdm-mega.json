@@ -245,6 +245,7 @@
     "reviewedAt": "2026-07-14"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "dependencies": [
     {
       "id": "usdtb-ethena",

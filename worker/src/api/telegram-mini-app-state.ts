@@ -1,4 +1,11 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  TELEGRAM_ALERT_PERSISTENCE,
+  type TelegramSubscriberGlobalColumn,
+  type TelegramSubscriptionAlertColumn,
+  type TelegramSubscriptionOverrideColumn,
+} from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_TYPES, type TelegramAlertType } from "@shared/types/status";
 import type { TelegramMiniAppMutableState } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "@shared/lib/telegram-recap-policy";
 import {
@@ -96,50 +103,33 @@ function normalizeSafetyMode(value: string | null | undefined): "all" | "downgra
   return value === "all" || value === "downgrade-only" || value === "upgrade-only" ? value : null;
 }
 
-function alertTypes(row: {
-  alert_dews: number | null;
-  alert_depeg: number | null;
-  alert_safety: number | null;
-  alert_launch?: number | null;
-  alert_reserve?: number | null;
-  alert_freeze?: number | null;
-}): { dews: boolean; depeg: boolean; safety: boolean; launch: boolean; reserve: boolean; freeze: boolean } {
-  return {
-    dews: boolFlag(row.alert_dews),
-    depeg: boolFlag(row.alert_depeg),
-    safety: boolFlag(row.alert_safety),
-    launch: boolFlag(row.alert_launch),
-    reserve: boolFlag(row.alert_reserve),
-    freeze: boolFlag(row.alert_freeze),
-  };
+type AlertTypeFlags = Record<TelegramAlertType, boolean>;
+
+/** Projects a family-keyed boolean map through the registry's column names. */
+function alertFlagsFrom<TColumn extends string>(
+  row: Partial<Record<TColumn, number | null>>,
+  column: (alertType: TelegramAlertType) => TColumn,
+): AlertTypeFlags {
+  return Object.fromEntries(
+    TELEGRAM_ALERT_TYPES.map((alertType) => [alertType, boolFlag(row[column(alertType)])]),
+  ) as AlertTypeFlags;
+}
+
+function alertTypes(row: Partial<Record<TelegramSubscriptionAlertColumn, number | null>>): AlertTypeFlags {
+  return alertFlagsFrom(row, (alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn);
+}
+
+function alertOverrideTypes(
+  row: Partial<Record<TelegramSubscriptionOverrideColumn, number | null>>,
+): AlertTypeFlags {
+  return alertFlagsFrom(row, (alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn);
 }
 
 function shouldProjectSubscription(row: SubscriptionRow): boolean {
   const alerts = alertTypes(row);
-  return alerts.dews ||
-    alerts.depeg ||
-    alerts.safety ||
-    alerts.launch ||
-    alerts.reserve ||
-    alerts.freeze ||
-    boolFlag(row.alert_dews_override) ||
-    boolFlag(row.alert_depeg_override) ||
-    boolFlag(row.alert_safety_override) ||
-    boolFlag(row.alert_launch_override) ||
-    boolFlag(row.alert_reserve_override) ||
-    boolFlag(row.alert_freeze_override) ||
-    row.alert_snooze_until_ts != null;
-}
-
-function alertOverrideTypes(row: SubscriptionRow): Record<"dews" | "depeg" | "safety" | "launch" | "reserve" | "freeze", boolean> {
-  return {
-    dews: boolFlag(row.alert_dews_override),
-    depeg: boolFlag(row.alert_depeg_override),
-    safety: boolFlag(row.alert_safety_override),
-    launch: boolFlag(row.alert_launch_override),
-    reserve: boolFlag(row.alert_reserve_override),
-    freeze: boolFlag(row.alert_freeze_override),
-  };
+  const overrides = alertOverrideTypes(row);
+  return TELEGRAM_ALERT_TYPES.some((alertType) => alerts[alertType] || overrides[alertType])
+    || row.alert_snooze_until_ts != null;
 }
 
 function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition, "id" | "label" | "description"> {
@@ -247,12 +237,10 @@ export async function loadTelegramMiniAppState(
     subscriber: {
       exists: subscriber != null,
       globalAlerts: {
-        dews: boolFlag(subscriber?.global_alert_dews),
-        depeg: boolFlag(subscriber?.global_alert_depeg),
-        safety: boolFlag(subscriber?.global_alert_safety),
-        launch: boolFlag(subscriber?.global_alert_launch),
-        reserve: boolFlag(subscriber?.global_alert_reserve),
-        freeze: boolFlag(subscriber?.global_alert_freeze),
+        ...alertFlagsFrom<TelegramSubscriberGlobalColumn>(
+          subscriber ?? {},
+          (alertType) => TELEGRAM_ALERT_PERSISTENCE[alertType].globalColumn,
+        ),
         depegStepBps: normalizeDepegStep(subscriber?.global_depeg_worsening_bps_step),
       },
       quietHours: {

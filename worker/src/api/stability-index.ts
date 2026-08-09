@@ -1,5 +1,4 @@
 import {
-  withErrorHandler,
   addFreshnessHeaders,
   errorResponse,
   jsonResponse,
@@ -83,7 +82,7 @@ function decodePsiObjectField(
   return { ok: true, value: decoded.payload };
 }
 
-export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
+export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = now - (now % DAY_SECONDS);
@@ -130,7 +129,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
         changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
         asOf: now,
       }),
-    }, { "Cache-Control": CACHE_PROFILES.standard });
+    }, { headers: { "Cache-Control": CACHE_PROFILES.standard } });
   }
 
   // Build current from latest sample, falling back to latest history row
@@ -253,7 +252,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
       asOf: computedAt,
     }),
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, computedAt, DAY_SECONDS));
-});
+  }, {
+    headers: addFreshnessHeaders({ "Cache-Control": CACHE_PROFILES.standard }, computedAt, DAY_SECONDS),
+  });
+};

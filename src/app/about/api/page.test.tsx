@@ -1,16 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import AboutApiPage from "./page";
 import { extractJsonLd } from "@/test/json-ld";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href, className }: { children: ReactNode; href: string; className?: string }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 describe("AboutApiPage", () => {
   it("emits API artifact catalog structured data with crawlable public URLs", async () => {

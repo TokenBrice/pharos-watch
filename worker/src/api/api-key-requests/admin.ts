@@ -86,8 +86,6 @@ export function mapAdminRow(row: ApiKeyRequestAdminRow): ApiKeySelfServeRequestA
     linkedKeyExpiresAt: row.linked_key_expires_at,
     rateLimitPerMinute: row.self_serve_rate_limit_per_minute,
     selfServeExpiresAt: row.self_serve_expires_at,
-    riskScore: row.risk_score,
-    riskReasons: parseJsonStringArray(row.risk_reasons_json),
     claimStatus: row.claim_status,
     verificationSentAt: row.verification_sent_at,
     verificationExpiresAt: row.verification_expires_at,

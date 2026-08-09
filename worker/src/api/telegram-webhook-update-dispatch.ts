@@ -30,6 +30,7 @@ import {
 } from "../lib/telegram-usage-analytics";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import {
+  buildMutationOperations,
   createTelegramWebhookIntent,
   type TelegramWebhookEffectFence,
 } from "./telegram-webhook-effect-fence";
@@ -82,41 +83,19 @@ const RESUMABLE_NORMALIZED_COMMANDS = new Set([
   "/unsubscribe",
 ]);
 
-function buildReducedPendingOperationContext(
+/**
+ * Pending-gate operation context. `operationNowSec` is supplied only by the
+ * gates that persist a new pending row; the stored-clear resume path reads none
+ * of the timestamped members, so one builder serves both.
+ */
+function buildPendingOperationContext(
   effectFence: TelegramWebhookEffectFence | null,
   beforeIrreversibleEffect: (kind: string) => Promise<void>,
+  operationNowSec?: number,
 ): PendingSelectionOperationContext {
   return {
-    beforeIrreversibleEffect,
-    prepareMutationAppliedStatement: effectFence
-      ? () => effectFence.prepareMutationAppliedStatement()
-      : undefined,
-    confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
-    markMutationApplied: async () => effectFence?.markMutationApplied(),
-    storedIntent: effectFence?.storedIntent ?? null,
-    wasMutationApplied: effectFence?.wasMutationApplied ?? false,
-  };
-}
-
-function buildFullPendingOperationContext(
-  effectFence: TelegramWebhookEffectFence | null,
-  beforeIrreversibleEffect: (kind: string) => Promise<void>,
-  operationNowSec: number,
-): PendingSelectionOperationContext {
-  return {
-    beforeIrreversibleEffect,
-    planIntent: async (intent) => effectFence?.plan(intent),
-    prepareMutationAppliedStatement: effectFence
-      ? () => effectFence.prepareMutationAppliedStatement()
-      : undefined,
-    preparePendingMutationAppliedStatement: effectFence
-      ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
-      : undefined,
-    confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
-    markMutationApplied: async () => effectFence?.markMutationApplied(),
-    storedIntent: effectFence?.storedIntent ?? null,
-    wasMutationApplied: effectFence?.wasMutationApplied ?? false,
-    operationNowSec,
+    ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
+    ...(operationNowSec == null ? {} : { operationNowSec }),
   };
 }
 
@@ -201,15 +180,7 @@ export async function handleTelegramCallbackQueryUpdate(args: {
       return finishOk();
     }
     await handleCallbackQuery(db, botToken, callbackQuery, {
-      beforeIrreversibleEffect,
-      markMutationApplied: async () => effectFence?.markMutationApplied(),
-      planIntent: async (intent) => effectFence?.plan(intent),
-      prepareMutationAppliedStatement: effectFence
-        ? () => effectFence.prepareMutationAppliedStatement()
-        : undefined,
-      confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
-      storedIntent: effectFence?.storedIntent ?? null,
-      wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+      ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
       recapRollout,
     });
   } catch (err) {
@@ -277,26 +248,15 @@ export async function handleTelegramMessageUpdate(args: {
     botToken,
     recapRollout,
     operationNowSec,
-    beforeIrreversibleEffect,
-    planIntent: async (intent) => effectFence?.plan(intent),
-    prepareMutationAppliedStatement: effectFence
-      ? () => effectFence.prepareMutationAppliedStatement()
-      : undefined,
-    prepareMutationOperationStatements: effectFence
-      ? () => [
-          ...(commandContext.clearPendingOnMutation
-            ? [db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId)]
-            : []),
-          effectFence.prepareMutationAppliedStatement(),
-        ]
-      : undefined,
-    preparePendingMutationAppliedStatement: effectFence
-      ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
-      : undefined,
-    confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
-    markMutationApplied: async () => effectFence?.markMutationApplied(),
-    storedIntent: effectFence?.storedIntent ?? null,
-    wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+    ...buildMutationOperations(effectFence, {
+      beforeIrreversibleEffect,
+      mutationOperationStatements: (fence) => [
+        ...(commandContext.clearPendingOnMutation
+          ? [db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId)]
+          : []),
+        fence.prepareMutationAppliedStatement(),
+      ],
+    }),
     replyToChat: reply,
     replyToChatWithMarkup: replyWithMarkup,
   };
@@ -312,7 +272,7 @@ export async function handleTelegramMessageUpdate(args: {
       db,
       chatId,
       intent: effectFence?.storedIntent,
-      operation: buildReducedPendingOperationContext(effectFence, beforeIrreversibleEffect),
+      operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect),
     });
     if (pendingClearResume.handled) {
       if (pendingClearResume.reply) await reply(pendingClearResume.reply);
@@ -395,7 +355,7 @@ export async function handleTelegramMessageUpdate(args: {
         pendingRow,
         parsedCommand,
         reply,
-        operation: buildFullPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
+        operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
       });
       if (setupResult === "finished") return finishOk();
     }
@@ -413,7 +373,7 @@ export async function handleTelegramMessageUpdate(args: {
         pendingNotExpired,
         parsedCommand,
         reply,
-        operation: buildFullPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
+        operation: buildPendingOperationContext(effectFence, beforeIrreversibleEffect, operationNowSec),
       });
       if (pendingResult === "finished") return finishOk();
       if (pendingResult === "continue-clear-pending") {

@@ -1,8 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   handleStablecoinHistoryRequest,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
@@ -15,7 +14,7 @@ interface SupplyHistoryRow {
 const DEFAULT_SUPPLY_HISTORY_DAYS = 365;
 const MAX_SUPPLY_HISTORY_DAYS = 5000;
 
-export const handleSupplyHistory = withErrorHandler("supply-history", async (
+export const handleSupplyHistory = async (
   db: D1Database,
   url: URL
 ): Promise<Response> => {
@@ -68,4 +67,4 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
         };
     },
   });
-});
+};

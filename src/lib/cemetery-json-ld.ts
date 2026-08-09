@@ -1,4 +1,3 @@
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import cemeteryDatasetExport from "../../public/datasets/stablecoin-cemetery.json";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
@@ -35,7 +34,7 @@ const cemeterySourceData = cemeteryDataset.sourceData ?? [
 ];
 
 export function buildCemeteryDatasetJsonLd() {
-  const organization = buildPharosOrganizationNode(SITE_URL);
+  const organization = buildPharosOrganizationNode();
 
   return {
     "@context": "https://schema.org",

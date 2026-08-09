@@ -25,6 +25,9 @@ import {
   getSafeActionFollowUpHref,
 } from "@/lib/actions-workbench-model";
 import type { CoinOption } from "@/lib/compare-types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
+import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 const STATUS_LABEL: Record<AdminActionExecution["status"], string> = {
   ready: "Ready",
@@ -52,10 +55,10 @@ const RISK_LABEL = {
 } as const;
 
 const RISK_CLASS = {
-  "read-only": "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300",
-  low: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  moderate: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
-  high: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+  "read-only": STATUS_OK_PILL_CLASS,
+  low: SEVERITY_TONE_CLASS.info.pill,
+  moderate: SEVERITY_TONE_CLASS.watch.pill,
+  high: SEVERITY_TONE_CLASS.alert.pill,
 } as const;
 
 const RESULT_MODE_LABEL = {
@@ -483,7 +486,7 @@ export function AdminActionExecutionDialog({
         )}
 
         {readiness.blocked && (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-900 dark:text-red-100">
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-red-900 dark:text-red-100", SEVERITY_TONE_CLASS.alert.banner)}>
             <div className="font-medium">Live execution blocked</div>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-xs">
               {readiness.reasons.map((reason) => (
@@ -499,8 +502,8 @@ export function AdminActionExecutionDialog({
             htmlFor={acknowledgementInputId}
             className={`flex min-h-11 items-start gap-2 rounded-md border px-3 py-2 text-sm ${
               action.risk === "high"
-                ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100"
-                : "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100"
+                ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-100")
+                : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-900 dark:text-amber-100")
             }`}
           >
             <input
@@ -528,12 +531,12 @@ export function AdminActionExecutionDialog({
           </div>
         )}
         {execution?.warning && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          <div className={cn("rounded-md border px-3 py-2 text-xs text-amber-800 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}>
             {execution.warning}
           </div>
         )}
         {execution?.status === "unknown" && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}>
             The action may have started. Retry the same execution to reconcile this idempotency key, or explicitly
             create a new execution after checking downstream state.
           </div>

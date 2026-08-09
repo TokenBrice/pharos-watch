@@ -1,3 +1,4 @@
+import { formatLongDate } from "@shared/lib/format";
 import type { MechanismArchetype, RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { BlacklistStatus } from "@shared/lib/report-cards";
@@ -75,12 +76,7 @@ export function formatLaunchDate(launchDate: string | undefined): string | null 
   if (!launchDate || !/^\d{4}-\d{2}-\d{2}$/.test(launchDate)) return null;
   const parsed = new Date(`${launchDate}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatLongDate(parsed, { utc: true });
 }
 
 // Same data-driven freeze tones as the retired identity FreezablePill — amber

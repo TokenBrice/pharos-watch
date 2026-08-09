@@ -201,7 +201,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
               </p>
             </div>
           </div>
-          <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" />
+          <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" includeJsonLd />
         </section>
 
         <div className="order-5 flex justify-end">

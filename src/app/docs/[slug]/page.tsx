@@ -4,15 +4,15 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Metadata } from "next";
 import type React from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { markdownLinkComponent } from "@/components/markdown-link";
 import { TableBody, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -70,22 +70,7 @@ function getMarkdownTableLabel(node: unknown): string {
 }
 
 const mdxComponents = {
-  a: ({ href, children }: React.ComponentProps<"a">) => {
-    const resolved = resolvePublicDocHref(href);
-    if (!resolved) return <span>{children}</span>;
-    if (resolved.startsWith("/")) {
-      return (
-        <Link href={resolved} className="pharos-prose-link">
-          {children}
-        </Link>
-      );
-    }
-    return (
-      <a href={resolved} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
-        {children}
-      </a>
-    );
-  },
+  a: markdownLinkComponent({ resolveHref: resolvePublicDocHref }),
   table: ({ node, children, className, ...props }: MarkdownComponentProps<"table">) => (
     <TableFrame
       chrome="content"
@@ -151,7 +136,6 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
       path={`/docs/${slug}/`}
       title={doc.title}
       variant="longform"
-      containerClassName="mx-auto max-w-3xl"
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Docs", url: "/docs/" },
@@ -162,18 +146,17 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "TechArticle",
-            headline: doc.title,
-            description: doc.summary,
-            datePublished: meta?.dateCreated,
-            dateModified: meta?.dateModified,
-            author: { "@id": `${SITE_URL}#organization` },
-            publisher: { "@id": `${SITE_URL}#organization` },
-            image: `${SITE_URL}/og-card.png`,
-            mainEntityOfPage: `${SITE_URL}/docs/${slug}/`,
-          }),
+          __html: safeJsonLd(
+            buildArticleJsonLd({
+              type: "TechArticle",
+              headline: doc.title,
+              description: doc.summary,
+              datePublished: meta?.dateCreated,
+              dateModified: meta?.dateModified,
+              image: `${SITE_URL}/og-card.png`,
+              mainEntityOfPage: `${SITE_URL}/docs/${slug}/`,
+            }),
+          ),
         }}
       />
       <article className="space-y-5 text-sm leading-7 text-muted-foreground [&_h2]:pt-4 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:pt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_p]:leading-7 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80 [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-foreground [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-muted/35 [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0">

@@ -12,6 +12,7 @@ import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log"
 import { validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
   TelegramWebhookEffectFence,
+  buildMutationOperations,
   createTelegramWebhookIntent,
   establishTelegramWebhookEffectFence,
 } from "./telegram-webhook-effect-fence";
@@ -138,12 +139,7 @@ export const handleTelegramWebhook = withErrorHandler(
         let myChatMemberErrorClass: string | null = null;
         try {
           await handleMyChatMember(db, botToken, update.my_chat_member, {
-            beforeIrreversibleEffect,
-            prepareMutationAppliedStatement: effectFence
-              ? () => effectFence.prepareMutationAppliedStatement()
-              : undefined,
-            confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
-            wasMutationApplied: effectFence?.wasMutationApplied,
+            ...buildMutationOperations(effectFence, { beforeIrreversibleEffect }),
           });
         } catch (err) {
           logTelegramEvent({

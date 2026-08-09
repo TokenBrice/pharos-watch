@@ -1,5 +1,3 @@
-import { flushPendingApiKeyPrunes } from "../../lib/api-key-rate-limit";
-import { flushPendingPrunes } from "../../lib/rate-limit";
 import { resolveRoute, route } from "../../router";
 import type { Env } from "../../lib/env";
 import {
@@ -23,18 +21,6 @@ import {
   warnWorkerEnvIssuesOnce,
 } from "./gates";
 
-function queuePendingRateLimitPrunes(ctx: ExecutionContext): void {
-  ctx.waitUntil(Promise.all([
-    flushPendingPrunes(),
-    flushPendingApiKeyPrunes(),
-  ]).then(() => {}));
-}
-
-function finalizeResponse(response: Response, origin: string | null, ctx: ExecutionContext): Response {
-  queuePendingRateLimitPrunes(ctx);
-  return addCorsHeaders(response, origin);
-}
-
 export async function handleHttpRequestImpl(
   request: Request,
   env: Env,
@@ -51,7 +37,7 @@ export async function handleHttpRequestImpl(
   const url = new URL(request.url);
   const telegramIngressGate = await evaluateTelegramIngressAbuseGate(request, url, env);
   if (telegramIngressGate.response) {
-    return finalizeResponse(telegramIngressGate.response, origin, ctx);
+    return addCorsHeaders(telegramIngressGate.response, origin);
   }
   const routedRequest = telegramIngressGate.request;
   const edgeCache = createEdgeCacheContext(routedRequest, url);
@@ -89,7 +75,7 @@ export async function handleHttpRequestImpl(
         apiKeyTrafficClass: fastGate.apiKey?.trafficClass ?? null,
         requestLane: fastGate.requestLane,
       })();
-      return finalizeResponse(fastRateLimitResponse ?? cached, origin, ctx);
+      return addCorsHeaders(fastRateLimitResponse ?? cached, origin);
     }
   }
 
@@ -99,7 +85,7 @@ export async function handleHttpRequestImpl(
     apiKey,
     requestLane,
     response: gateResponse,
-  } = await evaluateAccessGate(routedRequest, url, env);
+  } = await evaluateAccessGate(routedRequest, url, env, ctx);
   const recordRequestSource = buildRecorder({
     isAdmin,
     isSiteProxy,
@@ -109,7 +95,7 @@ export async function handleHttpRequestImpl(
   });
   if (gateResponse) {
     recordRequestSource();
-    return finalizeResponse(gateResponse, origin, ctx);
+    return addCorsHeaders(gateResponse, origin);
   }
 
   if (!cached && !edgeCacheProbed) {
@@ -117,13 +103,13 @@ export async function handleHttpRequestImpl(
   }
   if (cached) {
     recordRequestSource();
-    return finalizeResponse(cached, origin, ctx);
+    return addCorsHeaders(cached, origin);
   }
 
   const resolvedRoute = resolveRoute(url, routedRequest.method);
   if (resolvedRoute == null) {
     recordRequestSource();
-    return finalizeResponse(notFoundResponse(), origin, ctx);
+    return addCorsHeaders(notFoundResponse(), origin);
   }
 
   const response = await route(
@@ -141,5 +127,5 @@ export async function handleHttpRequestImpl(
   recordTelegramIngressHandlerResponse(routedRequest, url, response);
   recordRequestSource();
   writeEdgeCache(edgeCache, response, ctx);
-  return finalizeResponse(response, origin, ctx);
+  return addCorsHeaders(response, origin);
 }

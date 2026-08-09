@@ -1,5 +1,5 @@
 import type {
-  V9AssetFactsV2,
+  V9AssetFactsBase,
   V9DeploymentControlFactV2,
   V9FactStatusV2,
   V9FailureDomainRef,
@@ -136,12 +136,12 @@ export interface V9BridgeControlReview {
 }
 
 export interface V9EconomicControlAssetFacts {
-  assetId: V9AssetFactsV2["assetId"];
-  archetype: V9AssetFactsV2["archetype"];
-  controlStatus: V9AssetFactsV2["controlStatus"];
+  assetId: V9AssetFactsBase["assetId"];
+  archetype: V9AssetFactsBase["archetype"];
+  controlStatus: V9AssetFactsBase["controlStatus"];
   controls: readonly V9DeploymentControlFactV2[];
   supply: Pick<
-    V9AssetFactsV2["supply"],
+    V9AssetFactsBase["supply"],
     | "status"
     | "selectedBridgeRoutes"
     | "selectedRouteSupplyShare"
@@ -164,9 +164,9 @@ export interface EvaluateV9EconomicControlArgs {
 
 export type V9EconomicControlAssetSource = V9EconomicControlAssetFacts;
 
-/** Facts still awaiting a first-class home in V9AssetFactsV2. */
+/** Facts still awaiting a first-class home in the shared asset-fact base. */
 export interface V9EconomicControlReviewExtension {
-  assetId: V9AssetFactsV2["assetId"];
+  assetId: V9AssetFactsBase["assetId"];
   mint: V9MintMechanismReview;
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;

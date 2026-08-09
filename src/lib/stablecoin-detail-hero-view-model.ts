@@ -95,7 +95,7 @@ export interface HeroCardViewModel {
     prevWeekTrendClass: string;
     prevMonthTrendClass: string;
   };
-  peg: { earlyPegScore: boolean; trackingSpanDays: number; activeDepeg: boolean };
+  peg: { activeDepeg: boolean };
   tertiaryMetrics: HeroTertiaryMetricViewModel[];
   desktopTertiaryMetrics: HeroTertiaryMetricViewModel[];
   signalRailItems: HeroSignalRailItemViewModel[];
@@ -321,11 +321,7 @@ export function buildStablecoinDetailHeroViewModel({
       limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
     },
     market: { ...buildMarketTrends(mcap, prevDay, prevWeek, prevMonth), supply },
-    peg: {
-      earlyPegScore: effectivePegScore !== null && pegScoreResult !== null && pegScoreResult.trackingSpanDays < 30,
-      trackingSpanDays: pegScoreResult?.trackingSpanDays ?? 0,
-      activeDepeg: pegScoreResult?.activeDepeg === true,
-    },
+    peg: { activeDepeg: pegScoreResult?.activeDepeg === true },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => !MOBILE_ONLY_TERTIARY_KEYS.has(metric.key)),
     signalRailItems: buildSignalRailItems(reportCard, isNavToken, effectivePegScore, liquidityData, dewsDisplay),

@@ -1,39 +1,12 @@
 import { defineLazyStaticRoute, type StaticRouteDefinition } from "./shared";
 
 export const OPS_STATIC_ROUTES = [
-  defineLazyStaticRoute("status", () =>
-    import("../api/status").then(
-      ({ handleStatus }) =>
-        ({
-          db,
-          trustedAdmin,
-          request,
-          coingeckoApiKey,
-          cloudflareD1StatusBindings,
-          workerCanaryMode,
-        }) =>
-          handleStatus(
-            db,
-            trustedAdmin,
-            request,
-            coingeckoApiKey,
-            cloudflareD1StatusBindings,
-            workerCanaryMode,
-          ),
-    ),
-  ),
+  defineLazyStaticRoute("status", () => import("../api/status").then(({ handleStatus }) => handleStatus)),
   defineLazyStaticRoute("status-history", () =>
     import("../api/status-history").then(({ handleStatusHistoryRoute }) => handleStatusHistoryRoute),
   ),
   defineLazyStaticRoute("request-source-stats", () =>
-    import("../api/request-source-stats").then(
-      ({ handleRequestSourceStats }) =>
-        ({ db, trustedAdmin, request }) =>
-          handleRequestSourceStats(db, trustedAdmin, request),
-    ),
-  ),
-  defineLazyStaticRoute("yield-source-decisions", () =>
-    import("../api/yield-source-decisions").then(({ handleYieldSourceDecisions }) => handleYieldSourceDecisions),
+    import("../api/request-source-stats").then(({ handleRequestSourceStats }) => handleRequestSourceStats),
   ),
   defineLazyStaticRoute("api-keys", () =>
     import("../api/api-keys").then(({ handleApiKeysRoute }) => handleApiKeysRoute),
@@ -44,11 +17,7 @@ export const OPS_STATIC_ROUTES = [
     ),
   ),
   defineLazyStaticRoute("api-key-audit-log", () =>
-    import("../api/api-key-audit-log").then(
-      ({ handleApiKeyAuditLog }) =>
-        ({ db, trustedAdmin, request }) =>
-          handleApiKeyAuditLog(db, trustedAdmin, request),
-    ),
+    import("../api/api-key-audit-log").then(({ handleApiKeyAuditLog }) => handleApiKeyAuditLog),
   ),
   defineLazyStaticRoute("api-key-requests-admin", () =>
     import("../api/api-key-requests").then(({ handleApiKeyRequestsAdminRoute }) => handleApiKeyRequestsAdminRoute),

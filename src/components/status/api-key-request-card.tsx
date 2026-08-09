@@ -11,6 +11,7 @@ import {
   formatApiKeyRequestTime,
   statusClassName,
 } from "@/lib/api-key-request-admin-view-model";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 export function ApiKeyRequestCard({
   request,
@@ -28,7 +29,7 @@ export function ApiKeyRequestCard({
   const viewModel = buildApiKeyRequestCardViewModel(request, generatedAt, busyRequestId);
 
   return (
-    <article className="space-y-4 rounded-lg border border-border/60 bg-background/35 p-4">
+    <article className={cn("space-y-4 rounded-lg p-4", STATUS_PANEL_SHELL_CLASS)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -80,7 +81,7 @@ export function ApiKeyRequestCard({
         <p className="mt-1 text-sm leading-relaxed text-foreground">{viewModel.nextAction}</p>
       </div>
 
-      <div className="grid gap-3 text-sm md:grid-cols-3">
+      <div className="grid gap-3 text-sm md:grid-cols-2">
         <div>
           <div className="text-xs uppercase text-muted-foreground">Cadence</div>
           <div className="font-medium text-foreground">{request.expectedCadence ?? "unknown"}</div>
@@ -88,10 +89,6 @@ export function ApiKeyRequestCard({
         <div>
           <div className="text-xs uppercase text-muted-foreground">Volume</div>
           <div className="font-medium text-foreground">{request.expectedVolume ?? "not provided"}</div>
-        </div>
-        <div>
-          <div className="text-xs uppercase text-muted-foreground">Risk</div>
-          <div className="font-medium text-foreground">{request.riskScore}</div>
         </div>
       </div>
 
@@ -117,19 +114,6 @@ export function ApiKeyRequestCard({
           </div>
         </div>
       </details>
-
-      {request.riskReasons.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {request.riskReasons.map((reason) => (
-            <span
-              key={reason}
-              className="rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-1 text-xs text-amber-700 dark:text-amber-300"
-            >
-              {reason}
-            </span>
-          ))}
-        </div>
-      ) : null}
 
       <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
         <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">

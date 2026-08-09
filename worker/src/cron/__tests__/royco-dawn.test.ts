@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../test-helpers/cron";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -18,10 +19,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     },
   ];
 
-  return {
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map(stablecoins.map((coin) => [coin.id, coin])),
-  };
+  return mockRegistry({ stablecoins });
 });
 
 import { fetchRoycoDawnSources } from "../yield-sync/royco-dawn";

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { mockRegistry } from "../../test-helpers/cron";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
 const fetchEvmBlockNumberMock = vi.fn();
@@ -8,109 +9,55 @@ const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
-  ACTIVE_IDS: {
-    has: (stablecoinId: string) => stablecoinId !== "sofid-sofi" && stablecoinId !== "usx-dforce",
-  },
-  ACTIVE_STABLECOINS: [
-    { id: "cusd-cap", symbol: "CUSD" },
-    { id: "iusd-infinifi", symbol: "iUSD" },
-    { id: "pyusd-paypal", symbol: "PYUSD" },
-    { id: "wm-m0", symbol: "wM" },
-    { id: "ausd-agora", symbol: "AUSD" },
-    { id: "usdai-usd-ai", symbol: "USDAI" },
-    { id: "usdc-circle", symbol: "USDC" },
-    { id: "yusd-aegis", symbol: "YUSD" },
-    { id: "gho-aave", symbol: "GHO" },
-    { id: "sgho-aave", symbol: "sGHO" },
-    { id: "aid-gaib", symbol: "AID" },
-    { id: "said-gaib", symbol: "sAID" },
-  ],
-  TRACKED_META_BY_ID: new Map([
-    [
-      "cusd-cap",
+  ...mockRegistry({
+    stablecoins: [
       {
         id: "cusd-cap",
+        symbol: "CUSD",
         contracts: [{ chain: "ethereum", address: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", decimals: 18 }],
       },
-    ],
-    [
-      "iusd-infinifi",
       {
         id: "iusd-infinifi",
+        symbol: "iUSD",
         contracts: [{ chain: "ethereum", address: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c", decimals: 18 }],
       },
-    ],
-    [
-      "pyusd-paypal",
-      {
-        id: "pyusd-paypal",
-        geckoId: "paypal-usd",
-      },
-    ],
-    [
-      "wm-m0",
-      {
-        id: "wm-m0",
-        geckoId: "wrappedm-by-m0",
-      },
-    ],
-    [
-      "ausd-agora",
-      {
-        id: "ausd-agora",
-        geckoId: "agora-dollar",
-      },
-    ],
-    [
-      "usdai-usd-ai",
-      {
-        id: "usdai-usd-ai",
-        geckoId: "usdai",
-      },
-    ],
-    [
-      "usdc-circle",
+      { id: "pyusd-paypal", symbol: "PYUSD", geckoId: "paypal-usd" },
+      { id: "wm-m0", symbol: "wM", geckoId: "wrappedm-by-m0" },
+      { id: "ausd-agora", symbol: "AUSD", geckoId: "agora-dollar" },
+      { id: "usdai-usd-ai", symbol: "USDAI", geckoId: "usdai" },
       {
         id: "usdc-circle",
+        symbol: "USDC",
         contracts: [{ chain: "ethereum", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 }],
       },
-    ],
-    [
-      "yusd-aegis",
-      {
-        id: "yusd-aegis",
-        geckoId: "aegis-yusd",
-      },
-    ],
-    [
-      "gho-aave",
+      { id: "yusd-aegis", symbol: "YUSD", geckoId: "aegis-yusd" },
       {
         id: "gho-aave",
+        symbol: "GHO",
         contracts: [{ chain: "ethereum", address: "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f", decimals: 18 }],
       },
-    ],
-    [
-      "sgho-aave",
       {
         id: "sgho-aave",
+        symbol: "sGHO",
         contracts: [{ chain: "ethereum", address: "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d", decimals: 18 }],
       },
-    ],
-    [
-      "aid-gaib",
       {
         id: "aid-gaib",
+        symbol: "AID",
         contracts: [{ chain: "ethereum", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18 }],
       },
-    ],
-    [
-      "said-gaib",
       {
         id: "said-gaib",
+        symbol: "sAID",
         contracts: [{ chain: "ethereum", address: "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8", decimals: 18 }],
       },
     ],
-  ]),
+  }),
+  // Deliberately permissive: everything is active except the two ids this suite
+  // asserts are excluded from authoritative-override eligibility.
+  ACTIVE_IDS: {
+    has: (stablecoinId: string) => stablecoinId !== "sofid-sofi" && stablecoinId !== "usx-dforce",
+  },
 }));
 
 vi.mock("../evm-rpc", () => ({

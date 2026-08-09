@@ -24,7 +24,7 @@ export { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 export { DepegHistory } from "@/components/depeg-history";
 export { FlowsSection, FlowHistorySection } from "@/components/stablecoin-detail/flows-section";
 export { BlacklistSection, BlacklistHistorySection } from "@/components/stablecoin-detail/blacklist-section";
-export { KeyInfoCard } from "@/components/key-info-card";
+export { KeyInfoCard } from "@/components/key-info-card-root";
 export { PegStabilityCard } from "@/components/stablecoin-detail/peg-stability-card";
 export { default as YieldDetailSection, YieldChangeAttributionCard } from "@/components/yield-detail-section";
 export { YieldHistoryChart } from "@/components/yield-history-chart";

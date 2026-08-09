@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { TermText } from "@/components/term-text";
 import type { StablecoinAiSummary } from "@shared/types";
+import { formatLongDate } from "@shared/lib/format";
 
 export function AiSummary({
   title,
@@ -17,12 +18,7 @@ export function AiSummary({
   factsAsOf,
 }: StablecoinAiSummary) {
   const isoDate = updatedAt;
-  const dateline = new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const dateline = formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
   const disclosure = buildAiDisclosureLine({ authoredBy, model, reviewedBy, reviewedAt, factsAsOf });
 
   return (

@@ -1,3 +1,4 @@
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildYieldDecisionLedgerDisplay } from "@/lib/yield-decision-ledger";
 import type { YieldPublicDecisionLedger } from "@shared/types";
@@ -34,7 +35,7 @@ export function YieldDecisionLedgerCard({
       {display.sourceSwitchLabel || display.rejectedCountLabel || display.previousSourceKey ? (
         <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
           {display.sourceSwitchLabel ? (
-            <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2 py-0.5 text-sky-700 dark:text-sky-300">
+            <span className={cn("rounded-full border px-2 py-0.5", SEVERITY_TONE_CLASS.sky.pill)}>
               {display.sourceSwitchLabel}
             </span>
           ) : null}

@@ -2,7 +2,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
-import type { ReportCardGrade } from "@shared/types/report-cards";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
@@ -73,13 +73,12 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         `Canonical Safety Score V9 source unavailable (${active.reason}): ${active.detail}`,
       );
     }
-    if (active.snapshot.publicationHealth.status === "held") {
+    if (active.kind === "held") {
       return {
         status: "degraded" as const,
         itemCount: 0,
         metadata: JSON.stringify({
-          reason: "v9-publication-held",
-          expectedModel: "v9",
+          reason: active.reason,
           historyWritesSkipped: true,
         }),
       };
@@ -90,7 +89,6 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         itemCount: 0,
         metadata: JSON.stringify({
           reason: "v9-publication-stale",
-          expectedModel: "v9",
           historyWritesSkipped: true,
         }),
       };

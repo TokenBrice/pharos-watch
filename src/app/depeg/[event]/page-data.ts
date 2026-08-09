@@ -1,11 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent } from "@shared/types/market";
-import {
-  MIN_DEPEG_PAGE_DEVIATION_BPS,
-  selectIndexableDepegEvents,
-  selectStaticDepegEventPages,
-} from "./config";
+import { MIN_DEPEG_PAGE_DEVIATION_BPS, selectStaticDepegEventPages } from "./config";
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -35,17 +31,15 @@ function readDepegEventEntries(): readonly DepegEventEntry[] {
 
 const ALL_ENTRIES = readDepegEventEntries();
 
+/**
+ * Every generated event page is linked from the archive, listed in the sitemap,
+ * and served `index,follow` — the static page set and the indexable set are the
+ * same set by construction (`selectStaticDepegEventPages`).
+ */
 export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = selectStaticDepegEventPages(ALL_ENTRIES);
 
-export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] =
-  selectIndexableDepegEvents(DEPEG_EVENT_ENTRIES);
-
-export const INDEXABLE_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(
-  INDEXABLE_DEPEG_EVENT_ENTRIES.map((event) => event.slug),
-);
-
 export const COLLIDING_DEPEG_EVENT_SLUGS: ReadonlySet<string> =
-  buildSameDayDirectionCollisionSlugs(INDEXABLE_DEPEG_EVENT_ENTRIES);
+  buildSameDayDirectionCollisionSlugs(DEPEG_EVENT_ENTRIES);
 
 export { DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS };
 

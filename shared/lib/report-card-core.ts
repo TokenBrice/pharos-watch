@@ -1,21 +1,15 @@
 import type { ReportCardGrade } from "../types";
+import { V9_GRADE_THRESHOLDS } from "../types/safety-score-v9-grade";
 import { bandFromThresholds, clampScore } from "./math";
 
 export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
 
-export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
-  { grade: "A+", min: 87 },
-  { grade: "A", min: 83 },
-  { grade: "A-", min: 80 },
-  { grade: "B+", min: 75 },
-  { grade: "B", min: 70 },
-  { grade: "B-", min: 65 },
-  { grade: "C+", min: 60 },
-  { grade: "C", min: 55 },
-  { grade: "C-", min: 50 },
-  { grade: "D", min: 40 },
-  { grade: "F", min: 0 },
-];
+/**
+ * The grade bands are owned by `shared/types/safety-score-v9-grade.ts`, the
+ * module `scoreToV9Grade` reads. This is the same table under its report-card
+ * name, not a second copy.
+ */
+export const GRADE_THRESHOLDS: readonly { grade: ReportCardGrade; min: number }[] = V9_GRADE_THRESHOLDS;
 
 export const REPORT_CARD_GRADE_RANK: Record<ReportCardGrade, number> = {
   NR: -1,

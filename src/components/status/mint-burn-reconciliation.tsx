@@ -8,6 +8,7 @@ import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds"
 import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 const COLLAPSED_ROW_COUNT = 6;
 
@@ -94,7 +95,7 @@ export function MintBurnReconciliationCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-[1rem] border border-border/60 bg-background/35 px-4 py-3">
+        <div className={cn("flex flex-wrap items-start justify-between gap-3 rounded-[1rem] px-4 py-3", STATUS_PANEL_SHELL_CLASS)}>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
               Compares 24h configured canonical issuance-chain mint/burn net flow against the stablecoins cache&apos;s

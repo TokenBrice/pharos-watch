@@ -3,7 +3,7 @@ import {
   getMechanismArchetypeLabel,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { PHAROS_ORG_NODE, safeJsonLd } from "@/lib/json-ld";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import type { CaseStudy } from "./content/types";
 import {
@@ -29,45 +29,43 @@ function buildCaseStudyArticleJsonLd(study: CaseStudy): Record<string, unknown> 
   const wordCount = caseStudyWordCount(study);
   const timeRequired = `PT${estimateCaseStudyReadingMinutes(study)}M`;
   const archetypeLabel = getMechanismArchetypeLabel(study.archetype);
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "@id": url,
+  return buildArticleJsonLd({
+    id: url,
     headline: study.title,
     description: study.metaDescription,
     url,
     mainEntityOfPage: url,
     image: `${SITE_ORIGIN}/og-learn-case-${study.slug}.png`,
-    author: { "@id": PHAROS_ORG_NODE["@id"] },
-    publisher: { "@id": PHAROS_ORG_NODE["@id"] },
     inLanguage: "en",
-    isPartOf: `${SITE_ORIGIN}${HUB_PATH}`,
-    articleSection: study.eyebrow,
     keywords: [
       study.eyebrow,
       archetypeLabel,
       study.outcome,
       ...(study.relatedCoins ?? []).map((coin) => coin.coinId),
       study.primaryCoinId,
-    ].filter(Boolean),
-    about: {
-      "@type": "DefinedTerm",
-      name: archetypeLabel,
-      termCode: study.archetype,
-      url: `${SITE_ORIGIN}${getMechanismExplainerPath(study.archetype)}`,
-    },
-    citation: study.sources.map((source) => ({
-      "@type": "CreativeWork",
-      name: source.label,
-      url: source.href,
-    })),
-    wordCount,
-    timeRequired,
+    ].filter((keyword): keyword is string => Boolean(keyword)),
     datePublished: study.datePublished.includes("T")
       ? study.datePublished
       : `${study.datePublished}T00:00:00Z`,
     dateModified,
-  };
+    extra: {
+      isPartOf: `${SITE_ORIGIN}${HUB_PATH}`,
+      articleSection: study.eyebrow,
+      about: {
+        "@type": "DefinedTerm",
+        name: archetypeLabel,
+        termCode: study.archetype,
+        url: `${SITE_ORIGIN}${getMechanismExplainerPath(study.archetype)}`,
+      },
+      citation: study.sources.map((source) => ({
+        "@type": "CreativeWork",
+        name: source.label,
+        url: source.href,
+      })),
+      wordCount,
+      timeRequired,
+    },
+  });
 }
 
 /** `ItemList` document for the case-studies hub. */

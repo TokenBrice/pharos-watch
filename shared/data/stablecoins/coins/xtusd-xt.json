@@ -94,6 +94,21 @@
         "chains": [
           "xsc"
         ],
+        "feeds": [
+          {
+            "provider": "None identified: the XT-A collateral price is a static Vat.spot with no authorized updater",
+            "path": "Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b ilks(\"XT-A\").spot returns 3.478066666666666666666666666 ray, byte-identical on datarpc1 and datarpc2 at block 48211240 (2026-08-09) and unchanged from the block-48187434 read of 2026-08-08. No Spotter, pip, OSM, or median contract is a Vat ward: wards() answers 1 only for the Jug 0x8276a38e484771ee1b14c60aaa85ab2147e5eb0b and the XT-A GemJoin 0xdec7d8fe3955ccbeb009e366c583fba2a9b63d2e, and 0 for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab, the vow 0x73c190d6be81bbe3cbe96bb83d8ab66f1c645160, the CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99, the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc, and WXT 0x4b681a704664ce482c45ec16ac9ecc9b121fb037. Neither ward exposes a spot-poke path, and the Median-OSM-Spotter stack deployed on XSC is wired to the legacy TAI token 0x775c4bc7…, not to XTUSD or this Vat. Not-published: feed provider, feed address, heartbeat, staleness bound, and failover for the live path.",
+            "address": "0xf9d4810f1b140d869d2f92ca8da1755ea55e786b",
+            "chain": "xsc",
+            "observedAt": "2026-08-09",
+            "observedBlock": 48211240,
+            "failureDomainKeys": [
+              "xtdao-vat-spot-unwired",
+              "xt-com-issuer-operations",
+              "xsc"
+            ]
+          }
+        ],
         "fallbackBehavior": "No oracle feed is identifiable on the live path. Among all probed system contracts (deployer, DaiJoin, CDP manager, Jug, GemJoin), only the Jug and the XT-A GemJoin are Vat wards at block 48187434, and neither exposes a file/poke that can update Vat.spot, so the XT-A spot of 3.4780667 ray has no identified on-chain update mechanism, no heartbeat, and no staleness rejection. The Median→OSM→Spotter stack visible on XSC is wired only to the legacy TAI deployment (token 0x775c4bc7…), not to the XTUSD token 0x1a6131ea… or the live Vat, and the issuer announcement names no oracle provider, feed address, heartbeat, or failover. Not-published: any feed identity or failover for the live path.",
         "observedAt": "2026-08-08",
         "observedBlock": 48187434,
@@ -104,7 +119,8 @@
             "note": "The 150% minimum collateral ratio and 3% annual fee come from the issuer's 2022 launch announcement, not from a live Spotter read — the live Vat has no Spotter ward, so mat is not readable on-chain (the Jug duty independently matches 3.0000% annualized at block 48187434). Live Vat ilk XT-A parameters, re-read on two independent XSC RPCs (datarpc1, datarpc2) at block 48187434: line 1,000,000,000 XTUSD (1e54 rad), dust 10 XTUSD (1e46 rad), spot 3.4780667 ray, rate 1.1097688381727833 ray, Art 4,325,685.429106 — Vat-internal debt Art×rate = 4,800,510.89 XTUSD against a global Line of 2,000,000,000 XTUSD, so the ilk ceiling matches the announced 1,000,000,000 XTUSD design and is not breached. debtSharePct 100 rests on XT-A being the only debt-bearing ilk observed across four years of system transactions; DSS ilks cannot be enumerated by direct reads."
           }
         ],
-        "liquidationMechanism": "The issuer announcement describes an auction mechanism that handles risky vaults, but no liquidation module (Maker-style Cat/Dog or Flip/Clip auction contract) is a current Vat ward at block 48187434 — only the Jug and the XT-A GemJoin are authorized, and vault collateral seizure (Vat.grab) requires Vat auth — so no on-chain liquidation path is operable on the live deployment. Liquidation trigger conditions, auction parameters, and any liquidation delay are not published.",
+        "liquidationMechanism": "The issuer announcement describes an auction mechanism that handles risky vaults, but no liquidation module (Maker-style Cat/Dog or Flip/Clip auction contract) is a current Vat ward at block 48187434 — only the Jug and the XT-A GemJoin are authorized, and vault collateral seizure (Vat.grab) requires Vat auth — so no on-chain liquidation path is operable on the live deployment. No liquidation timer, grace period, or auction window stands on that path either, because no module exists to start one: liquidationDelaySec 0 records the absence of a delay parameter, not an ability to liquidate promptly. Not-published: liquidation trigger conditions and auction parameters.",
+        "liquidationDelaySec": 0,
         "backstop": "The Jug's vow() resolves to 0x73c190d6be81bbe3cbe96bb83d8ab66f1c645160, so Vat-internal surplus/debt accounting exists, but no flapper/flopper auction pair, stability pool, insurance fund, or committed bad-debt buyer was identified among authorized contracts, and the issuer publishes none. Not-published: any auction-based or fund-based liquidation backstop.",
         "shutdownOrBadDebtBehavior": "Vat.live() = 1 at block 48187434 and no global-settlement (End-like) module is authorized on the live Vat; the issuer publishes no shutdown, settlement, write-off, or bad-debt socialization procedure, and with no operable liquidation module an undercollateralized vault has no identified on-chain resolution path. Not-published: shutdown and bad-debt handling.",
         "debtSharePct": 100,
@@ -116,11 +132,11 @@
         ],
         "sources": [
           {
-            "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks('XT-A')/wards/Line, Jug duty/rho/vow, block 48187434, 2026-08-08)",
+            "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks('XT-A')/wards/Line, Jug duty/rho/vow, block 48187434, 2026-08-08; ilks('XT-A') and Vat wards re-read at block 48211240, 2026-08-09)",
             "url": "https://datarpc1.xsc.pub"
           },
           {
-            "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks('XT-A') read, 2026-08-08)",
+            "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks('XT-A') read, 2026-08-08; corroborating ilks('XT-A') and Vat wards re-read at block 48211240, 2026-08-09)",
             "url": "https://datarpc2.xsc.pub"
           },
           {
@@ -153,6 +169,7 @@
   },
   "implementationLaunchDate": "2022-07-07",
   "custodyModel": "cex",
+  "governanceQuality": "immutable-code",
   "reserves": [
     {
       "name": "XT.com issuer-managed reserve assets",

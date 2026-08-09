@@ -374,6 +374,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",

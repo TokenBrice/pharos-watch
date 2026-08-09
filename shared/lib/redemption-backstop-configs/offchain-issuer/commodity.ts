@@ -176,28 +176,33 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
   },
   "ggbr-goldfish-gold": {
     ...commodityIssuerBase,
-    ...documentedBoundSupplyFull("2026-07-21"),
+    ...documentedBoundSupplyFull("2026-08-09"),
     routeStatus: "open",
-    costModel: documentedVariableFee(
-      "Goldfish lists no protocol redemption fee; physical-delivery shipping and insurance fees may apply",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Goldfish support FAQ: physical redemption fees range from 2% to 3% for processing and delivery, over a 250 g gold minimum conversion (8,818.49 GGBR)",
+      ),
+      feeBpsMin: 200,
+      feeBpsMax: 300,
+    },
     docs: [
-      sourceRef("Goldfish redemption dashboard", "https://app.goldfishgold.com/redemption", [
+      sourceRef("Goldfish redemption app", "https://app.goldfishgold.com/redemption", [
         "route",
         "capacity",
-        "fees",
         "access",
         "settlement",
       ]),
       sourceRef("Goldfish support and redemption FAQ", "https://goldfishgold.com/support", [
         "route",
         "capacity",
+        "fees",
         "access",
       ]),
       sourceRef("Goldfish whitepaper", "https://goldfishgold.com/whitepaper", ["route", "capacity"]),
     ],
     notes: [
-      "Modeled route is KYC-gated physical-gold redemption through the issuer dashboard; Goldfish lists vault storage or physical delivery and 5-7 business-day processing.",
+      "Modeled route is KYC-gated physical-gold redemption through the issuer app; the support FAQ (last updated 2026-06-17, re-read 2026-08-09) publishes a 250 g minimum conversion (8,818.49 GGBR), a 2%-3% processing and delivery fee, KYC verification, token burn on redemption, and fulfilment through regulated dealers including Monex.",
+      "Settlement timing and eligible jurisdictions are not published on Goldfish's public pages; the earlier five-to-seven-business-day figure came from the sign-in-gated redemption dashboard and could not be re-verified from public sources on 2026-08-09.",
     ],
   },
   "euroe-membrane": {

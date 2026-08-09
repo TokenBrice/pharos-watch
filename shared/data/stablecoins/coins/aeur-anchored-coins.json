@@ -216,6 +216,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Euro deposits at Swissquote Bank SA",

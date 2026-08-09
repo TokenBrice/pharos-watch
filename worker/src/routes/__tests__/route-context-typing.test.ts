@@ -161,7 +161,6 @@ describe("route context typing", () => {
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/reject")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies).toEqual([]);
-    expect(getDynamicRouteMatch("/api/admin-telegram-chat/-12345")?.dependencies).toEqual([]);
   });
 
   it("keeps static route dependency mapping centralized", () => {
@@ -196,9 +195,6 @@ describe("route context typing", () => {
     );
     expect(getDynamicEndpointDescriptorByKey("api-key-request-release-claim")?.routeDependencies).toEqual(
       getDynamicRouteMatch("/api/api-key-requests-admin/akr_abc12345/release-claim")?.dependencies,
-    );
-    expect(getDynamicEndpointDescriptorByKey("admin-telegram-chat")?.routeDependencies).toEqual(
-      getDynamicRouteMatch("/api/admin-telegram-chat/-12345")?.dependencies,
     );
   });
 });

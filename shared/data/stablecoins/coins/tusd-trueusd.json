@@ -818,6 +818,7 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
     "version": 1,

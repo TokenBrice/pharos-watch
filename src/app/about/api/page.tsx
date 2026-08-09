@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
 import { FaqSection } from "@/components/faq-section";
+import { markdownLinkComponent } from "@/components/markdown-link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
@@ -126,29 +127,7 @@ function MethodBadge({
 
 const inlineMarkdownComponents = {
   p: ({ children }: ComponentProps<"p">) => <>{children}</>,
-  a: ({ href, children }: ComponentProps<"a">) => {
-    if (!href) return <span>{children}</span>;
-    if (href.startsWith("/")) {
-      return (
-        <Link href={href} className="pharos-prose-link">
-          {children}
-        </Link>
-      );
-    }
-    if (!href.startsWith("http://") && !href.startsWith("https://")) {
-      return <span>{children}</span>;
-    }
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="pharos-prose-link"
-      >
-        {children}
-      </a>
-    );
-  },
+  a: markdownLinkComponent({ httpOnly: true }),
   code: InlineCode,
   strong: ({ children }: ComponentProps<"strong">) => (
     <strong className="font-semibold text-foreground">{children}</strong>

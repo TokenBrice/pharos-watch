@@ -4,7 +4,7 @@ import {
   getMechanismArchetypeLabel,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { slugifyId } from "@shared/lib/format";
+import { formatUtcDayLabel, slugifyId } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
@@ -296,12 +296,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
 function formatEventWindowDate(dateISO: string): string {
   const [year, month, day] = dateISO.split("T")[0].split("-").map(Number);
   if (!year || !month || !day) return dateISO;
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  return formatUtcDayLabel(new Date(Date.UTC(year, month - 1, day)));
 }
 
 function EvidenceSnapshot({ study }: { study: CaseStudy }) {

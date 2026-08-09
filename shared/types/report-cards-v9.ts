@@ -12,17 +12,17 @@ import {
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
+import { compareText } from "./safety-score-v9-fact-primitives";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 4;
-export const REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION = 3;
-export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 2;
-export const REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION = 1;
+
+// The report-v1/v2/v3 versions below are compatibility-reader literals only.
+// They had no consumer outside this file, so they are stated inline on the arm
+// that reads them (WS6.8, 2026-08-09) — see the retention-horizon note on
+// SafetyScoreV9ResponseSchema in ./safety-score-v9-public for when an arm and
+// its version may be retired together.
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -315,7 +315,7 @@ function refineReportCardsV9Response(
 export const ReportCardsV9LegacyResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION),
+    schemaVersion: z.literal(1),
     cards: z.array(SafetyScoreV9PreviousCardSchema),
   })
   .strict()
@@ -328,7 +328,7 @@ export type ReportCardsV9LegacyResponse = z.infer<
 export const ReportCardsV9PreviousResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION),
+    schemaVersion: z.literal(2),
     cards: z.array(SafetyScoreV9CausalCardSchema),
   })
   .strict()
@@ -341,7 +341,7 @@ export type ReportCardsV9PreviousResponse = z.infer<
 export const ReportCardsV9PreBreakdownResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION),
+    schemaVersion: z.literal(3),
     publicationHealth: V9PublicationHealthSchema,
     cards: z.array(SafetyScoreV9PreBreakdownCardSchema),
   })

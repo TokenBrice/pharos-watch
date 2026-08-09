@@ -6,6 +6,7 @@ import {
   buildStablecoinDetailMetadata,
   getMarkdownAlternateForCanonical,
 } from "@/lib/page-metadata";
+import digests from "../../../data/digests.json";
 
 const fixtures = vi.hoisted(() => {
   const active = {
@@ -96,6 +97,15 @@ describe("buildPageMetadata", () => {
     expect(getMarkdownAlternateForCanonical("/changelog/")).toBe("/changelog/index.md");
     expect(getMarkdownAlternateForCanonical("/learn/glossary/")).toBeNull();
     expect(getMarkdownAlternateForCanonical("/stablecoin/not-a-coin/")).toBeNull();
+  });
+
+  it("advertises digest archive markdown alternates for known dates only", () => {
+    const knownDigestDate = (digests as readonly { date: string }[])[0].date;
+
+    expect(getMarkdownAlternateForCanonical(`/digest/${knownDigestDate}/`)).toBe(
+      `/digest/${knownDigestDate}/index.md`,
+    );
+    expect(getMarkdownAlternateForCanonical("/digest/1999-01-01/")).toBeNull();
   });
 
   it("places markdown alternates under metadata alternates.types", () => {

@@ -2,7 +2,7 @@ import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-me
 import { resolveChainId } from "@shared/lib/chains";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -15,28 +15,17 @@ import {
 } from "@shared/types/dependency-types";
 import type {
   BlacklistabilityReview,
-  BridgeRouteDeployment,
-  BridgeRouteRiskProfile,
   DependencyReview,
   DependencyWeight,
   MintAuthorityControl,
   MintAuthorityEconomicCapSemantics,
   MintAuthorityProfile,
-  OracleRiskBranch,
-  OracleRiskProfile,
-  OracleRiskTier,
-  StablecoinLink,
-  StablecoinMeta,
 } from "@shared/types/core";
-import { ORACLE_RISK_TIER_VALUES } from "@shared/types/core";
-import type { V9FactStatusV2, V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
+import type { V9FailureDomainRef } from "@shared/types/safety-score-v9-facts";
 import {
-  RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
-  validateReserveCompositionTotal,
   type ReserveSlice,
 } from "@shared/types/reserves";
 import {
-  computeSafetyScoreV9ReserveExposureKey,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
 import {
@@ -50,7 +39,6 @@ import {
   getSafetyScoreV9OperationalResilienceOverlay,
   SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-operational-resilience";
-import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
 import {
   computeSafetyScoreV9ReviewedTransferFactsDigest,
   resolveSafetyScoreV9ReviewedTransferFact,
@@ -60,18 +48,12 @@ import {
   type SafetyScoreV9TransferMaterialScope,
 } from "./safety-score-v9-extension-transfer";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "./safety-score-v9-extension-routes";
 import {
   buildSafetyScoreV9SupplyReview,
-  safetyScoreV9RouteSupplyShare,
-  V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
-  V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
-  V9_UNMATCHED_CHAIN_ROUTE_PREFIX,
-  V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -81,32 +63,42 @@ import {
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplySourceGenerationId,
 } from "./safety-score-v9-supply-attribution";
+import { adaptBridgeReview } from "./safety-score-v9-extension-bridge";
+import { adaptOracleReview, deriveOracleBranchMateriality } from "./safety-score-v9-extension-oracle";
+import {
+  addReserveClassificationEvidence,
+  addReviewedStaticReserveEvidence,
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+  buildSafetyScoreV9ReviewedStandaloneReserveRows,
+  buildSafetyScoreV9ReviewedStaticReserveRows,
+  dependencyReserveSlices,
+} from "./safety-score-v9-extension-reserves";
+import {
+  ReviewEvidenceBuilder,
+  accessEvidenceObservationState,
+  boundedObservedAt,
+  confidenceForResearch,
+  conservativeDateEndSec,
+  maximumObservedAt,
+  requiredStatus,
+  researchReviewObservationState,
+  reviewedObservationState,
+  type ControlOverlay,
+  type ExtensionAsset,
+  type V9ExtensionRegistryMeta,
+  DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
+} from "./safety-score-v9-extension-shared";
 
-export type V9ExtensionRegistryMeta = Pick<
-  StablecoinMeta,
-  | "id"
-  | "variantOf"
-  | "variantKind"
-  | "wrapperOperator"
-  | "archetypeOverride"
-  | "mechanismArchetype"
-  | "implementationLaunchDate"
-  | "launchDate"
-  | "reserves"
-  | "reserveReview"
-  | "custodyProfile"
-  | "liveReservesConfig"
-  | "proofOfReserves"
-  | "genius"
-  | "dependencies"
-  | "dependencyReview"
-  | "mintAuthority"
-  | "oracleRisk"
-  | "bridgeRouteRisk"
-  | "blacklistabilityReview"
-  | "contracts"
-> &
-  Partial<Pick<StablecoinMeta, "flags">>;
+// The registry-meta projection now lives beside the adapters that read it.
+export type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
+export { deriveOracleBranchMateriality };
+export {
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+  buildSafetyScoreV9ReviewedStandaloneReserveRows,
+  buildSafetyScoreV9ReviewedStaticReserveRows,
+};
 
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
@@ -131,27 +123,6 @@ interface PreparedDependency {
   issueCodes: string[];
 }
 
-type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
-type ResearchEvidence = ExtensionAsset["researchEvidence"][number];
-type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
-type ControlOverlay = NonNullable<
-  Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>
->["controls"][number];
-type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
-
-// Identity tolerance for joining a live reserve slice to its reviewed
-// classification. Name equality (with the surrounding 1:1 bijection guards)
-// carries slice identity; the weight check only rejects gross mismatches.
-// Live compositions drift daily (2026-07-18: USDC T-bills moved 2.0pp in two
-// days, severing every fiat classification under the prior 0.5), so the
-// bound must tolerate normal rebalancing. Weights used for scoring always
-// come from the live row, never the reviewed one.
-const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 5;
-const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
-// RULED D-J (2026-07-19): below this floor the unrecognized-chain-label pool is
-// a bounded/diagnostic condition; at or above it the pool stays fail-closed.
-const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
 
 const ISSUER_ENTITY_STOPWORDS = new Set([
   "llc",
@@ -250,539 +221,7 @@ export function resolveSafetyScoreV9AssetIssuerKey(
   return null;
 }
 
-function normalizedReserveName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "");
-}
 
-function reserveSlicesMatch(left: ReserveSlice, right: ReserveSlice): boolean {
-  const normalizedName = normalizedReserveName(left.name);
-  return (
-    normalizedName.length > 0 &&
-    normalizedName === normalizedReserveName(right.name) &&
-    Math.abs(left.pct - right.pct) <= RESERVE_WEIGHT_MATCH_TOLERANCE_PCT
-  );
-}
-
-function overlayReviewedReserveClassification(
-  classification: ReserveClassification,
-  live: ReserveSlice,
-  reviewed: ReserveSlice,
-  reviewKey: string,
-  reviewedNonLink: boolean,
-): ReserveClassification {
-  const assetClass = live.assetClass ?? reviewed.assetClass ?? null;
-  const issuerOrObligorKey =
-    live.issuerOrObligor ?? reviewed.issuerOrObligor ?? (reviewed.coinId ? `asset:${reviewed.coinId}` : null);
-  const riskFactors = live.riskFactors?.length ? [...live.riskFactors] : [...(reviewed.riskFactors ?? [])];
-  const liquidityHorizon = live.liquidityHorizon ?? reviewed.liquidityHorizon ?? null;
-  const maturityDaysMax = live.maturityDaysMax ?? reviewed.maturityDaysMax ?? null;
-  const trackedAssetId = live.coinId ?? reviewed.coinId ?? null;
-  const usesReviewedMetadata =
-    (live.assetClass == null && reviewed.assetClass != null) ||
-    (live.issuerOrObligor == null && (reviewed.issuerOrObligor != null || reviewed.coinId != null)) ||
-    (live.coinId == null && reviewed.coinId != null) ||
-    (!live.riskFactors?.length && Boolean(reviewed.riskFactors?.length)) ||
-    (live.liquidityHorizon == null && reviewed.liquidityHorizon != null) ||
-    (live.maturityDaysMax == null && reviewed.maturityDaysMax != null);
-
-  if (!usesReviewedMetadata && !reviewedNonLink) return classification;
-  return {
-    ...classification,
-    classificationKey: `registry-reviewed:${classification.exposureKey}:${reviewKey}`,
-    assetClass,
-    issuerOrObligorKey,
-    riskFactors: [...new Set(riskFactors)].sort(compareText),
-    liquidityHorizon,
-    maturityDaysMax,
-    ...(reviewedNonLink
-      ? { trackedAssetId: null }
-      : trackedAssetId
-        ? { trackedAssetId }
-        : {}),
-    ...(reviewedNonLink ? { trackedAssetDisposition: "reviewed-non-link" as const } : {}),
-    failureDomains: issuerOrObligorKey
-      ? [{ kind: "reserve-issuer", key: issuerOrObligorKey }]
-      : classification.failureDomains,
-  };
-}
-
-interface ReviewedReserveMatch {
-  liveIndex: number;
-  reviewedIndex: number;
-  reviewed: ReserveSlice;
-}
-
-function reviewedReserveMatches(
-  liveReserves: readonly ReserveSlice[],
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReviewedReserveMatch[] {
-  const reviewedReserves = meta.reserves ?? [];
-  const review = meta.reserveReview;
-  const reviewedAtSec = review ? Date.parse(`${review.reviewedAt}T00:00:00.000Z`) / 1_000 : Number.NaN;
-  const compositionAsOfSec = review?.compositionAsOf
-    ? Date.parse(`${review.compositionAsOf}T00:00:00.000Z`) / 1_000
-    : null;
-  if (
-    reviewedReserves.length === 0 ||
-    review?.scope !== "full-composition" ||
-    review.confidence === "unknown" ||
-    !Number.isFinite(reviewedAtSec) ||
-    reviewedAtSec > clockSec ||
-    (compositionAsOfSec !== null && (!Number.isFinite(compositionAsOfSec) || compositionAsOfSec > clockSec))
-  ) {
-    return [];
-  }
-  const reviewedCandidatesByLive = liveReserves.map((live) =>
-    reviewedReserves
-      .map((reviewed, reviewedIndex) => ({ reviewed, reviewedIndex }))
-      .filter(({ reviewed }) => reserveSlicesMatch(live, reviewed)),
-  );
-  const liveCandidateCountByReviewed = reviewedReserves.map(
-    (reviewed) => liveReserves.filter((live) => reserveSlicesMatch(live, reviewed)).length,
-  );
-  return reviewedCandidatesByLive.flatMap((candidates, liveIndex) => {
-    if (candidates.length !== 1) return [];
-    const candidate = candidates[0]!;
-    return liveCandidateCountByReviewed[candidate.reviewedIndex] === 1
-      ? [{ liveIndex, reviewedIndex: candidate.reviewedIndex, reviewed: candidate.reviewed }]
-      : [];
-  });
-}
-
-function dependencyReserveSlices(
-  liveReserves: readonly ReserveSlice[],
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReserveSlice[] {
-  const reviewedMatches = reviewedReserveMatches(liveReserves, meta, clockSec);
-  const reviewedByLiveIndex = new Map(
-    reviewedMatches.map((match) => [match.liveIndex, match.reviewed]),
-  );
-  const nonLinkReviewedIndexes = new Set(
-    meta.reserveReview?.nonLinkDispositions?.map((disposition) => disposition.reserveIndex) ?? [],
-  );
-  const nonLinkLiveIndexes = new Set(
-    reviewedMatches
-      .filter((match) => nonLinkReviewedIndexes.has(match.reviewedIndex))
-      .map((match) => match.liveIndex),
-  );
-  return liveReserves.map((slice, liveIndex) => {
-    if (nonLinkLiveIndexes.has(liveIndex)) {
-      const { coinId: _coinId, depType: _depType, ...unlinked } = slice;
-      return unlinked;
-    }
-    const reviewed = reviewedByLiveIndex.get(liveIndex);
-    if (!reviewed?.coinId || slice.coinId) return slice;
-    return {
-      ...slice,
-      coinId: reviewed.coinId,
-      ...(reviewed.depType ? { depType: reviewed.depType } : {}),
-    };
-  });
-}
-
-/**
- * Bridges reviewed registry classifications onto exact live reserve identities.
- * Matching is deliberately one-to-one and ignores rows whose names or rounded
- * weights no longer describe the same exposure.
- */
-export function buildReviewedReserveClassifications(
-  liveReserves: readonly ReserveSlice[],
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReserveClassification[] {
-  const classifications = buildSafetyScoreV9ReserveClassifications(liveReserves);
-  const review = meta.reserveReview;
-  if (!review) return classifications;
-  const nonLinkReviewedIndexes = new Set(
-    review.nonLinkDispositions?.map((disposition) => disposition.reserveIndex) ?? [],
-  );
-  const reviewedByExposureKey = new Map<string, { reviewed: ReserveSlice; reviewedNonLink: boolean }>();
-  const liveByExposureKey = new Map(liveReserves.map((live) => [computeSafetyScoreV9ReserveExposureKey(live), live]));
-
-  for (const match of reviewedReserveMatches(liveReserves, meta, clockSec)) {
-    const exposureKey = computeSafetyScoreV9ReserveExposureKey(liveReserves[match.liveIndex]!);
-    reviewedByExposureKey.set(exposureKey, {
-      reviewed: match.reviewed,
-      reviewedNonLink: nonLinkReviewedIndexes.has(match.reviewedIndex),
-    });
-  }
-
-  const reviewKey = domainDigest("safety-score-v9.reserve-classification-review.v1", review).slice(0, 16);
-  return classifications.map((classification) => {
-    const live = liveByExposureKey.get(classification.exposureKey);
-    const match = reviewedByExposureKey.get(classification.exposureKey);
-    return live && match
-      ? overlayReviewedReserveClassification(
-          classification,
-          live,
-          match.reviewed,
-          reviewKey,
-          match.reviewedNonLink,
-        )
-      : classification;
-  });
-}
-
-type ReviewedStaticReserveRows = NonNullable<ExtensionAsset["reviewedStaticReserveRows"]>;
-
-const CORROBORATING_ASSURANCE_METHODS = new Set([
-  "audit",
-  "examination",
-  "review",
-  "agreed-upon-procedures",
-  "attestation",
-]);
-const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
-const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
-const REVIEWED_CURATED_RESERVE_MAX_AGE_SEC = 31 * 86_400;
-const UNRESOLVED_CURATED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
-
-function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
-  const sorted = [...rows].sort(
-    (left, right) =>
-      compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
-      compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
-  );
-  const totalPct = sorted.reduce((sum, row) => sum + row.pct, 0);
-  if (totalPct === 100) return sorted;
-  if (Math.abs(totalPct - 100) > RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT) {
-    throw new Error("Issuer-attested reserve normalization exceeded the approved composition tolerance");
-  }
-  const scale = 100 / totalPct;
-  let normalizedPct = 0;
-  return sorted.map((row, index) => {
-    const pct = index === sorted.length - 1 ? 100 - normalizedPct : row.pct * scale;
-    normalizedPct += pct;
-    return { ...row, pct };
-  });
-}
-
-function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): boolean {
-  const review = meta.reserveReview;
-  const report = meta.proofOfReserves?.latestReport;
-  if (!review || !report) return false;
-  const reportSourceUrls = new Set(report.sources.map((source) => source.url));
-  const transparencyIndexUrl = meta.proofOfReserves?.url;
-  return (
-    review.confidence === "verified" &&
-    report.confidence === "verified" &&
-    DIRECT_RESERVE_ASSURANCE_METHODS.has(report.assuranceMethod) &&
-    report.scope === "assets-and-liabilities" &&
-    report.liabilityReconciliation === "full" &&
-    review.sources.some(
-      (source) =>
-        reportSourceUrls.has(source.url) &&
-        source.url !== transparencyIndexUrl,
-    )
-  );
-}
-
-/**
- * D6: admit reviewed static rows only when an independent attestor corroborates
- * a prudential issuer. Rows directly reconciled by a verified audit or
- * examination retain independent evidence strength; corroborated issuer rows
- * keep the candidate policy's confidence haircut.
- */
-export function buildSafetyScoreV9ReviewedStaticReserveRows(
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReviewedStaticReserveRows | null {
-  const rows = meta.reserves ?? [];
-  const review = meta.reserveReview;
-  const proof = meta.proofOfReserves;
-  const report = proof?.latestReport;
-  const attestorIndependent =
-    proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
-  const reviewAtSec = review ? conservativeDateEndSec(review.reviewedAt, clockSec) : null;
-  const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
-  const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
-  const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
-  if (
-    rows.length === 0 ||
-    review?.scope !== "full-composition" ||
-    review.confidence === "unknown" ||
-    review.sources.length === 0 ||
-    reviewAtSec === null ||
-    compositionAtSec === null ||
-    !validateReserveCompositionTotal(rows, "full") ||
-    meta.mintAuthority?.supervision !== "prudential" ||
-    proof?.type !== "independent-audit" ||
-    !attestorIndependent ||
-    !proof.provider?.trim() ||
-    report === undefined ||
-    report.confidence === "unknown" ||
-    report.sources.length === 0 ||
-    reportAtSec === null ||
-    periodEndSec === null ||
-    compositionAtSec !== periodEndSec ||
-    reportAtSec < periodEndSec ||
-    clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC ||
-    !CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod)
-  ) {
-    return null;
-  }
-  const evidenceClass = hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested";
-  return {
-    rows: normalizeReviewedStaticReserveRows(rows),
-    evidenceClass,
-    provenance: "curated",
-  };
-}
-
-/**
- * Validate a reviewed registry composition shared by the fallback and
- * standalone admission paths. This is weaker than direct assurance and
- * therefore retains the policy's static-evidence confidence discount.
- */
-function buildSafetyScoreV9ReviewedCuratedReserveRows(
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-  provenance: "curated" | "curated-fallback",
-): ReviewedStaticReserveRows | null {
-  const rows = meta.reserves ?? [];
-  const review = meta.reserveReview;
-  const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
-  const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
-  if (
-    rows.length === 0 ||
-    review?.scope !== "full-composition" ||
-    review.confidence !== "verified" ||
-    review.knownUnknownExposurePct !== 0 ||
-    review.nonLinkDispositions?.some((disposition) =>
-      UNRESOLVED_CURATED_RESERVE_DISPOSITIONS.has(disposition.disposition),
-    ) === true ||
-    review.sources.length === 0 ||
-    reviewedAtSec === null ||
-    compositionAtSec === null ||
-    reviewedAtSec < compositionAtSec ||
-    clockSec - compositionAtSec > REVIEWED_CURATED_RESERVE_MAX_AGE_SEC ||
-    !validateReserveCompositionTotal(rows, "full")
-  ) {
-    return null;
-  }
-  return {
-    rows: normalizeReviewedStaticReserveRows(rows),
-    evidenceClass: "static-validated",
-    provenance,
-  };
-}
-
-export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReviewedStaticReserveRows | null {
-  if (meta.liveReservesConfig == null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback");
-}
-
-/**
- * Assets without a live-reserve producer may use the same tightly bounded
- * reviewed composition as a static input. Wrappers remain parent-inherited so
- * a child cannot duplicate or replace the parent's backing facts.
- */
-export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
-  meta: V9ExtensionRegistryMeta,
-  clockSec: number,
-): ReviewedStaticReserveRows | null {
-  if (meta.liveReservesConfig != null || meta.variantOf != null) return null;
-  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated");
-}
-
-function addReviewedStaticReserveEvidence(
-  meta: V9ExtensionRegistryMeta,
-  admitted: ReviewedStaticReserveRows | null,
-  evidence: ReviewEvidenceBuilder,
-): void {
-  const review = meta.reserveReview;
-  if (!admitted || !review) return;
-  if (admitted.evidenceClass === "static-validated") {
-    evidence.add({
-      componentKeys: [
-        "reviewed-static-reserves",
-        ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
-      ],
-      sourceId:
-        admitted.provenance === "curated-fallback"
-          ? "stablecoin-meta.reviewed-curated-fallback-reserves"
-          : "stablecoin-meta.reviewed-standalone-reserves",
-      reviewedAt: review.compositionAsOf!,
-      confidence: confidenceForResearch(review.confidence),
-      sources: review.sources,
-      payload: {
-        reserveReview: review,
-        reserves: admitted.rows,
-        evidenceClass: admitted.evidenceClass,
-        provenance: admitted.provenance,
-      },
-      maxAgeSec: REVIEWED_CURATED_RESERVE_MAX_AGE_SEC,
-    });
-    return;
-  }
-  const report = meta.proofOfReserves?.latestReport;
-  if (!report) return;
-  const sources = [...review.sources, ...report.sources].filter(
-    (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
-  );
-  evidence.add({
-    componentKeys: [
-      "reviewed-static-reserves",
-      ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
-    ],
-    sourceId: "stablecoin-meta.reviewed-static-reserves",
-    reviewedAt: report.periodEnd,
-    confidence: confidenceForResearch(report.confidence),
-    sources,
-    payload: {
-      reserveReview: review,
-      reserves: admitted.rows,
-      proofOfReserves: meta.proofOfReserves,
-      evidenceClass: admitted.evidenceClass,
-      provenance: admitted.provenance,
-    },
-    maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
-  });
-}
-
-function addReserveClassificationEvidence(
-  meta: V9ExtensionRegistryMeta,
-  classifications: readonly ReserveClassification[],
-  evidence: ReviewEvidenceBuilder,
-): void {
-  const review = meta.reserveReview;
-  const reviewed = classifications.filter((classification) =>
-    classification.classificationKey.startsWith("registry-reviewed:"),
-  );
-  if (!review || reviewed.length === 0) return;
-  evidence.add({
-    componentKeys: reviewed.map((classification) => `reserve-classification:${classification.exposureKey}`),
-    sourceId: "stablecoin-meta.reserve-review",
-    reviewedAt: review.reviewedAt,
-    confidence: confidenceForResearch(review.confidence),
-    sources: review.sources,
-    payload: { reserveReview: review, reserves: meta.reserves ?? [] },
-  });
-}
-
-function isoDateStartSec(value: string, clockSec: number, label: string): number {
-  const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
-  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid review date`);
-  const timestampSec = Math.floor(timestampMs / 1_000);
-  if (timestampSec > clockSec) throw new Error(`Safety Score v9 ${label} review is later than the scoring clock`);
-  return timestampSec;
-}
-
-function confidenceForResearch(
-  value: "verified" | "probable" | "manual-review" | "limited" | "unknown" | undefined,
-): ResearchEvidence["confidence"] {
-  return value ?? "manual-review";
-}
-
-class ReviewEvidenceBuilder {
-  readonly evidence = new Map<string, ResearchEvidence>();
-  readonly bindings = new Map<string, Set<string>>();
-
-  constructor(
-    private readonly assetId: string,
-    private readonly clockSec: number,
-  ) {}
-
-  add(args: {
-    componentKeys: readonly string[];
-    sourceId: string;
-    reviewedAt: string;
-    confidence?: ResearchEvidence["confidence"];
-    sources?: readonly StablecoinLink[];
-    payload: unknown;
-    maxAgeSec?: number | null;
-  }): string[] {
-    const observedAtSec = isoDateStartSec(args.reviewedAt, this.clockSec, `${this.assetId}:${args.sourceId}`);
-    const sources = args.sources?.length
-      ? [...args.sources].sort(
-          (left, right) => compareText(left.url, right.url) || compareText(left.label, right.label),
-        )
-      : [null];
-    const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v1", {
-        assetId: this.assetId,
-        sourceId: args.sourceId,
-        reviewedAt: args.reviewedAt,
-        confidence: args.confidence ?? "manual-review",
-        source,
-        payload: args.payload,
-      });
-      const evidenceKey = `${args.sourceId}:${index}:${contentSha256.slice(0, 16)}`;
-      this.evidence.set(evidenceKey, {
-        evidenceKey,
-        sourceId: args.sourceId,
-        observedAtSec,
-        publishedAtSec: null,
-        url: source?.url ?? null,
-        contentSha256,
-        confidence: args.confidence ?? "manual-review",
-        maxAgeSec: args.maxAgeSec ?? null,
-      });
-      return evidenceKey;
-    });
-    for (const componentKey of args.componentKeys) {
-      const binding = this.bindings.get(componentKey) ?? new Set<string>();
-      for (const evidenceKey of evidenceKeys) binding.add(evidenceKey);
-      this.bindings.set(componentKey, binding);
-    }
-    return evidenceKeys;
-  }
-
-  finish(): { researchEvidence: ResearchEvidence[]; componentEvidence: ComponentEvidence[] } {
-    return {
-      researchEvidence: [...this.evidence.values()].sort((left, right) =>
-        compareText(left.evidenceKey, right.evidenceKey),
-      ),
-      componentEvidence: [...this.bindings.entries()]
-        .sort(([left], [right]) => compareText(left, right))
-        .map(([componentKey, evidenceKeys]) => ({
-          componentKey,
-          evidenceKeys: [...evidenceKeys].sort(compareText),
-        })),
-    };
-  }
-}
-
-function requiredStatus(
-  policyRuleId: string,
-  observationState: V9FactStatusV2["observationState"],
-  componentKey: string,
-  evidenceKeys: readonly string[] = [],
-): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId, rationale: null, gapId: null },
-    observationState,
-    evidenceRefIds:
-      observationState === "known" || observationState === "stale" || observationState === "bounded-unknown"
-        ? [...evidenceKeys]
-        : [],
-    gapIds: observationState === "known" ? [] : [`extension-gap:${componentKey}`],
-  };
-}
-
-function notApplicableStatus(policyRuleId: string, rationale: string, evidenceKeys: readonly string[]): V9FactStatusV2 {
-  // The fact-set compiler rebinds statuses to research-overlay evidence; a
-  // sentinel id only satisfies the known-state evidence invariant until then.
-  return {
-    applicability: { state: "not-applicable", policyRuleId, rationale, gapId: null },
-    observationState: "known",
-    evidenceRefIds: evidenceKeys.length > 0 ? [...evidenceKeys] : [`extension-evidence:${policyRuleId}`],
-    gapIds: [],
-  };
-}
-
-function reviewedObservationState(confidence: ResearchEvidence["confidence"]): "known" | "bounded-unknown" | "missing" {
-  if (confidence === "verified" || confidence === "probable" || confidence === "manual-review") return "known";
-  return confidence === "limited" ? "bounded-unknown" : "missing";
-}
 
 function issuerAuthorityKey(assetId: string, control: MintAuthorityControl): string | null {
   if (control.authorityType !== "issuer-backend" && control.authorityType !== "custodian") return null;
@@ -936,35 +375,6 @@ function adaptMintControl(
   };
 }
 
-function boundedObservedAt(value: number | null | undefined, clockSec: number): number {
-  if (value == null || !Number.isFinite(value)) return clockSec;
-  return Math.max(0, Math.min(clockSec, Math.floor(value)));
-}
-
-function maximumObservedAt(values: readonly (number | null | undefined)[], fallback: number, clockSec: number): number {
-  const finite = values.filter((value): value is number => value != null && Number.isFinite(value));
-  return boundedObservedAt(finite.length > 0 ? Math.max(...finite) : fallback, clockSec);
-}
-
-function conservativeDateEndSec(value: string | undefined, clockSec: number): number | null {
-  if (!value) return null;
-  let timestampMs: number;
-  const quarterMatch = /^(\d{4})-Q([1-4])$/.exec(value);
-  if (quarterMatch) {
-    const [, year, quarter] = quarterMatch;
-    timestampMs = Date.UTC(Number(year), Number(quarter) * 3, 0, 23, 59, 59);
-  } else if (/^\d{4}$/.test(value)) {
-    timestampMs = Date.UTC(Number(value), 11, 31, 23, 59, 59);
-  } else if (/^\d{4}-\d{2}$/.test(value)) {
-    const [year, month] = value.split("-").map(Number);
-    timestampMs = Date.UTC(year!, month!, 0, 23, 59, 59);
-  } else {
-    timestampMs = Date.parse(value);
-  }
-  if (!Number.isFinite(timestampMs)) return null;
-  const timestampSec = Math.floor(timestampMs / 1_000);
-  return timestampSec <= clockSec ? timestampSec : null;
-}
 
 function dependencyFailureDomains(
   dependency: Pick<DependencyWeight, "id" | "type">,
@@ -1183,22 +593,6 @@ function addWrapperCustodyEvidence(meta: V9ExtensionRegistryMeta, evidence: Revi
   });
 }
 
-function accessEvidenceObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
-  const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1_000;
-  if (!Number.isFinite(reviewedAtSec)) throw new Error("Safety Score v9 access review has an invalid review date");
-  if (reviewedAtSec > clockSec) throw new Error("Safety Score v9 access review is later than the scoring clock");
-  return clockSec - reviewedAtSec <= V9_ACCESS_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
-}
-
-/**
- * Reviewed bridge/mint/oracle research shares the D11 review cadence. A review
- * older than the window supports no known claims: the fact degrades to stale
- * with its evidence still attached (mirroring the access-evidence treatment).
- */
-function researchReviewObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
-  const reviewedAtSec = isoDateStartSec(reviewedAt, clockSec, "research review");
-  return clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
-}
 
 function transferMaterialScope(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -1444,17 +838,6 @@ function adaptAccessReview(
   };
 }
 
-const ORACLE_BRANCH_ADAPTERS = [
-  ["feed", (branch: OracleRiskBranch) => (branch.feeds?.length ?? 0) > 0 || branch.fallbackBehavior != null],
-  ["collateral-parameter", (branch: OracleRiskBranch) => (branch.collateralParameters?.length ?? 0) > 0],
-  [
-    "liquidation",
-    (branch: OracleRiskBranch) => branch.liquidationMechanism != null || branch.liquidationDelaySec != null,
-  ],
-  ["backstop", (branch: OracleRiskBranch) => branch.backstop != null],
-  ["shutdown-bad-debt", (branch: OracleRiskBranch) => branch.shutdownOrBadDebtBehavior != null],
-] as const;
-
 function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegReference"] {
   // Pure NAV tokens track fund NAV by design: they have no fixed peg to
   // deviate from, so the peg fact is published not-applicable (the v8 pure
@@ -1477,554 +860,6 @@ function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegRe
   return { referenceKind: "fiat", referenceKey: pegCurrency, failureDomains: [] };
 }
 
-// A claim on identified metal has no oracle- or liquidation-dependent
-// stabilization path any more than a custodial cash claim does: nothing is
-// liquidated against a price feed, and the token-versus-metal spread is the peg
-// layer's measurement. `commodity-claim` was added here at the v9.14 phase-2
-// migration — phase 1 could not have caught the omission, because its
-// zero-coin guard meant no asset ever reached this branch on the new archetype.
-const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
-
-// V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
-// CDP should be graded on the per-market oracle branches that carry material
-// debt, not dragged to its worst branch regardless of that branch's size. The
-// lever is active only once at least one branch carries a measured share;
-// otherwise the reviewed aggregate tier stands (fail-safe for unmeasured
-// multi-branch profiles, so byte-held assets never move). Within an active
-// profile a branch is material when its measured share reaches the shared
-// deployment-materiality floor OR its share is unmeasured (fail-closed). Weak
-// branches below the floor stop driving the top tier but leave a graded,
-// non-binding diagnostic: >= the moderate floor -> moderate@74, else low.
-const ORACLE_BRANCH_MATERIAL_SHARE_PCT = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct;
-const ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT = 5;
-
-function isWeakOracleTier(tier: OracleRiskTier): boolean {
-  return tier === "single-source-or-laggy" || tier === "opaque-or-unknown";
-}
-
-export function deriveOracleBranchMateriality(
-  branches: readonly OracleRiskBranch[],
-  authoredTier: OracleRiskTier,
-): { tier: OracleRiskTier; subMaterialWeakBand?: "moderate" | "low" } {
-  const measured = branches.some((branch) => branch.debtSharePct !== undefined);
-  if (!measured) return { tier: authoredTier };
-  const isMaterial = (branch: OracleRiskBranch): boolean =>
-    branch.debtSharePct === undefined || branch.debtSharePct >= ORACLE_BRANCH_MATERIAL_SHARE_PCT;
-  const materialTiers = branches.filter(isMaterial).map((branch) => branch.tier);
-  const tier =
-    materialTiers.length === 0
-      ? authoredTier
-      : materialTiers.reduce((worst, candidate) =>
-          ORACLE_RISK_TIER_VALUES.indexOf(candidate) > ORACLE_RISK_TIER_VALUES.indexOf(worst) ? candidate : worst,
-        );
-  const subMaterialWeak = branches.filter(
-    (branch) => branch.debtSharePct !== undefined && !isMaterial(branch) && isWeakOracleTier(branch.tier),
-  );
-  if (subMaterialWeak.length === 0) return { tier };
-  const subMaterialWeakBand = subMaterialWeak.some(
-    (branch) => branch.debtSharePct! >= ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT,
-  )
-    ? "moderate"
-    : "low";
-  return { tier, subMaterialWeakBand };
-}
-
-function adaptOracleReview(
-  meta: V9ExtensionRegistryMeta,
-  archetype: string,
-  evidence: ReviewEvidenceBuilder,
-  clockSec: number,
-): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
-  const profile: OracleRiskProfile | undefined = meta.oracleRisk;
-  if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
-    if (!profile && ORACLE_FREE_ARCHETYPES.has(archetype)) {
-      return {
-        status: notApplicableStatus(
-          "v9.control.oracle-review",
-          `The ${archetype} mechanism archetype has no oracle- or liquidation-dependent stabilization path.`,
-          [],
-        ),
-        tier: null,
-        branches: [],
-      };
-    }
-    return {
-      status: requiredStatus("v9.control.oracle-review", "missing", `oracle:${meta.id}`),
-      tier: null,
-      branches: [],
-    };
-  }
-  const confidence = confidenceForResearch(profile.confidence);
-  const componentKeys = [
-    "economic-control:oracle",
-    ...ORACLE_BRANCH_ADAPTERS.map(([branch]) => `economic-control:oracle:${branch}`),
-  ];
-  const evidenceKeys = evidence.add({
-    componentKeys,
-    sourceId: "stablecoin-meta.oracle-risk",
-    reviewedAt: profile.reviewedAt,
-    confidence,
-    sources: profile.sources,
-    payload: profile,
-    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
-  });
-  if (researchReviewObservationState(profile.reviewedAt, clockSec) === "stale") {
-    return {
-      status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, evidenceKeys),
-      tier: null,
-      branches: [],
-    };
-  }
-  if (profile.branchApplicability?.disposition === "not-applicable") {
-    return {
-      status: notApplicableStatus("v9.control.oracle-review", profile.branchApplicability.rationale, evidenceKeys),
-      tier: null,
-      branches: [],
-    };
-  }
-  const topState =
-    profile.branchApplicability?.disposition === "branches-required"
-      ? reviewedObservationState(confidence)
-      : "bounded-unknown";
-  const branchesRequired =
-    profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
-  const materiality =
-    branchesRequired && topState !== "missing"
-      ? deriveOracleBranchMateriality(profile.branches!, profile.tier)
-      : { tier: profile.tier };
-  const branches =
-    profile.branchApplicability?.disposition === "branches-required" && profile.branches?.length
-      ? ORACLE_BRANCH_ADAPTERS.map(([branchKind, predicate]) => {
-          const complete = profile.branches!.every(predicate);
-          const state = complete ? reviewedObservationState(confidence) : "missing";
-          return {
-            branch: branchKind,
-            status: requiredStatus(
-              "v9.control.oracle-review",
-              state,
-              `oracle:${meta.id}:${branchKind}`,
-              state === "known" || state === "bounded-unknown" ? evidenceKeys : [],
-            ),
-            controlKey: null,
-            mechanismKey: complete
-              ? `oracle-mechanism:${meta.id}:${branchKind}:${domainDigest("safety-score-v9.oracle-branch.v1", {
-                  branchKind,
-                  branches: profile.branches,
-                }).slice(0, 16)}`
-              : null,
-            inheritedFromAssetId: null,
-          };
-        })
-      : [];
-  return {
-    status: requiredStatus(
-      "v9.control.oracle-review",
-      topState,
-      `oracle:${meta.id}`,
-      topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
-    ),
-    tier: topState === "missing" ? null : materiality.tier,
-    ...(materiality.subMaterialWeakBand !== undefined
-      ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
-      : {}),
-    branches,
-  };
-}
-
-function bridgeControl(
-  assetId: string,
-  route: BridgeRouteDeployment,
-  materialSupplyShare: number | null,
-): ControlOverlay | null {
-  if (route.routeClass === "native" || route.issuanceModel === "native-issuance") return null;
-  const capabilities: ControlOverlay["capabilities"] =
-    route.issuanceModel === "bridge-representation" || route.issuanceModel === "wrapped-representation"
-      ? ["bridge-mint"]
-      : [];
-  const authorityKey = route.controllerAddress
-    ? `${route.controllerChain}:${route.controllerAddress.toLowerCase()}`
-    : (route.failureDomainKeys?.[0] ?? `bridge-route:${route.id}`);
-  const mintsRepresentation = capabilities.includes("bridge-mint");
-  const reviewed = route.reviewDisposition === "reviewed";
-  return {
-    controlKey: `bridge-meta:${assetId}:${domainDigest("safety-score-v9.bridge-control-key.v1", route.id).slice(0, 20)}`,
-    deploymentKey: route.id,
-    controlKind: "bridge",
-    scope: "deployment",
-    capabilities,
-    capSemantics: !reviewed
-      ? { kind: "unknown", bound: null }
-      : mintsRepresentation
-        ? { kind: "unbounded", bound: null }
-        : { kind: "not-applicable", bound: null },
-    claimImpairment: !reviewed ? "unknown" : mintsRepresentation ? "unbounded" : "bounded",
-    economicLossScope: "deployment",
-    authority: { authorityKey, model: route.controllerAddress ? "contract" : "unknown", threshold: null },
-    delaySec: null,
-    materialSupplyShare,
-    // Bridge-route controls carry no reviewed key-custody or Safe-module facts;
-    // the mint-authority review owns both vocabularies.
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: reviewed ? "none" : "unknown",
-    failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id])
-      .map((key) => ({ kind: "bridge-route" as const, key }))
-      .sort((left, right) => compareText(left.key, right.key)),
-  };
-}
-
-function unmatchedBridgeControl(
-  assetId: string,
-  route: NonNullable<ExtensionAsset["supplyReview"]>["selectedBridgeRoutes"][number],
-): ControlOverlay {
-  return {
-    controlKey: `bridge-supply:${assetId}:${domainDigest("safety-score-v9.unmatched-bridge-control-key.v1", route.deploymentRouteKey).slice(0, 20)}`,
-    deploymentKey: route.deploymentRouteKey,
-    controlKind: "bridge",
-    scope: "deployment",
-    capabilities: [],
-    capSemantics: { kind: "unknown", bound: null },
-    claimImpairment: "unknown",
-    economicLossScope: "deployment",
-    authority: {
-      authorityKey: `bridge-route:${route.deploymentRouteKey}`,
-      model: "unknown",
-      threshold: null,
-    },
-    delaySec: null,
-    materialSupplyShare: route.supplyShare,
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: "unknown",
-    failureDomains: [{ kind: "bridge-route", key: route.deploymentRouteKey }],
-  };
-}
-
-function representationGroupId(
-  assetId: string,
-  deploymentRouteKey: string,
-): string | null {
-  const prefix = `${V9_REPRESENTATION_GROUP_ROUTE_PREFIX}${assetId}:`;
-  return deploymentRouteKey.startsWith(prefix) &&
-    deploymentRouteKey.length > prefix.length
-    ? deploymentRouteKey.slice(prefix.length)
-    : null;
-}
-
-function representationGroupBridgeControl(
-  assetId: string,
-  route: NonNullable<
-    ExtensionAsset["supplyReview"]
-  >["selectedBridgeRoutes"][number],
-  failureDomains: readonly V9FailureDomainRef[],
-): ControlOverlay {
-  const reviewed = route.reviewState === "selected-reviewed";
-  const authorityDomain =
-    failureDomains.find(
-      (domain) =>
-        domain.kind === "bridge-route" &&
-        domain.key.startsWith("contract:"),
-    ) ?? failureDomains[0];
-  return {
-    controlKey: `bridge-group:${assetId}:${domainDigest(
-      "safety-score-v9.representation-group-bridge-control-key.v1",
-      route.deploymentRouteKey,
-    ).slice(0, 20)}`,
-    deploymentKey: route.deploymentRouteKey,
-    controlKind: "bridge",
-    scope: "deployment",
-    capabilities: ["bridge-mint"],
-    capSemantics: reviewed
-      ? { kind: "unbounded", bound: null }
-      : { kind: "unknown", bound: null },
-    claimImpairment: reviewed ? "unbounded" : "unknown",
-    economicLossScope: reviewed ? "deployment" : "unknown",
-    authority: {
-      authorityKey:
-        authorityDomain?.key ??
-        `bridge-route:${route.deploymentRouteKey}`,
-      // The adapter contract is the observed common mechanism, not proof of
-      // the heterogeneous destination mint authorities.
-      model: "unknown",
-      threshold: null,
-    },
-    delaySec: null,
-    materialSupplyShare: route.supplyShare,
-    keyCustody: "unknown",
-    modulesOrGuards: "unknown",
-    incidentState: reviewed ? "none" : "unknown",
-    failureDomains: [...failureDomains].sort((left, right) =>
-      compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
-    ),
-  };
-}
-
-function canonicalRouteChain(routeId: string): string | null {
-  const separator = routeId.indexOf(":");
-  return separator > 0 ? resolveChainId(routeId.slice(0, separator)) : null;
-}
-
-/**
- * Proves that every unresolved exact deployment is independently below the
- * deployment threshold. Shares are intentionally not summed: each row has a
- * distinct deployment-scoped failure domain. Uncanonicalized raw labels are
- * the exception and arrive as one conservative pooled row.
- */
-function hasCompleteSubthresholdBridgeInventory(
-  profileRoutes: readonly BridgeRouteDeployment[],
-  controls: readonly ControlOverlay[],
-  supplyReview: ExtensionAsset["supplyReview"],
-): boolean {
-  if (supplyReview === null || supplyReview.selectedBridgeRoutes.length === 0) return false;
-  const rows = supplyReview.selectedBridgeRoutes;
-  const totalRowShare = rows.reduce((sum, row) => sum + row.supplyShare, 0);
-  const aggregateShare =
-    supplyReview.selectedRouteSupplyShare +
-    supplyReview.unreviewedRouteSupplyShare +
-    supplyReview.unknownRouteSupplyShare;
-  if (Math.abs(totalRowShare - 1) > 0.000001 || Math.abs(aggregateShare - 1) > 0.000001) return false;
-  if (rows.some((row) => row.deploymentRouteKey.startsWith(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX))) return false;
-
-  const controlCounts = new Map<string, number>();
-  const controlsByDeployment = new Map<string, ControlOverlay>();
-  for (const control of controls) {
-    controlCounts.set(control.deploymentKey, (controlCounts.get(control.deploymentKey) ?? 0) + 1);
-    controlsByDeployment.set(control.deploymentKey, control);
-  }
-  if ([...controlCounts.values()].some((count) => count !== 1)) return false;
-
-  const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
-  for (const row of rows) {
-    if (
-      row.deploymentRouteKey.startsWith(
-        V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
-      )
-    ) {
-      const control = controlsByDeployment.get(row.deploymentRouteKey);
-      if (
-        row.reviewState !== "selected-reviewed" ||
-        control === undefined ||
-        control.scope !== "deployment" ||
-        control.economicLossScope !== "deployment" ||
-        control.materialSupplyShare === null ||
-        Math.abs(control.materialSupplyShare - row.supplyShare) >
-          0.000001 ||
-        row.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD ||
-        row.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD
-      ) {
-        return false;
-      }
-      continue;
-    }
-    if (row.reviewState === "selected-reviewed") continue;
-    // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
-    // common-mode materiality floor is an accepted bounded row; the proof no
-    // longer requires its joined subthreshold control. At or above the floor
-    // the pool keeps the ordinary fail-closed join below.
-    if (
-      row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
-      row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD
-    ) {
-      continue;
-    }
-    const control = controlsByDeployment.get(row.deploymentRouteKey);
-    if (
-      control === undefined ||
-      control.scope !== "deployment" ||
-      control.economicLossScope !== "deployment" ||
-      control.materialSupplyShare === null ||
-      Math.abs(control.materialSupplyShare - row.supplyShare) > 0.000001 ||
-      control.materialSupplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
-    ) {
-      return false;
-    }
-  }
-
-  const presentCanonicalChains = new Set<string>();
-  for (const row of rows) {
-    if (row.deploymentRouteKey.startsWith(V9_UNMATCHED_CHAIN_ROUTE_PREFIX)) {
-      const scopedKey = row.deploymentRouteKey.slice(V9_UNMATCHED_CHAIN_ROUTE_PREFIX.length);
-      const separator = scopedKey.indexOf(":");
-      if (separator <= 0) return false;
-      presentCanonicalChains.add(scopedKey.slice(separator + 1));
-      continue;
-    }
-    if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) continue;
-    if (row.deploymentRouteKey.startsWith(V9_REPRESENTATION_GROUP_ROUTE_PREFIX)) continue;
-    const chain = canonicalRouteChain(row.deploymentRouteKey);
-    if (chain !== null) presentCanonicalChains.add(chain);
-  }
-
-  for (const route of profileRoutes) {
-    if (route.reviewDisposition === "reviewed") continue;
-    if (exactRowsByDeployment.has(route.id)) continue;
-    const chain = canonicalRouteChain(route.id);
-    const control = controlsByDeployment.get(route.id);
-    if (
-      chain === null ||
-      presentCanonicalChains.has(chain) ||
-      control === undefined ||
-      control.materialSupplyShare !== 0
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function adaptBridgeReview(
-  meta: V9ExtensionRegistryMeta,
-  supplyReview: ExtensionAsset["supplyReview"],
-  deployedChainCount: number,
-  evidence: ReviewEvidenceBuilder,
-  clockSec: number,
-): {
-  review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
-  controls: ControlOverlay[];
-} {
-  const profile: BridgeRouteRiskProfile | undefined = meta.bridgeRouteRisk;
-  if (!profile) {
-    if (deployedChainCount <= 1) {
-      return {
-        review: {
-          status: notApplicableStatus(
-            "v9.control.bridge-review",
-            "The exact captured supply is confined to one deployment; no bridge route carries the claim.",
-            [],
-          ),
-          routes: [],
-        },
-        controls: [],
-      };
-    }
-    return {
-      review: {
-        status: requiredStatus("v9.control.bridge-review", "missing", `bridge:${meta.id}`),
-        routes: [],
-      },
-      controls: [],
-    };
-  }
-  const confidence = confidenceForResearch(profile.confidence);
-  const reviewStale = researchReviewObservationState(profile.reviewedAt, clockSec) === "stale";
-  const evidenceKeys = evidence.add({
-    // A stale review still evidences the bridge fact itself, but it cannot
-    // carry known claims in the umbrella deployment-control inventory.
-    componentKeys: reviewStale ? ["economic-control:bridge"] : ["economic-control:bridge", "control"],
-    sourceId: "stablecoin-meta.bridge-route-risk",
-    reviewedAt: profile.reviewedAt,
-    confidence,
-    sources: profile.sources,
-    payload: profile,
-    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
-  });
-  if (reviewStale) {
-    return {
-      review: {
-        status: requiredStatus("v9.control.bridge-review", "stale", `bridge:${meta.id}`, evidenceKeys),
-        routes: [],
-      },
-      controls: [],
-    };
-  }
-  const profileRoutes = profile.routes ?? [];
-  const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
-  const representationGroups = (
-    supplyReview?.selectedBridgeRoutes ?? []
-  ).flatMap((row) => {
-    const representationId = representationGroupId(
-      meta.id,
-      row.deploymentRouteKey,
-    );
-    if (representationId === null) return [];
-    const members = profileRoutes.filter(
-      (route) => route.representationId === representationId,
-    );
-    const tiers = new Set(members.map((route) => route.riskTier));
-    if (
-      members.length === 0 ||
-      tiers.size !== 1 ||
-      members.some(
-        (route) =>
-          route.reviewDisposition !== "reviewed" ||
-          route.routeClass === "native" ||
-          route.issuanceModel !== "wrapped-representation" ||
-          route.semantics !== "lock-mint",
-      )
-    ) {
-      return [];
-    }
-    return [{
-      control: representationGroupBridgeControl(
-        meta.id,
-        row,
-        supplyReview?.failureDomains ?? [],
-      ),
-      routeIds: members.map((route) => route.id),
-      tier: [...tiers][0]!,
-    }];
-  });
-  const groupedRouteIds = new Set(
-    representationGroups.flatMap((group) => group.routeIds),
-  );
-  // Keep every non-native route as a control fact so exact deployment shares
-  // remain available even when the route review itself is unresolved.
-  const profileControls = profileRoutes
-    .filter((route) => !groupedRouteIds.has(route.id))
-    .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
-    .filter((control): control is ControlOverlay => control !== null);
-  const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
-    .filter((route) => route.reviewState === "unmatched")
-    .map((route) => unmatchedBridgeControl(meta.id, route));
-  const controls = [
-    ...profileControls,
-    ...representationGroups.map((group) => group.control),
-    ...unmatchedControls,
-  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
-  const controlsByDeployment = new Map(controls.map((control) => [control.deploymentKey, control]));
-  const routes = [
-    ...reviewedRoutes
-      .filter((route) => !groupedRouteIds.has(route.id))
-      .flatMap((route) => {
-        const control = controlsByDeployment.get(route.id);
-        return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
-      }),
-    ...representationGroups.map((group) => ({
-      controlKey: group.control.controlKey,
-      tier: group.tier,
-    })),
-  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
-  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
-  const onlyZeroShareUnroutedControls =
-    routes.length === 0 &&
-    controls.length > 0 &&
-    controls.every((control) => control.materialSupplyShare === 0);
-  // An unresolved registry deployment can remain as a zero-share audit fact
-  // while every selected supply route is reviewed native issuance. It does not
-  // make the asset bridge-exposed or require a synthetic bridge route row.
-  if (controls.length === 0 || (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls)) {
-    return {
-      review: {
-        status: notApplicableStatus(
-          "v9.control.bridge-review",
-          "Every reviewed deployment route is native issuance; no bridge control carries the claim.",
-          evidenceKeys,
-        ),
-        routes: [],
-      },
-      controls,
-    };
-  }
-  const state =
-    allMaterialRoutesReviewed && reviewedObservationState(confidence) === "known" ? "known" : "bounded-unknown";
-  return {
-    review: {
-      status: requiredStatus("v9.control.bridge-review", state, `bridge:${meta.id}`, evidenceKeys),
-      routes,
-    },
-    controls,
-  };
-}
 
 /**
  * Epoch second of the most recent *resolved* mint incident, bounded by the
@@ -2317,17 +1152,17 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     liveReserves: {
       generationId: `live-reserves:v1:${liveReservesGenerationDigest}`,
       observedAtSec: reserveObservedAtSec,
-      maxAgeSec: CRON_INTERVALS["sync-live-reserves"] * 2,
+      maxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-live-reserves"] * 2,
     },
     chainSupply: {
       generationId: chainSupplyGenerationId,
       observedAtSec: chainSupplyObservedAtSec,
-      maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
+      maxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-stablecoins"] * 2,
     },
     peg: {
       generationId: `peg:v1:${pegGenerationDigest}`,
       observedAtSec: pegObservedAtSec,
-      maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
+      maxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-stablecoins"] * 2,
     },
     researchOverlays: {
       generationId: `research-overlays:v3:${researchOverlaysGenerationDigest}`,
@@ -2347,8 +1182,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     compiledAtSec: clockSec,
     sources,
     routeFreshness: {
-      dexMaxAgeSec: CRON_INTERVALS["sync-dex-liquidity"] * 2,
-      redemptionMaxAgeSec: CRON_INTERVALS["sync-redemption-backstops"] * 2,
+      dexMaxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-dex-liquidity"] * 2,
+      redemptionMaxAgeSec: V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-redemption-backstops"] * 2,
       documentedTermsMaxAgeSec: SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec,
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {

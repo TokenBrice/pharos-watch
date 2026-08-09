@@ -146,14 +146,23 @@ async function resolveRawStatusForResponse(
   };
 }
 
-export function handleStatus(
-  db: D1Database,
-  trustedAdmin?: boolean,
-  request?: Request,
-  coingeckoApiKey?: string | null,
-  cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
-  workerCanaryMode: WorkerCanaryMode = "off",
-): Promise<Response> {
+export interface StatusRouteContext {
+  db: D1Database;
+  request?: Request;
+  trustedAdmin?: boolean;
+  coingeckoApiKey?: string | null;
+  cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
+  workerCanaryMode?: WorkerCanaryMode;
+}
+
+export function handleStatus({
+  db,
+  trustedAdmin,
+  request,
+  coingeckoApiKey,
+  cloudflareD1StatusBindings,
+  workerCanaryMode = "off",
+}: StatusRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "status",

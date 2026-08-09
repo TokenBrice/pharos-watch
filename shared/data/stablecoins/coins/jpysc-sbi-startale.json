@@ -413,6 +413,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Yen demand deposits in segregated SBI Shinsei Trust Bank trust accounts",

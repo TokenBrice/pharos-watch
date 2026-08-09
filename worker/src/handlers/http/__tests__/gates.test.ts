@@ -178,16 +178,19 @@ describe("evaluateAccessGate", () => {
       headers: { "X-API-Key": "pharos_test_valid" },
     });
 
+    const execCtx = { waitUntil: vi.fn(), passThroughOnException: () => {} } as unknown as ExecutionContext;
     const result = await evaluateAccessGate(request, new URL(request.url), {
       ...makeEnv(),
       DB: db,
       API_KEY_HASH_PEPPER: "pepper",
-    } as never);
+    } as never, execCtx);
 
     expect(result.response).toBeNull();
     expect(result.apiKey).toBe(validKey);
     expect(result.requestLane).toBe("public-api");
-    expect(apiKeyMocks.checkApiKeyRateLimit).toHaveBeenCalledWith(db, 7, 60);
+    // The ExecutionContext is forwarded so the limiter can schedule its own
+    // bucket prune instead of parking it in module state for a later flush.
+    expect(apiKeyMocks.checkApiKeyRateLimit).toHaveBeenCalledWith(db, 7, 60, undefined, execCtx);
     expect(apiKeyMocks.recordApiKeyRateLimitDependencySuccess).toHaveBeenCalled();
     expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
   });

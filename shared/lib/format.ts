@@ -178,6 +178,51 @@ export function formatEventDate(timestamp: number): string {
 }
 
 /**
+ * Calendar-day formatters. `utc: true` pins the calendar day to UTC, which is
+ * required whenever the source is a day-precision value (an ISO `YYYY-MM-DD`
+ * string or a UTC-midnight timestamp) — formatting those in local time shifts
+ * the rendered day by one west of Greenwich.
+ */
+export function formatShortDate(date: Date, options: { utc?: boolean } = {}): string {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(options.utc ? { timeZone: "UTC" } : {}),
+  });
+}
+
+/** Long-form month variant of `formatShortDate` ("August 9, 2026"). */
+export function formatLongDate(date: Date, options: { utc?: boolean } = {}): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    ...(options.utc ? { timeZone: "UTC" } : {}),
+  });
+}
+
+/**
+ * Join labels into a human-readable prose list ("A", "A and B", "A, B, and C").
+ *
+ * Pharos house style is the Oxford comma; pass `oxford: false` for the surfaces
+ * that deliberately read without it. Callers own truncation and empty-list
+ * fallbacks — this only joins what it is given.
+ */
+export function formatProseList(items: readonly string[], options: { oxford?: boolean } = {}): string {
+  const { oxford = true } = options;
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}${oxford ? "," : ""} and ${items[items.length - 1]}`;
+}
+
+/** Named idiom for the off-by-one-proof day label ("Aug 9, 2026", always UTC). */
+export function formatUtcDayLabel(date: Date): string {
+  return formatShortDate(date, { utc: true });
+}
+
+/**
  * Format a duration between two epoch timestamps as a human-readable string.
  * Returns two-unit precision for clarity: "2d 5h", "14h 30m", "45m".
  * For very short durations: "< 1m". For ongoing events (null end): "Ongoing".

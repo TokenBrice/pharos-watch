@@ -8,13 +8,9 @@ import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { timeAgo } from "@shared/lib/format";
+import { formatDecimal, timeAgo } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { HealthResponse } from "@shared/types";
-
-// Grouped, locale-aware counts for the watcher/follow figures — matches the
-// formatter style used on the public /pharoswatchbot pulse surface.
-const COUNT_FORMATTER = new Intl.NumberFormat("en-US");
 
 // Per-status accent dots. Lookup map of COMPLETE static class strings so the
 // Tailwind scanner sees every variant (no dynamic concatenation).
@@ -84,12 +80,12 @@ function TelegramLine(): React.JSX.Element {
         className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
         strokeWidth={2}
       />
-      <span className="pharos-numeric shrink-0 text-sm font-semibold">{COUNT_FORMATTER.format(pulse.activeWatchers)}</span>
+      <span className="pharos-numeric shrink-0 text-sm font-semibold">{formatDecimal(pulse.activeWatchers, 0, 3)}</span>
       <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.activeWatchers.description}>
         {TELEGRAM_METRIC_SEMANTICS.activeWatchers.label.toLowerCase()}
       </span>
       <span aria-hidden="true" className="text-muted-foreground/40">·</span>
-      <span className="pharos-numeric shrink-0 text-sm font-semibold">{COUNT_FORMATTER.format(pulse.coinSubscriptions)}</span>
+      <span className="pharos-numeric shrink-0 text-sm font-semibold">{formatDecimal(pulse.coinSubscriptions, 0, 3)}</span>
       <span className="shrink-0 text-sm text-muted-foreground" title={TELEGRAM_METRIC_SEMANTICS.coinFollows.description}>
         {TELEGRAM_METRIC_SEMANTICS.coinFollows.label.toLowerCase()}
       </span>

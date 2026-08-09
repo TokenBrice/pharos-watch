@@ -1,13 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockRegistry } from "../../test-helpers/cron";
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_META_BY_ID: new Map([
-    ["brz-transfero", { flags: { pegCurrency: "BRL", navToken: false } }],
-    ["ggbr-goldfish-gold", { flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 }],
-    ["ousg-ondo-finance", { flags: { pegCurrency: "USD", navToken: true } }],
-    ["fpi-frax", { flags: { pegCurrency: "VAR", navToken: true } }],
-  ]),
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [
+    { id: "brz-transfero", flags: { pegCurrency: "BRL", navToken: false } },
+    { id: "ggbr-goldfish-gold", flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 },
+    { id: "ousg-ondo-finance", flags: { pegCurrency: "USD", navToken: true } },
+    { id: "fpi-frax", flags: { pegCurrency: "VAR", navToken: true } },
+  ],
 }));
 
 import {

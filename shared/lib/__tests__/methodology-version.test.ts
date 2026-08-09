@@ -7,7 +7,6 @@ import {
   toMethodologyVersionLabel,
 } from "../methodology-version";
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
-import { SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE } from "../../data/methodology-changelogs/safety-score/v9-activation";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -139,14 +138,26 @@ describe("createMethodologyVersion", () => {
   });
 });
 
-describe("Safety Score v9.14 commodity-claim entry", () => {
-  // Replaces the phase-1 "prepared, unpublished" guard. The entry, the current
-  // version, and the migration that moves scores now land together, which is
-  // what `createMethodologyVersion` enforces and what 9.13 set as precedent.
-  it("is published as the current version", () => {
-    expect(SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.version).toBe("9.14");
-    expect(SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]).toBe(SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE);
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("9.14");
+describe("Safety Score methodology head entry", () => {
+  // Version-agnostic replacement for the per-release guard that had to be
+  // hand-rewritten every time the version moved. The invariant it protected --
+  // the entry, the current version, and the score migration land together --
+  // is what `createMethodologyVersion` enforces and what 9.13 set as precedent.
+  it("is the newest changelog entry and matches the current version", () => {
+    const head = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    expect(head).toBeDefined();
+    expect(head!.version).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+  });
+
+  it("orders every changelog entry strictly newest-first", () => {
+    for (let index = 1; index < SAFETY_SCORE_METHODOLOGY_CHANGELOG.length; index += 1) {
+      const newer = SAFETY_SCORE_METHODOLOGY_CHANGELOG[index - 1]!;
+      const older = SAFETY_SCORE_METHODOLOGY_CHANGELOG[index]!;
+      expect(
+        compareMethodologyVersions(newer.version, older.version),
+        `${newer.version} must sort after ${older.version}`,
+      ).toBeGreaterThan(0);
+    }
   });
 });
 

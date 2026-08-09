@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import {
+  EvidenceFooter,
+  type EvidenceFooterSource,
+} from "@/components/stablecoin-detail/evidence-footer";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
@@ -25,25 +29,27 @@ function DeploymentEvidence({ deployment }: { deployment: TransferReviewDeployme
         </Badge>
       </div>
       <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{deployment.evidence}</p>
-      {deployment.sources.length > 0 ? (
-        <ul className="mt-1 space-y-0.5">
-          {deployment.sources.map((source) => (
-            <li key={source.url}>
-              <a
-                href={source.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex items-baseline gap-1 rounded-sm text-[11px] text-frost-blue underline-offset-2 hover:underline"
-              >
-                <ExternalLink className="h-3 w-3 shrink-0 translate-y-0.5" aria-hidden="true" />
-                {source.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </li>
   );
+}
+
+/**
+ * The per-deployment citations, collected into the module-footer shape
+ * `EvidenceFooter` expresses. Chain attribution moves into the label because
+ * there is no per-item footer form and inventing one would be a second
+ * disclosure idiom; identical label/url pairs collapse, since several
+ * deployments legitimately cite the same registry page.
+ */
+function collectReviewSources(review: TransferReviewView): EvidenceFooterSource[] {
+  const byKey = new Map<string, EvidenceFooterSource>();
+  for (const deployment of review.deployments) {
+    for (const source of deployment.sources) {
+      const label = `${deployment.chainName} · ${source.label}`;
+      const key = `${label}:${source.url}`;
+      if (!byKey.has(key)) byKey.set(key, { label, url: source.url });
+    }
+  }
+  return [...byKey.values()];
 }
 
 /**
@@ -102,9 +108,15 @@ export function AccessPosturePanel({
                 <DeploymentEvidence key={deployment.key} deployment={deployment} />
               ))}
             </ul>
-            <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              Reviewed {review.reviewedAt}
-            </p>
+            {/* `Reviewed {date}` as plain trailing text, matching the four
+                sibling `EvidenceFooter` call sites. `ReviewedStamp` is the
+                *header* chip primitive (backing-mechanics, collateralization);
+                the footer row has its own one spelling. */}
+            <EvidenceFooter
+              className="mt-3"
+              sources={collectReviewSources(review)}
+              trailing={`Reviewed ${review.reviewedAt}`}
+            />
           </div>
         ) : null}
       </>

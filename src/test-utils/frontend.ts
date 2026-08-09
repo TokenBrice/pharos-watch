@@ -3,9 +3,16 @@ import { vi } from "vitest";
 
 type MatchMediaMock = ReturnType<typeof vi.fn>;
 
-function createMatchMediaMock(matches = false): MatchMediaMock {
+/**
+ * `matches` accepts a predicate so a suite can answer per query — e.g. only
+ * `(prefers-reduced-motion: reduce)`, or a simulated viewport width — without
+ * hand-rolling the whole `MediaQueryList` shape.
+ */
+type MatchMediaMatches = boolean | ((query: string) => boolean);
+
+function createMatchMediaMock(matches: MatchMediaMatches = false): MatchMediaMock {
   return vi.fn().mockImplementation((query: string) => ({
-    matches,
+    matches: typeof matches === "function" ? matches(query) : matches,
     media: query,
     onchange: null,
     addEventListener: vi.fn(),
@@ -16,7 +23,7 @@ function createMatchMediaMock(matches = false): MatchMediaMock {
   }));
 }
 
-export function installMatchMediaMock(matches = false): MatchMediaMock {
+export function installMatchMediaMock(matches: MatchMediaMatches = false): MatchMediaMock {
   const mock = createMatchMediaMock(matches);
   Object.defineProperty(window, "matchMedia", {
     writable: true,

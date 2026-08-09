@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { StablecoinChartResponseSchema } from "@shared/types/market";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
-import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
@@ -290,25 +289,6 @@ describe("api contract validation policy", () => {
     await expect(
       apiFetchWithMeta("/api/custom", z.object({ ok: z.literal(false) })),
     ).rejects.toBeInstanceOf(SchemaValidationError);
-  });
-
-  it("preserves optional report-card live reserve telemetry in the shared schema", () => {
-    const parsed = ReportCardsResponseSchema.parse({
-      cards: [],
-      dependencyGraph: { edges: [{ from: "usdc-circle", to: "usde-ethena", weight: 0.9, type: "collateral" }] },
-      methodology: {
-        version: "7.13",
-        weights: { pegStability: 0, liquidity: 0.3, resilience: 0.2, decentralization: 0.15, dependencyRisk: 0.25 },
-        pegMultiplierExponent: 0.4,
-        thresholds: [{ grade: "A+", min: 87 }],
-      },
-      updatedAt: 1771977600,
-      collateralDriftCoins: [{ id: "jupusd-jupiter", liveScore: 80, curatedScore: 65, delta: 15 }],
-      liveToFallbackCoins: ["usdaf-asymmetry"],
-    });
-
-    expect(parsed.collateralDriftCoins).toEqual([{ id: "jupusd-jupiter", liveScore: 80, curatedScore: 65, delta: 15 }]);
-    expect(parsed.liveToFallbackCoins).toEqual(["usdaf-asymmetry"]);
   });
 
   it("validates stablecoin chart points before chart consumers use them", () => {

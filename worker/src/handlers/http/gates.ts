@@ -44,6 +44,49 @@ type AccessGateResult = {
   response: Response | null;
 };
 
+/**
+ * Non-admin, non-site-proxy gate outcome. Every caller sits after
+ * `evaluateAccessGate`'s admin short-circuit, so `isAdmin` is provably false.
+ */
+function gateResult(
+  requestLane: AccessGateResult["requestLane"],
+  response: Response | null = null,
+  apiKey: AuthenticatedApiKey | null = null,
+): AccessGateResult {
+  return { isAdmin: false, isSiteProxy: false, apiKey, requestLane, response };
+}
+
+/**
+ * Shared shape of the two rate-limit degradation branches (dependency circuit
+ * open, dependency threw). Returns the isolate-local limiter's verdict when a
+ * fallback is permitted, or `null` when the lane must fail closed.
+ */
+function degradeRateLimit(options: {
+  canFallback: boolean;
+  fallbackEvent: string;
+  fallbackMessage: string;
+  failClosedEvent: string;
+  failClosedMessage: string;
+  apiKeyId: number;
+  fallbackLimit: number;
+  error?: unknown;
+  fallbackMetadata?: Record<string, unknown>;
+}): { rateLimitResponse: Response | null } | null {
+  const { canFallback } = options;
+  logWorkerEvent({
+    scope: "http",
+    level: "warn",
+    event: canFallback ? options.fallbackEvent : options.failClosedEvent,
+    route: "public-api-auth",
+    requestLane: "public-api",
+    message: canFallback ? options.fallbackMessage : options.failClosedMessage,
+    ...("error" in options ? { error: options.error } : {}),
+    ...(canFallback && options.fallbackMetadata ? { metadata: options.fallbackMetadata } : {}),
+  });
+  if (!canFallback) return null;
+  return { rateLimitResponse: checkIsolateLocalApiKeyRateLimit(options.apiKeyId, options.fallbackLimit) };
+}
+
 function publicApiUnavailableResponse(): Response {
   return errorResponse(503, "Public API temporarily unavailable", {
     retryAfterSec: API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
@@ -89,6 +132,7 @@ export async function evaluateAccessGate(
   request: Request,
   url: URL,
   env: Env,
+  execCtx?: ExecutionContext,
 ): Promise<AccessGateResult> {
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (isAdmin) {
@@ -96,7 +140,7 @@ export async function evaluateAccessGate(
   }
 
   const siteApiAllowed = (): AccessGateResult => ({
-    isAdmin,
+    isAdmin: false,
     isSiteProxy: true,
     apiKey: null,
     requestLane: "site-api",
@@ -108,13 +152,13 @@ export async function evaluateAccessGate(
   const hasSiteProxyCredential = await hasValidSiteProxyCredential(request, env);
   if (isSiteApiRequest) {
     if (!hasSiteProxyCredential) {
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: errorResponse(401, "Unauthorized") };
+      return gateResult("site-api", errorResponse(401, "Unauthorized"));
     }
     if (!isSiteDataAllowedApiPath(url.pathname)) {
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: notFoundResponse() };
+      return gateResult("site-api", notFoundResponse());
     }
     if (!isSiteDataAllowedMethod(request.method)) {
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: methodNotAllowedResponse("Method not allowed", [SITE_DATA_ALLOWED_METHOD]) };
+      return gateResult("site-api", methodNotAllowedResponse("Method not allowed", [SITE_DATA_ALLOWED_METHOD]));
     }
     return siteApiAllowed();
   }
@@ -129,21 +173,15 @@ export async function evaluateAccessGate(
   }
 
   if (!url.pathname.startsWith("/api/") || url.pathname === API_PATHS.telegramWebhook()) {
-    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
+    return gateResult(null);
   }
 
   if (url.hostname !== OPS_API_HOSTNAME && isAdminLikePath(url.pathname)) {
-    return {
-      isAdmin,
-      isSiteProxy: false,
-      apiKey: null,
-      requestLane: "public-api",
-      response: notFoundResponse(),
-    };
+    return gateResult("public-api", notFoundResponse());
   }
 
   if (getPublicApiAccess(url.pathname) === "exempt") {
-    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: null };
+    return gateResult("public-api");
   }
 
   const apiKeyAuth = await authenticateApiKey(
@@ -153,97 +191,64 @@ export async function evaluateAccessGate(
     env.API_KEY_HASH_PEPPER_PREVIOUS,
   );
   if (apiKeyAuth.kind !== "valid") {
-    if (apiKeyAuth.kind === "unavailable") {
-      return {
-        isAdmin,
-        isSiteProxy: false,
-        apiKey: null,
-        requestLane: "public-api",
-        response: publicApiUnavailableResponse(),
-      };
-    }
-    return {
-      isAdmin,
-      isSiteProxy: false,
-      apiKey: null,
-      requestLane: "public-api",
-      response: unauthorizedResponse(),
-    };
+    return gateResult(
+      "public-api",
+      apiKeyAuth.kind === "unavailable" ? publicApiUnavailableResponse() : unauthorizedResponse(),
+    );
   }
 
   const canUseIsolateFallbackRateLimit = isCacheableGetRequest(request, url);
   const isolateFallbackRateLimit = resolveIsolateFallbackApiKeyRateLimit(apiKeyAuth.key.rateLimitPerMinute);
   let rateLimitResponse: Response | null;
   if (isApiKeyRateLimitDependencyCircuitOpen()) {
-    if (canUseIsolateFallbackRateLimit) {
-      logWorkerEvent({
-        scope: "http",
-        level: "warn",
-        event: "api_key_rate_limit_circuit_open_fallback",
-        route: "public-api-auth",
-        requestLane: "public-api",
-        message: "API key rate-limit dependency circuit open; using isolate-local fallback limiter",
-      });
-      rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
-        apiKeyAuth.key.id,
-        isolateFallbackRateLimit,
-      );
-    } else {
-      logWorkerEvent({
-        scope: "http",
-        level: "warn",
-        event: "api_key_rate_limit_circuit_open_fail_closed",
-        route: "public-api-auth",
-        requestLane: "public-api",
-        message: "API key rate-limit dependency circuit open; failing closed",
-      });
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+    const degraded = degradeRateLimit({
+      canFallback: canUseIsolateFallbackRateLimit,
+      fallbackEvent: "api_key_rate_limit_circuit_open_fallback",
+      fallbackMessage: "API key rate-limit dependency circuit open; using isolate-local fallback limiter",
+      failClosedEvent: "api_key_rate_limit_circuit_open_fail_closed",
+      failClosedMessage: "API key rate-limit dependency circuit open; failing closed",
+      apiKeyId: apiKeyAuth.key.id,
+      fallbackLimit: isolateFallbackRateLimit,
+    });
+    if (!degraded) {
+      return gateResult("public-api", publicApiUnavailableResponse());
     }
+    rateLimitResponse = degraded.rateLimitResponse;
   } else {
     try {
       rateLimitResponse = await checkApiKeyRateLimit(
         env.DB,
         apiKeyAuth.key.id,
         apiKeyAuth.key.rateLimitPerMinute,
+        undefined,
+        execCtx,
       );
       recordApiKeyRateLimitDependencySuccess();
     } catch (err) {
       const circuit = recordApiKeyRateLimitDependencyFailure();
-      if (canUseIsolateFallbackRateLimit) {
-        logWorkerEvent({
-          scope: "http",
-          level: "warn",
-          event: "api_key_rate_limit_dependency_unavailable_fallback",
-          route: "public-api-auth",
-          requestLane: "public-api",
-          message: "API key rate-limit dependency unavailable; using isolate-local fallback limiter",
-          error: err,
-          metadata: {
-            consecutiveFailures: circuit.consecutiveFailures,
-            circuitOpened: circuit.opened,
-            openUntilMs: circuit.openUntilMs || null,
-          },
-        });
-        rateLimitResponse = checkIsolateLocalApiKeyRateLimit(
-          apiKeyAuth.key.id,
-          isolateFallbackRateLimit,
-        );
-      } else {
-        logWorkerEvent({
-          scope: "http",
-          level: "warn",
-          event: "api_key_rate_limit_dependency_unavailable_fail_closed",
-          route: "public-api-auth",
-          requestLane: "public-api",
-          message: "API key rate-limit dependency unavailable",
-          error: err,
-        });
-        return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: publicApiUnavailableResponse() };
+      const degraded = degradeRateLimit({
+        canFallback: canUseIsolateFallbackRateLimit,
+        fallbackEvent: "api_key_rate_limit_dependency_unavailable_fallback",
+        fallbackMessage: "API key rate-limit dependency unavailable; using isolate-local fallback limiter",
+        failClosedEvent: "api_key_rate_limit_dependency_unavailable_fail_closed",
+        failClosedMessage: "API key rate-limit dependency unavailable",
+        apiKeyId: apiKeyAuth.key.id,
+        fallbackLimit: isolateFallbackRateLimit,
+        error: err,
+        fallbackMetadata: {
+          consecutiveFailures: circuit.consecutiveFailures,
+          circuitOpened: circuit.opened,
+          openUntilMs: circuit.openUntilMs || null,
+        },
+      });
+      if (!degraded) {
+        return gateResult("public-api", publicApiUnavailableResponse());
       }
+      rateLimitResponse = degraded.rateLimitResponse;
     }
   }
   if (rateLimitResponse) {
-    return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };
+    return gateResult("public-api", rateLimitResponse, apiKeyAuth.key);
   }
   try {
     await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
@@ -258,7 +263,7 @@ export async function evaluateAccessGate(
       error: err,
     });
   }
-  return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
+  return gateResult("public-api", null, apiKeyAuth.key);
 }
 
 export function notFoundResponse(): Response {
@@ -283,13 +288,7 @@ export async function evaluateCachedPublicApiReadFastGate(
     return null;
   }
 
-  return {
-    isAdmin: false,
-    isSiteProxy: false,
-    apiKey: apiKeyAuth.key,
-    requestLane: "public-api",
-    response: null,
-  };
+  return gateResult("public-api", null, apiKeyAuth.key);
 }
 
 // Intentional divergence from the slow path (evaluateAccessGate above): the

@@ -22,7 +22,6 @@ import type { V9EconomicControlResult } from "./control";
 import type { V9ResolvedDependencyInputs } from "./dependencies";
 import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
-import type { V9PublicStressState } from "./stress";
 import { computeV9ResultDigest } from "./trace";
 import { compareText, uniqueSorted } from "./primitives";
 
@@ -35,7 +34,6 @@ export interface V9PublicCardProjectionInput {
   scoreInput: Pick<V9ProductionScoreInput, "pillars" | "peg" | "dependencyReasons" | "methodologyReasons">;
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
-  stressState: Pick<V9PublicStressState, "stateDigest"> | null;
   policy: V9ValidatedPolicyEnvelope;
   backing?: Pick<V9BackingResult, "archetype" | "score" | "contributions">;
   exit?: Pick<
@@ -783,7 +781,6 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): Sa
       reasons: canonicalPublicReasons(input.access.reasons ?? []),
     },
     dependencies: projectDependencies(input),
-    stressStateDigest: input.stressState?.stateDigest ?? null,
     scoreTrace: projectScoreTrace(input),
     breakdowns: projectBreakdowns(input),
   });

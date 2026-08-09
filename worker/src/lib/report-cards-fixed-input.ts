@@ -537,7 +537,10 @@ function assertFreshnessConsistency(input: ReportCardsFixedInput): void {
   }
 }
 
-function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
+function assertFixedInputConsistency(
+  input: ReportCardsFixedInput,
+  options: { verifyBaseInputGenerationId: boolean } = { verifyBaseInputGenerationId: true },
+): void {
   if (new Set(input.activeAssetIds).size !== input.activeAssetIds.length) {
     throw new Error("Fixed input active asset identities contain duplicates");
   }
@@ -681,11 +684,16 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
       throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
     }
   }
-  const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
-  if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
-    throw new Error(
-      `Fixed input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
-    );
+  // Integrity gate: a *supplied* base generation id must match the payload it
+  // claims to identify. Skipped only when this same call just derived the id
+  // from the identical payload, where the comparison is true by construction.
+  if (options.verifyBaseInputGenerationId) {
+    const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
+    if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
+      throw new Error(
+        `Fixed input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
+      );
+    }
   }
   assertFreshnessConsistency(input);
 }
@@ -731,23 +739,24 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
         ]),
       ),
     ),
-    evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.parse(input.evidenceJournalById),
-    supplyAttributionJournalById:
-      SupplyAttributionJournalByIdV1Schema.parse(
-        input.supplyAttributionJournalById,
-      ),
+    // Both journal maps are validated by parseReportCardsFixedInput above
+    // (superRefine only, no transform), so they carry through unchanged.
+    evidenceJournalById: input.evidenceJournalById,
+    supplyAttributionJournalById: input.supplyAttributionJournalById,
     pegProvenanceById: sortedRecord(input.pegProvenanceById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
   };
-  const derivedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(normalizedPayload);
+  const suppliedBaseInputGenerationId = "baseInputGenerationId" in input ? input.baseInputGenerationId : undefined;
   const normalized = ReportCardsFixedInputSchema.parse({
     ...normalizedPayload,
     baseInputGenerationId:
-      "baseInputGenerationId" in input ? input.baseInputGenerationId : derivedBaseInputGenerationId,
+      suppliedBaseInputGenerationId ?? deriveReportCardsBaseInputGenerationId(normalizedPayload),
   });
-  assertFixedInputConsistency(normalized);
+  assertFixedInputConsistency(normalized, {
+    verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,
+  });
   return normalized;
 }

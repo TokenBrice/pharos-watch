@@ -38,8 +38,6 @@ function makeRequest(overrides: Partial<ApiKeySelfServeRequestAdminSummary> = {}
     linkedKeyExpiresAt: overrides.linkedKeyExpiresAt ?? null,
     rateLimitPerMinute: overrides.rateLimitPerMinute ?? 30,
     selfServeExpiresAt: overrides.selfServeExpiresAt ?? null,
-    riskScore: overrides.riskScore ?? 0,
-    riskReasons: overrides.riskReasons ?? [],
     claimStatus: overrides.claimStatus ?? "pending_verification",
     verificationSentAt: overrides.verificationSentAt ?? GENERATED_AT - 60,
     verificationExpiresAt: overrides.verificationExpiresAt ?? GENERATED_AT + 1800,
@@ -127,10 +125,7 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("renders triage summary and request-level next action guidance", () => {
     renderPanel([
-      makeRequest({
-        riskScore: 70,
-        riskReasons: ["high requested volume"],
-      }),
+      makeRequest(),
       makeRequest({
         requestId: "akr_issued_cleanup",
         status: "issued",
@@ -143,7 +138,6 @@ describe("ApiKeyRequestsPanel", () => {
 
     const summary = screen.getByLabelText("Request triage summary");
     expect(within(summary).getByText("Displayed")).toBeTruthy();
-    expect(within(summary).getByText("Risk flags")).toBeTruthy();
     expect(within(summary).getByText("Claim cleanup")).toBeTruthy();
     expect(within(summary).getByText("safe to release")).toBeTruthy();
     expect(screen.getByText(/Waiting on email verification/i)).toBeTruthy();

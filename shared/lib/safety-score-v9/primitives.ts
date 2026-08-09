@@ -1,10 +1,12 @@
-import type { V9FailureDomainRef } from "../../types/safety-score-v9-fact-primitives";
+import {
+  compareText,
+  type V9FailureDomainRef,
+} from "../../types/safety-score-v9-fact-primitives";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 
-export function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
+// Canonical ordering is a determinism-digest input; it has one definition.
+export { compareText };
 
 export function uniqueSorted<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);

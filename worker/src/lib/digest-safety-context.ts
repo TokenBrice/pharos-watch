@@ -5,9 +5,9 @@ import {
 } from "@shared/types/digest";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
-  loadIdentifiedActiveSafetyScoreSource,
-  type IdentifiedActiveSafetyScoreSource,
-} from "./identified-active-safety-score-source";
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "./safety-score-active-source";
 
 export const LEGACY_UNBOUND_DIGEST_SAFETY_REASON = "legacy-unbound";
 
@@ -53,12 +53,12 @@ export function findUnboundDigestSafetyClaimMarkers(
 }
 
 export function digestSafetyContextFromSource(
-  source: IdentifiedActiveSafetyScoreSource,
+  source: ActiveSafetyScoreSource,
 ): DigestSafetyContext {
-  if (source.kind === "error") {
+  if (source.kind !== "v9") {
     return {
       status: "unavailable",
-      expectedModel: source.expectedModel,
+      expectedModel: "v9",
       identity: null,
       publishedAt: null,
       reason: source.reason,
@@ -66,9 +66,9 @@ export function digestSafetyContextFromSource(
   }
   return {
     status: "available",
-    expectedModel: source.expectedModel,
-    identity: source.identity,
-    publishedAt: source.publishedAtSec,
+    expectedModel: source.snapshot.safetyScoreIdentity.model,
+    identity: source.snapshot.safetyScoreIdentity,
+    publishedAt: source.snapshot.updatedAt,
     reason: null,
   };
 }
@@ -77,7 +77,7 @@ export async function loadDigestSafetyContext(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<DigestSafetyContext> {
-  return digestSafetyContextFromSource(await loadIdentifiedActiveSafetyScoreSource(db, signal));
+  return digestSafetyContextFromSource(await loadActiveSafetyScoreSource(db, signal));
 }
 
 export function parseDigestSafetyContext(raw: unknown): DigestSafetyContext | null {
@@ -136,11 +136,11 @@ export async function checkDigestSafetyContextForDelivery(
       ? { kind: "stale", reason: "legacy-unbound" }
       : { kind: "ok" };
   }
-  const current = await loadIdentifiedActiveSafetyScoreSource(db, signal);
-  if (current.kind === "error") {
+  const current = await loadActiveSafetyScoreSource(db, signal);
+  if (current.kind !== "v9") {
     return { kind: "unavailable", reason: current.reason };
   }
-  return safetyScorePublicationIdentitiesMatch(authored.identity, current.identity)
+  return safetyScorePublicationIdentitiesMatch(authored.identity, current.snapshot.safetyScoreIdentity)
     ? { kind: "ok" }
     : { kind: "stale", reason: "identity-mismatch" };
 }

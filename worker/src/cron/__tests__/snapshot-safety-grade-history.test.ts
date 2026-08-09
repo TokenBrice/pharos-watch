@@ -52,8 +52,9 @@ describe("snapshotSafetyGradeHistory", () => {
   it("skips history writes while the canonical V9 publication is held", async () => {
     const current = makeReportCardsV9Response();
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
-      kind: "v9",
-      expectedModel: "v9",
+      kind: "held",
+      reason: "v9-publication-held",
+      detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
       snapshot: makeReportCardsV9Response({
         publicationHealth: {
           ...current.publicationHealth,
@@ -74,7 +75,6 @@ describe("snapshotSafetyGradeHistory", () => {
   it("skips history writes while the current V9 publication is stale", async () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot: makeReportCardsV9Response({ updatedAt: 1 }),
     });
 
@@ -85,7 +85,6 @@ describe("snapshotSafetyGradeHistory", () => {
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "v9-publication-stale",
-        expectedModel: "v9",
         historyWritesSkipped: true,
       }),
     });
@@ -94,7 +93,6 @@ describe("snapshotSafetyGradeHistory", () => {
   it("fails closed when V9 is unavailable", async () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "missing",
@@ -118,7 +116,6 @@ describe("snapshotSafetyGradeHistory", () => {
     const card = current.cards[0]!;
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot: current,
     });
     mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
@@ -176,7 +173,6 @@ describe("snapshotSafetyGradeHistory", () => {
     const identity = current.safetyScoreIdentity;
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot: current,
     });
     mockLoadSafetyScoreV9PublicationAttempt.mockResolvedValue({
@@ -254,7 +250,6 @@ describe("snapshotSafetyGradeHistory", () => {
     const identity = current.safetyScoreIdentity;
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot: current,
     });
     // The predecessor row was written by the pre-cutover producer: the same V9
@@ -310,7 +305,6 @@ describe("snapshotSafetyGradeHistory", () => {
     const identity = current.safetyScoreIdentity;
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot: current,
     });
     mockFetchLatestSafetyScoreHistoryV2Rows.mockResolvedValue([

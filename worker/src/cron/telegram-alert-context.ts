@@ -2,7 +2,7 @@ import { formatCompactUsdShort } from "@shared/lib/format";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadIdentifiedActiveSafetyScoreSource } from "../lib/identified-active-safety-score-source";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import { buildInClause, chunkArray } from "../lib/db";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
@@ -32,7 +32,7 @@ export async function buildAlertContextLines(
   const nowSec = Math.floor(Date.now() / 1000);
 
   const [snapshot, stablecoinsResult, liquidityResult, flowResult] = await Promise.all([
-    loadIdentifiedActiveSafetyScoreSource(db).then((source) =>
+    loadActiveSafetyScoreSource(db).then((source) =>
       source.kind === "v9" ? source : null,
     ).catch(() => null),
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
@@ -58,7 +58,7 @@ export async function buildAlertContextLines(
     const liq = liquidityResult.get(id);
     if (card) {
       parts.push(
-        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${snapshot!.identity.model.toUpperCase()} ${snapshot!.identity.methodologyVersion})`,
+        `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""} (${snapshot!.snapshot.safetyScoreIdentity.model.toUpperCase()} ${snapshot!.snapshot.safetyScoreIdentity.methodologyVersion})`,
       );
     }
     if (liq) parts.push(`Liquidity ${liq.score ?? "NR"}, DEX TVL ${formatUsdCompact(liq.tvl)}`);

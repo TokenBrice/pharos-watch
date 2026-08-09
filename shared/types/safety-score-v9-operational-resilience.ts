@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
 
 const CanonicalTextSchema = z
   .string()
@@ -13,23 +14,6 @@ const IsoDateSchema = z
     const parsed = new Date(`${value}T00:00:00.000Z`);
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
   }, "Value must be a valid ISO calendar date");
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
-  return z
-    .array(schema)
-    .superRefine((values, ctx) => {
-      const keys = values.map(keyOf);
-      const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-      if (duplicate !== undefined) {
-        ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
-      }
-    })
-    .transform((values) => [...values].sort((left, right) => compareText(keyOf(left), keyOf(right))));
-}
 
 const EvidenceRefIdsSchema = canonicalArrayBy(CanonicalTextSchema, (value) => value).refine(
   (values) => values.length > 0,

@@ -2,13 +2,16 @@ import { PEG_METADATA } from "@shared/lib/classification";
 import { SELECTOR_ELIGIBLE_PEG_CURRENCIES } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import {
+  preHighlightForDepeg,
   shouldSkipExitStep,
+  type SelectorAction,
   type SelectorDepeg,
   type SelectorExit,
   type SelectorHorizon,
   type SelectorPeg,
   type SelectorProfile,
   type SelectorVenue,
+  type SelectorWizardState,
 } from "./selector-state";
 
 export const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
@@ -36,14 +39,19 @@ const PEG_SUBLABEL: Record<SelectorPeg, string> = {
   GOLD: "Tokenized gold universe with live signal coverage.",
 };
 
-export const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
+const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
   SELECTOR_ELIGIBLE_PEG_CURRENCIES.map((value) => ({
     value,
     label: PEG_METADATA[value]?.filterLabel ?? value,
     sublabel: PEG_SUBLABEL[value],
   }));
 
-export const YIELD_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
+const YIELD_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
+
+/** Yield is limited to pegs with benchmark and source coverage. */
+function pegOptionsForProfile(profile: SelectorProfile): readonly SelectorOption<SelectorPeg>[] {
+  return profile === "yield" ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value)) : PEG_OPTIONS;
+}
 
 export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "lt24h", label: "Under 24 hours" },
@@ -103,19 +111,111 @@ export const PROFILE_LABEL: Record<SelectorProfile, string> = {
   trading: "Active Trading",
 };
 
-export const LEGEND_BY_PROFILE_Q4: Record<SelectorProfile, string> = {
+const VENUE_LEGEND_BY_PROFILE: Record<SelectorProfile, string> = {
   yield: "Where will you put it to work?",
   trading: "Where will you trade?",
   treasury: "What custody or rail setup do you prefer?",
 };
 
-export const QUESTION_HELPER_COPY: Record<2 | 3 | 4 | 5 | 6, string> = {
-  2: "Narrows the universe to this reference asset.",
-  3: "Longer horizons weight resilience and history more heavily.",
-  4: "Tighter tolerance raises the peg and stress thresholds.",
-  5: "Shifts allowed custody, composability, and source exposure.",
-  6: "Faster exits weight liquidity, DEWS, and redemption pathways.",
-};
+export const PROFILE_LEGEND = "What are you using this stablecoin for?";
+
+export type SelectorQuestionId = "q2" | "q3" | "q4" | "q5" | "q6";
+
+/**
+ * One descriptor per wizard question after the profile step (Q1). The desktop wizard
+ * (`screener/picker/client.tsx`) renders the descriptor matching the active step; the mobile
+ * single-form (`components/selector/selector-mobile-form.tsx`) renders every descriptor at once.
+ * Both read the same legend / helper / options / value / action accessors, so the two surfaces
+ * cannot drift apart again — mobile previously dropped three of the five helper strings.
+ *
+ * Value types are erased to `string` here so the five rows share one table; each accessor casts
+ * back to its own union at the single point where it builds the reducer action.
+ */
+export interface SelectorQuestionDescriptor {
+  questionId: SelectorQuestionId;
+  step: 2 | 3 | 4 | 5 | 6;
+  /** Mobile-only kicker; desktop keeps the default "Step X of Y · Profile" kicker. */
+  kickerLabel: (profile: SelectorProfile) => string;
+  legend: (profile: SelectorProfile) => string;
+  /** Desktop-only sub-legend rendered under the question. */
+  legendSubtext?: (profile: SelectorProfile) => string | undefined;
+  helper: string;
+  options: (profile: SelectorProfile) => readonly SelectorOption<string>[];
+  multi?: (profile: SelectorProfile) => boolean;
+  value: (state: SelectorWizardState, profile: SelectorProfile) => string | readonly string[] | null;
+  preHighlight?: (state: SelectorWizardState, profile: SelectorProfile) => string | undefined;
+  /** Selection update that does not advance the wizard. */
+  setAction: (value: string | readonly string[]) => SelectorAction;
+  /** Desktop "Next" commit; `null` when the current answer is not complete enough to advance. */
+  answerAction: (state: SelectorWizardState) => SelectorAction | null;
+}
+
+function toVenueList(value: string | readonly string[]): readonly SelectorVenue[] {
+  return (Array.isArray(value) ? value : [value]) as readonly SelectorVenue[];
+}
+
+export const SELECTOR_QUESTIONS: readonly SelectorQuestionDescriptor[] = [
+  {
+    questionId: "q2",
+    step: 2,
+    kickerLabel: () => "Question 2 — Peg currency",
+    legend: () => "Which peg currency should it target?",
+    legendSubtext: (profile) =>
+      profile === "yield" ? "Yield is limited to pegs with benchmark and source coverage." : undefined,
+    helper: "Narrows the universe to this reference asset.",
+    options: (profile) => pegOptionsForProfile(profile),
+    value: (state) => state.pegCurrency,
+    setAction: (value) => ({ type: "set-peg", value: value as SelectorPeg }),
+    answerAction: (state) => ({ type: "answer-peg", value: state.pegCurrency }),
+  },
+  {
+    questionId: "q3",
+    step: 3,
+    kickerLabel: () => "Question 3 — Horizon",
+    legend: () => "How long do you plan to hold this position?",
+    helper: "Longer horizons weight resilience and history more heavily.",
+    options: () => HORIZON_OPTIONS,
+    value: (state) => state.horizon,
+    setAction: (value) => ({ type: "set-horizon", value: value as SelectorHorizon }),
+    answerAction: (state) => (state.horizon ? { type: "answer-horizon", value: state.horizon } : null),
+  },
+  {
+    questionId: "q4",
+    step: 4,
+    kickerLabel: () => "Question 4 — Peg tolerance",
+    legend: () => "How tight does the peg need to hold?",
+    helper: "Tighter tolerance raises the peg and stress thresholds.",
+    options: () => DEPEG_OPTIONS,
+    value: (state) => state.depegTolerance,
+    preHighlight: (state, profile) => preHighlightForDepeg(profile, state.horizon),
+    setAction: (value) => ({ type: "set-depeg", value: value as SelectorDepeg }),
+    answerAction: (state) =>
+      state.depegTolerance ? { type: "answer-depeg", value: state.depegTolerance } : null,
+  },
+  {
+    questionId: "q5",
+    step: 5,
+    kickerLabel: (profile) => `Question 5 — ${profile === "treasury" ? "Rails" : "Venues"}`,
+    legend: (profile) => VENUE_LEGEND_BY_PROFILE[profile],
+    helper: "Shifts allowed custody, composability, and source exposure.",
+    options: (profile) => VENUE_OPTIONS_BY_PROFILE[profile],
+    multi: (profile) => profile !== "treasury",
+    value: (state, profile) => (profile === "treasury" ? (state.venue[0] ?? null) : state.venue),
+    setAction: (value) => ({ type: "set-venue", value: toVenueList(value) }),
+    answerAction: (state) => (state.venue.length > 0 ? { type: "answer-venue", value: state.venue } : null),
+  },
+  {
+    questionId: "q6",
+    step: 6,
+    kickerLabel: () => "Question 6 — Exit speed",
+    legend: () => "If something goes wrong, how fast do you need to be out?",
+    helper: "Faster exits weight liquidity, DEWS, and redemption pathways.",
+    options: () => EXIT_OPTIONS,
+    value: (state) => state.exitSpeed,
+    setAction: (value) => ({ type: "set-exit", value: value as SelectorExit }),
+    answerAction: (state) => (state.exitSpeed ? { type: "answer-exit", value: state.exitSpeed } : null),
+  },
+];
 
 export function computeTotalSteps(
   profile: SelectorProfile | null,
@@ -126,21 +226,10 @@ export function computeTotalSteps(
   return 6;
 }
 
-export function stepLegend(state: { step: number | "result" }): string {
-  switch (state.step) {
-    case 1:
-      return "What are you using this stablecoin for?";
-    case 2:
-      return "Which peg currency should it target?";
-    case 3:
-      return "How long do you plan to hold this position?";
-    case 4:
-      return "How tight does the peg need to hold?";
-    case 5:
-      return "What custody or rail setup do you prefer?";
-    case 6:
-      return "If something goes wrong, how fast do you need to be out?";
-    default:
-      return "";
-  }
+/** Announcement copy for the live region; reads the same legends the cards render. */
+export function stepLegend(state: { step: number | "result"; profile: SelectorProfile | null }): string {
+  if (state.step === 1) return PROFILE_LEGEND;
+  if (typeof state.step !== "number" || state.profile == null) return "";
+  const question = SELECTOR_QUESTIONS.find((candidate) => candidate.step === state.step);
+  return question ? question.legend(state.profile) : "";
 }

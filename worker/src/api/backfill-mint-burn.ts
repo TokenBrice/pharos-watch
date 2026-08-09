@@ -96,13 +96,21 @@ async function resolveBackfillConfig(
   };
 }
 
-export async function handleBackfillMintBurn(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean | undefined,
-  request: Request | undefined,
-  alchemyApiKey: string | null,
-): Promise<Response> {
+export interface BackfillMintBurnRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+  alchemyApiKey?: string | null;
+}
+
+export async function handleBackfillMintBurn({
+  db,
+  url,
+  trustedAdmin,
+  request,
+  alchemyApiKey = null,
+}: BackfillMintBurnRouteContext): Promise<Response> {
   const executeBackfill = async (body: Record<string, unknown>): Promise<Response> => {
     if (!alchemyApiKey) {
       return errorResponse(500, "ALCHEMY_API_KEY is not configured");

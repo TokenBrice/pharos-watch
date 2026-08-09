@@ -10,7 +10,6 @@ describe("buildStablecoinDatasetJsonLd", () => {
   it("caps contract identifiers without exposing private site-data downloads", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const jsonLd = buildStablecoinDatasetJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
       dateModified: "2026-05-13T00:00:00.000Z",
       logoPath: "/logos/usdt-tether.png",
     });
@@ -69,9 +68,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
   it("exposes redemption backstop coverage as an active analytics measurement", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
-    const jsonLd = buildStablecoinDatasetJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
-    });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
 
     expect(jsonLd.description).toContain("redemption backstop coverage");
     expect(jsonLd.variableMeasured).toContainEqual({
@@ -82,13 +79,8 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
   it("omits dateModified unless an explicit source date is provided", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const withoutDate = buildStablecoinDatasetJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
-    });
-    const withDate = buildStablecoinDatasetJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
-      dateModified: "2026-05-13T00:00:00.000Z",
-    });
+    const withoutDate = buildStablecoinDatasetJsonLd(coin);
+    const withDate = buildStablecoinDatasetJsonLd(coin, { dateModified: "2026-05-13T00:00:00.000Z" });
 
     expect(withoutDate).not.toHaveProperty("dateModified");
     expect(withDate.dateModified).toBe("2026-05-13T00:00:00.000Z");
@@ -96,10 +88,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
   it("uses archive wording for frozen stablecoin datasets", () => {
     const coin = TRACKED_META_BY_ID.get("usnd-nerite")!;
-    const jsonLd = buildStablecoinDatasetJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
-      dateModified: "2026-05-13",
-    });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin, { dateModified: "2026-05-13" });
 
     expect(jsonLd.name).toContain("Frozen Stablecoin Archive");
     expect(jsonLd.description).toContain("Historical archive");
@@ -111,9 +100,7 @@ describe("buildStablecoinDatasetJsonLd", () => {
 describe("buildPreLaunchStablecoinJsonLd", () => {
   it("uses conservative WebPage and Thing schema for pre-launch stablecoins", () => {
     const coin = TRACKED_META_BY_ID.get("fiusd-fiserv")!;
-    const jsonLd = buildPreLaunchStablecoinJsonLd(coin, {
-      siteUrl: "https://pharos.watch",
-    });
+    const jsonLd = buildPreLaunchStablecoinJsonLd(coin);
 
     expect(jsonLd).toHaveLength(2);
     expect(jsonLd[0]).toMatchObject({

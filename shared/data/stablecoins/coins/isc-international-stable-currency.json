@@ -314,6 +314,7 @@
     "yieldType": "nav-appreciation"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-or-compromised",

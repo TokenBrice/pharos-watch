@@ -1,6 +1,5 @@
 import { type DepegRow } from "../lib/depeg-helpers";
 import {
-  withErrorHandler,
   resolveOrReject,
   buildMethodologyEnvelope,
   buildPaginatedEventResponse,
@@ -211,9 +210,7 @@ async function loadThresholdCrossingCount(db: D1Database, stablecoinId: string):
   }
 }
 
-export const handleDepegEvents = withErrorHandler(
-  "depeg-events",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
     const active = params.get("active");
@@ -287,5 +284,4 @@ export const handleDepegEvents = withErrorHandler(
         };
       },
     });
-  },
-);
+  };

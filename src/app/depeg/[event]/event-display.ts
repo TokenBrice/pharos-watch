@@ -1,5 +1,5 @@
 import type { DepegEvent } from "@shared/types/market";
-import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 
 export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18T00:00:00Z") / 1000;
@@ -23,12 +23,7 @@ export function buildSameDayDirectionCollisionSlugs(events: readonly DepegEventD
 }
 
 export function formatEventLongDate(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  return formatLongDate(new Date(seconds * 1000), { utc: true });
 }
 
 export function formatEventUtcTime(seconds: number): string {

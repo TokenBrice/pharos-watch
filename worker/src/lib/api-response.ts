@@ -11,8 +11,6 @@ export interface JsonResponseOptions {
   retryAfterSec?: number;
 }
 
-type JsonResponseInit = Record<string, string> | JsonResponseOptions | undefined;
-type DefinedJsonResponseInit = Exclude<JsonResponseInit, undefined>;
 
 export function withErrorHandler<T extends unknown[]>(endpoint: string, handler: ApiHandler<T>): ApiHandler<T> {
   return async (...args: T): Promise<Response> => {
@@ -32,20 +30,6 @@ export function withErrorHandler<T extends unknown[]>(endpoint: string, handler:
   };
 }
 
-function isJsonResponseOptions(value: DefinedJsonResponseInit): value is JsonResponseOptions {
-  return "status" in value || "headers" in value || "noStore" in value || "retryAfterSec" in value;
-}
-
-function normalizeJsonResponseOptions(initOrHeaders: JsonResponseInit): JsonResponseOptions {
-  if (!initOrHeaders) {
-    return {};
-  }
-  if (isJsonResponseOptions(initOrHeaders)) {
-    return initOrHeaders;
-  }
-  return { headers: initOrHeaders };
-}
-
 export function withResponseHeaders(response: Response, headersInit: HeadersInit): Response {
   const headers = new Headers(response.headers);
   new Headers(headersInit).forEach((value, key) => {
@@ -63,13 +47,20 @@ export function noStoreResponse(response: Response): Response {
   return withResponseHeaders(response, { "Cache-Control": "no-store" });
 }
 
-export function errorResponse(status: number, message: string, initOrHeaders?: JsonResponseInit): Response {
-  const options = normalizeJsonResponseOptions(initOrHeaders);
+export function errorResponse(status: number, message: string, options: JsonResponseOptions = {}): Response {
   return jsonResponse({ error: message }, { ...options, status });
 }
 
-export function jsonResponse(body: unknown, initOrHeaders?: JsonResponseInit): Response {
-  const options = normalizeJsonResponseOptions(initOrHeaders);
+/**
+ * Headers-only form. Kept explicit because the previous single signature
+ * sniffed its argument shape and misread any header record that happened to
+ * carry a `status` / `headers` / `noStore` / `retryAfterSec` key.
+ */
+export function jsonResponseWithHeaders(body: unknown, headers: Record<string, string>): Response {
+  return jsonResponse(body, { headers });
+}
+
+export function jsonResponse(body: unknown, options: JsonResponseOptions = {}): Response {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers ?? {}),
@@ -110,10 +101,10 @@ export function jsonFreshResponse(body: unknown, options: JsonFreshResponseOptio
   }
 
   if (options.updatedAt != null && options.maxAgeSec != null) {
-    return jsonResponse(body, addFreshnessHeaders(headers, options.updatedAt, options.maxAgeSec));
+    return jsonResponseWithHeaders(body, addFreshnessHeaders(headers, options.updatedAt, options.maxAgeSec));
   }
 
-  return jsonResponse(body, headers);
+  return jsonResponseWithHeaders(body, headers);
 }
 
 export function cacheControlForDegradedPayload(payload: { _meta: { degraded: boolean } }): string {

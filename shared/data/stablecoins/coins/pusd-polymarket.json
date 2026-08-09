@@ -66,6 +66,7 @@
     "reviewer": "OpenAI Codex C02 control review",
     "reviewedAt": "2026-08-08"
   },
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "pusd-vault",
     "version": 1,

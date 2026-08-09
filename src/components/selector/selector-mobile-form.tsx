@@ -1,15 +1,11 @@
 "use client";
 
-import { type ReactNode } from "react";
 import { selectorProfileLabel } from "@shared/lib/selector/selector-labels";
-import { SelectorQuestionCard, type SelectorOption } from "@/components/selector/selector-question-card";
+import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
+import { SELECTOR_QUESTIONS, computeTotalSteps } from "@/app/screener/picker/picker-options";
 import type {
-  SelectorDepeg,
-  SelectorExit,
-  SelectorHorizon,
-  SelectorPeg,
+  SelectorAction,
   SelectorProfile,
-  SelectorVenue,
   SelectorWizardState,
 } from "@/app/screener/picker/selector-state";
 import { shouldSkipExitStep } from "@/app/screener/picker/selector-state";
@@ -17,66 +13,27 @@ import { shouldSkipExitStep } from "@/app/screener/picker/selector-state";
 interface SelectorMobileFormProps {
   state: SelectorWizardState;
   profile: SelectorProfile;
-  pegOptions: readonly SelectorOption<SelectorPeg>[];
-  horizonOptions: readonly SelectorOption<SelectorHorizon>[];
-  depegOptions: readonly SelectorOption<SelectorDepeg>[];
-  venueOptions: readonly SelectorOption<SelectorVenue>[];
-  exitOptions: readonly SelectorOption<SelectorExit>[];
-  preHighlightDepeg?: SelectorDepeg;
-  isVenueMulti: boolean;
-  legendQ2: string;
-  legendQ3: string;
-  legendQ4: string;
-  legendQ5: string;
-  legendQ6: string;
-  helperQ3?: ReactNode;
-  helperQ4?: ReactNode;
-  onSetPeg: (value: SelectorPeg) => void;
-  onSetHorizon: (value: SelectorHorizon) => void;
-  onSetDepeg: (value: SelectorDepeg) => void;
-  onSetVenue: (value: readonly SelectorVenue[]) => void;
-  onSetExit: (value: SelectorExit) => void;
+  onAnswer: (action: SelectorAction) => void;
   onAdjustProfile: () => void;
   onSeeResults: () => void;
 }
 
 /**
  * Mobile-only: stacks Q2-Q6 below the Q1 answer with a single bottom CTA.
- * Uses the same `SelectorQuestionCard` primitive — the only structural
- * difference is the single submit at the bottom rather than per-step Next.
+ * Uses the same `SelectorQuestionCard` primitive and the same `SELECTOR_QUESTIONS`
+ * descriptors as the desktop wizard — the only structural difference is the single
+ * submit at the bottom rather than per-step Next.
  */
-export function SelectorMobileForm(props: SelectorMobileFormProps) {
-  const {
-    state,
-    profile,
-    pegOptions,
-    horizonOptions,
-    depegOptions,
-    venueOptions,
-    exitOptions,
-    preHighlightDepeg,
-    isVenueMulti,
-    legendQ2,
-    legendQ3,
-    legendQ4,
-    legendQ5,
-    legendQ6,
-    helperQ3,
-    helperQ4,
-    onSetPeg,
-    onSetHorizon,
-    onSetDepeg,
-    onSetVenue,
-    onSetExit,
-    onAdjustProfile,
-    onSeeResults,
-  } = props;
-
+export function SelectorMobileForm({
+  state,
+  profile,
+  onAnswer,
+  onAdjustProfile,
+  onSeeResults,
+}: SelectorMobileFormProps) {
   const skipExit = shouldSkipExitStep(profile, state.horizon, state.depegTolerance);
-  const venueValue = isVenueMulti ? state.venue : (state.venue[0] ?? null);
   const profileLabel = selectorProfileLabel(profile);
-  const totalSteps = skipExit ? 5 : 6;
-  const q5Topic = profile === "treasury" ? "Rails" : "Venues";
+  const totalSteps = computeTotalSteps(profile, state.horizon, state.depegTolerance);
 
   const isReady =
     state.pegCurrency != null &&
@@ -100,71 +57,23 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         </button>
       </div>
 
-      <SelectorQuestionCard<SelectorPeg>
-        questionId="q2"
-        step={2}
-        totalSteps={totalSteps}
-        kickerLabel="Question 2 — Peg currency"
-        legend={legendQ2}
-        options={pegOptions}
-        value={state.pegCurrency}
-        onChange={(v) => onSetPeg(v as SelectorPeg)}
-        showActions={false}
-      />
-
-      <SelectorQuestionCard<SelectorHorizon>
-        questionId="q3"
-        step={3}
-        totalSteps={totalSteps}
-        kickerLabel="Question 3 — Horizon"
-        legend={legendQ3}
-        options={horizonOptions}
-        value={state.horizon}
-        onChange={(v) => onSetHorizon(v as SelectorHorizon)}
-        showActions={false}
-      />
-
-      <SelectorQuestionCard<SelectorDepeg>
-        questionId="q4"
-        step={4}
-        totalSteps={totalSteps}
-        kickerLabel="Question 4 — Peg tolerance"
-        legend={legendQ4}
-        helper={helperQ3}
-        options={depegOptions}
-        value={state.depegTolerance}
-        onChange={(v) => onSetDepeg(v as SelectorDepeg)}
-        preHighlight={preHighlightDepeg}
-        showActions={false}
-      />
-
-      <SelectorQuestionCard<SelectorVenue>
-        questionId="q5"
-        step={5}
-        totalSteps={totalSteps}
-        kickerLabel={`Question 5 — ${q5Topic}`}
-        legend={legendQ5}
-        helper={helperQ4}
-        multi={isVenueMulti}
-        options={venueOptions}
-        value={venueValue}
-        onChange={(v) => onSetVenue(Array.isArray(v) ? v : [v as SelectorVenue])}
-        showActions={false}
-      />
-
-      {!skipExit ? (
-        <SelectorQuestionCard<SelectorExit>
-          questionId="q6"
-          step={6}
+      {SELECTOR_QUESTIONS.filter((question) => !(skipExit && question.questionId === "q6")).map((question) => (
+        <SelectorQuestionCard
+          key={question.questionId}
+          questionId={question.questionId}
+          step={question.step}
           totalSteps={totalSteps}
-          kickerLabel="Question 6 — Exit speed"
-          legend={legendQ6}
-          options={exitOptions}
-          value={state.exitSpeed}
-          onChange={(v) => onSetExit(v as SelectorExit)}
+          kickerLabel={question.kickerLabel(profile)}
+          legend={question.legend(profile)}
+          helper={question.helper}
+          options={question.options(profile)}
+          multi={question.multi?.(profile)}
+          value={question.value(state, profile)}
+          preHighlight={question.preHighlight?.(state, profile)}
+          onChange={(v) => onAnswer(question.setAction(v))}
           showActions={false}
         />
-      ) : null}
+      ))}
 
       <div className="sticky bottom-0 z-10 -mx-4 pharos-mobile-utility-safe border-t border-border/55 bg-background/95 px-4 py-3 backdrop-blur sm:hidden">
         <p className="mb-2 text-center text-xs text-muted-foreground" aria-live="polite">

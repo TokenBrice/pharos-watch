@@ -1,3 +1,7 @@
+import {
+  getReportCardGradeRank,
+  UNKNOWN_REPORT_CARD_GRADE_RANK,
+} from "@shared/lib/report-card-core";
 import type { SafetyChange } from "../lib/telegram-alerts";
 import type {
   AlertSafetyV9SourceRow,
@@ -27,24 +31,11 @@ function compareGradeOrScore(
   previousScore: number | null,
   currentScore: number | null,
 ): Direction {
-  const gradeOrder = [
-    "NR",
-    "F",
-    "D-",
-    "D",
-    "D+",
-    "C-",
-    "C",
-    "C+",
-    "B-",
-    "B",
-    "B+",
-    "A-",
-    "A",
-    "A+",
-  ];
-  const previousRank = gradeOrder.indexOf(previousGrade);
-  const currentRank = gradeOrder.indexOf(currentGrade);
+  // One grade-rank ladder. The local list this replaced also carried phantom
+  // `D-`/`D+` grades the V9 vocabulary has never produced; unknown grades still
+  // rank strictly below NR, so every comparison below is unchanged.
+  const previousRank = getReportCardGradeRank(previousGrade, UNKNOWN_REPORT_CARD_GRADE_RANK)!;
+  const currentRank = getReportCardGradeRank(currentGrade, UNKNOWN_REPORT_CARD_GRADE_RANK)!;
   const gradeDirection =
     currentRank > previousRank
       ? "upgrade"

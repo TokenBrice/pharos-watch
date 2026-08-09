@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  ACTIVE_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [
     {
       id: "ftusd-flying-tulip",
       name: "Flying Tulip USD",

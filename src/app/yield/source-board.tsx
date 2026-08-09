@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
@@ -367,7 +368,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
               role="button"
               tabIndex={0}
               aria-label={`${driver.label}: ${pluralize(driver.count, "row")}`}
-              className="pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
+              className={cn("pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}
             >
               <span>{driver.label}</span>
               <span className="pharos-numeric text-[10px] opacity-75">{driver.count}</span>
@@ -589,7 +590,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
                     description="A source changed when the selected source differs from the prior published snapshot. Click for the audit list."
                     open={openDisclosure === "switches"}
                     controls={disclosureId}
-                    toneClass="border-sky-500/25 bg-sky-500/10 text-sky-700 hover:bg-sky-500/15 dark:text-sky-300"
+                    toneClass={cn(SEVERITY_TONE_CLASS.sky.pill, "hover:bg-sky-500/15")}
                     onClick={() => toggleDisclosure("switches")}
                   />
                 ) : null}
@@ -599,7 +600,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
                     description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
                     open={openDisclosure === "anomalies"}
                     controls={disclosureId}
-                    toneClass="border-amber-500/25 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+                    toneClass={cn(SEVERITY_TONE_CLASS.watch.pill, "hover:bg-amber-500/15")}
                     onClick={() => toggleDisclosure("anomalies")}
                   />
                 ) : null}

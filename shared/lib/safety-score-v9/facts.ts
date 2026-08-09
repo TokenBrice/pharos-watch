@@ -108,6 +108,9 @@ export function computeValidatedV9FactSetDigest(input: V9FactSetCore | CompiledV
   );
 }
 
+// Test seam (keep exported): parse-then-hash over an unvalidated fact set.
+// `computeValidatedV9FactSetDigest` (the production entry) assumes a validated
+// input, so the tamper-detection assertions need this form.
 export function computeV9FactSetDigest(input: V9FactSetCore | CompiledV9FactSet): string {
   return computeValidatedV9FactSetDigest(parseV9FactSetDigestInput(input));
 }
@@ -119,12 +122,16 @@ function assertV9FactSetDigest(factSet: CompiledV9FactSet): void {
   }
 }
 
+// Test seam (keep exported): the only path returning the *retained V2 shape*.
+// `readCompiledV9FactSetForEvaluation` upgrades V2 to V3, so the frozen-capture
+// byte-stability round-trip and the digest-tamper refusal have no public route.
 export function parseCompiledV9FactSetV2(input: unknown): CompiledV9FactSetV2 {
   const factSet = CompiledV9FactSetV2Schema.parse(input);
   assertV9FactSetDigest(factSet);
   return factSet;
 }
 
+// Test seam (keep exported): V3 digest-tamper refusal, paired with the V2 form.
 export function parseCompiledV9FactSetV3(input: unknown): CompiledV9FactSetV3 {
   const factSet = CompiledV9FactSetV3Schema.parse(input);
   assertV9FactSetDigest(factSet);
@@ -197,6 +204,8 @@ if (Object.keys(V9_LEGACY_RESPONSIBILITY_BY_REASON).length !== V9_REASON_CODES.l
   throw new Error("Safety Score v9 legacy responsibility map is not exhaustive");
 }
 
+// Test seam (keep exported): per-gap V2->V3 responsibility mapping, asserted in
+// isolation because a whole-fact-set upgrade cannot isolate one legacy reason.
 export function upgradeV9FactGapV2(gap: V9FactGapV2) {
   const responsibility: V9EvidenceResponsibility =
     gap.observationState === "stale"

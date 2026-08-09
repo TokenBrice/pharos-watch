@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import { formatAddress, formatEventDate } from "@shared/lib/format";
+import { formatAddress, formatDecimal, formatEventDate } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
 import { CHAIN_META } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -41,11 +41,14 @@ function TelegramIcon({ className }: { className?: string }) {
   );
 }
 
-const USD_COMPACT = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
+/**
+ * Whole-dollar grouped USD through the shared cached formatter. Every value
+ * rendered here is a non-negative sum (donations, targets, remaining gaps), so
+ * the `$`-prefix spelling matches the previous `style: "currency"` output.
+ */
+function formatUsdWhole(value: number): string {
+  return `$${formatDecimal(value, 0, 0)}`;
+}
 
 /* ------------------------------------------------------------------ KPI row */
 
@@ -64,7 +67,7 @@ function buildThisMonthLabel(
   }
   return {
     primary: coveragePctLabel,
-    secondary: `${USD_COMPACT.format(summary.currentMonthCommunityUsd)} of ${USD_COMPACT.format(monthlyTargetUsd)} covered`,
+    secondary: `${formatUsdWhole(summary.currentMonthCommunityUsd)} of ${formatUsdWhole(monthlyTargetUsd)} covered`,
   };
 }
 
@@ -73,7 +76,7 @@ function buildCommunityLabel(summary: DonationSummary): KpiLabel {
     return { primary: "Be the first", secondary: "community support starts here" };
   }
   return {
-    primary: USD_COMPACT.format(summary.lifetimeCommunityUsd),
+    primary: formatUsdWhole(summary.lifetimeCommunityUsd),
     secondary: `from ${summary.lifetimeCommunityDonorCount} supporters since launch`,
   };
 }
@@ -105,7 +108,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
           <p className="pharos-kicker text-muted-foreground">Monthly running cost</p>
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
-              {USD_COMPACT.format(monthlyTargetUsd)}
+              {formatUsdWhole(monthlyTargetUsd)}
             </p>
             <p className="text-sm text-muted-foreground">
               What it takes to keep Pharos online, maintained, and free to use every month.
@@ -138,8 +141,8 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{USD_COMPACT.format(summary.currentMonthCommunityUsd)} covered</span>
-            <span>Monthly goal: {USD_COMPACT.format(monthlyTargetUsd)}</span>
+            <span>{formatUsdWhole(summary.currentMonthCommunityUsd)} covered</span>
+            <span>Monthly goal: {formatUsdWhole(monthlyTargetUsd)}</span>
           </div>
           <div
             className="relative h-2 w-full overflow-hidden rounded-full bg-muted/40"
@@ -164,7 +167,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Supporter-funded this month</span>
-            <span>{remainingUsd > 0 ? `${USD_COMPACT.format(remainingUsd)} still open` : "Monthly costs covered"}</span>
+            <span>{remainingUsd > 0 ? `${formatUsdWhole(remainingUsd)} still open` : "Monthly costs covered"}</span>
           </div>
         </div>
 
@@ -173,7 +176,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <p className="text-sm font-medium text-foreground">Previous months</p>
               <p className="text-xs text-muted-foreground">
-                Coverage against the {USD_COMPACT.format(monthlyTargetUsd)} monthly goal
+                Coverage against the {formatUsdWhole(monthlyTargetUsd)} monthly goal
               </p>
             </div>
             <TableFrame
@@ -215,7 +218,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
                       </TableHead>
                       <TableCell className="px-3 py-2.5 text-right">
                         <span className="pharos-numeric text-foreground">
-                          {USD_COMPACT.format(m.communityUsd)}
+                          {formatUsdWhole(m.communityUsd)}
                         </span>
                       </TableCell>
                       <TableCell className="px-3 py-2.5">
@@ -300,7 +303,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
                     {item.note ? <span className="ml-2 text-xs text-muted-foreground">— {item.note}</span> : null}
                   </span>
                   <span className="pharos-numeric text-muted-foreground">
-                    {USD_COMPACT.format(item.usd_per_month)}
+                    {formatUsdWhole(item.usd_per_month)}
                   </span>
                 </li>
               ))}
@@ -309,7 +312,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
         ))}
         <div className="flex justify-between border-t border-border/60 pt-2 text-sm font-medium">
           <span>Total / month</span>
-          <span className="pharos-numeric">{USD_COMPACT.format(total)}</span>
+          <span className="pharos-numeric">{formatUsdWhole(total)}</span>
         </div>
         <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           TokenBrice also sponsored $5,800 in one-time design expenses for the full website redesign and logo.
@@ -317,8 +320,8 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
         </p>
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>
-            This month: {USD_COMPACT.format(currentCommunityUsd)} community ·{" "}
-            {currentFundingGapUsd > 0 ? `${USD_COMPACT.format(currentFundingGapUsd)} still open.` : "costs covered."}
+            This month: {formatUsdWhole(currentCommunityUsd)} community ·{" "}
+            {currentFundingGapUsd > 0 ? `${formatUsdWhole(currentFundingGapUsd)} still open.` : "costs covered."}
           </p>
           <p>
             Costs last reviewed: <time dateTime={reviewedDateTime}>{reviewedDate}</time>.
@@ -366,7 +369,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
                 <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
                   <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    <span className="pharos-numeric">{USD_COMPACT.format(d.usd_at_receipt)}</span>{" "}
+                    <span className="pharos-numeric">{formatUsdWhole(d.usd_at_receipt)}</span>{" "}
                     {explorerUrl ? (
                       <a
                         href={explorerUrl}

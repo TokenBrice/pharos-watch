@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { makeTelegramUpdateRequest } from "../../test-helpers/__shared/telegram";
 
 // The audited reply helper is mocked so the flood notice reply can throw;
 // the production helper swallows Telegram/D1 failures internally.
@@ -11,25 +10,15 @@ vi.mock("../telegram-webhook-replies", () => ({
   sendAuditedTelegramReply: sendAuditedTelegramReplyMock,
 }));
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
-
-const { handleTelegramWebhook } = await import("../telegram-webhook");
-
-function makeWebhookRequest(chatId: number, text: string): Request {
-  return makeTelegramUpdateRequest({
-    message: {
-      chat: { id: chatId, username: "testuser", type: "private" },
-      from: { id: 999, username: "requester" },
-      text,
-    },
-  });
-}
+const {
+  handleTelegramWebhook,
+  makeWebhookRequest,
+  resetTelegramWebhookTest,
+} = await import("./telegram-webhook.test-support");
 
 describe("telegram webhook per-chat flood cap", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    resetTelegramWebhookTest();
     sendAuditedTelegramReplyMock.mockReset();
   });
 

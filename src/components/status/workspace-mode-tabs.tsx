@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 export type WorkspaceModeSeverity = "healthy" | "watch" | "critical" | "unknown";
 
@@ -14,9 +16,9 @@ export interface WorkspaceModeSummary<TMode extends string> {
 }
 
 const SEVERITY_CLASS: Record<WorkspaceModeSeverity, string> = {
-  healthy: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300",
-  watch: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  critical: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+  healthy: STATUS_OK_PILL_CLASS,
+  watch: SEVERITY_TONE_CLASS.watch.pill,
+  critical: SEVERITY_TONE_CLASS.alert.pill,
   unknown: "border-border bg-muted text-muted-foreground",
 };
 

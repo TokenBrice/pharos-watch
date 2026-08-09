@@ -144,15 +144,15 @@ Promotion drill:
    producer is live; any other blocker must be explained before promotion.
 2. Provision a named Cloudflare Worker environment called
    `reserve-recovery-preview` with its own isolated D1 database bound as `DB`.
-   Set `WORKER_RESERVE_FAULT_INJECTION_ENABLED=true` only in that environment;
-   keep it unset or false in production. The flag gates both arming and scheduled
-   execution, so disabling it also neutralizes any retained fault row. This
-   repository change does not create or deploy the environment, and a
-   placeholder/fake D1 UUID does not satisfy this prerequisite. On its uploaded `workers.dev` version, obtain a valid
-   Access JWT for `CF_ACCESS_OPS_API_AUD` and arm
-   `POST /api/admin/reserve-recovery-fault-injection` for an exact version,
-   schedule, slot, and attempt. Run two cancellations at different boundaries,
-   including one per-asset boundary and one sidecar boundary.
+   This repository change does not create or deploy the environment, and a
+   placeholder/fake D1 UUID does not satisfy this prerequisite. The fault-injection
+   harness this step used to drive — `WORKER_RESERVE_FAULT_INJECTION_ENABLED` plus
+   `POST /api/admin/reserve-recovery-fault-injection`, which armed an exact version,
+   schedule, slot, and attempt — has been removed from the Worker, so the two
+   deliberate cancellations at different boundaries (one per-asset boundary and one
+   sidecar boundary) can no longer be induced on demand. Either observe them
+   opportunistically on a real interrupted run or revert the harness removal before
+   re-running this drill.
 3. Set the preview version to `reconcile`. Within one poll after the exact child
    lease expires, require one `platform_abandoned` source attempt, one `ready`
    successor, exact pending-attempt cleanup, and explicit `not_started`

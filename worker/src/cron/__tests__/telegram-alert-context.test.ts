@@ -7,15 +7,15 @@ import {
 } from "../../test-helpers/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
-  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
+  loadActiveSafetyScoreSource: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
   getCache: vi.fn(),
   getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
-vi.mock("../../lib/identified-active-safety-score-source", () => ({
-  loadIdentifiedActiveSafetyScoreSource: mocks.loadIdentifiedActiveSafetyScoreSource,
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -38,11 +38,8 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
     const snapshot = makeWorkerReportCardsV9Response({ cards: [] });
-    mocks.loadIdentifiedActiveSafetyScoreSource.mockReset().mockResolvedValue({
+    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
-      identity: snapshot.safetyScoreIdentity,
-      publishedAtSec: snapshot.updatedAt,
       snapshot,
     });
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
@@ -74,7 +71,7 @@ describe("buildAlertContextLines", () => {
   });
 
   it("omits safety context when the canonical identity is unavailable", async () => {
-    mocks.loadIdentifiedActiveSafetyScoreSource.mockRejectedValueOnce(new Error("identity mismatch"));
+    mocks.loadActiveSafetyScoreSource.mockRejectedValueOnce(new Error("identity mismatch"));
     const db = {
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
     } as unknown as D1Database;
@@ -88,11 +85,8 @@ describe("buildAlertContextLines", () => {
     const snapshot = makeWorkerReportCardsV9Response({
       cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
     });
-    mocks.loadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce({
+    mocks.loadActiveSafetyScoreSource.mockResolvedValueOnce({
       kind: "v9",
-      expectedModel: "v9",
-      identity: snapshot.safetyScoreIdentity,
-      publishedAtSec: snapshot.updatedAt,
       snapshot,
     });
     const db = {

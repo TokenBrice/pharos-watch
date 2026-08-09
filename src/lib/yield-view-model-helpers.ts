@@ -1,9 +1,15 @@
+import { abbreviateNumberParts } from "@shared/lib/format";
 import { CURRENCY_TAB_ENUMERATED_PEGS, type YieldPegFilter } from "@/lib/yield-view-config";
 import type { PegCurrency } from "@shared/types";
 
+/**
+ * TVL filter thresholds are curated round numbers, so the abbreviated value is
+ * rendered unrounded ("$1B+", "$250M+"); anything below a million keeps the
+ * grouped integer form.
+ */
 export function formatTvlOption(value: number): string {
-  if (value >= 1_000_000_000) return `$${value / 1_000_000_000}B+`;
-  if (value >= 1_000_000) return `$${value / 1_000_000}M+`;
+  const { short, suffix } = abbreviateNumberParts(value);
+  if (value > 0 && (suffix === "T" || suffix === "B" || suffix === "M")) return `$${short}${suffix}+`;
   return `$${value.toLocaleString()}+`;
 }
 

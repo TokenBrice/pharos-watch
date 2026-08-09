@@ -110,6 +110,7 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "ETH + wstETH (delta-neutral via short perps)",

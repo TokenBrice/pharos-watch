@@ -72,7 +72,6 @@ export function buildYieldSafetySnapshotMeta(input: {
   trackedCount: number;
   reason: string | null;
   source: "safety-score-v9-publication";
-  expectedModel: "v9";
   safetyScoreIdentity: SafetyScorePublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
@@ -85,7 +84,6 @@ export function buildYieldSafetySnapshotMeta(input: {
     trackedCount: input.trackedCount,
     reason: input.reason,
     source: input.source,
-    expectedModel: input.expectedModel,
     safetyScoreIdentity: input.safetyScoreIdentity,
     publicationGenerationId: input.publicationGenerationId,
     methodologyVersion: input.methodologyVersion,

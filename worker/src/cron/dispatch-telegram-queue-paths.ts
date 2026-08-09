@@ -1,9 +1,6 @@
 import type { AlertSafetySourceAssessment } from "../lib/alert-safety-source-cache";
 import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-cache";
-import { recordOutcome } from "../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
-import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
 import { reportCronProgress } from "../lib/cron-progress";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
@@ -21,15 +18,11 @@ import {
   type TelegramDispatchSharedState,
 } from "./dispatch-telegram-state";
 import { writeSnapshots } from "./telegram-alert-snapshots";
+import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
 import {
-  drainPendingQueue,
-  archiveAgedExecutionUnknownPendingAlerts,
-  cleanupExpiredPendingAlerts,
-  emptyDrainResult,
   readPendingCapacitySnapshot,
   type PendingDrainResult,
   type PendingCapacitySnapshot,
-  TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "./telegram-pending";
 
 /**
@@ -38,23 +31,6 @@ import {
  * on eventless runs, advance the stored baseline snapshots.
  */
 
-function pendingQueueChanged(
-  drainResult: PendingDrainResult,
-  expiredCount: number,
-  pendingEnqueued = 0,
-): boolean {
-  return (
-    drainResult.sent > 0 ||
-    drainResult.blocked > 0 ||
-    drainResult.retryQueued > 0 ||
-    drainResult.executionUnknown > 0 ||
-    drainResult.dropped > 0 ||
-    drainResult.deferred > 0 ||
-    expiredCount > 0 ||
-    pendingEnqueued > 0
-  );
-}
-
 function pendingCountTotals(drainResult: PendingDrainResult) {
   return {
     pendingAttempted: drainResult.attempted,
@@ -62,25 +38,6 @@ function pendingCountTotals(drainResult: PendingDrainResult) {
     pendingDeferred: drainResult.deferred,
     pendingDropped: drainResult.dropped,
   };
-}
-
-async function readPendingCapacityAfterLifecycle(
-  db: D1Database,
-  nowSec: number,
-  pendingCapacityBefore: PendingCapacitySnapshot,
-  drainResult: PendingDrainResult,
-  expiredCount: number,
-  options: {
-    pendingEnqueued?: number;
-    forceRefresh?: boolean;
-  } = {},
-): Promise<PendingCapacitySnapshot> {
-  const shouldRefresh =
-    options.forceRefresh === true ||
-    pendingQueueChanged(drainResult, expiredCount, options.pendingEnqueued ?? 0);
-  return shouldRefresh
-    ? readPendingCapacitySnapshot(db, nowSec)
-    : pendingCapacityBefore;
 }
 
 export interface EventlessFastPathContext {
@@ -136,24 +93,17 @@ export async function executeCircuitOpenQueuePath({
     },
   });
 
-  const drainResult = pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
-      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-    })
-    : emptyDrainResult();
-  const archivedExecutionUnknownCount = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
-  const expiredCount = pendingCapacityBefore.expired > 0
-    ? await cleanupExpiredPendingAlerts(db, nowSec)
-    : 0;
-  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
+  const lifecycle = await runPendingQueueLifecycle({
     db,
     nowSec,
     pendingCapacityBefore,
-    drainResult,
-    expiredCount,
-    { forceRefresh: archivedExecutionUnknownCount > 0 },
-  );
-  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+    drain: { botToken, dispatchStartedAtMs, signal },
+    cleanupExpired: "when-snapshot-shows-expired",
+    capacityRefreshBasis: "queue-changed",
+    outcomePolicy: "attempted-only",
+    sharedState,
+  });
+  const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
 
   const base = emptyResult(false);
   const result: DispatchResult & { skipped: "circuit-open" } = {
@@ -168,10 +118,7 @@ export async function executeCircuitOpenQueuePath({
     pendingCapacityAfter,
   };
 
-  if (drainResult.attempted > 0) {
-    const hasSuccessfulTelegramEffect = drainResult.sent > 0 || drainResult.blockedCleanedUp > 0;
-    await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulTelegramEffect);
-  }
+  await lifecycle.recordDrainOutcome();
 
   await reportCronProgress(reportProgress, {
     stage: "complete",
@@ -219,28 +166,18 @@ export async function executeEventlessFastPath({
       deferredTail: pendingTailState(pendingCapacityBefore),
     },
   });
-  let drainResult = emptyDrainResult();
-  if (pendingCapacityBefore.due > 0) {
-    drainResult = await drainPendingQueue(db, botToken, TELEGRAM_PENDING_DRAIN_BUDGET, signal, {
-      softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-      markTelegramDeliveryStarted,
-    });
-  }
-  const archivedExecutionUnknownCount = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
-  const expiredCount = pendingCapacityBefore.expired > 0
-    ? await cleanupExpiredPendingAlerts(db, nowSec)
-    : 0;
-  const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
+  const lifecycle = await runPendingQueueLifecycle({
     db,
     nowSec,
     pendingCapacityBefore,
-    drainResult,
-    expiredCount,
-    {
-      forceRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0 || archivedExecutionUnknownCount > 0,
-    },
-  );
-  assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
+    drain: { botToken, dispatchStartedAtMs, signal, markTelegramDeliveryStarted },
+    cleanupExpired: "when-snapshot-shows-expired",
+    capacityRefreshBasis: "queue-changed",
+    forceCapacityRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0,
+    outcomePolicy: "always-crediting-idle",
+    sharedState,
+  });
+  const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
 
   await writeSnapshots(db, currentSnapshots);
   await writePresetFailureCount(db, 0);
@@ -267,12 +204,7 @@ export async function executeEventlessFastPath({
     eventlessFastPath: true,
   };
 
-  const hasSuccessfulEffect =
-    result.messagesSent > 0 ||
-    result.blockedUsersCleanedUp > 0 ||
-    result.pendingEnqueued > 0 ||
-    result.pendingAttempted === 0;
-  await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
+  await lifecycle.recordDrainOutcome();
   await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Completed eventless Telegram dispatch",
@@ -302,26 +234,28 @@ export async function executeSourceRecoveryQueueSidecar(args: {
   sharedState?: TelegramDispatchSharedState;
   markTelegramDeliveryStarted?: () => void;
 }): Promise<DispatchResult> {
-  const drainResult = args.pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(args.db, args.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, args.signal, {
-      softDeadlineAtMs: args.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+  // The recovery sidecar expires TTL-dead rows on every run, unlike the
+  // circuit-open/eventless paths which only do so when the pre-run snapshot
+  // already showed expired rows. That difference is deliberate: the sidecar is
+  // the only path that runs while the fresh lane is degraded, so it carries the
+  // unconditional expiry duty.
+  const lifecycle = await runPendingQueueLifecycle({
+    db: args.db,
+    nowSec: args.nowSec,
+    pendingCapacityBefore: args.pendingCapacityBefore,
+    drain: {
+      botToken: args.botToken,
+      dispatchStartedAtMs: args.dispatchStartedAtMs,
+      signal: args.signal,
       markTelegramDeliveryStarted: args.markTelegramDeliveryStarted,
-    })
-    : emptyDrainResult();
-  const archivedUnknown = await archiveAgedExecutionUnknownPendingAlerts(args.db, args.nowSec);
-  const expiredCount = await cleanupExpiredPendingAlerts(args.db, args.nowSec);
-  const pendingCapacityAfter =
-    drainResult.attempted > 0 || archivedUnknown > 0 || expiredCount > 0
-      ? await readPendingCapacitySnapshot(args.db, args.nowSec)
-      : args.pendingCapacityBefore;
-  assignSharedDispatchState(args.sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
-  if (drainResult.attempted > 0) {
-    await recordOutcome(
-      args.db,
-      CIRCUIT_SOURCE.TELEGRAM_API,
-      drainResult.sent > 0 || drainResult.blockedCleanedUp > 0,
-    );
-  }
+    },
+    cleanupExpired: "always",
+    capacityRefreshBasis: "drain-attempted",
+    outcomePolicy: "attempted-only",
+    sharedState: args.sharedState,
+  });
+  const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
+  await lifecycle.recordDrainOutcome();
   return {
     ...emptyResult(false, args.chatsWithActiveSnooze),
     messagesSent: drainResult.sent,

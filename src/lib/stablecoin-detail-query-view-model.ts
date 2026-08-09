@@ -156,35 +156,6 @@ export function buildDetailPegPriceSnapshot(
   };
 }
 
-export function buildDetailFeatureAvailability(
-  id: string,
-  coin: StablecoinMeta,
-  supplemental: StablecoinDetailViewModelSupplementalInputs,
-): DetailFeatureAvailabilitySnapshot {
-  const yieldRanking = supplemental.yieldRankings.data?.rankings.find((candidate) => candidate.id === id) ?? null;
-  const stressSignal = supplemental.stressSignals.data?.signals[id] ?? null;
-  const hasFlows = supplemental.flows.enabled && (
-    supplemental.flows.isLoading
-    || supplemental.flows.error != null
-    || Boolean(supplemental.flows.data?.coins.find((entry) => entry.stablecoinId === id))
-  );
-  const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
-  const hasBlacklist = blacklistSupported && supplemental.blacklist.enabled && (
-    supplemental.blacklist.isLoading
-    || supplemental.blacklist.error != null
-    || Boolean(supplemental.blacklist.summary
-      && (supplemental.blacklist.summary.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0) > 0)
-  );
-  return {
-    yieldRanking,
-    hasYieldSection: (coin.flags.yieldBearing ?? false) || yieldRanking !== null,
-    stressSignal,
-    hasFlows,
-    hasBlacklist,
-    blacklistSymbol: blacklistSupported ? coin.symbol as BlacklistStablecoin : null,
-  };
-}
-
 function staleQueryFrom<T>(
   preset: NonNullable<StablecoinDetailStaleQuery["preset"]>,
   query: DetailQueryResource<T>,
@@ -259,73 +230,116 @@ function featureState(
   return { status, dataUpdatedAt, error: error ?? null };
 }
 
-export function buildDetailFeatureStates(
+export interface DetailFeatureSnapshot {
+  availability: DetailFeatureAvailabilitySnapshot;
+  states: StablecoinDetailFeatureStates;
+}
+
+/**
+ * One pass over the per-feature lookups. Availability ("does this section render at all")
+ * and the per-feature transport status were previously two functions that re-derived the
+ * same `find()` results, membership tests and event counts from the same inputs.
+ */
+export function buildDetailFeatureSnapshot(
   id: string,
   coin: StablecoinMeta,
   queries: StablecoinDetailViewModelQueryInputs,
   supplemental: StablecoinDetailViewModelSupplementalInputs,
-): StablecoinDetailFeatureStates {
+): DetailFeatureSnapshot {
+  const { yieldRankings, stressSignals, flows, blacklist, reserves } = supplemental;
   const liquidityEntry = queries.dexLiquidity.data?.[id];
-  const yieldRanking = supplemental.yieldRankings.data?.rankings.find((entry) => entry.id === id);
-  const flowEntry = supplemental.flows.data?.coins.find((entry) => entry.stablecoinId === id);
+  const yieldRanking = yieldRankings.data?.rankings.find((candidate) => candidate.id === id) ?? null;
+  const stressSignal = stressSignals.data?.signals[id] ?? null;
+  const flowEntry = flows.data?.coins.find((entry) => entry.stablecoinId === id) ?? null;
   const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
-  const blacklistEventCount = blacklistSupported
-    ? supplemental.blacklist.summary?.stats.perCoinTotalEvents[coin.symbol as BlacklistStablecoin] ?? 0
+  const blacklistSymbol = blacklistSupported ? (coin.symbol as BlacklistStablecoin) : null;
+  const blacklistEventCount = blacklistSymbol
+    ? blacklist.summary?.stats.perCoinTotalEvents[blacklistSymbol] ?? 0
     : 0;
-  const yieldStatus = supplemental.yieldRankings.error && supplemental.yieldRankings.data === undefined
-    ? "unavailable"
-    : supplemental.yieldRankings.error
-      ? "stale-with-data"
-      : supplemental.yieldRankings.isLoading
-        ? "loading"
-        : yieldRanking
-          ? "ready"
-          : coin.flags.yieldBearing ? "empty" : "unsupported";
-  const stressStatus = coin.flags.navToken
-    ? "unsupported"
-    : resolveQueryViewState({
-        hasData: supplemental.stressSignals.data !== undefined,
-        isLoading: supplemental.stressSignals.isLoading,
-        error: supplemental.stressSignals.error,
-        isEmpty: supplemental.stressSignals.data?.signals[id] == null,
-      });
-  const flowsStatus = !supplemental.flows.enabled
-    ? "deferred"
-    : supplemental.flows.error && supplemental.flows.data === undefined
-      ? "unavailable"
-      : supplemental.flows.error
-        ? "stale-with-data"
-        : supplemental.flows.isLoading ? "loading" : flowEntry ? "ready" : "unsupported";
-  const blacklistStatus = !blacklistSupported
-    ? "unsupported"
-    : !supplemental.blacklist.enabled
-      ? "deferred"
-      : supplemental.blacklist.error && supplemental.blacklist.summary === undefined
-        ? "unavailable"
-        : supplemental.blacklist.error
-          ? "stale-with-data"
-          : supplemental.blacklist.isLoading ? "loading" : blacklistEventCount > 0 ? "ready" : "empty";
-  const reservesStatus = !coin.liveReservesConfig
-    ? "unsupported"
-    : !supplemental.reserves.enabled
-      ? "deferred"
-      : supplemental.reserves.error && supplemental.reserves.live == null
-        ? "unavailable"
-        : supplemental.reserves.error
-          ? "stale-with-data"
-          : supplemental.reserves.isLoading ? "loading" : supplemental.reserves.live ? "ready" : "empty";
+
+  const hasFlows = flows.enabled && (flows.isLoading || flows.error != null || flowEntry != null);
+  const hasBlacklist = blacklistSupported
+    && blacklist.enabled
+    && (blacklist.isLoading || blacklist.error != null || blacklistEventCount > 0);
 
   return {
-    liquidity: featureState(resolveQueryViewState({
-      hasData: queries.dexLiquidity.data !== undefined,
-      isLoading: queries.dexLiquidity.isLoading ?? false,
-      error: queries.dexLiquidity.error,
-      isEmpty: liquidityEntry == null,
-    }), queries.dexLiquidity.dataUpdatedAt, queries.dexLiquidity.error),
-    yield: featureState(yieldStatus, supplemental.yieldRankings.dataUpdatedAt, supplemental.yieldRankings.error),
-    stress: featureState(stressStatus, supplemental.stressSignals.dataUpdatedAt, supplemental.stressSignals.error),
-    flows: featureState(flowsStatus, supplemental.flows.dataUpdatedAt, supplemental.flows.error),
-    blacklist: featureState(blacklistStatus, supplemental.blacklist.dataUpdatedAt, supplemental.blacklist.error),
-    reserves: featureState(reservesStatus, supplemental.reserves.dataUpdatedAt, supplemental.reserves.error),
+    availability: {
+      yieldRanking,
+      hasYieldSection: (coin.flags.yieldBearing ?? false) || yieldRanking !== null,
+      stressSignal,
+      hasFlows,
+      hasBlacklist,
+      blacklistSymbol,
+    },
+    states: {
+      liquidity: featureState(
+        resolveQueryViewState({
+          hasData: queries.dexLiquidity.data !== undefined,
+          isLoading: queries.dexLiquidity.isLoading ?? false,
+          error: queries.dexLiquidity.error,
+          isEmpty: liquidityEntry == null,
+        }),
+        queries.dexLiquidity.dataUpdatedAt,
+        queries.dexLiquidity.error,
+      ),
+      yield: featureState(
+        resolveQueryViewState({
+          hasData: yieldRankings.data !== undefined,
+          isLoading: yieldRankings.isLoading,
+          error: yieldRankings.error,
+          isEmpty: yieldRanking == null,
+          // A non-yield-bearing coin with no ranking has nothing to show, not an empty section.
+          emptyState: coin.flags.yieldBearing ? "empty" : "unsupported",
+        }),
+        yieldRankings.dataUpdatedAt,
+        yieldRankings.error,
+      ),
+      stress: featureState(
+        resolveQueryViewState({
+          supported: !coin.flags.navToken,
+          hasData: stressSignals.data !== undefined,
+          isLoading: stressSignals.isLoading,
+          error: stressSignals.error,
+          isEmpty: stressSignal == null,
+        }),
+        stressSignals.dataUpdatedAt,
+        stressSignals.error,
+      ),
+      flows: featureState(
+        resolveQueryViewState({
+          enabled: flows.enabled,
+          hasData: flows.data !== undefined,
+          isLoading: flows.isLoading,
+          error: flows.error,
+          isEmpty: flowEntry == null,
+          emptyState: "unsupported",
+        }),
+        flows.dataUpdatedAt,
+        flows.error,
+      ),
+      blacklist: featureState(
+        resolveQueryViewState({
+          supported: blacklistSupported,
+          enabled: blacklist.enabled,
+          hasData: blacklist.summary !== undefined,
+          isLoading: blacklist.isLoading,
+          error: blacklist.error,
+          isEmpty: blacklistEventCount === 0,
+        }),
+        blacklist.dataUpdatedAt,
+        blacklist.error,
+      ),
+      reserves: featureState(
+        resolveQueryViewState({
+          supported: Boolean(coin.liveReservesConfig),
+          enabled: reserves.enabled,
+          hasData: reserves.live != null,
+          isLoading: reserves.isLoading,
+          error: reserves.error,
+        }),
+        reserves.dataUpdatedAt,
+        reserves.error,
+      ),
+    },
   };
 }

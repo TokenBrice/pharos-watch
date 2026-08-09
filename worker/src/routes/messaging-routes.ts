@@ -4,8 +4,8 @@ export const MESSAGING_STATIC_ROUTES = [
   defineLazyStaticRoute("feedback", () =>
     import("../api/feedback").then(
       ({ handleFeedback }) =>
-        ({ db, request, feedbackEnv }) =>
-          handleFeedback(db, request, feedbackEnv),
+        ({ db, request, feedbackEnv, execCtx }) =>
+          handleFeedback(db, request, feedbackEnv, execCtx),
     ),
   ),
   defineLazyStaticRoute("api-key-requests", () =>

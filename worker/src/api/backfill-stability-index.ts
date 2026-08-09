@@ -31,13 +31,19 @@ interface ExistingStabilityIndexRow {
   methodology_version: string | null;
 }
 
-export async function handleBackfillStabilityIndex(
-  db: D1Database,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
-  const url = request ? new URL(request.url) : new URL("https://api.pharos.watch/api/backfill-stability-index");
+export interface BackfillStabilityIndexRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
 
+export async function handleBackfillStabilityIndex({
+  db,
+  url,
+  trustedAdmin,
+  request,
+}: BackfillStabilityIndexRouteContext): Promise<Response> {
   return runAdminJob({ request, trustedAdmin, url }, async ({ dryRun }) => {
     const rebuildTableSql = [
       "CREATE TABLE stability_index_rebuild (",

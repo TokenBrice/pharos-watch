@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { mockRegistry } from "../../../../test-helpers/cron";
 
 // Live supplies observed 2026-07-29. Arbitrum is the conserved global total:
 // its CCIP LockRelease pool holds exactly Ethereum + Pharos supply and the
@@ -15,8 +16,8 @@ const PGOLD_PRICE = 4_042.62;
 const selectCuratedAggregateContractsMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  ACTIVE_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [
     {
       id: "pgold-pleasing",
       name: "Pleasing Gold",

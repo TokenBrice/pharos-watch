@@ -26,7 +26,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
@@ -49,7 +49,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       crons: Record<string, { lastRun: unknown; healthy: boolean; expectedIntervalSec: number }>;
     };
@@ -107,7 +107,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -183,7 +183,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       crons: Record<
         string,
@@ -270,7 +270,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; cronErrors: number };
@@ -316,7 +316,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean; inFlight?: unknown | null }>;
       summary: { unhealthyCrons: number };
@@ -363,7 +363,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: {
@@ -445,7 +445,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       telegramBot: {
         totalChats: number;
@@ -543,7 +543,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as { telegramBot: unknown };
 
     expect(res.status).toBe(200);
@@ -570,7 +570,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
       telegramBot: unknown;
@@ -613,7 +613,7 @@ describe("handleStatus", () => {
     }) as typeof db.prepare;
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dbHealthy: boolean;
       rawOverallStatus: string;
@@ -646,7 +646,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean }>;
     };
@@ -690,7 +690,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; degradedCrons: number };

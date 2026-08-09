@@ -12,8 +12,11 @@ import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_DOC_BY_SLUG } from "@shared/lib/public-docs";
+import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
+import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
+import digests from "../../data/digests.json";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -26,21 +29,33 @@ interface BuildPageMetadataInput {
   ogWidth?: number;
   ogHeight?: number;
   robots?: Metadata["robots"];
+  /**
+   * Emit `title` as `{ absolute }`, bypassing the root `"%s | Pharos"`
+   * template. Only for pages whose title already carries the brand.
+   */
+  titleAbsolute?: boolean;
+  /** Open Graph object type. Defaults to `"website"`. */
+  ogType?: "website" | "article";
+  /** `og:article:published_time`; requires `ogType: "article"`. */
+  publishedTime?: string;
 }
 
-const METHODOLOGY_MARKDOWN_PATHS = new Set([
+/**
+ * The `.md` twins are written by
+ * `scripts/maintenance/generate-markdown-exports.ts`. The route *families* come
+ * from `shared/lib/markdown-route-policy.ts` (shared with
+ * `functions/_middleware.ts`); the per-family guards below mirror exactly what
+ * the generator writes, so an unknown slug or date never advertises an
+ * alternate that would 404.
+ */
+const METHODOLOGY_MARKDOWN_PATHS: ReadonlySet<string> = new Set<string>([
   "/methodology/",
-  "/methodology/blacklist-tracker-changelog/",
-  "/methodology/chain-health-changelog/",
-  "/methodology/depeg-changelog/",
-  "/methodology/depeg-resolver-changelog/",
-  "/methodology/liquidity-score-changelog/",
-  "/methodology/mint-burn-flow-changelog/",
-  "/methodology/pricing-pipeline-changelog/",
-  "/methodology/scoring-changelog/",
-  "/methodology/stability-index-changelog/",
-  "/methodology/yield-changelog/",
+  ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
 ]);
+
+const DIGEST_MARKDOWN_DATES: ReadonlySet<string> = new Set(
+  (digests as readonly { date: string }[]).map((digest) => digest.date),
+);
 
 export function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -59,31 +74,36 @@ function canonicalPathname(canonical: string): string | null {
   }
 }
 
-export function getMarkdownAlternateForCanonical(canonical: string): string | null {
-  const pathname = canonicalPathname(canonical);
-  if (!pathname) return null;
-
-  if (pathname === "/changelog/" || METHODOLOGY_MARKDOWN_PATHS.has(pathname)) {
-    return `${pathname}index.md`;
-  }
+function hasGeneratedMarkdownAsset(pathname: string): boolean {
+  if (pathname === "/changelog/" || pathname === "/docs/") return true;
+  if (METHODOLOGY_MARKDOWN_PATHS.has(pathname)) return true;
 
   const stablecoinMatch = pathname.match(/^\/stablecoin\/([^/]+)\/$/);
   if (stablecoinMatch) {
-    const id = decodeURIComponent(stablecoinMatch[1]);
-    return TRACKED_META_BY_ID.has(id) ? `${pathname}index.md` : null;
+    return TRACKED_META_BY_ID.has(decodeURIComponent(stablecoinMatch[1]));
   }
 
-  if (pathname === "/docs/") {
-    return "/docs/index.md";
+  const digestMatch = pathname.match(/^\/digest\/([^/]+)\/$/);
+  if (digestMatch) {
+    return DIGEST_MARKDOWN_DATES.has(decodeURIComponent(digestMatch[1]));
   }
 
   const docMatch = pathname.match(/^\/docs\/([^/]+)\/$/);
   if (docMatch) {
-    const slug = decodeURIComponent(docMatch[1]);
-    return PUBLIC_DOC_BY_SLUG.has(slug) ? `${pathname}index.md` : null;
+    return PUBLIC_DOC_BY_SLUG.has(decodeURIComponent(docMatch[1]));
   }
 
-  return null;
+  return false;
+}
+
+export function getMarkdownAlternateForCanonical(canonical: string): string | null {
+  const pathname = canonicalPathname(canonical);
+  if (!pathname) return null;
+
+  const assetPath = getGeneratedMarkdownAssetPath(pathname);
+  if (!assetPath) return null;
+
+  return hasGeneratedMarkdownAsset(pathname) ? assetPath : null;
 }
 
 export function trimTextAtWordBoundary(text: string, maxLength: number, ellipsis = "…"): string {
@@ -329,6 +349,9 @@ export function buildPageMetadata({
   ogWidth = 1200,
   ogHeight = 628,
   robots,
+  titleAbsolute = false,
+  ogType = "website",
+  publishedTime,
 }: BuildPageMetadataInput): Metadata {
   const resolvedImage = {
     url: ogImage ?? "/og-card.png",
@@ -344,17 +367,29 @@ export function buildPageMetadata({
     };
   }
 
+  const openGraph: Metadata["openGraph"] =
+    ogType === "article"
+      ? {
+          title,
+          description,
+          url: canonical,
+          type: "article",
+          ...(publishedTime ? { publishedTime } : {}),
+          images: [resolvedImage],
+        }
+      : {
+          title,
+          description,
+          url: canonical,
+          type: "website",
+          images: [resolvedImage],
+        };
+
   return {
-    title,
+    title: titleAbsolute ? { absolute: title } : title,
     description,
     alternates,
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      type: "website",
-      images: [resolvedImage],
-    },
+    openGraph,
     twitter: {
       card: "summary_large_image",
       title,

@@ -395,6 +395,7 @@
     ]
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

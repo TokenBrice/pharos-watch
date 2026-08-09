@@ -5,7 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { errorResponse, jsonResponseWithHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
@@ -24,7 +24,6 @@ interface ChainsDependencyMeta {
   ageSeconds?: number | null;
   status: ChainsDependencyStatus;
   reason?: string | null;
-  expectedModel: "v9";
   inputsStale?: boolean;
   staleInputs?: string[];
 }
@@ -55,18 +54,16 @@ function buildV9ExpectedDependencyMeta(
       ageSeconds: null,
       status: "unavailable",
       reason: activeSource.reason,
-      expectedModel: "v9",
     };
   }
   const updatedAt = activeSource.snapshot.updatedAt;
   const ageSeconds = getDependencyAgeSeconds(updatedAt, nowSec);
-  if (activeSource.snapshot.publicationHealth.status === "held") {
+  if (activeSource.kind === "held") {
     return {
       updatedAt,
       ageSeconds,
       status: "degraded",
       reason: "publication-held",
-      expectedModel: "v9",
     };
   }
   if (
@@ -78,14 +75,12 @@ function buildV9ExpectedDependencyMeta(
       ageSeconds,
       status: "stale",
       reason: "stale-cache",
-      expectedModel: "v9",
     };
   }
   return {
     updatedAt,
     ageSeconds,
     status: "fresh",
-    expectedModel: "v9",
   };
 }
 
@@ -155,7 +150,7 @@ function buildChainsFreshnessMeta(
   };
 }
 
-export const handleChains = withErrorHandler("chains", async (db: D1Database): Promise<Response> => {
+export const handleChains = async (db: D1Database): Promise<Response> => {
   const stablecoinsResult = await loadStablecoinsCache(db, {
     mode: "strict",
     contract: "published",
@@ -175,8 +170,8 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
   const safetyScores: Record<string, number> = {};
   const reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
   const safetyScoreIdentity =
-    activeSource.kind === "v9" ? activeSource.snapshot.safetyScoreIdentity : null;
-  if (activeSource.kind === "v9" && reportCards.status === "fresh") {
+    activeSource.kind === "error" ? null : activeSource.snapshot.safetyScoreIdentity;
+  if (activeSource.kind !== "error" && reportCards.status === "fresh") {
     for (const card of activeSource.snapshot.cards) {
       if (card.score !== null) safetyScores[card.id] = card.score;
     }
@@ -190,7 +185,7 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
 
   const freshness = buildChainsFreshnessMeta(stablecoinsResult.updatedAt, reportCards, safetyScoreIdentity);
 
-  return jsonResponse(
+  return jsonResponseWithHeaders(
     {
       ...response,
       updatedAt: stablecoinsResult.updatedAt,
@@ -199,4 +194,4 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     },
     freshness.headers,
   );
-});
+};

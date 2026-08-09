@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
-import { safeJsonLd } from "@/lib/json-ld";
+import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import StatusClient from "./client";
 
@@ -30,13 +29,5 @@ const STATUS_FAQ_ITEMS = [
 ] as const satisfies readonly FaqItem[];
 
 export default function StatusPage() {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(buildFaqJsonLd(STATUS_FAQ_ITEMS)) }}
-      />
-      <StatusClient faqItems={STATUS_FAQ_ITEMS} />
-    </>
-  );
+  return <StatusClient faqItems={STATUS_FAQ_ITEMS} />;
 }

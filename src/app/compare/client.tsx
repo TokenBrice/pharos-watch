@@ -267,42 +267,31 @@ export function CompareClient() {
   } = useCompareSelection();
 
   const {
-    bcUpdatedAt,
-    bluechipData,
-    bluechipError,
-    bluechipMeta,
+    bluechip,
     comparisonCoins,
-    dataUpdatedAt,
     detailErrors,
     detailLoading,
-    dexData,
-    dexError,
-    dexMeta,
+    dex,
     flowCardData,
     flowCoinQueries,
     flowData,
     flowSeries,
     globalError,
     handleRetry,
-    liqUpdatedAt,
-    listData,
-    listError,
-    listMeta,
-    pegError,
-    pegMeta,
+    list,
+    peg,
     pegRates,
-    pegSummary,
-    pegUpdatedAt,
     radarCards,
-    rcUpdatedAt,
-    reportCardsData,
-    reportCardsError,
-    reportCardsMeta,
+    reportCards,
     supplySeries,
   } = useCompareDataModel({
     selectedIds,
     flowHours,
   });
+  const listData = list.data;
+  const pegSummary = peg.data;
+  const dexData = dex.data;
+  const reportCardsData = reportCards.data;
 
   const { handleDownload, handleTwitterShare, handleWebShare, shareLoading, toast } = useCompareShareActions({
     comparisonCoins,
@@ -410,17 +399,35 @@ export function CompareClient() {
         hasData={!!listData?.peggedAssets?.length}
         onRetry={handleRetry}
         queries={[
-          { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length, meta: listMeta },
-          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length, meta: pegMeta },
-          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: dexError, hasData: !!dexData, meta: dexMeta },
+          {
+            preset: "stablecoins",
+            dataUpdatedAt: list.dataUpdatedAt,
+            error: list.error,
+            hasData: !!listData?.peggedAssets?.length,
+            meta: list.meta,
+          },
+          {
+            preset: "pegSummary",
+            dataUpdatedAt: peg.dataUpdatedAt,
+            error: peg.error,
+            hasData: !!pegSummary?.coins?.length,
+            meta: peg.meta,
+          },
+          { preset: "dexLiquidity", dataUpdatedAt: dex.dataUpdatedAt, error: dex.error, hasData: !!dexData, meta: dex.meta },
           {
             preset: "reportCards",
-            dataUpdatedAt: rcUpdatedAt,
-            error: reportCardsError,
+            dataUpdatedAt: reportCards.dataUpdatedAt,
+            error: reportCards.error,
             hasData: !!reportCardsData?.cards?.length,
-            meta: reportCardsMeta,
+            meta: reportCards.meta,
           },
-          { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData, meta: bluechipMeta },
+          {
+            preset: "bluechip",
+            dataUpdatedAt: bluechip.dataUpdatedAt,
+            error: bluechip.error,
+            hasData: !!bluechip.data,
+            meta: bluechip.meta,
+          },
         ]}
       />
       <SafetyScoreV9StatusNotice response={reportCardsData} />

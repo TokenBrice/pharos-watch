@@ -15,7 +15,7 @@
 import {
   SNAPSHOT_DATE_PATTERN,
 } from "@shared/lib/api-endpoints";
-import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { tryParseJson } from "../lib/json-parse";
 import {
@@ -91,8 +91,20 @@ type StoredSafetyValidation =
   | { kind: "legacy"; identity: null }
   | { kind: "error"; reason: string };
 
-const TRANSITIONAL_IDENTITY_START_DATE = "2026-07-13";
-const TRANSITIONAL_IDENTITY_END_DATE = "2026-07-15";
+/**
+ * The safety-score identity cutover snapshots. `public_snapshots` rows are
+ * written `INSERT OR IGNORE` and the table has no DELETE anywhere in the worker
+ * (verified 2026-08-09), so these three dates are a closed, immutable set — a
+ * pinned allowlist rather than an open-ended window that any future date could
+ * still fall into.
+ */
+const TRANSITIONAL_IDENTITY_DATES: ReadonlySet<string> = new Set([
+  "2026-07-13",
+  "2026-07-14",
+  "2026-07-15",
+]);
+/** Last snapshot date that may legitimately carry no safety-score identity. */
+const IDENTITY_CUTOVER_DATE = "2026-07-15";
 
 function hasOwn(value: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
@@ -193,7 +205,7 @@ function validateReportCardsForIdentity(
 }
 
 function isTransitionalIdentityDate(date: string): boolean {
-  return date >= TRANSITIONAL_IDENTITY_START_DATE && date <= TRANSITIONAL_IDENTITY_END_DATE;
+  return TRANSITIONAL_IDENTITY_DATES.has(date);
 }
 
 function validateStoredSafetyPublication(
@@ -230,7 +242,7 @@ function validateStoredSafetyPublication(
   ];
 
   if (!metadataHasIdentity && !envelopeHasIdentity && !reportCardsHasIdentity) {
-    if (date > TRANSITIONAL_IDENTITY_END_DATE) {
+    if (date > IDENTITY_CUTOVER_DATE) {
       return { kind: "error", reason: "safety-score-identity-missing" };
     }
     const legacyError = validateLegacyReportCards(reportCards);
@@ -348,7 +360,7 @@ async function loadSnapshotBytes(
   return { row, bytes };
 }
 
-export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (db: D1Database): Promise<Response> => {
+export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> => {
   const result = await db
     .prepare(
       "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC",
@@ -364,10 +376,10 @@ export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (d
     createdAt: row.created_at,
   }));
 
-  return jsonResponse({ snapshots }, { "Cache-Control": CACHE_PROFILES.archive });
-});
+  return jsonResponse({ snapshots }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
+};
 
-export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
+export const handleSnapshotDay = async (
   db: D1Database,
   date: string,
 ): Promise<Response> => {
@@ -385,9 +397,9 @@ export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
       ETag: `"${loaded.row.content_hash}"`,
     },
   });
-});
+};
 
-export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
+export const handleSnapshotCoin = async (
   db: D1Database,
   date: string,
   stablecoinId: string,
@@ -438,4 +450,4 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
       ETag: `"${loaded.row.content_hash}-${stablecoinId}"`,
     },
   });
-});
+};

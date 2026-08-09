@@ -140,7 +140,6 @@ type SnapshotSafetySource =
     }
   | {
       kind: "error";
-      expectedModel: "v9";
       reason: string;
       updatedAt: number | null;
     };
@@ -155,7 +154,6 @@ async function loadSnapshotSafetySource(
   if (active.kind === "error") {
     return {
       kind: "error",
-      expectedModel: active.expectedModel,
       reason: active.reason,
       updatedAt: null,
     };
@@ -164,7 +162,6 @@ async function loadSnapshotSafetySource(
   if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
     return {
       kind: "error",
-      expectedModel: "v9",
       reason: "stale-cache",
       updatedAt: active.snapshot.updatedAt,
     };
@@ -322,7 +319,6 @@ export async function snapshotPublicDataset(
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "active_safety_score_unavailable",
-        expectedModel: safetySource.expectedModel,
         sourceReason: safetySource.reason,
         updatedAt: safetySource.updatedAt,
       }),
@@ -483,11 +479,7 @@ export async function snapshotPublicDataset(
         itemCount: 0,
         metadata: JSON.stringify({
           reason: "active_safety_score_changed_before_insert",
-          expectedModel: safetySource.model,
           expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
-          observedModel: recheckedSafetySource.kind === "ok"
-            ? recheckedSafetySource.model
-            : recheckedSafetySource.expectedModel,
           observedPublicationGenerationId: recheckedSafetySource.kind === "ok"
             ? recheckedSafetySource.identity.publicationGenerationId
             : null,
@@ -542,7 +534,6 @@ export async function snapshotPublicDataset(
           itemCount: 0,
           metadata: JSON.stringify({
             reason: "active_safety_score_changed_before_insert",
-            expectedModel: safetySource.model,
             expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
           }),
         };

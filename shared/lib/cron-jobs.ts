@@ -1,3 +1,4 @@
+import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
 import { DAY_SECONDS } from "./time-constants";
 
 export const SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC =
@@ -14,8 +15,14 @@ export type CronGroupKey =
   | "daily"
   | "other";
 
+/**
+ * Cron expression + trigger topology for each lane. Cadence lengths and slot
+ * offsets are imported from `cron-cadences.ts` (the Safety Score v9 evaluator
+ * pins that module) so each number is authored once; this table stays the
+ * ADR-7 schedule authority.
+ */
 const CRON_SCHEDULE_DEFINITIONS = {
-  quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
+  quarterHourly: { schedule: "*/15 * * * *", ...CRON_SCHEDULE_CADENCES.quarterHourly },
   // The capture must land BEFORE the fixed input it will be consumed against.
   // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
   // captureClockSec <= fixedInput.clockSec, because a publication must not depend
@@ -25,47 +32,58 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // by construction: it is never admitted, and isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred
   // then skips the publication every cycle. Verified in production on 2026-08-09 (see
   // the 10:22 skip); do not move this grid later without changing that admission rule.
-  v9SupplyAttributionOffset: { schedule: "8,23,38,53 * * * *", intervalSec: 900, offsetSec: 8 * 60 },
-  v9PublicationOffset: { schedule: "22,52 * * * *", intervalSec: 1800, offsetSec: 22 * 60 },
-  statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
-  sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
-  halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
-  twoHourlyDexDiscovery: { schedule: "6 */2 * * *", intervalSec: 2 * 3600, offsetSec: 6 * 60 },
+  v9SupplyAttributionOffset: {
+    schedule: "8,23,38,53 * * * *",
+    ...CRON_SCHEDULE_CADENCES.v9SupplyAttributionOffset,
+  },
+  v9PublicationOffset: { schedule: "22,52 * * * *", ...CRON_SCHEDULE_CADENCES.v9PublicationOffset },
+  statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", ...CRON_SCHEDULE_CADENCES.statusSelfCheckOffset },
+  sixHourlyBlacklist: { schedule: "3 */6 * * *", ...CRON_SCHEDULE_CADENCES.sixHourlyBlacklist },
+  halfHourlyMintBurnCritical: {
+    schedule: "4,34 * * * *",
+    ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnCritical,
+  },
+  twoHourlyDexDiscovery: { schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
-  halfHourlyMintBurnExtended: { schedule: "18,48 * * * *", intervalSec: 1800, offsetSec: 18 * 60 },
-  halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
+  halfHourlyMintBurnExtended: {
+    schedule: "18,48 * * * *",
+    ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended,
+  },
+  halfHourlyMeasuredExecution: {
+    schedule: "0,30 * * * *",
+    ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecution,
+  },
   halfHourlyOffset: {
     schedule: "10,40 * * * *",
     triggerSchedules: ["10 * * * *", "40 * * * *"],
-    intervalSec: 1800,
-    offsetSec: 10 * 60,
+    ...CRON_SCHEDULE_CADENCES.halfHourlyOffset,
   },
   halfHourlyChartsOffset: {
     schedule: "16,46 * * * *",
     triggerSchedules: ["16 * * * *", "46 * * * *"],
-    intervalSec: 1800,
-    offsetSec: 16 * 60,
+    ...CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset,
   },
-  dewsPsiOffset: { schedule: "26,56 * * * *", intervalSec: 1800, offsetSec: 26 * 60 },
-  fourHourlyReserveSync: { schedule: "11 */4 * * *", intervalSec: 4 * 3600, offsetSec: 11 * 60 },
-  hourlyYieldSync: { schedule: "20 * * * *", intervalSec: 3600, offsetSec: 20 * 60 },
-  fourHourlyYieldSupplemental: { schedule: "25 */4 * * *", intervalSec: 4 * 3600, offsetSec: 25 * 60 },
+  dewsPsiOffset: { schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
+  fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
+  hourlyYieldSync: { schedule: "20 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  fourHourlyYieldSupplemental: {
+    schedule: "25 */4 * * *",
+    ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,
+  },
   fiveMinuteTelegramAlerts: {
     schedule: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
-    intervalSec: 300,
-    offsetSec: 2 * 60,
+    ...CRON_SCHEDULE_CADENCES.fiveMinuteTelegramAlerts,
   },
   fiveMinuteReserveRecovery: {
     schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
-    intervalSec: 300,
-    offsetSec: 60,
+    ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
-  digestTriggerPoll: { schedule: "*/5 * * * *", intervalSec: 300, offsetSec: 0 },
-  daily0300Utc: { schedule: "0 3 * * *", intervalSec: DAY_SECONDS, offsetSec: 3 * 3600 },
-  daily0800Utc: { schedule: "0 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
-  daily0805Utc: { schedule: "5 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
-  daily0810Utc: { schedule: "10 8 * * *", intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 10 * 60 },
-  monthlyYieldAudit: { schedule: "0 6 1 * *", intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
+  digestTriggerPoll: { schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
+  daily0300Utc: { schedule: "0 3 * * *", ...CRON_SCHEDULE_CADENCES.daily0300Utc },
+  daily0800Utc: { schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
+  daily0805Utc: { schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
+  daily0810Utc: { schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },
+  monthlyYieldAudit: { schedule: "0 6 1 * *", ...CRON_SCHEDULE_CADENCES.monthlyYieldAudit },
 } as const;
 
 export const CRON_CONNECTION_BUDGET = {

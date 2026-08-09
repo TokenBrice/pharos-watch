@@ -12,7 +12,7 @@ import {
   evaluateSafetyScoreV9AnchorGate,
   type V9AnchorGateCard,
   type V9AnchorGateReport,
-} from "../src/lib/safety-score-v9-anchor-gate";
+} from "./lib/safety-score-v9-anchor-gate";
 
 const USAGE = `Usage: npm run safety-score-v9:anchor-gate -- --replay <path> [options]
 

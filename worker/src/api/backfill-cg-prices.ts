@@ -7,7 +7,6 @@ import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { jsonResponse } from "../lib/api-utils";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
-import { runAdminRoute } from "../lib/route-wrappers";
 import {
   fetchMarketBackfillPriceSeries,
   type HistoricalMarketSourceDiagnostics,
@@ -195,21 +194,4 @@ export function handleBackfillCgPricesTrusted({
   coingeckoApiKey,
 }: BackfillCgPricesRouteContext): Promise<Response> {
   return executeBackfillCgPrices(db, url, coingeckoApiKey);
-}
-
-export async function handleBackfillCgPrices(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-  cgApiKey?: string | null,
-): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "backfill-cg-prices",
-      request,
-      trustedAdmin,
-    },
-    () => executeBackfillCgPrices(db, url, cgApiKey),
-  );
 }

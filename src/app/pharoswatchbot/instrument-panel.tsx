@@ -10,10 +10,10 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
-const NUMBER_FORMATTER = new Intl.NumberFormat("en-US");
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -37,7 +37,7 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
 });
 
 function formatCount(value: number): string {
-  return NUMBER_FORMATTER.format(value);
+  return formatDecimal(value, 0, 3);
 }
 
 function formatMonthTick(value: unknown): string {

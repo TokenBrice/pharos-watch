@@ -2,7 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatDecimal } from "@shared/lib/format";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -23,12 +23,8 @@ interface LatticeRow {
 
 const MOBILE_CHAIN_COLUMN_LIMIT = 4;
 
-const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-});
-
 function formatCount(value: number): string {
-  return COUNT_FORMATTER.format(Number.isFinite(value) ? value : 0);
+  return formatDecimal(Number.isFinite(value) ? value : 0, 0, 0);
 }
 
 function buildRows(

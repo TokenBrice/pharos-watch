@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell } from "@/components/table";
 import { DeviationIcon } from "@/components/severity-icon";
+import { MintAuthorityScoreBadge } from "@/components/mint-authority-score-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { StablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
@@ -274,13 +275,12 @@ function RiskCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("mintAuthority") ? (
         <TableCell className="text-center">
-          <Badge
-            variant="outline"
-            className={`px-2 py-0.5 pharos-numeric text-xs ${model.mintAuthorityScore.badgeClassName}`}
-            title={`${model.mintAuthorityScore.detail} Review bucket: ${model.mintAuthorityStatus.spokenLabel}.`}
-          >
-            {model.mintAuthorityScore.scoreLabel}
-          </Badge>
+          <MintAuthorityScoreBadge
+            scoreLabel={model.mintAuthorityScore.scoreLabel}
+            detail={model.mintAuthorityScore.detail}
+            reviewBucketLabel={model.mintAuthorityStatus.spokenLabel}
+            badgeClassName={model.mintAuthorityScore.badgeClassName}
+          />
         </TableCell>
       ) : null}
       {row.isVisible("backing") ? (

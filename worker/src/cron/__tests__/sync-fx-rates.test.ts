@@ -2,46 +2,99 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-const fetchRetryMocks = vi.hoisted(() => ({
-  fetchWithRetry: vi.fn(async (url: string, opts?: RequestInit) => fetch(url, opts)),
-  fetchJsonWithRetry: vi.fn(async (url: string, opts?: RequestInit) => {
-    try {
-      const response = await fetch(url, opts);
-      return {
-        response,
-        body: await response.json(),
-      };
-    } catch {
-      return null;
-    }
-  }),
-}));
+// The raw wrapper is deliberately its own spy rather than the JSON wrapper's
+// base: one test asserts the JSON path never falls through to it.
+const fetchRetryMocks = vi.hoisted(() => {
+  const passthrough = async (url: string, opts?: RequestInit) => fetch(url, opts);
+  return { passthrough, fetchWithRetry: vi.fn(passthrough) };
+});
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchRetryMocks.fetchWithRetry,
-  fetchJsonWithRetry: fetchRetryMocks.fetchJsonWithRetry,
+  fetchJsonWithRetry: mockFetchRetry({ failureAsNull: true }).fetchJsonWithRetry,
 }));
 
+import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+
 function resetFetchRetryMocks(): void {
-  fetchRetryMocks.fetchWithRetry.mockImplementation(async (url: string, opts?: RequestInit) => fetch(url, opts));
-  fetchRetryMocks.fetchJsonWithRetry.mockImplementation(async (url: string, opts?: RequestInit) => {
-    try {
-      const response = await fetch(url, opts);
-      return {
-        response,
-        body: await response.json(),
-      };
-    } catch {
-      return null;
-    }
-  });
-  fetchRetryMocks.fetchWithRetry.mockClear();
-  fetchRetryMocks.fetchJsonWithRetry.mockClear();
+  fetchRetryMocks.fetchWithRetry.mockReset().mockImplementation(fetchRetryMocks.passthrough);
+  vi.mocked(fetchJsonWithRetry).mockClear();
 }
 
 import { syncFxRates } from "../sync-fx-rates";
 import { loadExchangeRateApiPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
+
+type FxRoutes = NonNullable<Parameters<typeof mockFetch>[0]>;
+type FxRoute = FxRoutes[number];
+type FxRouteSpec = Omit<FxRoute, "match"> | "unavailable" | "omit";
+
+/** The 503 body every upstream-down fx test uses. */
+const FX_UNAVAILABLE = { body: { error: "Service unavailable" }, status: 503 } as const;
+
+/** frankfurter.dev's baseline symbol set; HKD/INR are the only per-test additions. */
+const FX_FRANKFURTER_RATES = {
+  EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36,
+  AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2,
+};
+
+/** The secondary mirror's baseline USD leg. */
+const FX_SECONDARY_USD = { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 };
+
+function frankfurterBody(extraRates: Record<string, number> = {}) {
+  return { base: "USD", date: "2025-06-15", rates: { ...FX_FRANKFURTER_RATES, ...extraRates } };
+}
+
+function secondaryBody(
+  extraUsd: Record<string, number> = {},
+  options: { date?: string | null } = {},
+) {
+  const { date = "2025-06-15" } = options;
+  return {
+    ...(date == null ? {} : { date }),
+    usd: { ...FX_SECONDARY_USD, ...extraUsd },
+  };
+}
+
+/**
+ * Route list for the fx mirror ladder, ordered the way `mockFetch` resolves it
+ * (first substring hit wins, so the dated jsDelivr path must precede the generic
+ * jsDelivr match). Each axis defaults to the healthy baseline; pass a body to
+ * change one, `"unavailable"` for the shared 503, or `"omit"` to drop the route
+ * entirely (an omitted route is an unmatched fetch, which is how the
+ * "everything is down" tests express a dead endpoint).
+ */
+function fxMirrors(axes: {
+  frankfurter?: FxRouteSpec;
+  datedCdn?: FxRouteSpec;
+  cdn?: FxRouteSpec;
+  pages?: FxRouteSpec;
+  secondary?: FxRouteSpec;
+  exchangeRate?: FxRouteSpec;
+  openExchange?: FxRouteSpec;
+  gold?: FxRouteSpec;
+  silver?: FxRouteSpec;
+} = {}): FxRoutes {
+  const defaults: Record<string, { match: string; spec: FxRouteSpec }> = {
+    frankfurter: { match: "frankfurter.dev", spec: { body: frankfurterBody() } },
+    datedCdn: { match: "@2025.6.15/", spec: "omit" },
+    cdn: { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", spec: "omit" },
+    pages: { match: "latest.currency-api.pages.dev", spec: "omit" },
+    secondary: { match: "currency-api", spec: { body: secondaryBody() } },
+    exchangeRate: { match: "open.er-api.com/v6/latest/USD", spec: "omit" },
+    openExchange: { match: "openexchangerates.org", spec: "omit" },
+    gold: { match: "gold-api.com/price/XAU", spec: { body: { price: 2900 } } },
+    silver: { match: "gold-api.com/price/XAG", spec: { body: { price: 32 } } },
+  };
+  const routes: FxRoutes = [];
+  for (const [axis, { match, spec: fallback }] of Object.entries(defaults)) {
+    const spec = axes[axis as keyof typeof axes] ?? fallback;
+    if (spec === "omit") continue;
+    routes.push({ match, ...(spec === "unavailable" ? FX_UNAVAILABLE : spec) } as FxRoute);
+  }
+  return routes;
+}
 
 function findCacheWrite(
   db: ReturnType<typeof mockD1>,
@@ -65,28 +118,10 @@ describe("syncFxRates", () => {
   });
 
   it("caches FX rates from frankfurter.dev when API succeeds", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, HKD: 7.81, INR: 85.5 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({
+      frankfurter: { body: frankfurterBody({ HKD: 7.81, INR: 85.5 }) },
+      secondary: { body: secondaryBody({ vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }) },
+    }));
 
     const db = mockD1([
       {
@@ -172,7 +207,7 @@ describe("syncFxRates", () => {
     expect(secondary?.endpoint).toBe("jsdelivr");
     expect(tertiary?.rates.EUR).toBe(0.92);
     expect(fetchRetryMocks.fetchWithRetry).not.toHaveBeenCalled();
-    const jsonUrls = fetchRetryMocks.fetchJsonWithRetry.mock.calls.map(([url]) => String(url));
+    const jsonUrls = vi.mocked(fetchJsonWithRetry).mock.calls.map(([url]) => String(url));
     expect(jsonUrls).toEqual(expect.arrayContaining([
       expect.stringContaining("@fawazahmed0/currency-api@latest"),
       expect.stringContaining("latest.currency-api.pages.dev"),
@@ -182,30 +217,10 @@ describe("syncFxRates", () => {
   });
 
   it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { error: "blocked" },
-        status: 503,
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { error: "blocked" },
-        status: 503,
-      },
-    ]);
+    mockFetch(fxMirrors({
+      gold: { body: { error: "blocked" }, status: 503 },
+      silver: { body: { error: "blocked" }, status: 503 },
+    }));
 
     const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 90;
     const db = mockD1([
@@ -298,28 +313,7 @@ describe("syncFxRates", () => {
 
   it("rejects gold-api.com metal spots that diverge from the commodity peer median", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 3100 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({ gold: { body: { price: 3100 } } }));
 
     const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 120;
     const db = mockD1([
@@ -406,13 +400,12 @@ describe("syncFxRates", () => {
   });
 
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-    ]);
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      gold: "omit",
+      silver: "omit",
+    }));
 
     const db = mockD1([
       {
@@ -485,14 +478,10 @@ describe("syncFxRates", () => {
   });
 
   it("uses the secondary FX mirror as a live full-set fallback when frankfurter.dev is unavailable", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: {
         body: {
           date: "2025-06-14",
           usd: {
@@ -502,8 +491,7 @@ describe("syncFxRates", () => {
           },
         },
       },
-      {
-        match: "latest.currency-api.pages.dev",
+      pages: {
         body: {
           date: "2025-06-15",
           usd: {
@@ -513,15 +501,7 @@ describe("syncFxRates", () => {
           },
         },
       },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    }));
 
     const db = mockD1([
       {
@@ -565,28 +545,13 @@ describe("syncFxRates", () => {
   it("uses ExchangeRate-API as a live full-set fallback when frankfurter and the secondary mirrors are unavailable", async () => {
     const exchangeRateUpdatedAt = Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000);
 
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "@2025.6.15/",
-        body: "definitely not json",
-      },
-      {
-        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "latest.currency-api.pages.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "open.er-api.com/v6/latest/USD",
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      datedCdn: { body: "definitely not json" },
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: {
         body: {
           result: "success",
           time_last_update_unix: exchangeRateUpdatedAt,
@@ -597,15 +562,7 @@ describe("syncFxRates", () => {
           },
         },
       },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    }));
 
     const db = mockD1([
       {
@@ -647,36 +604,13 @@ describe("syncFxRates", () => {
   });
 
   it("treats cadence-valid carry-forward rates as a live run when live FX fetches fail", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "latest.currency-api.pages.dev",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "open.er-api.com/v6/latest/USD",
-        body: { error: "Service unavailable" },
-        status: 503,
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: "unavailable",
+    }));
 
     const fullPrevRates: Record<string, number> = {
       peggedEUR: 1 / 0.925,
@@ -786,28 +720,11 @@ describe("syncFxRates", () => {
   });
 
   it("uses secondary API for CNH/RUB/UAH/ARS/KGS/NGN/XOF/KES/GHS/COP/CLP/PEN rates", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
+    mockFetch(fxMirrors({
+      secondary: {
+        body: secondaryBody({ kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 }, { date: null }),
       },
-      {
-        match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    }));
 
     const db = mockD1([
       {
@@ -832,32 +749,13 @@ describe("syncFxRates", () => {
   });
 
   it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api",
+    mockFetch(fxMirrors({
+      secondary: "omit",
+      cdn: {
         body: { date: "2025-06-14", usd: { cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371, xof: 561 } },
       },
-      {
-        match: "latest.currency-api.pages.dev",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+      pages: { body: secondaryBody() },
+    }));
 
     const db = mockD1([
       {
@@ -1143,14 +1041,13 @@ describe("syncFxRates", () => {
   });
 
   it("reconstructs daily fiat provenance from same-day live timestamps during carry-forward", async () => {
-    mockFetch([
-      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
-      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 }, status: 200 },
-      { match: "gold-api.com/price/XAG", body: { price: 32 }, status: 200 },
-    ]);
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: "unavailable",
+    }));
 
     const fullPrevRates: Record<string, number> = {
       peggedEUR: 1 / 0.925,
@@ -1300,13 +1197,13 @@ describe("syncFxRates", () => {
       Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
     );
 
-    mockFetch([
-      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
-      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
-      {
-        match: "openexchangerates.org",
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: "unavailable",
+      openExchange: {
         body: {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
@@ -1315,9 +1212,7 @@ describe("syncFxRates", () => {
           },
         },
       },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-      { match: "gold-api.com/price/XAG", body: { price: 32 } },
-    ]);
+    }));
 
     const db = mockD1([
       {
@@ -1423,20 +1318,14 @@ describe("syncFxRates", () => {
       Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
     );
 
-    mockFetch([
-      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
-      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
-      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
-      {
-        match: "openexchangerates.org",
-        body: {
-          rates: { EUR: 0.925 },
-        },
-      },
-      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
-      { match: "gold-api.com/price/XAG", body: { price: 32 } },
-    ]);
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: "unavailable",
+      pages: "unavailable",
+      exchangeRate: "unavailable",
+      openExchange: { body: { rates: { EUR: 0.925 } } },
+    }));
 
     const db = mockD1([
       {
@@ -1500,28 +1389,7 @@ describe("syncFxRates", () => {
   });
 
   it("keeps syncing when the OXR telemetry write fails", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({ secondary: { body: secondaryBody({}, { date: null }) } }));
 
     const db = mockD1([
       {
@@ -1564,34 +1432,10 @@ describe("syncFxRates", () => {
   });
 
   it("records the OXR cooldown after a completed response with zero usable rates", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "openexchangerates.org",
-        body: {
-          rates: { EUR: 0.01, GBP: 0.01 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({
+      secondary: { body: secondaryBody({}, { date: null }) },
+      openExchange: { body: { rates: { EUR: 0.01, GBP: 0.01 } } },
+    }));
 
     const db = mockD1([
       {
@@ -1632,33 +1476,10 @@ describe("syncFxRates", () => {
 
   it("skips the OXR fetch when the fx-realtime circuit breaker is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "openexchangerates.org",
-        body: { error: "should not be called" },
-        status: 500,
-      },
-      {
-        match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({
+      secondary: { body: secondaryBody({}, { date: null }) },
+      openExchange: { body: { error: "should not be called" }, status: 500 },
+    }));
 
     const db = mockD1([
       {
@@ -1708,34 +1529,10 @@ describe("syncFxRates", () => {
   });
 
   it("records a breaker failure when OXR returns 200 with zero usable rates", async () => {
-    mockFetch([
-      {
-        match: "frankfurter.dev",
-        body: {
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        },
-      },
-      {
-        match: "openexchangerates.org",
-        body: {
-          rates: { EUR: 0.01, GBP: 0.01 },
-        },
-      },
-      {
-        match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
-      },
-      {
-        match: "gold-api.com/price/XAU",
-        body: { price: 2900 },
-      },
-      {
-        match: "gold-api.com/price/XAG",
-        body: { price: 32 },
-      },
-    ]);
+    mockFetch(fxMirrors({
+      secondary: { body: secondaryBody({}, { date: null }) },
+      openExchange: { body: { rates: { EUR: 0.01, GBP: 0.01 } } },
+    }));
 
     const db = mockD1([
       {

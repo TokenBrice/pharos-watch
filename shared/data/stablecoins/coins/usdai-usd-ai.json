@@ -644,6 +644,7 @@
       "reviewedAt": "2026-07-15"
     }
   },
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 2,

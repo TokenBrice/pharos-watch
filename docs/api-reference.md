@@ -50,7 +50,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` are also externally reachable but not anonymous. They require Telegram Mini App `initData` signed for `@PharosWatchBot`; the worker validates the HMAC, `auth_date`, and user payload before any D1-backed state write. These endpoints are denied on the website-internal site-data lane and are intended only for the Mini App at `https://pharos.watch/pharoswatchbot/app/`.
 
-Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The one exception is the reserve-recovery fault injector: it accepts a cryptographically verified Access assertion only on a `workers.dev` preview host and rejects production hosts. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*` and `/api/api-key-requests-admin*` on `api.pharos.watch`.
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*` and `/api/api-key-requests-admin*` on `api.pharos.watch`.
 
 The public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
 
@@ -155,7 +155,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`                           | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                                                                       |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
-| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `status-probe-history`) |
+| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
@@ -280,21 +280,13 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
-- `POST /api/reset-cron-lease`
-- `POST /api/reset-circuit-breaker`
-- `POST /api/kill-cron-in-flight`
-- `POST /api/telegram-pending`
-- `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
-- `POST /api/admin-telegram-delivery-control` (GET inspection bypasses idempotency)
 - `POST /api/api-key-requests-admin/:requestId/reject`
 - `POST /api/api-key-requests-admin/:requestId/release-claim`
 
 When an `Idempotency-Key` is supplied on one of those routes, the worker fingerprints the request and reserves the key with owner/generation fencing before execution. Terminal responses echo `Idempotency-Key` plus `X-Idempotent-Replay`; a stored terminal response is replayed without rerunning the action, while reuse with a different request fingerprint returns `409`. Only an abandoned reservation whose execution never started can be reclaimed after its takeover window.
 
 Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
-
-`POST /api/telegram-pending` is conditional: mutating clears use idempotency, but dry-run previews (`dry_run`, `dryRun`, or `dry-run`) bypass idempotency bookkeeping and return the current match count directly.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -2366,12 +2358,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.14",
+    "methodologyVersion": "9.15",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.14",
+    "version": "9.15",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2654,7 +2646,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.14",
+      "methodologyVersion": "9.15",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2665,7 +2657,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.14",
+      "methodologyVersion": "9.15",
       "publishedAt": 1772000700
     }
   },
@@ -3311,7 +3303,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 | `organization`      | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `projectUrl`        | `string`                                                            | No       | Must start with `https://` when provided                                                                                        |
 | `useCase`           | `string`                                                            | Yes      | 10-1200 characters                                                                                                              |
-| `intendedEndpoints` | `string[]`                                                          | No       | Public API paths, known dynamic patterns such as `/api/stablecoin/:id`, or `unknown`; admin/API-key/backfill paths are rejected |
+| `intendedEndpoints` | `string[]`                                                          | No       | Free-text note describing the routes the requester expects to call. Trimmed and de-duplicated, then stored for operator review only — it grants and restricts nothing |
 | `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"` | Yes      | Used for review context                                                                                                         |
 | `expectedVolume`    | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `acceptedTerms`     | `true`                                                              | Yes      | Fair-use acknowledgement                                                                                                        |
@@ -4253,7 +4245,7 @@ The top-line `site` bucket combines:
 
 - same-origin `/_site-data/*` upstream attempts recorded by the Pages Function; the retired outer Cache API path may still appear in historical windows
 - `api.pharos.watch` requests attributed to browser evidence (`Origin` / `Referer` / frontend `Accept` marker + same-site fetch metadata)
-- `api.pharos.watch` requests authenticated with API keys explicitly marked `trafficClass="site"`
+- `api.pharos.watch` requests authenticated with API keys carrying the legacy `trafficClass="site"` label (no longer writable; see `POST /api/api-keys/:id/update`)
 
 The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin-only routes and `/api/telegram-webhook` remain excluded. The response also includes worker-lane telemetry so operators can distinguish total demand from actual `public-api` vs `site-api` worker load.
 
@@ -4282,82 +4274,6 @@ Malformed numeric params return `400`; out-of-range numeric params are clamped t
 - `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
 - `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
 - `scope` — explicit booleans describing total site demand, worker load, and whether the selected historical window contains retired Pages cache-hit telemetry
-
-### `GET /api/yield-source-decisions`
-
-Admin-only read-only debug endpoint for the Yield Intelligence publication ledger. Returns recent `yield_publication_generations` summaries and, when `stablecoin` is supplied, compact selected-source evidence from `yield_source_decisions` for that asset.
-
-**Authentication:** admin only through `ops-api.pharos.watch` / `ops.pharos.watch/api/admin/*`. **Cache:** `no-store`. This endpoint is intentionally excluded from the public OpenAPI and Postman artifacts.
-
-**Query parameters**
-
-| Param                       | Type      | Default | Description                                                                                |
-| --------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
-| `limit`                     | `integer` | `10`    | Generation summaries to return (`1`-`25`; out-of-range values return `400`)                |
-| `decisionLimit`             | `integer` | `5`     | Per-stablecoin decision rows to return (`1`-`25`)                                          |
-| `generationId`              | `string`  | —       | Optional exact generation ID filter, e.g. `yield-1772000000`                               |
-| `state`                     | `string`  | —       | Optional generation state: `staged`, `published`, or `failed`                              |
-| `stablecoin`                | `string`  | —       | Optional canonical stablecoin ID for selected/rejected source evidence                     |
-| `includePublicAlternatives` | `string`  | —       | Pass `1` with `stablecoin` to include typed rows from `yield_source_decision_alternatives` |
-
-**Response shape**
-
-```json
-{
-  "filters": {
-    "generationId": "yield-1772000000",
-    "state": "published",
-    "stablecoinId": "usdc-circle",
-    "limit": 10,
-    "decisionLimit": 5
-  },
-  "generations": [
-    {
-      "generationId": "yield-1772000000",
-      "startedAt": 1772000000,
-      "state": "published",
-      "cacheKey": "yield-rankings",
-      "rankingUpdatedAt": 1772000000,
-      "rankingCount": 125,
-      "sourceRowCount": 180,
-      "bestRowCount": 125,
-      "decisionCount": 125,
-      "publishedAt": 1772000003,
-      "failedAt": null,
-      "failureReason": null,
-      "metadata": { "rowsRejected": 3, "sourceSwitches": 2 },
-      "metadataMalformed": false,
-      "createdAt": 1772000000
-    }
-  ],
-  "decisions": [
-    {
-      "generationId": "yield-1772000000",
-      "stablecoinId": "usdc-circle",
-      "selected": {
-        "sourceKey": "defillama:best",
-        "confidenceTier": "curated",
-        "dataSource": "defillama",
-        "apy30d": 4.7,
-        "score": 82.5,
-        "reason": "Curated source selected"
-      },
-      "previousBestSourceKey": "price-derived:legacy",
-      "sourceSwitch": true,
-      "rejectedCount": 1,
-      "alternatives": [
-        {
-          "sourceKey": "defillama:auto",
-          "rejected": true,
-          "reason": "rejected: divergent lower-confidence source"
-        }
-      ],
-      "alternativesMalformed": false,
-      "createdAt": 1772000000
-    }
-  ]
-}
-```
 
 ### `GET /api/api-keys`
 
@@ -4421,8 +4337,7 @@ Admin-only API key creation route.
 | -------------------- | ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`               | `string`               | Yes      | Display name for the key                                                                                                                    |
 | `ownerEmail`         | `string`               | No       | Optional operator / owner contact                                                                                                           |
-| `tier`               | `string`               | No       | Free-form tier label; defaults to `"standard"`                                                                                              |
-| `trafficClass`       | `"external" \| "site"` | No       | Attribution class for demand accounting. Use `"site"` for website-owned automation or browser-adjacent keys; defaults to `"external"`       |
+| `tier`               | `"standard" \| "self-serve"` | No       | Issuance tier; defaults to `"standard"`. `"self-serve"` is written by the verified public issuance path                              |
 | `rateLimitPerMinute` | `integer`              | No       | Per-key threshold (`1`–`10000`, default `120`)                                                                                              |
 | `expiresAt`          | `integer \| null`      | No       | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
@@ -4443,10 +4358,11 @@ Accepted fields:
 - `name`
 - `ownerEmail`
 - `tier`
-- `trafficClass`
 - `rateLimitPerMinute`
 - `isActive`
 - `expiresAt`
+
+`trafficClass` is no longer accepted on either mutation body. It is an attribution label only — the real request lane is derived per request in `worker/src/handlers/http/gates.ts` — so issuance always writes `"external"` and existing rows keep whatever value they were created with.
 
 **Response shape:** `ApiKeyMutationResponse`
 
@@ -5021,165 +4937,6 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
 }
 ```
 
-### `POST /api/telegram-pending`
-
-Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Add `?dry_run=1`, `?dryRun=true`, or `?dry-run=true` to preview the matching row count without dead-lettering or deleting rows. Live clears return the count of rows deleted; dry-runs return the count matched. Both paths are recorded in `admin_action_audit`.
-
-**Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
-
-**Response**
-
-```json
-{ "ok": true, "deleted": 3 }
-```
-
-**Dry-run response**
-
-```json
-{ "ok": true, "dryRun": true, "matched": 3 }
-```
-
-**Error responses:** `400` when neither filter is supplied, when both are supplied, or when `older_than_sec` is not a positive integer.
-
-### `POST /api/reset-cron-lease`
-
-Deletes the `cron_leases` row for the named job so the next scheduled tick can claim it cleanly. Intended for recovering from orphaned locks (e.g., after a worker restart during a run). The cron job name is whitelisted against `CRON_JOB_DEFINITIONS`.
-
-**Authentication:** admin. **Required query:** `?job=<cron-id>`.
-
-**Response**
-
-```json
-{ "ok": true, "cleared": 1 }
-```
-
-**Error responses:** `400` if `job` is missing or not in the whitelist.
-
-### `POST /api/reset-circuit-breaker`
-
-Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`. The reset also removes the source from `cache["provider:circuit:index"]`, the best-effort aggregate telemetry row; `/api/status.providerCircuitHealth` reads authoritative `cache["circuit:<source>"]` rows.
-
-**Authentication:** admin. **Required query:** `?circuit=<circuit-source>`.
-
-**Response**
-
-```json
-{ "ok": true, "cleared": 1 }
-```
-
-### `POST /api/kill-cron-in-flight`
-
-Force-terminates a stale in-flight cron run. Deletes both the `cron_leases` row and the `cron_run_progress` row, guarded by a `lease_owner` match to prevent racing a legitimate replacement.
-
-**Authentication:** admin. **Required query:** `?job=<cron-id>&leaseOwner=<owner>`.
-
-**Response**
-
-```json
-{ "ok": true, "leaseCleared": 1, "progressCleared": 1 }
-```
-
-**Error responses:** `400` if params missing or job unknown; `409` if `lease_owner` no longer matches (another run has taken over).
-
-### `POST /api/admin/reserve-recovery-fault-injection`
-
-Arms one preview-only abrupt-interruption drill for the exact uploaded Worker
-version and reserve schedule attempt. The request must target a `workers.dev`
-hostname and carry a valid `Cf-Access-Jwt-Assertion` whose audience matches
-`CF_ACCESS_OPS_API_AUD`. Its Worker environment must also set
-`WORKER_RESERVE_FAULT_INJECTION_ENABLED=true`; unset, false, and malformed
-values fail closed. Production hosts return `403` even for an authenticated
-operator, and the production Wrangler configuration intentionally leaves the
-arming flag unset.
-
-Live drills require a named `reserve-recovery-preview` Worker environment with
-an isolated D1 database bound as `DB`. The repository does not create or deploy
-that environment; a placeholder/fake database UUID is not a substitute.
-
-**Request body**
-
-```json
-{
-  "workerVersion": "preview-version-tag-or-id",
-  "scheduleKey": "fourHourlyReserveSync",
-  "slotStartedAt": 1783671060,
-  "attemptNo": 1,
-  "killPoint": "after_pending_begin",
-  "targetItemKey": "usdc-circle"
-}
-```
-
-`slotStartedAt` must be an exact `11 */4 * * *` UTC slot between five minutes
-in the past and six hours in the future. `workerVersion` must equal the version
-metadata exposed by the executing preview. `attemptNo` is bounded to `1..20`.
-
-Supported `killPoint` values:
-
-- `after_checkpoint`
-- `after_pending_begin` (requires a configured reserve `targetItemKey`)
-- `after_authoritative_write` (requires a configured reserve `targetItemKey`)
-- `before_sync-redemption-backstops`
-- `before_sync-kinesis-supply`
-- `before_reserve-post-sync-watchdog`
-
-The D1 cache control is compare-and-swap consumed when the exact point fires and
-expires after six hours. A second arm for the same schedule/slot/attempt returns
-`409`; this endpoint deliberately uses its own one-shot fence instead of the
-general admin idempotency wrapper. The injected termination bypasses reserve
-domain and checkpoint catch finalization, leaving durable recovery evidence for
-the `reconcile`/`recover` drill.
-
-**Response (`201`)**
-
-```json
-{
-  "ok": true,
-  "armed": true,
-  "fault": {
-    "workerVersion": "preview-version-tag-or-id",
-    "scheduleKey": "fourHourlyReserveSync",
-    "slotStartedAt": 1783671060,
-    "attemptNo": 1,
-    "killPoint": "after_pending_begin",
-    "targetItemKey": "usdc-circle",
-    "armedAt": 1783670400,
-    "expiresAt": 1783692000
-  }
-}
-```
-
-**Error responses:** `400` for malformed identity, schedule, point, or asset;
-`401` without admin authentication; `403` on a non-preview host or when fault
-injection is not explicitly enabled; `409` for a version mismatch or an already
-armed exact attempt; `503` when Worker version metadata is unavailable.
-
-### `GET /api/status-probe-history`
-
-Returns historical probe-run data for a single endpoint over the last N days (1-30). Reads from `status_probe_runs.details_json` to surface per-probe failure annotations.
-
-**Authentication:** admin. **Required query:** `?path=<probe-path>`. **Optional:** `?days=<1-30>` (default 7).
-
-Malformed `days` defaults to `7`; out-of-range `days` is clamped to `1..30`.
-
-**Response**
-
-```json
-{
-  "path": "/api/health",
-  "summary": { "windowDays": 7, "sampleCount": 672, "failCount": 3 },
-  "runs": [
-    {
-      "at": 1700000000,
-      "overallProbeStatus": "degraded",
-      "failed": true,
-      "httpStatus": 503,
-      "error": "bootstrap-cache-miss",
-      "latencyMs": 1200
-    }
-  ]
-}
-```
-
 ### `GET /api/admin-action-log`
 
 Returns the last N audited operator actions (action name, actor, target, result, HTTP status, details) for post-incident review. This includes every endpoint surfaced by the admin action catalog, including read-only inspections and dry-run previews, plus handler-owned audit events outside that catalog.
@@ -5201,8 +4958,8 @@ For browser actions, `actor` is the normalized email from the signature-verified
       "id": 42,
       "at": 1700000000,
       "actor": "alice@pharos.watch",
-      "action": "reset-cron-lease",
-      "target": "sync-mint-burn",
+      "action": "reset-blacklist-sync",
+      "target": "blacklist-sync",
       "result": "ok",
       "httpStatus": 200,
       "details": { "cleared": 1 }
@@ -5210,123 +4967,6 @@ For browser actions, `actor` is the normalized email from the signature-verified
   ]
 }
 ```
-
-### `GET /api/admin-telegram-chat/:chatId`
-
-Returns the versioned, redacted incident-diagnostic contract for one Telegram chat. It includes the current subscriber/default/global intent, reserve flags, timezone, quiet hours, snooze, preference generation, block strikes, every per-coin override marker, preset intent, disambiguation shape, mutually exclusive pending lifecycle counts, bounded recent pending/dead-letter rows, chat delivery diagnostics, and bounded authoritative job/target outcomes. Each inspection writes counts only to `admin_action_audit`.
-
-**Authentication:** admin. **Path param:** `:chatId` (signed integer; negative for groups/supergroups).
-
-The endpoint still returns `200` with `subscriber: null` when a subscriber was deleted but retained queue, dead-letter, diagnostic, or target history exists. It returns `404` only when no current or retained state exists.
-
-**Response**
-
-```json
-{
-  "contractVersion": 2,
-  "generatedAt": 1700002100,
-  "chatId": "12345",
-  "subscriber": {
-    "registered": true,
-    "usernamePresent": true,
-    "createdAt": 1700000000,
-    "lastActiveAt": 1700001000,
-    "preferenceGeneration": 9,
-    "globalAlerts": {
-      "dews": true,
-      "depeg": false,
-      "safety": false,
-      "launch": true,
-      "reserve": true,
-      "freeze": false,
-      "depegWorseningBpsStep": 250
-    },
-    "directAlertDefaults": {
-      "dews": true,
-      "depeg": false,
-      "safety": true,
-      "launch": false,
-      "reserve": true,
-      "freeze": false
-    },
-    "deliveryControls": {
-      "timezone": "Europe/Belgrade",
-      "quietHours": { "enabled": true, "startHourUtc": 22, "endHourUtc": 7 },
-      "snooze": { "active": true, "untilTs": 1700001600 },
-      "blockStrikes": { "count": 1, "firstAt": 1700001200 }
-    }
-  },
-  "subscriptions": [
-    {
-      "stablecoinId": "usdc-circle",
-      "alerts": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
-      "explicitOverrides": { "dews": true, "depeg": true, "safety": false, "launch": false, "reserve": true },
-      "dewsMinBand": "WARNING",
-      "safetyMode": null,
-      "depegWorseningBpsStep": 250,
-      "snooze": { "active": false, "untilTs": null }
-    }
-  ],
-  "presets": [],
-  "pendingDisambiguation": null,
-  "pendingAlerts": {
-    "lifecycle": {
-      "totalRows": 6,
-      "claimable": 1,
-      "deferred": 1,
-      "sending": 1,
-      "executionUnknown": 1,
-      "sentCleanup": 1,
-      "expired": 1
-    },
-    "recent": []
-  },
-  "deadLetters": { "count": 1, "oldestExpiredAt": 1700000100, "newestExpiredAt": 1700000800, "recent": [] },
-  "deliveryDiagnostics": null,
-  "targetHistory": [],
-  "redaction": {
-    "username": "presence-only",
-    "messageHtml": "length-only",
-    "disambiguationPayloads": "shape-only",
-    "dedupeAndOwnerKeys": "omitted"
-  }
-}
-```
-
-Recent pending and dead-letter lists are capped at 20 rows; target history is capped at 50 rows. They expose payload length/presence metadata, never message HTML, usernames, dedupe keys, or claim/effect owners.
-
-### `POST /api/admin-telegram-resend`
-
-Previews or queues an exact historical authoritative target replay. It never reconstructs current state and never calls Telegram synchronously. The handler verifies the target row against its target-plan JSON and SHA-256 digest; dead letters must resolve through the same authoritative `(source_event_id, pending_dedupe_key)` target. Settled exact-replay bundles retain 14 days; dead-letter audit lasts 90 days, so older dead letters return an incomplete-history response instead of an approximation. Unresolved and `execution_unknown` bundles retain their evidence for the 90-day reconciliation window.
-
-**Authentication:** admin (`X-Pharos-Admin: 1` header required).
-
-**Body**
-
-```json
-{
-  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
-  "dryRun": true
-}
-```
-
-Alternatively use `{ "source": { "kind": "dead-letter", "deadLetterId": 42 } }`. `dryRun` defaults to `true`. Live enqueue requires `dryRun: false`, an `Idempotency-Key` header of 8-128 characters, and `operatorReason` of 8-500 characters. Live replay also requires the chat to remain registered. Targets with `accepted` or `execution_unknown` final state are refused until their effect is reconciled separately.
-
-**Response**
-
-```json
-{
-  "mode": "exact_historical_outbox_replay",
-  "dryRun": true,
-  "enqueued": 0,
-  "chatId": "12345",
-  "source": { "kind": "target", "jobId": "job-1", "targetKey": "..." },
-  "payload": { "sha256": "...", "messageLength": 512, "hasReplyMarkup": true },
-  "historicalOutcome": { "finalDeliveryState": "failed", "finalDeliveryError": "rate_limit" }
-}
-```
-
-Live success returns `202` and `enqueued: 1`. The new pending row uses `source_type = "admin_replay"`, a replay-specific dedupe identity, the exact HTML/notification/markup policy, admin delivery pause semantics, and a fresh 45-minute TTL. It never mutates the original target outcome. `404` means the source identity is absent, `422` means exact persisted payload proof is incomplete/corrupt, and `409` covers unsafe terminal state or an unregistered historical chat.
 
 ### `POST /api/admin-telegram-broadcast`
 
@@ -5417,79 +5057,3 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 Before enqueue, live execution requires the admin-delivery pause to be inactive and the bot-wide transport circuit to be closed, claims one admin transport permit, and sends the exact chunks to the private canary. A rejected, uncertain, or incomplete canary prevents all fleet enqueue. `enqueued` reports the number of non-canary chat/chunk messages submitted to the pending queue (`fleetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
 **Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, malformed `canaryChatId`, or a live request without `canaryChatId`. `422` for malformed/unsupported Telegram HTML or a canary rejected for formatting/bad-request reasons. `409` when the projected fleet backlog cannot retain the hard 15-minute reserve inside the 45-minute admin TTL, or when admin delivery is operator-paused/the transport circuit is unavailable. `503` covers a transport permit denial or non-formatting canary failure, and `500` means the live Worker has no bot token. Canary failures report `fleetEnqueued: 0`.
-
-### `GET /api/admin-telegram-adoption-report`
-
-Returns the Access-authenticated weekly PharosWatchBot adoption report. The response covers the last seven complete UTC days, identifies the preceding comparison range, groups CTA/start/setup stages by allowlisted placement, reports first-mutation latency buckets, and includes the latest D7/D30 `any`/`direct`/`preset`/`global` active-follow retention snapshots.
-
-Counts from one through four and rates derived from low-count cells are `null`. `quality.ctaClicks` is `best_effort_no_identifier`; CTA and Telegram stages are independent aggregates rather than joined users, so `startPerClickPct` is directional and may exceed 100%. Retention uses durable aggregate first-follow counts as cohort denominators and current surviving active-follow rows as numerators, so `/forget` cannot shrink a historical denominator. Rows identify `on_time_snapshot`, `catchup_current_state`, or `pre_rollout_unavailable` (cohorts before 2026-07-11); an empty instrumented cohort has zero counts and a `null` rate. `freshness` reports the newest funnel and retention timestamps. The route is read-only, `no-store`, unavailable on the public API host, and requires the normal Cloudflare Access operator context.
-
-### `GET|POST /api/admin-telegram-delivery-control`
-
-Reads the authoritative Telegram transport circuit and the independent `fresh`, `pending`, and `admin` operator-pause rows. `GET` is read-only. `POST` creates, replaces, or resumes one expiring pause and writes a handler-owned row to `admin_action_audit`. Webhook command replies are not an admin-delivery mode and are outside these pause controls.
-
-**Authentication:** admin. Mutating requests require `X-Pharos-Admin: 1`; an optional `Idempotency-Key` protects a POST retry.
-
-**Pause body**
-
-```json
-{
-  "action": "pause",
-  "mode": "pending",
-  "expectedGeneration": 0,
-  "durationSec": 900,
-  "reason": "Telegram transport incident"
-}
-```
-
-`durationSec` is 60-86,400. `expectedGeneration` is `0` when the mode has no row and otherwise must equal the current row generation. Pauses become inactive automatically when `expiresAt <= now`; no cleanup job is needed for expiry.
-
-**Resume body**
-
-```json
-{
-  "action": "resume",
-  "mode": "pending",
-  "expectedGeneration": 1
-}
-```
-
-Resume is also generation-fenced. It retains the row as inert audit state, advances its generation, and sets `expiresAt` to the current time. A stale generation returns `409` and does not mutate the active control.
-
-**Execution-unknown acknowledgement body**
-
-```json
-{
-  "action": "acknowledge_execution_unknown",
-  "pendingIds": [30557, 30558],
-  "operatorReason": "Reviewed the interrupted send owner and accepted the at-most-once outcome."
-}
-```
-
-This action accepts 1-100 exact pending-row IDs. Every row must still be `execution_unknown`; otherwise the request returns `409` without changing any row. A successful acknowledgement preserves the exact payload and lifecycle in `telegram_alert_dead_letters` with `reason = "execution_unknown_archived"`, retains `execution_unknown` as the authoritative target outcome, removes the row from the active backlog, and records the operator reason in `admin_action_audit`. It never resends or changes an ambiguous effect to accepted.
-
-**Response**
-
-```json
-{
-  "now": 1800000000,
-  "circuit": {
-    "state": "closed",
-    "generation": 4,
-    "causeClass": null,
-    "causeScope": null,
-    "nextProbeAt": null
-  },
-  "pauses": [
-    {
-      "mode": "pending",
-      "generation": 2,
-      "active": false,
-      "expiresAt": 1800000000,
-      "reason": "operator resume"
-    }
-  ]
-}
-```
-
-The full circuit response also includes bounded distinct-failure counts, first/last failure and success timestamps, and the owner/generation/expiry fence for any half-open probe. Operator pause rows include actor and created/updated timestamps.

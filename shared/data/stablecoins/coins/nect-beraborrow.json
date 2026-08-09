@@ -1000,6 +1000,7 @@
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "infrastructures": [
     "liquity-v2"
   ],

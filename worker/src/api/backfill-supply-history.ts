@@ -11,7 +11,7 @@ import { encodeJsonCursor, jsonResponse, parseIntParam, parseJsonCursorParam } f
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
-import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
+import { buildAdminJobSummary, noAdminTargetsResponse } from "../lib/admin-job";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import {
@@ -1044,17 +1044,4 @@ export function handleBackfillSupplyHistoryTrusted({
   request,
 }: BackfillSupplyHistoryRouteContext): Promise<Response> {
   return executeBackfillSupplyHistory(db, url, coingeckoApiKey, chainRpcs, request.signal);
-}
-
-export async function handleBackfillSupplyHistory(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-  cgApiKey?: string | null,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Response> {
-  return runAdminJob({ request, trustedAdmin, url }, () =>
-    executeBackfillSupplyHistory(db, url, cgApiKey, chainRpcs, request?.signal)
-  );
 }

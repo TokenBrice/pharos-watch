@@ -2,6 +2,7 @@
 
 import { VenueRiskBreakdown } from "@/components/venue-risk-breakdown";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
@@ -38,9 +39,9 @@ export interface YieldSourceRiskCardProps {
 }
 
 const POSTURE_TONE = {
-  clean: "border-emerald-500/25 bg-emerald-500/8 text-emerald-700 dark:text-emerald-300",
-  watch: "border-amber-500/25 bg-amber-500/8 text-amber-700 dark:text-amber-300",
-  speculative: "border-red-500/25 bg-red-500/8 text-red-700 dark:text-red-300",
+  clean: SEVERITY_TONE_CLASS.ok.pill,
+  watch: SEVERITY_TONE_CLASS.watch.pill,
+  speculative: SEVERITY_TONE_CLASS.alert.pill,
 } as const;
 
 function formatPenalty(sourceRisk: YieldSourceRisk): string {

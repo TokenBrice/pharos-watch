@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
@@ -25,7 +25,6 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
-  INDEXABLE_DEPEG_EVENT_SLUGS,
   eventBySlug,
   formatIncidentNumber,
   type DepegEventEntry,
@@ -95,9 +94,6 @@ export async function generateMetadata(
     description,
     canonical: `/depeg/${event.slug}/`,
     ogImage: `${SITE_URL}/og-editorial-depeg.png`,
-    robots: INDEXABLE_DEPEG_EVENT_SLUGS.has(event.slug)
-      ? undefined
-      : { index: false, follow: true },
   });
 }
 
@@ -226,25 +222,17 @@ export default async function DepegEventPage(
     : (event.endedAt ?? event.startedAt);
   const modifiedIso = new Date(modifiedAtSeconds * 1000).toISOString();
 
-  const newsArticleJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    "@id": canonicalUrl,
+  const newsArticleJsonLd = buildArticleJsonLd({
+    type: "NewsArticle",
+    id: canonicalUrl,
     headline: heroTitle,
     description: heroDescription,
     datePublished: startedIso,
     dateModified: modifiedIso,
     image: [`${SITE_URL}/og-editorial-depeg.png`],
-    author: { "@type": "Organization", name: "Pharos", url: SITE_URL },
-    publisher: {
-      "@type": "Organization",
-      name: "Pharos",
-      url: SITE_URL,
-      logo: `${SITE_URL}/pharos-mark.png`,
-    },
     mainEntityOfPage: canonicalUrl,
     identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
-  };
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

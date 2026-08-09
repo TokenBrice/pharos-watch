@@ -1,6 +1,6 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
-import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
+import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import {
   errorResponse,
   jsonResponse,
@@ -71,29 +71,19 @@ function resolveCandidate(row: GapRow): ResolvedCandidate {
   return { row, kind: matches.length > 1 ? "ambiguous_config" : "missing_config" };
 }
 
-export async function handleRemediateBlacklistAmountGaps(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean | undefined,
-  request: Request | undefined,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "remediate-blacklist-amount-gaps",
-      request,
-      trustedAdmin,
-    },
-    () => handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
-  );
+export interface RemediateBlacklistAmountGapsRouteContext {
+  db: D1Database;
+  url: URL;
+  request?: Request;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
-export async function handleRemediateBlacklistAmountGapsTrusted(
-  db: D1Database,
-  url: URL,
-  request: Request | undefined,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Response> {
+export async function handleRemediateBlacklistAmountGapsTrusted({
+  db,
+  url,
+  request,
+  chainRpcs,
+}: RemediateBlacklistAmountGapsRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     const body = await parseOptionalRequestJsonObject(request);
     if (body instanceof Response) return body;

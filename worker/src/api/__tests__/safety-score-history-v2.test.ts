@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/report-cards";
+import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleSafetyScoreHistoryV2 } from "../safety-score-history-v2";
 
@@ -128,13 +128,11 @@ describe("handleSafetyScoreHistoryV2", () => {
       },
     ]);
 
-    const response = await handleSafetyScoreHistoryV2(
-      db,
-      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
-    );
-
-    expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Internal Server Error" });
+    // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
+    // `router-contract.test.ts`.
+    await expect(
+      handleSafetyScoreHistoryV2(db, new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle")),
+    ).rejects.toThrow();
   });
 
   it("returns an empty history with a current freshness fallback", async () => {

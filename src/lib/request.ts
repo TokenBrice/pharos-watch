@@ -53,7 +53,8 @@ async function executeRequest<T>(
   readSuccessBody: (response: Response) => Promise<T>,
 ): Promise<RequestResult<T>> {
   const url = inputLabel(input);
-  const parentSignal = resolveRequestSignal(options.init?.signal, options.signal, "compose");
+  const parent = resolveRequestSignal(options.init?.signal, options.signal, "compose");
+  const parentSignal = parent.signal;
   const timeoutMs = normalizeRequestTimeoutMs(options.timeoutMs);
   const timeout =
     timeoutMs == null
@@ -94,6 +95,7 @@ async function executeRequest<T>(
     throw new RequestFailure("network", url, "Network request failed", { cause: error });
   } finally {
     timeout?.dispose();
+    parent.dispose();
   }
 }
 

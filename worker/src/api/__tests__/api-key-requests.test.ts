@@ -210,15 +210,17 @@ describe("api key self-serve request handlers", () => {
     expect(sentEmails).toHaveLength(1);
   });
 
-  it("accepts known dynamic endpoint templates from the public form", async () => {
+  it("stores intendedEndpoints as a normalized free-text note", async () => {
+    // The note grants nothing — an issued self-serve key can read every
+    // protected public route regardless of what the requester listed here.
     const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
       email: "template@example.com",
-      intendedEndpoints: ["/api/stablecoin/:id"],
+      intendedEndpoints: ["  /api/stablecoin/:id  ", "/api/stablecoin/:id", "", "whatever I plan to call"],
     })), env());
 
     expect(response.status).toBe(202);
     expect(sqlite.prepare("SELECT intended_endpoints_json FROM api_key_requests").get()).toEqual({
-      intended_endpoints_json: JSON.stringify(["/api/stablecoin/:id"]),
+      intended_endpoints_json: JSON.stringify(["/api/stablecoin/:id", "whatever I plan to call"]),
     });
   });
 

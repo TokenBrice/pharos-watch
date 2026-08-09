@@ -209,6 +209,7 @@
     ]
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",

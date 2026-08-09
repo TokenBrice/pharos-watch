@@ -1,5 +1,5 @@
 import { jsonResponse, parseOptionalPositiveIntegerParam } from "../lib/api-utils";
-import { runAdminRoute } from "../lib/route-wrappers";
+import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { toErrorMessage } from "../lib/error-utils";
 
 interface AuditLogRow {
@@ -27,11 +27,7 @@ function parseAuditDetail(row: AuditLogRow): unknown {
   }
 }
 
-export function handleApiKeyAuditLog(
-  db: D1Database,
-  trustedAdmin: boolean,
-  request: Request,
-): Promise<Response> {
+export function handleApiKeyAuditLog({ db, trustedAdmin, request }: AdminRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "api-key-audit-log",

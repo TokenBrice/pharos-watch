@@ -13,7 +13,7 @@ Primary files:
 - `src/app/dependency-map/dependency-hubs-board.tsx`
 - `src/components/dependency-map-mobile-summary.tsx`
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout
-- `src/components/contagion-graph.tsx` — graph shell and shared interaction state
+- `src/components/contagion-graph-root.tsx` — graph shell and shared interaction state
 - `src/components/contagion-graph-model.ts` — relationship presentation tokens and grade colors
 - `src/components/contagion-graph-graph.ts` — pure visibility, ripple, and navigation algorithms
 - `src/components/contagion-graph-tooltips.tsx` — node/edge tooltips and the live-region announcement

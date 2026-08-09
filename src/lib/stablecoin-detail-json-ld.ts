@@ -73,10 +73,10 @@ function buildStablecoinThingJsonLd({
   };
 }
 
-function absoluteSiteUrl(siteUrl: string, pathOrUrl: string | undefined): string | undefined {
+function absoluteSiteUrl(pathOrUrl: string | undefined): string | undefined {
   if (!pathOrUrl) return undefined;
   try {
-    return new URL(pathOrUrl, siteUrl).toString();
+    return new URL(pathOrUrl, SITE_URL).toString();
   } catch {
     return undefined;
   }
@@ -84,17 +84,16 @@ function absoluteSiteUrl(siteUrl: string, pathOrUrl: string | undefined): string
 
 export function buildStablecoinDatasetJsonLd(
   coin: StablecoinMeta,
-  options: { siteUrl?: string; dateModified?: string; logoPath?: string } = {},
+  options: { dateModified?: string; logoPath?: string } = {},
 ) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
-  const image = absoluteSiteUrl(siteUrl, options.logoPath);
+  const detailUrl = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
+  const image = absoluteSiteUrl(options.logoPath);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const datasetSameAs = buildStablecoinSameAs(coin);
   const datasetIdentityUrls = datasetSameAs.length > 0 ? datasetSameAs : [detailUrl];
-  const organization = buildPharosOrganizationNode(siteUrl);
+  const organization = buildPharosOrganizationNode();
   const contractIdentifiers = (coin.contracts ?? []).slice(0, CONTRACT_IDENTIFIER_JSON_LD_LIMIT).map((contract) => ({
     "@type": "PropertyValue",
     propertyID: `contract:${contract.chain}`,
@@ -204,9 +203,8 @@ export function buildStablecoinDatasetJsonLd(
   };
 }
 
-export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { siteUrl?: string } = {}) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta) {
+  const detailUrl = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
@@ -221,7 +219,7 @@ export function buildPreLaunchStablecoinJsonLd(coin: StablecoinMeta, options: { 
       name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
       url: detailUrl,
-      isPartOf: { "@id": `${siteUrl}#website` },
+      isPartOf: { "@id": `${SITE_URL}#website` },
       about: { "@id": `${detailUrl}#stablecoin` },
     },
     {

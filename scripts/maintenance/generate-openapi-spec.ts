@@ -230,7 +230,6 @@ function render() {
             "evidence",
             "accessPosture",
             "dependencies",
-            "stressStateDigest",
             "scoreTrace",
             "breakdowns",
           ],
@@ -372,7 +371,6 @@ function render() {
                 reasonCodes: { type: "array", items: { type: "string" } },
               },
             },
-            stressStateDigest: stringOrNull,
             scoreTrace: schemaRef("ReportCardsV9ScoreTrace"),
             breakdowns: {
               oneOf: [

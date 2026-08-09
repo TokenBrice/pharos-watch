@@ -1,5 +1,6 @@
 import shockCoverageRegistryAsset from "@shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 import { V9CdpStressCoverageFactSchema, type V9CdpStressCoverageFact } from "@shared/types/safety-score-v9-backing";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { isRecord } from "@shared/lib/type-guards";
 import { z } from "zod";
 
@@ -120,9 +121,18 @@ function latestMeasurement(assetId: string, asOfSec: number): RegistryEntry | nu
   return latest;
 }
 
+/**
+ * Projects a registry row into the fact shape. The registry is parsed once at
+ * module load (`SHOCK_COVERAGE_REGISTRY`) against a schema that is strictly
+ * narrower than `V9CdpStressCoverageFactSchema` field-for-field, so the
+ * projection is typed rather than re-parsed: every downstream consumer receives
+ * a `V9CdpStressCoverageFact` that has already been validated at the registry
+ * boundary. Supplied (replay-pinned) facts are a different lane and are still
+ * parsed — see `validatePinnedMeasurement`.
+ */
 function projectMeasurement(measurement: RegistryEntry): V9CdpStressCoverageFact {
   const measured = measurement.measuredFacts;
-  return V9CdpStressCoverageFactSchema.parse({
+  return {
     family: measurement.family,
     applicability: measurement.applicability,
     failureReason: measurement.failureReason,
@@ -144,10 +154,11 @@ function projectMeasurement(measurement: RegistryEntry): V9CdpStressCoverageFact
     branchContributions: measured.branchContributions,
     codeHashPins: measurement.codePins,
     evidenceRefIds: [],
-  });
+  };
 }
 
 function validatePinnedMeasurement(assetId: string, value: unknown, asOfSec: number): void {
+  // Supplied facts are untrusted replay input, so this parse stays.
   const supplied = V9CdpStressCoverageFactSchema.parse(value);
   const source = supplied.source;
   if (source === null || source.block.timestampUnix > asOfSec) {
@@ -160,8 +171,14 @@ function validatePinnedMeasurement(assetId: string, value: unknown, asOfSec: num
       measurement.journalSha256 === source.journalSha256,
   );
   if (!registered) throw new Error(`Replay-pinned shock coverage for ${assetId} is not in the committed registry`);
+  // Canonical-form comparison: the journal sha256 pins the *journal file*, not
+  // the supplied fact body, so the whole projection still has to match. Stable
+  // canonicalization makes the comparison key-order independent instead of
+  // depending on JSON.stringify insertion order.
   const normalizedSupplied = { ...supplied, evidenceRefIds: [] };
-  if (JSON.stringify(normalizedSupplied) !== JSON.stringify(projectMeasurement(registered))) {
+  if (
+    stableJsonStringifyV1(normalizedSupplied) !== stableJsonStringifyV1(projectMeasurement(registered))
+  ) {
     throw new Error(`Replay-pinned shock coverage for ${assetId} differs from its committed journal projection`);
   }
 }

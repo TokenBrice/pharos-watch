@@ -2,7 +2,7 @@ import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score
 import type {
   CompiledV9FactSetV2,
   CompiledV9FactSetV3,
-  V9AssetFactsV2,
+  V9AssetFactsBase,
   V9AssetFactsV3,
   V9EvidenceResponsibility,
   V9FactStatusV2,
@@ -123,7 +123,7 @@ function sourceGenerations(factSet: CompiledV9FactSetV3): Readonly<Record<string
 }
 
 /** A reviewed bridge tier as carried by the fact set's bridge-route review. */
-type V9BridgeRouteTier = V9AssetFactsV2["economicControlReview"]["bridge"]["routes"][number]["tier"];
+type V9BridgeRouteTier = V9AssetFactsBase["economicControlReview"]["bridge"]["routes"][number]["tier"];
 
 export interface V9ConservativeShareBounds {
   lower: number;
@@ -228,7 +228,7 @@ function clampShare(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function boundedPooledChainShare(supply: V9AssetFactsV2["supply"]): number {
+function boundedPooledChainShare(supply: V9AssetFactsBase["supply"]): number {
   return supply.selectedBridgeRoutes.reduce(
     (sum, route) =>
       sum +
@@ -240,7 +240,7 @@ function boundedPooledChainShare(supply: V9AssetFactsV2["supply"]): number {
   );
 }
 
-function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
+function summarizeSupplyChainExposure(supply: V9AssetFactsBase["supply"]): V9SupplyChainExposure {
   const poolShare = boundedPooledChainShare(supply);
   if (!isKnownRequiredStatus(supply.status)) {
     return {
@@ -292,7 +292,7 @@ function referenceExitRequest(envelope: V9ValidatedPolicyEnvelope): V9ExitStress
 }
 
 function summarizeDexDomainExposure(
-  asset: V9AssetFactsV2 | V9AssetFactsV3,
+  asset: V9AssetFactsBase,
   envelope: V9ValidatedPolicyEnvelope,
 ): ReadonlyMap<string, V9ConservativeShareBounds> {
   const request = referenceExitRequest(envelope);
@@ -367,7 +367,7 @@ function sharesReconcile(left: number, right: number): boolean {
   return Math.abs(left - right) <= SHARE_RECONCILIATION_TOLERANCE;
 }
 
-function bridgeSupplyIsConsistent(supply: V9AssetFactsV2["supply"]): boolean {
+function bridgeSupplyIsConsistent(supply: V9AssetFactsBase["supply"]): boolean {
   const circulatingUsd = supply.circulatingUsd;
   if (!isKnownRequiredStatus(supply.status) || circulatingUsd === null) return false;
   const { selectedRouteSupplyShare, unknownRouteSupplyShare, unreviewedRouteSupplyShare } = supply;
@@ -409,7 +409,7 @@ function bridgeSupplyIsConsistent(supply: V9AssetFactsV2["supply"]): boolean {
 }
 
 function summarizeBridgeDomainExposure(
-  asset: V9AssetFactsV2 | V9AssetFactsV3,
+  asset: V9AssetFactsBase,
   representationGroupMaterialShareThreshold: number,
 ): ReadonlyMap<string, V9BridgeDomainExposure> {
   const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
@@ -529,7 +529,7 @@ function summarizeBridgeDomainExposure(
 }
 
 function buildCommonModeContext(
-  asset: V9AssetFactsV2 | V9AssetFactsV3 | undefined,
+  asset: V9AssetFactsBase | undefined,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9CommonModeContext {
   // A missing asset fact fails closed: no attributed share, no reviewed tiers.
@@ -928,7 +928,6 @@ function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDig
       access: asset.access,
       operationalResilience: asset.operationalResilience,
       wrapperParentLimit: asset.trace.wrapperParentLimit,
-      stressStateDigest: asset.stressState.stateDigest,
     })),
   };
 }

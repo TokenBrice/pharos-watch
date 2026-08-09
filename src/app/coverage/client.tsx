@@ -1,7 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FaqSection } from "@/components/faq-section";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import {
@@ -33,23 +32,7 @@ export default function CoveragePageClient() {
         </>
       )}
 
-      <Card className="pharos-card-shell p-5 sm:p-6">
-        <CardHeader className="pb-2">
-          <p className="pharos-kicker">Frequently Asked</p>
-          <CardTitle className="leading-none font-semibold">Coverage FAQ</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {COVERAGE_FAQ_ITEMS.map((item, i) => (
-            <details key={i} className="group rounded-lg border border-border/50 bg-background/40">
-              <summary className="pharos-focus-ring cursor-pointer rounded-lg px-4 py-3 text-sm font-medium text-foreground select-none flex items-center justify-between">
-                {item.q}
-                <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="px-4 pb-3 text-sm text-muted-foreground leading-relaxed">{item.a}</div>
-            </details>
-          ))}
-        </CardContent>
-      </Card>
+      <FaqSection items={COVERAGE_FAQ_ITEMS} title="Coverage FAQ" includeJsonLd />
     </div>
   );
 }

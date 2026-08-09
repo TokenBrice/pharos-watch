@@ -2896,6 +2896,7 @@
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "BUCK V1 dynamic CDP and Peg Stability Module basket",

@@ -39,6 +39,18 @@ function reviewed(
 }
 
 /**
+ * Rows reviewed after the {@link REVIEWED_DATE} sweep carry their own evidence
+ * pin. `reviewedDate` is the date the evidence was read, never the date the
+ * file was edited.
+ */
+function reviewedOn(
+  reviewedDate: string,
+  row: Omit<ReviewedRedemptionCoverageDisposition, "reviewer" | "reviewedDate">,
+): ReviewedRedemptionCoverageDisposition {
+  return { ...row, reviewer: REVIEWER, reviewedDate };
+}
+
+/**
  * Source-reviewed decisions for every active stablecoin without a redemption
  * config. The coverage audit rejects missing, duplicate, unknown, configured,
  * or no-longer-active rows so this list cannot silently become stale.
@@ -167,48 +179,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewed({
-    id: "ggbr-goldfish-gold",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The physical-gold route is documented; a config still needs KYC eligibility, delivery costs, minimums, and operational status.",
-    rationale:
-      "Goldfish exposes a holder redemption flow for physical gold with KYC and a stated five-to-seven-business-day process.",
-    evidenceNeeded:
-      "Verified minimum, shipping and insurance costs, eligible jurisdictions, settlement status, and capacity terms.",
-    evidenceUrls: ["https://app.goldfishgold.com/redemption", "https://goldfishgold.com/Goldfish-Cyfrin.pdf"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
-    id: "gramg-token-teknoloji",
-    disposition: "hard-reject",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "Published reserve evidence does not provide a holder redemption schedule for physical gold or the PAXG reserve asset.",
-    rationale: "Backing evidence alone does not establish that an ordinary GRAMG holder can exercise redemption.",
-    evidenceNeeded:
-      "Issuer redemption terms covering eligibility, output, minimum, fee, settlement, and current availability.",
-    evidenceUrls: [
-      "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
-      "https://www.token.com.tr/rezerv-kanitlari/",
-    ],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "grams-token-teknoloji",
-    disposition: "hard-reject",
-    reasonCode: "issuer-terms-missing",
-    blocker: "Published reserve evidence does not provide a holder redemption schedule for physical silver.",
-    rationale: "The documented bank-held backing is not itself a holder-exercisable exit.",
-    evidenceNeeded:
-      "Issuer redemption terms covering eligibility, output, minimum, fee, settlement, and current availability.",
-    evidenceUrls: [
-      "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
-      "https://www.token.com.tr/rezerv-kanitlari/",
-    ],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
     id: "hchf-hedera-swiss-franc",
     disposition: "add",
     reasonCode: "holder-route-confirmed",
@@ -299,6 +269,19 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://docs.initia.xyz/home/tools/bridge", "https://scan.initia.xyz"],
     allowedRouteFamilyIfProven: null,
   }),
+  reviewedOn("2026-08-09", {
+    id: "jpysc-sbi-startale",
+    disposition: "defer",
+    reasonCode: "issuer-terms-missing",
+    blocker:
+      "SBI VC Trade states that JPYSC deposits and withdrawals are not supported at the start of service, so the tracked Ethereum token has no exit a holder can exercise outside the closed SBI VC Trade loop, and Shinsei Trust & Banking publishes no beneficiary-right redemption schedule.",
+    rationale:
+      "The documented par exit is the distributor's in-app sales desk (販売所) at a fixed 1 JPYSC = 1 JPY with no spread, no fee, and no size cap, available only to SBI VC Trade account holders; that is a venue rail inside a closed loop, not a redemption claim the on-chain token carries.",
+    evidenceNeeded:
+      "Trust-issuer redemption terms for JPYSC holders, plus evidence that public-chain circulation and JPYSC withdrawals have been enabled with stated eligibility, limits, fees, and settlement.",
+    evidenceUrls: ["https://www.sbivc.co.jp/jpysc", "https://startale.com/en/blog/jpysc"],
+    allowedRouteFamilyIfProven: "offchain-issuer",
+  }),
   reviewed({
     id: "jpyt-dephaser",
     disposition: "add",
@@ -331,17 +314,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "https://docs.juicedollar.com/smart-contracts/deployments",
     ],
     allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewed({
-    id: "jusd-jusd-stable-token",
-    disposition: "hard-reject",
-    reasonCode: "no-holder-route",
-    blocker:
-      "JUSD Stable Token materials do not establish a current ordinary-holder redemption route with defined output and capacity.",
-    rationale: "Issuer assertions and exchange liquidity are insufficient for redemption scoring.",
-    evidenceNeeded: "New official holder redemption terms and live operational evidence.",
-    evidenceUrls: ["https://jusd.app/", "https://jusd.app/whitepaper.pdf"],
-    allowedRouteFamilyIfProven: null,
   }),
   reviewed({
     id: "luausd-lumi-finance",
@@ -381,20 +353,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "https://docs.mai.finance/functions/smart-contract-addresses",
     ],
     allowedRouteFamilyIfProven: "queue-redeem",
-  }),
-  reviewed({
-    id: "mim-abracadabra",
-    disposition: "hard-reject",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Abracadabra documents MIM debt repayment and market liquidity, not a broad collateral redemption right for holders.",
-    rationale: "Repaying a Cauldron position releases only its borrower's collateral.",
-    evidenceNeeded: "New official ordinary-holder redemption terms and live execution evidence.",
-    evidenceUrls: [
-      "https://docs.abracadabra.money/learn/tokens/tokenomics",
-      "https://docs.abracadabra.money/learn/intro/liquidations",
-    ],
-    allowedRouteFamilyIfProven: null,
   }),
   reviewed({
     id: "money-defi-money",
@@ -445,58 +403,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded: "Official redemption docs or audited callable route for ordinary holders.",
     evidenceUrls: ["https://nereus.finance/"],
     allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewed({
-    id: "pc0000031-tradable",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "The public deal surface does not expose complete holder redemption, maturity, transfer, fees, and settlement terms for this SSTN.",
-    rationale:
-      "A tokenized credit instrument may settle at maturity, but no generic route can be inferred across Tradable deals.",
-    evidenceNeeded: "Deal-specific offering or redemption terms and current investor portal evidence.",
-    evidenceUrls: [
-      "https://doc.tradable.xyz/product-docs",
-      "https://app.tradable.xyz/investor/deals/861cce9e-08ae-45a0-aca8-9fa229a0189d",
-    ],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
-    id: "pc0000033-tradable",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "The public deal surface does not expose complete holder redemption, maturity, transfer, fees, and settlement terms for this SSTN.",
-    rationale:
-      "A tokenized credit instrument may settle at maturity, but no generic route can be inferred across Tradable deals.",
-    evidenceNeeded: "Deal-specific offering or redemption terms and current investor portal evidence.",
-    evidenceUrls: [
-      "https://doc.tradable.xyz/product-docs",
-      "https://app.tradable.xyz/investor/deals/e2c78ce9-1c20-4f4a-b6ca-eba1b2f575b1",
-    ],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
-    id: "pc0000089-tradable",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "Public product documentation does not expose deal-specific redemption, maturity, transfer, fee, and settlement terms for this SSTL.",
-    rationale: "The instrument needs its own reviewed lifecycle and exit terms rather than a family-level assumption.",
-    evidenceNeeded: "Deal-specific offering or redemption terms and current investor portal evidence.",
-    evidenceUrls: ["https://doc.tradable.xyz/product-docs", "https://www.tradable.xyz/"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
-    id: "pc0000101-tradable",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "Public product documentation does not expose deal-specific redemption, maturity, transfer, fee, and settlement terms for this receivables token.",
-    rationale: "The instrument needs its own reviewed lifecycle and exit terms rather than a family-level assumption.",
-    evidenceNeeded: "Deal-specific offering or redemption terms and current investor portal evidence.",
-    evidenceUrls: ["https://doc.tradable.xyz/product-docs", "https://www.tradable.xyz/"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
   }),
   reviewed({
     id: "pht-pht",
@@ -575,22 +481,18 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://docs.hedgecore.io/docs/protocol/yield-generation"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
-    id: "tbill-openeden",
+  reviewedOn("2026-08-09", {
+    id: "trusd-tori",
     disposition: "add",
     reasonCode: "holder-route-confirmed",
     blocker:
-      "The queued route is fully documented; config work must encode permissioned eligibility, NAV, queue capacity, and status.",
+      "The route is documented; config work must still confirm the live mint/redeem contracts or API, executable USDC/USDT capacity, settlement timing, and route status.",
     rationale:
-      "Onboarded whitelisted investors can burn TBILL for USDC through a FIFO queue, typically settling next U.S. business day for a five-basis-point fee.",
+      "Tori documents direct mint and redemption of trUSD at NAV for verified participants at a 10 bps fee, and verified access is open to applicants including individuals rather than a closed facilitator set; unverified holders are left with app swaps at market rates.",
     evidenceNeeded:
-      "Current queue or liquidity capacity, NAV source, route status, whitelist eligibility, and contract addresses.",
-    evidenceUrls: [
-      "https://docs.openeden.com/tbill/redemptions",
-      "https://docs.openeden.com/tbill/faq",
-      "https://docs.openeden.com/tbill/fees",
-    ],
-    allowedRouteFamilyIfProven: "queue-redeem",
+      "Whitelist onboarding terms, redemption settlement timing and any queue, reachable USDC/USDT capacity, and current route-status evidence.",
+    evidenceUrls: ["https://docs.tori.finance/resources/institutional", "https://docs.tori.finance/faq/trusd"],
+    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "usda-alpha-partner",
@@ -726,18 +628,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "vndc-jade-labs",
-    disposition: "needs-research",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "The issuer-controlled VNDC exit cannot be verified as reliably available under current public terms and withdrawal conditions.",
-    rationale: "Historical platform conversion does not establish a currently credible ordinary-holder backstop.",
-    evidenceNeeded:
-      "Current binding withdrawal terms, reserve evidence, route availability, output currency, fees, limits, and settlement.",
-    evidenceUrls: ["https://vndc.io/", "https://goonus.io/en/"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
     id: "vusd-virtue",
     disposition: "hard-reject",
     reasonCode: "no-holder-route",
@@ -748,21 +638,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "An official access update plus live contract evidence that general-holder redemption has been enabled.",
     evidenceUrls: ["https://docs.virtue.money/redemption"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "xofm-mento",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "The oracle-priced route is documented; config work must verify XOFm's live pair directions, reserve limits, fees, and breaker status.",
-    rationale: "Mento documents direct XOFm swaps in its app at an oracle rate without slippage.",
-    evidenceNeeded:
-      "Current pair addresses, bidirectional route, reserve or trading limits, fee, and circuit-breaker status.",
-    evidenceUrls: [
-      "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-    ],
-    allowedRouteFamilyIfProven: "psm-swap",
   }),
   reviewed({
     id: "xtusd-xt",

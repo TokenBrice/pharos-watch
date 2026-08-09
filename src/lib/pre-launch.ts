@@ -1,3 +1,4 @@
+import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestoneType, LaunchPhase } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ export function formatFuzzyDate(raw: string): string {
   if (dMatch) {
     const parsed = parseFuzzyDate(raw);
     return parsed
-      ? parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+      ? formatUtcDayLabel(parsed)
       : raw;
   }
   const hMatch = raw.match(/^(\d{4})-H([1-2])$/);

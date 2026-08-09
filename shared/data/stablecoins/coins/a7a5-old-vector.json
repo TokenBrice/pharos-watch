@@ -137,6 +137,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "yieldConfig": {
     "yieldSource": "Central Bank of Russia key rate minus 1pp issuer distribution",
     "yieldType": "governance-set"

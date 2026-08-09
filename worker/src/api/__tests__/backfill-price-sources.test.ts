@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-const fetchWithRetryMock = vi.fn();
+const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
-  fetchJsonWithRetry: async (...args: unknown[]) => {
-    const response = await fetchWithRetryMock(...args) as Response | null;
-    return response ? { response, body: await response.json() } : null;
-  },
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 

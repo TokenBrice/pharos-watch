@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import policy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
+import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import {
   DEFAULT_NOTIONALS_USD,
   IMMEDIATE_SETTLEMENT_HORIZON_SEC,
@@ -7,37 +7,36 @@ import {
 } from "@shared/lib/p4-exit-route-capacity";
 import { V9_DEX_STRESS_MAX_COST_BPS, V9_DEX_STRESS_NOTIONAL_USD } from "../scoring";
 
-const exitPolicy = (policy as { semantic: { exit: Record<string, unknown> } }).semantic.exit;
-const stressRequest = exitPolicy.stressRequest as {
-  notionalGridUsd: number[];
-  maxCostBps: number;
-  settlementHorizonSec: number;
-  capUsd: number;
-};
+/**
+ * Copy-matches-source, not copy-matches-copy.
+ *
+ * The stress-request triple (notional grid, max cost, settlement horizon) used
+ * to be authored independently in three places, and this file could only report
+ * that drift had *already* happened. The P4 exit-route defaults and the worker's
+ * V9 DEX stress constants now derive from `EXIT_ROUTE_SCORING_TABLES.request`,
+ * so this asserts that each named view still points at the field it claims to.
+ *
+ * The policy JSON's `semantic.exit.stressRequest` is validated against the same
+ * source by `shared/lib/__tests__/exit-policy-constants-pin.test.ts`; it is not
+ * re-pinned here.
+ */
+describe("exit stress-request views derive from the single exit-scoring source", () => {
+  const request = EXIT_ROUTE_SCORING_TABLES.request;
 
-// Drift tripwire: the stress-request triple (notional grid, max cost, and
-// settlement horizon) is independently authored in three places — the
-// methodology policy JSON, the shared P4 exit-route-capacity defaults, and
-// the worker's V9 DEX stress-scoring constants. This test pins all three
-// against each other; a failure means real drift already exists between the
-// copies and must be reconciled by hand, not by editing this test.
-describe("exit stress-request triple stays pinned across policy, p4, and DEX worker constants", () => {
-  it("notional grid matches the P4 default notional ladder", () => {
-    expect(stressRequest.notionalGridUsd).toEqual([...DEFAULT_NOTIONALS_USD]);
+  it("exposes the source notional ladder as the P4 default notionals", () => {
+    expect(DEFAULT_NOTIONALS_USD).toBe(request.notionalGridUsd);
   });
 
-  it("max cost bps matches across policy, P4, and the DEX worker stress constant", () => {
-    expect(stressRequest.maxCostBps).toBe(REFERENCE_COST_BPS);
-    expect(stressRequest.maxCostBps).toBe(V9_DEX_STRESS_MAX_COST_BPS);
+  it("exposes the source max cost as both the P4 reference cost and the DEX stress cost", () => {
+    expect(REFERENCE_COST_BPS).toBe(request.maxCostBps);
+    expect(V9_DEX_STRESS_MAX_COST_BPS).toBe(request.maxCostBps);
   });
 
-  it("settlement horizon matches the P4 immediate-settlement horizon", () => {
-    expect(stressRequest.settlementHorizonSec).toBe(IMMEDIATE_SETTLEMENT_HORIZON_SEC);
+  it("exposes the source settlement horizon as the P4 immediate-settlement horizon", () => {
+    expect(IMMEDIATE_SETTLEMENT_HORIZON_SEC).toBe(request.settlementHorizonSec);
   });
 
-  it("stress cap matches the DEX worker's stress notional ($25M)", () => {
-    expect(stressRequest.capUsd).toBe(V9_DEX_STRESS_NOTIONAL_USD);
-    expect(V9_DEX_STRESS_NOTIONAL_USD).toBe(25_000_000);
-    expect(V9_DEX_STRESS_MAX_COST_BPS).toBe(200);
+  it("exposes the source stress cap as the DEX stress notional", () => {
+    expect(V9_DEX_STRESS_NOTIONAL_USD).toBe(request.capUsd);
   });
 });

@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
@@ -110,7 +111,7 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           {viewModel.showResolutionStateBadge && (
             <Badge
               variant="outline"
-              className="border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300"
+              className={cn("text-xs", SEVERITY_TONE_CLASS.watch.pill)}
             >
               {viewModel.resolutionStateLabel}
             </Badge>
@@ -118,7 +119,7 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           {viewModel.showRouteStatusBadge && (
             <Badge
               variant="outline"
-              className="border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300"
+              className={cn("text-xs", SEVERITY_TONE_CLASS.watch.pill)}
             >
               {viewModel.routeStatusLabel}
             </Badge>
@@ -129,7 +130,7 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
         </div>
 
         {viewModel.resolutionSummary ? (
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-muted-foreground">
+          <div className={cn("rounded-lg border px-3 py-2 text-sm text-muted-foreground", SEVERITY_TONE_CLASS.watch.banner)}>
             {viewModel.resolutionSummary}
           </div>
         ) : null}

@@ -9,6 +9,10 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../lib/telegram";
 import { isPausedSentinel } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
+import {
+  TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
+  TELEGRAM_ALERT_PERSISTENCE,
+} from "@shared/lib/telegram-alert-families";
 import { MANAGE_PAGE_SIZE, formatQuietHours } from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
@@ -37,10 +41,15 @@ export function buildHomeMessage(
     `Snooze: ${formatSnoozeLine(subscriber)}`,
     "",
     "<b>Global alerts</b>",
-    `DEWS: ${onOff(subscriber?.global_alert_dews)}`,
-    `Depeg: ${onOff(subscriber?.global_alert_depeg)}${depegSuffix}`,
-    `Safety: ${onOff(subscriber?.global_alert_safety)}`,
-    `Launch: ${onOff(subscriber?.global_alert_launch)}`,
+    // Generated from GLOBAL_ALERT_TYPES so the state lines always match the
+    // toggle rows `buildHomeKeyboard` renders from the same list. The previous
+    // hand-written four missed Reserve and Freeze entirely.
+    ...GLOBAL_ALERT_TYPES.map(
+      (type) =>
+        `${labelForType(type)}: ${subscriberHasGlobal(subscriber, type) ? "ON" : "OFF"}${
+          type === "depeg" ? depegSuffix : ""
+        }`,
+    ),
     "",
     options.hasCoinControls
       ? "Tap a row to toggle. Tap a coin below or send /settings &lt;ticker&gt; for per-coin controls."
@@ -124,18 +133,10 @@ export function buildCoinKeyboard(
     buildDewsRow(coinId, dewsBand),
     buildSafetyRow(coinId, safetyMode),
     buildDepegRow(coinId, depegStep),
-    [
-      { text: `${markIf(launchOn)}on`, callback_data: `settings:c:${coinId}:lc:1` },
-      { text: `${markIf(!launchOn)}off`, callback_data: `settings:c:${coinId}:lc:0` },
-    ],
-    [
-      { text: `Reserve ${markIf(reserveOn)}on`, callback_data: `settings:c:${coinId}:rs:1` },
-      { text: `${markIf(!reserveOn)}off`, callback_data: `settings:c:${coinId}:rs:0` },
-    ],
-    [
-      { text: `Freeze ${markIf(freezeOn)}on`, callback_data: `settings:c:${coinId}:fz:1` },
-      { text: `${markIf(!freezeOn)}off`, callback_data: `settings:c:${coinId}:fz:0` },
-    ],
+    // The launch row predates the family prefix and stays unprefixed.
+    buildPlainAlertRow(coinId, "launch", launchOn, ""),
+    buildPlainAlertRow(coinId, "reserve", reserveOn),
+    buildPlainAlertRow(coinId, "freeze", freezeOn),
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
   if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(`coin_${coinId}`) } }]);
@@ -191,6 +192,19 @@ function buildSafetyRow(coinId: string, safetyMode: string | null): Array<{ text
   return row;
 }
 
+function buildPlainAlertRow(
+  coinId: string,
+  alertType: "launch" | "reserve" | "freeze",
+  enabled: boolean,
+  prefix = `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS[alertType]} `,
+): Array<{ text: string; callback_data: string }> {
+  const code = TELEGRAM_ALERT_PERSISTENCE[alertType].settingCode;
+  return [
+    { text: `${prefix}${markIf(enabled)}on`, callback_data: `settings:c:${coinId}:${code}:1` },
+    { text: `${markIf(!enabled)}off`, callback_data: `settings:c:${coinId}:${code}:0` },
+  ];
+}
+
 function buildDepegRow(coinId: string, depegStep: number | "off"): Array<{ text: string; callback_data: string }> {
   const row = DEPEG_STEPS.map((step) => ({
     text: `${markIf(depegStep === step)}${step}`,
@@ -205,17 +219,8 @@ function buildDepegRow(coinId: string, depegStep: number | "off"): Array<{ text:
 
 // ---------- Small helpers ----------
 
-const TYPE_LABELS: Record<GlobalAlertType, string> = {
-  dews: "DEWS",
-  depeg: "Depeg",
-  safety: "Safety",
-  launch: "Launch",
-  reserve: "Reserve",
-  freeze: "Freeze",
-};
-
 function labelForType(type: GlobalAlertType): string {
-  return TYPE_LABELS[type];
+  return TELEGRAM_ALERT_FAMILY_SHORT_LABELS[type];
 }
 
 const SAFETY_LABELS: Record<SafetyModeCode, string> = {
@@ -230,10 +235,6 @@ function labelForSafety(code: SafetyModeCode): string {
 
 function markIf(active: boolean): string {
   return active ? "• " : "";
-}
-
-function onOff(value: number | null | undefined): string {
-  return value ? "ON" : "OFF";
 }
 
 function describeDews(row: SubscriptionRow | null): string {

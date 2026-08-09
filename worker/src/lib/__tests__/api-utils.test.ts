@@ -29,6 +29,7 @@ import {
   cacheControlForDegradedPayload,
   respondWithFreshSnapshot,
   jsonResponse,
+  jsonResponseWithHeaders,
   jsonFreshResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
@@ -187,56 +188,55 @@ describe("JSON cursor helpers", () => {
 });
 
 describe("parseIntParam", () => {
-  it("returns default for null input", () => {
-    expect(parseIntParam(null, 100, 1, 1000)).toBe(100);
+  it.each([
+    { label: "returns the default for null input", raw: null, fallback: 100, min: 1, max: 1000, expected: 100 },
+    { label: "returns the default for undefined input", raw: undefined, fallback: 50, min: 1, max: 500, expected: 50 },
+    { label: "parses a valid integer", raw: "25", fallback: 100, min: 1, max: 1000, expected: 25 },
+    { label: "clamps below min", raw: "-5", fallback: 100, min: 0, max: 1000, expected: 0 },
+    { label: "clamps above max", raw: "9999", fallback: 100, min: 1, max: 500, expected: 500 },
+  ])("$label", ({ raw, fallback, min, max, expected }) => {
+    expect(parseIntParam(raw, fallback, min, max)).toBe(expected);
   });
 
-  it("returns default for undefined input", () => {
-    expect(parseIntParam(undefined, 50, 1, 500)).toBe(50);
-  });
-
-  it("parses valid integer", () => {
-    expect(parseIntParam("25", 100, 1, 1000)).toBe(25);
-  });
-
-  it("clamps below min", () => {
-    expect(parseIntParam("-5", 100, 0, 1000)).toBe(0);
-  });
-
-  it("clamps above max", () => {
-    expect(parseIntParam("9999", 100, 1, 500)).toBe(500);
-  });
-
-  it("rejects out-of-range integers when rangePolicy is reject", async () => {
-    const result = parseIntParam("9999", 100, 1, 500, "limit", { rangePolicy: "reject" });
+  it.each([
+    {
+      label: "rejects out-of-range integers when rangePolicy is reject",
+      raw: "9999",
+      max: 500,
+      name: "limit",
+      options: { rangePolicy: "reject" } as const,
+      error: "Invalid limit: must be between 1 and 500",
+    },
+    {
+      label: "returns 400 for malformed input",
+      raw: "abc",
+      max: 1000,
+      name: "limit",
+      options: undefined,
+      error: "Invalid limit: must be a number",
+    },
+    {
+      label: "returns 400 for an empty string",
+      raw: "",
+      max: 1000,
+      name: "offset",
+      options: undefined,
+      error: "Invalid offset: must be a number",
+    },
+    {
+      label: "returns 400 for non-finite integer input",
+      raw: "9".repeat(400),
+      max: 1000,
+      name: "limit",
+      options: undefined,
+      error: "Invalid limit: must be a number",
+    },
+  ])("$label", async ({ raw, max, name, options, error }) => {
+    const result = parseIntParam(raw, 100, 1, max, name, options);
     expect(result).toBeInstanceOf(Response);
     const response = result as Response;
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid limit: must be between 1 and 500" });
-  });
-
-  it("returns 400 response for malformed input", async () => {
-    const result = parseIntParam("abc", 100, 1, 1000, "limit");
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid limit: must be a number" });
-  });
-
-  it("returns 400 response for empty string", async () => {
-    const result = parseIntParam("", 100, 1, 1000, "offset");
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid offset: must be a number" });
-  });
-
-  it("returns 400 response for non-finite integer input", async () => {
-    const result = parseIntParam("9".repeat(400), 100, 1, 1000, "limit");
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid limit: must be a number" });
+    expect(await response.json()).toEqual({ error });
   });
 });
 
@@ -785,10 +785,20 @@ describe("jsonResponse", () => {
     expect(body).toEqual({ ok: true });
   });
 
-  it("merges custom headers", async () => {
-    const res = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
+  it("merges custom headers through the explicit headers form", async () => {
+    const res = jsonResponseWithHeaders({ ok: true }, { "Cache-Control": "no-store" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("does not mistake a header record key for an option", async () => {
+    // The retired options-sniffing signature read this record as options and
+    // dropped every header while setting status 503.
+    const res = jsonResponseWithHeaders({ ok: true }, { status: "503", headers: "x", noStore: "1" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("status")).toBe("503");
+    expect(res.headers.get("headers")).toBe("x");
+    expect(res.headers.get("noStore")).toBe("1");
   });
 
   it("supports status, no-store, and Retry-After options", async () => {
@@ -821,7 +831,7 @@ describe("response header helpers", () => {
     const cached = jsonResponse({ ok: true });
     expect(noStoreResponse(cached).headers.get("Cache-Control")).toBe("no-store");
 
-    const alreadyNoStore = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
+    const alreadyNoStore = jsonResponse({ ok: true }, { noStore: true });
     expect(noStoreResponse(alreadyNoStore)).toBe(alreadyNoStore);
   });
 

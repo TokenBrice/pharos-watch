@@ -4,35 +4,26 @@ import {
   getPrimaryCandidatePricesForCurrentAsset,
 } from "../pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
+import { makePeggedAsset, makePrimaryPriceResultFixture } from "./_fixtures";
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
-    id: "usdt-tether",
-    name: "Tether",
-    symbol: "USDT",
-    pegType: "peggedUSD",
+  return makePeggedAsset({
     price: 1.0,
     priceSource: "coingecko",
     priceConfidence: "high",
     ...overrides,
-  };
+  });
 }
 
 function makePrimaryPriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {
-  return {
-    price: 1.0,
-    source: "coingecko",
+  return makePrimaryPriceResultFixture({
     confidence: "high",
-    selectedSource: "coingecko",
-    dlPrice: null,
     cgPrice: null,
     candidateSources: ["coingecko", "defillama-list"],
     agreeSources: ["coingecko", "defillama-list"],
     allPrices: { coingecko: 1.0, "defillama-list": 1.0005 },
-    observedAt: 1_700_000_000,
-    observedAtMode: "upstream",
     ...overrides,
-  };
+  });
 }
 
 describe("getPrimaryCandidatePricesForCurrentAsset", () => {

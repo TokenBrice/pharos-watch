@@ -171,7 +171,6 @@ describe("buildDispatchSnapshotState", () => {
       sourceData({
         activeSafetySource: {
           kind: "error",
-          expectedModel: "v9",
           reason: "v9-snapshot-unavailable",
           snapshot: null,
           detail: "publication unavailable",
@@ -190,7 +189,6 @@ describe("buildDispatchSnapshotState", () => {
 
     expect(state.safetySourceAssessment).toMatchObject({
       state: "missing",
-      expectedModel: "v9",
       failureReason: "v9-snapshot-unavailable",
     });
     expect(state.currentSafetySnapshot).toBeNull();
@@ -217,7 +215,6 @@ describe("buildDispatchSnapshotState", () => {
       sourceData({
         activeSafetySource: {
           kind: "v9",
-          expectedModel: "v9",
           snapshot: response,
         },
         safetyCache: safetyBaseline(response, "D", 44),
@@ -249,7 +246,6 @@ describe("buildDispatchSnapshotState", () => {
       sourceData({
         activeSafetySource: {
           kind: "v9",
-          expectedModel: "v9",
           snapshot: response,
         },
         publicationAttempt: {

@@ -9,7 +9,6 @@ import {
 import {
   cacheControlForDegradedPayload,
   jsonFreshResponse,
-  withErrorHandler,
 } from "../lib/api-utils";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { buildEmptyDdrrSummary } from "../cron/compute-depeg-resolver-review";
@@ -55,9 +54,7 @@ function staleSnapshotResponse(snapshot: DdrrResponse): DdrrResponse {
   };
 }
 
-export const handleDepegResolverReview = withErrorHandler(
-  "depeg-resolver-review",
-  async (db: D1Database): Promise<Response> => {
+export const handleDepegResolverReview = async (db: D1Database): Promise<Response> => {
     const cached = await loadDepegResolverReviewSnapshot(db);
     if (cached.kind === "ok") {
       const nowSec = Math.floor(Date.now() / 1000);
@@ -79,5 +76,4 @@ export const handleDepegResolverReview = withErrorHandler(
       updatedAt: nowSec,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolverReview,
     });
-  },
-);
+  };

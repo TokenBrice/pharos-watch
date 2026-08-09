@@ -25,7 +25,6 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
-  INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/app/depeg/[event]/page-data";
 
 export const dynamic = "force-static";
@@ -49,8 +48,6 @@ type StaticPageSpec = readonly [
 
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
-const depegEventEntries = DEPEG_EVENT_ENTRIES;
-const indexableDepegEventEntries = INDEXABLE_DEPEG_EVENT_ENTRIES;
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
 function lastEdited(path: string): Date {
@@ -124,7 +121,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const latestDataSnapshotMs = Math.max(
     0,
     ...digests.map((d) => d.generatedAt * 1000),
-    ...depegEventEntries.map((e) => (e.endedAt ?? e.startedAt) * 1000),
+    ...DEPEG_EVENT_ENTRIES.map((e) => (e.endedAt ?? e.startedAt) * 1000),
   );
   const liveDataLastModified = (path: string): Date => {
     const editedMs = LAST_EDITED[path] ? new Date(LAST_EDITED[path]).getTime() : 0;
@@ -222,7 +219,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const depegEventPages: MetadataRoute.Sitemap = indexableDepegEventEntries.map((e) => ({
+  const depegEventPages: MetadataRoute.Sitemap = DEPEG_EVENT_ENTRIES.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
     lastModified: new Date(
       Math.max(

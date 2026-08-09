@@ -3,26 +3,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
-  DYNAMIC_ENDPOINT_ACCESS_POLICIES,
-  DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
-  DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS,
   getEndpointDefinitionByKey,
   API_PATHS,
   getSiteDataAccess,
   getPublicApiAccess,
   getEndpointProbeDescriptors,
-  getEndpointProbePaths,
   getProbePaths,
   getStatusPageActions,
   ENDPOINT_DEFINITIONS,
-  ENDPOINT_DEFINITION_PROBES,
-  ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   findDynamicEndpointDescriptor,
   getDynamicEndpointDescriptorByKey,
-  PUBLIC_API_ENDPOINT_DEFINITIONS,
-  STATIC_ENDPOINT_ACCESS_POLICIES,
-  STATIC_ENDPOINT_CACHE_POLICIES,
-  STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,
   getStaticEndpointDependenciesByKey,
   isAdminLikePath,
@@ -42,10 +32,7 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
-      "/api/admin-telegram-adoption-report",
       "/api/admin-telegram-broadcast",
-      "/api/admin-telegram-delivery-control",
-      "/api/admin-telegram-resend",
       "/api/api-key-requests",
       "/api/api-key-requests-admin",
       "/api/api-key-requests/verify",
@@ -81,7 +68,6 @@ describe("api endpoint registry", () => {
       "/api/events",
       "/api/feedback",
       "/api/health",
-      "/api/kill-cron-in-flight",
       "/api/mint-burn-events",
       "/api/mint-burn-events?stablecoin=usdt-tether",
       "/api/mint-burn-flows",
@@ -95,8 +81,6 @@ describe("api endpoint registry", () => {
       "/api/report-cards/v9",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
-      "/api/reset-circuit-breaker",
-      "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history-v2",
       "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
@@ -116,14 +100,11 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history",
       "/api/status-history?limit=10",
-      "/api/status-probe-history",
-      "/api/status-probe-history?path=%2Fapi%2Fhealth",
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
       "/api/telegram-mini-app/mutate",
       "/api/telegram-mini-app/session",
-      "/api/telegram-pending",
       "/api/telegram-pulse",
       "/api/telegram-webhook",
       "/api/trigger-digest",
@@ -132,7 +113,6 @@ describe("api endpoint registry", () => {
       "/api/yield-history",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/yield-rankings",
-      "/api/yield-source-decisions",
     ];
 
     const actualPaths = [
@@ -192,8 +172,6 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
-      "/api/admin-telegram-adoption-report",
-      "/api/status-probe-history?path=%2Fapi%2Fhealth",
     ]);
 
     expect(getProbePaths("manual")).toEqual([
@@ -212,13 +190,7 @@ describe("api endpoint registry", () => {
       "/api/reclassify-atomic-roundtrips",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
-      "/api/reset-cron-lease",
-      "/api/reset-circuit-breaker",
-      "/api/kill-cron-in-flight",
-      "/api/telegram-pending",
-      "/api/admin-telegram-resend",
       "/api/admin-telegram-broadcast",
-      "/api/admin-telegram-delivery-control",
     ]);
   });
 
@@ -228,127 +200,9 @@ describe("api endpoint registry", () => {
     expect(getProbePaths("public")).not.toContain("/api/snapshot/:date/stablecoin/:id");
   });
 
-  it("derives static route definitions from literal endpoint paths", () => {
-    const expectedStaticKeys = ENDPOINT_DEFINITIONS.filter((endpoint) => isStaticEndpointPath(endpoint.path)).map(
-      (endpoint) => endpoint.key,
-    );
-
-    expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).toEqual(expectedStaticKeys);
+  it("keeps dynamic endpoints out of the static route table", () => {
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.every((endpoint) => isStaticEndpointPath(endpoint.path))).toBe(true);
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).not.toContain("stablecoin-detail");
-
-    expect(DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        methods: descriptor.methods,
-        dependencies: descriptor.routeDependencies,
-      })),
-    );
-  });
-
-  it("derives static and dynamic access policies without changing metadata", () => {
-    expect(STATIC_ENDPOINT_ACCESS_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        methods: endpoint.methods,
-        adminRequired: endpoint.adminRequired,
-        publicApiAccess: endpoint.publicApiAccess,
-        siteDataAccess: endpoint.siteDataAccess,
-      })),
-    );
-
-    expect(DYNAMIC_ENDPOINT_ACCESS_POLICIES).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        routePath: descriptor.requestAttribution?.routePath ?? null,
-        methods: descriptor.methods,
-        adminRequired: descriptor.adminRequired,
-        publicApiAccess: descriptor.publicApiAccess,
-        siteDataAccess: descriptor.siteDataAccess,
-      })),
-    );
-  });
-
-  it("derives static cache policies without adding dynamic cache behavior", () => {
-    expect(STATIC_ENDPOINT_CACHE_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        cacheBypass: endpoint.cacheBypass,
-      })),
-    );
-    expect(STATIC_ENDPOINT_CACHE_POLICIES.some((policy) => policy.key === "stablecoin-detail")).toBe(false);
-  });
-
-  it("derives public API endpoint definitions for static and dynamic public routes", () => {
-    const staticPublicKeys = STATIC_ENDPOINT_ROUTE_DEFINITIONS.filter(
-      (endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"),
-    ).map((endpoint) => endpoint.key);
-    const dynamicPublicKeys = DYNAMIC_ENDPOINT_DESCRIPTORS.filter((descriptor) => !descriptor.adminRequired).map(
-      (descriptor) => descriptor.key,
-    );
-
-    expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "static").map(
-        (definition) => definition.key,
-      ),
-    ).toEqual(staticPublicKeys);
-    expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "dynamic").map(
-        (definition) => definition.key,
-      ),
-    ).toEqual(dynamicPublicKeys);
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS).toContainEqual(
-      expect.objectContaining({ scope: "dynamic", key: "og-image", publicApiAccess: "exempt" }),
-    );
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS.some((definition) => definition.key === "status")).toBe(false);
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS.some((definition) => definition.key === "api-key-update")).toBe(false);
-  });
-
-  it("derives probe definitions from endpoint metadata", () => {
-    expect(ENDPOINT_DEFINITION_PROBES).toEqual(
-      ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
-        if (!endpoint.probeGroup) return [];
-        return [
-          {
-            source: "endpoint-definition",
-            key: endpoint.key,
-            definitionPath: endpoint.path,
-            path: endpoint.probePath ?? endpoint.path,
-            group: endpoint.probeGroup,
-            ...(endpoint.probeSemanticKind ? { probeSemanticKind: endpoint.probeSemanticKind } : {}),
-          },
-        ];
-      }),
-    );
-    expect(getEndpointProbeDescriptors("public")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "public").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbeDescriptors("admin")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "admin").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbeDescriptors("manual")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "manual").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbePaths("public")).toEqual(getProbePaths("public"));
-    expect(getEndpointProbePaths("admin")).toEqual(getProbePaths("admin"));
-    expect(getEndpointProbePaths("manual")).toEqual(getProbePaths("manual"));
   });
 
   it("declares semantic probe metadata only for health and status", () => {
@@ -372,27 +226,7 @@ describe("api endpoint registry", () => {
     expect(getEndpointProbeDescriptors("manual").filter((probe) => probe.probeSemanticKind)).toEqual([]);
   });
 
-  it("derives static and dynamic dependency hydration policies", () => {
-    expect(STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        dependencies: endpoint.routeDependencies ?? [],
-      })),
-    );
-    expect(DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        routePath: descriptor.requestAttribution?.routePath ?? null,
-        dependencies: descriptor.routeDependencies,
-      })),
-    );
-    expect(ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toHaveLength(
-      STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length + DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length,
-    );
+  it("resolves static endpoint dependency policies by key", () => {
     expect(getStaticEndpointDependenciesByKey("status")).toEqual([
       "coingeckoApiKey",
       "cloudflareD1StatusConfig",
@@ -467,7 +301,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(12);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -513,14 +347,6 @@ describe("api endpoint registry", () => {
       routeDependencies: [],
       siteDataAccess: "denied",
     });
-    expect(getDynamicEndpointDescriptorByKey("admin-telegram-chat")).toMatchObject({
-      methods: ["GET"],
-      adminRequired: true,
-      routeDependencies: [],
-      publicApiAccess: "exempt",
-      siteDataAccess: "denied",
-    });
-
     expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
     expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");

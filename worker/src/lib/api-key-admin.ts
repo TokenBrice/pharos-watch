@@ -3,7 +3,7 @@ import type {
   ApiKeyListResponse,
   ApiKeyMutationResponse,
   ApiKeyRotateResponse,
-  ApiKeyTrafficClass,
+  ApiKeyTier,
 } from "@shared/types";
 import {
   API_KEY_DEFAULT_EXPIRY_SEC,
@@ -86,7 +86,6 @@ export async function createApiKey(
       name: parsed.name,
       ownerEmail: parsed.ownerEmail ?? null,
       tier: parsed.tier ?? "standard",
-      trafficClass: parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
       rateLimitPerMinute: parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
       expiresAt: expiresAt ?? null,
     },
@@ -103,8 +102,7 @@ export async function createApiKey(
 export interface TrustedApiKeyCreateInput {
   name: string;
   ownerEmail: string | null;
-  tier: string;
-  trafficClass: ApiKeyTrafficClass;
+  tier: ApiKeyTier;
   rateLimitPerMinute: number;
   expiresAt: number | null;
   isActive?: boolean;
@@ -148,7 +146,9 @@ export async function createTrustedApiKey(
       input.name,
       input.ownerEmail,
       input.tier,
-      input.trafficClass,
+      // Attribution label only; the real request lane is derived per request in
+      // handlers/http/gates.ts, so issuance always writes the external default.
+      API_KEY_TRAFFIC_CLASS_DEFAULT,
       input.rateLimitPerMinute,
       input.isActive === false ? 0 : 1,
       input.expiresAt,
@@ -228,7 +228,7 @@ export async function updateApiKey(
       parsed.name ?? existing.name,
       Object.prototype.hasOwnProperty.call(parsed, "ownerEmail") ? (parsed.ownerEmail ?? null) : existing.owner_email,
       parsed.tier ?? existing.tier,
-      parsed.trafficClass ?? existing.traffic_class,
+      existing.traffic_class,
       parsed.rateLimitPerMinute ?? existing.rate_limit_per_minute,
       parsed.isActive == null ? existing.is_active : parsed.isActive ? 1 : 0,
       Object.prototype.hasOwnProperty.call(parsed, "expiresAt") ? (parsed.expiresAt ?? null) : existing.expires_at,

@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
+import type { AdminApiQueryDescriptor } from "@/lib/admin-api-query-descriptors";
 import { buildAdminApiPath } from "@/lib/admin-access";
 import { createApiQueryFn, usePollingQuery, type ApiQueryOptions } from "./use-api-query";
 
@@ -24,4 +25,19 @@ export function useAdminPollingQuery<T>(
       retry: options?.retry ?? 0,
     },
   );
+}
+
+/**
+ * Admin twin of `useRegisteredApiQuery`: binds one `ADMIN_API_QUERY_DESCRIPTORS`
+ * entry, letting a caller override only the enablement gate.
+ */
+export function useRegisteredAdminQuery<T>(
+  descriptor: AdminApiQueryDescriptor<T>,
+  overrides?: { enabled?: boolean; retry?: number | boolean },
+): UseQueryResult<T, Error> {
+  return useAdminPollingQuery<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
+    enabled: overrides?.enabled ?? descriptor.enabled,
+    retry: overrides?.retry,
+    schema: descriptor.schema,
+  });
 }

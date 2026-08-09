@@ -17,6 +17,7 @@ import { TableSourceLink } from "@/components/table/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
@@ -162,7 +163,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             {view.warningSignals.map((signal) => (
               <span
                 key={signal}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
+                className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}
               >
                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                 {formatYieldWarningSignal(signal)}

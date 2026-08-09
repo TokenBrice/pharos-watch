@@ -31,7 +31,7 @@ import {
   buildMethodologyEnvelope,
   createCacheHandler,
   errorResponse,
-  jsonResponse,
+  jsonResponseWithHeaders,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
@@ -363,7 +363,6 @@ function hydrateAltSourcesWithLiveSafety(row: YieldRanking, underlyingSafetyScor
 
 interface LiveSafetyHydrationSource {
   source: "safety-score-v9-publication";
-  expectedModel?: "v9";
   safetyScoreIdentity: SafetyScorePublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
@@ -668,7 +667,7 @@ function buildYieldRankingsResponse(
   if (warning && headers.Warning && !headers.Warning.includes(warning)) {
     headers.Warning = `${headers.Warning}, ${warning}`;
   }
-  return jsonResponse(
+  return jsonResponseWithHeaders(
     {
       ...payload,
       _meta: buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC),
@@ -695,13 +694,9 @@ function createYieldRankingsCacheHandler(
     transform: async (payload, { db, cached }) => {
       const validatedPayload = normalizeYieldRankingsContract(payload as YieldRankingsResponse, cached);
       try {
-        const snapshot = await computeSafetyScoresSnapshot(db, {
-          outputMode: "map",
-          sourceMode: "published-cache",
-        });
+        const snapshot = await computeSafetyScoresSnapshot(db);
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "safety-score-v9-publication",
-          expectedModel: snapshot.expectedModel,
           safetyScoreIdentity: snapshot.safetyScoreIdentity,
           publicationGenerationId: snapshot.publicationGenerationId,
           methodologyVersion: snapshot.methodologyVersion,
@@ -736,7 +731,6 @@ function createYieldRankingsCacheHandler(
         console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "safety-score-v9-publication",
-          expectedModel: validatedPayload.provenance?.safetySnapshot.expectedModel,
           safetyScoreIdentity: null,
           publicationGenerationId: null,
           methodologyVersion: null,

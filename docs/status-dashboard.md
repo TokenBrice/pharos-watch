@@ -490,6 +490,18 @@ The cron metadata now includes:
 
 `GET /api/status` returns the latest persisted aggregate in `probe`. New rows include optional `probe.internal`, `probe.external`, and `probe.internalExternalDiscrepancy` fields read from `status_probe_runs.details_json`; legacy rows omit those optional fields.
 
+`GET /api/status-probe-history`, which replayed one path's pass/fail history out of those rows, was retired on 2026-08-09. `status_probe_runs` is unchanged and still written every probe cycle, so per-path history is now a direct D1 read of `created_at`, `status`, and the `failed[]` entries inside `details_json`:
+
+```sql
+SELECT created_at, status, details_json
+FROM status_probe_runs
+WHERE created_at >= CAST(strftime('%s', 'now') AS INTEGER) - 7 * 86400
+ORDER BY created_at DESC
+LIMIT 3000;
+```
+
+A path failed in a given run when the `failed` array inside `details_json` holds an entry whose `path` matches; that entry also carries the observed `status`, `error`, and `latencyMs`. Probes fire every 15 minutes, so a 30-day window is roughly 2,880 rows — the retired endpoint capped reads at 3,000 and 30 days.
+
 `status_discrepancy_state` persists both divergence and probe-failure alert state:
 `consecutive_divergent`, `last_divergent_at`, `last_alert_at`,
 `consecutive_probe_failures`, `last_probe_failure_at`, and `last_probe_alert_at`.
@@ -519,7 +531,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Bounded browser probing uses a worker pool capped at 6 concurrent requests (`ENDPOINT_PROBE_CONCURRENCY`), with `Promise.all` only coordinating those workers rather than fanning out every endpoint at once.
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
-- Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` uses `/api/status-probe-history?path=%2Fapi%2Fhealth` as its stable admin canary so the browser probe loop validates the route without hitting the endpoint's required-query guard.
+- Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses.
 - The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets. Its expected `refresh scheduled` stale-while-revalidate warning remains transport-healthy for at most two cache TTLs when `X-Data-Age` is valid; older scheduled refreshes, missing age evidence, explicit `refresh failed` warnings, and other freshness warnings remain stale.
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest; dated public snapshot detail routes are omitted because valid dates come from `GET /api/snapshots/index`.
 - Returned result shape: `{ path, status, latencyMs, error? }`
@@ -582,8 +594,7 @@ Persisted audit coverage boundary (intentional):
 
 - Every catalog action (`statusPageAction` endpoints) is audited canonically at the router, success or failure, so the Actions workbench catalog has complete server-side coverage once a request reaches the Worker.
 - Executions that never reach the Worker (client network failure or abort before a response) can only exist as session-scoped entries; they are labeled `session` in the workbench and legitimately disappear on reload. Their idempotency key remains reusable for a safe retry that will produce the durable row.
-- Non-catalog operator mutations (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/broadcast, bulk discovery dismissal) emit handler-level `admin_action_audit_log` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces.
-- `POST /api/admin/reserve-recovery-fault-injection` deliberately writes no admin audit record: it is a workers.dev preview-host-only test harness that also requires `WORKER_RESERVE_FAULT_INJECTION_ENABLED=true` and returns `403` when disabled or called on production hosts.
+- The remaining non-catalog operator mutation, `POST /api/admin-telegram-broadcast`, emits handler-level `admin_action_audit_log` records; credential lifecycle mutations audit into `api_key_audit_log` instead and surface through the API Management and History workspaces. The other handler-audited operator routes (cron lease/kill controls, circuit-breaker reset, Telegram pending/resend/delivery-control) were retired on 2026-08-09, so no new rows appear for those actions; historical rows remain.
 
 `POST /api/backfill-mint-burn` is operator-safe from the status page even without an explicit `configKey`: the worker auto-selects the most behind tracked mint/burn config with a critical-first / major-symbol-first policy and returns the selected config in the response payload.
 

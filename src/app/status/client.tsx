@@ -188,7 +188,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
             </p>
           </div>
         </div>
-        <FaqSection items={faqItems} title="System Status FAQ" />
+        <FaqSection items={faqItems} title="System Status FAQ" includeJsonLd />
       </section>
     </FeaturePageShell>
   );

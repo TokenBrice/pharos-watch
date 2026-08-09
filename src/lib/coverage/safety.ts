@@ -10,6 +10,7 @@ import {
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -57,12 +58,6 @@ function formatSafety(
   ];
 }
 
-const SAFETY_KINDS: readonly string[] = [
-  "rated",
-  "nr",
-  DATA_UNAVAILABLE_KIND,
-] as const;
-
 // "NR" is shared with DEX; the dedicated "general" legend entry covers it.
 const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
   {
@@ -73,7 +68,7 @@ const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: SAFETY_KINDS,
+  statusKinds: [...statusKindsFromPresets(SAFETY_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: SAFETY_LEGEND,
   resolve: resolveSafety,
   formatBreakdown: formatSafety,

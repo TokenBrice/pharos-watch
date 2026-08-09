@@ -52,6 +52,9 @@ function producerVersionsOrUnavailable(values: readonly string[]): string[] {
   return values.length > 0 ? [...values] : [REPORT_CARDS_BASE_INPUT_UNAVAILABLE_METHODOLOGY];
 }
 
+// Test seam (keep exported): the only path that returns the *projected identity*
+// object. `deriveReportCardsBaseInputGenerationId` returns a digest string, so
+// the field-separation and permutation-invariance guards have no public route.
 export function projectReportCardsBaseInputIdentityV1(
   source: ReportCardsBaseInputSourceV1,
 ): ReportCardsBaseInputIdentityV1 {
@@ -103,10 +106,15 @@ export function projectReportCardsBaseInputIdentityV1(
   });
 }
 
+// Test seam (keep exported): the `unknown`-input schema fence. Its fail-closed
+// rejections (publication clock, methodology-version floor) are unreachable
+// through `deriveReportCardsBaseInputGenerationId`, which takes a typed source.
 export function projectReportCardsBaseInputIdentity(input: unknown): ReportCardsBaseInputIdentityV1 {
   return ReportCardsBaseInputIdentityV1Schema.parse(input);
 }
 
+// Test seam (keep exported): pairs with the fence above for the digest-shape
+// assertions on rejected input.
 export function computeReportCardsBaseInputGenerationId(input: unknown): string {
   const projection = projectReportCardsBaseInputIdentity(input);
   return `${REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX}${sha256Hex(stableJsonStringifyV1(projection))}`;

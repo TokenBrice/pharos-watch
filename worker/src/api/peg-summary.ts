@@ -6,7 +6,6 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
-  withErrorHandler,
   addFreshnessHeaders,
   errorResponse,
   jsonResponse,
@@ -86,7 +85,7 @@ export const __pegSummaryTestHooks = {
   deriveDexDeviationBps,
 };
 
-export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
+export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
   if (stablecoinsCache.kind !== "ok") {
@@ -306,7 +305,11 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf: freshnessAsOf,
     }),
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.producerBacked,
-  }, freshnessAsOf, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
-});
+  }, {
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.producerBacked },
+      freshnessAsOf,
+      API_FRESHNESS_MAX_AGE_SEC.pegSummary,
+    ),
+  });
+};

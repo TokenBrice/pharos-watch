@@ -27,12 +27,19 @@ interface CoinResult {
   inserted: boolean;
 }
 
-export async function handleBackfillYieldHistory(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
+export interface BackfillYieldHistoryRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
+
+export async function handleBackfillYieldHistory({
+  db,
+  url,
+  trustedAdmin,
+  request,
+}: BackfillYieldHistoryRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "backfill-yield-history",

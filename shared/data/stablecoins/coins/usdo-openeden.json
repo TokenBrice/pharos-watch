@@ -432,6 +432,7 @@
 
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"

@@ -219,6 +219,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
+  "governanceQuality": "multisig",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "LUAUSD has one tracked Arbitrum contract and no token-specific bridge controls in reviewed issuer docs. The Arbitrum signal is canonical chain infrastructure, not a separate stablecoin route.",

@@ -3,7 +3,7 @@ import { buildCoverageDatasetJsonLd, buildPublicDatasetMirrorJsonLd } from "@/li
 
 describe("buildCoverageDatasetJsonLd", () => {
   it("describes the coverage matrix dataset without live values or site-data proxy URLs", () => {
-    const jsonLd = buildCoverageDatasetJsonLd({ siteUrl: "https://pharos.watch" });
+    const jsonLd = buildCoverageDatasetJsonLd();
     const serialized = JSON.stringify(jsonLd);
 
     expect(serialized).not.toContain("/_site-data/");
@@ -47,9 +47,7 @@ describe("buildCoverageDatasetJsonLd", () => {
 
 describe("buildPublicDatasetMirrorJsonLd", () => {
   it("describes public mirrored datasets with downloadable distributions", () => {
-    const jsonLd = buildPublicDatasetMirrorJsonLd("scores-latest", {
-      siteUrl: "https://pharos.watch",
-    });
+    const jsonLd = buildPublicDatasetMirrorJsonLd("scores-latest");
     const serialized = JSON.stringify(jsonLd);
 
     expect(serialized).not.toContain("/_site-data/");

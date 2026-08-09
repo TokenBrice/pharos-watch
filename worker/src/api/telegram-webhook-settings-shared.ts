@@ -10,6 +10,12 @@ import {
 } from "./webhook-callbacks/_shared";
 import type { SubscriberRow } from "./telegram-webhook-shared";
 import { isDepegStepValue } from "../lib/telegram-constants";
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import {
+  TELEGRAM_ALERT_TYPES,
+  isTelegramAlertType,
+  type TelegramAlertType,
+} from "@shared/types/status";
 
 export { isKnownStablecoinId, isSubscribableStablecoinId };
 
@@ -19,8 +25,9 @@ export { isKnownStablecoinId, isSubscribableStablecoinId };
 export const DEFAULT_QUIET_START_HOUR = 22;
 export const DEFAULT_QUIET_END_HOUR = 7;
 
-export const GLOBAL_ALERT_TYPES = ["dews", "depeg", "safety", "launch", "reserve", "freeze"] as const;
-export type GlobalAlertType = (typeof GLOBAL_ALERT_TYPES)[number];
+/** The chat-wide toggles are exactly the canonical alert families, in order. */
+export const GLOBAL_ALERT_TYPES = TELEGRAM_ALERT_TYPES;
+export type GlobalAlertType = TelegramAlertType;
 
 export const DEWS_BAND_CODES = { A: "ALERT", W: "WARNING", D: "DANGER" } as const;
 export type DewsBandCode = keyof typeof DEWS_BAND_CODES;
@@ -34,7 +41,7 @@ export const DEPEG_STEPS = [100, 250, 500] as const;
 export type DepegStep = 100 | 250 | 500;
 
 export function isGlobalAlertType(value: string): value is GlobalAlertType {
-  return (GLOBAL_ALERT_TYPES as readonly string[]).includes(value);
+  return isTelegramAlertType(value);
 }
 
 export function isDewsBandCode(value: string): value is DewsBandCode {
@@ -49,10 +56,5 @@ export const isDepegStep = isDepegStepValue;
 
 export function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {
   if (!subscriber) return false;
-  if (type === "dews") return Boolean(subscriber.global_alert_dews);
-  if (type === "depeg") return Boolean(subscriber.global_alert_depeg);
-  if (type === "safety") return Boolean(subscriber.global_alert_safety);
-  if (type === "launch") return Boolean(subscriber.global_alert_launch);
-  if (type === "freeze") return Boolean(subscriber.global_alert_freeze);
-  return Boolean(subscriber.global_alert_reserve);
+  return Boolean(subscriber[TELEGRAM_ALERT_PERSISTENCE[type].globalColumn]);
 }

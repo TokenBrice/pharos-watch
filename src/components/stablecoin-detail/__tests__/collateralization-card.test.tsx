@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CollateralizationCard } from "../collateralization-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 
@@ -26,6 +26,12 @@ describe("CollateralizationCard", () => {
     expect(screen.getByText("Overcollateralized")).toBeTruthy();
     expect(screen.getByText(/Reviewed 2026-07-15/)).toBeTruthy();
     expect(screen.getByText("65.8%")).toBeTruthy();
+
+    // The citation folds behind the standard `Sources (N)` disclosure at every
+    // breakpoint (WS8.13) but stays in the DOM so it remains crawlable.
+    const sourcesToggle = screen.getByRole("button", { name: /Sources/ });
+    expect(sourcesToggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(sourcesToggle);
     expect(screen.getByRole("link", { name: /Liquity V2 protocol stats API/ }).getAttribute("href")).toBe(
       "https://example.com/stats",
     );

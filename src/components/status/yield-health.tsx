@@ -12,6 +12,7 @@ import type {
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
+import { getStatusTone } from "@/lib/status-dashboard-model";
 
 const SOURCE_RISK_COVERAGE_FIELDS = [
   ["sourceRiskPenalty", "Penalty"],
@@ -25,9 +26,11 @@ const SOURCE_RISK_COVERAGE_FIELDS = [
 ] satisfies Array<[YieldSourceRiskCoverageField, string]>;
 
 function statusClassName(status: YieldHealthFieldStatus): string {
-  if (status === "healthy") return "text-green-700 dark:text-green-400";
-  if (status === "degraded") return "text-amber-700 dark:text-amber-400";
-  if (status === "stale") return "text-red-700 dark:text-red-400";
+  // healthy/degraded/stale re-bin onto the dashboard's one status palette; the
+  // fourth ("unknown") field state has no `StatusResponse` counterpart.
+  if (status === "healthy" || status === "degraded" || status === "stale") {
+    return getStatusTone(status).valueClassName;
+  }
   return "text-muted-foreground";
 }
 

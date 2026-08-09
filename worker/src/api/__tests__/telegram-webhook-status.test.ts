@@ -10,11 +10,11 @@ import {
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const mocks = vi.hoisted(() => ({
-  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
+  loadActiveSafetyScoreSource: vi.fn(),
 }));
 
-vi.mock("../../lib/identified-active-safety-score-source", () => ({
-  loadIdentifiedActiveSafetyScoreSource: mocks.loadIdentifiedActiveSafetyScoreSource,
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
 
 afterEach(() => {
@@ -34,11 +34,8 @@ describe("loadStatusForCoin", () => {
         }),
       ],
     });
-    mocks.loadIdentifiedActiveSafetyScoreSource.mockReset().mockResolvedValue({
+    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
-      identity: snapshot.safetyScoreIdentity,
-      publishedAtSec: 123,
       snapshot,
     });
   });
@@ -164,11 +161,11 @@ describe("loadStatusForCoin", () => {
   });
 
   it("fails closed when canonical safety identity is unavailable", async () => {
-    mocks.loadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce({
+    mocks.loadActiveSafetyScoreSource.mockResolvedValueOnce({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       detail: "missing",
+      snapshot: null,
     });
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },

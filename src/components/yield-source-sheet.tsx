@@ -9,6 +9,7 @@ import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableSourceLink } from "@/components/table/client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import {
@@ -105,7 +106,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
         </SheetHeader>
 
         <div className="space-y-4 px-4">
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
+          <div className={cn("rounded-xl border px-3 py-2.5", SEVERITY_TONE_CLASS.ok.banner)}>
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Chosen Yield Source
             </p>
@@ -152,7 +153,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
               )}
               {sourceExplorer.sourceSwitch.changed ? (
                 <span
-                  className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300"
+                  className={cn("rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}
                   title="The chosen source changed versus the prior published snapshot. This explains source provenance, not stablecoin safety."
                 >
                   source changed
@@ -164,14 +165,10 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
                 <span
                   className={cn(
                     "rounded-full border px-1.5 py-0.5 font-medium",
-                    scoreQualification === "rated" &&
-                      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-                    scoreQualification === "estimated" &&
-                      "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-                    scoreQualification === "partial" &&
-                      "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-                    scoreQualification === "NR" &&
-                      "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
+                    scoreQualification === "rated" && SEVERITY_TONE_CLASS.ok.pill,
+                    scoreQualification === "estimated" && SEVERITY_TONE_CLASS.watch.pill,
+                    scoreQualification === "partial" && SEVERITY_TONE_CLASS.sky.pill,
+                    scoreQualification === "NR" && SEVERITY_TONE_CLASS.alert.pill,
                   )}
                   title="Whether the displayed score has complete, estimated, partial, or insufficient critical evidence"
                 >

@@ -1,6 +1,6 @@
 "use client";
 
-import { ContagionGraph } from "@/components/contagion-graph";
+import { ContagionGraph } from "@/components/contagion-graph-root";
 import { formatCurrency } from "@shared/lib/format";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";

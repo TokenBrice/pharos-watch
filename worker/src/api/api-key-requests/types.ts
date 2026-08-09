@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ApiKeySelfServeClaimStatus, ApiKeySelfServeStatus } from "@shared/types";
 import { SELF_SERVE_USE_CASE_MAX_LENGTH, SELF_SERVE_USE_CASE_MIN_LENGTH } from "@shared/lib/ops-limits";
+import type { MinimalD1Database } from "../../lib/minimal-d1";
 
 const HONEYPOT_MAX_LENGTH = 300;
 
@@ -14,24 +15,7 @@ export interface ApiKeySelfServeEnv {
   RESEND_API_KEY?: string;
 }
 
-export interface StatementRunResult {
-  meta?: { changes?: number };
-}
-
-export interface StatementResult<T> {
-  results?: T[];
-}
-
-export interface ApiKeyRequestStatement {
-  bind(...values: unknown[]): ApiKeyRequestStatement;
-  first<T>(): Promise<T | null>;
-  all<T>(): Promise<StatementResult<T>>;
-  run(): Promise<StatementRunResult>;
-}
-
-export interface ApiKeyRequestDb {
-  prepare(query: string): ApiKeyRequestStatement;
-}
+export type ApiKeyRequestDb = MinimalD1Database;
 
 export interface ApiKeyRequestRow {
   request_id: string;
@@ -52,8 +36,6 @@ export interface ApiKeyRequestRow {
   self_serve_expires_at: number | null;
   ip_hash: string;
   user_agent_hash: string | null;
-  risk_score: number;
-  risk_reasons_json: string | null;
   verification_token_hash: string | null;
   verification_sent_at: number | null;
   verification_expires_at: number | null;

@@ -155,7 +155,6 @@ function response() {
           reasons: [],
         },
         dependencies: { serial: [], basket: [], cycleBlocked: false, reasonCodes: [] },
-        stressStateDigest: "f".repeat(64),
       },
     ],
   } as const;

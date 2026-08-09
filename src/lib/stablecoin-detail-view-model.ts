@@ -8,8 +8,7 @@ import {
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
 import {
-  buildDetailFeatureAvailability,
-  buildDetailFeatureStates,
+  buildDetailFeatureSnapshot,
   buildDetailMarketSnapshot,
   buildDetailPegPriceSnapshot,
   buildDetailStaleQueries,
@@ -82,8 +81,12 @@ export function buildStablecoinDetailViewModel({
   const liquidityData = dexLiquidity.data?.[id];
   const redemptionBackstop = redemptionBackstops.data?.coins?.[id];
   const reportCard = reportCards.data?.cards.find((candidate) => candidate.id === id);
-  const featureAvailability = buildDetailFeatureAvailability(id, coin, supplemental);
-  const featureStates = buildDetailFeatureStates(id, coin, queries, supplemental);
+  const { availability: featureAvailability, states: featureStates } = buildDetailFeatureSnapshot(
+    id,
+    coin,
+    queries,
+    supplemental,
+  );
   const variantRelationship = getClientVariantRelationship(id);
   const variantParent = getClientVariantParent(id);
   const childVariants = getClientVariants(id);

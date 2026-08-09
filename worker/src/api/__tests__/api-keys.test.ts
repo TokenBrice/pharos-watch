@@ -15,7 +15,6 @@ import {
   handleCredentialLifecycleSummary,
 } from "./api-keys.test-helpers";
 import { resetApiKeyStateForTests } from "../../lib/api-keys";
-import { resetRateLimitStateForTests } from "../../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../../lib/request-source-attribution";
 
 stubCryptoForAuth();
@@ -32,7 +31,6 @@ function makeEnv(db: D1Database) {
 describe("api key handlers", () => {
   beforeEach(() => {
     resetApiKeyStateForTests();
-    resetRateLimitStateForTests();
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
     vi.stubGlobal("caches", {

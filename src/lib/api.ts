@@ -1,4 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
@@ -56,21 +57,25 @@ function resolveResponseUpdatedAtSec(headers: Headers, ageSeconds: number): numb
 }
 
 export async function apiRequest(path: string, init?: RequestInit, options?: ApiRequestOptions): Promise<Response> {
-  const parentSignal = resolveRequestSignal(init?.signal, options?.signal, "explicit-over-init");
+  const parent = resolveRequestSignal(init?.signal, options?.signal, "explicit-over-init");
   const requestInit = withPublicApiAcceptMarker(path, {
     ...init,
-    signal: parentSignal,
+    signal: parent.signal,
   });
   const timeoutMs = normalizeRequestTimeoutMs(options?.timeoutMs);
 
   if (timeoutMs == null) {
-    return fetch(buildRequestUrl(path, requestInit), requestInit);
+    try {
+      return await fetch(buildRequestUrl(path, requestInit), requestInit);
+    } finally {
+      parent.dispose();
+    }
   }
 
   const timeout = createTimeoutSignal({
     timeoutMs,
     timeoutReason: new DOMException(`API request timed out after ${timeoutMs}ms`, "TimeoutError"),
-    parentSignal,
+    parentSignal: parent.signal,
   });
 
   try {
@@ -80,6 +85,7 @@ export async function apiRequest(path: string, init?: RequestInit, options?: Api
     });
   } finally {
     timeout.dispose();
+    parent.dispose();
   }
 }
 
@@ -107,10 +113,6 @@ export class ApiFetchError extends Error {
     this.path = path;
     this.bodyText = bodyText;
   }
-}
-
-function isFreshnessWarningHeader(warningHeader: string): boolean {
-  return /(?:^|,\s*)110\b/.test(warningHeader) || /Response is (?:degraded|stale)/i.test(warningHeader);
 }
 
 function getBodyWarning(data: unknown): string | null {

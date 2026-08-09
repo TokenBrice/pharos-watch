@@ -303,7 +303,6 @@ function setupDefaultMocks() {
     trackedCount: 4,
     coverageRatio: 1,
     source: "safety-score-v9-publication",
-    expectedModel: "v9",
     // The producer now requires a publication identity before rating rows.
     safetyScoreIdentity: {
       model: "v9",
@@ -1712,7 +1711,6 @@ describe("auto-lending safety availability", () => {
       supplementalCandidates: [],
       safetyScores: new Map(),
       safetySnapshotAvailable: false,
-      expectedModel: "v9",
       stablecoinSupplyById: new Map(),
     });
 
@@ -1738,7 +1736,6 @@ describe("auto-lending safety availability", () => {
       supplementalCandidates: [],
       safetyScores: new Map([["usdc-circle", { score: 49, grade: "D" }]]),
       safetySnapshotAvailable: true,
-      expectedModel: "v9",
       stablecoinSupplyById: new Map(),
     });
 

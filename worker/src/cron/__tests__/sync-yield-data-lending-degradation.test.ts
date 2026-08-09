@@ -225,7 +225,6 @@ describe("syncYieldData", () => {
       reason: "stablecoins-cache:missing-cache",
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -320,7 +319,6 @@ describe("syncYieldData", () => {
       reason,
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -337,7 +335,7 @@ describe("syncYieldData", () => {
         pharosYieldScore: number | null;
         pysNullReason: string | null;
       }>;
-      provenance: { safetySnapshot: { expectedModel?: string; reason: string | null } };
+      provenance: { safetySnapshot: { reason: string | null } };
     };
 
     expect(result.status).toBe("degraded");
@@ -360,7 +358,6 @@ describe("syncYieldData", () => {
       pysNullReason: "safety-unrated",
     });
     expect(payload.provenance.safetySnapshot).toMatchObject({
-      expectedModel: "v9",
       reason,
     });
   });

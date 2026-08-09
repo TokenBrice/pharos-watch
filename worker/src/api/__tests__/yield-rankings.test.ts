@@ -225,7 +225,6 @@ describe("handleYieldRankings", () => {
       coverageRatio: 1,
       scores: new Map([["rated-coin", { score: 66, grade: "B-" }]]),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: currentSafetyIdentity,
       publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
       methodologyVersion: V9_METHODOLOGY_VERSION,
@@ -493,7 +492,6 @@ describe("handleYieldRankings", () => {
       trackedCount: 3,
       reason: "low-row-safety-coverage",
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       publicationGenerationId: `report-cards:v9:${updatedAt}`,
       methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
@@ -558,7 +556,6 @@ describe("handleYieldRankings", () => {
       trackedCount: 1,
       reason: null,
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       publicationGenerationId: liveGenerationId,
       methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
@@ -578,7 +575,6 @@ describe("handleYieldRankings", () => {
       coverageRatio: 1,
       scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: {
         ...v9Identity("report-cards:v9:other"),
         evaluationBuildDigest: "c".repeat(64),
@@ -1173,7 +1169,6 @@ describe("handleYieldRankings", () => {
       reason: snapshotReason,
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -1206,7 +1201,6 @@ describe("handleYieldRankings", () => {
     });
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
-      expectedModel: "v9",
       reason: "safety-snapshot-unavailable",
     });
     expect(body._meta.ageSeconds).toBe(30);

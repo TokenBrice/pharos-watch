@@ -19,4 +19,51 @@ describe("resolveQueryViewState", () => {
     expect(resolveQueryViewState({ hasData: true, isLoading: false, error: null, isEmpty: true })).toBe("empty");
     expect(resolveQueryViewState({ hasData: true, isLoading: false, error: null })).toBe("ready");
   });
+
+  describe("gates", () => {
+    it("ranks unsupported above deferred above every transport state", () => {
+      expect(
+        resolveQueryViewState({
+          supported: false,
+          enabled: false,
+          hasData: true,
+          isLoading: true,
+          error: new Error("offline"),
+        }),
+      ).toBe("unsupported");
+      expect(
+        resolveQueryViewState({
+          supported: true,
+          enabled: false,
+          hasData: true,
+          isLoading: true,
+          error: new Error("offline"),
+        }),
+      ).toBe("deferred");
+    });
+
+    it("keeps error-with-data above loading once the gates pass", () => {
+      expect(
+        resolveQueryViewState({
+          supported: true,
+          enabled: true,
+          hasData: true,
+          isLoading: true,
+          error: new Error("offline"),
+        }),
+      ).toBe("stale-with-data");
+    });
+
+    it("lets a surface declare that 'no row' means non-applicable rather than empty", () => {
+      expect(
+        resolveQueryViewState({ hasData: true, isLoading: false, error: null, isEmpty: true, emptyState: "unsupported" }),
+      ).toBe("unsupported");
+      expect(
+        resolveQueryViewState({ hasData: false, isLoading: false, error: null, emptyState: "unsupported" }),
+      ).toBe("unsupported");
+      expect(resolveQueryViewState({ hasData: false, isLoading: false, error: null, emptyState: "empty" })).toBe(
+        "empty",
+      );
+    });
+  });
 });

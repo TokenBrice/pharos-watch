@@ -1,14 +1,7 @@
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { StatusPill } from "@/components/status/severity-pill";
-import type { PipelineIntegrityRow, PipelineSeverity } from "@/lib/pipeline-workspace-model";
-import type { PipelineIntegrityModel } from "@/lib/pipeline-workspace-model";
-
-const STATE_META: Record<PipelineSeverity, { label: string; className: string }> = {
-  healthy: { label: "Healthy", className: "bg-green-500/15 text-green-700 dark:text-green-300" },
-  watch: { label: "Watch", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300" },
-  critical: { label: "Critical", className: "bg-red-500/15 text-red-700 dark:text-red-300" },
-  unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
-};
+import { PIPELINE_STATE_META } from "@/lib/pipeline-workspace-model";
+import type { PipelineIntegrityModel, PipelineIntegrityRow } from "@/lib/pipeline-workspace-model";
 
 function IntegrityTable({ caption, label, rows }: { caption: string; label: string; rows: PipelineIntegrityRow[] }) {
   return (
@@ -33,7 +26,7 @@ function IntegrityTable({ caption, label, rows }: { caption: string; label: stri
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
-            const state = STATE_META[row.state];
+            const state = PIPELINE_STATE_META[row.state];
             return (
               <TableRow key={row.id}>
                 <TableCell className="min-w-52 align-top">

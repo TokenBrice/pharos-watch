@@ -5,6 +5,18 @@ import { computeStabilityIndex } from "../../lib/stability-index";
 
 stubCryptoForAuth();
 
+/** The route hydrates `url` from the request; mirror that for the direct-call suites. */
+function callBackfillStabilityIndex(context: {
+  db: D1Database;
+  trustedAdmin?: boolean;
+  request?: Request;
+}): Promise<Response> {
+  const url = context.request
+    ? new URL(context.request.url)
+    : new URL("https://api.pharos.watch/api/backfill-stability-index");
+  return handleBackfillStabilityIndex({ ...context, url });
+}
+
 vi.mock("../../lib/stability-index", () => ({
   computeStabilityIndex: vi.fn(() => ({
     score: 73.2,
@@ -199,20 +211,12 @@ describe("handleBackfillStabilityIndex", () => {
   });
 
   it("requires admin auth", async () => {
-    const res = await handleBackfillStabilityIndex(
-      makeDb(),
-      undefined,
-      makeApiRequest("/api/backfill-stability-index"),
-    );
+    const res = await callBackfillStabilityIndex({ db: makeDb(), request: makeApiRequest("/api/backfill-stability-index") });
     expect(res.status).toBe(401);
   });
 
   it("returns 404 when there are no depeg events", async () => {
-    const res = await handleBackfillStabilityIndex(
-      makeDb({ earliest: null }),
-      true,
-      makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }),
-    );
+    const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: null }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }) });
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "No depeg events found" });
@@ -225,8 +229,7 @@ describe("handleBackfillStabilityIndex", () => {
     const day1 = Math.floor((nowSec - 86400) / 86400) * 86400;
     const day2 = Math.floor(nowSec / 86400) * 86400;
 
-    const res = await handleBackfillStabilityIndex(
-      makeDb({
+    const res = await callBackfillStabilityIndex({ db: makeDb({
         earliest: start,
         depegRows: [
           {
@@ -242,10 +245,7 @@ describe("handleBackfillStabilityIndex", () => {
           { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000, price: 0.9975 },
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },
         ],
-      }),
-      true,
-      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
-    );
+      }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean; daysBackfilled: number; endDay: number; daysEvaluated: number };
@@ -296,11 +296,7 @@ describe("handleBackfillStabilityIndex", () => {
       return origBatch(stmts);
     }) as typeof db.batch;
 
-    const res = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
-    );
+    const res = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
     expect(res.status).toBe(200);
     // First batch should contain the DDL: DROP + CREATE (atomic)
@@ -315,13 +311,9 @@ describe("handleBackfillStabilityIndex", () => {
   it("returns a no-op when there are no completed UTC days to rebuild yet", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayMidnight = Math.floor(nowSec / 86400) * 86400;
-    const res = await handleBackfillStabilityIndex(
-      makeDb({
+    const res = await callBackfillStabilityIndex({ db: makeDb({
         earliest: todayMidnight + 60,
-      }),
-      true,
-      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
-    );
+      }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
@@ -343,8 +335,7 @@ describe("handleBackfillStabilityIndex", () => {
     const day1 = Math.floor((nowSec - 2 * 86400) / 86400) * 86400;
     const day2 = Math.floor((nowSec - 86400) / 86400) * 86400;
 
-    const res = await handleBackfillStabilityIndex(
-      makeDb({
+    const res = await callBackfillStabilityIndex({ db: makeDb({
         earliest: day1,
         depegRows: [
           {
@@ -361,13 +352,10 @@ describe("handleBackfillStabilityIndex", () => {
           { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000, price: 0.999 },
         ],
         stabilityRows: [{ computed_at: day1, score: 99.9, band: "BEDROCK", methodology_version: "2.1" }],
-      } as Parameters<typeof makeDb>[0]),
-      true,
-      makeApiRequest(`/api/backfill-stability-index?dry-run=true&startDay=${day1}&endDay=${day1}`, {
+      } as Parameters<typeof makeDb>[0]), trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?dry-run=true&startDay=${day1}&endDay=${day1}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
@@ -412,14 +400,10 @@ describe("handleBackfillStabilityIndex", () => {
       captureState: state,
     });
 
-    const res = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    const res = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(res.status).toBe(200);
     expect(state.stabilityRows).toEqual([
@@ -462,14 +446,10 @@ describe("handleBackfillStabilityIndex", () => {
       captureState: state,
     });
 
-    const res = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    const res = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(res.status).toBe(200);
     expect(state.stabilityRows).toEqual([preservedRow]);
@@ -515,11 +495,7 @@ describe("handleBackfillStabilityIndex", () => {
       return stmt;
     }) as typeof db.prepare;
 
-    const res = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
-    );
+    const res = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
     expect(res.status).toBe(409);
   });
@@ -581,11 +557,7 @@ describe("handleBackfillStabilityIndex", () => {
       return origBatch(stmts);
     }) as typeof db.batch;
 
-    const pending = handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
-    );
+    const pending = callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }) });
 
     await vi.advanceTimersByTimeAsync(60_000);
     expect(renewCalls).toBeGreaterThanOrEqual(1);
@@ -643,14 +615,10 @@ describe("handleBackfillStabilityIndex", () => {
       } as unknown as typeof stmt;
     }) as typeof db.prepare;
 
-    const response = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    const response = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(response.status).toBe(409);
     expect(state.stabilityRows).toEqual([originalRow]);
@@ -691,14 +659,10 @@ describe("handleBackfillStabilityIndex", () => {
       return origBatch(statements);
     }) as typeof db.batch;
 
-    const response = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    const response = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(response.status).toBe(500);
     expect(execCalls).toEqual(["DROP TABLE IF EXISTS stability_index_rebuild"]);
@@ -744,14 +708,10 @@ describe("handleBackfillStabilityIndex", () => {
       } as unknown as typeof stmt;
     }) as typeof db.prepare;
 
-    const response = await handleBackfillStabilityIndex(
-      db,
-      true,
-      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+    const response = await callBackfillStabilityIndex({ db, trustedAdmin: true, request: makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(response.status).toBe(200);
     expect(warnSpy.mock.calls.flat().join(" ")).toContain("backfill_stability_index_lease_release_failed");
@@ -759,14 +719,10 @@ describe("handleBackfillStabilityIndex", () => {
   });
 
   it("rejects invalid day parameters", async () => {
-    const res = await handleBackfillStabilityIndex(
-      makeDb({ earliest: 1 }),
-      true,
-      makeApiRequest("/api/backfill-stability-index?startDay=not-a-day", {
+    const res = await callBackfillStabilityIndex({ db: makeDb({ earliest: 1 }), trustedAdmin: true, request: makeApiRequest("/api/backfill-stability-index?startDay=not-a-day", {
         method: "POST",
         adminKey: "secret",
-      }),
-    );
+      }) });
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({

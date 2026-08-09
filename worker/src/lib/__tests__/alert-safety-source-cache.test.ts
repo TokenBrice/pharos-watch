@@ -55,14 +55,19 @@ describe("canonical V9 alert safety source", () => {
     });
 
     expect(assessActiveAlertSafetySource(
-      { kind: "v9", expectedModel: "v9", snapshot: held },
+      {
+        kind: "held",
+        reason: "v9-publication-held",
+        detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+        snapshot: held,
+      },
       { nowSec: held.updatedAt },
     )).toMatchObject({
       state: "corrupt",
       failureReason: "v9-publication-held",
     });
     expect(assessActiveAlertSafetySource(
-      { kind: "v9", expectedModel: "v9", snapshot: current },
+      { kind: "v9", snapshot: current },
       { nowSec: current.updatedAt + 6 * 60 * 60 + 1 },
     )).toMatchObject({
       state: "stale",
@@ -71,7 +76,6 @@ describe("canonical V9 alert safety source", () => {
     expect(assessActiveAlertSafetySource(
       {
         kind: "error",
-        expectedModel: "v9",
         reason: "v9-snapshot-unavailable",
         snapshot: null,
         detail: "missing",

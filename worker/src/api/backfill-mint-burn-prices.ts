@@ -37,13 +37,20 @@ function readLimit(url: URL): number {
   return limit;
 }
 
-export async function handleBackfillMintBurnPrices(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean | undefined,
-  request?: Request,
-  options: BackfillMintBurnPricesOptions = {},
-): Promise<Response> {
+export interface BackfillMintBurnPricesRouteContext extends BackfillMintBurnPricesOptions {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
+
+export async function handleBackfillMintBurnPrices({
+  db,
+  url,
+  trustedAdmin,
+  request,
+  ...options
+}: BackfillMintBurnPricesRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "backfill-mint-burn-prices",

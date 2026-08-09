@@ -3284,6 +3284,7 @@
     ]
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "circle-transparency",
     "version": 1,

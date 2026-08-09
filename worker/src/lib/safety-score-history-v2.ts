@@ -1,4 +1,4 @@
-import type { ReportCardGrade } from "@shared/types/report-cards";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import {
   safetyScorePublicationIdentitiesAreComparable,
   safetyScorePublicationIdentitiesMatch,

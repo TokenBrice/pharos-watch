@@ -7,6 +7,7 @@ import {
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import {
   ReportCardsFixedInputMethodologyVersionsSchema,
   computeRedemptionPayloadFingerprint,
@@ -200,8 +201,9 @@ const NATIVE_V9_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 // The prefix is a published format namespace (public fact-set schemas, OpenAPI,
 // the publication codec, and the `safety_score_history_v2` CHECK all pin it),
-// not a projection version — see `SafetyScoreV9InputIdentitySchema`.
-export const NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX = "report-cards-input:v1:";
+// not a projection version — see `SafetyScoreV9InputIdentitySchema`. Both lanes
+// share one literal; this is the native alias for it.
+export const NATIVE_V9_BASE_INPUT_GENERATION_ID_PREFIX = REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX;
 const NATIVE_V9_BASE_INPUT_DIGEST_DOMAIN = "report-cards.native-v9-base-input.v2";
 
 /**
@@ -369,7 +371,10 @@ function assertNativeFreshnessConsistency(input: NativeSafetyScoreV9Input): void
   }
 }
 
-function assertNativeV9InputConsistency(input: NativeSafetyScoreV9Input): void {
+function assertNativeV9InputConsistency(
+  input: NativeSafetyScoreV9Input,
+  options: { verifyBaseInputGenerationId: boolean } = { verifyBaseInputGenerationId: true },
+): void {
   if (new Set(input.activeAssetIds).size !== input.activeAssetIds.length) {
     throw new Error("Native V9 input active asset identities contain duplicates");
   }
@@ -486,20 +491,33 @@ function assertNativeV9InputConsistency(input: NativeSafetyScoreV9Input): void {
       throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
     }
   }
-  const expectedBaseInputGenerationId = deriveNativeV9BaseInputGenerationId(input);
-  if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
-    throw new Error(
-      `Native V9 input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
-    );
+  // Integrity gate: a *supplied* base generation id must match the payload it
+  // claims to identify. Skipped only when this same call just derived the id
+  // from the identical payload, where the comparison is true by construction.
+  if (options.verifyBaseInputGenerationId) {
+    const expectedBaseInputGenerationId = deriveNativeV9BaseInputGenerationId(input);
+    if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
+      throw new Error(
+        `Native V9 input base generation ${input.baseInputGenerationId} does not match payload ${expectedBaseInputGenerationId}`,
+      );
+    }
   }
   assertNativeFreshnessConsistency(input);
 }
 
+/**
+ * The intake shape: the full native input with an optional base generation id,
+ * so a capture may either carry its identity (verified below) or have it derived
+ * here. Hoisted to module scope — deriving it per call rebuilt the whole Zod
+ * object graph on every publication cycle.
+ */
+const NativeSafetyScoreV9InputIntakeSchema = NativeSafetyScoreV9InputSchema.omit({
+  baseInputGenerationId: true,
+}).extend({ baseInputGenerationId: z.string().optional() });
+
 /** Canonicalizes record ordering, derives the base generation id, and validates. */
 export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input {
-  const parsed = NativeSafetyScoreV9InputSchema.omit({ baseInputGenerationId: true })
-    .extend({ baseInputGenerationId: z.string().optional() })
-    .safeParse(value);
+  const parsed = NativeSafetyScoreV9InputIntakeSchema.safeParse(value);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new Error(`Malformed native V9 input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
@@ -530,18 +548,23 @@ export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input
         ]),
       ),
     ),
-    evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.parse(input.evidenceJournalById),
-    supplyAttributionJournalById: SupplyAttributionJournalByIdV1Schema.parse(input.supplyAttributionJournalById),
+    // Both journal maps are validated by the intake parse above (superRefine
+    // only, no transform), so they carry through unchanged.
+    evidenceJournalById: input.evidenceJournalById,
+    supplyAttributionJournalById: input.supplyAttributionJournalById,
     pegProvenanceById: sortedRecord(input.pegProvenanceById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
   };
+  const suppliedBaseInputGenerationId = input.baseInputGenerationId;
   const normalized = NativeSafetyScoreV9InputSchema.parse({
     ...normalizedPayload,
     baseInputGenerationId:
-      input.baseInputGenerationId ?? deriveNativeV9BaseInputGenerationId(normalizedPayload),
+      suppliedBaseInputGenerationId ?? deriveNativeV9BaseInputGenerationId(normalizedPayload),
   });
-  assertNativeV9InputConsistency(normalized);
+  assertNativeV9InputConsistency(normalized, {
+    verifyBaseInputGenerationId: suppliedBaseInputGenerationId !== undefined,
+  });
   return normalized;
 }
 

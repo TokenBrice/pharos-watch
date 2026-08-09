@@ -1,14 +1,14 @@
-import { expect, vi } from "vitest";
+import { expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  createTelegramFetchSpy,
   lastSendMessageBody,
   makeTelegramUpdateRequest,
   telegramApiCallBody,
   telegramCallBody,
 } from "../../test-helpers/__shared/telegram";
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const { handleTelegramWebhook, TELEGRAM_GROUP_ADMIN_GATING } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
@@ -174,8 +174,7 @@ function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
   });
 }
 function resetTelegramWebhookTest() {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  resetTelegramFetchSpy();
   resetTelegramInvalidSecretLogStateForTests();
 }
 

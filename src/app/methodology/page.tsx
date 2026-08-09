@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { MethodologySections } from "./methodology-sections";
+import { MethodologySections } from "./sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { safeJsonLd } from "@/lib/json-ld";
-import { buildFaqJsonLd } from "@/lib/faq";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { FaqSection } from "@/components/faq-section";
+import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
@@ -20,6 +21,44 @@ export const metadata: Metadata = buildPageMetadata({
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
+
+const METHODOLOGY_FAQ_ITEMS = [
+  {
+    question: "How does Pharos grade stablecoins?",
+    answer:
+      "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit capacity is route-specific: a route below both the first positive 1% coverage and $100K absolute-capacity breakpoints receives no route credit, while a route that reaches $100K but still completes less than 1% is capped at 50. Bounded aggregation then limits how far strong pillars can lift a weak material path, while peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
+  },
+  {
+    question: "How is the Pharos peg score calculated?",
+    answer:
+      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
+  },
+  {
+    question: "What is the DEWS early-warning system?",
+    answer:
+      "The Depeg Early Warning System (DEWS) combines eight weighted 0-100 sub-signals: supply contraction, pool stress, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow stress, and yield warnings. Available signals are blended with redistribution, then PSI and same-peg contagion can amplify the score. Bands are CALM <=15, WATCH <=35, ALERT <=55, WARNING <=75, and DANGER above 75.",
+  },
+  {
+    question: "How is the liquidity score calculated?",
+    answer:
+      "The liquidity score evaluates how easily a stablecoin can be exited through DEX markets. It combines TVL depth (30%), 24-hour volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). TVL depth uses effective TVL relative to market cap, volume uses a log-scale volume/TVL ratio, pool quality measures mechanism and balance-health retention, durability blends TVL stability, volume consistency, maturity, and organic fees, and pair diversity counts distinct retained pools.",
+  },
+  {
+    question: "What is the Mint Authority Score?",
+    answer:
+      "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component starts from a derived posture (cap semantics, claim impairment, reserve reconciliation, and supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Mint route family is deliberately not priced separately because the cap and claim semantics already price it. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
+  },
+  {
+    question: "How does Pharos confirm depegs and maintain DEWS history?",
+    answer:
+      "Every depeg onset must remain beyond the full trigger threshold for at least 15 minutes before promotion, even when multiple sources agree. Live events resolve only after 15 minutes inside a tighter half-threshold recovery band. Pharos treats opposite-side evidence as contradiction, does not count DefiLlama's CoinGecko mirror as independent, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
+  },
+  {
+    question: "What is the Bank Run Gauge?",
+    answer:
+      "The Bank Run Gauge is a market-cap-weighted composite of each tracked stablecoin's issuance-chain net flow versus its own trailing 30-day baseline. It is a signed -100 to +100 pressure signal. Scores below -10 indicate worsening redemption pressure; scores above +10 indicate improving issuance pressure. It returns null when insufficient data is available.",
+  },
+] as const satisfies readonly FaqItem[];
 
 export default function MethodologyPage() {
   return (
@@ -34,70 +73,25 @@ export default function MethodologyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: safeJsonLd(
-            buildFaqJsonLd([
-              {
-                question: "How does Pharos grade stablecoins?",
-                answer:
-                  "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit capacity is route-specific: a route below both the first positive 1% coverage and $100K absolute-capacity breakpoints receives no route credit, while a route that reaches $100K but still completes less than 1% is capped at 50. Bounded aggregation then limits how far strong pillars can lift a weak material path, while peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
-              },
-              {
-                question: "How is the Pharos peg score calculated?",
-                answer:
-                  "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
-              },
-              {
-                question: "What is the DEWS early-warning system?",
-                answer:
-                  "The Depeg Early Warning System (DEWS) combines eight weighted 0-100 sub-signals: supply contraction, pool stress, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow stress, and yield warnings. Available signals are blended with redistribution, then PSI and same-peg contagion can amplify the score. Bands are CALM <=15, WATCH <=35, ALERT <=55, WARNING <=75, and DANGER above 75.",
-              },
-              {
-                question: "How is the liquidity score calculated?",
-                answer:
-                  "The liquidity score evaluates how easily a stablecoin can be exited through DEX markets. It combines TVL depth (30%), 24-hour volume activity (20%), pool quality (20%), durability (20%), and pair diversity (10%). TVL depth uses effective TVL relative to market cap, volume uses a log-scale volume/TVL ratio, pool quality measures mechanism and balance-health retention, durability blends TVL stability, volume consistency, maturity, and organic fees, and pair diversity counts distinct retained pools.",
-              },
-              {
-                question: "What is the Mint Authority Score?",
-                answer:
-                  "Since methodology v9.1 mint risk is graded once, by the Safety Score V9 Economic Control pillar; the standalone Mint Authority Score is retired. The published 0-100 mint component starts from a derived posture (cap semantics, claim impairment, reserve reconciliation, and supervision), then applies resolved-incident age decay, a key-custody penalty that MPC or HSM attestation waives, a multisig quorum ladder, and a small Safe module modifier. Mint route family is deliberately not priced separately because the cap and claim semantics already price it. Missing or unresolved required evidence stays explicit as NR rather than receiving a guessed score.",
-              },
-              {
-                question: "How does Pharos confirm depegs and maintain DEWS history?",
-                answer:
-                  "Every depeg onset must remain beyond the full trigger threshold for at least 15 minutes before promotion, even when multiple sources agree. Live events resolve only after 15 minutes inside a tighter half-threshold recovery band. Pharos treats opposite-side evidence as contradiction, does not count DefiLlama's CoinGecko mirror as independent, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
-              },
-              {
-                question: "What is the Bank Run Gauge?",
-                answer:
-                  "The Bank Run Gauge is a market-cap-weighted composite of each tracked stablecoin's issuance-chain net flow versus its own trailing 30-day baseline. It is a signed -100 to +100 pressure signal. Scores below -10 indicate worsening redemption pressure; scores above +10 indicate improving issuance pressure. It returns null when insufficient data is available.",
-              },
-            ]),
+            buildArticleJsonLd({
+              additionalType: "https://schema.org/TechArticle",
+              headline: "Methodology: How Pharos Grades Stablecoins",
+              description:
+                "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
+              author: "person",
+              image: `${SITE_URL}/og-editorial-methodology.png`,
+              mainEntityOfPage: `${SITE_URL}/methodology/`,
+              keywords: [
+                "stablecoin methodology",
+                "safety score",
+                "mint authority score",
+                "PegScore",
+                "DEWS",
+                "PSI",
+                "liquidity score",
+              ],
+            }),
           ),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "Article",
-            additionalType: "https://schema.org/TechArticle",
-            headline: "Methodology: How Pharos Grades Stablecoins",
-            description:
-              "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
-            author: { "@id": `${SITE_URL}#person-tokenbrice` },
-            publisher: { "@id": `${SITE_URL}#organization` },
-            image: `${SITE_URL}/og-editorial-methodology.png`,
-            mainEntityOfPage: `${SITE_URL}/methodology/`,
-            keywords: [
-              "stablecoin methodology",
-              "safety score",
-              "mint authority score",
-              "PegScore",
-              "DEWS",
-              "PSI",
-              "liquidity score",
-            ],
-          }),
         }}
       />
 
@@ -247,6 +241,8 @@ export default function MethodologyPage() {
       />
 
       <MethodologySections />
+
+      <FaqSection items={METHODOLOGY_FAQ_ITEMS} title="Methodology FAQ" includeJsonLd />
     </div>
   );
 }

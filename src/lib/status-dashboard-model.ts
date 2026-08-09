@@ -297,6 +297,17 @@ export function getStatusTone(status: StatusResponse["overallStatus"]) {
   return STATUS_TONE[status];
 }
 
+/**
+ * The operator surface's "good state" outlined pill.
+ *
+ * Green, deliberately *not* the site-wide emerald `SEVERITY_TONE_CLASS.ok`:
+ * the admin dashboard has used green for healthy across ~40 sites since it
+ * shipped, and re-hueing it is a palette ruling of its own rather than a
+ * drift cleanup. This constant exists so the four components that spelled the
+ * identical string by hand share one definition in the meantime (WS8.14).
+ */
+export const STATUS_OK_PILL_CLASS = STATUS_TONE.healthy.badgeClassName;
+
 export function getSeverityBadgeClass(severity: StatusCause["severity"]): string {
   if (severity === "critical") return "bg-red-500/15 text-red-700 dark:text-red-400";
   if (severity === "warning") return "bg-amber-500/15 text-amber-700 dark:text-amber-400";

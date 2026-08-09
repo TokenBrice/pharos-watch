@@ -18,9 +18,19 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 
 - **Recommended historical price backfill:** the status page currently recommends `backfill-cg-prices` for `stablecoins_cache_unavailable`, `stablecoins_cache_degraded`, and missing-price causes. It repairs historical `supply_history` price rows; it does not directly republish the `stablecoins` cache, so treat it as the right action when missing historical CoinGecko prices are implicated.
 - **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
-- **Circuit breaker:** if a provider breaker is open, call `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=<source>` with `CF-Access-Client-Id`, `CF-Access-Client-Secret`, `X-Pharos-Admin: 1`, and an `Idempotency-Key`. Scoped live-reserve breakers use the same endpoint with `circuit=live-reserves:<scope>`.
+- **Circuit breaker:** if a provider breaker is open, delete its `cache` row. `POST /api/reset-circuit-breaker` was retired on 2026-08-09; this single delete is exactly what it ran, and the next call re-probes closed. Scoped live-reserve breakers use the same key convention, `circuit:live-reserves:<scope>`.
+
+  ```bash
+  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
+    "DELETE FROM cache WHERE key = 'circuit:<source>';"
+  ```
 - **Address-price provider headroom:** production pins `ADDRESS_PRICE_PROVIDERS_ENABLED=coingecko-onchain-address` in `worker/wrangler.toml`, retaining only the authenticated exact-address lane while the public GeckoTerminal corroboration pass stays outside the quarter-hour invocation. Do not widen that allowlist as part of cache remediation unless a fresh Worker headroom audit proves the scheduled run can complete with the added provider. Reset provider breakers only after confirming the next sync will not immediately consume the same disabled or exhausted lane.
-- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, call `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-stablecoins` with the same Access service-token + `X-Pharos-Admin` + `Idempotency-Key` pattern.
+- **Cron lease:** if `sync-stablecoins` shows consecutive `skipped_locked` runs, delete the lease row. `POST /api/reset-cron-lease` was retired on 2026-08-09 and ran exactly this statement. Do not clear a lease while `/api/status` shows an active, fresh `inFlight` progress row for the same job.
+
+  ```bash
+  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
+    "DELETE FROM cron_leases WHERE job = 'sync-stablecoins';"
+  ```
 
 ## Prevention
 

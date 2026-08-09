@@ -29,12 +29,7 @@ describe("handleBackfillBlacklistCurrentBalances", () => {
       },
     );
 
-    const response = await handleBackfillBlacklistCurrentBalances(
-      db,
-      makeApiUrl("/api/backfill-blacklist-current-balances?stablecoin=USDT&chainId=optimism&dryRun=true&limit=10"),
-      true,
-      request,
-    );
+    const response = await handleBackfillBlacklistCurrentBalances({ db, url: makeApiUrl("/api/backfill-blacklist-current-balances?stablecoin=USDT&chainId=optimism&dryRun=true&limit=10"), trustedAdmin: true, request });
 
     expect(response.status).toBe(200);
     const body = await response.json() as {

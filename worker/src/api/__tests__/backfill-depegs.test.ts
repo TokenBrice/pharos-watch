@@ -1,57 +1,29 @@
 import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
-import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegs } from "../backfill-depegs";
+import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegsTrusted } from "../backfill-depegs";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 
 stubCryptoForAuth();
 
 describe("handleBackfillDepegs", () => {
-  it("requires admin auth", async () => {
-    const res = await handleBackfillDepegs(
-      mockD1(),
-      makeApiUrl("/api/backfill-depegs"),
-      undefined,
-      makeApiRequest("/api/backfill-depegs"),
-    );
-
-    expect(res.status).toBe(401);
-  });
-
   it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillDepegs(
-      mockD1(),
-      makeApiUrl("/api/backfill-depegs?stablecoin=not-a-real-id"),
-      true,
-      makeApiRequest("/api/backfill-depegs?stablecoin=not-a-real-id", { adminKey: "secret" }),
-    );
+    const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?stablecoin=not-a-real-id") });
 
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Stablecoin not found" });
   });
 
   it("returns no-op response for out-of-range batches", async () => {
-    const res = await handleBackfillDepegs(
-      mockD1(),
-      makeApiUrl("/api/backfill-depegs?batch=999999"),
-      true,
-      makeApiRequest("/api/backfill-depegs?batch=999999", { adminKey: "secret" }),
-    );
+    const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?batch=999999") });
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ message: "No coins in this batch" });
   });
 
   it("validates bounded replay contextDays", async () => {
-    const res = await handleBackfillDepegs(
-      mockD1(),
-      makeApiUrl("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02&contextDays=999"),
-      true,
-      makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02&contextDays=999", {
-        adminKey: "secret",
-      }),
-    );
+    const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?stablecoin=usdt-tether&startDay=2025-01-01&endDay=2025-01-02&contextDays=999") });
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({

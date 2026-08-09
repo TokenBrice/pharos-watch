@@ -1,11 +1,9 @@
-import { withErrorHandler, handleStablecoinHistoryRequest, getLatestSuccessfulCronTimestamp } from "../lib/api-utils";
+import { handleStablecoinHistoryRequest, getLatestSuccessfulCronTimestamp } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchSafetyScoreHistoryCompatibilityRows } from "../lib/safety-score-history-v2";
 
-export const handleSafetyScoreHistory = withErrorHandler(
-  "safety-score-history",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleSafetyScoreHistory = async (db: D1Database, url: URL): Promise<Response> => {
     return handleStablecoinHistoryRequest(db, url, {
       query: {
         defaultDays: 365,
@@ -34,5 +32,4 @@ export const handleSafetyScoreHistory = withErrorHandler(
         return { updatedAt, maxAgeSec: DAY_SECONDS };
       },
     });
-  },
-);
+  };

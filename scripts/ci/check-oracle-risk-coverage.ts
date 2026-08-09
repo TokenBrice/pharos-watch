@@ -9,6 +9,7 @@
 
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
+import { REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS } from "@shared/data/coverage-dispositions/oracle-risk-branch-dispositions";
 
 const ENFORCE = process.argv.includes("--enforce");
 const staleDaysArg = process.argv.find((arg) => arg.startsWith("--stale-days="));
@@ -20,28 +21,36 @@ if (!Number.isFinite(staleDays) || staleDays <= 0) {
 }
 
 const coins = loadPerCoinStablecoinEntries().map((entry) => entry.coin);
-const result = analyzeOracleRiskCoverage(coins, { staleDays });
+const result = analyzeOracleRiskCoverage(coins, {
+  staleDays,
+  reviewedBranchDispositions: REVIEWED_ORACLE_RISK_BRANCH_DISPOSITIONS,
+});
 const prefix = ENFORCE ? "oracleRisk coverage" : "oracleRisk coverage warning";
 
 process.stdout.write(
   `${prefix}: ${result.withOracleRisk}/${result.totalCryptoCdp} direct active crypto-backed CDPs have oracleRisk; ` +
     `${result.completeProfiles} complete profiles; ${result.completeBranches}/${result.branches} branches complete; ` +
+    `${result.reviewedInoperableBranches} branches reviewed inoperable (evidence recorded, field inexpressible); ` +
     `${result.reviewedBranchApplicability} reviewed branch dispositions ` +
     `(${result.branchesRequired} required, ${result.branchNotApplicable} not applicable, ` +
     `${result.branchApplicabilityUnresolved} unresolved).\n`,
 );
 
+const ADVISORY_FINDING_KINDS = [
+  "stale-review",
+  "stale-branch-observation",
+  "missing-branch-applicability",
+  "branch-applicability-unresolved",
+];
+
 if (result.findings.length > 0) {
   process.stdout.write("Findings:\n");
   for (const finding of result.findings) {
-    const tag = [
-      "stale-review",
-      "stale-branch-observation",
-      "missing-branch-applicability",
-      "branch-applicability-unresolved",
-    ].includes(finding.kind)
-      ? " (advisory)"
-      : "";
+    const tag = finding.kind === "reviewed-inoperable-branch-evidence"
+      ? " (reviewed — not counted complete)"
+      : ADVISORY_FINDING_KINDS.includes(finding.kind)
+        ? " (advisory)"
+        : "";
     process.stdout.write(`  - ${finding.id} (${finding.symbol}): ${finding.kind}${tag} — ${finding.detail}\n`);
   }
 }
@@ -49,14 +58,15 @@ if (result.findings.length > 0) {
 // Staleness is a maintenance reminder, not a structural gap — a review past the
 // window still scores. Enforce only on missing/incomplete profiles so the merge
 // gate cannot become a time-bomb that blocks unrelated work as reviews age.
+//
+// `reviewed-inoperable-branch-evidence` is also non-blocking: the gap is
+// researched, evidenced, and unrecordable in the current schema, so the honest
+// state is "reviewed", not "outstanding work". The paired
+// `stale-branch-disposition` kind stays blocking — it is what stops that
+// exemption from outliving the situation that earned it.
 const blockingFindings = result.findings.filter(
   (finding) =>
-    ![
-      "stale-review",
-      "stale-branch-observation",
-      "missing-branch-applicability",
-      "branch-applicability-unresolved",
-    ].includes(finding.kind),
+    ![...ADVISORY_FINDING_KINDS, "reviewed-inoperable-branch-evidence"].includes(finding.kind),
 );
 
 if (ENFORCE && blockingFindings.length > 0) {

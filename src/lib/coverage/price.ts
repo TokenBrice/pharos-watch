@@ -8,11 +8,40 @@ import {
   breakdownItem,
   createDataUnavailableStatus,
   createBreakdownCounter,
-  createStatus,
+  createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
+  type CoverageStatusPreset,
 } from "./shared";
+
+const PRICE_STATUS_PRESETS = {
+  tracked: {
+    kind: "tracked",
+    label: "Tracked",
+    tone: "emerald",
+    available: true,
+    sortRank: 3,
+    detail: "Live peg monitoring, peg score coverage, and depeg-event history are available.",
+  },
+  "price-only": {
+    kind: "price-only",
+    label: "Price only",
+    tone: "sky",
+    available: true,
+    sortRank: 2,
+    detail: "NAV-priced token. Price tracking is available, but peg/depeg logic is not applicable.",
+  },
+  missing: {
+    kind: "missing",
+    label: "Missing",
+    tone: "rose",
+    available: false,
+    sortRank: 0,
+    detail: "No peg-summary row is currently available for this asset.",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
 
 function resolvePrice(
   coin: Pick<StablecoinMeta, "flags">,
@@ -26,25 +55,11 @@ function resolvePrice(
   }
 
   if (coin.flags.navToken) {
-    return createStatus(
-      "price-only",
-      "Price only",
-      "sky",
-      true,
-      2,
-      "NAV-priced token. Price tracking is available, but peg/depeg logic is not applicable.",
-    );
+    return createPresetStatus(PRICE_STATUS_PRESETS["price-only"]);
   }
 
   if (hasPegCoverage) {
-    const status = createStatus(
-      "tracked",
-      "Tracked",
-      "emerald",
-      true,
-      3,
-      "Live peg monitoring, peg score coverage, and depeg-event history are available.",
-    );
+    const status = createPresetStatus(PRICE_STATUS_PRESETS.tracked);
     if (consensusSources !== undefined) {
       status.sourceCount = consensusSources.length;
       status.sourceNames = consensusSources;
@@ -55,14 +70,7 @@ function resolvePrice(
     return status;
   }
 
-  return createStatus(
-    "missing",
-    "Missing",
-    "rose",
-    false,
-    0,
-    "No peg-summary row is currently available for this asset.",
-  );
+  return createPresetStatus(PRICE_STATUS_PRESETS.missing);
 }
 
 function formatPrice(
@@ -98,13 +106,6 @@ function formatPrice(
   return items;
 }
 
-const PRICE_KINDS: readonly string[] = [
-  "tracked",
-  "price-only",
-  "missing",
-  DATA_UNAVAILABLE_KIND,
-] as const;
-
 const PRICE_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Tracked",
@@ -124,7 +125,7 @@ const PRICE_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: PRICE_KINDS,
+  statusKinds: [...statusKindsFromPresets(PRICE_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: PRICE_LEGEND,
   resolve: resolvePrice,
   formatBreakdown: formatPrice,

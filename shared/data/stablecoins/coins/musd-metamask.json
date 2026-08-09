@@ -258,6 +258,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

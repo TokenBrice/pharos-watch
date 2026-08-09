@@ -1,9 +1,11 @@
 import type {
   ApiKeyCreateRequest,
   ApiKeySummary,
+  ApiKeyTier,
   ApiKeyTrafficClass,
   ApiKeyUpdateRequest,
 } from "@shared/types";
+import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
 import {
   API_KEY_DEFAULT_EXPIRY_SEC,
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
@@ -14,6 +16,7 @@ import { errorResponse } from "./api-response";
 import { bytesToHex } from "./hash";
 import { bytesToBase64Url } from "@shared/lib/base64url";
 import { IsolateLocalState } from "./isolate-local-state";
+import type { MinimalD1Database } from "./minimal-d1";
 
 const API_KEY_PREFIX_BYTES = 8;
 const API_KEY_SECRET_BYTES = 24;
@@ -21,7 +24,6 @@ const API_KEY_TOKEN_PREFIX = "ph_live";
 export const API_KEY_TOKEN_PATTERN = /^ph_live_([0-9a-f]{16})_([A-Za-z0-9_-]{32})$/;
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
-const API_KEY_TIER_MAX_LENGTH = 40;
 export const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
 export const API_KEY_AUTH_CACHE_TTL_MS = 5_000;
 export const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
@@ -34,24 +36,7 @@ export {
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
 };
 
-interface StatementRunResult {
-  meta?: { changes?: number };
-}
-
-interface StatementResult<T> {
-  results?: T[];
-}
-
-interface ApiKeyStatement {
-  bind(...values: unknown[]): ApiKeyStatement;
-  first<T>(): Promise<T | null>;
-  all<T>(): Promise<StatementResult<T>>;
-  run(): Promise<StatementRunResult>;
-}
-
-export interface ApiKeyDb {
-  prepare(query: string): ApiKeyStatement;
-}
+export type ApiKeyDb = MinimalD1Database;
 
 export interface ApiKeyRow {
   id: number;
@@ -182,7 +167,6 @@ const _ak = new IsolateLocalState(() => ({
   } as ApiKeyRateLimitDependencyCircuitState,
   lastApiKeyRateLimitPruneBucket: null as number | null,
   lastApiKeyFallbackRateLimitPruneBucket: null as number | null,
-  pendingApiKeyPrune: null as Promise<void> | null,
 }));
 
 export function getApiKeyRuntimeState() {
@@ -241,19 +225,15 @@ function normalizeRequiredName(value: unknown): string | Response {
   return normalized ?? errorResponse(400, "API key name is required");
 }
 
-function normalizeTier(value: unknown): string {
-  return normalizeOptionalString(value, API_KEY_TIER_MAX_LENGTH) ?? "standard";
-}
-
-function normalizeTrafficClass(value: unknown): ApiKeyTrafficClass | Response {
+function normalizeTier(value: unknown): ApiKeyTier | Response {
   const trimmed = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (!trimmed) {
-    return API_KEY_TRAFFIC_CLASS_DEFAULT;
+    return "standard";
   }
-  if (trimmed === "external" || trimmed === "site") {
-    return trimmed;
+  if ((API_KEY_TIER_VALUES as readonly string[]).includes(trimmed)) {
+    return trimmed as ApiKeyTier;
   }
-  return errorResponse(400, "trafficClass must be either site or external");
+  return errorResponse(400, `tier must be one of: ${API_KEY_TIER_VALUES.join(", ")}`);
 }
 
 function normalizeRateLimit(value: unknown): number | Response {
@@ -466,9 +446,9 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
     return rateLimitPerMinute;
   }
 
-  const trafficClass = normalizeTrafficClass(body.trafficClass);
-  if (trafficClass instanceof Response) {
-    return trafficClass;
+  const tier = normalizeTier(body.tier);
+  if (tier instanceof Response) {
+    return tier;
   }
 
   const expiresAt = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
@@ -479,8 +459,7 @@ export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreat
   return {
     name,
     ownerEmail: normalizeOwnerEmail(body.ownerEmail),
-    tier: normalizeTier(body.tier),
-    trafficClass,
+    tier,
     rateLimitPerMinute,
     expiresAt,
   };
@@ -502,15 +481,11 @@ export function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdat
   }
 
   if ("tier" in body) {
-    next.tier = normalizeTier(body.tier);
-  }
-
-  if ("trafficClass" in body) {
-    const normalized = normalizeTrafficClass(body.trafficClass);
+    const normalized = normalizeTier(body.tier);
     if (normalized instanceof Response) {
       return normalized;
     }
-    next.trafficClass = normalized;
+    next.tier = normalized;
   }
 
   if ("rateLimitPerMinute" in body) {

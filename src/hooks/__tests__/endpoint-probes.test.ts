@@ -131,7 +131,7 @@ describe("collectEndpointProbes", () => {
 
   it("preserves admin probe query strings when using the same-origin proxy", async () => {
     const cancel = vi.fn().mockResolvedValue(undefined);
-    const adminPath = "/api/status-probe-history?path=%2Fapi%2Fhealth";
+    const adminPath = "/api/status-history?limit=10";
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       status: 200,
@@ -141,7 +141,7 @@ describe("collectEndpointProbes", () => {
     const result = await collectEndpointProbes([adminPath]);
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/status-probe-history?path=%2Fapi%2Fhealth");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/admin/status-history?limit=10");
     expect(result[0]).toEqual(expect.objectContaining({ path: adminPath, status: 200 }));
   });
 

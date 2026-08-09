@@ -16,6 +16,8 @@ import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { MintAuthorityScoreBadge } from "@/components/mint-authority-score-badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
@@ -271,18 +273,6 @@ function ScoreValue({ value }: { value: number | null }) {
   );
 }
 
-function MintAuthorityScoreBadge({ row }: { row: ScreenerRow }) {
-  const status = MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority];
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-1 pharos-numeric text-xs font-medium ${row.mintAuthorityScoreBadgeClassName}`}
-      title={`${row.mintAuthorityScoreDetail} Review bucket: ${status.spokenLabel}.`}
-    >
-      {row.mintAuthorityScoreLabel}
-    </span>
-  );
-}
-
 function ScreenerEmptyState({
   hasActiveFilters,
   onClearFilters,
@@ -292,19 +282,33 @@ function ScreenerEmptyState({
   onClearFilters?: () => void;
   compact?: boolean;
 }) {
+  // Cold start is a loading state, not an empty state — the canonical
+  // archetypes only cover the zero-rows case.
+  if (!hasActiveFilters) {
+    return (
+      <div className={compact ? "space-y-2" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground"}>
+        <p>Loading screener inputs…</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={compact ? "space-y-2" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground"}>
-      <p>{hasActiveFilters ? "No stablecoins match these filters." : "Loading screener inputs…"}</p>
-      {hasActiveFilters && onClearFilters ? (
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="pharos-focus-ring mt-2 inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-foreground hover:text-foreground/80 md:min-h-0 md:border-0 md:bg-transparent md:px-0 md:py-0 md:underline md:underline-offset-4"
-        >
-          Reset filters and try again.
-        </button>
-      ) : null}
-    </div>
+    <EmptyStateIllustration
+      kind="no-matches"
+      title="No stablecoins match these filters."
+      className={compact ? "py-6" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4"}
+      action={
+        onClearFilters ? (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-foreground hover:text-foreground/80 md:min-h-9"
+          >
+            Reset filters and try again.
+          </button>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -347,7 +351,12 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <MobileMetricPill>Peg <ScoreValue value={row.pegScore} /></MobileMetricPill>
         <MobileMetricPill>DEWS <ScoreValue value={row.dewsScore} /></MobileMetricPill>
         <MobileMetricPill>Liq <ScoreValue value={row.liquidityScore} /></MobileMetricPill>
-        <MintAuthorityScoreBadge row={row} />
+        <MintAuthorityScoreBadge
+          scoreLabel={row.mintAuthorityScoreLabel}
+          detail={row.mintAuthorityScoreDetail}
+          reviewBucketLabel={MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
+          badgeClassName={row.mintAuthorityScoreBadgeClassName}
+        />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -377,9 +386,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
 function DesktopScoreCell({ value }: { value: number | null }) {
   return (
     <TableCell className="text-right pharos-numeric">
-      {value != null ? value.toFixed(0) : (
-        <span className="text-muted-foreground">—</span>
-      )}
+      <ScoreValue value={value} />
     </TableCell>
   );
 }
@@ -437,7 +444,12 @@ function ScreenerTableRow({
         )}
       </TableCell>
       <TableCell className="text-center">
-        <MintAuthorityScoreBadge row={row} />
+        <MintAuthorityScoreBadge
+          scoreLabel={row.mintAuthorityScoreLabel}
+          detail={row.mintAuthorityScoreDetail}
+          reviewBucketLabel={MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
+          badgeClassName={row.mintAuthorityScoreBadgeClassName}
+        />
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}

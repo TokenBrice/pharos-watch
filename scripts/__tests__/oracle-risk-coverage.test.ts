@@ -237,4 +237,128 @@ describe("analyzeOracleRiskCoverage", () => {
     expect(result.reviewedBranchApplicability).toBe(0);
     expect(result.findings).toEqual([expect.objectContaining({ kind: "missing-branch-applicability" })]);
   });
+
+  describe("reviewed inoperable branch dispositions", () => {
+    const deadOracleBranch = {
+      id: "dead",
+      label: "Dead oracle market",
+      tier: "standard-external" as const,
+      summary: "The market's price feed reverts.",
+      feeds: [{ provider: "Chainlink", path: "ETH / USD", chain: "ethereum" }],
+      fallbackBehavior: "No fallback: the price read reverts.",
+      observedAt: "2026-07-13",
+      collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 150 }],
+      liquidationMechanism: "Permissionless liquidation that cannot execute while the oracle reverts.",
+      backstop: "None.",
+      shutdownOrBadDebtBehavior: "Debt is stranded with holders.",
+      sources: [{ label: "Docs", url: "https://example.com/docs" }],
+    };
+
+    function coinWithDeadBranch(branchOverrides: Record<string, unknown> = {}) {
+      return makeCoin({
+        oracleRisk: {
+          tier: "standard-external",
+          summary: "One market's oracle is dead.",
+          branchApplicability: {
+            disposition: "branches-required",
+            reviewedAt: "2026-07-13",
+            reviewer: "test",
+            rationale: "Each collateral market has independent oracle and liquidation behavior.",
+            sources: [{ label: "Docs", url: "https://example.com/docs" }],
+          },
+          branchModel: "multi-branch",
+          reviewedAt: "2026-07-13",
+          reviewer: "test",
+          confidence: "verified",
+          branches: [{ ...deadOracleBranch, ...branchOverrides }],
+        },
+      });
+    }
+
+    const disposition = {
+      id: "test-cdp",
+      branchId: "dead",
+      field: "liquidationDelaySec" as const,
+      disposition: "reviewed-inoperable" as const,
+      reasonCode: "liquidation-uncallable-dead-oracle" as const,
+      schemaLimitation: "The field cannot express an unbounded wait.",
+      finding: "liquidateVault reverts empty on a live position at the pinned block.",
+      observedBlocks: ["ethereum:1"],
+      evidenceUrls: ["https://example.com/proof"],
+      reviewer: "test",
+      reviewedDate: "2026-08-09",
+    };
+
+    const asOf = { asOf: new Date("2026-07-13T00:00:00Z"), staleDays: 180 };
+
+    it("reports an unreviewed dead-oracle gap as outstanding evidence work", () => {
+      const result = analyzeOracleRiskCoverage([coinWithDeadBranch()], asOf);
+
+      expect(result.completeBranches).toBe(0);
+      expect(result.reviewedInoperableBranches).toBe(0);
+      expect(result.findings).toEqual([
+        expect.objectContaining({
+          kind: "missing-branch-evidence",
+          detail: "dead branch missing liquidationDelaySec",
+        }),
+      ]);
+    });
+
+    it("converts the gap into a reviewed-inoperable finding that carries its evidence", () => {
+      const result = analyzeOracleRiskCoverage([coinWithDeadBranch()], {
+        ...asOf,
+        reviewedBranchDispositions: [disposition],
+      });
+
+      expect(result.reviewedInoperableBranches).toBe(1);
+      // Reviewed is not complete: the audit knows why the field is blank, which
+      // is a different claim from having the evidence the field asks for.
+      expect(result.completeBranches).toBe(0);
+      expect(result.findings).toEqual([
+        expect.objectContaining({
+          kind: "reviewed-inoperable-branch-evidence",
+          detail: expect.stringContaining("https://example.com/proof"),
+        }),
+      ]);
+      expect(result.findings[0]?.detail).toContain("liquidation-uncallable-dead-oracle");
+      expect(result.findings[0]?.detail).toContain("ethereum:1");
+    });
+
+    it("blocks when a disposition outlives the gap it excused", () => {
+      const populated = analyzeOracleRiskCoverage([coinWithDeadBranch({ liquidationDelaySec: 0 })], {
+        ...asOf,
+        reviewedBranchDispositions: [disposition],
+      });
+      expect(populated.reviewedInoperableBranches).toBe(0);
+      expect(populated.completeBranches).toBe(1);
+      expect(populated.findings).toEqual([
+        expect.objectContaining({
+          kind: "stale-branch-disposition",
+          detail: "dead branch liquidationDelaySec disposition no longer applies: branch now records liquidationDelaySec",
+        }),
+      ]);
+
+      const renamedBranch = analyzeOracleRiskCoverage([coinWithDeadBranch({ id: "renamed" })], {
+        ...asOf,
+        reviewedBranchDispositions: [disposition],
+      });
+      expect(renamedBranch.findings).toContainEqual(
+        expect.objectContaining({
+          kind: "stale-branch-disposition",
+          detail: expect.stringContaining("profile has no branch with that id"),
+        }),
+      );
+
+      const removedCoin = analyzeOracleRiskCoverage([], {
+        ...asOf,
+        reviewedBranchDispositions: [disposition],
+      });
+      expect(removedCoin.findings).toEqual([
+        expect.objectContaining({
+          kind: "stale-branch-disposition",
+          detail: expect.stringContaining("no active crypto-backed CDP with that id"),
+        }),
+      ]);
+    });
+  });
 });

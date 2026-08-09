@@ -161,7 +161,6 @@ function activeV9(updatedAt = NOW_SEC) {
   });
   return {
     kind: "v9" as const,
-    expectedModel: "v9" as const,
     snapshot,
   };
 }
@@ -415,7 +414,6 @@ describe("snapshotPublicDataset", () => {
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "active_safety_score_unavailable",
-      expectedModel: "v9",
       sourceReason: "stale-cache",
     });
     expect(getInsertBinds(db)).toBeUndefined();
@@ -426,7 +424,6 @@ describe("snapshotPublicDataset", () => {
       .mockResolvedValueOnce(activeV9())
       .mockResolvedValueOnce({
         kind: "error",
-        expectedModel: "v9",
         reason: "v9-snapshot-unavailable",
         snapshot: null,
         detail: "publication disappeared",
@@ -438,7 +435,6 @@ describe("snapshotPublicDataset", () => {
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "active_safety_score_changed_before_insert",
-      expectedModel: "v9",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });

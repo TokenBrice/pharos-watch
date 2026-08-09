@@ -409,7 +409,6 @@ function resetSyncYieldDataTest() {
     trackedCount: 4,
     coverageRatio: 1,
     source: "safety-score-v9-publication",
-    expectedModel: "v9",
     safetyScoreIdentity: {
       model: "v9",
       schemaVersion: 1,

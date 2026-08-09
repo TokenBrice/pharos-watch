@@ -420,7 +420,6 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValueOnce({
         kind: "v9",
-        expectedModel: "v9",
         snapshot,
       });
     vi.spyOn(
@@ -1293,7 +1292,6 @@ describe("handleMintBurnFlows contract tests", () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValueOnce({
         kind: "v9",
-        expectedModel: "v9",
         snapshot: activeSnapshot,
       });
     vi.spyOn(

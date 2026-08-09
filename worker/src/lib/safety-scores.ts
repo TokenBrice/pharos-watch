@@ -15,7 +15,6 @@ export type PublishedSafetyScoresResultMap = {
   coverageRatio: number;
   scores: Map<string, SafetyResult>;
   source: "safety-score-v9-publication";
-  expectedModel: "v9";
   safetyScoreIdentity: SafetyScoreV9PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
@@ -25,7 +24,7 @@ export type PublishedSafetyScoresResultMap = {
 function result(
   input: Omit<
     PublishedSafetyScoresResultMap,
-    "mode" | "source" | "expectedModel" | "coveredCount" | "coverageRatio"
+    "mode" | "source" | "coveredCount" | "coverageRatio"
   > & { scores: Map<string, SafetyResult> },
 ): PublishedSafetyScoresResultMap {
   const coveredCount = input.scores.size;
@@ -33,7 +32,6 @@ function result(
     ...input,
     mode: "map",
     source: "safety-score-v9-publication",
-    expectedModel: "v9",
     coveredCount,
     coverageRatio:
       input.trackedCount > 0 ? coveredCount / input.trackedCount : 1,
@@ -46,14 +44,7 @@ function result(
  */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
-  options: { outputMode: "map"; sourceMode: "published-cache" },
 ): Promise<PublishedSafetyScoresResultMap> {
-  if (
-    options.outputMode !== "map" ||
-    options.sourceMode !== "published-cache"
-  ) {
-    throw new Error("Safety scores support only the canonical published V9 map");
-  }
   const active = await loadActiveSafetyScoreSource(db);
   if (active.kind === "error") {
     return result({
@@ -68,10 +59,10 @@ export async function computeSafetyScoresSnapshot(
     });
   }
   const identity = active.snapshot.safetyScoreIdentity;
-  if (active.snapshot.publicationHealth.status === "held") {
+  if (active.kind === "held") {
     return result({
       kind: "degraded",
-      reason: "v9-publication-held",
+      reason: active.reason,
       scores: new Map(),
       trackedCount: active.snapshot.completeness.expectedCount,
       safetyScoreIdentity: identity,

@@ -321,6 +321,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "SPCT (Secured Private Credit Token)",

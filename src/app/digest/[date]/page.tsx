@@ -8,9 +8,8 @@ import { EditorialMasthead } from "@/components/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { digestDisplay } from "@/lib/fonts/digest";
-import { safeJsonLd } from "@/lib/json-ld";
-import { summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
-import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { buildPageMetadata, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
 import digests from "@data/digests.json";
@@ -70,24 +69,14 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
     };
   }
   const formatted = formatDate(digest.date);
-  const description = buildDigestMetadataDescription(digest, formatted);
-  return {
+  return buildPageMetadata({
     title: `${digest.title} (${formatted})`,
-    description,
-    alternates: { canonical: `/digest/${digest.date}/` },
-    robots: INDEXABLE_ROBOTS,
-    openGraph: {
-      title: `${digest.title} (${formatted}) | Pharos`,
-      description,
-      url: `/digest/${digest.date}/`,
-      type: "article",
-      publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
-      images: [{ url: "/og-editorial-digest.png", width: 1200, height: 628 }],
-    },
-    twitter: {
-      images: [{ url: "/og-editorial-digest.png", width: 1200, height: 628 }],
-    },
-  };
+    description: buildDigestMetadataDescription(digest, formatted),
+    canonical: `/digest/${digest.date}/`,
+    ogImage: "/og-editorial-digest.png",
+    ogType: "article",
+    publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
+  });
 }
 
 export default async function DigestDetailPage({ params }: { params: Promise<{ date: string }> }) {
@@ -118,27 +107,16 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "Article",
-            headline: `${digest.title} (${formatted})`,
-            image: [`${SITE_URL}/og-editorial-digest.png`],
-            datePublished: new Date(digest.generatedAt * 1000).toISOString(),
-            dateModified: new Date(digest.generatedAt * 1000).toISOString(),
-            description: buildDigestMetadataDescription(digest, formatted),
-            author: {
-              "@type": "Organization",
-              name: "Pharos",
-              url: SITE_URL,
-            },
-            publisher: {
-              "@type": "Organization",
-              name: "Pharos",
-              url: SITE_URL,
-              logo: `${SITE_URL}/pharos-mark.png`,
-            },
-            mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
-          }),
+          __html: safeJsonLd(
+            buildArticleJsonLd({
+              headline: `${digest.title} (${formatted})`,
+              description: buildDigestMetadataDescription(digest, formatted),
+              image: [`${SITE_URL}/og-editorial-digest.png`],
+              datePublished: new Date(digest.generatedAt * 1000).toISOString(),
+              dateModified: new Date(digest.generatedAt * 1000).toISOString(),
+              mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
+            }),
+          ),
         }}
       />
       <EditorialMasthead date={formatted} editor="Claude Opus 4.8" />

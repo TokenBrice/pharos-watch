@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { telegramApiCalls, telegramCallBody } from "../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  telegramApiCalls,
+  telegramCallBody,
+} from "../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
@@ -14,8 +18,7 @@ const {
   handleSettingsCommand,
 } = await import("../telegram-webhook-settings");
 
-const fetchSpy = vi.fn();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);
@@ -47,8 +50,7 @@ function subscriptionRow(stablecoinId: string): SubscriptionRow & Record<string,
 }
 
 beforeEach(() => {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  resetTelegramFetchSpy();
 });
 
 describe("handleSettingsCommand", () => {
@@ -537,7 +539,7 @@ describe("handleSettingsCallback — per-coin", () => {
         first: null,
       },
     ]);
-    fetchSpy.mockImplementation(async (url: string) => {
+    fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false }), { status: 400 });
       }
@@ -569,7 +571,7 @@ describe("handleSettingsCallback — per-coin", () => {
         first: null,
       },
     ]);
-    fetchSpy.mockImplementation(async (url: string) => {
+    fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }), {
           status: 400,
@@ -636,6 +638,40 @@ describe("callback_data size budget", () => {
 });
 
 describe("message builders", () => {
+  it("home message states every global alert family the home keyboard toggles", () => {
+    const subscriber = {
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      global_alert_dews: 1,
+      global_alert_depeg: 1,
+      global_depeg_worsening_bps_step: 25,
+      global_alert_safety: 0,
+      global_alert_launch: 1,
+      global_alert_reserve: 1,
+      global_alert_freeze: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: null,
+    };
+
+    const message = buildHomeMessage(subscriber);
+    expect(message).toContain("<b>Global alerts</b>\nDEWS: ON\nDepeg: ON (+25bps)\nSafety: OFF\nLaunch: ON\nReserve: ON\nFreeze: OFF\n");
+
+    // Regression pin: the hand-written copy listed only DEWS/Depeg/Safety/Launch
+    // while buildHomeKeyboard rendered a toggle row for all six, so a chat with
+    // global Reserve or Freeze on saw the toggle but never the state line.
+    const toggleLabels = buildHomeKeyboard(subscriber)
+      .inline_keyboard.flat()
+      .flatMap((button) => (button.callback_data?.startsWith("settings:gt:") ? [button.text.split(":")[0]!] : []));
+    expect(toggleLabels).toHaveLength(6);
+    for (const label of toggleLabels) {
+      expect(message).toContain(`\n${label}: `);
+    }
+  });
+
   it("home message reflects active snooze duration", () => {
     const subscriber = {
       alert_dews: 0,

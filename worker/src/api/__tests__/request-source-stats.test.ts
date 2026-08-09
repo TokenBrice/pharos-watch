@@ -101,7 +101,7 @@ describe("handleRequestSourceStats", () => {
     ], { requireMatch: true });
 
     const request = new Request("https://ops-api.pharos.watch/api/request-source-stats?hours=24&bucketSec=3600&routeLimit=2");
-    const response = await handleRequestSourceStats(db, true, request);
+    const response = await handleRequestSourceStats({ db, trustedAdmin: true, request });
     const body = await response.json() as ApiRequestAttributionResponse;
 
     expect(response.status).toBe(200);

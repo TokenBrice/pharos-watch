@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { useRecentBlacklist7dMock, isBlacklistBannerEnabledMock } = vi.hoisted(() => ({
@@ -17,13 +16,10 @@ vi.mock("@/lib/feature-flags", () => ({
   isBlacklistBannerEnabled: isBlacklistBannerEnabledMock,
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 import { RecentBlacklistBanner } from "../recent-blacklist-banner";
 

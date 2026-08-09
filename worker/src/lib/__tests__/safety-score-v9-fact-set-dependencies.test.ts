@@ -14,7 +14,6 @@ import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
-import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
@@ -488,9 +487,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       freezeExposure: "none-known",
       primaryExit: "permissionless",
     });
-    expect(evaluateV9StressState(evaluated.assets[0]!.stressState, V9_CANDIDATE_POLICY_V1)).toEqual(
-      evaluated.assets[0]!.trace,
-    );
+    expect(evaluated.assets[0]!.stressState.scoreInput).toEqual(evaluated.assets[0]!.scoreInput);
 
     const low = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 1 }), extension());
     const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());

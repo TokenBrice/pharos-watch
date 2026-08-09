@@ -22,17 +22,21 @@ import {
   buildDepegStepUpsert,
   buildDepegUpsert,
   buildDewsUpsert,
-  buildLaunchUpsert,
-  buildFreezeUpsert,
-  buildReserveUpsert,
+  buildPlainAlertUpsert,
   buildSafetyUpsert,
   loadSubscriberByChat,
   prepareUpsertSubscriberRow,
   unixNow,
   upsertSubscriberRow,
   type BuiltSubscriptionUpsert,
+  type PlainAlertType,
 } from "./telegram-webhook-store";
 import type { TelegramOperationBatchOptions } from "./telegram-store/_internals";
+import {
+  TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
+  TELEGRAM_ALERT_PERSISTENCE,
+} from "@shared/lib/telegram-alert-families";
+import type { TelegramAlertType } from "@shared/types/status";
 
 export async function toggleGlobalAlert(
   db: D1Database,
@@ -87,6 +91,35 @@ export async function applyCoinSetting(
   return prepared.description;
 }
 
+type CoinSettingPreparer = (
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  value: string,
+) => { description: string | null; statements: D1PreparedStatement[] };
+
+/** Families whose `/settings` value needs a bespoke parser (band/mode/step). */
+const TUNED_SETTING_PREPARERS: Record<string, CoinSettingPreparer | undefined> = {
+  [TELEGRAM_ALERT_PERSISTENCE.dews.settingCode]: (...args) => prepareDewsSetting(...args),
+  [TELEGRAM_ALERT_PERSISTENCE.safety.settingCode]: (...args) => prepareSafetySetting(...args),
+  [TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode]: (...args) => prepareDepegSetting(...args),
+};
+
+/** Plain on/off families, addressed by their registry setting code. */
+const PLAIN_ALERT_TYPE_BY_SETTING_CODE: Record<string, PlainAlertType | undefined> = {
+  [TELEGRAM_ALERT_PERSISTENCE.launch.settingCode]: "launch",
+  [TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode]: "reserve",
+  [TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode]: "freeze",
+};
+
+/** `/settings` says "Freeze alerts", not the bare family short label. */
+const PLAIN_SETTING_LABELS: Record<PlainAlertType, string> = {
+  launch: TELEGRAM_ALERT_FAMILY_SHORT_LABELS.launch,
+  reserve: TELEGRAM_ALERT_FAMILY_SHORT_LABELS.reserve,
+  freeze: `${TELEGRAM_ALERT_FAMILY_SHORT_LABELS.freeze} alerts`,
+};
+
 export function prepareCoinSettingStatements(
   db: D1Database,
   chatId: string,
@@ -96,12 +129,12 @@ export function prepareCoinSettingStatements(
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
   assertSubscribableCoin(coinId);
-  if (setting === "db") return prepareDewsSetting(db, chatId, username, coinId, value);
-  if (setting === "sm") return prepareSafetySetting(db, chatId, username, coinId, value);
-  if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);
-  if (setting === "lc") return prepareLaunchSetting(db, chatId, username, coinId, value);
-  if (setting === "rs") return prepareReserveSetting(db, chatId, username, coinId, value);
-  if (setting === "fz") return prepareFreezeSetting(db, chatId, username, coinId, value);
+  const tuned = TUNED_SETTING_PREPARERS[setting];
+  if (tuned) return tuned(db, chatId, username, coinId, value);
+  const plainAlertType = PLAIN_ALERT_TYPE_BY_SETTING_CODE[setting];
+  if (plainAlertType) {
+    return preparePlainAlertSetting(db, chatId, username, coinId, plainAlertType, value);
+  }
   return { description: null, statements: [] };
 }
 
@@ -168,61 +201,40 @@ function prepareDepegSetting(
   };
 }
 
-/** Shared body for the three simple boolean alert prepare* functions (tg-3[mutations]). */
-function prepareBooleanSetting(
-  label: string,
-  prepareFn: () => D1PreparedStatement[],
+/** One body for every plain on/off family, addressed from the registry. */
+function preparePlainAlertSetting(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  alertType: PlainAlertType,
   value: string,
 ): { description: string | null; statements: D1PreparedStatement[] } {
   if (value !== "0" && value !== "1") return { description: null, statements: [] };
   const enabled = value === "1";
+  const label = PLAIN_SETTING_LABELS[alertType];
   return {
     description: enabled ? `${label} on.` : `${label} off.`,
-    statements: prepareFn(),
+    statements: prepareBoolAlert(
+      db,
+      chatId,
+      username,
+      coinId,
+      enabled,
+      alertType,
+      (chat, coin, on) => buildPlainAlertUpsert(alertType, chat, coin, on),
+    ),
   };
 }
 
-function prepareLaunchSetting(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  coinId: string,
-  value: string,
-): { description: string | null; statements: D1PreparedStatement[] } {
-  const enabled = value === "1";
-  return prepareBooleanSetting("Launch", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "launch", buildLaunchUpsert), value);
-}
-
-function prepareReserveSetting(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  coinId: string,
-  value: string,
-): { description: string | null; statements: D1PreparedStatement[] } {
-  const enabled = value === "1";
-  return prepareBooleanSetting("Reserve", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "reserve", buildReserveUpsert), value);
-}
-
-function prepareFreezeSetting(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  coinId: string,
-  value: string,
-): { description: string | null; statements: D1PreparedStatement[] } {
-  const enabled = value === "1";
-  return prepareBooleanSetting("Freeze alerts", () => prepareBoolAlert(db, chatId, username, coinId, enabled, "freeze", buildFreezeUpsert), value);
-}
-
-/** Shared body for the three simple boolean alert prepare* helpers (tg-2[mutations]). */
+/** Shared body for the simple boolean alert prepare* helpers (tg-2[mutations]). */
 function prepareBoolAlert(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   enabled: boolean,
-  bumpKey: "reserve" | "depeg" | "launch" | "freeze",
+  bumpKey: TelegramAlertType,
   buildUpsert: (chatId: string, coinId: string, enabled: boolean) => BuiltSubscriptionUpsert,
 ): D1PreparedStatement[] {
   const now = unixNow();

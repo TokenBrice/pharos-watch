@@ -2,7 +2,7 @@ import Link from "next/link";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
-  INDEXABLE_DEPEG_EVENT_ENTRIES,
+  DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
 } from "@/app/depeg/[event]/page-data";
 import {
@@ -38,7 +38,7 @@ function groupByMonth(events: readonly DepegEventEntry[]): Array<{ label: string
  * the whole archive stays crawl-discoverable from `/depeg/`.
  */
 export function DepegEventArchive() {
-  const events: readonly DepegEventEntry[] = INDEXABLE_DEPEG_EVENT_ENTRIES;
+  const events: readonly DepegEventEntry[] = DEPEG_EVENT_ENTRIES;
 
   if (events.length === 0) return null;
 

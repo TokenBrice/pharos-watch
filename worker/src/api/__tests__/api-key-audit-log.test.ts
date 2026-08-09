@@ -6,7 +6,7 @@ describe("api-key-audit-log handler", () => {
   it("requires admin auth", async () => {
     const db = mockD1([]);
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
-    const response = await handleApiKeyAuditLog(db, false, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: false, request });
     expect(response.status).toBe(401);
   });
 
@@ -28,7 +28,7 @@ describe("api-key-audit-log handler", () => {
     ]);
 
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
-    const response = await handleApiKeyAuditLog(db, true, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
 
@@ -48,7 +48,7 @@ describe("api-key-audit-log handler", () => {
     ], { requireMatch: true });
 
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7");
-    const response = await handleApiKeyAuditLog(db, true, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
     expect(response.status).toBe(200);
   });
 
@@ -56,7 +56,7 @@ describe("api-key-audit-log handler", () => {
     const db = mockD1([], { requireMatch: true });
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?limit=25abc");
 
-    const response = await handleApiKeyAuditLog(db, true, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "Invalid limit: must be a positive integer" });
@@ -66,7 +66,7 @@ describe("api-key-audit-log handler", () => {
     const db = mockD1([], { requireMatch: true });
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7abc");
 
-    const response = await handleApiKeyAuditLog(db, true, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "Invalid apiKeyId: must be a positive integer" });
@@ -91,7 +91,7 @@ describe("api-key-audit-log handler", () => {
     ]);
 
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
-    const response = await handleApiKeyAuditLog(db, true, request);
+    const response = await handleApiKeyAuditLog({ db, trustedAdmin: true, request });
 
     expect(response.status).toBe(200);
     const body = await response.json() as { entries: Array<{ detail: unknown }> };

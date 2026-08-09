@@ -1,4 +1,5 @@
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
@@ -29,7 +30,7 @@ import {
 } from "./action-runner";
 import type { WebhookCommandContext, WebhookCommandHandler } from "./context";
 
-const VALID_IMPORT_ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve", "freeze"]);
+const VALID_IMPORT_ALERT_TYPES = new Set<string>(TELEGRAM_ALERT_TYPES);
 const KNOWN_PRESET_IDS = new Set<string>(TELEGRAM_PRESET_IDS);
 
 function generateImportLease(): number {

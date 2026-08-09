@@ -151,7 +151,6 @@ describe("stablecoin OG card data", () => {
       });
       return {
         kind: "v9" as const,
-        expectedModel: "v9" as const,
         marker: {
           policyId: snapshot.safetyScoreIdentity.policyId,
           policyDigest: snapshot.safetyScoreIdentity.policyDigest,

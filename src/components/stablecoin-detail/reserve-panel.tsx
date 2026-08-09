@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { ReserveTreemap } from "@/components/reserve-treemap";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { StablecoinMeta } from "@shared/types";
@@ -113,22 +114,13 @@ export function ReservePanel({
             badge={reserves.displayBadge}
           />
           {reserveFootnote ? (
-            <div className="mt-1 flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
-              {reserveFootnote.text ? <span>{reserveFootnote.text}</span> : null}
-              {reserveFootnote.references.map((reference) => (
-                <span key={`${reference.label}:${reference.url}`}>
-                  <span aria-hidden>·</span>{" "}
-                  <a
-                    href={reference.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2 transition-colors hover:text-foreground"
-                  >
-                    {reference.label}
-                  </a>
-                </span>
-              ))}
-            </div>
+            /* The standard module footer: snapshot freshness right-aligned,
+               citations folded behind `Sources (N)` at every breakpoint. */
+            <EvidenceFooter
+              className="mt-3"
+              sources={reserveFootnote.references}
+              trailing={reserveFootnote.text || undefined}
+            />
           ) : null}
           {reserveCompositionNote ? (
             <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>

@@ -38,7 +38,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -104,7 +104,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -196,7 +196,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       rawOverallStatus: string;
@@ -279,7 +279,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       caches: Record<string, { mode?: string; sourceStatus?: string }>;
@@ -335,7 +335,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       causes: { availability: Array<{ code: string }> };
@@ -393,7 +393,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       causes: { availability: Array<{ code: string }> };
@@ -451,7 +451,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       availabilityStatus: string;
       causes: { availability: Array<{ code: string }> };
@@ -483,7 +483,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: { blacklistMissingRatio: number; blacklistRecentMissingAmounts: number };
@@ -516,7 +516,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       causes: { dataQuality: Array<{ code: string }> };
@@ -558,7 +558,7 @@ describe("handleStatus", () => {
     }) as typeof db.prepare;
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const blacklistSql = seenSql.find((sql) => sql.includes("FROM blacklist_events")) ?? "";
@@ -569,7 +569,7 @@ describe("handleStatus", () => {
     const db = fixtureMockD1([{ match: "SELECT 1", rows: [], throwError: new Error("db down") }]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -617,7 +617,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -687,7 +687,7 @@ describe("handleStatus", () => {
       const missing = Math.floor(total * 0.18);
       const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as StatusBody;
       expect(body.dataQualityStatus).toBe("healthy");
       const codes = body.causes.dataQuality.map((c) => c.code);
@@ -700,7 +700,7 @@ describe("handleStatus", () => {
       const missing = Math.floor(total * 0.18) + 1;
       const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as StatusBody;
       expect(body.dataQualityStatus).toBe("degraded");
       const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
@@ -714,7 +714,7 @@ describe("handleStatus", () => {
       const missing = Math.ceil(total * 0.16);
       const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as StatusBody;
       expect(body.dataQualityStatus).toBe("healthy");
       const elevatedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_elevated");
@@ -728,7 +728,7 @@ describe("handleStatus", () => {
       const missing = Math.floor(total * 0.14);
       const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as StatusBody;
       expect(body.dataQualityStatus).toBe("healthy");
       const codes = body.causes.dataQuality.map((c) => c.code);
@@ -742,7 +742,7 @@ describe("handleStatus", () => {
       const missing = Math.floor(total * 0.45) + 1;
       const db = buildBaselineDb(total, missing);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as StatusBody;
       expect(body.dataQualityStatus).toBe("stale");
       const staleCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_stale");
@@ -845,7 +845,7 @@ describe("handleStatus", () => {
         residualsMissing: 100,
       });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as CanonicalScopeBody;
       expect(body.dataQualityStatus).toBe("healthy");
       expect(body.dataQuality.totalStablecoins).toBe(canonicalTotal);
@@ -866,7 +866,7 @@ describe("handleStatus", () => {
         residualsMissing: 0,
       });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as CanonicalScopeBody;
       expect(body.dataQualityStatus).toBe("degraded");
       expect(body.dataQuality.totalStablecoins).toBe(canonicalTotal);
@@ -895,7 +895,7 @@ describe("handleStatus", () => {
       });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
 
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as CanonicalScopeBody;
 
       expect(body.dataQualityStatus).toBe("degraded");
@@ -969,7 +969,7 @@ describe("handleStatus", () => {
       // staleSupply = 1 ensures the cause-emission trigger would otherwise fire.
       const db = buildOnchainDb({ trackedCoins: 2, staleSupply: 1 });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as DataQualityBody;
       const codes = body.causes.dataQuality.map((c) => c.code);
       expect(codes).not.toContain("onchain_monitor_low_sample");
@@ -978,7 +978,7 @@ describe("handleStatus", () => {
     it("still emits onchain_monitor_low_sample when tracked coins are in the partial-coverage band [3, 9]", async () => {
       const db = buildOnchainDb({ trackedCoins: 6, staleSupply: 1 });
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as DataQualityBody;
       const cause = body.causes.dataQuality.find((c) => c.code === "onchain_monitor_low_sample");
       expect(cause).toBeDefined();
@@ -1019,7 +1019,7 @@ describe("handleStatus", () => {
     it("reports the number of status_transitions rows inserted in the last 24h", async () => {
       const db = buildTransitionCountDb(4);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as SummaryBody;
       expect(body.summary.transitionsLast24h).toBe(4);
     });
@@ -1027,7 +1027,7 @@ describe("handleStatus", () => {
     it("reports 0 when the transitions count query returns nothing", async () => {
       const db = buildTransitionCountDb(0);
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       const body = (await res.json()) as SummaryBody;
       expect(body.summary.transitionsLast24h).toBe(0);
     });
@@ -1076,7 +1076,7 @@ describe("handleStatus", () => {
       };
       const db = fixtureMockD1(buildBaseStatusTables(now, staleStateRow));
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       expect(res.status).toBe(200);
 
       const writes = db
@@ -1094,7 +1094,7 @@ describe("handleStatus", () => {
       const now = Math.floor(Date.now() / 1000);
       const db = fixtureMockD1(buildBaseStatusTables(now, null));
       const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-      const res = await handleStatus(db, true, request);
+      const res = await handleStatus({ db, trustedAdmin: true, request });
       expect(res.status).toBe(200);
 
       const writes = db

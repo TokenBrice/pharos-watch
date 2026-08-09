@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 import type { CaseStudySeverity, CaseStudyTimelineEntry } from "./content/types";
+import { formatUtcDayLabel } from "@shared/lib/format";
 
 // Desktop track geometry — keep in sync with `auto-cols-[15.375rem]` (the dot
 // pitch) and `w-[23rem]` (the card width) on the grid below. The scrollable
@@ -51,12 +52,7 @@ function formatTimelineDate(dateISO: string): string {
   // Day-precision ISO ("2023-03-11") rendered without timezone drift.
   const [y, m, d] = dateISO.split("T")[0].split("-").map(Number);
   if (!y || !m || !d) return dateISO;
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  return formatUtcDayLabel(new Date(Date.UTC(y, m - 1, d)));
 }
 
 function TimelineDate({ dateISO }: { dateISO: string }) {

@@ -6,13 +6,62 @@ import {
   breakdownItem,
   createDataUnavailableStatus,
   createBreakdownCounter,
-  createStatus,
+  createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
+  type CoverageStatusPreset,
 } from "./shared";
 
 const BLACKLIST_SYMBOLS = new Set<string>(BLACKLIST_STABLECOINS);
+
+const BLACKLIST_STATUS_PRESETS = {
+  live: {
+    kind: "live",
+    label: "Live",
+    tone: "amber",
+    available: true,
+    sortRank: 6,
+    detail: "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
+    spokenLabel: "Live tracked blacklistable",
+  },
+  yes: {
+    kind: "yes",
+    label: "Yes",
+    tone: "rose",
+    available: true,
+    sortRank: 5,
+    detail: "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
+    spokenLabel: "Blacklistable",
+  },
+  upstream: {
+    kind: "upstream",
+    label: "Upstream",
+    tone: "amber",
+    available: true,
+    sortRank: 3,
+    detail: "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
+  },
+  possible: {
+    kind: "possible",
+    label: "Possible",
+    tone: "sky",
+    available: true,
+    sortRank: 2,
+    detail:
+      "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
+  },
+  no: {
+    kind: "no",
+    label: "No",
+    tone: "emerald",
+    available: true,
+    sortRank: 1,
+    detail: "No direct, upstream, or possible freeze exposure is resolved in the current model.",
+    spokenLabel: "Not blacklistable",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
 
 function hasBlacklistTrackerCoverage(coin: Pick<StablecoinMeta, "symbol">, blacklistStatus: BlacklistStatus | null = null): boolean {
   if (blacklistStatus !== null && blacklistStatus !== true) {
@@ -30,60 +79,22 @@ function resolveBlacklist(
   }
 
   if (hasBlacklistTrackerCoverage(coin, blacklistStatus)) {
-    return createStatus(
-      "live",
-      "Live",
-      "amber",
-      true,
-      6,
-      "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
-      "Live tracked blacklistable",
-    );
+    return createPresetStatus(BLACKLIST_STATUS_PRESETS.live);
   }
 
   if (blacklistStatus === true) {
-    return createStatus(
-      "yes",
-      "Yes",
-      "rose",
-      true,
-      5,
-      "Direct token, vault, or issuer controls can freeze, block, seize, or destroy user balances.",
-      "Blacklistable",
-    );
+    return createPresetStatus(BLACKLIST_STATUS_PRESETS.yes);
   }
 
   if (blacklistStatus === "inherited") {
-    return createStatus(
-      "upstream",
-      "Upstream",
-      "amber",
-      true,
-      3,
-      "No direct control is resolved; exposure comes from freezable upstream collateral or parent assets.",
-    );
+    return createPresetStatus(BLACKLIST_STATUS_PRESETS.upstream);
   }
 
   if (blacklistStatus === "possible") {
-    return createStatus(
-      "possible",
-      "Possible",
-      "sky",
-      true,
-      2,
-      "Mutable or pause-capable admin surfaces indicate possible controls, but active address-level freezing is not confirmed.",
-    );
+    return createPresetStatus(BLACKLIST_STATUS_PRESETS.possible);
   }
 
-  return createStatus(
-    "no",
-    "No",
-    "emerald",
-    true,
-    1,
-    "No direct, upstream, or possible freeze exposure is resolved in the current model.",
-    "Not blacklistable",
-  );
+  return createPresetStatus(BLACKLIST_STATUS_PRESETS.no);
 }
 
 function formatBlacklist(
@@ -104,15 +115,6 @@ function formatBlacklist(
   }
   return items;
 }
-
-const BLACKLIST_KINDS: readonly string[] = [
-  "live",
-  "yes",
-  "upstream",
-  "possible",
-  "no",
-  DATA_UNAVAILABLE_KIND,
-] as const;
 
 const BLACKLIST_LEGEND: readonly CoverageLegendItem[] = [
   {
@@ -144,7 +146,7 @@ const BLACKLIST_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: BLACKLIST_KINDS,
+  statusKinds: [...statusKindsFromPresets(BLACKLIST_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: BLACKLIST_LEGEND,
   resolve: resolveBlacklist,
   formatBreakdown: formatBlacklist,

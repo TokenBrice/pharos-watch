@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { addFreshnessHeaders, jsonResponse, parseClampedIntegerParam, withErrorHandler } from "../lib/api-utils";
+import { addFreshnessHeaders, jsonResponseWithHeaders, parseClampedIntegerParam } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
@@ -64,9 +64,7 @@ async function readRows(
   return result.results ?? [];
 }
 
-export const handleNonUsdShare = withErrorHandler(
-  "non-usd-share",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Response> => {
     const days = parseClampedIntegerParam(url.searchParams.get("days"), DEFAULT_DAYS, MIN_DAYS, MAX_DAYS, {
       zeroAsDefault: true,
     });
@@ -132,6 +130,5 @@ export const handleNonUsdShare = withErrorHandler(
             API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
           );
 
-    return jsonResponse(points, headers);
-  },
-);
+    return jsonResponseWithHeaders(points, headers);
+  };

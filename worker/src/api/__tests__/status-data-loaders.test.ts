@@ -88,7 +88,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, "cg-test-key");
+    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         checkedAt: number;
@@ -210,7 +210,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, "cg-test-key");
+    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         trackedWithGeckoId: number;
@@ -272,7 +272,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, "cg-test-key");
+    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: unknown;
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
@@ -345,10 +345,15 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, {
-      CLOUDFLARE_ACCOUNT_ID: "acct-123",
-      CLOUDFLARE_D1_STATUS_API_TOKEN: "cf-token",
-      CLOUDFLARE_D1_DATABASE_ID: "db-123",
+    const res = await handleStatus({
+      db,
+      trustedAdmin: true,
+      request,
+      cloudflareD1StatusBindings: {
+        CLOUDFLARE_ACCOUNT_ID: "acct-123",
+        CLOUDFLARE_D1_STATUS_API_TOKEN: "cf-token",
+        CLOUDFLARE_D1_DATABASE_ID: "db-123",
+      },
     });
     const body = (await res.json()) as {
       d1Usage: {
@@ -407,10 +412,15 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, {
-      CLOUDFLARE_ACCOUNT_ID: "acct-123",
-      CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
-      CLOUDFLARE_D1_DATABASE_ID: "db-123",
+    const res = await handleStatus({
+      db,
+      trustedAdmin: true,
+      request,
+      cloudflareD1StatusBindings: {
+        CLOUDFLARE_ACCOUNT_ID: "acct-123",
+        CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
+        CLOUDFLARE_D1_DATABASE_ID: "db-123",
+      },
     });
     const body = (await res.json()) as {
       d1Usage: unknown;
@@ -500,7 +510,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, "cg-test-key");
+    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         trackedWithGeckoId: number;
@@ -579,7 +589,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -644,7 +654,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -707,7 +717,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       datasetFreshness: {
         blacklist: number | null;
@@ -738,7 +748,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, "coingecko-key");
+    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "coingecko-key" });
     const body = (await res.json()) as {
       sectionErrors: { coingeckoPriceDiff?: { code: string; message: string } };
       coingeckoPriceDiff: unknown;
@@ -766,7 +776,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -805,7 +815,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -852,7 +862,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = (await res.json()) as {
       dataQualityStatus: string;
       reserveComposition: { status: string };

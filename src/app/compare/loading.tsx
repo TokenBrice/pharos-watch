@@ -4,7 +4,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 // Power-user tier: coin-selector strip, radar + comparison chart pair,
 // then comparison table. Matches the dynamic chart placeholders used
 // by compare/client.tsx.
-export default function Loading() {
+export function CompareLoadingState() {
   return (
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       <div className="space-y-2.5">
@@ -37,4 +37,8 @@ export default function Loading() {
       <ChartSkeleton className="h-[340px] rounded-xl" />
     </div>
   );
+}
+
+export default function Loading() {
+  return <CompareLoadingState />;
 }

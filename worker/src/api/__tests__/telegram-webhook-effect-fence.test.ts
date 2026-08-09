@@ -1,11 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { executeAtomicBatch } from "../../lib/db";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   TelegramWebhookEffectFence,
+  buildMutationOperations,
   createTelegramWebhookIntent,
 } from "../telegram-webhook-effect-fence";
 import { acquireTelegramCommandCooldown, claimTelegramProcessedUpdate } from "../telegram-webhook-store";
@@ -272,5 +273,156 @@ describe("TelegramWebhookEffectFence", () => {
       nowSec: NOW + 300,
       cooldownSec: 20,
     })).resolves.toEqual({ allowed: true, retryAfterSec: 0 });
+  });
+});
+
+describe("buildMutationOperations", () => {
+  const fixtures: DatabaseSync[] = [];
+  afterEach(() => {
+    while (fixtures.length > 0) fixtures.pop()?.close();
+  });
+
+  async function plannedFence(updateId: number): Promise<{
+    sqlite: DatabaseSync;
+    db: D1Database;
+    fence: TelegramWebhookEffectFence;
+  }> {
+    const { sqlite, db } = createFixture();
+    fixtures.push(sqlite);
+    insertClaim(sqlite, updateId, "owner-1");
+    const fence = new TelegramWebhookEffectFence(db, updateId, { owner: "owner-1", generation: 1 }, undefined, null);
+    await fence.plan(createTelegramWebhookIntent("command:/set", { scope: "all" }, "required"));
+    return { sqlite, db, fence };
+  }
+
+  it("degrades every member to a no-op when the update proceeds without a fence", async () => {
+    const beforeIrreversibleEffect = vi.fn(async () => undefined);
+    const operations = buildMutationOperations(null, { beforeIrreversibleEffect });
+
+    expect(operations.prepareMutationAppliedStatement).toBeUndefined();
+    expect(operations.preparePendingMutationAppliedStatement).toBeUndefined();
+    expect(operations.prepareMutationOperationStatements).toBeUndefined();
+    expect(operations.storedIntent).toBeNull();
+    expect(operations.wasMutationApplied).toBe(false);
+
+    // The callable members must resolve rather than throw: a fence-less update
+    // still walks the same handler code path.
+    await expect(operations.planIntent(createTelegramWebhookIntent("command:/help", {}))).resolves.toBeUndefined();
+    expect(() => operations.confirmAtomicMutationApplied()).not.toThrow();
+    await expect(operations.markMutationApplied()).resolves.toBeUndefined();
+
+    await operations.beforeIrreversibleEffect("command-reply");
+    expect(beforeIrreversibleEffect).toHaveBeenCalledExactlyOnceWith("command-reply");
+  });
+
+  it("binds the statement builders and the intent snapshot to the fence when one is present", async () => {
+    const { sqlite, db, fence } = await plannedFence(20);
+    const operations = buildMutationOperations(fence, { beforeIrreversibleEffect: async () => undefined });
+
+    expect(operations.storedIntent).toEqual(
+      createTelegramWebhookIntent("command:/set", { scope: "all" }, "required"),
+    );
+    expect(operations.wasMutationApplied).toBe(false);
+
+    await executeAtomicBatch(db, [
+      db.prepare("UPDATE domain_state SET value = 'after' WHERE id = 1"),
+      operations.prepareMutationAppliedStatement!(),
+    ]);
+    operations.confirmAtomicMutationApplied();
+
+    expect(fence.wasMutationApplied).toBe(true);
+    // The adapter's own field is a build-time snapshot, not a live view of the
+    // fence — handlers read it before deciding whether to replay.
+    expect(operations.wasMutationApplied).toBe(false);
+    expect(sqlite.prepare("SELECT value FROM domain_state WHERE id = 1").get()).toEqual({ value: "after" });
+    expect(
+      sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 20").get(),
+    ).not.toEqual({ mutation_applied_at: null });
+  });
+
+  it("routes planIntent and markMutationApplied through the fence", async () => {
+    const { sqlite, fence } = await plannedFence(21);
+    const operations = buildMutationOperations(fence, { beforeIrreversibleEffect: async () => undefined });
+
+    // A retry that re-plans the identical intent is resumable; a divergent one is not.
+    await expect(
+      operations.planIntent(createTelegramWebhookIntent("command:/set", { scope: "all" }, "required")),
+    ).resolves.toBeUndefined();
+    await expect(
+      operations.planIntent(createTelegramWebhookIntent("command:/set", { scope: "one" }, "required")),
+    ).rejects.toThrow("does not match the stored operation intent");
+
+    await operations.markMutationApplied();
+    expect(fence.wasMutationApplied).toBe(true);
+    expect(
+      sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 21").get(),
+    ).not.toEqual({ mutation_applied_at: null });
+
+    // Second call is a no-op rather than a second marker write.
+    await expect(operations.markMutationApplied()).resolves.toBeUndefined();
+  });
+
+  it("prepares the pending-disambiguation marker statement from the fence", async () => {
+    const { sqlite, db, fence } = await plannedFence(22);
+    const operations = buildMutationOperations(fence, { beforeIrreversibleEffect: async () => undefined });
+
+    sqlite.prepare(`
+      INSERT INTO telegram_pending_disambiguation (
+        chat_id, action_type, action_payload, alert_types, resolved_ids,
+        ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id
+      ) VALUES ('42', 'subscribe', '{}', '[]', '[]', '', '[]', '[]', 200, NULL)
+    `).run();
+
+    await executeAtomicBatch(db, [
+      operations.preparePendingMutationAppliedStatement!({
+        chatId: "42",
+        actionType: "subscribe",
+        actionPayload: "{}",
+        expiresAt: 200,
+      }),
+    ]);
+
+    expect(
+      sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 22").get(),
+    ).not.toEqual({ mutation_applied_at: null });
+  });
+
+  it.each([
+    { label: "no fence and no folded-batch builder", withFence: false, withStatements: false },
+    { label: "no fence but a folded-batch builder", withFence: false, withStatements: true },
+    { label: "a fence but no folded-batch builder", withFence: true, withStatements: false },
+  ])(
+    "leaves prepareMutationOperationStatements undefined with $label",
+    async ({ withFence, withStatements }) => {
+      const fence = withFence ? (await plannedFence(30)).fence : null;
+      const operations = buildMutationOperations(fence, {
+        beforeIrreversibleEffect: async () => undefined,
+        ...(withStatements ? { mutationOperationStatements: () => [] } : {}),
+      });
+      expect(operations.prepareMutationOperationStatements).toBeUndefined();
+    },
+  );
+
+  it("folds the caller's extra statements into one batch when both a fence and a builder exist", async () => {
+    const { sqlite, db, fence } = await plannedFence(31);
+    const operations = buildMutationOperations(fence, {
+      beforeIrreversibleEffect: async () => undefined,
+      mutationOperationStatements: (boundFence) => [
+        db.prepare("UPDATE domain_state SET value = 'folded' WHERE id = 1"),
+        boundFence.prepareMutationAppliedStatement(NOW + 1),
+      ],
+    });
+
+    expect(operations.prepareMutationOperationStatements).toBeDefined();
+    const statements = operations.prepareMutationOperationStatements!();
+    expect(statements).toHaveLength(2);
+
+    await executeAtomicBatch(db, statements);
+    operations.confirmAtomicMutationApplied();
+
+    expect(sqlite.prepare("SELECT value FROM domain_state WHERE id = 1").get()).toEqual({ value: "folded" });
+    expect(
+      sqlite.prepare("SELECT mutation_applied_at FROM telegram_processed_updates WHERE update_id = 31").get(),
+    ).toEqual({ mutation_applied_at: NOW + 1 });
   });
 });

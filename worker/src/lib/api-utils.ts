@@ -18,6 +18,7 @@ export {
   cacheControlForDegradedPayload,
   jsonFreshResponse,
   jsonResponse,
+  jsonResponseWithHeaders,
   respondWithFreshSnapshot,
   withResponseHeaders,
   withErrorHandler,

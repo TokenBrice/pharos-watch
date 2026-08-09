@@ -4,7 +4,7 @@ import type {
   MintAuthorityDetailViewModel,
   StablecoinDetailCoinMeta,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-import type { QueryViewState } from "@/lib/query-view-state";
+import type { GatedQueryViewState } from "@/lib/query-view-state";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -112,7 +112,7 @@ export interface StablecoinDetailStaleQuery {
   meta: ApiMeta | null;
 }
 
-export type StablecoinDetailFeatureStatus = QueryViewState | "unsupported" | "deferred";
+export type StablecoinDetailFeatureStatus = GatedQueryViewState;
 
 export interface StablecoinDetailFeatureState {
   status: StablecoinDetailFeatureStatus;

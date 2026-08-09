@@ -1,3 +1,5 @@
+import { mergeAbortSignals, staticAbortSignal, type MergedAbortSignal } from "@shared/lib/abort-signals";
+
 export const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
 export function normalizeRequestTimeoutMs(timeoutMs: number | null | undefined): number | null {
@@ -8,30 +10,19 @@ export function normalizeRequestTimeoutMs(timeoutMs: number | null | undefined):
 
 export type RequestSignalPolicy = "explicit-over-init" | "compose";
 
+/**
+ * Resolve the signal a request should carry. Callers must `dispose()` the
+ * result once the request settles — under the `"compose"` policy the merge can
+ * hold listeners on the caller's signals until then.
+ */
 export function resolveRequestSignal(
   initSignal: AbortSignal | null | undefined,
   explicitSignal: AbortSignal | null | undefined,
   policy: RequestSignalPolicy,
-): AbortSignal | undefined {
+): MergedAbortSignal {
   if (policy === "explicit-over-init") {
-    return explicitSignal ?? initSignal ?? undefined;
+    return staticAbortSignal(explicitSignal ?? initSignal ?? undefined);
   }
 
-  const signals = [initSignal, explicitSignal].filter((signal): signal is AbortSignal => signal != null);
-  if (signals.length === 0) return undefined;
-  if (signals.length === 1) return signals[0];
-  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
-
-  const controller = new AbortController();
-  const abort = (source: AbortSignal) => {
-    if (!controller.signal.aborted) controller.abort(source.reason);
-  };
-  for (const source of signals) {
-    if (source.aborted) {
-      abort(source);
-      break;
-    }
-    source.addEventListener("abort", () => abort(source), { once: true });
-  }
-  return controller.signal;
+  return mergeAbortSignals([initSignal, explicitSignal]);
 }

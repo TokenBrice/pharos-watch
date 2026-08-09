@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 
 function shareLabel(row: FailureDomainRow): string {
   if (row.exposureShare === null) return "Unquantified";
@@ -22,7 +24,7 @@ function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
           {row.adjustmentPoints > 0 ? (
             <Badge
               variant="outline"
-              className="h-5 rounded-full border-rose-500/25 bg-rose-500/12 px-2 text-[10px] font-medium text-rose-700 dark:text-rose-400"
+              className={cn("h-5 rounded-full px-2 text-[10px] font-medium", SEVERITY_TONE_CLASS.rose.pill)}
             >
               −{row.adjustmentPoints.toFixed(1)}
             </Badge>

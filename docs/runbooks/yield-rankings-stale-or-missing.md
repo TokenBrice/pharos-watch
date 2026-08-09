@@ -20,19 +20,22 @@ Yield Intelligence rankings, PYS, source provenance, and detail-page yield panel
 2. **Access-gated status:** `https://ops.pharos.watch/admin/` -> Crons -> `sync-yield-data`; also inspect Endpoint probes for `/api/yield-rankings`.
 3. **Machine status:** `GET https://ops-api.pharos.watch/api/status` with Cloudflare Access service-token headers.
 4. **Public API:** `GET https://api.pharos.watch/api/yield-rankings`.
-5. **Source decisions:** `GET https://ops-api.pharos.watch/api/yield-source-decisions?limit=10`; add `&generationId=<generation_id>&stablecoin=<stablecoin_id>` to inspect selected/rejected source evidence for one asset.
+5. **Source decisions:** see [Source Decision Evidence](#source-decision-evidence) below for the generation and per-asset decision queries.
 
-## Source Decision Debug Endpoint
+## Source Decision Evidence
 
-Use the admin-only read path before direct SQL for routine generation/source checks:
+`GET /api/yield-source-decisions`, the admin-only read path that joined generations and decisions in one response, was retired on 2026-08-09. Every table it read is unchanged and still written by each publication run, so the same evidence is assembled from the `yield_publication_generations` and `yield_source_decisions` snippets in [Read-Only D1 Snippets](#read-only-d1-snippets) below, plus the typed alternates for one asset:
 
-```text
-GET https://ops-api.pharos.watch/api/yield-source-decisions?limit=10
-GET https://ops-api.pharos.watch/api/yield-source-decisions?state=failed&limit=5
-GET https://ops-api.pharos.watch/api/yield-source-decisions?generationId=<generation_id>&stablecoin=<stablecoin_id>
+```sql
+SELECT generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+       alt_apy30d_delta, rejection_reason_code, recorded_at
+FROM yield_source_decision_alternatives
+WHERE stablecoin_id = '<stablecoin_id>'
+  AND generation_id = '<generation_id>'
+ORDER BY recorded_at DESC, alt_source_key ASC;
 ```
 
-The endpoint is Cloudflare-Access-gated, `no-store`, read-only, and excluded from public OpenAPI/Postman artifacts. It returns recent `yield_publication_generations` summaries plus compact selected-source and alternate/rejected-source evidence from `yield_source_decisions` when `stablecoin` is supplied. Bounds are intentionally small: `limit` and `decisionLimit` accept `1..25`.
+Filter generations by `state IN ('staged', 'published', 'failed')` to reproduce the endpoint's `state` filter. Keep result sets small; the retired endpoint capped both generation and decision reads at 25 rows for a reason.
 
 ## Read-Only D1 Snippets
 
@@ -100,7 +103,12 @@ The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per 
 ## Remediation
 
 - If `sync-yield-data` is stale but not leased, wait for the next hourly `20 * * * *` run if the last failure was transient.
-- If the cron is repeatedly `skipped_locked`, confirm the lease is stale before calling `POST https://ops-api.pharos.watch/api/reset-cron-lease?job=sync-yield-data` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
+- If the cron is repeatedly `skipped_locked`, confirm the lease is stale, then delete it directly. `POST /api/reset-cron-lease` was retired on 2026-08-09; the delete below is exactly what it ran.
+
+  ```bash
+  npx --no-install wrangler d1 execute stablecoin-db --remote --command \
+    "DELETE FROM cron_leases WHERE job = 'sync-yield-data';"
+  ```
 - If metadata shows `reason: "previous-yield-rankings-cache-invalid"` or publication guard failure, do not delete the cache blindly. Preserve the last good payload for rollback/debugging and identify whether the failure came from payload schema, severe shrink, duplicate ranking IDs, or a generation `failure_reason`.
 - If the degraded reason points to benchmarks, use [`yield-benchmark-fallback-stale.md`](./yield-benchmark-fallback-stale.md).
 - If the degraded reason points to deterministic on-chain cooldown or all-fail state, use [`yield-deterministic-cooldown.md`](./yield-deterministic-cooldown.md).

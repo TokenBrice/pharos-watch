@@ -232,6 +232,7 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "launchDate": "2022-11-01",
   "status": "quarantined",
   "listingStatusReview": {

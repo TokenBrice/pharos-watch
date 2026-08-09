@@ -253,6 +253,7 @@
     }
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

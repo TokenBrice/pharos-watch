@@ -1,4 +1,5 @@
 import { ApiFetchError } from "@/lib/api";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 
 export interface ReserveNoticeModel {
@@ -41,7 +42,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve refresh delayed",
       message: "Showing the last worker-resolved reserve snapshot while refresh retries.",
-      toneClass: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      toneClass: SEVERITY_TONE_CLASS.watch.pill,
     };
   }
 
@@ -49,7 +50,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing curated reserve baseline.",
-      toneClass: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      toneClass: SEVERITY_TONE_CLASS.watch.pill,
     };
   }
 
@@ -57,7 +58,7 @@ export function buildReserveFetchNotice(
     return {
       title: "Live reserve feed unavailable",
       message: "Unable to load the live reserve feed right now. Showing the estimated reserve template.",
-      toneClass: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      toneClass: SEVERITY_TONE_CLASS.watch.pill,
     };
   }
 
@@ -67,7 +68,7 @@ export function buildReserveFetchNotice(
       message: hasFallbackView
         ? "The live reserve feed has not been populated yet. Showing the current fallback view."
         : "The live reserve feed has not been populated yet. Please check back shortly.",
-      toneClass: "border-border/60 bg-muted/40 text-muted-foreground",
+      toneClass: SEVERITY_TONE_CLASS.neutral.pill,
     };
   }
 
@@ -78,7 +79,7 @@ export function buildReserveFetchNotice(
         ? "Unable to reach the live reserve API. Showing the current fallback view."
         : "Unable to reach the live reserve API right now. Please check your connection and try again.",
       toneClass: hasFallbackView
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+        ? SEVERITY_TONE_CLASS.watch.pill
         : "border-destructive/50 bg-destructive/10 text-destructive",
     };
   }
@@ -91,7 +92,7 @@ export function buildReserveFetchNotice(
         ? error.message
         : "Unable to load reserve composition right now.",
     toneClass: hasFallbackView
-      ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      ? SEVERITY_TONE_CLASS.watch.pill
       : "border-destructive/50 bg-destructive/10 text-destructive",
   };
 }
@@ -272,6 +273,6 @@ export function buildReserveSyncNotice(
     rows,
     toneClass: sync.status === "error"
       ? "border-destructive/50 bg-destructive/10 text-destructive"
-      : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+      : SEVERITY_TONE_CLASS.watch.pill,
   };
 }

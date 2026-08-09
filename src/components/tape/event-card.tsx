@@ -29,10 +29,12 @@ import {
   deviationBgClass,
   deviationColorClass,
 } from "@/lib/severity-colors";
+import { eventClassSlug } from "@/lib/tape-collapse";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
-import { deriveTicker, formatAbsoluteDate } from "@/lib/tape-derive";
+import { baseEventType, deriveTicker, firstSentence, formatAbsoluteDate } from "@/lib/tape-derive";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
-import { formatCompactUsd } from "@shared/lib/format";
+import { formatCompactUsd, formatUtcDayLabel, getNetPrefix } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
   SEVERITY_LABEL_INCLUSIVE,
@@ -55,11 +57,6 @@ export const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
   critical: "[X]",
 };
 
-function eventClass(type: string): string {
-  const dot = type.indexOf(".");
-  return dot === -1 ? type : type.slice(0, dot);
-}
-
 interface ClassIconProps {
   type: string;
   className?: string;
@@ -68,7 +65,7 @@ interface ClassIconProps {
 // Per-class icon. Inline rather than via a registry so React doesn't see a
 // component re-created on every render (eslint react-hooks/static-components).
 function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
-  switch (eventClass(type)) {
+  switch (eventClassSlug(type)) {
     case "depeg":       return <TrendingDown className={className} aria-hidden="true" />;
     case "freeze":      return <Lock className={className} aria-hidden="true" />;
     case "redemption":  return <ArrowLeftRight className={className} aria-hidden="true" />;
@@ -92,16 +89,7 @@ function formatHhMm(tsMs: number): string {
 }
 
 function humanizeEventType(type: string): string {
-  const base = type.split(":")[0];
-  return base.replace(/[._]/g, " ");
-}
-
-function firstSentence(summary: string): string {
-  const trimmed = summary.trim();
-  if (trimmed.length === 0) return "";
-  const match = trimmed.match(/^[^.!?]+[.!?]/);
-  const sentence = match ? match[0] : trimmed;
-  return sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
+  return baseEventType(type).replace(/[._]/g, " ");
 }
 
 // Resolve a canonical coin id for rendering the stablecoin logo. Freeze
@@ -181,7 +169,7 @@ const SCORE_PILL_CLASS =
   "inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums";
 
 function formatSignedDelta(value: number, formatted = String(value)): string {
-  return value > 0 ? `+${formatted}` : formatted;
+  return `${getNetPrefix(value)}${formatted}`;
 }
 
 function renderDeltaPills(
@@ -220,9 +208,7 @@ function ScoreEnrichment({ event }: { event: TapeEvent }) {
   const newScore = typeof p.newScore === "number" ? p.newScore : null;
   const isUpgrade = event.type === "score.upgraded";
   const ArrowIcon = isUpgrade ? TrendingUp : TrendingDown;
-  const arrowColor = isUpgrade
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-red-600 dark:text-red-400";
+  const arrowColor = isUpgrade ? SEVERITY_TONE_CLASS.ok.text : SEVERITY_TONE_CLASS.alert.text;
   return renderDeltaPills(
     prev,
     next,
@@ -246,9 +232,7 @@ function BandTransitionEnrichment({ event }: { event: TapeEvent }) {
   const newScore = typeof p.newScore === "number" ? p.newScore : null;
   const isEscalation = event.type.endsWith(".shifted_down") || event.type === "dews.escalated";
   const ArrowIcon = isEscalation ? TrendingDown : TrendingUp;
-  const arrowColor = isEscalation
-    ? "text-red-600 dark:text-red-400"
-    : "text-emerald-600 dark:text-emerald-400";
+  const arrowColor = isEscalation ? SEVERITY_TONE_CLASS.alert.text : SEVERITY_TONE_CLASS.ok.text;
   return renderDeltaPills(
     prev,
     next,
@@ -267,7 +251,7 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
     const next = typeof p?.newScore === "number" ? p.newScore : null;
     if (prev == null || next == null) return null;
     const delta = next - prev;
-    const arrowColor = "text-red-600 dark:text-red-400";
+    const arrowColor = SEVERITY_TONE_CLASS.alert.text;
     return renderDeltaPills(
       Math.round(prev),
       Math.round(next),
@@ -276,7 +260,7 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
       arrowColor,
       undefined,
       formatSignedDelta(delta, String(Math.round(delta))),
-      "text-red-600 dark:text-red-400",
+      SEVERITY_TONE_CLASS.alert.text,
     );
   }
   // yield.warning_emitted
@@ -405,7 +389,7 @@ function formatAbsoluteDay(value: string): string | null {
     return null;
   }
   const date = new Date(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)));
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return formatUtcDayLabel(date);
 }
 
 function LifecycleEnrichment({ event }: { event: TapeEvent }) {
@@ -425,7 +409,7 @@ function LifecycleEnrichment({ event }: { event: TapeEvent }) {
 }
 
 function EventCardEnrichment({ event }: { event: TapeEvent }) {
-  switch (eventClass(event.type)) {
+  switch (eventClassSlug(event.type)) {
     case "depeg":       return <DepegEnrichment event={event} />;
     case "score":       return <ScoreEnrichment event={event} />;
     case "methodology": return <MethodologyEnrichment event={event} />;

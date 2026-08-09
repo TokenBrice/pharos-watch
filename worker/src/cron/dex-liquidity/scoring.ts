@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import {
   buildP4DexExitRouteObservations,
   type P4DexRouteObservationResult,
@@ -170,8 +171,10 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
   return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
 }
 
-export const V9_DEX_STRESS_NOTIONAL_USD = 25_000_000;
-export const V9_DEX_STRESS_MAX_COST_BPS = 200;
+// Named views of the one exit scoring engine's stress request, not a
+// third copy of the same numbers.
+export const V9_DEX_STRESS_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.capUsd;
+export const V9_DEX_STRESS_MAX_COST_BPS = EXIT_ROUTE_SCORING_TABLES.request.maxCostBps;
 const MAX_ROUTES_PER_CHAIN = 6;
 const MAX_ROUTES_PER_PROTOCOL = 3;
 const MAX_ROUTES_PER_ADAPTER = 3;

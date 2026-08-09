@@ -48,6 +48,7 @@ import {
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import type { TelegramWebhookOperationIntent } from "../telegram-webhook-store";
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
+import type { WebhookCommandContext } from "./context";
 
 export interface TelegramActionContext {
   db: D1Database;
@@ -69,6 +70,34 @@ export interface TelegramActionContext {
   storedIntent?: TelegramWebhookOperationIntent | null;
   wasMutationApplied?: boolean;
   operationNowSec?: number;
+}
+
+/**
+ * Projects a command context onto the action-runner context. The mutation
+ * members are the effect-fence adapter built once in the update dispatcher, so
+ * every command handler forwards the same bag instead of re-listing it.
+ */
+export function buildTelegramActionContext(
+  ctx: WebhookCommandContext,
+  overrides: { username?: string | null } = {},
+): TelegramActionContext {
+  return {
+    db: ctx.db,
+    chatId: ctx.chatId,
+    username: ctx.username,
+    initiatorUserId: ctx.actorUserId,
+    beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
+    planIntent: ctx.planIntent,
+    prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
+    prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
+    preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
+    confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
+    markMutationApplied: ctx.markMutationApplied,
+    storedIntent: ctx.storedIntent,
+    wasMutationApplied: ctx.wasMutationApplied,
+    operationNowSec: ctx.operationNowSec,
+    ...overrides,
+  };
 }
 
 async function prepareActionMutation(

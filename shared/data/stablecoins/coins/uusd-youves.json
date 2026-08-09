@@ -702,6 +702,7 @@
     "reviewedAt": "2026-08-08"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "USDt (Tether on Tezos)",

@@ -1,46 +1,11 @@
 import { bytesToHex } from "./hash";
-import { IsolateLocalState } from "./isolate-local-state";
+import type { MinimalD1Database } from "./minimal-d1";
 
-interface RateLimitRunResult {
-  meta?: { changes?: number };
-}
-
-interface RateLimitStatement {
-  bind(...values: unknown[]): RateLimitStatement;
-  run(): Promise<RateLimitRunResult>;
-  first<T>(): Promise<T | null>;
-}
-
-interface RateLimitDb {
-  prepare(query: string): RateLimitStatement;
-}
+type RateLimitDb = MinimalD1Database;
 
 export interface FeedbackRateLimitReservation {
   ipHash: string;
   submittedAt: number;
-}
-
-const _rl = new IsolateLocalState(() => ({
-  feedbackPruneFailures: 0,
-  pendingFeedbackPrune: null as Promise<void> | null,
-}));
-
-/**
- * Flush any pending rate-limit prune promises.
- * Call via `ctx.waitUntil(flushPendingPrunes())` in the main fetch handler
- * so isolate shutdown doesn't abort in-flight cleanup.
- */
-export function flushPendingPrunes(): Promise<void> {
-  const promises: Promise<void>[] = [];
-  if (_rl.state.pendingFeedbackPrune) {
-    promises.push(_rl.state.pendingFeedbackPrune);
-    _rl.state.pendingFeedbackPrune = null;
-  }
-  return promises.length > 0 ? Promise.all(promises).then(() => {}) : Promise.resolve();
-}
-
-export function resetRateLimitStateForTests(): void {
-  _rl.reset();
 }
 
 /** Centralized rate-limit and crawl-budget constants for external APIs */
@@ -69,6 +34,7 @@ export async function reserveFeedbackRateLimit(
   salt: string,
   windowSec: number,
   maxSubmissions: number,
+  execCtx?: ExecutionContext,
 ): Promise<FeedbackRateLimitReservation | null> {
   const now = Math.floor(Date.now() / 1000);
   const ipHash = await hashIpWithSalt(ip, salt);
@@ -88,17 +54,18 @@ export async function reserveFeedbackRateLimit(
     return null;
   }
 
-  _rl.state.pendingFeedbackPrune = db
-    .prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
-    .bind(now - 3600)
-    .run()
-    .then(() => {
-      _rl.state.feedbackPruneFailures = 0;
-    })
-    .catch((e) => {
-      _rl.state.feedbackPruneFailures++;
-      console.warn(`[feedback] rate-limit prune failed (${_rl.state.feedbackPruneFailures} consecutive):`, e);
-    });
+  // Handed straight to the request lifetime instead of parked in module state
+  // for a later flush: `waitUntil` already keeps the isolate alive for it.
+  execCtx?.waitUntil(
+    db
+      .prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
+      .bind(now - 3600)
+      .run()
+      .then(() => {})
+      .catch((e) => {
+        console.warn("[feedback] rate-limit prune failed:", e);
+      }),
+  );
 
   return { ipHash, submittedAt: now };
 }

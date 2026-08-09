@@ -114,7 +114,6 @@ describe("runYieldCoverageAudit", () => {
       reason: "safety-score-v9-publication:completeness-mismatch",
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v8",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -127,13 +126,9 @@ describe("runYieldCoverageAudit", () => {
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "safety-snapshot-unavailable:safety-score-v9-publication:completeness-mismatch",
-      expectedModel: "v8",
     });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledOnce();
-    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(expect.anything(), {
-      outputMode: "map",
-      sourceMode: "published-cache",
-    });
+    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(expect.anything());
     expect(mockSetCache).not.toHaveBeenCalled();
   });
 
@@ -158,7 +153,6 @@ describe("runYieldCoverageAudit", () => {
       reason,
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -171,7 +165,6 @@ describe("runYieldCoverageAudit", () => {
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: `safety-snapshot-unavailable:${reason}`,
-      expectedModel: "v9",
       safetyScoreIdentity: null,
     });
     expect(mockSetCache).not.toHaveBeenCalled();
@@ -234,7 +227,6 @@ describe("runYieldCoverageAudit", () => {
       coverageRatio: 1,
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -344,10 +336,7 @@ describe("runYieldCoverageAudit", () => {
           safetySnapshotSource: "safety-score-v9-publication",
         },
       });
-    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(db, {
-      outputMode: "map",
-      sourceMode: "published-cache",
-    });
+    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(db);
     expect(progressUpdates.find((update) => update.stage === "quarantine-probe" && update.itemsDone === 4))
       .toMatchObject({
         metadata: {
@@ -405,7 +394,6 @@ describe("runYieldCoverageAudit", () => {
       coverageRatio: 1,
       scores: new Map(),
       source: "safety-score-v9-publication",
-      expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,

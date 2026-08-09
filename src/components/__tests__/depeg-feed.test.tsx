@@ -3,25 +3,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { DepegFeed } from "@/components/depeg-feed";
+import { installMatchMediaMock } from "@/test-utils/frontend";
 import type { DepegEvent } from "@shared/types";
-import type { ReactNode } from "react";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: { children: ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 beforeEach(() => {
-  window.matchMedia = vi.fn().mockReturnValue({
-    matches: true,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  });
+  installMatchMediaMock(true);
 });
 
 afterEach(cleanup);

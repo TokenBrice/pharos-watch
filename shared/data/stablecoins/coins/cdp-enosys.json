@@ -494,6 +494,7 @@
       ]
     }
   },
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "FXRP",

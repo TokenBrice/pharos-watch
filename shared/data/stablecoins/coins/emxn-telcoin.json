@@ -322,6 +322,7 @@
     }
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Mexican peso fiat reserves for Telcoin Digital Cash",

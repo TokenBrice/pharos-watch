@@ -176,7 +176,7 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
       });
       return null;
     }
-    if (active.kind === "v9") return active.snapshot.updatedAt;
+    if (active.kind !== "error") return active.snapshot.updatedAt;
     logWorkerEvent({
       scope: "status",
       level: "warn",
@@ -186,7 +186,6 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
       message: "Failed to validate the canonical V9 publication for dataset freshness",
       metadata: {
         reason: active.reason,
-        expectedModel: active.expectedModel,
       },
     });
     return null;

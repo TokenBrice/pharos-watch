@@ -178,18 +178,15 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
       {TAPE_CLASSES.map((cls) => {
         const slug = `${cls.slug}.*`;
         const active = activeClassSet.has(slug);
-        const planned = !cls.hasProjector;
         return (
           <button
             key={cls.slug}
             type="button"
             onClick={() => onToggleClass(cls.slug)}
             aria-pressed={active}
-            title={planned ? `${cls.label}: projector ships when the source pipeline matures.` : undefined}
-            className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE} ${planned ? "border-dashed opacity-60" : ""}`}
+            className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
           >
             {cls.label}
-            {planned ? <span className="ml-1 text-muted-foreground/70">·soon</span> : null}
           </button>
         );
       })}

@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { LogIn, RefreshCw } from "lucide-react";
 import type { StatusResponse } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceStatusBoundaryProps {
   data: StatusResponse | undefined;
@@ -40,7 +42,7 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        className="border border-red-500/30 bg-red-500/10 p-5 text-red-800 dark:text-red-200"
+        className={cn("border p-5 text-red-800 dark:text-red-200", SEVERITY_TONE_CLASS.alert.banner)}
       >
         <h2 className="text-base font-semibold">Status data failed to load</h2>
         <p className="mt-2 text-sm">{error.message}</p>
@@ -85,7 +87,7 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className="border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200"
+          className={cn("border px-4 py-3 text-sm text-amber-900 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}
         >
           <span className="font-medium">Status refresh failed.</span> Showing the last successful response.{" "}
           {error.message}

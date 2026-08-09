@@ -268,5 +268,6 @@
       ]
     }
   },
+  "governanceQuality": "single-entity",
   "launchDate": "2025-05-01"
 }

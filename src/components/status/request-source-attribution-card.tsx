@@ -1,7 +1,7 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
-import { PublicSignalCard } from "./public-signal-card";
+import { AttributionBadge, AttributionPanel } from "./attribution-panel";
 
 function formatBucketLabel(bucketStart: number): string {
   return new Date(bucketStart * 1000).toLocaleTimeString("en-US", {
@@ -65,15 +65,9 @@ export function RequestSourceAttributionCard({
   const bucketSizeMinutes = stats ? stats.window.bucketSizeSec / 60 : null;
 
   return (
-    <PublicSignalCard
+    <AttributionPanel
       title="Site vs external demand"
-      titleBadges={
-        stats ? (
-          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {Math.round(stats.window.durationSec / 3600)}h window
-          </span>
-        ) : null
-      }
+      windowHours={stats ? Math.round(stats.window.durationSec / 3600) : null}
       description={
         <>
           Total request demand across same-origin{" "}
@@ -85,27 +79,19 @@ export function RequestSourceAttributionCard({
       }
       badges={
         totals ? (
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300">
-              Site {formatPercent(totals.siteSharePct, 1)}
-            </span>
-            <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              External {formatPercent(totals.externalSharePct, 1)}
-            </span>
-          </div>
+          <>
+            <AttributionBadge tone="sky">Site {formatPercent(totals.siteSharePct, 1)}</AttributionBadge>
+            <AttributionBadge tone="watch">External {formatPercent(totals.externalSharePct, 1)}</AttributionBadge>
+          </>
         ) : null
       }
+      error={error}
+      isLoading={isLoading}
+      hasData={Boolean(totals && siteDelivery)}
+      loadingLabel="Loading request attribution…"
+      emptyLabel="No attribution data yet."
     >
-
-      {error ? (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-          {error}
-        </div>
-      ) : isLoading && !stats ? (
-        <div className="text-sm text-muted-foreground">Loading request attribution…</div>
-      ) : !totals || !siteDelivery ? (
-        <div className="text-sm text-muted-foreground">No attribution data yet.</div>
-      ) : (
+      {totals && siteDelivery ? (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile variant="tile" label="Total demand" value={formatCompactCount(totals.totalRequests)} />
@@ -207,7 +193,7 @@ export function RequestSourceAttributionCard({
             </div>
           </div>
         </div>
-      )}
-    </PublicSignalCard>
+      ) : null}
+    </AttributionPanel>
   );
 }

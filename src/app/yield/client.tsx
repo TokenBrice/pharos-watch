@@ -18,6 +18,8 @@ import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/app/yield/coin-index";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 import { YieldDataHealth } from "@/app/yield/yield-data-health";
 import {
   buildYieldViewModel,
@@ -91,7 +93,7 @@ function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryResponse
       {warnings.map((warning) => (
         <div
           key={`${warning.code}:${warning.message}`}
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+          className={cn("rounded-xl border px-4 py-3 text-sm text-amber-950 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
         >
           <p className="font-medium">{warning.message}</p>
           {warning.reasons && warning.reasons.length > 0 ? (
@@ -131,7 +133,7 @@ function YieldWorkbenchFallbackNotice({ stablecoinId }: { stablecoinId: string |
   return (
     <section
       aria-label="Yield workbench fallback"
-      className="rounded-xl border border-amber-500/35 bg-amber-500/[0.08] px-4 py-3 text-sm text-foreground"
+      className={cn("rounded-xl border px-4 py-3 text-sm text-foreground", SEVERITY_TONE_CLASS.watch.banner)}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p>

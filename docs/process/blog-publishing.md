@@ -11,7 +11,8 @@ notes). Keep posts editorial: what shipped, what's next, and why.
 - **Post bodies:** `src/data/blog/posts/<slug>.md` — Markdown, rendered by
   `src/app/blog/[slug]/page.tsx` (react-markdown, same plugin stack as `/docs`).
 - **Hub:** `src/app/blog/page.tsx` lists posts newest-first.
-- **Feed:** `src/app/feed/blog/route.ts` (+ `blog.xml` re-export) → `/feed/blog.xml`.
+- **Feed:** `src/app/feed/blog.xml/route.ts` → `/feed/blog.xml` (the legacy
+  extensionless `/feed/blog` path is a `_redirects` 301).
 - **Homepage banner:** `src/components/home-blog-banner.tsx` advertises the
   latest post for `FRESH_DAYS` (14) after `datePublished`, gated at build time
   (zero client JS — the site's CSP forbids author inline scripts).

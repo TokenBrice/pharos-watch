@@ -6,6 +6,7 @@ import {
 } from "../pricing";
 import { validatePrimaryPriceCandidate } from "../../../lib/price-publish-policy";
 import type { PeggedAsset } from "../enrich-prices";
+import { makePeggedAsset } from "./_fixtures";
 
 vi.mock("../../../lib/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
@@ -15,11 +16,10 @@ vi.mock("../../../lib/price-publish-policy", () => ({
 const validatePrimaryPriceCandidateMock = vi.mocked(validatePrimaryPriceCandidate);
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
+  return makePeggedAsset({
     id: "mkusd-prisma",
     name: "mkUSD",
     symbol: "mkUSD",
-    pegType: "peggedUSD",
     price: 1.0,
     priceSource: "coingecko",
     priceConfidence: "single-source",
@@ -27,7 +27,7 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     priceObservedAtMode: "upstream",
     priceUpdatedAt: 1_799_999_940,
     ...overrides,
-  };
+  });
 }
 
 function makeOverride(overrides: Partial<ProtocolPriceOverride> = {}): ProtocolPriceOverride {

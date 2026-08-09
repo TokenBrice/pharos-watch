@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 interface FreshnessIndicatorProps {
   updatedAtMs: number;
@@ -96,7 +97,7 @@ export function FreshnessIndicator({
               "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
               compact && "min-h-6 rounded-md px-2 py-0 leading-none",
               isStale || isUnavailable
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                ? SEVERITY_TONE_CLASS.watch.pill
                 : "border-border/60 bg-background/60 text-muted-foreground",
               className,
             )}

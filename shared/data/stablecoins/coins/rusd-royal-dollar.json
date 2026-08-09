@@ -231,6 +231,7 @@
     }
   ],
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",

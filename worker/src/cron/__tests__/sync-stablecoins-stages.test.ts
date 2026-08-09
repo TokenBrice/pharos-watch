@@ -80,6 +80,7 @@ import {
 } from "../sync-stablecoins/phase-helpers";
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import { makePrimaryPriceResultFixture } from "../sync-stablecoins/__tests__/_fixtures";
 
 function makePricedAsset(): PeggedAsset {
   return {
@@ -94,21 +95,11 @@ function makePricedAsset(): PeggedAsset {
 }
 
 function makePrimaryPriceResult(syncStartSec: number): PrimaryPriceResult {
-  return {
-    price: 1,
-    source: "coingecko",
-    selectedSource: "coingecko",
-    confidence: "single-source",
-    dlPrice: null,
-    cgPrice: 1,
-    candidateSources: ["coingecko"],
-    agreeSources: ["coingecko"],
-    allPrices: { coingecko: 1 },
+  return makePrimaryPriceResultFixture({
     observedAt: syncStartSec - 30,
-    observedAtMode: "upstream",
     observedAtBySource: { coingecko: syncStartSec - 30 },
     observedAtModeBySource: { coingecko: "upstream" },
-  };
+  });
 }
 
 describe("sync-stablecoins stage helpers", () => {

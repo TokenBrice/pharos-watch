@@ -1,4 +1,5 @@
 import type { StablecoinAiSummary } from "@shared/types";
+import { formatUtcDayLabel } from "@shared/lib/format";
 
 export type AiDisclosureFields = Pick<
   StablecoinAiSummary,
@@ -15,12 +16,7 @@ export function formatAiSummaryDate(rawDate: string): string {
   const [, year, month, day] = match;
   const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return formatUtcDayLabel(date);
 }
 
 export function buildAiDisclosureLine(fields: AiDisclosureFields): string | null {

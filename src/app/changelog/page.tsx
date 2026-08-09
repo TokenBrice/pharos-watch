@@ -9,6 +9,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { changelogs } from "@/data/changelogs";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { formatLongDate } from "@shared/lib/format";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Changelog: What's New on Pharos",
@@ -28,11 +29,7 @@ export default function ChangelogPage() {
     ? new Date(latestEntry.dateRange.to + "T00:00:00").getFullYear()
     : new Date().getFullYear();
   const mastheadDate = latestEntry
-    ? new Date(latestEntry.dateRange.to + "T00:00:00").toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? formatLongDate(new Date(latestEntry.dateRange.to + "T00:00:00"))
     : undefined;
   const changelogJsonLd = safeJsonLd({
     "@context": "https://schema.org",
@@ -62,7 +59,6 @@ export default function ChangelogPage() {
       path="/changelog/"
       title="Changelog"
       variant="longform"
-      containerClassName="mx-auto max-w-3xl"
       preface={(
         <>
           <script

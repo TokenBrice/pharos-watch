@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
+import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 
 vi.mock("next/image", () => ({
   default: ({ alt, ...props }: { alt: string; src: string; width: number; height: number; className?: string }) => (
@@ -18,16 +19,12 @@ const SCREENSHOTS = [
 ] as const;
 
 afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
+  cleanupFrontendTest();
 });
 
 describe("MiniAppScreenshotCarousel", () => {
   it("keeps narrow-screen controls wrap-safe and at least 44px", () => {
-    vi.stubGlobal(
-      "matchMedia",
-      vi.fn(() => ({ matches: false })),
-    );
+    installMatchMediaMock();
     render(<MiniAppScreenshotCarousel screenshots={SCREENSHOTS} />);
 
     const pause = screen.getByRole("button", { name: "Pause Mini App screenshots" });

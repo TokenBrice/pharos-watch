@@ -9,7 +9,7 @@ import {
 } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
-import { runWithOverloadRetry } from "./d1-overload-retry";
+import { getCache } from "./db-cache";
 import { executeAtomicBatch } from "./db";
 import { parseJson } from "./json-parse";
 import {
@@ -166,24 +166,14 @@ export async function loadSafetyScoreV9PublicationHealth(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<V9PublicationHealth | null> {
-  throwIfAborted(signal);
-  const row = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)
-        .first<{ value: string; updated_at: number }>(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
+  const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, signal);
   if (!row) return null;
   const health = parseCanonicalJson(
     row.value,
     V9PublicationHealthSchema,
     "Safety Score v9 publication health",
   );
-  if (row.updated_at !== health.attemptedAtSec) {
+  if (row.updatedAt !== health.attemptedAtSec) {
     throw new Error(
       "Safety Score v9 publication health cache timestamp mismatch",
     );
@@ -196,24 +186,14 @@ async function loadSafetyScoreV9PublicationAttemptAtKey(
   key: string,
   signal?: AbortSignal,
 ): Promise<V9PublicationAttempt | null> {
-  throwIfAborted(signal);
-  const row = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .bind(key)
-        .first<{ value: string; updated_at: number }>(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
+  const row = await getCache(db, key, signal);
   if (!row) return null;
   const attempt = parseCanonicalJson(
     row.value,
     V9PublicationAttemptSchema,
     "Safety Score v9 publication attempt",
   );
-  if (row.updated_at !== attempt.attemptedAtSec) {
+  if (row.updatedAt !== attempt.attemptedAtSec) {
     throw new Error(
       "Safety Score v9 publication attempt cache timestamp mismatch",
     );
@@ -247,17 +227,7 @@ export async function loadSafetyScoreV9Publication(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<SafetyScoreV9CurrentResponse | null> {
-  throwIfAborted(signal);
-  const row = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare("SELECT value FROM cache WHERE key = ?")
-        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
-        .first<{ value: string }>(),
-    3,
-    signal,
-  );
-  throwIfAborted(signal);
+  const row = await getCache(db, SAFETY_SCORE_V9_CACHE_KEYS.publication, signal);
   if (!row) return null;
   return parseSafetyScoreV9Publication(row.value, signal);
 }

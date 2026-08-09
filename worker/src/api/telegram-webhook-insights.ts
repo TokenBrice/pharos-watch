@@ -33,9 +33,9 @@ function truncate(text: string, max = 220): string {
 function expectedV9UnavailableText(
   activeSource: ActiveSafetyScoreSource,
 ): string {
-  return activeSource.kind === "v9"
-    ? "expected model V9"
-    : `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`;
+  return activeSource.kind === "error"
+    ? `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`
+    : "expected model V9";
 }
 
 export async function buildBriefMessage(db: D1Database): Promise<string> {
@@ -233,7 +233,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
       const safetyScores: Record<string, number> = {};
-      if (activeSource.kind === "v9") {
+      if (activeSource.kind !== "error") {
         for (const card of activeSource.snapshot.cards) {
           if (card.score !== null) safetyScores[card.id] = card.score;
         }
@@ -254,13 +254,13 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         (row, i) =>
           `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
       );
-      return activeSource.kind === "v9"
+      return activeSource.kind !== "error"
         ? message
         : `${message}\n${escapeHtml(`Chain health unavailable; ${expectedV9UnavailableText(activeSource)}.`)}`;
     }
     case "safety": {
       const source = await loadActiveSafetyScoreSource(db);
-      if (source.kind !== "v9") {
+      if (source.kind === "error") {
         return "Safety scores are temporarily unavailable.";
       }
       const cards = source.snapshot.cards
@@ -290,7 +290,7 @@ function formatTopRows<T>(title: string, rows: readonly T[], render: (row: T, in
 
 export async function buildWhyMessage(db: D1Database, stablecoinId: string): Promise<string> {
   const source = await loadActiveSafetyScoreSource(db);
-  if (source.kind !== "v9") {
+  if (source.kind === "error") {
     return "Safety Score is temporarily unavailable.";
   }
   const card = source.snapshot.cards.find((candidate) => candidate.id === stablecoinId);

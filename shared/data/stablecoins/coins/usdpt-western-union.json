@@ -203,6 +203,7 @@
     }
   ],
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "contracts": [
     {
       "chain": "solana",

@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { CASE_STUDIES, CASE_STUDY_LIST, getCaseStudy } from "../content";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { CaseStudyBody } from "../case-study-body";
-import { CaseStudyPageShell } from "../case-study-page-shell";
+import { LearnPageShell } from "../../_shared/learn-page-shell";
 
 const CASE_STUDY_SLUGS = new Set(CASE_STUDY_LIST.map((study) => study.slug));
 
@@ -44,7 +44,7 @@ export default async function CaseStudyPage({
   const study = getCaseStudy(slug)!;
 
   return (
-    <CaseStudyPageShell
+    <LearnPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Case Studies", url: "/learn/case-studies/" },
@@ -53,9 +53,10 @@ export default async function CaseStudyPage({
       title={study.title}
       subtitle={study.subtitle}
       leadParagraphs={study.lead}
+      titleClassName="max-w-[24ch]"
     >
       <CaseStudyArticleJsonLd study={study} />
       <CaseStudyBody study={study} />
-    </CaseStudyPageShell>
+    </LearnPageShell>
   );
 }

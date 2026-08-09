@@ -4,7 +4,9 @@ import { StatTile } from "@/components/stat-tile";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { StatusPill } from "./severity-pill";
-import { PublicSignalCard } from "./public-signal-card";
+import { AttributionBadge, AttributionPanel } from "./attribution-panel";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { cn } from "@/lib/utils";
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"
@@ -27,15 +29,9 @@ export function ApiKeyLoadTable({
   const windowHours = stats ? Math.round(stats.window.durationSec / 3600) : null;
 
   return (
-    <PublicSignalCard
+    <AttributionPanel
       title="API Key Load"
-      titleBadges={
-        windowHours != null ? (
-          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {windowHours}h window
-          </span>
-        ) : null
-      }
+      windowHours={windowHours}
       description={
         <>
           Authenticated API-key requests on the public{" "}
@@ -55,27 +51,22 @@ export function ApiKeyLoadTable({
       }
       badges={
         summary ? (
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300">
-              Keyed {formatPercent(summary.keyedSharePct, 1)}
-            </span>
-            <span className="rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+          <>
+            <AttributionBadge tone="sky">Keyed {formatPercent(summary.keyedSharePct, 1)}</AttributionBadge>
+            <AttributionBadge>
               {formatCompactCount(summary.keyedRequests)} / {formatCompactCount(summary.totalRequests)} public-api
               requests
-            </span>
-          </div>
+            </AttributionBadge>
+          </>
         ) : null
       }
+      error={error}
+      isLoading={isLoading}
+      hasData={summary != null}
+      loadingLabel="Loading API key load..."
+      emptyLabel="No keyed public API data yet."
     >
-      {error ? (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-          {error}
-        </div>
-      ) : isLoading && !stats ? (
-        <div className="text-sm text-muted-foreground">Loading API key load...</div>
-      ) : !summary ? (
-        <div className="text-sm text-muted-foreground">No keyed public API data yet.</div>
-      ) : summary.keyedRequests <= 0 || apiKeys.length === 0 ? (
+      {summary == null ? null : summary.keyedRequests <= 0 || apiKeys.length === 0 ? (
         <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
           No authenticated API-key load recorded in this window.
         </div>
@@ -88,7 +79,7 @@ export function ApiKeyLoadTable({
           </div>
 
           {summary.truncated ? (
-            <div className="rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+            <div className={cn("rounded-lg px-3 py-2 text-xs text-muted-foreground", STATUS_PANEL_SHELL_CLASS)}>
               Showing the top {stats?.window.apiKeyLimit ?? apiKeys.length} keys by volume.{" "}
               {formatCompactCount(summary.omittedKeys)} more key{summary.omittedKeys === 1 ? "" : "s"} account for{" "}
               {formatCompactCount(summary.omittedRequests)} additional keyed requests in this window.
@@ -171,6 +162,6 @@ export function ApiKeyLoadTable({
           </TableFrame>
         </div>
       )}
-    </PublicSignalCard>
+    </AttributionPanel>
   );
 }

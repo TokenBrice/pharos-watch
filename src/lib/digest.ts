@@ -9,6 +9,8 @@
  * both authority and real-time urgency — core to the Pharos brand personality.
  */
 
+import { formatLongDate, formatShortDate } from "@shared/lib/format";
+
 /** Inline style for body text — Courier italic for raw intel aesthetic */
 export const EDITORIAL_BODY_STYLE: React.CSSProperties = {
   fontFamily: "'Courier New', Courier, monospace",
@@ -33,11 +35,7 @@ export function formatDigestDateLabel(dateStr: string, monthStyle: "long" | "sho
   const [year, month, day] = parts;
   const date = new Date(year, month - 1, day);
   if (isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", {
-    month: monthStyle,
-    day: "numeric",
-    year: "numeric",
-  });
+  return monthStyle === "long" ? formatLongDate(date) : formatShortDate(date);
 }
 
 /**

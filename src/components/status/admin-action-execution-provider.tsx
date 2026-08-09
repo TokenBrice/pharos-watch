@@ -11,8 +11,9 @@ import type {
   AdminActionExecutionStatus,
   AdminActionRunResult,
 } from "@/components/status/admin-action-execution-types";
+import { classifyAdminMutationFailure } from "@/components/status/admin-mutation-failure";
+import { focusElement } from "@/lib/focus-element";
 import { AdminMutationError, adminMutation, type AdminMutationResult } from "@/lib/admin-access";
-import { RequestFailure } from "@/lib/request";
 
 export type {
   AdminActionDialogRequest,
@@ -84,42 +85,13 @@ function statusFromSuccessfulResponse(result: AdminMutationResult<unknown>): Adm
   return result.status === 202 ? "accepted" : "succeeded";
 }
 
-function isExecutionUnknownBody(data: unknown): boolean {
-  return Boolean(
-    data && typeof data === "object" && "error" in data && (data as { error?: unknown }).error === "execution_unknown",
-  );
-}
-
-function isActiveIdempotencyConflict(execution: AdminActionExecution, result: AdminMutationResult<unknown>): boolean {
-  if (result.status !== 409) return false;
-  const errorMessage =
-    result.data &&
-    typeof result.data === "object" &&
-    "error" in result.data &&
-    typeof (result.data as { error?: unknown }).error === "string"
-      ? (result.data as { error: string }).error.toLowerCase()
-      : "";
-  const isReservationOrOwnershipLoss =
-    errorMessage.includes("idempotency key is currently reserved") ||
-    errorMessage.includes("idempotency reservation ownership was lost");
-  const identifiesSameExecution =
-    result.idempotentReplay === true || result.idempotencyKey === execution.idempotencyKey;
-  return isReservationOrOwnershipLoss && identifiesSameExecution;
-}
-
 function executionFromFailure(
   execution: AdminActionExecution,
   error: unknown,
   completedAt: number,
 ): AdminActionExecution {
+  const status = classifyAdminMutationFailure(error, execution.idempotencyKey);
   if (error instanceof AdminMutationError) {
-    const status =
-      isExecutionUnknownBody(error.result.data) ||
-      isActiveIdempotencyConflict(execution, error.result) ||
-      error.result.executionCertainty?.trim().toLowerCase() === "unknown" ||
-      error.result.status >= 500
-        ? "unknown"
-        : "failed";
     return {
       ...execution,
       status,
@@ -137,11 +109,7 @@ function executionFromFailure(
     };
   }
 
-  const isUncertainRequestFailure =
-    error instanceof RequestFailure &&
-    (error.kind === "network" || error.kind === "timeout" || error.kind === "aborted");
   const message = error instanceof Error ? error.message : "Unknown error";
-  const status = isUncertainRequestFailure ? "unknown" : "failed";
   return {
     ...execution,
     status,
@@ -358,9 +326,7 @@ export function AdminActionExecutionProvider({
           onClose={() => {
             const returnFocus = dialogRequest.returnFocus;
             setDialogRequest(null);
-            queueMicrotask(() => {
-              if (returnFocus?.isConnected) returnFocus.focus();
-            });
+            focusElement(returnFocus);
           }}
         />
       )}

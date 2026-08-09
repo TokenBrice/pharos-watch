@@ -2,11 +2,10 @@ import {
   getLatestSuccessfulCronTimestamp,
   jsonFreshResponse,
   parseStablecoinHistoryQuery,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/report-cards";
+import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import {
   fetchSafetyScoreHistoryV2Rows,
   safetyScoreHistoryIdentityFromV2Row,
@@ -16,9 +15,7 @@ import {
  * Boundary-aware, identity-rich history. The legacy endpoint remains the V8
  * compatibility projection and intentionally omits these boundary rows.
  */
-export const handleSafetyScoreHistoryV2 = withErrorHandler(
-  "safety-score-history-v2",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleSafetyScoreHistoryV2 = async (db: D1Database, url: URL): Promise<Response> => {
     const query = parseStablecoinHistoryQuery(url, {
       defaultDays: 365,
       minDays: 1,
@@ -48,5 +45,4 @@ export const handleSafetyScoreHistoryV2 = withErrorHandler(
       updatedAt,
       maxAgeSec: DAY_SECONDS,
     });
-  },
-);
+  };

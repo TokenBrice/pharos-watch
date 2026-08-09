@@ -1,16 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import DocPage from "./page";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href, className }: { children: ReactNode; href: string; className?: string }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 describe("DocPage", () => {
   it("marks external markdown links as new-tab safe links", async () => {

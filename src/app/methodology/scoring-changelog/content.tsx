@@ -1,22 +1,7 @@
 import type { ReactNode } from "react";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
-import {
-  SAFETY_SCORE_V9_ACTIVATION,
-  SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
-  SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE,
-  SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION,
-  SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY,
-  SAFETY_SCORE_V9_EXIT_REDUNDANCY,
-  SAFETY_SCORE_V9_MERGED_MINT_GRADER,
-  SAFETY_SCORE_V9_NATIVE_INPUT,
-  SAFETY_SCORE_V9_ROUTE_CAPACITY,
-  SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE,
-  SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE,
-  SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE,
-  SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION,
-} from "@shared/data/methodology-changelogs/safety-score/v9-activation";
-import { scoringAnchorId, VersionCard } from "./content-shared";
+import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "./content-shared";
 import { scoringChangelogV8Details } from "./content-v8";
 import { scoringChangelogV729Details } from "./content-v7-29";
 import { scoringChangelogV728Details } from "./content-v7-28";
@@ -29,137 +14,21 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 
 export { scoringAnchorId };
 
+/**
+ * Every V9-era entry renders from its structured changelog record, so shipping a
+ * new V9 version only requires the entry in
+ * `shared/data/methodology-changelogs/safety-score/` — no JSX block here.
+ * Pre-V9 versions keep their hand-authored prose modules.
+ */
+const scoringChangelogV9Details: Record<string, ReactNode> = Object.fromEntries(
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG.filter((entry) => entry.version.startsWith("9.")).map((entry) => [
+    entry.version,
+    <StructuredChangelogDetail key={entry.version} entry={entry} />,
+  ]),
+);
+
 export const scoringChangelogDetails: Record<string, ReactNode> = {
-  "9.14": (
-    <>
-      <p>{SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.13": (
-    <>
-      <p>{SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.12": (
-    <>
-      <p>{SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.11": (
-    <>
-      <p>{SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.1": (
-    <>
-      <p>{SAFETY_SCORE_V9_MERGED_MINT_GRADER.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_MERGED_MINT_GRADER.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.07": (
-    <>
-      <p>{SAFETY_SCORE_V9_NATIVE_INPUT.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_NATIVE_INPUT.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.06": (
-    <>
-      <p>{SAFETY_SCORE_V9_EXIT_REDUNDANCY.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_EXIT_REDUNDANCY.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.05": (
-    <>
-      <p>{SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_WRAPPER_LOCAL_CONTROL_EVIDENCE.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.04": (
-    <>
-      <p>{SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.03": (
-    <>
-      <p>{SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.02": (
-    <>
-      <p>{SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.01": (
-    <>
-      <p>{SAFETY_SCORE_V9_ROUTE_CAPACITY.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_ROUTE_CAPACITY.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
-  "9.0": (
-    <>
-      <p>{SAFETY_SCORE_V9_ACTIVATION.summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {SAFETY_SCORE_V9_ACTIVATION.impact.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </>
-  ),
+  ...scoringChangelogV9Details,
   ...scoringChangelogV8Details,
   ...scoringChangelogV729Details,
   ...scoringChangelogV728Details,

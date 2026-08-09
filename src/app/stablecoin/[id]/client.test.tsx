@@ -84,13 +84,10 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 vi.mock("@/hooks/use-stablecoin-detail-view-model", () => ({
   useStablecoinDetailViewModel: useStablecoinDetailViewModelMock,

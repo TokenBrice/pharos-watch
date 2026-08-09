@@ -1,4 +1,4 @@
-import { parseEnumParam, parseQueryParams, withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { parseEnumParam, parseQueryParams, jsonResponse } from "../lib/api-utils";
 import { listRecentStatusTransitions } from "../lib/status-reliability";
 import { CACHE_PROFILES } from "../lib/constants";
 import { assessPublicHealth } from "../lib/public-health-assessment";
@@ -59,9 +59,7 @@ function getPublicLastChangedAt(
   return latest?.to === currentStatus ? latest.at : null;
 }
 
-export const handlePublicStatusHistory = withErrorHandler(
-  "public-status-history",
-  async (db: D1Database, request: Request): Promise<Response> => {
+export const handlePublicStatusHistory = async (db: D1Database, request: Request): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
     const url = new URL(request.url);
     const parsed = parseQueryParams(url.searchParams, {
@@ -100,6 +98,5 @@ export const handlePublicStatusHistory = withErrorHandler(
       transitions: filteredTransitions.map(toPublicTransition),
     };
 
-    return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.publicStatus });
-  },
-);
+    return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.publicStatus } });
+  };

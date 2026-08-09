@@ -1,6 +1,7 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusResponse } from "@shared/types";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
+import { TelegramBroadcastPanel } from "@/components/status/telegram-broadcast-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
 
@@ -49,6 +50,7 @@ export function CommsSection({ data }: CommsSectionProps) {
       }
     >
       <TelegramBotStats model={model} />
+      <TelegramBroadcastPanel />
     </StatusSection>
   );
 }

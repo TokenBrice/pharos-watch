@@ -6,6 +6,7 @@ import type { CredentialLifecycleSummaryResponse } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { useCredentialLifecycleSummary } from "@/hooks/use-credential-lifecycle-summary";
 import { cn } from "@/lib/utils";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 export interface CredentialSummaryItem {
   label: string;
@@ -61,7 +62,7 @@ export function CredentialSummaryCard() {
   const items = buildCredentialSummaryItemsFromResponse(summary.data);
 
   return (
-    <section aria-labelledby="credential-summary-title" className="rounded-xl border border-border/60 bg-background/35 p-4">
+    <section aria-labelledby="credential-summary-title" className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 id="credential-summary-title" className="text-sm font-semibold text-foreground">

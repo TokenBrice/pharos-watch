@@ -6,16 +6,15 @@ import {
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
 } from "./shared";
 import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_SCORE_FILTER_VALUES,
   MINT_AUTHORITY_STATUS_CONFIG,
-  MINT_AUTHORITY_STATUS_VALUES,
   resolveMintAuthorityScoreDisplay,
   resolveMintAuthorityStatus,
-  type MintAuthorityStatusKind,
   type PublishedMintComponent,
 } from "@/lib/mint-authority-display";
 
@@ -75,8 +74,6 @@ function formatMintAuthority(
   ];
 }
 
-const MINT_AUTHORITY_KINDS: readonly MintAuthorityStatusKind[] = MINT_AUTHORITY_STATUS_VALUES;
-
 const MINT_AUTHORITY_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "No priv.",
@@ -112,7 +109,9 @@ const MINT_AUTHORITY_LEGEND: readonly CoverageLegendItem[] = [
 ];
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: MINT_AUTHORITY_KINDS,
+  // The status config is the mint-authority preset table; `data-unavailable`
+  // only ever lands in `scoreBand`, never in `kind`.
+  statusKinds: statusKindsFromPresets(MINT_AUTHORITY_STATUS_CONFIG),
   legendItems: MINT_AUTHORITY_LEGEND,
   resolve: resolveMintAuthority,
   formatBreakdown: formatMintAuthority,

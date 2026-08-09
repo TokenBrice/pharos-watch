@@ -599,6 +599,7 @@
     ]
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "DAI yield-token collateral",

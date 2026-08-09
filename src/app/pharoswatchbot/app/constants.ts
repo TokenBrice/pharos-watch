@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import type { TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramSnoozeDurationToken } from "./types";
 
 export const ALERT_LABELS = {
@@ -24,7 +25,7 @@ export const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd
 
 export const SNOOZE_DURATION_TOKENS = ["1h", "4h", "24h"] as const satisfies readonly TelegramSnoozeDurationToken[];
 
-export const PHAROS_COIN_PAGE_PREFIX = "https://pharos.watch/stablecoin/";
+export const PHAROS_COIN_PAGE_PREFIX = `${SITE_ORIGIN}/stablecoin/`;
 
 export const DEWS_BAND_OPTIONS = [
   { value: "ALERT" as const, label: "ALERT", caption: "Light yellow" },

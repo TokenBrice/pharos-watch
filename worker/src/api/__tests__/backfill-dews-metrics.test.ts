@@ -42,12 +42,7 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
     const request = makeApiRequest("/api/backfill-dews?mode=backtest-metrics", {
       adminKey: "secret",
     });
-    const response = await handleBackfillDEWS(
-      db,
-      makeApiUrl(request.url),
-      true,
-      request,
-    );
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {

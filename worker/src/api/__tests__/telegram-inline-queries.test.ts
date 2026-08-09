@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { makeTelegramUpdateRequest, telegramApiCallBody } from "../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  makeTelegramUpdateRequest,
+  telegramApiCallBody,
+} from "../../test-helpers/__shared/telegram";
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { TELEGRAM_INLINE_STATUS_POLICY } = await import("../telegram-inline-queries");
@@ -57,8 +60,7 @@ function inlineAnswerBody(): {
 
 describe("Telegram inline status cards", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    resetTelegramFetchSpy();
   });
 
   it("serves one source-attributed status card through the existing status loader", async () => {

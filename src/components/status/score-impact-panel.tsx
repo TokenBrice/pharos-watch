@@ -2,6 +2,9 @@ import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stabl
 import type { ClassificationWarning, ReserveDriftEntry, StatusResponse } from "@shared/types";
 import { SummaryBadge } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 interface ScoreImpactPanelProps {
   reserveComposition: StatusResponse["reserveComposition"];
@@ -34,7 +37,7 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
     reserveComposition.writeTimeoutUncertain > 0;
 
   return (
-    <section className="rounded-xl border border-border/60 bg-background/35 p-4">
+    <section className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-base font-semibold tracking-tight text-foreground">Score impact monitor</h3>
@@ -49,8 +52,8 @@ export function ScoreImpactPanel({ reserveComposition, reserveDrift, classificat
             value={reserveInputHold ? "conservative" : "clean"}
             className={
               reserveInputHold
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
+                ? SEVERITY_TONE_CLASS.watch.pill
+                : STATUS_OK_PILL_CLASS
             }
           />
           <SummaryBadge label="Score-grade" value={formatPct(reserveComposition.authoritativeFreshCoverageRatio)} />

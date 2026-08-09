@@ -216,6 +216,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-nav",
     "version": 1,

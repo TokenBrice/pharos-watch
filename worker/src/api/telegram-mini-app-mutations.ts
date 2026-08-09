@@ -11,6 +11,11 @@ import {
   type TelegramMiniAppPortabilityResponse,
 } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
+import {
+  TELEGRAM_ALERT_PERSISTENCE,
+  type TelegramAlertSettingCode,
+} from "@shared/lib/telegram-alert-families";
+import { isTelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../lib/db";
 import { isSubscribableCoin } from "../lib/telegram-subscription-eligibility";
 import {
@@ -413,7 +418,7 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
   let appliedCount = 0;
   const statements: D1PreparedStatement[] = [];
 
-  const apply = (setting: "db" | "ds" | "sm" | "lc" | "rs" | "fz", value: string): void => {
+  const apply = (setting: TelegramAlertSettingCode, value: string): void => {
     const prepared = prepareCoinSettingStatements(db, chatId, username, operation.stablecoinId, setting, value);
     if (prepared.description == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
     statements.push(...prepared.statements);
@@ -425,19 +430,10 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
     for (const [alertType, on] of Object.entries(patch.alertTypes)) {
       if (on) {
         enabled.add(alertType);
-      } else if (alertType === "dews") {
-        apply("db", "0");
-      } else if (alertType === "depeg") {
-        apply("ds", "0");
-      } else if (alertType === "safety") {
-        apply("sm", "0");
-      } else if (alertType === "launch") {
-        apply("lc", "0");
-      } else if (alertType === "reserve") {
-        apply("rs", "0");
-      } else if (alertType === "freeze") {
-        apply("fz", "0");
+        continue;
       }
+      if (!isTelegramAlertType(alertType)) continue;
+      apply(TELEGRAM_ALERT_PERSISTENCE[alertType].settingCode, "0");
     }
     if (enabled.size > 0) {
       statements.push(
@@ -446,25 +442,25 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
       appliedCount += 1;
     }
   }
-  const explicitlyDisabled = (alertType: "dews" | "depeg" | "safety" | "launch" | "reserve" | "freeze"): boolean =>
+  const explicitlyDisabled = (alertType: TelegramAlertType): boolean =>
     patch.alertTypes?.[alertType] === false;
   if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand") && !explicitlyDisabled("dews")) {
-    apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
+    apply(TELEGRAM_ALERT_PERSISTENCE.dews.settingCode, patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps") && !explicitlyDisabled("depeg")) {
-    apply("ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
+    apply(TELEGRAM_ALERT_PERSISTENCE.depeg.settingCode, patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "safetyMode") && !explicitlyDisabled("safety")) {
-    apply("sm", patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
+    apply(TELEGRAM_ALERT_PERSISTENCE.safety.settingCode, patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "launch") && !explicitlyDisabled("launch")) {
-    apply("lc", patch.launch ? "1" : "0");
+    apply(TELEGRAM_ALERT_PERSISTENCE.launch.settingCode, patch.launch ? "1" : "0");
   }
   if (Object.prototype.hasOwnProperty.call(patch, "reserve") && !explicitlyDisabled("reserve")) {
-    apply("rs", patch.reserve ? "1" : "0");
+    apply(TELEGRAM_ALERT_PERSISTENCE.reserve.settingCode, patch.reserve ? "1" : "0");
   }
   if (Object.prototype.hasOwnProperty.call(patch, "freeze") && !explicitlyDisabled("freeze")) {
-    apply("fz", patch.freeze ? "1" : "0");
+    apply(TELEGRAM_ALERT_PERSISTENCE.freeze.settingCode, patch.freeze ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
   await executeAtomicBatch(db, statements);

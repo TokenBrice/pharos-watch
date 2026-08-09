@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
+import { mockRegistry } from "../../../test-helpers/cron";
 
 // A mega-multichain footprint: a cheap CoinGecko head plus a GeckoTerminal-only
 // tail whose 2s pacing floor cannot fit in the same per-coin budget.
@@ -18,14 +19,9 @@ const { GT_ONLY_CHAINS, FOOTPRINT, cursorStore } = vi.hoisted(() => {
   };
 });
 
-vi.mock("@shared/lib/stablecoins/registry", () => {
-  const stablecoins = [{ id: "mega-coin", contracts: FOOTPRINT }];
-  return {
-    TRACKED_STABLECOINS: stablecoins,
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map(stablecoins.map((coin) => [coin.id, coin])),
-  };
-});
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [{ id: "mega-coin", contracts: FOOTPRINT }],
+}));
 
 vi.mock("../../dex-liquidity/pool-helpers", () => ({
   getTrackedContracts: vi.fn((coin: { contracts?: ContractDeployment[] }) => coin.contracts ?? []),

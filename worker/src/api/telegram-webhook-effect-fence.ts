@@ -181,6 +181,77 @@ export class TelegramWebhookEffectFence {
   }
 }
 
+/**
+ * The fence surface every downstream handler context exposes. Callback
+ * handlers, command handlers, the pending-disambiguation gate and the action
+ * runner each declare their own (optional) subset of these members; this is the
+ * one adapter shape that satisfies all of them.
+ *
+ * Every member degrades to a no-op when there is no fence (updates without a
+ * usable `update_id` proceed fence-less), which is why the callable members are
+ * always present while the statement builders are only present with a fence —
+ * their callers branch on definedness to decide between an atomic
+ * mutation-marker batch and the deferred `markMutationApplied` path.
+ */
+export interface TelegramMutationOperations {
+  beforeIrreversibleEffect: (kind: string) => Promise<void>;
+  planIntent: (intent: TelegramWebhookOperationIntent) => Promise<void>;
+  prepareMutationAppliedStatement?: () => D1PreparedStatement;
+  preparePendingMutationAppliedStatement?: (input: {
+    chatId: string;
+    actionType: string;
+    actionPayload: string;
+    expiresAt: number;
+  }) => D1PreparedStatement;
+  prepareMutationOperationStatements?: () => D1PreparedStatement[];
+  confirmAtomicMutationApplied: () => void;
+  markMutationApplied: () => Promise<void>;
+  storedIntent: TelegramWebhookOperationIntent | null;
+  wasMutationApplied: boolean;
+}
+
+export interface BuildMutationOperationsOptions {
+  /** Crosses the at-most-once boundary; owned by the request, not the fence. */
+  beforeIrreversibleEffect: (kind: string) => Promise<void>;
+  /**
+   * Supplies `prepareMutationOperationStatements` — the command-dispatch path
+   * folds a pending-disambiguation delete into the same atomic batch as the
+   * mutation marker. Omit it everywhere else: `prepareActionMutation` prefers
+   * this builder over the plain marker whenever it is defined, so defining it
+   * on a context that does not want the fold would change the emitted SQL.
+   */
+  mutationOperationStatements?: (fence: TelegramWebhookEffectFence) => D1PreparedStatement[];
+}
+
+/**
+ * One adapter from the effect fence to the handler-facing operation shape,
+ * replacing the hand-written `effectFence ? () => effectFence.x() : undefined`
+ * blocks that each dispatch branch used to spell out.
+ */
+export function buildMutationOperations(
+  effectFence: TelegramWebhookEffectFence | null,
+  options: BuildMutationOperationsOptions,
+): TelegramMutationOperations {
+  const mutationOperationStatements = options.mutationOperationStatements;
+  return {
+    beforeIrreversibleEffect: options.beforeIrreversibleEffect,
+    planIntent: async (intent) => effectFence?.plan(intent),
+    prepareMutationAppliedStatement: effectFence
+      ? () => effectFence.prepareMutationAppliedStatement()
+      : undefined,
+    preparePendingMutationAppliedStatement: effectFence
+      ? (input) => effectFence.preparePendingMutationAppliedStatement(input)
+      : undefined,
+    prepareMutationOperationStatements: effectFence && mutationOperationStatements
+      ? () => mutationOperationStatements(effectFence)
+      : undefined,
+    confirmAtomicMutationApplied: () => effectFence?.confirmAtomicMutationApplied(),
+    markMutationApplied: async () => effectFence?.markMutationApplied(),
+    storedIntent: effectFence?.storedIntent ?? null,
+    wasMutationApplied: effectFence?.wasMutationApplied ?? false,
+  };
+}
+
 export type TelegramWebhookUpdateClaimOutcome =
   | { kind: "respond"; response: Response }
   | { kind: "proceed"; effectFence: TelegramWebhookEffectFence | null };

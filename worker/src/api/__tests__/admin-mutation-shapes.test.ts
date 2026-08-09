@@ -32,17 +32,17 @@ vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {
   return { ...actual, recalcAffectedHours: vi.fn().mockResolvedValue(undefined) };
 });
 
-import { handleAuditDepegHistory } from "../audit-depeg-history";
-import { handleReclassifyAtomicRoundtrips } from "../reclassify-atomic-roundtrips";
-import { handleRemediateBlacklistAmountGaps } from "../remediate-blacklist-amount-gaps";
-import { handleBackfillSupplyHistory } from "../backfill-supply-history";
+import { handleAuditDepegHistoryTrusted } from "../audit-depeg-history";
+import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
+import { handleRemediateBlacklistAmountGapsTrusted } from "../remediate-blacklist-amount-gaps";
+import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
 
 describe("handleAuditDepegHistory shape", () => {
   it("returns 200 with the documented top-level audit shape for GET dry-run", async () => {
     const db = mockD1([{ match: "depeg_events", rows: [] }]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
@@ -61,7 +61,7 @@ describe("handleAuditDepegHistory shape", () => {
     const db = mockD1([]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=999", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -77,7 +77,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
     ]);
     const url = makeApiUrl("/api/reclassify-atomic-roundtrips");
 
-    const res = await handleReclassifyAtomicRoundtrips(db, url, true);
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
@@ -97,7 +97,7 @@ describe("handleReclassifyAtomicRoundtrips shape", () => {
     const db = mockD1([]);
     const url = makeApiUrl("/api/reclassify-atomic-roundtrips?since=0foo");
 
-    const res = await handleReclassifyAtomicRoundtrips(db, url, true);
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -115,7 +115,7 @@ describe("handleRemediateBlacklistAmountGaps shape", () => {
       body: JSON.stringify({ dryRun: true }),
     });
 
-    const res = await handleRemediateBlacklistAmountGaps(db, makeApiUrl(req.url), true, req);
+    const res = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
@@ -140,7 +140,7 @@ describe("handleRemediateBlacklistAmountGaps shape", () => {
       body: "{not-json",
     });
 
-    const res = await handleRemediateBlacklistAmountGaps(db, makeApiUrl(req.url), true, req);
+    const res = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
@@ -155,7 +155,7 @@ describe("handleBackfillSupplyHistory shape", () => {
       adminKey: "secret",
     });
 
-    const res = await handleBackfillSupplyHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
@@ -168,7 +168,7 @@ describe("handleBackfillSupplyHistory shape", () => {
       adminKey: "secret",
     });
 
-    const res = await handleBackfillSupplyHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };

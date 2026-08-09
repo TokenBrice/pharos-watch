@@ -1,6 +1,5 @@
-import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
+import { jsonResponse, parseClampedIntegerParam, safeJsonParse } from "../lib/api-utils";
 import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
-import { safeJsonParse } from "../lib/api-cache-read";
 
 interface AdminActionAuditRow {
   id: number;

@@ -1,14 +1,12 @@
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 import MechanismExplainersHub from "@/app/learn/mechanisms/page";
 

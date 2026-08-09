@@ -446,6 +446,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

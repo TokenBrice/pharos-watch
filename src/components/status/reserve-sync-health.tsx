@@ -1,6 +1,9 @@
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { getStatusTone } from "@/lib/status-dashboard-model";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 
 interface ReserveSyncHealthCardProps {
   health: StatusResponse["reserveComposition"];
@@ -28,12 +31,9 @@ function formatCoveragePct(value: number): string {
 }
 
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
-  const statusTone =
-    health.status === "stale"
-      ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
-      : health.status === "degraded"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-        : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+  // One definition of the healthy/degraded/stale badge palette: this used to be
+  // a byte-identical re-implementation of `STATUS_TONE[...].badgeClassName`.
+  const statusTone = getStatusTone(health.status).badgeClassName;
   const scoreInputHold =
     health.status !== "healthy" ||
     health.deferredCoins > 0 ||
@@ -53,7 +53,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {scoreInputHold ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+          <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}>
             <div className="text-sm font-medium text-amber-950 dark:text-amber-100">
               Report-card inputs are conservative
             </div>

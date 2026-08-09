@@ -1,11 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  D1Database,
-  D1PreparedStatement,
-  D1Result,
-  KVNamespace,
-  KVNamespaceGetOptions,
-} from "@cloudflare/workers-types";
+import type { D1Database, D1PreparedStatement, D1Result, KVNamespace } from "@cloudflare/workers-types";
+import { makeKV, type TestKVNamespace } from "./helpers/mock-kv";
+import { makePagesProxyContext } from "./helpers/pages-context";
 import {
   SELECTOR_SNAPSHOT_TTL_SECONDS,
   SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS,
@@ -28,65 +24,6 @@ vi.mock("../lib/selector-canonical-snapshot", () => ({
 }));
 
 import { onRequest } from "../selector-snapshot/[[path]].ts";
-
-interface RecordedPutCall {
-  key: string;
-  options?: { expirationTtl?: number; metadata?: unknown };
-}
-
-interface TestKVNamespace extends KVNamespace {
-  __getStore(): Map<string, string>;
-  __getPutCalls(): RecordedPutCall[];
-  __setReadHandler(handler: ((key: string) => string | null | Promise<string | null>) | null): void;
-  __setWriteHandler(handler: ((key: string, value: string) => void | Promise<void>) | null): void;
-}
-
-function makeKV(): TestKVNamespace {
-  const store = new Map<string, string>();
-  const metaStore = new Map<string, unknown>();
-  const putCalls: RecordedPutCall[] = [];
-  let readHandler: ((key: string) => string | null | Promise<string | null>) | null = null;
-  let writeHandler: ((key: string, value: string) => void | Promise<void>) | null = null;
-
-  const readValue = async (key: string): Promise<string | null> => {
-    if (readHandler) {
-      return readHandler(key);
-    }
-    return store.has(key) ? (store.get(key) ?? null) : null;
-  };
-
-  const ns: Partial<TestKVNamespace> = {
-    get: (async (key: string, _options?: KVNamespaceGetOptions<"text">) => {
-      return readValue(key);
-    }) as KVNamespace["get"],
-    getWithMetadata: (async (key: string, _options?: KVNamespaceGetOptions<"text">) => {
-      return { value: await readValue(key), metadata: metaStore.get(key) ?? null, cacheStatus: null };
-    }) as KVNamespace["getWithMetadata"],
-    put: (async (key: string, value: string, options?: RecordedPutCall["options"]) => {
-      if (writeHandler) {
-        await writeHandler(key, value);
-      }
-      store.set(key, value);
-      metaStore.set(key, options?.metadata ?? null);
-      putCalls.push({ key, options });
-    }) as KVNamespace["put"],
-    delete: (async (key: string) => {
-      store.delete(key);
-      metaStore.delete(key);
-    }) as KVNamespace["delete"],
-    list: (async () => ({ keys: [], list_complete: true, cacheStatus: null })) as KVNamespace["list"],
-    __getStore: () => store,
-    __getPutCalls: () => putCalls,
-    __setReadHandler: (handler) => {
-      readHandler = handler;
-    },
-    __setWriteHandler: (handler) => {
-      writeHandler = handler;
-    },
-  };
-
-  return ns as TestKVNamespace;
-}
 
 interface TestD1Database extends D1Database {
   __getQuotaRows(): Map<string, number>;
@@ -170,6 +107,11 @@ function makeEnv(overrides: MakeEnvOverrides = {}) {
   };
 }
 
+/** Pages context bag for the `/selector-snapshot/[[path]]` catch-all. */
+function snapshotContext(request: Request, env: ReturnType<typeof makeEnv> = makeEnv()) {
+  return makePagesProxyContext({ request, env, mountPath: "/selector-snapshot" });
+}
+
 const POST_HEADERS = {
   "Content-Type": "application/json",
   Origin: "https://pharos.watch",
@@ -203,60 +145,50 @@ describe("selector-snapshot Pages Function", () => {
 
   describe("origin gating", () => {
     it("rejects POST without Origin/Referer", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot", {
           method: "POST",
           body: JSON.stringify(buildSelectorSnapshotOutput()),
           headers: { "Content-Type": "application/json" },
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(404);
     });
 
     it("rejects GET without Origin/Referer", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff"),
-        env: makeEnv(),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff")),
+      );
       expect(response.status).toBe(404);
     });
 
     it("rejects POST from foreign origin", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           "Content-Type": "application/json",
           Origin: "https://evil.example.com",
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(404);
     });
 
     it("accepts POST from allowlisted ops origin", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           "Content-Type": "application/json",
           Origin: "https://ops.pharos.watch",
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(200);
     });
 
     it("accepts requests when Origin is missing but Referer is allowlisted", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           "Content-Type": "application/json",
           Referer: "https://pharos.watch/screener/picker/",
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(200);
     });
   });
@@ -264,11 +196,7 @@ describe("selector-snapshot Pages Function", () => {
   describe("POST storage", () => {
     it("stores a server-recomputed verified payload and returns its binding", async () => {
       const env = makeEnv();
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const response = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       expect(response.status).toBe(200);
       expect(response.headers.get("Cache-Control")).toBe("no-store");
       const body = (await response.json()) as { sid: string; ev: string };
@@ -307,8 +235,8 @@ describe("selector-snapshot Pages Function", () => {
         },
       });
 
-      const forgedResponse = await onRequest({ request: postRequest(forged), env, params: {} });
-      const inputOnlyResponse = await onRequest({ request: postRequest({ input: forged.input }), env, params: {} });
+      const forgedResponse = await onRequest(snapshotContext(postRequest(forged), env));
+      const inputOnlyResponse = await onRequest(snapshotContext(postRequest({ input: forged.input }), env));
       const forgedBody = (await forgedResponse.json()) as { sid: string };
       const inputOnlyBody = (await inputOnlyResponse.json()) as { sid: string };
 
@@ -344,11 +272,7 @@ describe("selector-snapshot Pages Function", () => {
         }),
       );
 
-      const response = await onRequest({
-        request: postRequest({ input: canonical.input }),
-        env,
-        params: {},
-      });
+      const response = await onRequest(snapshotContext(postRequest({ input: canonical.input }), env));
 
       expect(response.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
@@ -366,21 +290,13 @@ describe("selector-snapshot Pages Function", () => {
         debug: { allSurvivors: [buildSnapshotRecommendation({ id: "debug-only", symbol: "DBG" })] },
       };
 
-      const debug = await onRequest({
-        request: postRequest(withDebug),
-        env,
-        params: {},
-      });
+      const debug = await onRequest(snapshotContext(postRequest(withDebug), env));
       const debugBody = (await debug.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       const stored = JSON.parse(kv.__getStore().get(`s:${debugBody.sid}`) ?? "{}") as Record<string, unknown>;
       expect(stored.debug).toBeUndefined();
 
-      const plain = await onRequest({
-        request: postRequest(output),
-        env,
-        params: {},
-      });
+      const plain = await onRequest(snapshotContext(postRequest(output), env));
       const plainBody = (await plain.json()) as { sid: string };
       expect(debugBody.sid).toBe(plainBody.sid);
     });
@@ -409,11 +325,7 @@ describe("selector-snapshot Pages Function", () => {
         ],
       });
 
-      const response = await onRequest({
-        request: postRequest(output),
-        env,
-        params: {},
-      });
+      const response = await onRequest(snapshotContext(postRequest(output), env));
       const { sid } = (await response.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       const stored = JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}") as Record<string, unknown>;
@@ -430,18 +342,10 @@ describe("selector-snapshot Pages Function", () => {
       const env = makeEnv();
       const output = buildSelectorSnapshotOutput();
 
-      const first = await onRequest({
-        request: postRequest(output),
-        env,
-        params: {},
-      });
+      const first = await onRequest(snapshotContext(postRequest(output), env));
       const firstBody = (await first.json()) as { sid: string };
 
-      const second = await onRequest({
-        request: postRequest(output),
-        env,
-        params: {},
-      });
+      const second = await onRequest(snapshotContext(postRequest(output), env));
       const secondBody = (await second.json()) as { sid: string };
 
       expect(secondBody.sid).toBe(firstBody.sid);
@@ -450,54 +354,40 @@ describe("selector-snapshot Pages Function", () => {
 
   describe("POST failure modes", () => {
     it("returns 400 on malformed JSON", async () => {
-      const response = await onRequest({
-        request: postRequest("not-json"),
-        env: makeEnv(),
-        params: {},
-      });
+      const response = await onRequest(snapshotContext(postRequest("not-json")));
       expect(response.status).toBe(400);
     });
 
     it("returns 400 when the shared snapshot contract rejects the payload", async () => {
-      const response = await onRequest({
-        request: postRequest({ profile: "treasury" }),
-        env: makeEnv(),
-        params: {},
-      });
+      const response = await onRequest(snapshotContext(postRequest({ profile: "treasury" })));
       expect(response.status).toBe(400);
     });
 
     it("returns 400 when the shared structural guard rejects the payload", async () => {
-      const response = await onRequest({
-        request: postRequest(JSON.stringify(JSON.parse(`{"__proto__":{"polluted":true}}`))),
-        env: makeEnv(),
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest(JSON.stringify(JSON.parse(`{"__proto__":{"polluted":true}}`)))),
+      );
       expect(response.status).toBe(400);
     });
 
     it("returns 413 when Content-Length advertises an oversized payload", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           "Content-Type": "application/json",
           Origin: "https://pharos.watch",
           "Content-Length": String(200 * 1024),
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(413);
     });
 
     it("returns 413 when the body itself exceeds the size cap", async () => {
-      const response = await onRequest({
-        request: postRequest({
+      const response = await onRequest(
+        snapshotContext(postRequest({
           ...buildSelectorSnapshotOutput(),
           oversizedTestPadding: "x".repeat(101 * 1024),
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(413);
     });
 
@@ -516,7 +406,7 @@ describe("selector-snapshot Pages Function", () => {
         duplex: "half",
       } as RequestInit & { duplex: "half" });
 
-      const response = await onRequest({ request, env: makeEnv(), params: {} });
+      const response = await onRequest(snapshotContext(request));
 
       expect(response.status).toBe(413);
       expect(cancel).toHaveBeenCalled();
@@ -535,50 +425,42 @@ describe("selector-snapshot Pages Function", () => {
         duplex: "half",
       } as RequestInit & { duplex: "half" });
 
-      const response = await onRequest({ request, env: makeEnv(), params: {} });
+      const response = await onRequest(snapshotContext(request));
       expect(response.status).toBe(413);
     });
 
     it("returns 413 when a multibyte body exceeds the byte cap", async () => {
-      const response = await onRequest({
-        request: postRequest({
+      const response = await onRequest(
+        snapshotContext(postRequest({
           ...buildSelectorSnapshotOutput(),
           oversizedTestPadding: "🙂".repeat(30 * 1024),
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(413);
     });
 
     it("returns 500 when the KV binding is missing", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: undefined }),
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput()), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
+      );
       expect(response.status).toBe(500);
     });
 
     it("fails closed when the dedicated IP HMAC pepper is missing", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env: makeEnv({ SELECTOR_SNAPSHOT_IP_HASH_SECRET: "" }),
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput()), makeEnv({ SELECTOR_SNAPSHOT_IP_HASH_SECRET: "" })),
+      );
       expect(response.status).toBe(500);
       await expect(response.json()).resolves.toEqual({ error: "Snapshot write limiter is not configured" });
     });
 
     it("returns 503 when the D1 quota binding is missing for identified clients", async () => {
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           ...POST_HEADERS,
           "CF-Connecting-IP": "203.0.113.88",
-        }),
-        env: makeEnv({ DB: undefined }),
-        params: {},
-      });
+        }), makeEnv({ DB: undefined })),
+      );
       expect(response.status).toBe(503);
     });
 
@@ -587,25 +469,21 @@ describe("selector-snapshot Pages Function", () => {
       db.__setRunHandler(() => {
         throw new Error("d1 unavailable");
       });
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput(), {
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
           ...POST_HEADERS,
           "CF-Connecting-IP": "203.0.113.89",
-        }),
-        env: makeEnv({ DB: db }),
-        params: {},
-      });
+        }), makeEnv({ DB: db })),
+      );
       expect(response.status).toBe(503);
     });
 
     it("returns 503 instead of storing caller output when canonical recomputation fails", async () => {
       recomputeVerifiedSelectorSnapshotMock.mockRejectedValueOnce(new Error("canonical source unavailable"));
       const env = makeEnv();
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput({ datasetHash: "f".repeat(64) })),
-        env,
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput({ datasetHash: "f".repeat(64) })), env),
+      );
 
       expect(response.status).toBe(503);
       await expect(response.json()).resolves.toEqual({ error: "Canonical selector data temporarily unavailable" });
@@ -617,24 +495,20 @@ describe("selector-snapshot Pages Function", () => {
       kv.__setWriteHandler(() => {
         throw new Error("kv unavailable");
       });
-      const response = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: kv }),
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest(buildSelectorSnapshotOutput()), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+      );
       expect(response.status).toBe(503);
     });
 
     it("returns 405 when POST is sent with a sid segment", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           method: "POST",
           body: JSON.stringify(buildSelectorSnapshotOutput()),
           headers: POST_HEADERS,
-        }),
-        env: makeEnv(),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        })),
+      );
       expect(response.status).toBe(405);
       expect(response.headers.get("Allow")).toBe("GET");
     });
@@ -643,20 +517,14 @@ describe("selector-snapshot Pages Function", () => {
   describe("GET storage", () => {
     it("returns the normalized stored payload", async () => {
       const env = makeEnv();
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       const { sid } = (await post.json()) as { sid: string };
 
-      const get = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const get = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(get.status).toBe(200);
       expect(get.headers.get("Cache-Control")).toBe("private, no-store");
       const body = (await get.json()) as Record<string, unknown>;
@@ -678,13 +546,11 @@ describe("selector-snapshot Pages Function", () => {
       const sid = computeSelectorSnapshotSid(legacy);
       kv.__getStore().set(`s:${sid}`, JSON.stringify(legacy));
 
-      const get = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const get = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
       expect(body.debug).toBeUndefined();
@@ -712,13 +578,11 @@ describe("selector-snapshot Pages Function", () => {
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       kv.__getStore().set(`s:${sid}`, JSON.stringify(legacyShape));
 
-      const get = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const get = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
       const recommended = body.recommended as Array<Record<string, unknown>>;
@@ -742,13 +606,11 @@ describe("selector-snapshot Pages Function", () => {
       const sid = computeSelectorSnapshotSid(output);
       kv.__getStore().set(`s:${sid}`, JSON.stringify(output));
 
-      const get = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const get = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
 
       expect(get.status).toBe(200);
       const body = (await get.json()) as Record<string, unknown>;
@@ -764,13 +626,11 @@ describe("selector-snapshot Pages Function", () => {
       const sid = computeSelectorSnapshotSid(forged);
       kv.__getStore().set(`s:${sid}`, JSON.stringify(forged));
 
-      const response = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const response = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toMatchObject({
@@ -784,11 +644,7 @@ describe("selector-snapshot Pages Function", () => {
     it("writes with the unread TTL and extends to full retention on first read only", async () => {
       const env = makeEnv();
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       const { sid } = (await post.json()) as { sid: string };
 
       expect(kv.__getPutCalls()).toHaveLength(1);
@@ -797,13 +653,11 @@ describe("selector-snapshot Pages Function", () => {
         options: { expirationTtl: SELECTOR_SNAPSHOT_UNREAD_TTL_SECONDS },
       });
 
-      const getOnce = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const getOnce = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(getOnce.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
       expect(kv.__getPutCalls()[1]).toMatchObject({
@@ -814,13 +668,11 @@ describe("selector-snapshot Pages Function", () => {
         },
       });
 
-      const getTwice = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const getTwice = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(getTwice.status).toBe(200);
       expect(kv.__getPutCalls()).toHaveLength(2);
     });
@@ -828,23 +680,17 @@ describe("selector-snapshot Pages Function", () => {
     it("returns 503 instead of claiming success when the retention extension fails", async () => {
       const env = makeEnv();
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       const { sid } = (await post.json()) as { sid: string };
       kv.__setWriteHandler(() => {
         throw new Error("extension unavailable");
       });
 
-      const get = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const get = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
 
       expect(get.status).toBe(503);
       await expect(get.json()).resolves.toEqual({ error: "Snapshot retention could not be extended" });
@@ -862,28 +708,18 @@ describe("selector-snapshot Pages Function", () => {
 
       let lastStatus = 0;
       for (let i = 0; i < 10; i++) {
-        const response = await onRequest({
-          request: postRequest(output, limitedHeaders),
-          env,
-          params: {},
-        });
+        const response = await onRequest(snapshotContext(postRequest(output, limitedHeaders), env));
         lastStatus = response.status;
       }
       expect(lastStatus).toBe(200);
 
-      const throttled = await onRequest({
-        request: postRequest(output, limitedHeaders),
-        env,
-        params: {},
-      });
+      const throttled = await onRequest(snapshotContext(postRequest(output, limitedHeaders), env));
       expect(throttled.status).toBe(429);
       expect(throttled.headers.get("Retry-After")).toBe("60");
 
-      const otherIp = await onRequest({
-        request: postRequest(output, { ...POST_HEADERS, "CF-Connecting-IP": "203.0.113.78" }),
-        env,
-        params: {},
-      });
+      const otherIp = await onRequest(
+        snapshotContext(postRequest(output, { ...POST_HEADERS, "CF-Connecting-IP": "203.0.113.78" }), env),
+      );
       expect(otherIp.status).toBe(200);
     });
   });
@@ -901,20 +737,16 @@ describe("selector-snapshot Pages Function", () => {
 
     for (let i = 0; i < 100; i++) {
       vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 0, i + 1, 0)));
-      const response = await onRequest({
-        request: postRequest({ ...output, datasetHash: i.toString(16).padStart(64, "0") }, headers),
-        env,
-        params: {},
-      });
+      const response = await onRequest(
+        snapshotContext(postRequest({ ...output, datasetHash: i.toString(16).padStart(64, "0") }, headers), env),
+      );
       expect(response.status).toBe(200);
     }
 
     vi.setSystemTime(new Date(Date.UTC(2026, 5, 19, 1, 50, 0)));
-    const throttled = await onRequest({
-      request: postRequest({ ...output, datasetHash: "f".repeat(64) }, headers),
-      env,
-      params: {},
-    });
+    const throttled = await onRequest(
+      snapshotContext(postRequest({ ...output, datasetHash: "f".repeat(64) }, headers), env),
+    );
     expect(throttled.status).toBe(429);
     expect(throttled.headers.get("Retry-After")).toBe("86400");
     expect([...(env.DB as TestD1Database).__getQuotaRows().values()]).toEqual([100]);
@@ -924,14 +756,12 @@ describe("selector-snapshot Pages Function", () => {
     const db = makeD1();
     const env = makeEnv({ DB: db, SELECTOR_SNAPSHOT_IP_HASH_SECRET: "pepper-one-which-is-long-enough-for-tests" });
     const ip = "203.0.113.201";
-    const response = await onRequest({
-      request: postRequest(buildSelectorSnapshotOutput(), {
+    const response = await onRequest(
+      snapshotContext(postRequest(buildSelectorSnapshotOutput(), {
         ...POST_HEADERS,
         "CF-Connecting-IP": ip,
-      }),
-      env,
-      params: {},
-    });
+      }), env),
+    );
     expect(response.status).toBe(200);
 
     const [storedKey] = [...db.__getQuotaRows().keys()];
@@ -947,81 +777,63 @@ describe("selector-snapshot Pages Function", () => {
   describe("GET failure modes", () => {
     it("returns 404 for an unknown sid", async () => {
       const env = makeEnv();
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        }), env),
+      );
       expect(response.status).toBe(404);
     });
 
     it("returns 404 when the sid is not 32 hex chars", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/not-a-sid", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/not-a-sid", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv(),
-        params: { path: "not-a-sid" },
-      });
+        })),
+      );
       expect(response.status).toBe(404);
     });
 
     it("returns 502 when the stored KV value is corrupt JSON", async () => {
       const kv = makeKV();
       kv.__setReadHandler(() => "{not valid json}");
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: kv }),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+      );
       expect(response.status).toBe(502);
     });
 
     it("returns 502 when the stored KV value is valid JSON but the wrong shape", async () => {
       const kv = makeKV();
       kv.__setReadHandler(() => JSON.stringify({ wrong: "shape" }));
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: kv }),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+      );
       expect(response.status).toBe(502);
     });
 
     it("returns 502 when the stored KV payload does not match the requested sid", async () => {
       const env = makeEnv();
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       const { sid } = (await post.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       kv.__getStore().set(`s:${sid}`, JSON.stringify(buildVerifiedSnapshot({ datasetHash: "b".repeat(64) })));
 
-      const response = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const response = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(response.status).toBe(502);
     });
 
     it("returns 502 when a KV-attested verified score is tampered", async () => {
       const env = makeEnv();
-      const post = await onRequest({
-        request: postRequest(buildSelectorSnapshotOutput()),
-        env,
-        params: {},
-      });
+      const post = await onRequest(snapshotContext(postRequest(buildSelectorSnapshotOutput()), env));
       const { sid } = (await post.json()) as { sid: string };
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       const stored = JSON.parse(kv.__getStore().get(`s:${sid}`) ?? "{}") as {
@@ -1030,13 +842,11 @@ describe("selector-snapshot Pages Function", () => {
       stored.recommended[0]!.score = 100;
       kv.__getStore().set(`s:${sid}`, JSON.stringify(stored));
 
-      const response = await onRequest({
-        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+      const response = await onRequest(
+        snapshotContext(new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env,
-        params: { path: sid },
-      });
+        }), env),
+      );
       expect(response.status).toBe(502);
     });
 
@@ -1045,51 +855,43 @@ describe("selector-snapshot Pages Function", () => {
       kv.__setReadHandler(() => {
         throw new Error("kv read failed");
       });
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: kv }),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        }), makeEnv({ SELECTOR_SNAPSHOTS: kv })),
+      );
       expect(response.status).toBe(503);
     });
 
     it("returns 500 when the KV binding is missing on GET", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv({ SELECTOR_SNAPSHOTS: undefined }),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        }), makeEnv({ SELECTOR_SNAPSHOTS: undefined })),
+      );
       expect(response.status).toBe(500);
     });
   });
 
   describe("unsupported methods", () => {
     it("returns 405 with Allow on PUT", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot", {
           method: "PUT",
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv(),
-        params: {},
-      });
+        })),
+      );
       expect(response.status).toBe(405);
       expect(response.headers.get("Allow")).toBe("GET, POST");
     });
 
     it("returns 405 with Allow on DELETE", async () => {
-      const response = await onRequest({
-        request: new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
+      const response = await onRequest(
+        snapshotContext(new Request("https://pharos.watch/selector-snapshot/00112233445566778899aabbccddeeff", {
           method: "DELETE",
           headers: { Origin: "https://pharos.watch" },
-        }),
-        env: makeEnv(),
-        params: { path: "00112233445566778899aabbccddeeff" },
-      });
+        })),
+      );
       expect(response.status).toBe(405);
       expect(response.headers.get("Allow")).toBe("GET, POST");
     });

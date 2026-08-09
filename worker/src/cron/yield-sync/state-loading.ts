@@ -315,10 +315,7 @@ export async function loadYieldSyncState(params: {
         explorerResolvedCount: 0,
       }
     : fetchOnChainRates(params.signal, params.chainRpcs, params.etherscanApiKey);
-  const safetySnapshotPromise = computeSafetyScoresSnapshot(params.db, {
-    outputMode: "map",
-    sourceMode: "published-cache",
-  });
+  const safetySnapshotPromise = computeSafetyScoresSnapshot(params.db);
   const [onChainFetchResult, safetySnapshot] = await Promise.all([
     onChainFetchResultPromise,
     safetySnapshotPromise,

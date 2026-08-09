@@ -191,6 +191,7 @@
       ]
     }
   },
+  "governanceQuality": "single-entity",
   "launchDate": "2023-09-15",
   "status": "quarantined",
   "listingStatusReview": {

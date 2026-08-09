@@ -5,11 +5,11 @@ const CanonicalTextSchema = z
   .min(1)
   .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
 
-function compareText(left: string, right: string): number {
+export function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
+export function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
   return z
     .array(schema)
     .superRefine((values, ctx) => {

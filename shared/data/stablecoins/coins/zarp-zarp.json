@@ -370,6 +370,7 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "ZAR fiat reserves",

@@ -727,6 +727,7 @@
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "infrastructures": [
     "liquity-v2"
   ],
