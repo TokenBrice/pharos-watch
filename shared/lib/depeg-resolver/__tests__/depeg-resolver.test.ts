@@ -97,7 +97,7 @@ describe("structuralClass", () => {
     ).toBe(structuralClass(coin({ mechanismArchetype: "fiat-cash", authorityPosture: "unbounded-or-compromised" })));
   });
 
-  it("reads none-resolved-mint as benign but not as non-inflatable", () => {
+  it("reads none-resolved-mint as benign but not as structurally robust", () => {
     // The mint-scoped value states only that *this* asset has no minter. It is
     // therefore not a fragile posture — it must not by itself force fragile the
     // way the unbounded/concentrated rungs do.
@@ -113,11 +113,12 @@ describe("structuralClass", () => {
 });
 
 describe("DDR curated-posture set membership — pinned", () => {
-  // `FRAGILE_POSTURES`, `RISKY_POSTURES` and `SEVERE_SURGE_POSTURES` are module
-  // private, so membership is pinned through the behaviour each set drives. The
-  // curated vocabulary grew twice (`unbounded-reconciled`, `none-resolved-mint`)
-  // and both times the intended set membership was preserved silently; this
-  // fails loudly if a later edit changes it.
+  // Set membership now lives in the shared `safety-score-v9/mint-posture`
+  // predicates (`isFragileMintPosture`, `isUnboundedMintPosture`,
+  // `isNoPrivilegedMintPosture`, `isNoPrivilegedMintChainPosture`) rather than
+  // in per-engine literal sets. Membership is still pinned here through the
+  // behaviour each predicate drives, so a vocabulary addition that lands in the
+  // wrong set fails loudly at the DDR boundary rather than silently.
   const surging = () => baseSupply({ mintSurge: true, change7dPct: 40 });
   const deepBelow = () => event({ direction: "below", peakDeviationBps: -2000 });
   const k1 = (posture: string) =>
@@ -157,7 +158,12 @@ describe("DDR curated-posture set membership — pinned", () => {
     ).toMatchObject({ severity: "elevated" });
   });
 
-  it("does not grant the R1 non-inflatable anchor to the mint-scoped value", () => {
+  it("grants the mint-scoped value the weak R1 rung, never the strong one", () => {
+    // DDR 4.2: `none-resolved-mint` is real evidence — this token has no minter
+    // of its own — so it earns R1 at the weak rung alongside governance-bounded
+    // user collateral. It cannot earn the strong rung, because the wrapped
+    // parent can still print. Only strong anchors move the resolution tier, so
+    // the weak rung is published attribution and shifts no verdict.
     const anchorFor = (posture: string) =>
       resolveOutlook(
         event({ direction: "below", peakDeviationBps: -300 }),
@@ -167,7 +173,24 @@ describe("DDR curated-posture set membership — pinned", () => {
       ).factors.find((factor) => factor.code === "R1_noninflatable_supply") ?? null;
 
     expect(anchorFor("none-resolved")).toMatchObject({ severity: "strong" });
-    expect(anchorFor("none-resolved-mint")).toBeNull();
+    expect(anchorFor("none-resolved-mint")).toMatchObject({ kind: "anchor", severity: "weak" });
+    expect(anchorFor("bounded-admin")).toBeNull();
+  });
+
+  it("keeps the immutable and governed mint paths ahead of the mint-scoped rung", () => {
+    const anchorFor = (patch: Partial<DdrCoinStructural>) =>
+      resolveOutlook(
+        event({ direction: "below", peakDeviationBps: -300 }),
+        coin({ authorityPosture: "none-resolved-mint", ...patch }),
+        baseSupply(),
+        baseLive(),
+      ).factors.find((factor) => factor.code === "R1_noninflatable_supply") ?? null;
+
+    expect(anchorFor({ mintPath: "immutable-user-collateralized" })).toMatchObject({ severity: "strong" });
+    expect(anchorFor({ mintPath: "user-collateralized-governed" })).toMatchObject({
+      severity: "weak",
+      label: "User-collateralized supply (governance-bounded)",
+    });
   });
 });
 
