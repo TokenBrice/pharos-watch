@@ -10,8 +10,13 @@ import type {
   StatusSectionKey,
 } from "@shared/types";
 import { getProbeDisplayStatus, normalizeStatusIssues, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
-
-const RELIABILITY_MODE_QUERY_PARAM = "view";
+import {
+  buildWorkspaceModeUrl,
+  parseWorkspaceMode,
+  pickInitialMode,
+  worstSeverity as worstWorkspaceSeverity,
+  type WorkspaceSeverity,
+} from "@/lib/status/workspace-mode";
 
 export const RELIABILITY_MODES = [
   { id: "impact", label: "Impact" },
@@ -22,7 +27,7 @@ export const RELIABILITY_MODES = [
 ] as const;
 
 export type ReliabilityMode = (typeof RELIABILITY_MODES)[number]["id"];
-export type ReliabilitySeverity = "healthy" | "watch" | "critical" | "unknown";
+export type ReliabilitySeverity = WorkspaceSeverity;
 export type ReliabilityIssueKind = "critical" | "warning" | "maintenance" | "informational" | "unknown";
 
 export interface ReliabilityIssue {
@@ -112,19 +117,10 @@ export interface ReliabilityWorkspaceInput {
   requestSourceLoading?: boolean;
 }
 
-const RELIABILITY_MODE_IDS = new Set<string>(RELIABILITY_MODES.map((mode) => mode.id));
-
 const SECTION_ERROR_META: Partial<Record<StatusSectionKey, { mode: ReliabilityMode; label: string }>> = {
   dependencyHealth: { mode: "dependencies", label: "Dependency health" },
   providerCircuitHealth: { mode: "dependencies", label: "Provider circuits" },
   canaries: { mode: "dependencies", label: "Invariant canaries" },
-};
-
-const MODE_SEVERITY_RANK: Record<ReliabilitySeverity, number> = {
-  healthy: 0,
-  watch: 1,
-  unknown: 2,
-  critical: 3,
 };
 
 const ISSUE_KIND_RANK: Record<ReliabilityIssueKind, number> = {
@@ -149,11 +145,8 @@ function healthKind(status: StatusHealthValue | "unknown" | null | undefined): R
   return null;
 }
 
-function worstSeverity(issues: readonly ReliabilityIssue[]): ReliabilitySeverity {
-  return issues.reduce<ReliabilitySeverity>((current, issue) => {
-    const next = issueSeverity(issue.kind);
-    return MODE_SEVERITY_RANK[next] > MODE_SEVERITY_RANK[current] ? next : current;
-  }, "healthy");
+function worstIssueSeverity(issues: readonly ReliabilityIssue[]): ReliabilitySeverity {
+  return worstWorkspaceSeverity(issues.map((issue) => issueSeverity(issue.kind)));
 }
 
 function addIssue(map: Map<string, ReliabilityIssue>, issue: ReliabilityIssue): void {
@@ -318,19 +311,14 @@ function buildDependenciesModel(input: ReliabilityWorkspaceInput): ReliabilityDe
 }
 
 export function parseReliabilityMode(search: string | URLSearchParams): ReliabilityMode | null {
-  const params = typeof search === "string" ? new URLSearchParams(search) : search;
-  const candidate = params.get(RELIABILITY_MODE_QUERY_PARAM);
-  return candidate && RELIABILITY_MODE_IDS.has(candidate) ? (candidate as ReliabilityMode) : null;
+  return parseWorkspaceMode(RELIABILITY_MODES, search);
 }
 
 export function buildReliabilityModeUrl(
   location: Pick<Location, "pathname" | "search" | "hash">,
   mode: ReliabilityMode,
 ): string {
-  const params = new URLSearchParams(location.search);
-  params.set(RELIABILITY_MODE_QUERY_PARAM, mode);
-  const query = params.toString();
-  return `${location.pathname}${query ? `?${query}` : ""}${location.hash}`;
+  return buildWorkspaceModeUrl(location, mode);
 }
 
 function collectReliabilityEvidenceGaps(input: ReliabilityWorkspaceInput): ReliabilityEvidenceGap[] {
@@ -675,7 +663,7 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
     return {
       ...mode,
       issueCount: modeIssues.length,
-      severity: worstSeverity(modeIssues),
+      severity: worstIssueSeverity(modeIssues),
     };
   });
 
@@ -690,16 +678,5 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
 }
 
 export function deriveInitialReliabilityMode(model: Pick<ReliabilityWorkspaceModel, "modeSummaries">): ReliabilityMode {
-  return (
-    [...model.modeSummaries].sort((left, right) => {
-      const severityDelta = MODE_SEVERITY_RANK[right.severity] - MODE_SEVERITY_RANK[left.severity];
-      if (severityDelta !== 0) return severityDelta;
-      const countDelta = right.issueCount - left.issueCount;
-      if (countDelta !== 0) return countDelta;
-      return (
-        RELIABILITY_MODES.findIndex((mode) => mode.id === left.id) -
-        RELIABILITY_MODES.findIndex((mode) => mode.id === right.id)
-      );
-    })[0]?.id ?? "impact"
-  );
+  return pickInitialMode(model.modeSummaries, RELIABILITY_MODES, "impact");
 }

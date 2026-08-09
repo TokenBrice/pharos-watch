@@ -1,22 +1,38 @@
 import { describe, expect, it } from "vitest";
 import type { ApiKeySummary } from "@shared/types";
 import {
-  API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
-  API_KEY_INVENTORY_MAX_PAGE_SIZE,
-  DEFAULT_API_KEY_INVENTORY_SORT,
   buildApiKeyExpiryWindow,
   buildApiKeyInventoryView,
-  filterApiKeys,
-  getApiKeyInventoryStatus,
-  paginateApiKeys,
-  searchApiKeys,
-  sortApiKeys,
+  type ApiKeyInventoryQuery,
+  type ApiKeyInventoryStatus,
 } from "../api-key-admin-view-model";
 import { makeLargeApiKeyInventory } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
 
 const NOW_SECONDS = STATUS_FIXTURE_NOW_SECONDS;
 const DAY_SECONDS = 86_400;
+
+/** Pinned module defaults — the constants themselves are module-private. */
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+/** Larger than the 75-key fixture, so a query annotated with it returns every match. */
+const UNPAGED = MAX_PAGE_SIZE;
+
+const INVENTORY_STATUSES: readonly ApiKeyInventoryStatus[] = [
+  "expired",
+  "expiring-soon",
+  "inactive",
+  "non-expiring",
+  "active",
+];
+
+const STATUS_PRIORITY: Readonly<Record<ApiKeyInventoryStatus, number>> = {
+  expired: 0,
+  "expiring-soon": 1,
+  inactive: 2,
+  "non-expiring": 3,
+  active: 4,
+};
 
 function makeReviewInventory(): ApiKeySummary[] {
   return makeLargeApiKeyInventory().keys.map((key, index) => {
@@ -75,6 +91,20 @@ function makeReviewInventory(): ApiKeySummary[] {
   });
 }
 
+/** Every id the model surfaces for `query`, in model order. */
+function inventoryIds(keys: readonly ApiKeySummary[], query: ApiKeyInventoryQuery = {}): number[] {
+  return buildApiKeyInventoryView(keys, NOW_SECONDS, { pageSize: UNPAGED, ...query }).keys.map((key) => key.id);
+}
+
+/** Status per key, read back through the model's own status filters. */
+function statusById(keys: readonly ApiKeySummary[]): Map<number, ApiKeyInventoryStatus> {
+  const byId = new Map<number, ApiKeyInventoryStatus>();
+  for (const status of INVENTORY_STATUSES) {
+    for (const id of inventoryIds(keys, { status })) byId.set(id, status);
+  }
+  return byId;
+}
+
 describe("API key inventory workbench model", () => {
   it("uses a sanitized 75-key inventory with nullable review fields", () => {
     const keys = makeReviewInventory();
@@ -100,78 +130,66 @@ describe("API key inventory workbench model", () => {
       "PRIORITY",
       "FIXTURE-BEACON/LATEST",
     ]) {
-      expect(searchApiKeys(keys, search).map((key) => key.id)).toContain(expectedId);
+      expect(inventoryIds(keys, { search, status: "all" })).toContain(expectedId);
     }
 
-    expect(searchApiKeys(keys, "beacon.owner fixture-beacon/latest").map((key) => key.id)).toEqual([expectedId]);
-    expect(searchApiKeys(keys, "   ")).toEqual(keys);
+    expect(inventoryIds(keys, { search: "beacon.owner fixture-beacon/latest", status: "all" })).toEqual([expectedId]);
+    expect(inventoryIds(keys, { search: "   ", status: "all" })).toHaveLength(keys.length);
   });
 
   it("classifies mutually exclusive statuses and builds the attention filter from them", () => {
     const keys = makeReviewInventory();
+    const firstFive = keys.slice(0, 5);
 
-    expect(keys.slice(0, 5).map((key) => getApiKeyInventoryStatus(key, NOW_SECONDS))).toEqual([
-      "expired",
-      "expiring-soon",
-      "inactive",
-      "non-expiring",
-      "active",
-    ]);
-    expect(getApiKeyInventoryStatus({ ...keys[0], isActive: false }, NOW_SECONDS)).toBe("inactive");
-    expect(
-      getApiKeyInventoryStatus({ ...keys[1], isActive: false, expiresAt: NOW_SECONDS + DAY_SECONDS }, NOW_SECONDS),
-    ).toBe("inactive");
-    expect(getApiKeyInventoryStatus({ ...keys[3], isActive: false, expiresAt: null }, NOW_SECONDS)).toBe("inactive");
+    // The fixture seeds one key per status, in declaration order.
+    INVENTORY_STATUSES.forEach((status, index) => {
+      expect(inventoryIds(firstFive, { status })).toEqual([index + 1]);
+    });
 
-    for (const status of ["expired", "expiring-soon", "inactive", "non-expiring", "active"] as const) {
-      const matches = filterApiKeys(keys, { status }, NOW_SECONDS);
-      expect(matches.length).toBeGreaterThan(0);
-      expect(matches.every((key) => getApiKeyInventoryStatus(key, NOW_SECONDS) === status)).toBe(true);
+    // Deactivation outranks every expiry-derived status.
+    for (const deactivated of [
+      { ...keys[0], isActive: false },
+      { ...keys[1], isActive: false, expiresAt: NOW_SECONDS + DAY_SECONDS },
+      { ...keys[3], isActive: false, expiresAt: null },
+    ]) {
+      expect(inventoryIds([deactivated], { status: "inactive" })).toEqual([deactivated.id]);
     }
 
-    expect(
-      filterApiKeys(keys, { status: "attention" }, NOW_SECONDS).every(
-        (key) => getApiKeyInventoryStatus(key, NOW_SECONDS) !== "active",
-      ),
-    ).toBe(true);
+    const byStatus = INVENTORY_STATUSES.map((status) => inventoryIds(keys, { status }));
+    for (const ids of byStatus) expect(ids.length).toBeGreaterThan(0);
+    expect(byStatus.flat()).toHaveLength(keys.length);
+
+    const attention = inventoryIds(keys, { status: "attention" });
+    const active = inventoryIds(keys, { status: "active" });
+    expect(attention.some((id) => active.includes(id))).toBe(false);
+    expect([...attention, ...active].sort((a, b) => a - b)).toEqual(keys.map((key) => key.id).sort((a, b) => a - b));
   });
 
   it("applies inclusive expiry windows and includes non-expiring exceptions only when requested", () => {
     const keys = makeReviewInventory();
     const expiresAt = NOW_SECONDS + DAY_SECONDS;
-    const exactWindow = filterApiKeys(
-      keys,
-      {
-        status: "all",
-        expiryWindow: { expiresFrom: expiresAt, expiresThrough: expiresAt },
+    const nonExpiringIds = keys.filter((key) => key.expiresAt == null).map((key) => key.id);
+    const exactWindow = inventoryIds(keys, {
+      status: "all",
+      expiryWindow: { expiresFrom: expiresAt, expiresThrough: expiresAt },
+    });
+    const nextWeek = inventoryIds(keys, {
+      status: "all",
+      expiryWindow: { expiresFrom: NOW_SECONDS, expiresThrough: NOW_SECONDS + 7 * DAY_SECONDS },
+    });
+    const nextWeekWithExceptions = inventoryIds(keys, {
+      status: "all",
+      expiryWindow: {
+        expiresFrom: NOW_SECONDS,
+        expiresThrough: NOW_SECONDS + 7 * DAY_SECONDS,
+        includeNonExpiring: true,
       },
-      NOW_SECONDS,
-    );
-    const nextWeek = filterApiKeys(
-      keys,
-      {
-        status: "all",
-        expiryWindow: { expiresFrom: NOW_SECONDS, expiresThrough: NOW_SECONDS + 7 * DAY_SECONDS },
-      },
-      NOW_SECONDS,
-    );
-    const nextWeekWithExceptions = filterApiKeys(
-      keys,
-      {
-        status: "all",
-        expiryWindow: {
-          expiresFrom: NOW_SECONDS,
-          expiresThrough: NOW_SECONDS + 7 * DAY_SECONDS,
-          includeNonExpiring: true,
-        },
-      },
-      NOW_SECONDS,
-    );
+    });
 
-    expect(exactWindow.map((key) => key.id)).toEqual([2]);
-    expect(nextWeek.every((key) => key.expiresAt != null)).toBe(true);
-    expect(nextWeekWithExceptions.filter((key) => key.expiresAt == null)).toEqual(
-      keys.filter((key) => key.expiresAt == null),
+    expect(exactWindow).toEqual([2]);
+    expect(nextWeek.some((id) => nonExpiringIds.includes(id))).toBe(false);
+    expect(nextWeekWithExceptions.filter((id) => nonExpiringIds.includes(id)).sort((a, b) => a - b)).toEqual(
+      [...nonExpiringIds].sort((a, b) => a - b),
     );
   });
 
@@ -194,18 +212,17 @@ describe("API key inventory workbench model", () => {
   it("combines null-owner, owner, tier, and traffic-class filters without fuzzy matches", () => {
     const keys = makeReviewInventory();
 
-    expect(filterApiKeys(keys, { owner: null }, NOW_SECONDS).map((key) => key.id)).toEqual([1]);
-    expect(filterApiKeys(keys, { owner: "beacon.owner@example.invalid" }, NOW_SECONDS).map((key) => key.id)).toEqual([
-      12,
-    ]);
+    expect(inventoryIds(keys, { status: "all", owner: null })).toEqual([1]);
+    expect(inventoryIds(keys, { status: "all", owner: "beacon.owner@example.invalid" })).toEqual([12]);
     expect(
-      filterApiKeys(
-        keys,
-        { owner: "BEACON.OWNER@EXAMPLE.INVALID", tier: "priority", trafficClass: "external" },
-        NOW_SECONDS,
-      ).map((key) => key.id),
+      inventoryIds(keys, {
+        status: "all",
+        owner: "BEACON.OWNER@EXAMPLE.INVALID",
+        tier: "priority",
+        trafficClass: "external",
+      }),
     ).toEqual([12]);
-    expect(filterApiKeys(keys, { owner: "beacon", tier: "priority" }, NOW_SECONDS)).toEqual([]);
+    expect(inventoryIds(keys, { status: "all", owner: "beacon", tier: "priority" })).toEqual([]);
   });
 
   it("sorts expiry in both directions with nulls last and id as the stable tie-break", () => {
@@ -218,10 +235,8 @@ describe("API key inventory workbench model", () => {
     ];
     const originalIds = sortable.map((key) => key.id);
 
-    expect(sortApiKeys(sortable, { field: "expiry", direction: "asc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
-      1, 2, 5, 4,
-    ]);
-    expect(sortApiKeys(sortable, { field: "expiry", direction: "desc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
+    expect(inventoryIds(sortable, { status: "all", sort: { field: "expiry", direction: "asc" } })).toEqual([1, 2, 5, 4]);
+    expect(inventoryIds(sortable, { status: "all", sort: { field: "expiry", direction: "desc" } })).toEqual([
       5, 1, 2, 4,
     ]);
     expect(sortable.map((key) => key.id)).toEqual(originalIds);
@@ -236,24 +251,28 @@ describe("API key inventory workbench model", () => {
       { ...keys[3], lastUsedAt: NOW_SECONDS - 10 },
     ];
 
-    expect(sortApiKeys(sortable, { field: "last-use", direction: "asc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
+    expect(inventoryIds(sortable, { status: "all", sort: { field: "last-use", direction: "asc" } })).toEqual([
       2, 3, 4, 1,
     ]);
-    expect(sortApiKeys(sortable, { field: "last-use", direction: "desc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
+    expect(inventoryIds(sortable, { status: "all", sort: { field: "last-use", direction: "desc" } })).toEqual([
       4, 2, 3, 1,
     ]);
   });
 
   it("sorts rate limit and case-insensitive names deterministically", () => {
     const keys = makeReviewInventory();
-    const rateLimitSorted = sortApiKeys(keys, { field: "rate-limit", direction: "asc" }, NOW_SECONDS);
-    const rateLimitDescending = sortApiKeys(keys, { field: "rate-limit", direction: "desc" }, NOW_SECONDS);
+    const byId = new Map(keys.map((key) => [key.id, key] as const));
+    const rateLimitSorted = inventoryIds(keys, { status: "all", sort: { field: "rate-limit", direction: "asc" } })
+      .map((id) => byId.get(id)!);
+    const rateLimitDescending = inventoryIds(keys, { status: "all", sort: { field: "rate-limit", direction: "desc" } })
+      .map((id) => byId.get(id)!);
     const named = [
       { ...keys[2], name: "Beta" },
       { ...keys[1], name: "ALPHA" },
       { ...keys[0], name: "alpha" },
     ];
 
+    expect(rateLimitSorted).toHaveLength(keys.length);
     for (let index = 1; index < rateLimitSorted.length; index += 1) {
       const previous = rateLimitSorted[index - 1];
       const current = rateLimitSorted[index];
@@ -270,55 +289,45 @@ describe("API key inventory workbench model", () => {
         expect(previous.id).toBeLessThan(current.id);
       }
     }
-    expect(sortApiKeys(named, { field: "name", direction: "asc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
-      1, 2, 3,
-    ]);
-    expect(sortApiKeys(named, { field: "name", direction: "desc" }, NOW_SECONDS).map((key) => key.id)).toEqual([
-      3, 1, 2,
-    ]);
+    expect(inventoryIds(named, { status: "all", sort: { field: "name", direction: "asc" } })).toEqual([1, 2, 3]);
+    expect(inventoryIds(named, { status: "all", sort: { field: "name", direction: "desc" } })).toEqual([3, 1, 2]);
   });
 
   it("uses status priority by default and applies the id tie-break within each status", () => {
     const keys = makeReviewInventory();
-    const attentionKeys = filterApiKeys(keys, { status: "attention" }, NOW_SECONDS);
-    const expected = sortApiKeys(attentionKeys, DEFAULT_API_KEY_INVENTORY_SORT, NOW_SECONDS);
+    const statuses = statusById(keys);
+    const attentionIds = inventoryIds(keys, { status: "attention" });
     const view = buildApiKeyInventoryView(keys, NOW_SECONDS);
-    const priorities = new Map([
-      ["expired", 0],
-      ["expiring-soon", 1],
-      ["inactive", 2],
-      ["non-expiring", 3],
-      ["active", 4],
-    ] as const);
 
     expect(view.totalInventoryItems).toBe(75);
-    expect(view.totalItems).toBe(attentionKeys.length);
-    expect(view.keys).toEqual(expected.slice(0, API_KEY_INVENTORY_DEFAULT_PAGE_SIZE));
-    expect(view.keys.every((key) => getApiKeyInventoryStatus(key, NOW_SECONDS) !== "active")).toBe(true);
-    expect(
-      sortApiKeys(keys.slice(0, 5), { field: "status", direction: "desc" }, NOW_SECONDS).map((key) => key.id),
-    ).toEqual([5, 4, 3, 2, 1]);
-    for (let index = 1; index < expected.length; index += 1) {
-      const previous = expected[index - 1];
-      const current = expected[index];
-      const previousStatus = getApiKeyInventoryStatus(previous, NOW_SECONDS);
-      const currentStatus = getApiKeyInventoryStatus(current, NOW_SECONDS);
-      const previousPriority = priorities.get(previousStatus);
-      const currentPriority = priorities.get(currentStatus);
-      if (previousPriority == null || currentPriority == null) {
+    expect(view.totalItems).toBe(attentionIds.length);
+    expect(view.pageSize).toBe(DEFAULT_PAGE_SIZE);
+    expect(view.keys.map((key) => key.id)).toEqual(attentionIds.slice(0, DEFAULT_PAGE_SIZE));
+    expect(view.keys.every((key) => statuses.get(key.id) !== "active")).toBe(true);
+    expect(inventoryIds(keys.slice(0, 5), { status: "all", sort: { field: "status", direction: "desc" } })).toEqual([
+      5, 4, 3, 2, 1,
+    ]);
+
+    for (let index = 1; index < attentionIds.length; index += 1) {
+      const previousId = attentionIds[index - 1];
+      const currentId = attentionIds[index];
+      const previousStatus = statuses.get(previousId);
+      const currentStatus = statuses.get(currentId);
+      if (previousStatus == null || currentStatus == null) {
         throw new Error("Missing API key status priority fixture");
       }
-      expect(previousPriority).toBeLessThanOrEqual(currentPriority);
+      expect(STATUS_PRIORITY[previousStatus]).toBeLessThanOrEqual(STATUS_PRIORITY[currentStatus]);
       if (previousStatus === currentStatus) {
-        expect(previous.id).toBeLessThan(current.id);
+        expect(previousId).toBeLessThan(currentId);
       }
     }
   });
 
   it("bounds page size and corrects fractional, invalid, empty, and out-of-range pages", () => {
     const keys = makeReviewInventory();
+    const paged = (query: ApiKeyInventoryQuery) => buildApiKeyInventoryView(keys, NOW_SECONDS, { status: "all", ...query });
 
-    expect(paginateApiKeys(keys, 999, 20)).toMatchObject({
+    expect(paged({ page: 999, pageSize: 20 })).toMatchObject({
       page: 4,
       pageSize: 20,
       totalItems: 75,
@@ -328,7 +337,7 @@ describe("API key inventory workbench model", () => {
       pageWasCorrected: true,
       pageSizeWasCorrected: false,
     });
-    expect(paginateApiKeys(keys, 2.9, 10.9)).toMatchObject({
+    expect(paged({ page: 2.9, pageSize: 10.9 })).toMatchObject({
       page: 2,
       pageSize: 10,
       firstItemNumber: 11,
@@ -336,22 +345,22 @@ describe("API key inventory workbench model", () => {
       pageWasCorrected: true,
       pageSizeWasCorrected: true,
     });
-    expect(paginateApiKeys(keys, 0, 0)).toMatchObject({
+    expect(paged({ page: 0, pageSize: 0 })).toMatchObject({
       page: 1,
       pageSize: 1,
       pageWasCorrected: true,
       pageSizeWasCorrected: true,
     });
-    expect(paginateApiKeys(keys, Number.NaN, Number.POSITIVE_INFINITY)).toMatchObject({
+    expect(paged({ page: Number.NaN, pageSize: Number.POSITIVE_INFINITY })).toMatchObject({
       page: 1,
-      pageSize: API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,
+      pageSize: DEFAULT_PAGE_SIZE,
       pageWasCorrected: true,
       pageSizeWasCorrected: true,
     });
-    expect(paginateApiKeys([], 99, 500)).toMatchObject({
+    expect(buildApiKeyInventoryView([], NOW_SECONDS, { status: "all", page: 99, pageSize: 500 })).toMatchObject({
       keys: [],
       page: 1,
-      pageSize: API_KEY_INVENTORY_MAX_PAGE_SIZE,
+      pageSize: MAX_PAGE_SIZE,
       totalItems: 0,
       totalPages: 1,
       firstItemNumber: 0,

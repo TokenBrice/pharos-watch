@@ -4,9 +4,16 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
-import type { DataQuality, StatusHealthValue, StatusResponse, StatusSectionKey } from "@shared/types";
-
-const PIPELINE_MODE_QUERY_PARAM = "view";
+import type { DataQuality, StatusResponse, StatusSectionKey } from "@shared/types";
+import {
+  buildWorkspaceModeUrl,
+  healthSeverity,
+  parseWorkspaceMode,
+  pickInitialMode,
+  worstSeverity,
+  SEVERITY_RANK,
+  type WorkspaceSeverity,
+} from "@/lib/status/workspace-mode";
 
 export const PIPELINE_MODES = [
   { id: "quality", label: "Quality" },
@@ -18,7 +25,7 @@ export const PIPELINE_MODES = [
 ] as const;
 
 export type PipelineMode = (typeof PIPELINE_MODES)[number]["id"];
-export type PipelineSeverity = "healthy" | "watch" | "critical" | "unknown";
+export type PipelineSeverity = WorkspaceSeverity;
 
 export interface PipelineModeSummary {
   id: PipelineMode;
@@ -75,8 +82,6 @@ export interface PipelineIntegrityModel {
   severity: PipelineSeverity;
 }
 
-const PIPELINE_MODE_IDS = new Set<string>(PIPELINE_MODES.map((mode) => mode.id));
-
 const PIPELINE_ERROR_META: Partial<Record<StatusSectionKey, { mode: PipelineMode; label: string }>> = {
   priceSourceHealth: { mode: "markets", label: "Price source health" },
   liquidityHealth: { mode: "markets", label: "Liquidity health" },
@@ -89,13 +94,6 @@ const PIPELINE_ERROR_META: Partial<Record<StatusSectionKey, { mode: PipelineMode
   d1Usage: { mode: "storage", label: "D1 usage" },
   publicationHealth: { mode: "integrity", label: "Publication health" },
   dependencyHealth: { mode: "integrity", label: "Dependency health" },
-};
-
-const SEVERITY_RANK: Record<PipelineSeverity, number> = {
-  healthy: 0,
-  watch: 1,
-  unknown: 2,
-  critical: 3,
 };
 
 function finiteNumber(value: unknown): number | null {
@@ -117,20 +115,6 @@ function formatAge(ageSeconds: number | null): string {
   return `${Math.round(ageSeconds / 3_600)}h since last sample`;
 }
 
-function worstSeverity(states: readonly PipelineSeverity[]): PipelineSeverity {
-  return states.reduce<PipelineSeverity>(
-    (worst, state) => (SEVERITY_RANK[state] > SEVERITY_RANK[worst] ? state : worst),
-    "healthy",
-  );
-}
-
-function healthSeverity(status: StatusHealthValue | "unknown" | null | undefined): PipelineSeverity {
-  if (status === "stale") return "critical";
-  if (status === "degraded") return "watch";
-  if (status === "healthy") return "healthy";
-  return "unknown";
-}
-
 function thresholdState(value: number, warning: number, stale: number, inclusive = false): PipelineSeverity {
   if (inclusive ? value >= stale : value > stale) return "critical";
   if (inclusive ? value >= warning : value > warning) return "watch";
@@ -138,19 +122,14 @@ function thresholdState(value: number, warning: number, stale: number, inclusive
 }
 
 export function parsePipelineMode(search: string | URLSearchParams): PipelineMode | null {
-  const params = typeof search === "string" ? new URLSearchParams(search) : search;
-  const candidate = params.get(PIPELINE_MODE_QUERY_PARAM);
-  return candidate && PIPELINE_MODE_IDS.has(candidate) ? (candidate as PipelineMode) : null;
+  return parseWorkspaceMode(PIPELINE_MODES, search);
 }
 
 export function buildPipelineModeUrl(
   location: Pick<Location, "pathname" | "search" | "hash">,
   mode: PipelineMode,
 ): string {
-  const params = new URLSearchParams(location.search);
-  params.set(PIPELINE_MODE_QUERY_PARAM, mode);
-  const query = params.toString();
-  return `${location.pathname}${query ? `?${query}` : ""}${location.hash}`;
+  return buildWorkspaceModeUrl(location, mode);
 }
 
 export function collectPipelineLoaderErrors(data: StatusResponse): PipelineLoaderError[] {
@@ -627,13 +606,5 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
 }
 
 export function deriveInitialPipelineMode(data: StatusResponse): PipelineMode {
-  const summaries = buildPipelineModeSummaries(data);
-  return [...summaries].sort((left, right) => {
-    const severityDelta = SEVERITY_RANK[right.severity] - SEVERITY_RANK[left.severity];
-    if (severityDelta !== 0) return severityDelta;
-    const countDelta = right.issueCount - left.issueCount;
-    if (countDelta !== 0) return countDelta;
-    return PIPELINE_MODES.findIndex((mode) => mode.id === left.id)
-      - PIPELINE_MODES.findIndex((mode) => mode.id === right.id);
-  })[0]?.id ?? "quality";
+  return pickInitialMode(buildPipelineModeSummaries(data), PIPELINE_MODES, "quality");
 }

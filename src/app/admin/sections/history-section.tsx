@@ -135,7 +135,7 @@ function WorkerReleaseCorrelation({ evidence }: { evidence: WorkerVersionEvidenc
       {evidence.status === "unavailable" ? (
         <div className="border-l-2 border-border pl-3 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Runtime observation unavailable</p>
-          <p>No Worker version observation exists in producer-head or latest-attempt payload fields.</p>
+          <p>No Worker version observation exists in the producer-head payload fields.</p>
           <p className="mt-1">Deploy time, deployment ID, and deploy commit are Unknown.</p>
         </div>
       ) : (

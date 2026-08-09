@@ -26,29 +26,30 @@ describe("HomeAltDdrOverview", () => {
     useDepegResolverSurfacesMock.mockReturnValue({
       resolverEnabled: true,
       resolverReviewerEnabled: false,
-      resolverData: {
-        _meta: { degraded: false },
-        rows: [
-          {
-            kind: "prediction",
-            stablecoinId: "test-usd",
-            symbol: "TUSD",
-            name: "Test USD",
-            pegCurrency: "USD",
-            direction: "below",
-            prediction: { state: "frozen" },
-            frozen: {
-              resolution: { tier: "at_risk", factors: [] },
-              duration: { suppressed: true, medianSec: null },
-              sourceRow: { currentDeviationBps: -300, peakDeviationBps: -300 },
+      resolver: {
+        data: {
+          _meta: { degraded: false },
+          rows: [
+            {
+              kind: "prediction",
+              stablecoinId: "test-usd",
+              symbol: "TUSD",
+              name: "Test USD",
+              pegCurrency: "USD",
+              direction: "below",
+              prediction: { state: "frozen" },
+              frozen: {
+                resolution: { tier: "at_risk", factors: [] },
+                duration: { suppressed: true, medianSec: null },
+                sourceRow: { currentDeviationBps: -300, peakDeviationBps: -300 },
+              },
+              live: { currentDeviationBps: -45, peakDeviationBps: -300 },
             },
-            live: { currentDeviationBps: -45, peakDeviationBps: -300 },
-          },
-        ],
+          ],
+        },
+        error: null,
       },
-      resolverError: null,
-      resolverReviewData: undefined,
-      resolverReviewError: null,
+      resolverReview: { data: undefined, error: null },
     });
     useLogosMock.mockReturnValue({ data: {} });
 

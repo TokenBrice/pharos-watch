@@ -117,20 +117,21 @@ export function DepegClient() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
+  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const {
-    resolverEnabled,
-    resolverReviewerEnabled,
-    resolverData,
-    resolverError,
-    resolverUpdatedAt,
-    resolverMeta,
-    refetchResolver,
-    resolverReviewData,
-    resolverReviewError,
-    resolverReviewUpdatedAt,
-    resolverReviewMeta,
-    refetchResolverReview,
-  } = useDepegResolverSurfaces();
+    data: resolverData,
+    error: resolverError,
+    dataUpdatedAt: resolverUpdatedAt,
+    meta: resolverMeta,
+    refetch: refetchResolver,
+  } = resolver;
+  const {
+    data: resolverReviewData,
+    error: resolverReviewError,
+    dataUpdatedAt: resolverReviewUpdatedAt,
+    meta: resolverReviewMeta,
+    refetch: refetchResolverReview,
+  } = resolverReview;
   const { data: logos } = useLogos();
   const router = useRouter();
 

@@ -114,8 +114,13 @@ export interface CronStatus {
   healthy: boolean;
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
+  /**
+   * Legacy job-attempts ledger projection. The producer was deleted with the
+   * ledger (2026-08); no writer populates it and no reader consumes it apart
+   * from two residual fallbacks in `worker/src/lib/dependency-health.ts`. The
+   * field (and `WorkerJobAttemptStatus` above) retire with those.
+   */
   latestAttempt?: WorkerJobAttemptStatus;
-  attemptTelemetry?: "enabled" | "scoped-out" | "disabled";
   staleArtifacts?: CronStaleArtifact[];
   latestEvent?: CronEvent;
   /**

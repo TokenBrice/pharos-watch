@@ -5,13 +5,13 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { ReportCardsResponseSchema } from "@shared/types/report-cards";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 import {
   apiRequest,
   apiFetch,
   apiFetchWithMeta,
   ApiFetchError,
   buildRequestUrl,
-  DEFAULT_API_REQUEST_TIMEOUT_MS,
   fetchStablecoinReserves,
   resolveApiBase,
   SchemaValidationError,
@@ -522,9 +522,9 @@ describe("api contract validation policy", () => {
     const requestPromise = apiRequest("/api/stablecoins");
     const rejection = expect(requestPromise).rejects.toMatchObject({
       name: "TimeoutError",
-      message: `API request timed out after ${DEFAULT_API_REQUEST_TIMEOUT_MS}ms`,
+      message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
     });
-    await vi.advanceTimersByTimeAsync(DEFAULT_API_REQUEST_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(DEFAULT_REQUEST_TIMEOUT_MS);
 
     await rejection;
   });
@@ -563,9 +563,9 @@ describe("api contract validation policy", () => {
     const pending = apiRequest("/api/stablecoins", undefined, { timeoutMs: Number.NaN });
     const rejection = expect(pending).rejects.toMatchObject({
       name: "TimeoutError",
-      message: `API request timed out after ${DEFAULT_API_REQUEST_TIMEOUT_MS}ms`,
+      message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
     });
-    await vi.advanceTimersByTimeAsync(DEFAULT_API_REQUEST_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(DEFAULT_REQUEST_TIMEOUT_MS);
 
     await rejection;
   });

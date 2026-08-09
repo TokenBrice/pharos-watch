@@ -50,8 +50,8 @@ describe("useDepegResolverSurfaces", () => {
     expect(mocks.useDepegResolverReview).toHaveBeenCalledWith({ enabled: true });
     expect(result.current.resolverEnabled).toBe(true);
     expect(result.current.resolverReviewerEnabled).toBe(true);
-    expect(result.current.resolverData).toBe(resolver.data);
-    expect(result.current.resolverReviewData).toBe(reviewer.data);
+    expect(result.current.resolver).toBe(resolver);
+    expect(result.current.resolverReview).toBe(reviewer);
   });
 
   it("keeps the reviewer query disabled when DDR is disabled", () => {

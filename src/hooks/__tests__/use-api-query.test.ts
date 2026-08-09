@@ -21,7 +21,6 @@ import {
   createApiQueryFn,
   createApiPollingQueryOptions,
   getPollingWindow,
-  createPollingQueryOptions,
   createStaticQueryOptions,
 } from "../use-api-query";
 
@@ -71,7 +70,7 @@ describe("use-api-query", () => {
   });
 
   // ------------------------------------------------------------------
-  // getPollingWindow / createPollingQueryOptions
+  // getPollingWindow / createApiPollingQueryOptions
   // ------------------------------------------------------------------
   describe("getPollingWindow", () => {
     it("encodes staleTime = interval, refetchInterval = 2× interval", () => {
@@ -81,9 +80,9 @@ describe("use-api-query", () => {
     });
   });
 
-  describe("createPollingQueryOptions", () => {
+  describe("createApiPollingQueryOptions", () => {
     it("sets default retry=2 and propagates opts overrides", () => {
-      const opts = createPollingQueryOptions(["k"], async () => 1, 15_000);
+      const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000);
       expect(opts.staleTime).toBe(15_000);
       expect(opts.refetchInterval).toBe(30_000);
       expect(opts.retry).toBe(2);
@@ -91,7 +90,7 @@ describe("use-api-query", () => {
     });
 
     it("respects enabled=false and retry override", () => {
-      const opts = createPollingQueryOptions(["k"], async () => 1, 15_000, {
+      const opts = createApiPollingQueryOptions(["k"], "/api/x", 15_000, {
         enabled: false,
         retry: 0,
       });

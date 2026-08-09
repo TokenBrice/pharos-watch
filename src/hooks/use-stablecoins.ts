@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { StablecoinListResponse, SupplyHistoryPoint } from "@shared/types";
 import {
+  asPlainQueryOptions,
   createRegisteredApiPollingQueryOptions,
   useRegisteredApiQuery,
   type QueryControlOverrides,
@@ -28,9 +29,11 @@ export function supplyHistoryQueryOptions(
   days = 1825,
   overrides?: QueryControlOverrides,
 ) {
-  return createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
-    FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, days),
-    { enabled: !!id, ...overrides },
+  return asPlainQueryOptions<SupplyHistoryPoint[]>(
+    createRegisteredApiPollingQueryOptions<SupplyHistoryPoint[]>(
+      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(id, days),
+      { enabled: !!id, ...overrides },
+    ),
   );
 }
 

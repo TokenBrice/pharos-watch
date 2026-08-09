@@ -369,14 +369,9 @@ function TrackRecordZone({
 // --- public component ----------------------------------------------------
 
 export function HomeAltDdrOverview(): React.JSX.Element | null {
-  const {
-    resolverEnabled,
-    resolverReviewerEnabled,
-    resolverData,
-    resolverError,
-    resolverReviewData,
-    resolverReviewError,
-  } = useDepegResolverSurfaces();
+  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
+  const { data: resolverData, error: resolverError } = resolver;
+  const { data: resolverReviewData, error: resolverReviewError } = resolverReview;
 
   // Every ongoing depeg, worst gap first.
   const items = useMemo(

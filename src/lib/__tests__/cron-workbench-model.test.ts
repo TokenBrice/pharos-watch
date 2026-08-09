@@ -5,8 +5,6 @@ import {
   buildCronWorkbenchModel,
   classifyCronWorkbenchState,
   DEFAULT_CRON_WORKBENCH_FILTERS,
-  formatCronAttemptState,
-  formatCronAttemptStatusClass,
   formatCronDuration,
   formatCronRunStatus,
   formatCronRunTiming,
@@ -266,16 +264,13 @@ describe("cron workbench model", () => {
     });
   });
 
-  it("formats raw run and attempt values into readable labels", () => {
+  it("formats raw run values into readable labels", () => {
     expect(formatCronRunStatus("skipped_neutral")).toBe("Skipped: no work required");
     expect(
       formatCronRunStatus("skipped_neutral", { reason: "v9-competing-slot-active" }),
     ).toBe("Skipped: competing slot active");
     expect(formatCronRunStatus("skipped_locked")).toBe("Skipped: lease held");
     expect(formatCronRunStatus(null)).toBe("No runs");
-    expect(formatCronAttemptState("skipped_locked")).toBe("Skipped: lease held");
-    expect(formatCronAttemptStatusClass("controlled_error")).toBe("Controlled error");
-    expect(formatCronAttemptStatusClass(null)).toBe("Pending outcome");
   });
 
   it("formats long durations readably while retaining exact seconds and milliseconds", () => {
@@ -355,7 +350,7 @@ describe("cron workbench model", () => {
     }
   });
 
-  it("retains lease, orphan, and latest-attempt evidence on selected model rows", () => {
+  it("retains lease and orphan evidence on selected model rows", () => {
     const cron = makeCron({
       staleArtifacts: [
         { kind: "expired-lease", job: "sync-stablecoins", leaseOwner: "owner-a", leaseUntil: 123 },
@@ -366,32 +361,6 @@ describe("cron workbench model", () => {
           progressUpdatedAt: 456,
         },
       ],
-      latestAttempt: {
-        attemptId: "attempt-1",
-        idempotencyKey: "slot-1",
-        scheduleKey: "quarterHourly",
-        job: "sync-stablecoins",
-        slotStartedAt: 100,
-        producerPath: "quarterHourly",
-        producerKind: "scheduled-job",
-        invocationId: "invocation-1",
-        workerVersion: "version-1",
-        state: "running",
-        statusClass: null,
-        attemptNo: 2,
-        owner: "owner-a",
-        leaseUntil: 999,
-        queuedAt: 90,
-        claimedAt: 95,
-        startedAt: 100,
-        lastHeartbeatAt: 110,
-        finishedAt: null,
-        updatedAt: 110,
-        durationMs: null,
-        itemCount: null,
-        stale: true,
-        error: null,
-      },
     });
     const row = buildCronWorkbenchModel(
       [{ key: "q", title: "Quarter", badge: "q", description: "q", entries: [["sync-stablecoins", cron]] }],
@@ -399,7 +368,6 @@ describe("cron workbench model", () => {
     ).rows[0]!;
 
     expect(row.cron.staleArtifacts).toEqual(cron.staleArtifacts);
-    expect(row.cron.latestAttempt).toEqual(cron.latestAttempt);
   });
 
   it("projects budget-only surfaces by real schedule key with severity and registry-order ties", () => {

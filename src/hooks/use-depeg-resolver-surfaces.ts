@@ -3,24 +3,19 @@
 import { useDepegResolver, useDepegResolverReview } from "@/hooks/api-hooks";
 import { isDepegResolverEnabled, isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 
+/**
+ * Pairs the two DDR queries with their feature gates. Callers read the query
+ * objects directly — the hook deliberately does not re-flatten them into a
+ * per-field bag.
+ */
 export function useDepegResolverSurfaces() {
   const resolverEnabled = isDepegResolverEnabled();
   const resolverReviewerEnabled = resolverEnabled && isDepegResolverReviewerEnabled();
-  const resolver = useDepegResolver({ enabled: resolverEnabled });
-  const resolverReview = useDepegResolverReview({ enabled: resolverReviewerEnabled });
 
   return {
     resolverEnabled,
     resolverReviewerEnabled,
-    resolverData: resolver.data,
-    resolverError: resolver.error,
-    resolverUpdatedAt: resolver.dataUpdatedAt,
-    resolverMeta: resolver.meta,
-    refetchResolver: resolver.refetch,
-    resolverReviewData: resolverReview.data,
-    resolverReviewError: resolverReview.error,
-    resolverReviewUpdatedAt: resolverReview.dataUpdatedAt,
-    resolverReviewMeta: resolverReview.meta,
-    refetchResolverReview: resolverReview.refetch,
+    resolver: useDepegResolver({ enabled: resolverEnabled }),
+    resolverReview: useDepegResolverReview({ enabled: resolverReviewerEnabled }),
   };
 }

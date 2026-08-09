@@ -20,7 +20,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
   };
 });
 
-import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
+import { createApiPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { useHealth } from "../api-hooks";
@@ -193,8 +193,8 @@ describe("query polling policy", () => {
     vi.restoreAllMocks();
   });
 
-  it("createPollingQueryOptions enforces stale=interval and refetch=2x interval", () => {
-    const options = createPollingQueryOptions(["k"], async () => 1, 15_000);
+  it("createApiPollingQueryOptions enforces stale=interval and refetch=2x interval", () => {
+    const options = createApiPollingQueryOptions(["k"], "/api/health", 15_000);
     expect(options.staleTime).toBe(15_000);
     expect(options.refetchInterval).toBe(30_000);
     expect(options.retry).toBe(2);

@@ -361,7 +361,7 @@ describe("CronsSection", () => {
     expect(screen.getAllByText("Last heartbeat after 59s; reconciled 42m 1s later.").length).toBeGreaterThan(0);
   });
 
-  it("surfaces running lease, stale artifacts, orphaned progress, and latest attempt evidence", () => {
+  it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
     const cron = makeCronStatus({
       healthy: false,
       inFlight: {
@@ -389,32 +389,6 @@ describe("CronsSection", () => {
           progressStage: "reserve-fetch",
         },
       ],
-      latestAttempt: {
-        attemptId: "attempt-42",
-        idempotencyKey: "slot:42",
-        scheduleKey: "quarterHourly",
-        job: "sync-stablecoins",
-        slotStartedAt: 1_699_999_800,
-        producerPath: "quarterHourly",
-        producerKind: "scheduled-job",
-        invocationId: "invocation-42",
-        workerVersion: "worker-version-a",
-        state: "running",
-        statusClass: null,
-        attemptNo: 2,
-        owner: "attempt-owner-a",
-        leaseUntil: 1_700_000_100,
-        queuedAt: 1_699_999_700,
-        claimedAt: 1_699_999_750,
-        startedAt: 1_699_999_800,
-        lastHeartbeatAt: 1_699_999_900,
-        finishedAt: null,
-        updatedAt: 1_699_999_900,
-        durationMs: null,
-        itemCount: null,
-        stale: true,
-        error: null,
-      },
     });
     renderCrons({ groups: [makeGroup([["sync-stablecoins", cron]])] });
 
@@ -424,23 +398,17 @@ describe("CronsSection", () => {
     expect(screen.getByText("Expired lease")).toBeTruthy();
     expect(screen.getByText("Orphaned progress")).toBeTruthy();
     expect(screen.getByText("reserve-fetch")).toBeTruthy();
-    expect(screen.getByText("Latest attempt #2")).toBeTruthy();
-    expect(screen.getByText("attempt-42")).toBeTruthy();
-    expect(screen.getByText("attempt-owner-a")).toBeTruthy();
-    expect(screen.getByText("worker-version-a")).toBeTruthy();
     expect(screen.getByText("Full progress metadata")).toBeTruthy();
     expect(screen.getAllByText("Scheduled slot")).toHaveLength(2);
-    expect(screen.getByText("Queued / claimed / started")).toBeTruthy();
   });
 
-  it("distinguishes scoped-out attempt telemetry and unreported item counts", () => {
+  it("reports unreported item counts as unavailable", () => {
     renderCrons({
       groups: [
         makeGroup([
           [
             "snapshot-supply",
             makeCronStatus({
-              attemptTelemetry: "scoped-out",
               lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded" },
               recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded" }],
             }),
@@ -449,7 +417,6 @@ describe("CronsSection", () => {
       ],
     });
 
-    expect(screen.getByText("Attempt ledger is not enabled for this job.")).toBeTruthy();
     expect(screen.getByText("Last completed")).toBeTruthy();
     expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
   });

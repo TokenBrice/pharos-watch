@@ -6,8 +6,8 @@ import {
   buildApiKeySelfServeIssueResponseSchema,
 } from "@shared/types/api-key-requests";
 import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
-import { DEFAULT_API_REQUEST_TIMEOUT_MS } from "../api";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -215,9 +215,9 @@ describe("api key self-serve requests", () => {
     const requestPromise = submitApiKeyRequest(requestBody());
     const rejection = expect(requestPromise).rejects.toMatchObject({
       name: "TimeoutError",
-      message: `API request timed out after ${DEFAULT_API_REQUEST_TIMEOUT_MS}ms`,
+      message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
     });
-    await vi.advanceTimersByTimeAsync(DEFAULT_API_REQUEST_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(DEFAULT_REQUEST_TIMEOUT_MS);
 
     await rejection;
   });

@@ -1,6 +1,7 @@
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusResponse, StatusTransition } from "@shared/types";
 import type { StatusHistoryWindow } from "@/hooks/use-status-history";
+import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 
 export const INCIDENT_HISTORY_WINDOWS: readonly StatusHistoryWindow[] = ["6h", "24h", "7d", "30d"];
 export const INCIDENT_FLAPPING_TRANSITION_THRESHOLD = 2;
@@ -61,12 +62,6 @@ export const DEFAULT_INCIDENT_HISTORY_QUERY: IncidentHistoryQuery = {
   publicImpact: "all",
 };
 
-const SEVERITY_RANK: Record<StatusCause["severity"], number> = {
-  critical: 0,
-  warning: 1,
-  info: 2,
-};
-
 const HISTORY_WINDOW_SET = new Set<string>(INCIDENT_HISTORY_WINDOWS);
 const SEVERITY_FILTER_SET = new Set<string>(["all", "critical", "warning", "info", "unknown"]);
 const SURFACE_FILTER_SET = new Set<string>(["all", "availability", "data-quality", "system", "unknown"]);
@@ -112,7 +107,7 @@ export function buildIncidentHistoryUrl(
 function getTransitionSeverity(causes: readonly StatusCause[]): IncidentSeverity {
   let severity: StatusCause["severity"] | null = null;
   for (const cause of causes) {
-    if (severity == null || SEVERITY_RANK[cause.severity] < SEVERITY_RANK[severity]) {
+    if (severity == null || STATUS_CAUSE_SEVERITY_RANK[cause.severity] < STATUS_CAUSE_SEVERITY_RANK[severity]) {
       severity = cause.severity;
     }
   }
@@ -222,7 +217,7 @@ export function findFirstDegradationAfter(
 }
 
 export function deriveWorkerVersionEvidence(
-  input: Pick<StatusResponse, "producerHeads" | "crons">,
+  input: Pick<StatusResponse, "producerHeads">,
 ): WorkerVersionEvidence {
   const candidates: Array<{ version: string; observedAt: number | null; source: string }> = [];
 
@@ -233,18 +228,6 @@ export function deriveWorkerVersionEvidence(
         version,
         observedAt: producer.lastInvokedAt,
         source: `producer:${producer.job}`,
-      });
-    }
-  }
-
-  for (const [job, cron] of Object.entries(input.crons)) {
-    const attempt = cron.latestAttempt;
-    const version = attempt?.workerVersion?.trim();
-    if (version) {
-      candidates.push({
-        version,
-        observedAt: attempt?.updatedAt ?? null,
-        source: `attempt:${job}`,
       });
     }
   }

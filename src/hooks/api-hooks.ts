@@ -51,6 +51,29 @@ export type V9QueryControlOverrides = Omit<QueryControlOverrides, "keepPreviousD
 
 type QueryWithMetaEnvelope<T> = { data: T; meta: ApiMeta | null };
 
+export type PlainApiQueryOptions<T> = UseQueryOptions<T, Error, T, readonly unknown[]>;
+export type MetaApiQueryOptions<T> = UseQueryOptions<
+  QueryWithMetaEnvelope<T>,
+  Error,
+  QueryWithMetaEnvelope<T>,
+  readonly unknown[]
+>;
+type RegisteredApiQueryOptions<T> = PlainApiQueryOptions<T> | MetaApiQueryOptions<T>;
+
+/**
+ * Narrow the union returned by `createRegisteredApiPollingQueryOptions` for a
+ * descriptor the caller statically knows the response mode of. The descriptor's
+ * mode type argument is the proof; TypeScript cannot carry it through the
+ * runtime branch inside the builder.
+ */
+export function asPlainQueryOptions<T>(options: RegisteredApiQueryOptions<T>): PlainApiQueryOptions<T> {
+  return options as PlainApiQueryOptions<T>;
+}
+
+export function asMetaQueryOptions<T>(options: RegisteredApiQueryOptions<T>): MetaApiQueryOptions<T> {
+  return options as MetaApiQueryOptions<T>;
+}
+
 export function useRegisteredApiQuery<T>(
   descriptor: FrontendApiQueryDescriptor<T, "plain">,
   overrides?: QueryControlOverrides,
@@ -70,20 +93,11 @@ export function useRegisteredApiQuery<T>(
     : (query as UseQueryResult<T, Error>);
 }
 
-export function createRegisteredApiPollingQueryOptions<T>(
-  descriptor: FrontendApiQueryDescriptor<T, "plain">,
-  overrides?: QueryControlOverrides,
-): UseQueryOptions<T, Error, T, readonly unknown[]>;
-export function createRegisteredApiPollingQueryOptions<T>(
-  descriptor: FrontendApiQueryDescriptor<T, "meta">,
-  overrides?: QueryControlOverrides,
-): UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]>;
-export function createRegisteredApiPollingQueryOptions<T>(
-  descriptor: FrontendApiQueryDescriptor<T>,
-  overrides?: QueryControlOverrides,
-):
-  | UseQueryOptions<T, Error, T, readonly unknown[]>
-  | UseQueryOptions<QueryWithMetaEnvelope<T>, Error, QueryWithMetaEnvelope<T>, readonly unknown[]>;
+/**
+ * Returns the union of both response modes. Callers that know the descriptor is
+ * `"plain"` narrow with `asPlainQueryOptions(...)`; `useRegisteredApiQuery`
+ * keeps the descriptor-mode overloads so component call sites stay narrowed.
+ */
 export function createRegisteredApiPollingQueryOptions<T>(
   descriptor: FrontendApiQueryDescriptor<T>,
   overrides?: QueryControlOverrides,
@@ -131,8 +145,10 @@ export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
 }
 
 export function dexLiquidityHistoryQueryOptions(stablecoinId: string, days = 90) {
-  return createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
-    FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory(stablecoinId, days),
+  return asPlainQueryOptions<DexLiquidityHistoryPoint[]>(
+    createRegisteredApiPollingQueryOptions<DexLiquidityHistoryPoint[]>(
+      FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityHistory(stablecoinId, days),
+    ),
   );
 }
 
