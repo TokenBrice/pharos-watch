@@ -61,12 +61,13 @@ export function SafetyScoresDimensionDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Decentralization Scoring</h3>
+        <h3 className="text-foreground font-medium">V8.17 Decentralization Scoring (retired)</h3>
         <p>
-          Base score from governance quality tier, then a chain-risk penalty for protocols on less decentralized chains
+          This historical V8.17 dimension started from the governance quality tier, then applied a chain-risk penalty for protocols on less decentralized chains
           &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns
           &mdash; followed by a branch-aware CDP-only oracle setup blend (v8.11), reviewed bridge-route blend (v8.12),
-          and the penalty-only Mint Authority blend (v8.0):
+          and the penalty-only Mint Authority blend (v8.0). It is not used by Safety Score V9; the retained metadata is
+          displayed only as the descriptive Control posture classification:
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>
