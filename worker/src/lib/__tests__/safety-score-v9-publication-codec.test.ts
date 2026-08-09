@@ -52,6 +52,21 @@ describe("Safety Score V9 publication codec", () => {
     );
   });
 
+  it("rejects a malformed retired stressStateDigest", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const stored = stableJsonStringifyV1({
+      ...publication,
+      cards: publication.cards.map((card) => ({
+        ...card,
+        stressStateDigest: "not-a-digest",
+      })),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(
+      "Retired Safety Score v9 stress state digest is invalid",
+    );
+  });
+
   it("rejects the retired pre-cutover legacy envelope shapes", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const legacyCandidateWrapper = stableJsonStringifyV1({
