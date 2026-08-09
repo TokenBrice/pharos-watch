@@ -93,6 +93,7 @@ describe("client registry field contract", () => {
       reserves: [{ asset: "cash" }],
       collateral: "cash",
       collateralQuality: "rwa",
+      custodyModel: "institutional-top",
     };
 
     expect(Object.keys(projectCoin(coin, readCanonicalClientFields()))).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);

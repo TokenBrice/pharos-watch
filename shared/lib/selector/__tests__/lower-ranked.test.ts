@@ -39,7 +39,6 @@ function makeRow(id: string, overrides: Partial<MergedRow> = {}): MergedRow {
     effectiveTvlUsd: 50_000_000,
     concentrationHhi: 0.3,
     chainTvl: { ethereum: 40_000_000 },
-    effectiveExitScore: 80,
     pharosYieldScore: 80,
     apy30d: 5,
     apyVariance30d: 0.5,

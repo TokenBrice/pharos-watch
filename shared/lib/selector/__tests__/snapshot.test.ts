@@ -601,8 +601,24 @@ describe("selector snapshot contract", () => {
     expect(recommendation.confidenceReasons ?? []).not.toContain("missing-critical-safetyOverall");
   });
 
-  it("applies the v2.0 trading critical set to a v2.0 snapshot", () => {
+  it("applies the v2.0 trading critical set to a current-engine snapshot", () => {
     const snapshot = expectValid(buildCurrentTradingSnapshot());
+    const recommendation = snapshot.recommended[0]!;
+
+    expect(recommendation.score).toBe(78);
+    expect(recommendation.confidenceReasons).toContain("missing-critical-safetyOverall");
+  });
+
+  it("keeps a stored selector-v2.0 snapshot on the current-generation read path", () => {
+    // `selector-v2.1` changed the `MergedRow` shape and the custody data
+    // source; it did not re-base weights, components, or critical sets. The
+    // read path therefore has to treat `v2.0` as current-generation. Testing
+    // `engineVersion === SELECTOR_VERSION` instead would drop every stored
+    // `v2.0` blob onto the `v1.9x` legacy sets and republish a different
+    // number than the one that was shared.
+    const snapshot = expectValid(
+      buildTradingSnapshotWithMissingSlot("selector-v2.0", CURRENT_TRADING_SLOTS, "safetyOverall"),
+    );
     const recommendation = snapshot.recommended[0]!;
 
     expect(recommendation.score).toBe(78);

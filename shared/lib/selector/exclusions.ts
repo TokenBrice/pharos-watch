@@ -265,7 +265,7 @@ function tradingExclusions(row: MergedRow, input: SelectorInput): ExclusionRecor
       return fail(row.id, "supply-tvl-floor-1h");
     }
   } else if (input.exitSpeed === "24h") {
-    if (row.effectiveExitScore != null && row.effectiveExitScore < 50) {
+    if (row.safetyLiquidityScore != null && row.safetyLiquidityScore < 50) {
       return fail(row.id, "effective-exit-floor");
     }
   }

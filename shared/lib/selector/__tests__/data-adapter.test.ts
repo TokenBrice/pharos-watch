@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSelectorRows } from "../data-adapter";
+import { CLIENT_ACTIVE_META_BY_ID } from "../../stablecoins/client-registry";
+import { inferResilienceDefaults } from "../../report-card-policy";
 import type {
   BluechipRatingsMap,
   DexLiquidityMap,
@@ -96,11 +98,11 @@ describe("buildSelectorRows", () => {
       pegScore: 96,
       dewsScore: 42,
       liquidityScore: 88,
-      // The exit read now comes from the published V9 Exit pillar, not the
-      // retired redemption blend, so it matches `safetyLiquidityScore`.
-      effectiveExitScore: 77,
       canBeBlacklisted: true,
-      custodyModel: "institutional-regulated",
+      // Curated review, not the V8 `backing × governance` inference table.
+      // USDC is reviewed `institutional-top`; the table can only ever answer
+      // `onchain` or `institutional-regulated`, and answered the latter here.
+      custodyModel: "institutional-top",
       bluechipGrade: "A",
       currentDeviationBps: 4,
       supplyUsd: 32_000_000_000,
@@ -110,5 +112,67 @@ describe("buildSelectorRows", () => {
       pegScoreAndDews: "peg-v3+dews-v3",
     });
     expect(result.datasetHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+});
+
+/**
+ * `selector-v2.1` custody projection.
+ *
+ * The row used to derive `custodyModel` from `inferResilienceDefaults`, a
+ * 9-cell `backing × governance` table whose entire range is `onchain` and
+ * `institutional-regulated`. That made the Selector structurally unable to
+ * observe the other four `CUSTODY_MODEL_VALUES`, so exchange-custodied coins
+ * cleared the "on-chain only" custody rail and unregulated institutional
+ * custody cleared the "regulated only" rail. Curated review is now the
+ * authority; the inference survives only as the fallback.
+ *
+ * These assertions are curation-independent: they pin the projection rule and
+ * the fact that the out-of-range values are reachable, not any one coin.
+ */
+describe("custody-model projection", () => {
+  const rows = buildSelectorRows({
+    stablecoinsData: null,
+    pegCurrency: null,
+    pegData: null,
+    reportData: null,
+    stressData: null,
+    dexData: null,
+    yieldData: null,
+    bluechipData: null,
+    now: NOW,
+  }).rows;
+
+  it("prefers curated custody over the inference table", () => {
+    const mismatched: string[] = [];
+    for (const [id, row] of rows) {
+      const curated = CLIENT_ACTIVE_META_BY_ID.get(id)?.custodyModel;
+      if (curated != null && row.custodyModel !== curated) {
+        mismatched.push(`${id}: ${row.custodyModel} != ${curated}`);
+      }
+    }
+    expect(mismatched).toEqual([]);
+  });
+
+  it("falls back to the inference table when no custody review exists", () => {
+    const mismatched: string[] = [];
+    for (const [id, row] of rows) {
+      const meta = CLIENT_ACTIVE_META_BY_ID.get(id);
+      if (meta == null || meta.custodyModel != null) continue;
+      const inferred = inferResilienceDefaults(meta.flags.backing, meta.flags.governance).custodyModel;
+      if (row.custodyModel !== inferred) mismatched.push(`${id}: ${row.custodyModel} != ${inferred}`);
+    }
+    expect(mismatched).toEqual([]);
+  });
+
+  it("reaches custody models the inference table cannot produce", () => {
+    const observed = new Set(Array.from(rows.values(), (row) => row.custodyModel));
+    // `cex` is the value the old projection was blind to and the one both
+    // custody rails must now reject.
+    expect(observed.has("cex")).toBe(true);
+    expect(
+      ["institutional-top", "institutional-unregulated", "institutional-sanctioned"].some((model) =>
+        observed.has(model),
+      ),
+    ).toBe(true);
   });
 });

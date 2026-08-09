@@ -1,9 +1,16 @@
 /**
  * "What to watch" prose templates.
  *
- * 33 cells = 11 `LowestSubDimensionKey` × 3 profiles. Each cell carries a
+ * 24 cells = 8 live `LowestSubDimensionKey`s × 3 profiles. Each cell carries a
  * minimal hand-written template (≤80 chars after substitution per design
  * §2.7); contextKey-refined templates are deferred to Phase 2.
+ *
+ * The three axes retired at `selector-v2.0` — `dependencyRisk`,
+ * `collateralQuality`, `custodyModel` — keep their slot in the
+ * `LowestSubDimensionKey` vocabulary so stored snapshots that recorded them
+ * still render, but `lookupNormalizedSubDimension` returns `null` for all
+ * three, so no live run can select them. Their template cells are gone;
+ * `getTemplate` returns `null` for a retired key.
  *
  * Editorial owner: tokenbrice. The strings here are first-draft templates
  * meant to clear the selector editorial policy (design §4.5). Substitute `{dimensionLabel}`
@@ -26,12 +33,18 @@ export interface WhatToWatchTemplate {
   oneLineExplanation: string;
 }
 
+/** Axes a live run can actually select; see `lowest-sub-dimension.ts`. */
+export type LiveWatchKey = Exclude<
+  LowestSubDimensionKey,
+  "dependencyRisk" | "collateralQuality" | "custodyModel"
+>;
+
 type TemplateMatrix = Readonly<
-  Record<SelectorProfile, Readonly<Record<LowestSubDimensionKey, WhatToWatchTemplate>>>
+  Record<SelectorProfile, Readonly<Record<LiveWatchKey, WhatToWatchTemplate>>>
 >;
 
 /**
- * 33-cell matrix. Each cell is a non-fallback template.
+ * 24-cell matrix. Each cell is a non-fallback template.
  *
  * Drafting guardrails:
  *  - No "Pharos recommends", "Top pick", "Safe", "Best", "Trusted by", "Battle-tested". (banned-phrase-allow: drafting-guardrails-self-documentation)
@@ -53,15 +66,6 @@ export const TEMPLATES: TemplateMatrix = {
     },
     decentralization: {
       oneLineExplanation: "Issuer holds privileged controls; the coin is not censorship-resistant.",
-    },
-    dependencyRisk: {
-      oneLineExplanation: "Upstream dependencies inflate failure surface; check the dependency map.",
-    },
-    collateralQuality: {
-      oneLineExplanation: "Collateral mix sits below mainstream-cash standards for treasury parking.",
-    },
-    custodyModel: {
-      oneLineExplanation: "Custody model relies on a single entity; counterparty risk is concentrated.",
     },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze or dilute supply; review blacklisting policy.",
@@ -89,15 +93,6 @@ export const TEMPLATES: TemplateMatrix = {
     decentralization: {
       oneLineExplanation: "Issuer holds privileged controls; the rail is not censorship-resistant.",
     },
-    dependencyRisk: {
-      oneLineExplanation: "Upstream dependencies stack; one break interrupts the yield path.",
-    },
-    collateralQuality: {
-      oneLineExplanation: "Collateral mix is the weak axis; review what backs the yield-bearing token.",
-    },
-    custodyModel: {
-      oneLineExplanation: "Custody model concentrates counterparty exposure on a single entity.",
-    },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze the yield-bearing wrapper; review redemption rights.",
     },
@@ -123,15 +118,6 @@ export const TEMPLATES: TemplateMatrix = {
     },
     decentralization: {
       oneLineExplanation: "Issuer holds privileged controls; track freeze and dilute history.",
-    },
-    dependencyRisk: {
-      oneLineExplanation: "Upstream dependencies inflate the failure surface; review the dependency map.",
-    },
-    collateralQuality: {
-      oneLineExplanation: "Collateral mix sits below mainstream-cash standards for fast turnover.",
-    },
-    custodyModel: {
-      oneLineExplanation: "Custody model concentrates counterparty exposure; settlement risk is real.",
     },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze tokens mid-trade; check the blacklisting policy.",
@@ -159,7 +145,7 @@ export function getTemplate(
   key: LowestSubDimensionKey,
   profile: SelectorProfile,
 ): WhatToWatchTemplate | null {
-  return TEMPLATES[profile][key] ?? null;
+  return (TEMPLATES[profile] as Partial<Record<LowestSubDimensionKey, WhatToWatchTemplate>>)[key] ?? null;
 }
 
 function roundedBps(value: number): number {
@@ -172,21 +158,6 @@ function hasFreezeControls(row: MergedRow): boolean {
     row.canBeBlacklisted === "inherited" ||
     row.canBeBlacklisted === "possible"
   );
-}
-
-function custodyWatchText(row: MergedRow): string | null {
-  if (row.custodyModel === "cex") {
-    return "Custody routes through an exchange rail; settlement exposure is concentrated.";
-  }
-  if (
-    row.custodyModel === "institutional-top" ||
-    row.custodyModel === "institutional-regulated" ||
-    row.custodyModel === "institutional-unregulated" ||
-    row.custodyModel === "institutional-sanctioned"
-  ) {
-    return "Custody depends on one institutional rail; counterparty exposure is concentrated.";
-  }
-  return null;
 }
 
 function sourceRiskWatchText(row: MergedRow): string | null {
@@ -227,11 +198,6 @@ export function renderWatchText(
 
   if (lowest.key === "governanceOverride" && hasFreezeControls(row)) {
     return "Freeze or supply controls exist; review issuer permissions before routing.";
-  }
-
-  if (lowest.key === "custodyModel") {
-    const text = custodyWatchText(row);
-    if (text != null) return text;
   }
 
   if (lowest.key === "sourceRisk") {

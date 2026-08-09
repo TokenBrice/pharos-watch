@@ -53,8 +53,8 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
         ? `liquidity ${Math.round(row.liquidityScore)}`
         : "missing liquidity";
     case "effective-exit-floor":
-      return row.effectiveExitScore != null
-        ? `effective exit ${Math.round(row.effectiveExitScore)}`
+      return row.safetyLiquidityScore != null
+        ? `effective exit ${Math.round(row.safetyLiquidityScore)}`
         : "missing exit score";
     case "high-venue-on-c-tier":
       return row.venueRiskTier != null ? `venue risk ${row.venueRiskTier}` : "venue risk gap";
