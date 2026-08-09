@@ -98,5 +98,5 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
       transitions: filteredTransitions.map(toPublicTransition),
     };
 
-    return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.publicStatus });
+    return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.publicStatus } });
   };

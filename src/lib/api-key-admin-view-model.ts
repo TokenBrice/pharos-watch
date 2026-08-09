@@ -5,13 +5,12 @@ import {
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
 import { THIRTY_DAYS_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
-import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
+import type { ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
 
 export interface EditableKeyState {
   name: string;
   ownerEmail: string;
-  tier: string;
-  trafficClass: ApiKeyTrafficClass;
+  tier: ApiKeyTier;
   rateLimitPerMinute: string;
   expiryMode: "custom" | "non-expiring";
   expiresAtInput: string;
@@ -22,8 +21,7 @@ export type CreateExpiryMode = "default" | "custom" | "non-expiring";
 export interface CreateKeyState {
   name: string;
   ownerEmail: string;
-  tier: string;
-  trafficClass: ApiKeyTrafficClass;
+  tier: ApiKeyTier;
   rateLimitPerMinute: string;
   expiryMode: CreateExpiryMode;
   expiresAtInput: string;
@@ -133,7 +131,6 @@ export const DEFAULT_CREATE_KEY_STATE: CreateKeyState = {
   name: "",
   ownerEmail: "",
   tier: "standard",
-  trafficClass: "external",
   rateLimitPerMinute: API_KEY_DEFAULT_RATE_LIMIT_INPUT,
   expiryMode: "default",
   expiresAtInput: "",
@@ -143,8 +140,8 @@ export function buildEditableKeyState(key: ApiKeySummary): EditableKeyState {
   return {
     name: key.name,
     ownerEmail: key.ownerEmail ?? "",
-    tier: key.tier,
-    trafficClass: key.trafficClass,
+    // Legacy rows can carry a free-form tier written before the union narrowed.
+    tier: key.tier === "self-serve" ? "self-serve" : "standard",
     rateLimitPerMinute: String(key.rateLimitPerMinute),
     expiryMode: key.expiresAt == null ? "non-expiring" : "custom",
     expiresAtInput: key.expiresAt == null ? "" : formatDateTimeLocalValue(key.expiresAt),
@@ -461,7 +458,6 @@ export function buildCreateApiKeyPayload(state: CreateKeyState): Record<string, 
     name: state.name,
     ownerEmail: state.ownerEmail || null,
     tier: state.tier,
-    trafficClass: state.trafficClass,
     rateLimitPerMinute: parseRateLimitInput(state.rateLimitPerMinute),
   };
 
@@ -490,7 +486,6 @@ export function buildUpdateApiKeyPayload(draft: EditableKeyState): Record<string
     name: draft.name,
     ownerEmail: draft.ownerEmail || null,
     tier: draft.tier,
-    trafficClass: draft.trafficClass,
     rateLimitPerMinute: parseRateLimitInput(draft.rateLimitPerMinute),
     expiresAt,
   };

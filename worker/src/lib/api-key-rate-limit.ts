@@ -60,6 +60,28 @@ export function recordApiKeyRateLimitDependencyFailure(
   };
 }
 
+/** Per-key limiter bucket width. Shared by the D1 and isolate-local limiters. */
+const API_KEY_RATE_LIMIT_BUCKET_SEC = 60;
+
+interface ApiKeyRateLimitBucket {
+  bucketStart: number;
+  retryAfterSec: number;
+}
+
+/**
+ * Fixed 60s window shared by both per-key limiters. Keeping one derivation is
+ * what guarantees the D1 path and the isolate-local fallback bucket a request
+ * into the same minute and report the same Retry-After.
+ */
+function apiKeyRateLimitBucket(nowSec: number): ApiKeyRateLimitBucket {
+  const bucketStart = nowSec - (nowSec % API_KEY_RATE_LIMIT_BUCKET_SEC);
+  return { bucketStart, retryAfterSec: bucketStart + API_KEY_RATE_LIMIT_BUCKET_SEC - nowSec };
+}
+
+function apiKeyRateLimitExceededResponse(retryAfterSec: number): Response {
+  return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
+}
+
 export function resolveIsolateFallbackApiKeyRateLimit(limit: number): number {
   return Math.max(
     API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
@@ -72,8 +94,9 @@ export async function checkApiKeyRateLimit(
   apiKeyId: number,
   limit: number,
   nowSec = getNowSec(),
+  execCtx?: ExecutionContext,
 ): Promise<Response | null> {
-  const bucketStart = nowSec - (nowSec % 60);
+  const { bucketStart, retryAfterSec } = apiKeyRateLimitBucket(nowSec);
   const row = await db.prepare(
     `INSERT INTO api_key_rate_limit (api_key_id, bucket_start, count, last_seen_at)
      VALUES (?, ?, 1, ?)
@@ -87,25 +110,21 @@ export async function checkApiKeyRateLimit(
   const state = getApiKeyRuntimeState();
   if (state.lastApiKeyRateLimitPruneBucket !== bucketStart) {
     state.lastApiKeyRateLimitPruneBucket = bucketStart;
-    const prune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
-      .bind(bucketStart - (60 * API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER))
-      .run()
-      .then(() => {})
-      .catch((error) => {
-        console.warn("[api-keys] rate-limit prune failed:", error);
-      })
-      .finally(() => {
-        if (state.pendingApiKeyPrune === prune) {
-          state.pendingApiKeyPrune = null;
-        }
-      });
-    state.pendingApiKeyPrune = prune;
+    // Handed straight to the request lifetime instead of parked in module state
+    // for a later flush: `waitUntil` already keeps the isolate alive for it.
+    execCtx?.waitUntil(
+      db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
+        .bind(bucketStart - (API_KEY_RATE_LIMIT_BUCKET_SEC * API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER))
+        .run()
+        .then(() => {})
+        .catch((error) => {
+          console.warn("[api-keys] rate-limit prune failed:", error);
+        }),
+    );
   }
 
   if ((row?.count ?? 0) > limit) {
-    return errorResponse(429, "Rate limit exceeded", {
-      retryAfterSec: bucketStart + 60 - nowSec,
-    });
+    return apiKeyRateLimitExceededResponse(retryAfterSec);
   }
 
   return null;
@@ -116,8 +135,7 @@ export function checkIsolateLocalApiKeyRateLimit(
   limit: number,
   nowSec = getNowSec(),
 ): Response | null {
-  const bucketStart = nowSec - (nowSec % 60);
-  const retryAfterSec = bucketStart + 60 - nowSec;
+  const { bucketStart, retryAfterSec } = apiKeyRateLimitBucket(nowSec);
   const state = getApiKeyRuntimeState();
   if (state.lastApiKeyFallbackRateLimitPruneBucket !== bucketStart) {
     state.lastApiKeyFallbackRateLimitPruneBucket = bucketStart;
@@ -143,18 +161,10 @@ export function checkIsolateLocalApiKeyRateLimit(
   state.apiKeyFallbackRateLimitById.delete(apiKeyId);
   state.apiKeyFallbackRateLimitById.set(apiKeyId, existing);
   if (existing.count > limit) {
-    return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
+    return apiKeyRateLimitExceededResponse(retryAfterSec);
   }
 
   return null;
-}
-
-export function flushPendingApiKeyPrunes(): Promise<void> {
-  const state = getApiKeyRuntimeState();
-  const pending = state.pendingApiKeyPrune;
-  if (!pending) return Promise.resolve();
-  state.pendingApiKeyPrune = null;
-  return pending;
 }
 
 export async function recordApiKeyUsage(

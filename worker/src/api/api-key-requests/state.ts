@@ -2,6 +2,7 @@ import { SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE, SELF_SERVE_MAX_CREATIONS_PER_
 import { clearApiKeyCache } from "../../lib/api-key-core";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { normalizeOptionalText } from "./request";
+import { ISSUANCE_LIMIT_TABLE, acquireBucketedLimitSlot, bucketStartFor } from "./rate-limit";
 import type {
   ApiKeyRequestDb,
   ApiKeyRequestRow,
@@ -48,15 +49,13 @@ export async function insertPendingRequest(
        self_serve_expires_at,
        ip_hash,
        user_agent_hash,
-       risk_score,
-       risk_reasons_json,
        verification_token_hash,
        verification_sent_at,
        verification_expires_at,
        created_at,
        updated_at
      )
-     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 0, ?, ?, NULL, ?, ?, ?)`,
+     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
   )
     .bind(
       input.requestId,
@@ -73,7 +72,6 @@ export async function insertPendingRequest(
       input.selfServeExpiresAt,
       input.ipHash,
       input.userAgentHash,
-      JSON.stringify([]),
       input.tokenHash,
       input.verificationExpiresAt,
       input.nowSec,
@@ -259,31 +257,21 @@ export async function acquireIssuanceIpCap(
   ipHash: string,
   nowSec: number,
 ): Promise<{ allowed: boolean; retryAfterSec: number }> {
-  const bucketStart = Math.floor(nowSec / ISSUANCE_IP_CAP_WINDOW_SEC) * ISSUANCE_IP_CAP_WINDOW_SEC;
-  const result = await db.prepare(
-    `INSERT INTO api_key_self_serve_issuance_limits (
-       scope,
-       subject_hash,
-       bucket_start,
-       count,
-       updated_at
-     )
-     VALUES (?, ?, ?, 1, ?)
-     ON CONFLICT(scope, subject_hash, bucket_start) DO UPDATE SET
-       count = count + 1,
-       updated_at = excluded.updated_at
-     WHERE api_key_self_serve_issuance_limits.count < ?`,
-  )
-    .bind(ISSUANCE_IP_CAP_SCOPE, ipHash, bucketStart, nowSec, SELF_SERVE_MAX_CREATIONS_PER_IP_24H)
-    .run();
-  return {
-    allowed: (result.meta?.changes ?? 0) > 0,
-    retryAfterSec: Math.max(1, bucketStart + ISSUANCE_IP_CAP_WINDOW_SEC - nowSec),
-  };
+  const { allowed, retryAfterSec } = await acquireBucketedLimitSlot(db, ISSUANCE_LIMIT_TABLE, {
+    scope: ISSUANCE_IP_CAP_SCOPE,
+    subjectHash: ipHash,
+    windowSec: ISSUANCE_IP_CAP_WINDOW_SEC,
+    maxCount: SELF_SERVE_MAX_CREATIONS_PER_IP_24H,
+    nowSec,
+  });
+  // The shared limiter reports the raw remaining window; this caller keeps its
+  // 1s floor so a request landing on the bucket boundary still gets a usable
+  // Retry-After.
+  return { allowed, retryAfterSec: Math.max(1, retryAfterSec) };
 }
 
 export async function releaseIssuanceIpCap(db: ApiKeyRequestDb, ipHash: string, nowSec: number): Promise<void> {
-  const bucketStart = Math.floor(nowSec / ISSUANCE_IP_CAP_WINDOW_SEC) * ISSUANCE_IP_CAP_WINDOW_SEC;
+  const bucketStart = bucketStartFor(nowSec, ISSUANCE_IP_CAP_WINDOW_SEC);
   await db.prepare(
     `UPDATE api_key_self_serve_issuance_limits
      SET count = CASE WHEN count > 0 THEN count - 1 ELSE 0 END,

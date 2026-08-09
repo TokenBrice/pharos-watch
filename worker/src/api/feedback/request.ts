@@ -64,6 +64,7 @@ export async function prepareFeedbackSubmission(
   request: Request,
   env: FeedbackEnv,
   validated: ValidatedFeedbackSubmission,
+  execCtx?: ExecutionContext,
 ): Promise<PreparedFeedbackSubmission | Response> {
   if (!env.FEEDBACK_IP_SALT) {
     logWorkerEvent({
@@ -99,6 +100,7 @@ export async function prepareFeedbackSubmission(
       env.FEEDBACK_IP_SALT,
       FEEDBACK_RATE_LIMIT_WINDOW_SEC,
       FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+      execCtx,
     );
   } catch (error) {
     logWorkerEvent({

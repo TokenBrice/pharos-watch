@@ -32,10 +32,7 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
-      "/api/admin-telegram-adoption-report",
       "/api/admin-telegram-broadcast",
-      "/api/admin-telegram-delivery-control",
-      "/api/admin-telegram-resend",
       "/api/api-key-requests",
       "/api/api-key-requests-admin",
       "/api/api-key-requests/verify",
@@ -71,7 +68,6 @@ describe("api endpoint registry", () => {
       "/api/events",
       "/api/feedback",
       "/api/health",
-      "/api/kill-cron-in-flight",
       "/api/mint-burn-events",
       "/api/mint-burn-events?stablecoin=usdt-tether",
       "/api/mint-burn-flows",
@@ -85,8 +81,6 @@ describe("api endpoint registry", () => {
       "/api/report-cards/v9",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
-      "/api/reset-circuit-breaker",
-      "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history-v2",
       "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
@@ -106,14 +100,11 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history",
       "/api/status-history?limit=10",
-      "/api/status-probe-history",
-      "/api/status-probe-history?path=%2Fapi%2Fhealth",
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
       "/api/telegram-mini-app/mutate",
       "/api/telegram-mini-app/session",
-      "/api/telegram-pending",
       "/api/telegram-pulse",
       "/api/telegram-webhook",
       "/api/trigger-digest",
@@ -122,7 +113,6 @@ describe("api endpoint registry", () => {
       "/api/yield-history",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/yield-rankings",
-      "/api/yield-source-decisions",
     ];
 
     const actualPaths = [
@@ -182,8 +172,6 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
-      "/api/admin-telegram-adoption-report",
-      "/api/status-probe-history?path=%2Fapi%2Fhealth",
     ]);
 
     expect(getProbePaths("manual")).toEqual([
@@ -202,13 +190,7 @@ describe("api endpoint registry", () => {
       "/api/reclassify-atomic-roundtrips",
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
-      "/api/reset-cron-lease",
-      "/api/reset-circuit-breaker",
-      "/api/kill-cron-in-flight",
-      "/api/telegram-pending",
-      "/api/admin-telegram-resend",
       "/api/admin-telegram-broadcast",
-      "/api/admin-telegram-delivery-control",
     ]);
   });
 
@@ -319,7 +301,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(12);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -365,14 +347,6 @@ describe("api endpoint registry", () => {
       routeDependencies: [],
       siteDataAccess: "denied",
     });
-    expect(getDynamicEndpointDescriptorByKey("admin-telegram-chat")).toMatchObject({
-      methods: ["GET"],
-      adminRequired: true,
-      routeDependencies: [],
-      publicApiAccess: "exempt",
-      siteDataAccess: "denied",
-    });
-
     expect(getPublicApiAccess("/api/stablecoin/usdt-tether")).toBe("protected");
     expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");

@@ -132,6 +132,7 @@ export async function evaluateAccessGate(
   request: Request,
   url: URL,
   env: Env,
+  execCtx?: ExecutionContext,
 ): Promise<AccessGateResult> {
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (isAdmin) {
@@ -219,6 +220,8 @@ export async function evaluateAccessGate(
         env.DB,
         apiKeyAuth.key.id,
         apiKeyAuth.key.rateLimitPerMinute,
+        undefined,
+        execCtx,
       );
       recordApiKeyRateLimitDependencySuccess();
     } catch (err) {

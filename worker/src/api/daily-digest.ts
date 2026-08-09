@@ -20,7 +20,7 @@ export const handleDailyDigest = async (db: D1Database): Promise<Response> => {
   const row = digestResult.results?.[0] as { digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null } | undefined;
 
   if (!row) {
-    return jsonResponse({ digest: null }, { "Cache-Control": CACHE_PROFILES.standard });
+    return jsonResponse({ digest: null }, { headers: { "Cache-Control": CACHE_PROFILES.standard } });
   }
 
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
@@ -35,7 +35,11 @@ export const handleDailyDigest = async (db: D1Database): Promise<Response> => {
     editionNumber,
     riskSignal: selectDigestRiskSignal(inputData),
     ...intelligence,
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, row.generated_at, API_FRESHNESS_MAX_AGE_SEC.dailyDigest));
+  }, {
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.standard },
+      row.generated_at,
+      API_FRESHNESS_MAX_AGE_SEC.dailyDigest,
+    ),
+  });
 };

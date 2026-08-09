@@ -28,6 +28,7 @@ export interface ApiKeySelfServeRequest {
   organization?: string;
   projectUrl?: string;
   useCase: string;
+  /** Free-text operator note describing which endpoints the requester expects to call. */
   intendedEndpoints?: string[];
   expectedCadence: ApiKeySelfServeCadence;
   expectedVolume?: string;
@@ -97,6 +98,7 @@ export interface ApiKeySelfServeRequestAdminSummary {
   organization: string | null;
   projectUrl: string | null;
   useCase: string;
+  /** Free-text operator note; carries no authorization effect. */
   intendedEndpoints: string[];
   expectedCadence: string | null;
   expectedVolume: string | null;
@@ -108,8 +110,6 @@ export interface ApiKeySelfServeRequestAdminSummary {
   linkedKeyExpiresAt: number | null;
   rateLimitPerMinute: number;
   selfServeExpiresAt: number | null;
-  riskScore: number;
-  riskReasons: string[];
   claimStatus: ApiKeySelfServeClaimStatus | null;
   verificationSentAt: number | null;
   verificationExpiresAt: number | null;
@@ -143,8 +143,6 @@ export const ApiKeySelfServeRequestAdminSummarySchema = z.object({
   linkedKeyExpiresAt: z.number().nullable(),
   rateLimitPerMinute: z.number(),
   selfServeExpiresAt: z.number().nullable(),
-  riskScore: z.number(),
-  riskReasons: z.array(z.string()),
   claimStatus: ApiKeySelfServeClaimStatusSchema.nullable(),
   verificationSentAt: z.number().nullable(),
   verificationExpiresAt: z.number().nullable(),

@@ -17,8 +17,7 @@ export type DynamicEndpointDescriptorKey =
   | "api-key-deactivate"
   | "api-key-rotate"
   | "api-key-request-reject"
-  | "api-key-request-release-claim"
-  | "admin-telegram-chat";
+  | "api-key-request-release-claim";
 
 export interface DynamicEndpointDescriptor {
   key: DynamicEndpointDescriptorKey;
@@ -130,12 +129,6 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   adminDynamicPost({
     key: "api-key-request-release-claim",
     pattern: /^\/api\/api-key-requests-admin\/([^/]+)\/release-claim$/,
-    routeDependencies: [],
-  }),
-  adminDynamic({
-    key: "admin-telegram-chat",
-    pattern: /^\/api\/admin-telegram-chat\/(-?\d+)$/,
-    methods: ["GET"] as const,
     routeDependencies: [],
   }),
 ] as const satisfies readonly DynamicEndpointDescriptor[];

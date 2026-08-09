@@ -134,7 +134,7 @@ describe("api key helpers", () => {
             key_prefix: "fedcba9876543210",
             name: "Digest",
             owner_email: "digest@pharos.watch",
-            tier: "ci",
+            tier: "standard",
             rate_limit_per_minute: 90,
             expires_at: 111 + 90 * 24 * 60 * 60,
             created_at: 111,
@@ -157,7 +157,7 @@ describe("api key helpers", () => {
       {
         name: "Digest",
         ownerEmail: "digest@pharos.watch",
-        tier: "ci",
+        tier: "standard",
         rateLimitPerMinute: 90,
       },
       111,
@@ -171,7 +171,7 @@ describe("api key helpers", () => {
         maskedToken: "ph_live_fedcba9876543210_********",
         name: "Digest",
         ownerEmail: "digest@pharos.watch",
-        tier: "ci",
+        tier: "standard",
         trafficClass: "external",
         rateLimitPerMinute: 90,
         isActive: true,
@@ -200,33 +200,35 @@ describe("api key helpers", () => {
     });
   });
 
-  it("normalizes create input string fields and rejects invalid traffic class", async () => {
+  it("normalizes create input string fields and rejects an unknown tier", async () => {
     expect(
       normalizeCreateInput({
         name: "  Ops token  ",
         ownerEmail: " Ops@Pharos.Watch ",
-        tier: "  CI  ",
-        trafficClass: " SITE ",
+        tier: "  Self-Serve  ",
         rateLimitPerMinute: "120",
         expiresAt: "1800",
       }),
     ).toEqual({
       name: "Ops token",
       ownerEmail: "ops@pharos.watch",
-      tier: "CI",
-      trafficClass: "site",
+      tier: "self-serve",
       rateLimitPerMinute: 120,
       expiresAt: 1800,
     });
 
-    const invalidTrafficClass = normalizeCreateInput({
+    // trafficClass is no longer an issuance dimension: the lane is derived per
+    // request in handlers/http/gates.ts, so an admin body cannot assign it.
+    expect(normalizeCreateInput({ name: "Ops token", trafficClass: "site" })).not.toHaveProperty("trafficClass");
+
+    const invalidTier = normalizeCreateInput({
       name: "Ops token",
-      trafficClass: "internal",
+      tier: "enterprise",
     });
-    expect(invalidTrafficClass).toBeInstanceOf(Response);
-    expect((invalidTrafficClass as Response).status).toBe(400);
-    await expect((invalidTrafficClass as Response).json()).resolves.toEqual({
-      error: "trafficClass must be either site or external",
+    expect(invalidTier).toBeInstanceOf(Response);
+    expect((invalidTier as Response).status).toBe(400);
+    await expect((invalidTier as Response).json()).resolves.toEqual({
+      error: "tier must be one of: standard, self-serve",
     });
   });
 
@@ -410,7 +412,7 @@ describe("api key helpers", () => {
     expect(response?.status).toBe(429);
   });
 
-  it("does not let an older rate-limit prune clear a newer pending prune", async () => {
+  it("hands each bucket's rate-limit prune to the request lifetime exactly once", async () => {
     const pruneResolvers: Array<() => void> = [];
     const db = {
       prepare: (sql: string) => ({
@@ -428,22 +430,42 @@ describe("api key helpers", () => {
       }),
     } as unknown as Parameters<typeof checkApiKeyRateLimit>[0];
 
-    await checkApiKeyRateLimit(db, 7, 100, 600);
-    const firstPrune = getApiKeyRuntimeState().pendingApiKeyPrune;
-    await checkApiKeyRateLimit(db, 7, 100, 660);
-    const secondPrune = getApiKeyRuntimeState().pendingApiKeyPrune;
+    const waitUntil = vi.fn();
+    const execCtx = { waitUntil, passThroughOnException: () => {} } as unknown as ExecutionContext;
 
-    expect(firstPrune).toBeTruthy();
-    expect(secondPrune).toBeTruthy();
-    expect(secondPrune).not.toBe(firstPrune);
+    await checkApiKeyRateLimit(db, 7, 100, 600, execCtx);
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+
+    // Same 60s bucket: no second prune is scheduled.
+    await checkApiKeyRateLimit(db, 7, 100, 630, execCtx);
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+
+    // New bucket: a second, distinct prune promise reaches waitUntil.
+    await checkApiKeyRateLimit(db, 7, 100, 660, execCtx);
+    expect(waitUntil).toHaveBeenCalledTimes(2);
+    expect(waitUntil.mock.calls[1]?.[0]).not.toBe(waitUntil.mock.calls[0]?.[0]);
 
     pruneResolvers[0]?.();
-    await firstPrune;
-    expect(getApiKeyRuntimeState().pendingApiKeyPrune).toBe(secondPrune);
-
     pruneResolvers[1]?.();
-    await secondPrune;
-    expect(getApiKeyRuntimeState().pendingApiKeyPrune).toBeNull();
+    await Promise.all(waitUntil.mock.calls.map((call) => call[0]));
+  });
+
+  it("skips the rate-limit prune entirely when no ExecutionContext is supplied", async () => {
+    const prepared: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        prepared.push(sql);
+        return {
+          bind: () => ({
+            first: async () => ({ count: 1 }),
+            run: async () => ({ success: true, meta: { changes: 1 } }),
+          }),
+        };
+      },
+    } as unknown as Parameters<typeof checkApiKeyRateLimit>[0];
+
+    await checkApiKeyRateLimit(db, 9, 100, 600);
+    expect(prepared.some((sql) => sql.includes("DELETE FROM api_key_rate_limit"))).toBe(false);
   });
 
   it("throttles last-used writes to avoid per-request metadata churn", async () => {

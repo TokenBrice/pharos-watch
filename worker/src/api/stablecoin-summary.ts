@@ -57,7 +57,11 @@ export const handleStablecoinSummary = async (
     },
     chainCount: coin.chains.length,
     updatedAt: stablecoinsCache.updatedAt,
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.producerBacked,
-  }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins));
+  }, {
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.producerBacked },
+      stablecoinsCache.updatedAt,
+      API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+    ),
+  });
 };

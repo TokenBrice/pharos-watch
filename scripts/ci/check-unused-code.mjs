@@ -37,7 +37,7 @@ const MODULE_ALLOWLIST = new Set([
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
-  // is now consumed by src/components/command-palette.tsx.)
+  // is now consumed by src/components/command-palette-root.tsx.)
 ]);
 const EXPORT_ALLOWLIST = new Set([
   "shared/lib/protocol-api-sources/decimal.ts::CANONICAL_DECIMAL_PATTERN",
@@ -204,7 +204,7 @@ const EXPORT_ALLOWLIST = new Set([
   // resolve same-file references.
   "src/lib/coin-tracker-links.ts::buildCoinTrackerLink",
   // parsePaletteInput + buildCompareHrefFromCoinIds are consumed by
-  // src/components/command-palette.tsx. resolveCoinIdFromToken is only consumed
+  // src/components/command-palette-root.tsx. resolveCoinIdFromToken is only consumed
   // internally by parsePaletteInput; the static scan does not resolve same-file
   // references, so it stays allowlisted.
   "src/lib/command-palette-verbs.ts::resolveCoinIdFromToken",
@@ -272,7 +272,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/components/table/table-label.ts::withFallbackTableAriaLabel",
   "src/components/table/table-label.ts::hasTableCaptionChild",
   "src/lib/alt-peg-packing.ts::DEFAULT_COLLISION_ITERATIONS",
-  "src/lib/api-key-request-admin-view-model.ts::REQUEST_RISK_FLAG_SCORE",
   "src/lib/api.ts::normalizeApiDependencyMeta",
   "src/lib/exports/csv.ts::escapeCsvField",
   "src/lib/exports/csv.ts::buildCsv",

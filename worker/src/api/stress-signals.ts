@@ -219,7 +219,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
           changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
           asOf: methodologyAsOf,
         }),
-      }, responseHeaders);
+      }, { headers: responseHeaders });
     }
 
     // All coins: latest valid row per coin.
@@ -313,5 +313,5 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf,
-    }) }, responseHeaders);
+    }) }, { headers: responseHeaders });
   };

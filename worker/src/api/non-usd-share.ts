@@ -1,7 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { addFreshnessHeaders, jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
+import { addFreshnessHeaders, jsonResponseWithHeaders, parseClampedIntegerParam } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
@@ -130,5 +130,5 @@ export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Respo
             API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
           );
 
-    return jsonResponse(points, headers);
+    return jsonResponseWithHeaders(points, headers);
   };

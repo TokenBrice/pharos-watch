@@ -94,35 +94,7 @@ export const ADMIN_STATIC_ROUTES = [
       ({ handleBackfillBlacklistCurrentBalances }) => handleBackfillBlacklistCurrentBalances,
     ),
   ),
-  defineLazyStaticRoute("reset-cron-lease", () =>
-    import("../api/admin-reset-cron-lease").then(({ handleResetCronLease }) => handleResetCronLease),
-  ),
-  defineLazyStaticRoute("reset-circuit-breaker", () =>
-    import("../api/admin-reset-circuit-breaker").then(({ handleResetCircuitBreaker }) => handleResetCircuitBreaker),
-  ),
-  defineLazyStaticRoute("kill-cron-in-flight", () =>
-    import("../api/admin-kill-cron-in-flight").then(({ handleKillCronInFlight }) => handleKillCronInFlight),
-  ),
-  defineLazyStaticRoute("clear-telegram-pending", () =>
-    import("../api/admin-telegram-pending").then(({ handleClearTelegramPending }) => handleClearTelegramPending),
-  ),
-  defineLazyStaticRoute("admin-telegram-resend", () =>
-    import("../api/admin-telegram-resend").then(({ handleAdminTelegramResend }) => handleAdminTelegramResend),
-  ),
   defineLazyStaticRoute("admin-telegram-broadcast", () =>
     import("../api/admin-telegram-broadcast").then(({ handleAdminTelegramBroadcast }) => handleAdminTelegramBroadcast),
-  ),
-  defineLazyStaticRoute("admin-telegram-delivery-control", () =>
-    import("../api/admin-telegram-delivery-control").then(
-      ({ handleAdminTelegramDeliveryControl }) => handleAdminTelegramDeliveryControl,
-    ),
-  ),
-  defineLazyStaticRoute("admin-telegram-adoption-report", () =>
-    import("../api/admin-telegram-adoption-report").then(
-      ({ handleAdminTelegramAdoptionReport }) => handleAdminTelegramAdoptionReport,
-    ),
-  ),
-  defineLazyStaticRoute("status-probe-history", () =>
-    import("../api/status-probe-history").then(({ handleStatusProbeHistory }) => handleStatusProbeHistory),
   ),
 ] as const satisfies readonly StaticRouteDefinition[];

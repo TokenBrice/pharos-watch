@@ -196,7 +196,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/telegram.ts",
   "shared/lib/telegram-adoption-analytics.ts",
   "worker/src/lib/telegram-adoption-analytics.ts",
-  "worker/src/api/admin-telegram-adoption-report.ts",
   "functions/pharoswatchbot-adoption.ts",
   "src/app/pharoswatchbot/telegram-adoption-link.tsx",
   "worker/src/api/stablecoin-detail.ts",

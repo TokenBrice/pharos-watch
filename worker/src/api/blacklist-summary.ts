@@ -2,7 +2,7 @@ import {
   addFreshnessHeaders,
   buildMethodologyEnvelope,
   getLatestSuccessfulCronTimestamp,
-  jsonResponse,
+  jsonResponseWithHeaders,
   } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
@@ -676,9 +676,9 @@ export const handleBlacklistSummary = async (db: D1Database): Promise<Response> 
           // rolls out. A later producer write includes the durable status.
         }
       }
-      return jsonResponse(payload, blacklistSummaryHeaders(snapshot.freshnessTs));
+      return jsonResponseWithHeaders(payload, blacklistSummaryHeaders(snapshot.freshnessTs));
     }
 
     const built = await buildBlacklistSummaryPayload(db, now);
-    return jsonResponse(built.payload, blacklistSummaryHeaders(built.freshnessTs));
+    return jsonResponseWithHeaders(built.payload, blacklistSummaryHeaders(built.freshnessTs));
   };

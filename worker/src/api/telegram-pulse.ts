@@ -512,7 +512,9 @@ export const handleTelegramPulse = withErrorHandler(
       ?? await publishTelegramPulseSnapshot(db, nowSec);
 
     return jsonResponse(pulse, {
-      "Cache-Control": `public, max-age=${TELEGRAM_PULSE_CACHE_SECONDS}, s-maxage=${TELEGRAM_PULSE_CACHE_SECONDS}`,
+      headers: {
+        "Cache-Control": `public, max-age=${TELEGRAM_PULSE_CACHE_SECONDS}, s-maxage=${TELEGRAM_PULSE_CACHE_SECONDS}`,
+      },
     });
   },
 );

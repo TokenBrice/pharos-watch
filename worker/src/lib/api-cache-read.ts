@@ -2,7 +2,7 @@ import type { ZodType } from "zod";
 import { D1_INT32_MAX } from "./d1-constants";
 import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
-import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
+import { errorResponse, jsonResponseWithHeaders, withErrorHandler } from "./api-response";
 import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 import { toErrorMessage } from "./error-utils";
@@ -264,7 +264,7 @@ export function createCacheHandler(
     }
 
     if (options?.injectMeta !== "never" && body && typeof body === "object" && !Array.isArray(body)) {
-      return jsonResponse(
+      return jsonResponseWithHeaders(
         {
           ...(body as Record<string, unknown>),
           _meta: buildFreshnessMeta(cached.updatedAt, maxAgeSec),

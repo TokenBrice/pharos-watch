@@ -1,5 +1,5 @@
 import { getCache, setCacheIfNewer } from "../lib/db-cache";
-import { addFreshnessHeaders, jsonResponse, readCachedJsonOr503 } from "../lib/api-utils";
+import { addFreshnessHeaders, jsonResponseWithHeaders, readCachedJsonOr503 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
@@ -353,9 +353,14 @@ export async function finalizeMintBurnFlowResponse(
   freshnessTs: number,
 ): Promise<Response> {
   await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
-  return jsonResponse(body, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
+  return jsonResponseWithHeaders(
+    body,
+    addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.standard },
+      freshnessTs,
+      MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
+    ),
+  );
 }
 
 export async function withMintBurnFlowFallback(

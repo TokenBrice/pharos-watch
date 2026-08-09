@@ -165,13 +165,6 @@ const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
       return handleApiKeyRequestReleaseClaimRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId });
     },
   ),
-  "admin-telegram-chat": defineDynamicAdminRouteBinding(
-    "admin-telegram-chat",
-    async (routeCtx, dynamicAdminEndpoint) => {
-      const { handleAdminTelegramChat } = await import("../api/admin-telegram-chat");
-      return handleAdminTelegramChat(routeCtx.db, dynamicAdminEndpoint.chatId, routeCtx.trustedAdmin, routeCtx.request);
-    },
-  ),
 } satisfies DynamicAdminRouteBindingMap;
 
 export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(

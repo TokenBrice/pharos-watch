@@ -29,7 +29,6 @@ const DYNAMIC_ADMIN_PROBE_PATHS: Record<string, string> = {
   "api-key-rotate": "/api/api-keys/7/rotate",
   "api-key-request-reject": "/api/api-key-requests-admin/akr_abc12345/reject",
   "api-key-request-release-claim": "/api/api-key-requests-admin/akr_abc12345/release-claim",
-  "admin-telegram-chat": "/api/admin-telegram-chat/-12345",
 };
 
 interface AdminProbeCase {

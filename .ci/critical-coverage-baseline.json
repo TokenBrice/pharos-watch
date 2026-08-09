@@ -194,7 +194,6 @@
     "worker/src/lib/telegram.ts": 97.5,
     "shared/lib/telegram-adoption-analytics.ts": 100,
     "worker/src/lib/telegram-adoption-analytics.ts": 89.6,
-    "worker/src/api/admin-telegram-adoption-report.ts": 100,
     "functions/pharoswatchbot-adoption.ts": 97.4,
     "src/app/pharoswatchbot/telegram-adoption-link.tsx": 87.5,
     "worker/src/api/stablecoin-detail.ts": 97.6,

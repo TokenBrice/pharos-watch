@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
+import { API_KEY_TIER_VALUES } from "@shared/types";
+import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
@@ -70,21 +71,16 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
       </label>
       <label className="space-y-1">
         <span className="text-xs font-medium text-muted-foreground">Tier</span>
-        <input
-          className={FIELD_CLASS_NAME}
-          value={state.tier}
-          onChange={(event) => onChange({ tier: event.target.value } as Partial<TState>)}
-        />
-      </label>
-      <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
         <select
           className={FIELD_CLASS_NAME}
-          value={state.trafficClass}
-          onChange={(event) => onChange({ trafficClass: event.target.value as ApiKeyTrafficClass } as Partial<TState>)}
+          value={state.tier}
+          onChange={(event) => onChange({ tier: event.target.value as ApiKeyTier } as Partial<TState>)}
         >
-          <option value="external">external</option>
-          <option value="site">site</option>
+          {API_KEY_TIER_VALUES.map((tier) => (
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
+          ))}
         </select>
       </label>
       <label className="space-y-1">

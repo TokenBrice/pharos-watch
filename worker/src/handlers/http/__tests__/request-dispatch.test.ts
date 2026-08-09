@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeExecutionContext } from "../../../test-helpers/__shared/auth";
 
 const mocks = vi.hoisted(() => ({
-  flushPendingApiKeyPrunes: vi.fn(() => Promise.resolve()),
-  flushPendingPrunes: vi.fn(() => Promise.resolve()),
   resolveRoute: vi.fn(),
   route: vi.fn(),
   createRequestSourceRecorder: vi.fn(),
@@ -25,14 +23,6 @@ const mocks = vi.hoisted(() => ({
   warnWorkerEnvIssuesOnce: vi.fn(),
   evaluateTelegramIngressAbuseGate: vi.fn(),
   recordTelegramIngressHandlerResponse: vi.fn(),
-}));
-
-vi.mock("../../../lib/api-key-rate-limit", () => ({
-  flushPendingApiKeyPrunes: mocks.flushPendingApiKeyPrunes,
-}));
-
-vi.mock("../../../lib/rate-limit", () => ({
-  flushPendingPrunes: mocks.flushPendingPrunes,
 }));
 
 vi.mock("../../../router", () => ({
@@ -199,8 +189,6 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.resolveRoute).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
     expect(mocks.recordTelegramIngressHandlerResponse).not.toHaveBeenCalled();
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("routes the rebuilt bounded Telegram request and observes handler rejections", async () => {
@@ -229,6 +217,7 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.evaluateAccessGate).toHaveBeenCalledWith(
       boundedRequest,
       new URL(originalRequest.url),
+      expect.anything(),
       expect.anything(),
     );
     expect(mocks.buildRouteContext).toHaveBeenCalledWith(expect.objectContaining({
@@ -264,8 +253,6 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.readEdgeCache).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("returns edge-cache hits before route lookup and records attribution", async () => {
@@ -285,8 +272,6 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.resolveRoute).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("does not probe edge cache twice after a fast-gate cache miss", async () => {
@@ -336,12 +321,9 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
     expect(mocks.route).not.toHaveBeenCalled();
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
-  it("flushes pending prunes, records attribution, and writes edge cache on successful routing", async () => {
-    const flushPromise = Promise.resolve();
+  it("records attribution and writes edge cache on successful routing", async () => {
     const routedResponse = new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -356,8 +338,6 @@ describe("handleHttpRequestImpl", () => {
     const request = new Request("https://api.pharos.watch/api/stablecoins");
     const env = makeEnv();
 
-    mocks.flushPendingPrunes.mockReturnValue(flushPromise);
-    mocks.flushPendingApiKeyPrunes.mockReturnValue(Promise.resolve());
     mocks.createEdgeCacheContext.mockReturnValue(edgeCacheContext);
     mocks.buildRouteContext.mockReturnValue(routeContext);
     mocks.resolveRoute.mockReturnValue(resolvedRoute);
@@ -367,9 +347,10 @@ describe("handleHttpRequestImpl", () => {
 
     expect(response).toBe(routedResponse);
     expect(mocks.route).toHaveBeenCalledWith(routeContext, resolvedRoute);
-    expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
-    expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
-    expect(ctx.waitUntil).toHaveBeenCalledOnce();
+    // The dispatcher no longer schedules anything itself: rate-limit prunes are
+    // handed to `waitUntil` by the limiters, and the edge-cache write forwards
+    // the same ctx (mocked here).
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
     expect(mocks.writeEdgeCache).toHaveBeenCalledWith(edgeCacheContext, routedResponse, ctx);
     expect(mocks.addCorsHeaders).toHaveBeenCalledWith(routedResponse, "https://pharos.watch");

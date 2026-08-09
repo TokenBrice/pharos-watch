@@ -1,4 +1,4 @@
-import { safeJsonParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
+import { safeJsonParse, addFreshnessHeaders, jsonResponseWithHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
@@ -207,5 +207,5 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
     headers.Warning = headers.Warning ? `${headers.Warning}, ${degradedWarning}` : degradedWarning;
   }
 
-  return jsonResponse(map, headers);
+  return jsonResponseWithHeaders(map, headers);
 };

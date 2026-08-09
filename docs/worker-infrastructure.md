@@ -103,7 +103,7 @@ Repair debt: DDR repair-required events are dual-written into `worker_repair_tas
 
 Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, and the checked-in Worker config now sets `status` after the shadow soak produced consecutive clean 7/7 cycles. `off` skips and writes no run, `shadow` records observed findings while the cron remains OK, `status` exposes current status-mode rows and returns degraded findings from the cron, and `alert` exposes current alert-mode rows and returns critical findings as a terminal error. In `off` or `shadow`, `/api/status.canaries` returns its empty/unknown compatibility shape without querying retained authoritative rows. The next promotion target remains `alert` only after a separate alert-routing acceptance review; roll back to `shadow` or `off` if status-mode findings are unexplained.
 
-Reserve interruption recovery: unset `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`, while the checked-in Worker config sets `shadow`. Producer checkpoints are written in every mode. The isolated recovery lane uses `off` for no scan, `shadow` for read-only eligibility/blocker telemetry, `reconcile` for generation-fenced abandonment and ready-attempt preparation without a claim, and `recover` for claim plus suffix/sidecar replay. Compatible queue hashes are filtered before the bounded candidate/claim window; shadow telemetry reports the incompatible active count without mutation. In `reconcile` or `recover`, each poll can terminally retire up to five finished-slot checkpoints whose old queue hash can never be replayed, clearing only their exact pending domain attempt. Live-reserve child dependencies are explicit: Kinesis is independent, while redemption backstops and the post-sync watchdog require reserve-queue completion; recovery preserves completed independent children instead of replaying them. `WORKER_RESERVE_FAULT_INJECTION_ENABLED` is a separate fail-closed test-harness gate: only a trimmed, case-normalized literal `true` enables arming and scheduled execution, disabling it neutralizes retained fault rows, and the production `worker/wrangler.toml` intentionally leaves it unset.
+Reserve interruption recovery: unset `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`, while the checked-in Worker config sets `shadow`. Producer checkpoints are written in every mode. The isolated recovery lane uses `off` for no scan, `shadow` for read-only eligibility/blocker telemetry, `reconcile` for generation-fenced abandonment and ready-attempt preparation without a claim, and `recover` for claim plus suffix/sidecar replay. Compatible queue hashes are filtered before the bounded candidate/claim window; shadow telemetry reports the incompatible active count without mutation. In `reconcile` or `recover`, each poll can terminally retire up to five finished-slot checkpoints whose old queue hash can never be replayed, clearing only their exact pending domain attempt. Live-reserve child dependencies are explicit: Kinesis is independent, while redemption backstops and the post-sync watchdog require reserve-queue completion; recovery preserves completed independent children instead of replaying them. The separate `WORKER_RESERVE_FAULT_INJECTION_ENABLED` test-harness gate and its `POST /api/admin/reserve-recovery-fault-injection` arming route have been removed from the Worker; neither the flag nor the route exists in the current runtime, and interruption behavior can now only be observed on a real interrupted run.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
@@ -437,16 +437,13 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
-- `POST /api/reset-cron-lease`
-- `POST /api/reset-circuit-breaker`
-- `POST /api/kill-cron-in-flight`
 - `POST /api/api-keys`
 - `POST /api/api-keys/:id/update`
 - `POST /api/api-keys/:id/deactivate`
 - `POST /api/api-keys/:id/rotate`
-- `POST /api/telegram-pending`
-- `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
+
+Retired on 2026-08-09 with the rest of the curl-only operator surface: `POST /api/reset-cron-lease`, `POST /api/reset-circuit-breaker`, `POST /api/kill-cron-in-flight`, `POST /api/telegram-pending`, and `POST /api/admin-telegram-resend`. They had no UI or script consumer and now return `404`. The state they touched is unchanged — `cron_leases`, `cron_run_progress`, `cache` rows keyed `circuit:<source>`, and `telegram_pending_alerts` are still written by the normal runtime — so the equivalent operator action is a direct `wrangler d1 execute` statement against those tables. Restoring an endpoint requires reverting its removal commit.
 
 API-key create/rotate use the sensitive-response replay mode: the first successful response returns the one-time plaintext token, while the idempotency row and every replay retain only allowlisted public key identity plus `tokenUnavailableOnReplay` recovery guidance. Redaction failure is fail-closed as `execution_unknown`; plaintext tokens are never persisted for replay.
 
@@ -681,7 +678,7 @@ Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/cron-timeouts.ts`.
 
 ### Circuit Breakers
 
-Most high-risk external integrations are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`. Breaker writes also maintain the aggregate `cache["provider:circuit:index"]` row as best-effort telemetry; individual `circuit:<source>` rows remain the execution and `/api/status.providerCircuitHealth` source of truth, and `/api/reset-circuit-breaker` removes both the source row and its index entry. Bounded low-volume fallbacks such as gold-api.com metal spot quotes, the secondary FX mirror, and ExchangeRate-API daily reference snapshots use explicit retry/timeout/cooldown behavior but are not currently circuit-gated.
+Most high-risk external integrations are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`. Breaker writes also maintain the aggregate `cache["provider:circuit:index"]` row as best-effort telemetry; individual `circuit:<source>` rows remain the execution and `/api/status.providerCircuitHealth` source of truth. The `POST /api/reset-circuit-breaker` endpoint was retired on 2026-08-09; clearing a breaker is now a direct `DELETE FROM cache WHERE key = 'circuit:<source>'`, which is exactly what the endpoint did and forces the next call to re-probe closed. Bounded low-volume fallbacks such as gold-api.com metal spot quotes, the secondary FX mirror, and ExchangeRate-API daily reference snapshots use explicit retry/timeout/cooldown behavior but are not currently circuit-gated.
 
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
@@ -759,7 +756,7 @@ Primary-oracle implementation notes:
 - CoinGecko Onchain pool discovery treats malformed pool members as schema-degraded while allowing omitted optional Pro attributes such as flat 24h volume, fee percentage, locked-liquidity percentage, and optional price/reserve siblings. Valid siblings still stage, and an all-invalid response cannot verify that a deployment has no pools. Breaker accounting remains transport-based for these responses.
 - dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today.
 - `/api/health` completes the circuit list from active `CIRCUIT_SOURCE` values plus configured `live-reserves:*` scopes, and filters retired/stale cache rows so old breaker keys do not keep surfacing as active incidents after a source is removed.
-- `POST /api/reset-circuit-breaker?circuit=<source>` uses the same active-source whitelist, so operators can reset both source-wide breakers and configured scoped live-reserve breakers such as `live-reserves:usdgo-osl`.
+- Configured scoped live-reserve breakers such as `live-reserves:usdgo-osl` use the same `circuit:<source>` cache-key convention as source-wide breakers, so a manual reset is the same single-row delete for both.
 - Scheduled handlers that write breaker state from cron outcomes now treat `degraded`, `skipped_locked`, and `skipped_neutral` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
 
 ---

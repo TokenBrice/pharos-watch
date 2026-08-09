@@ -103,8 +103,6 @@ const apiKeyRequestsResponse: ApiKeySelfServeRequestAdminListResponse = {
       linkedKeyExpiresAt: null,
       rateLimitPerMinute: 30,
       selfServeExpiresAt: null,
-      riskScore: 0,
-      riskReasons: [],
       claimStatus: "pending_verification",
       verificationSentAt: STATUS_FIXTURE_NOW_SECONDS - 60,
       verificationExpiresAt: STATUS_FIXTURE_NOW_SECONDS + 1_800,

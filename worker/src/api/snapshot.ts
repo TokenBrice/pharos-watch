@@ -364,7 +364,7 @@ export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> =>
     createdAt: row.created_at,
   }));
 
-  return jsonResponse({ snapshots }, { "Cache-Control": CACHE_PROFILES.archive });
+  return jsonResponse({ snapshots }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
 };
 
 export const handleSnapshotDay = async (

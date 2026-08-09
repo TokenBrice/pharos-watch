@@ -25,7 +25,7 @@ import {
   parseSelfServeVerifyRequest,
   requireInitialSelfServeEnv,
   requireVerifySelfServeEnv,
-  validateIntendedEndpoints,
+  normalizeIntendedEndpoints,
 } from "./request";
 import {
   buildSelfServeKeyName,
@@ -76,8 +76,7 @@ export async function handleApiKeyRequest(
     const normalizedEmail = normalizeSelfServeEmail(parsed.email);
     if (normalizedEmail instanceof Response) return normalizedEmail;
 
-    const intendedEndpoints = validateIntendedEndpoints(parsed.intendedEndpoints);
-    if (intendedEndpoints instanceof Response) return intendedEndpoints;
+    const intendedEndpoints = normalizeIntendedEndpoints(parsed.intendedEndpoints);
 
     const nowSec = getNowSec();
     const emailHash = await hashForLookup(initialEnv.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER, normalizedEmail);
@@ -438,7 +437,6 @@ export async function handleApiKeyRequestVerify(
         name: buildSelfServeKeyName(row),
         ownerEmail: row.normalized_email,
         tier: "self-serve",
-        trafficClass: "external",
         rateLimitPerMinute: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
         expiresAt: nowSec + SELF_SERVE_API_KEY_EXPIRY_SEC,
         isActive: false,
@@ -502,8 +500,6 @@ export async function handleApiKeyRequestVerify(
           expectedVolume: row.expected_volume,
           selfServeDefaultQuota: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
           emailVerified: true,
-          riskScore: row.risk_score,
-          riskReasons: parseJsonStringArray(row.risk_reasons_json),
         },
         nowSec,
         "self-serve",

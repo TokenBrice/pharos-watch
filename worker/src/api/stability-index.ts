@@ -129,7 +129,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
         changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
         asOf: now,
       }),
-    }, { "Cache-Control": CACHE_PROFILES.standard });
+    }, { headers: { "Cache-Control": CACHE_PROFILES.standard } });
   }
 
   // Build current from latest sample, falling back to latest history row
@@ -252,7 +252,7 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
       asOf: computedAt,
     }),
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, computedAt, DAY_SECONDS));
+  }, {
+    headers: addFreshnessHeaders({ "Cache-Control": CACHE_PROFILES.standard }, computedAt, DAY_SECONDS),
+  });
 };

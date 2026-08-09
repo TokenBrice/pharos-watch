@@ -29,6 +29,7 @@ import {
   cacheControlForDegradedPayload,
   respondWithFreshSnapshot,
   jsonResponse,
+  jsonResponseWithHeaders,
   jsonFreshResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
@@ -785,10 +786,20 @@ describe("jsonResponse", () => {
     expect(body).toEqual({ ok: true });
   });
 
-  it("merges custom headers", async () => {
-    const res = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
+  it("merges custom headers through the explicit headers form", async () => {
+    const res = jsonResponseWithHeaders({ ok: true }, { "Cache-Control": "no-store" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("does not mistake a header record key for an option", async () => {
+    // The retired options-sniffing signature read this record as options and
+    // dropped every header while setting status 503.
+    const res = jsonResponseWithHeaders({ ok: true }, { status: "503", headers: "x", noStore: "1" });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("status")).toBe("503");
+    expect(res.headers.get("headers")).toBe("x");
+    expect(res.headers.get("noStore")).toBe("1");
   });
 
   it("supports status, no-store, and Retry-After options", async () => {
@@ -821,7 +832,7 @@ describe("response header helpers", () => {
     const cached = jsonResponse({ ok: true });
     expect(noStoreResponse(cached).headers.get("Cache-Control")).toBe("no-store");
 
-    const alreadyNoStore = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
+    const alreadyNoStore = jsonResponse({ ok: true }, { noStore: true });
     expect(noStoreResponse(alreadyNoStore)).toBe(alreadyNoStore);
   });
 

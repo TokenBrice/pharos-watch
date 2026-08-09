@@ -8,9 +8,6 @@ export const OPS_STATIC_ROUTES = [
   defineLazyStaticRoute("request-source-stats", () =>
     import("../api/request-source-stats").then(({ handleRequestSourceStats }) => handleRequestSourceStats),
   ),
-  defineLazyStaticRoute("yield-source-decisions", () =>
-    import("../api/yield-source-decisions").then(({ handleYieldSourceDecisions }) => handleYieldSourceDecisions),
-  ),
   defineLazyStaticRoute("api-keys", () =>
     import("../api/api-keys").then(({ handleApiKeysRoute }) => handleApiKeysRoute),
   ),

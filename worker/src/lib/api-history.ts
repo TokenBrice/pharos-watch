@@ -103,8 +103,10 @@ export async function handleStablecoinHistoryRequest<TRow, THistory>(
 
   if (!freshness) {
     return jsonResponse(history, {
-      "Cache-Control": config.cacheControl,
-      ...(extraHeaders ?? {}),
+      headers: {
+        "Cache-Control": config.cacheControl,
+        ...(extraHeaders ?? {}),
+      },
     });
   }
 

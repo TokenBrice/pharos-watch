@@ -639,7 +639,7 @@ The TTL — not a per-row attempts cap — bounds how long the queue keeps retry
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted in a
 capped cleanup batch at the end of the run, leaving any overflow for later dispatch
-runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. After reviewing the exact effect evidence, an operator may acknowledge exact pending IDs through `POST /api/admin-telegram-delivery-control`; this uses the same fail-closed archive path, preserves the ambiguous target outcome, and records the reason without replaying the effect. Operator resolution racing automatic archival fails with a row-change conflict instead of overwriting evidence.
+runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. The operator acknowledgement action that could archive reviewed pending IDs early (`POST /api/admin-telegram-delivery-control`, action `acknowledge_execution_unknown`) was retired on 2026-08-09. Its fail-closed archive helper still exists in `worker/src/cron/telegram-pending/cleanup.ts` but is no longer reachable over HTTP, so a reviewed `execution_unknown` row now waits for the automatic 90-day archive; re-exposing early acknowledgement requires reverting the endpoint's removal commit.
 Admin broadcasts preflight `messageHtml` before target selection or enqueue. The accepted
 Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`,
 `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple
@@ -651,15 +651,16 @@ of projected reserve inside the 45-minute TTL. Every chunk must succeed against 
 canary before any non-canary fleet row is enqueued; an acknowledgement flag cannot override
 the reserve gate.
 
-Admin resend is historical replay, not current-state reconstruction. Dry-run is the default
-and verifies the exact target-plan payload plus digest (dead letters must resolve to that same
-authoritative target). Live replay requires `Idempotency-Key`, an 8-500 character
-`operatorReason`, and a currently registered chat. Targets already `accepted` or
-`execution_unknown` are refused, and eligible exact payloads enter the normal queue as
-`source_type = 'admin_replay'` rather than calling Telegram inline.
-Operator clears through `POST /api/telegram-pending` should be previewed with
-`?dry_run=1` first. Dry-runs write only the matched count to admin audit; live clears
-use the same audit path with `reason = 'manual_clear'` before deleting filtered live rows.
+Admin resend (`POST /api/admin-telegram-resend`) was retired on 2026-08-09. It was historical
+replay, not current-state reconstruction: a dry-run verified the exact target-plan payload plus
+digest, live replay required `Idempotency-Key` and an 8-500 character `operatorReason`, targets
+already `accepted` or `execution_unknown` were refused, and eligible exact payloads entered the
+normal queue as `source_type = 'admin_replay'`. There is no operator replay path today; the queue
+still recognizes `admin_replay` priority and TTL semantics, but nothing enqueues those rows.
+The operator clear endpoint `POST /api/telegram-pending` was retired on 2026-08-09. Scheduled
+TTL cleanup remains the supported drain for stuck rows; a hand-written D1 delete skips the
+`reason = 'manual_clear'` dead-letter copy and the `cancelled` target projection the endpoint
+performed, so it is evidence-destroying rather than equivalent.
 
 Within the TTL window, retryable sends are re-queued with an exponential backoff
 (`60s → 120s → 240s → 480s → 600s`, capped at 600s) indexed by prior attempts. Telegram's
@@ -777,7 +778,7 @@ When tracked coverage changed, the digest gains a `Tracking Changes` section spl
 
 ## Admin Visibility
 
-`GET /api/admin-telegram-adoption-report` exposes the last seven complete UTC days of aggregate funnel data, a previous-seven-day comparison range, first-mutation latency buckets, and the latest D7/D30 feature-retention snapshots. Counts from one through four and rates derived from them are suppressed. CTA clicks are best-effort and are not joined to Telegram users, so click-to-start rates are directional and may exceed 100%; the response carries that warning and per-source quality/freshness metadata. See the [adoption report runbook](./runbooks/telegram-adoption-report.md).
+The adoption funnel is aggregated in `telegram_adoption_daily` and `telegram_adoption_retention_daily`: seven complete UTC days of funnel counts, a previous-seven-day comparison range, first-mutation latency buckets, and the latest D7/D30 feature-retention snapshots. Counts from one through four and rates derived from them are suppressed. CTA clicks are best-effort and are not joined to Telegram users, so click-to-start rates are directional and may exceed 100%. `GET /api/admin-telegram-adoption-report`, the read-only HTTP view over that data, was retired on 2026-08-09; the producer (`worker/src/lib/telegram-adoption-analytics.ts`) still writes both tables from the Telegram pulse, Mini App, and webhook paths. See the [adoption report runbook](./runbooks/telegram-adoption-report.md) for the direct D1 queries.
 
 The public Telegram pulse derives `miniAppOpenToFirstMutationP50Sec` from the same daily latency buckets, using the selected bucket midpoint as an approximate P50. It remains `null` and privacy-suppressed below five known-latency sessions; unknown/missing session correlations do not enter the median.
 

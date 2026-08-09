@@ -109,7 +109,7 @@ Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project
 | `cemetery.entry.added`                          | `shared/lib/cemetery-merged.ts`         | Newly added cemetery entries                                         |
 | `lifecycle.tracked.frozen`                      | `shared/lib/stablecoins/` (frozen status)| Tracked coin frozen-lifecycle entries                                |
 
-Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) for the filter chip set, but `hasProjector: false` keeps them subdued in the UI and out of the `ItemList` JSON-LD until their projector implementations land.
+`TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) carries exactly the classes with a live projector — one entry per row in the table above. The three reserved chip slots (`reserve`, `redemption`, `liquidity`) and the `hasProjector` flag that subdued them were deleted on 2026-08-09: a class earns a chip when its projector ships. `TAPE_CLASS_LABEL` in `src/lib/tape-class-style.ts` is derived from this list rather than re-authored.
 
 `tape_events` schema lives in `worker/migrations/0000_baseline.sql`, which absorbed the pre-squash `0129_tape_events.sql`. The wire `event_id` is `${ts_ms}-${type}-${hash8}` and is reused as the `?event=<id>` permalink.
 
@@ -140,7 +140,7 @@ Retention policy: `tape_events` is a product timeline archive kept forever. The 
 - The route is indexable. `src/app/sitemap.ts` includes `${SITE_URL}/timeline/`.
 - `src/app/timeline/page.tsx` emits two JSON-LD blocks:
   - `CollectionPage` with `@id=${TIMELINE_URL}#collection`, `isPartOf` the site `WebSite` node
-  - `ItemList` of projector-backed classes from `TAPE_CLASSES.filter(cls => cls.hasProjector)`, each linking to `?type=<slug>.*`
+  - `ItemList` of every entry in `TAPE_CLASSES` (all projector-backed by construction), each linking to `?type=<slug>.*`
 - Per-class deep-links into `/timeline/` (e.g., `/timeline/?type=depeg.*`) are the canonical "See all on Timeline" targets used from `/depeg/`, `/freezewatch/`, and `/flows/`.
 
 ---

@@ -54,7 +54,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/webhook-callbacks/__tests__/watchlist-import-retry.test.ts",
   "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
   "worker/src/lib/__tests__/telegram-adoption-analytics.test.ts",
-  "worker/src/api/__tests__/admin-telegram-adoption-report.test.ts",
   "functions/__tests__/pharoswatchbot-adoption.test.ts",
   "src/app/pharoswatchbot/telegram-adoption-link.test.tsx",
   "worker/src/lib/__tests__/evm-rpc.test.ts",

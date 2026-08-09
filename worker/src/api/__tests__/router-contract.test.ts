@@ -227,9 +227,6 @@ describe("router contract: strict frontend paths are routable", () => {
         }));
         expect(forbiddenRepairGet).not.toBeNull();
         expect(forbiddenRepairGet!.status).toBe(405);
-      } else if (path === "/api/admin-telegram-delivery-control") {
-        expect(getResult!.status).not.toBe(405);
-        expect(getResult!.status).toBe(401);
       } else {
         expect(getResult!.status).toBe(405);
       }

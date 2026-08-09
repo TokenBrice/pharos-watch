@@ -127,22 +127,6 @@ export const API_PATHS = {
       routeLimit: params?.routeLimit,
       apiKeyLimit: params?.apiKeyLimit,
     }),
-  yieldSourceDecisions: (params?: {
-    generationId?: string;
-    stablecoin?: string;
-    state?: string;
-    limit?: number;
-    decisionLimit?: number;
-    includePublicAlternatives?: boolean;
-  }) =>
-    buildQueryPath("/api/yield-source-decisions", {
-      generationId: params?.generationId,
-      stablecoin: params?.stablecoin,
-      state: params?.state,
-      limit: params?.limit,
-      decisionLimit: params?.decisionLimit,
-      includePublicAlternatives: params?.includePublicAlternatives ? 1 : undefined,
-    }),
   apiKeys: () => "/api/api-keys",
   credentialLifecycleSummary: () => "/api/api-keys/lifecycle-summary",
   apiKeyAuditLog: () => "/api/api-keys/audit-log",
@@ -171,21 +155,5 @@ export const API_PATHS = {
   auditDepegHistoryBase: () => "/api/audit-depeg-history",
   auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),
   backfillDews: () => "/api/backfill-dews",
-  resetCronLease: (params?: { job?: string }) => buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
-  resetCircuitBreaker: (params?: { circuit?: string }) =>
-    buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
-  killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
-    buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
-  clearTelegramPending: (params?: { chatId?: string; olderThanSec?: number }) =>
-    buildQueryPath("/api/telegram-pending", {
-      chat_id: params?.chatId,
-      older_than_sec: params?.olderThanSec,
-    }),
-  adminTelegramResend: () => "/api/admin-telegram-resend",
   adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
-  adminTelegramDeliveryControl: () => "/api/admin-telegram-delivery-control",
-  adminTelegramAdoptionReport: () => "/api/admin-telegram-adoption-report",
-  statusProbeHistory: (params?: { path?: string; days?: number }) =>
-    buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
-  adminTelegramChat: (chatId: string) => `/api/admin-telegram-chat/${encodeURIComponent(chatId)}`,
 } as const;

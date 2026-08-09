@@ -305,7 +305,11 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf: freshnessAsOf,
     }),
-  }, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.producerBacked,
-  }, freshnessAsOf, API_FRESHNESS_MAX_AGE_SEC.pegSummary));
+  }, {
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.producerBacked },
+      freshnessAsOf,
+      API_FRESHNESS_MAX_AGE_SEC.pegSummary,
+    ),
+  });
 };

@@ -1,4 +1,3 @@
-import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { hasConfiguredValue } from "@shared/lib/env-utils";
 import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
@@ -19,13 +18,6 @@ const API_KEY_REQUEST_ID_BYTES = 18;
 const VERIFICATION_TOKEN_BYTES = 32;
 const API_KEY_SELF_SERVE_REQUEST_MAX_BYTES = 16 * 1024;
 const API_KEY_SELF_SERVE_VERIFY_MAX_BYTES = 1024;
-
-const PUBLIC_ENDPOINT_PATHS = new Set(
-  ENDPOINT_DEFINITIONS.filter((endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/")).map(
-    (endpoint) => endpoint.path,
-  ),
-);
-const PUBLIC_ENDPOINT_TEMPLATES = new Set(["/api/stablecoin/:id"]);
 
 function dependencyUnavailable(message = SELF_SERVE_SERVICE_UNAVAILABLE): Response {
   return errorResponse(503, message, { noStore: true, retryAfterSec: 60 });
@@ -98,27 +90,16 @@ export function normalizeOptionalText(value: string | undefined): string | null 
   return trimmed ? trimmed : null;
 }
 
-export function validateIntendedEndpoints(endpoints: string[] | undefined): string[] | Response {
+/**
+ * `intendedEndpoints` is a free-text operator note shown on the admin request
+ * card. It grants nothing: an issued self-serve key can read every protected
+ * public route regardless of what the requester listed. Normalize (trim, drop
+ * blanks, de-duplicate) and store it as prose — the previous allowlist check
+ * read as an access control while enforcing none.
+ */
+export function normalizeIntendedEndpoints(endpoints: string[] | undefined): string[] {
   if (!endpoints) return [];
-  const normalized: string[] = [];
-  for (const raw of endpoints) {
-    const endpoint = raw.trim();
-    if (!endpoint) continue;
-    if (endpoint === "unknown") {
-      normalized.push(endpoint);
-      continue;
-    }
-    if (!endpoint.startsWith("/api/")) {
-      return errorResponse(400, "Intended endpoints must be public API paths or unknown", { noStore: true });
-    }
-    if (endpoint.includes("admin") || endpoint.includes("api-key") || endpoint.includes("backfill")) {
-      return errorResponse(400, "Admin API paths cannot be requested for self-serve access", { noStore: true });
-    }
-    if (!PUBLIC_ENDPOINT_PATHS.has(endpoint) && !PUBLIC_ENDPOINT_TEMPLATES.has(endpoint)) {
-      return errorResponse(400, "Unknown intended endpoint", { noStore: true });
-    }
-    normalized.push(endpoint);
-  }
+  const normalized = endpoints.map((raw) => raw.trim()).filter((endpoint) => endpoint.length > 0);
   return Array.from(new Set(normalized));
 }
 

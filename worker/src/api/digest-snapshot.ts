@@ -181,5 +181,5 @@ export const handleDigestSnapshot = async (
     prevInputData,
     depegEvents,
     blacklistEvents,
-  }, { "Cache-Control": CACHE_PROFILES.archive });
+  }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
 };

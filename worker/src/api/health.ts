@@ -115,5 +115,5 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
     telegramSummary,
   };
 
-  return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.realtime });
+  return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
 };

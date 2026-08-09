@@ -636,6 +636,40 @@ describe("callback_data size budget", () => {
 });
 
 describe("message builders", () => {
+  it("home message states every global alert family the home keyboard toggles", () => {
+    const subscriber = {
+      alert_dews: 0,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+      global_alert_dews: 1,
+      global_alert_depeg: 1,
+      global_depeg_worsening_bps_step: 25,
+      global_alert_safety: 0,
+      global_alert_launch: 1,
+      global_alert_reserve: 1,
+      global_alert_freeze: 0,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      alert_snooze_until_ts: null,
+    };
+
+    const message = buildHomeMessage(subscriber);
+    expect(message).toContain("<b>Global alerts</b>\nDEWS: ON\nDepeg: ON (+25bps)\nSafety: OFF\nLaunch: ON\nReserve: ON\nFreeze: OFF\n");
+
+    // Regression pin: the hand-written copy listed only DEWS/Depeg/Safety/Launch
+    // while buildHomeKeyboard rendered a toggle row for all six, so a chat with
+    // global Reserve or Freeze on saw the toggle but never the state line.
+    const toggleLabels = buildHomeKeyboard(subscriber)
+      .inline_keyboard.flat()
+      .flatMap((button) => (button.callback_data?.startsWith("settings:gt:") ? [button.text.split(":")[0]!] : []));
+    expect(toggleLabels).toHaveLength(6);
+    for (const label of toggleLabels) {
+      expect(message).toContain(`\n${label}: `);
+    }
+  });
+
   it("home message reflects active snooze duration", () => {
     const subscriber = {
       alert_dews: 0,

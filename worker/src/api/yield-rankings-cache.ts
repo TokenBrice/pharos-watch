@@ -31,7 +31,7 @@ import {
   buildMethodologyEnvelope,
   createCacheHandler,
   errorResponse,
-  jsonResponse,
+  jsonResponseWithHeaders,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
@@ -668,7 +668,7 @@ function buildYieldRankingsResponse(
   if (warning && headers.Warning && !headers.Warning.includes(warning)) {
     headers.Warning = `${headers.Warning}, ${warning}`;
   }
-  return jsonResponse(
+  return jsonResponseWithHeaders(
     {
       ...payload,
       _meta: buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC),

@@ -41,10 +41,15 @@ export function buildHomeMessage(
     `Snooze: ${formatSnoozeLine(subscriber)}`,
     "",
     "<b>Global alerts</b>",
-    `DEWS: ${onOff(subscriber?.global_alert_dews)}`,
-    `Depeg: ${onOff(subscriber?.global_alert_depeg)}${depegSuffix}`,
-    `Safety: ${onOff(subscriber?.global_alert_safety)}`,
-    `Launch: ${onOff(subscriber?.global_alert_launch)}`,
+    // Generated from GLOBAL_ALERT_TYPES so the state lines always match the
+    // toggle rows `buildHomeKeyboard` renders from the same list. The previous
+    // hand-written four missed Reserve and Freeze entirely.
+    ...GLOBAL_ALERT_TYPES.map(
+      (type) =>
+        `${labelForType(type)}: ${subscriberHasGlobal(subscriber, type) ? "ON" : "OFF"}${
+          type === "depeg" ? depegSuffix : ""
+        }`,
+    ),
     "",
     options.hasCoinControls
       ? "Tap a row to toggle. Tap a coin below or send /settings &lt;ticker&gt; for per-coin controls."
@@ -230,10 +235,6 @@ function labelForSafety(code: SafetyModeCode): string {
 
 function markIf(active: boolean): string {
   return active ? "• " : "";
-}
-
-function onOff(value: number | null | undefined): string {
-  return value ? "ON" : "OFF";
 }
 
 function describeDews(row: SubscriptionRow | null): string {

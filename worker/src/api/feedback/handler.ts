@@ -16,6 +16,7 @@ export async function handleFeedbackRequest(
   db: D1Database,
   request: Request,
   env: FeedbackEnv,
+  execCtx?: ExecutionContext,
 ): Promise<Response> {
   const idempotencyRequest = request.clone();
   const parsed = await parseFeedbackRequest(request);
@@ -34,7 +35,7 @@ export async function handleFeedbackRequest(
     "feedback-submit",
     idempotencyRequest,
     async () => {
-      const prepared = await prepareFeedbackSubmission(db, request, env, validated);
+      const prepared = await prepareFeedbackSubmission(db, request, env, validated, execCtx);
       if (prepared instanceof Response) {
         preExecutionRetryableResponse = prepared;
         return prepared;

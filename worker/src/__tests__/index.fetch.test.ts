@@ -3,7 +3,6 @@ import worker from "../index";
 import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
-import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
@@ -71,7 +70,6 @@ describe("worker.fetch", () => {
   beforeEach(() => {
     vi.useRealTimers();
     resetApiKeyStateForTests();
-    resetRateLimitStateForTests();
     resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
     cacheMatch.mockReset();
