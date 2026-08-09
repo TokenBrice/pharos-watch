@@ -106,6 +106,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "launchPhase": "beta",
   "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026. At Stripe Sessions 2026 (Apr 29) Bridge expanded stablecoin-backed cards to 30 countries (targeting 100+ by year-end via Visa) and added Tempo/Plasma/Celo/Sui support, COP/GBP on-off-ramps, and SWIFT/FedNow/ACH integration. Bridge Open Issuance now also powers MoneyGram's MGUSD (Stellar, Jun 2) and Deel's DLUSD (Tempo, Jun 3) alongside USDH, CASH, and USDSui; distinct from Blast's USDB (usdb-blast). Promotion to active is pending a verified runtime price and circulating-supply source; current DefiLlama USDB rows are Blast USDB and FantOHM USD Balance, not Bridge USDB",

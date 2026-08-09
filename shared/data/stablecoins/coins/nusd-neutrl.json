@@ -98,6 +98,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Stablecoin reserves",

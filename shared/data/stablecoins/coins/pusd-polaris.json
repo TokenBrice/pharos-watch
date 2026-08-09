@@ -43,6 +43,7 @@
     "reviewedAt": "2026-05-13",
     "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pUSD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
   },
+  "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",
   "dateHistory": [

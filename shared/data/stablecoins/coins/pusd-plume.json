@@ -182,6 +182,7 @@
     ]
   },
   "custodyModel": "onchain",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -212,6 +212,7 @@
     "reviewedAt": "2026-07-22"
   },
   "collateralQuality": "rwa",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Institutional credit and market-neutral fund basket",

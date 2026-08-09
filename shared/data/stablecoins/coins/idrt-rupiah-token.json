@@ -238,6 +238,7 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

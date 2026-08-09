@@ -169,6 +169,7 @@
   },
   "implementationLaunchDate": "2022-07-07",
   "custodyModel": "cex",
+  "governanceQuality": "immutable-code",
   "reserves": [
     {
       "name": "XT.com issuer-managed reserve assets",

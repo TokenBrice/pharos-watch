@@ -447,7 +447,7 @@
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "USDm (Mento Dollar) CDP collateral",

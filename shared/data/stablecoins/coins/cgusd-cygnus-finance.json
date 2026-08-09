@@ -279,6 +279,7 @@
     "knownUnknownExposurePct": 100
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

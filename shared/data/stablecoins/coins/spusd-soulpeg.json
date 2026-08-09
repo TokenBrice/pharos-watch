@@ -83,6 +83,7 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -145,6 +145,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

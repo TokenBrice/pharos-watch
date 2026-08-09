@@ -243,6 +243,7 @@
       ]
     }
   },
+  "governanceQuality": "dao-governance",
   "reserves": [
     {
       "name": "Rootstock BTC (rBTC) collateral",

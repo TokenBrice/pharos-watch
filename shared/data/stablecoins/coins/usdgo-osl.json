@@ -384,6 +384,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "usdgo-transparency",
     "version": 1,

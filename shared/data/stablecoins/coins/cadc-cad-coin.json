@@ -427,6 +427,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Canadian-dollar cash deposits at ATB Financial",

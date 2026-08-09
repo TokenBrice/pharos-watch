@@ -97,6 +97,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

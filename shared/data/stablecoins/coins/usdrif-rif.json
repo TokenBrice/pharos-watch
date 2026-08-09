@@ -103,6 +103,7 @@
     "reviewedAt": "2026-05-12"
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "dao-governance",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

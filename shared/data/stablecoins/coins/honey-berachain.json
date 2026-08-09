@@ -119,6 +119,7 @@
     "reviewedAt": "2026-07-14"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401#readProxyContract",

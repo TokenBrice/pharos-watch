@@ -94,6 +94,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "USDC held in the WEMIX3.0 Treasury",

@@ -460,6 +460,7 @@
     }
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "re-metrics",
     "version": 1,

@@ -436,6 +436,7 @@
     }
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",

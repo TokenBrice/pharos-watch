@@ -29,6 +29,7 @@
     "reviewer": "Pharos pre-launch addition 2026-05-19",
     "reviewedAt": "2026-05-19"
   },
+  "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "launchPhase": "announced",

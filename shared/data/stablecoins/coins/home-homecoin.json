@@ -80,6 +80,7 @@
     }
   ],
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.homecoin.finance/",

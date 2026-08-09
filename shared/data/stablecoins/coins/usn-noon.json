@@ -360,6 +360,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Private Credit (Fasanara FTAC)",

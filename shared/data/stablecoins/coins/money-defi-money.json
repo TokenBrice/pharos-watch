@@ -1142,6 +1142,7 @@
     "reviewer": "GPT SOL-CORP-C wave6",
     "reviewedAt": "2026-07-22"
   },
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Approved crypto loan collateral",

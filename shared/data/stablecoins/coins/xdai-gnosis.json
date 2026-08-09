@@ -119,6 +119,7 @@
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
+  "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",

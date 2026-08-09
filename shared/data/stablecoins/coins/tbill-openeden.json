@@ -277,6 +277,7 @@
     ]
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "OpenEden T-bill vault",
     "yieldType": "nav-appreciation"

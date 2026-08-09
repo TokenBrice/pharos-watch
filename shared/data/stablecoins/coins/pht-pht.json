@@ -703,6 +703,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,

@@ -266,6 +266,7 @@
     "reviewer": "SONG Safety Score V9 access review",
     "reviewedAt": "2026-07-14"
   },
+  "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

@@ -915,6 +915,7 @@
     "reviewer": "Codex FreezeWatch audit",
     "reviewedAt": "2026-05-25"
   },
+  "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",

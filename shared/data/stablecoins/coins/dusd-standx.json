@@ -194,6 +194,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Market-neutral spot collateral, perpetual hedges, and stability reserve",

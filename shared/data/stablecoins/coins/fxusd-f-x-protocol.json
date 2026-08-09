@@ -555,6 +555,7 @@
       ]
     }
   },
+  "governanceQuality": "multisig",
   "launchDate": "2024-02-23",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",

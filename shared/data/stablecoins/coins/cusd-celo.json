@@ -521,6 +521,7 @@
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "AUSD (Agora Dollar; Ethereum and Monad)",

@@ -439,6 +439,7 @@
     }
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "BlackRock T-bill fund",
     "yieldType": "rebase"

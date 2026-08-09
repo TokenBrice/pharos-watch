@@ -586,6 +586,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "ethena",
     "version": 1,

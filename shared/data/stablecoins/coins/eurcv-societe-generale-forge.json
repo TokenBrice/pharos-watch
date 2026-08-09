@@ -344,6 +344,7 @@
     }
   },
   "custodyModel": "institutional-top",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Euro cash deposits at Societe Generale",

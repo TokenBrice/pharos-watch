@@ -214,6 +214,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Fiat reserves (euro cash at regulated financial institutions)",

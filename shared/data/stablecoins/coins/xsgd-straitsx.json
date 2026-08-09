@@ -699,6 +699,7 @@
   },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,

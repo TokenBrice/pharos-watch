@@ -71,6 +71,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "chainlink-por",
     "version": 1,

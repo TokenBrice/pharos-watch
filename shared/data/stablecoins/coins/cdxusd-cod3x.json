@@ -230,6 +230,7 @@
       "reviewedAt": "2026-06-11"
     }
   },
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Facilitator-managed crypto and stablecoin collateral",

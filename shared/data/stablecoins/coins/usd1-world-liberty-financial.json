@@ -659,6 +659,7 @@
     ]
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "usd1-bundle-oracle",
     "version": 2,

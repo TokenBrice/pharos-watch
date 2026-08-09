@@ -952,6 +952,7 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "dao-governance",
   "liveReservesConfig": {
     "adapter": "m0",
     "version": 1,

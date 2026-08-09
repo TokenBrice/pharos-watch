@@ -400,6 +400,7 @@
     }
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "lista",
     "version": 1,

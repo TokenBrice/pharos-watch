@@ -45,6 +45,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
+  "governanceQuality": "wrapper",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "ZYS is a share of Zephyr's ZSD yield reserve rather than a borrower debt market; it inherits the underlying ZSD reserve-pricing risk, whose production oracle provider and failure handling remain unpublished.",

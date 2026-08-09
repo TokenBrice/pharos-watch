@@ -82,6 +82,7 @@
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
   },
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Undisclosed UUSD backing assets",

@@ -2388,6 +2388,7 @@
     ]
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "single-entity",
   "infrastructures": [
     "liquity-v1"
   ],

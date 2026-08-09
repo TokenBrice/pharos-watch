@@ -53,6 +53,7 @@
     }
   ],
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "regulated-entity",
   "milestones": [
     {
       "date": "2025-11-25",

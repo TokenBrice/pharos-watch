@@ -624,6 +624,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "U.S. Treasury Bills",

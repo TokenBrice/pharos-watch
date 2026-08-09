@@ -554,6 +554,7 @@
     "yieldType": "lending-vault"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "launchDate": "2025-05-22",
   "mechanismArchetype": "rwa-credit-fund"
 }

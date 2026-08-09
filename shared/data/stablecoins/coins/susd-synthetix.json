@@ -85,6 +85,7 @@
     "reviewedAt": "2026-05-12"
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "SNX (via legacy V2 420 pool, 200% C-ratio)",

@@ -897,6 +897,7 @@
     ]
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "yvDAI",

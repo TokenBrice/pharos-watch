@@ -439,6 +439,7 @@
       ]
     }
   },
+  "governanceQuality": "dao-governance",
   "reserves": [
     {
       "name": "WFPS (Wrapped Frankencoin Pool Share)",

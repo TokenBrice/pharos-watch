@@ -564,6 +564,7 @@
       }
     ]
   },
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Nereus overcollateralized crypto positions including DAI collateral",

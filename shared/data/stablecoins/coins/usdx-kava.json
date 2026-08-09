@@ -327,6 +327,7 @@
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },
+  "governanceQuality": "dao-governance",
   "reserves": [
     {
       "name": "HBTC (Huobi BTC) CDP collateral",

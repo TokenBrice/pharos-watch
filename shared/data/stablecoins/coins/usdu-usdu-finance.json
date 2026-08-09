@@ -65,6 +65,7 @@
     "reviewedAt": "2026-07-15"
   },
   "collateralQuality": "exotic",
+  "governanceQuality": "single-entity",
   "notices": [
     {
       "type": "info",

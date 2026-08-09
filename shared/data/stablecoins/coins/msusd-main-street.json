@@ -198,6 +198,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Unverified Main Street redemption reserve and strategy liquidity",

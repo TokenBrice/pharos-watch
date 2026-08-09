@@ -332,6 +332,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "multisig",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",

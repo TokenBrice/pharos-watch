@@ -668,6 +668,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "U.S. Treasury Bills and reverse repos",

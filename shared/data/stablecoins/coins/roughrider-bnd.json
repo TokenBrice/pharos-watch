@@ -126,6 +126,7 @@
     }
   ],
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "milestones": [
     {
       "date": "2025-06-23",

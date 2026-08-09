@@ -410,6 +410,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -382,7 +382,7 @@
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
-  "governanceQuality": "dao-governance",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

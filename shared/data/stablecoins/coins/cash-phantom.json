@@ -510,6 +510,7 @@
     }
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

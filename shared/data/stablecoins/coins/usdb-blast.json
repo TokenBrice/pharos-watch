@@ -177,6 +177,7 @@
     "reviewedAt": "2026-07-15"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "blast-usdb-yield-manager",
     "version": 1,

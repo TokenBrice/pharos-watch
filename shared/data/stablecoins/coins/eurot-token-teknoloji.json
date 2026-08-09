@@ -259,5 +259,6 @@
     ]
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "launchDate": "2023-08-28"
 }

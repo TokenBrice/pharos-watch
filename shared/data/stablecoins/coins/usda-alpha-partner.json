@@ -55,6 +55,7 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "Undisclosed reserve assets",

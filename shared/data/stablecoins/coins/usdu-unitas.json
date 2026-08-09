@@ -324,6 +324,7 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "Binance",

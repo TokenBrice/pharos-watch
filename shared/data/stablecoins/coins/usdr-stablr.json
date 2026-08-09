@@ -143,6 +143,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
   "reserves": [
     {
       "name": "Cash and short-term government bonds (EU financial institutions)",

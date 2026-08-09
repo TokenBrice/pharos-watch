@@ -101,6 +101,7 @@
     "reviewedAt": "2026-05-12"
   },
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",
   "expectedLaunchDate": "2026",
