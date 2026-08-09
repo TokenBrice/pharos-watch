@@ -298,7 +298,7 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     );
 
     const result = await fetchLiquityV2BranchReserves(
-      boldLiquity as StablecoinMeta,
+      boldLiquity as unknown as StablecoinMeta,
       config,
       AbortSignal.timeout(5_000),
     );
@@ -354,7 +354,7 @@ describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
     vi.mocked(fetchOnchainMulticall3).mockResolvedValue(null);
 
     const result = await fetchLiquityV2BranchReserves(
-      boldLiquity as StablecoinMeta,
+      boldLiquity as unknown as StablecoinMeta,
       config,
       AbortSignal.timeout(5_000),
     );
@@ -468,7 +468,7 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     });
 
     const result = await fetchLiquityV2BranchReserves(
-      nectBeraborrow as StablecoinMeta,
+      nectBeraborrow as unknown as StablecoinMeta,
       config,
       AbortSignal.timeout(5_000),
     );
