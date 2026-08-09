@@ -1163,6 +1163,146 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
+  describe("inherited freeze exposure named by a reserve slice", () => {
+    // FreezeWatch resolves "inherited" from any positive freezable reserve
+    // share with no parent required, so a reserve-side inherited verdict has
+    // no `variantOf`/`mintAuthority.inheritedFrom` to name. Before this branch
+    // accepted the reserve edge, those assets scored `missing-access-review`
+    // ("we never looked") and curators were pushed to write
+    // `canBeBlacklisted: false` instead — the wave-1 over-suppression of 29
+    // honest verdicts, restored in `1134ab32f`.
+    const inheritedReview = {
+      reviewedStatus: "inherited" as const,
+      evidence: "Reserve holds a directly freezable upstream stablecoin.",
+      reviewer: "test",
+      reviewedAt: "1970-01-01",
+      sources: [{ label: "Issuer transparency page", url: "https://example.test/reserves" }],
+    };
+    const upstreamMeta = (id: string, freezeCapable: boolean) => ({
+      id,
+      mechanismArchetype: "fiat-cash" as const,
+      launchDate: "2020-01-01",
+      blacklistabilityReview: {
+        reviewedStatus: freezeCapable,
+        evidence: "Contract exposes an owner-only blacklist.",
+        reviewer: "test",
+        reviewedAt: "1970-01-01",
+        sources: [{ label: "Contract", url: "https://example.test/contract" }],
+      },
+    });
+    const holderMeta = (reserves: { name: string; pct: number; coinId?: string }[]) => ({
+      id: "alpha",
+      mechanismArchetype: "fiat-cash" as const,
+      launchDate: "2020-01-01",
+      blacklistabilityReview: inheritedReview,
+      reserves: reserves.map((reserve) => ({ ...reserve, risk: "low" as const })),
+    });
+    // `upstreamAssetId` is validated against the compiled fact set's active
+    // asset set, so every candidate upstream has to be a scored asset. The
+    // three-asset harness supplies alpha + beta + gamma.
+    const threeAssetInput = () => exactThreeAssetFixedInput();
+    const buildExtension = (entries: [string, unknown][]) =>
+      buildSafetyScoreV9BaselineExtension(threeAssetInput(), {
+        metaById: new Map([
+          ...entries,
+          ...(["alpha", "beta", "gamma"] as const)
+            .filter((id) => !entries.some(([entryId]) => entryId === id))
+            .map((id) => [id, { id, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }] as [string, unknown]),
+        ]) as never,
+      });
+    const buildAccess = (entries: [string, unknown][]) => buildExtension(entries).assets[0]!.accessReview;
+
+    it("names the largest directly freeze-capable reserve upstream and grants the disposition", () => {
+      const entries: [string, unknown][] = [
+        [
+          "alpha",
+          holderMeta([
+            { name: "USDC", pct: 10, coinId: "beta" },
+            { name: "USDT", pct: 40, coinId: "gamma" },
+          ]),
+        ],
+        ["beta", upstreamMeta("beta", true)],
+        ["gamma", upstreamMeta("gamma", true)],
+      ];
+      const access = buildAccess(entries);
+      expect(access?.freeze.structuralDisposition).toBe("inherited-upstream");
+      expect(access?.freeze.reviews).toHaveLength(1);
+      expect(access?.freeze.reviews[0]).toMatchObject({
+        source: "upstream",
+        reach: "possible",
+        upstreamAssetId: "gamma",
+        // A reserve upstream freezes the holding, not the mint surface, so it
+        // must not share a failure domain with a declared parent.
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:gamma" }],
+      });
+      // Scoring-visible state is unchanged: the disposition only reclassifies
+      // the gap from missing data to a measured structural fact.
+      expect(access?.freeze.status.observationState).toBe("bounded-unknown");
+
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(threeAssetInput(), buildExtension(entries));
+      const freezeGaps = compiled.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
+      expect(freezeGaps.length).toBeGreaterThan(0);
+      expect(
+        freezeGaps.every(
+          (gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse",
+        ),
+      ).toBe(true);
+    });
+
+    it("ties break on the lexicographically first id so the fact set replays byte-for-byte", () => {
+      const access = buildAccess([
+        [
+          "alpha",
+          holderMeta([
+            { name: "USDT", pct: 25, coinId: "gamma" },
+            { name: "USDC", pct: 25, coinId: "beta" },
+          ]),
+        ],
+        ["beta", upstreamMeta("beta", true)],
+        ["gamma", upstreamMeta("gamma", true)],
+      ]);
+      expect(access?.freeze.reviews[0]).toMatchObject({ upstreamAssetId: "beta" });
+    });
+
+    it("a declared parent still wins over a reserve slice", () => {
+      const access = buildAccess([
+        ["alpha", { ...holderMeta([{ name: "USDT", pct: 90, coinId: "gamma" }]), variantOf: "beta" }],
+        ["beta", upstreamMeta("beta", true)],
+        ["gamma", upstreamMeta("gamma", true)],
+      ]);
+      expect(access?.freeze.reviews[0]).toMatchObject({
+        upstreamAssetId: "beta",
+        failureDomains: [{ kind: "mint-control", key: "asset:beta" }],
+      });
+    });
+
+    it("refuses an unnamed, unscored, or not-directly-freezable upstream", () => {
+      const cases: [string, [string, unknown][]][] = [
+        // No `coinId`: the slice names no asset, so there is nothing to attribute.
+        ["unnamed", [["alpha", holderMeta([{ name: "USDC", pct: 90 }])]]],
+        // `coinId` outside the active (scored) set — naming it would make the
+        // whole fact set unparseable.
+        ["unscored", [["alpha", holderMeta([{ name: "USDC", pct: 90, coinId: "delta" }])]]],
+        // Upstream that cannot itself freeze holder balances directly: naming it
+        // would assert a chain this branch does not verify.
+        [
+          "not-freeze-capable",
+          [
+            ["alpha", holderMeta([{ name: "USDC", pct: 90, coinId: "beta" }])],
+            ["beta", upstreamMeta("beta", false)],
+          ],
+        ],
+      ];
+      for (const [label, entries] of cases) {
+        const access = buildAccess(entries);
+        expect(access?.freeze.structuralDisposition, label).toBeUndefined();
+        expect(access?.freeze.reviews, label).toEqual([]);
+      }
+    });
+  });
+
   it("materializes fuzzy quarter implementation dates at the conservative quarter end", () => {
     const clockSec = Date.parse("2026-07-28T00:00:00Z") / 1_000;
     const fixed = exactFixedInput({ clockSec });
