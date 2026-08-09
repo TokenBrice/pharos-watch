@@ -5,11 +5,7 @@
   "oneLiner": "BtcUSD is BTCfi's overcollateralized USD stablecoin minted from BTC variants (WBTC, BTCB, cbBTC, native BTC) via Liquity-style CDP vaults.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
   "pegMechanism": "Overcollateralized CDP with liquidation mechanisms",
@@ -743,8 +739,8 @@
     "compositionBasis": "BTCFi current collateral balances by supported handler, refreshed 2026-08-09 from the BTCFi market API (deposit_value BTC 3,870,695.66 / BTCB 2,881,579.40 / cbBTC 74,635.15 / WBTC 4,702.87 of the $6,831,613.08 covered by the supported-handler registry) and normalized over the handlers the producer can see",
     "compositionAsOf": "2026-08-09",
     "scope": "full-composition",
-    "knownUnknownExposure": "The four handlers above are the full set the BTCFi supported-handler API publishes (ids 0-4, of which id 2 is the BtcUSD borrow side), and their wrapper custody and redemption risks remain explicit structured risk factors. On 2026-08-09 the BTCFi market API additionally returned a handler id 5 holding 133,780,914.2 units worth $847,661.29 (about 11% of true collateral, priced at 0.00633619 and identified on-chain as a JPYC collateral handler on Bifrost) that the supported-handler registry does not list, so the producer cannot see it and it is not represented in the composition above.",
-    "knownUnknownExposurePct": 11,
+    "knownUnknownExposure": "The four handlers above are the full set the BTCFi supported-handler API publishes (ids 0-4, of which id 2 is the BtcUSD borrow side), and their wrapper custody and redemption risks remain explicit structured risk factors. On 2026-08-09 the BTCFi market API additionally returned a handler id 5 holding 133,780,914.2 units worth $847,661.29 (about 11% of true collateral, priced at 0.00633619 and identified on-chain as a JPYC collateral handler on Bifrost) that the supported-handler registry does not list, so the producer cannot see it and it is not represented in the composition above. The structured pct stays 0 because the schema ties unresolved dispositions to visible reserve slices; re-raise it when the producer registers handler 5 and the slice exists.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
