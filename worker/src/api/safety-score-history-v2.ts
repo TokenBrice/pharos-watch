@@ -5,7 +5,7 @@ import {
   } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/report-cards";
+import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import {
   fetchSafetyScoreHistoryV2Rows,
   safetyScoreHistoryIdentityFromV2Row,

@@ -1,27 +1,17 @@
 import { describe, expect, it } from "vitest";
 import policyAsset from "../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { compileV9FactSetV2, compileV9FactSetV3 } from "../../shared/lib/safety-score-v9/compile";
-import { computeV9CoverageEvaluationProjectionDigest } from "../../shared/lib/safety-score-v9/coverage";
 import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "../../shared/lib/safety-score-v9/evidence-gap-queue";
 import { upgradeCompiledV9FactSetV2 } from "../../shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy } from "../../shared/lib/safety-score-v9/policy";
 import { sha256Hex } from "../../shared/lib/sha256";
 import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
 import {
-  V9ReleaseCoverageReportV1Schema,
-  type V9CoverageEvaluationProjectionPayloadV1,
-} from "../../shared/types/safety-score-v9-coverage";
-import {
   V9EvidenceGapQueueV1Schema,
   V9EvidenceGapQueueV2Schema,
 } from "../../shared/types/safety-score-v9-evidence-queue";
 import type { V9EvidenceResponsibility } from "../../shared/types/safety-score-v9-fact-primitives";
 import type { V9FactSetCoreV2 } from "../../shared/types/safety-score-v9-facts";
-import {
-  runV9CoverageReportCli,
-  type V9OperationalReportIo,
-} from "../maintenance/generate-safety-score-v9-coverage-report";
 import {
   runV9EvidenceGapQueueCli,
   type V9EvidenceGapQueueIo,
@@ -286,82 +276,6 @@ function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
   return compileV9FactSetV3(core);
 }
 
-function coverageArtifacts() {
-  const policy = loadV9MethodologyPolicy(policyAsset);
-  const factSet = upgradeCompiledV9FactSetV2(compileV9FactSetV2(factSetCore()));
-  const evaluationPayload: V9CoverageEvaluationProjectionPayloadV1 = {
-    schemaVersion: 1 as const,
-    factSetDigest: factSet.v9FactSetDigest,
-    baseInputGenerationId: factSet.baseInputGenerationId,
-    policyId: policy.policy.policyId,
-    policyDigest: policy.semanticDigest,
-    evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
-    producerCapabilityDigest: "8".repeat(64),
-    evaluatedSetDigest: "9".repeat(64),
-    scoreResultDigest: "a".repeat(64),
-    asOfSec: factSet.asOfSec,
-    sourceGenerations: Object.fromEntries(
-      Object.entries(SOURCES).map(([key, identity]) => [key, identity.generationId]),
-    ) as Record<keyof typeof SOURCES, string>,
-    assets: [
-      {
-        assetId: "asset-001",
-        finalScore: 80,
-        nrReasonCodes: [],
-        primaryExitRouteKey: null,
-        includedExitRouteKeys: [],
-      },
-    ],
-  };
-  const evaluation = {
-    ...evaluationPayload,
-    evaluationProjectionDigest: computeV9CoverageEvaluationProjectionDigest(evaluationPayload),
-  };
-  const manifest = {
-    schemaVersion: 1 as const,
-    releaseCandidateId: "v9-rc-1",
-    cohortId: "release-cohort-test",
-    capturedAtSec: AS_OF_SEC,
-    bindings: {
-      factSetDigest: factSet.v9FactSetDigest,
-      baseInputGenerationId: factSet.baseInputGenerationId,
-      policyId: policy.policy.policyId,
-      policyDigest: policy.semanticDigest,
-      evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
-      producerCapabilityDigest: evaluation.producerCapabilityDigest,
-      evaluatedSetDigest: evaluation.evaluatedSetDigest,
-      scoreResultDigest: evaluation.scoreResultDigest,
-      evaluationProjectionDigest: evaluation.evaluationProjectionDigest,
-      registryPayloadDigest: SOURCES.registry.payloadSha256,
-      weightPayloadDigest: SOURCES.chainSupply.payloadSha256,
-    },
-    assets: [
-      {
-        assetId: "asset-001",
-        archetype: "algorithmic" as const,
-        weight: {
-          disposition: "current-valid" as const,
-          canonicalUsd: 10_000_000,
-          conservativeUpperBoundUsd: null,
-          sourceGenerationId: SOURCES.chainSupply.generationId,
-          observedAtSec: SOURCES.chainSupply.observedAtSec,
-          rank: 1,
-          topCutoffMember: true,
-        },
-        calibrationDisposition: "not-member" as const,
-        nrReview: {
-          state: "not-required" as const,
-          reasonCodes: [],
-          disposition: null,
-          owner: null,
-          reviewedAtSec: null,
-        },
-      },
-    ],
-  };
-  return { factSet, evaluation, manifest };
-}
-
 function memoryIo(inputs: Record<string, unknown>) {
   const writes = new Map<string, string>();
   let stdout = "";
@@ -379,7 +293,7 @@ function memoryIo(inputs: Record<string, unknown>) {
         return true;
       },
     },
-  } satisfies V9OperationalReportIo & V9EvidenceGapQueueIo;
+  } satisfies V9EvidenceGapQueueIo;
   return { io, writes, getStdout: () => stdout };
 }
 
@@ -633,63 +547,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
   });
 });
 
-describe("Safety Score v9 operational report CLIs", () => {
-  it("writes a deterministic no-go coverage report and optionally enforces pass", () => {
-    const artifacts = coverageArtifacts();
-    const { io, writes } = memoryIo({
-      facts: artifacts.factSet,
-      evaluation: artifacts.evaluation,
-      manifest: artifacts.manifest,
-    });
-    const argv = [
-      "--fact-set",
-      "facts",
-      "--evaluation",
-      "evaluation",
-      "--manifest",
-      "manifest",
-      "--output",
-      "coverage.json",
-    ];
-    const report = runV9CoverageReportCli(argv, io);
-    expect(report?.decision).toBe("no-go");
-    expect(V9ReleaseCoverageReportV1Schema.parse(JSON.parse(writes.get("coverage.json")!))).toEqual(report);
-    const firstOutput = writes.get("coverage.json");
-    runV9CoverageReportCli(argv, io);
-    expect(writes.get("coverage.json")).toBe(firstOutput);
-    expect(() => runV9CoverageReportCli([...argv, "--require-pass"], io)).toThrow("coverage is no-go");
-    expect(() => runV9CoverageReportCli(argv.slice(0, -4), io)).toThrow("--manifest is required");
-  });
-
-  it("writes no-go reports when coverage projection data is mutated behind retained identities", () => {
-    const artifacts = coverageArtifacts();
-    const evaluation = structuredClone(artifacts.evaluation);
-    evaluation.assets[0]!.finalScore = null;
-    evaluation.assets[0]!.nrReasonCodes = ["insufficient-evidence"];
-    const { io } = memoryIo({ facts: artifacts.factSet, evaluation, manifest: artifacts.manifest });
-    const report = runV9CoverageReportCli(
-      ["--fact-set", "facts", "--evaluation", "evaluation", "--manifest", "manifest", "--output", "out"],
-      io,
-    );
-    expect(report?.blockers.map((blocker) => blocker.code)).toContain("evaluation-projection-digest-mismatch");
-  });
-
-  it("rejects retained V2 facts when the coverage report cannot represent the upgraded identity", () => {
-    const artifacts = coverageArtifacts();
-    const retainedV2 = compileV9FactSetV2(factSetCore());
-    const { io } = memoryIo({
-      facts: retainedV2,
-      evaluation: artifacts.evaluation,
-      manifest: artifacts.manifest,
-    });
-    expect(() =>
-      runV9CoverageReportCli(
-        ["--fact-set", "facts", "--evaluation", "evaluation", "--manifest", "manifest", "--output", "out"],
-        io,
-      ),
-    ).toThrow("requires a native V3 fact set");
-  });
-
+describe("Safety Score v9 evidence-gap queue CLI", () => {
   it("writes a policy-bound evidence queue and optionally enforces clear", () => {
     const factSet = compileV9FactSetV2(factSetCore());
     const { io, writes } = memoryIo({ facts: factSet, policy: policyAsset });

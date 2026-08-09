@@ -14,7 +14,7 @@
  */
 
 import type { MechanismArchetype, StablecoinStatus, StablecoinFlags } from "../types";
-import type { ReportCardGrade } from "../types/report-cards";
+import type { ReportCardGrade } from "../types/report-card-grade";
 import type { ThreatBand } from "./classification/risk";
 
 export type StablecoinVerdictArchetype =

@@ -353,16 +353,20 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "3356757ef6dd9ba5d0a30dc5e90a638e827c1e97b33e18e4a6f96e8c99b0f14c"
     },
     {
+      "path": "shared/types/report-card-grade.ts",
+      "sha256": "56cc39ff1e640903e6fb36b49b3f96e0ed5c12b05850943e1aa56df3892de94a"
+    },
+    {
       "path": "shared/types/report-cards-base-input.ts",
       "sha256": "024e025a255aa5706630e1096ae209e8170f616c75395072e4f5c1c7715ee623"
     },
     {
-      "path": "shared/types/report-cards.ts",
-      "sha256": "929441a79a718aed47be60af0c1238c1667ac80e7cd54ca0290537ed171deccb"
-    },
-    {
       "path": "shared/types/reserves.ts",
       "sha256": "1d76f48cb63f1323a6764021fa5d20460a85c755ff5f0499a3998cc73df9ce9c"
+    },
+    {
+      "path": "shared/types/safety-score-history.ts",
+      "sha256": "e618f8afa0e3bb743fcf324ce44166a7c157381f787808d88bcbcc3ce324438b"
     },
     {
       "path": "shared/types/safety-score-v9-backing.ts",
@@ -390,7 +394,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "59437b32cb36d3f237865b63174059eb3089bc451a045a64414a80b272f03d0d"
+      "sha256": "bdeed09979963969b82a82a82435699a1f8ca37d4e85d800fd0c214a929a0595"
     },
     {
       "path": "shared/types/safety-score-v9-wrapper.ts",
@@ -525,7 +529,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "8bac0fc55435e3606f6bd82aea591d1d3c10094162e5c93c16b1b3678a722467"
+  "digest": "3f8b541544005044b2042749882af202ab854fc015330bbd1af56bbbb5e7fb66"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

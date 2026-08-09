@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/report-cards";
+import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleSafetyScoreHistoryV2 } from "../safety-score-history-v2";
 

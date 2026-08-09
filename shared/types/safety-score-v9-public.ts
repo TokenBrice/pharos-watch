@@ -1417,7 +1417,6 @@ function refineLegacyCard(
 
 export const SafetyScoreV9LegacyCardSchema = SafetyScoreV9CardObjectSchema
   .superRefine((card, ctx) => refineLegacyCard(card, ctx));
-export type SafetyScoreV9LegacyCard = z.infer<typeof SafetyScoreV9LegacyCardSchema>;
 
 export const SafetyScoreV9PreviousCardSchema = z
   .object({
@@ -1426,9 +1425,6 @@ export const SafetyScoreV9PreviousCardSchema = z
   })
   .strict()
   .superRefine((card, ctx) => refineLegacyCard(card, ctx));
-export type SafetyScoreV9PreviousCard = z.infer<
-  typeof SafetyScoreV9PreviousCardSchema
->;
 
 export const SafetyScoreV9CausalCardSchema = z
   .object({
@@ -1648,7 +1644,6 @@ export const SafetyScoreV9LegacyResponseSchema = z
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
-export type SafetyScoreV9LegacyResponse = z.infer<typeof SafetyScoreV9LegacyResponseSchema>;
 
 /** Compatibility reader for schema-v2 envelopes carrying schema-v1 traces. */
 export const SafetyScoreV9PreviousResponseSchema = z
@@ -1659,9 +1654,6 @@ export const SafetyScoreV9PreviousResponseSchema = z
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
-export type SafetyScoreV9PreviousResponse = z.infer<
-  typeof SafetyScoreV9PreviousResponseSchema
->;
 
 /** Compatibility reader for schema-v3 envelopes carrying causal trace-v2 cards. */
 export const SafetyScoreV9CausalResponseSchema = z
@@ -1672,9 +1664,6 @@ export const SafetyScoreV9CausalResponseSchema = z
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
-export type SafetyScoreV9CausalResponse = z.infer<
-  typeof SafetyScoreV9CausalResponseSchema
->;
 
 /** Retained reader for schema-v4 candidates emitted before component breakdowns. */
 export const SafetyScoreV9PreBreakdownResponseSchema = z
@@ -1685,9 +1674,6 @@ export const SafetyScoreV9PreBreakdownResponseSchema = z
   })
   .strict()
   .superRefine((response, ctx) => refineResponse(response, ctx));
-export type SafetyScoreV9PreBreakdownResponse = z.infer<
-  typeof SafetyScoreV9PreBreakdownResponseSchema
->;
 
 /** Current V9 envelope. Schema v5 adds compact component breakdowns. */
 export const SafetyScoreV9CurrentResponseSchema = z
@@ -1703,6 +1689,33 @@ export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentRe
 /**
  * Compatibility reader for stored shadow artifacts. New V9 production
  * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 5.
+ *
+ * RETENTION HORIZON (decision D16, recorded 2026-08-09 — WS6.8).
+ *
+ * Tiers v1–v4 exist only to keep *already stored* artifacts readable. They are
+ * never emitted: every producer path writes schema version 5. Their cost is a
+ * five-arm union that every reader must try, plus five card schemas and their
+ * refinements, kept alive for rows nothing may still be holding.
+ *
+ * The horizon is deliberately expressed as a decision framework rather than a
+ * date, because the answer lives in production data, not in this file. A tier
+ * may be deleted when all three hold:
+ *
+ *   1. No stored artifact still parses at that tier. The authoritative query is
+ *      the minimum `schemaVersion` across the V9 publication store (the
+ *      `safety_score_v9_publication` cache rows read by
+ *      `worker/src/lib/safety-score-v9-publication-store.ts`) *and* any retained
+ *      candidate/shadow artifacts. Tiers strictly below that minimum are dead.
+ *   2. The tier is below the oldest artifact any replay corpus, golden fixture,
+ *      or digest pin still reads — replay determinism outranks tidiness here.
+ *   3. Its deletion ships as one step: schema arm, card schema, refinements, and
+ *      the matching `REPORT_CARDS_V9_*_RESPONSE_SCHEMA_VERSION` constant, so the
+ *      union never disagrees with the version constants.
+ *
+ * Per D16 the ladder itself stays until that query is run; only the six unused
+ * historical *type aliases* were removed (2026-08-09). Do not delete an arm on
+ * the strength of "nothing imports its type" — the arms are load-bearing for
+ * parsing, and their types were merely unused sugar over them.
  */
 export const SafetyScoreV9ResponseSchema = z.union([
   SafetyScoreV9CurrentResponseSchema,
@@ -1712,7 +1725,7 @@ export const SafetyScoreV9ResponseSchema = z.union([
   SafetyScoreV9LegacyResponseSchema,
 ]);
 export type SafetyScoreV9Response = Omit<
-  SafetyScoreV9LegacyResponse,
+  z.infer<typeof SafetyScoreV9LegacyResponseSchema>,
   "schemaVersion" | "cards" | "lifecycle" | "policyVersion"
 > & {
   schemaVersion: 1 | 2 | 3 | 4 | 5;

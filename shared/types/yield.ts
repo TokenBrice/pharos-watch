@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
-import { ReportCardGradeSchema } from "./report-cards";
+import { ReportCardGradeSchema } from "./report-card-grade";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 export const YIELD_ADAPTER_LIFECYCLE_VALUES = ["active", "quarantined", "intentional-gap", "experimental"] as const;
