@@ -60,6 +60,7 @@ async function main(): Promise<void> {
     };
   });
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local operator output path.
   writeFileSync(
     values.output,
     `${JSON.stringify(
