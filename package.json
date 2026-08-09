@@ -100,7 +100,7 @@
     "check:shared-types-imports": "node scripts/ci/check-shared-types-imports.mjs",
     "check:client-registry-imports": "node scripts/ci/check-client-registry-imports.mjs",
     "check:hook-polling-window": "node scripts/ci/check-hook-polling-window.mjs",
-    "check:structural": "npm run check:cron-console-usage && npm run check:provider-resilience && npm run check:fetch-body-timeouts && npm run check:script-entrypoints && npm run check:cli-args-policy && npm run check:stale-flags && npm run check:hook-polling-window && npm run check:dependency-review-gaps",
+    "check:structural": "npm run check:cron-console-usage && npm run check:provider-resilience && npm run check:fetch-body-timeouts && npm run check:script-entrypoints && npm run check:cli-args-policy && npm run check:stale-flags && npm run check:hook-polling-window && npm run check:dependency-review-gaps && npm run check:unused-code",
     "check:site-csp-sync": "tsx scripts/ci/check-site-csp-sync.ts",
     "check:cron-sync": "tsx scripts/ci/check-cron-schedule-sync.ts",
     "check:worker-config": "tsx scripts/ci/check-worker-wrangler-config.ts",
