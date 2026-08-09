@@ -16,7 +16,7 @@ import {
   safetySourceFields,
 } from "./dispatch-telegram-result";
 import type { buildDispatchSnapshotState } from "./dispatch-telegram-state";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 import {
   archiveAgedExecutionUnknownPendingAlerts,
   cleanupExpiredPendingAlerts,
@@ -173,7 +173,7 @@ export async function executeAuthoritativeFanoutPath(
       callbacks: planningCallbacks,
       onStep: async (step) => {
         if (step.step !== 1 && step.step % 8 !== 0) return;
-        await reportDigestProgress(context.reportProgress, {
+        await reportCronProgress(context.reportProgress, {
           stage: "target-plan-progress",
           message: `Advancing Telegram target plan (${step.state})`,
           providerFamily: "telegram-dispatch",
@@ -190,7 +190,7 @@ export async function executeAuthoritativeFanoutPath(
   }
   const progress = await loadTelegramTargetPlanProgress(db, sourceEvent.sourceEventId);
   const fanoutMs = Math.max(0, Date.now() - fanoutStartedAtMs);
-  await reportDigestProgress(context.reportProgress, {
+  await reportCronProgress(context.reportProgress, {
     stage: "fanout-built",
     message: "Advanced durable Telegram target manifests",
     providerFamily: "telegram-dispatch",
@@ -299,7 +299,7 @@ export async function executeAuthoritativeFanoutPath(
     const successfulEffect = drainResult.sent > 0 || drainResult.blockedCleanedUp > 0;
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, successfulEffect);
   }
-  await reportDigestProgress(context.reportProgress, {
+  await reportCronProgress(context.reportProgress, {
     stage: "complete",
     message: "Completed row-authoritative Telegram dispatch",
     providerFamily: "telegram-dispatch",

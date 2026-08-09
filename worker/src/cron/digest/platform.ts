@@ -9,7 +9,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { readResponseTextBoundedWithSignal } from "../../lib/response-body";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
 import { recordCronFailure } from "../../lib/cron-logger";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   formatDigestValidationIssues,

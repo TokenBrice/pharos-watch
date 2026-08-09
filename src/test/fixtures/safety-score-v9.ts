@@ -1,5 +1,6 @@
 import {
   makeReportCardsV9Card,
+  makeReportCardsV9Pillars,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
   type ReportCardsV9ResponseFixturePreset,
 } from "@shared/test-utils/report-cards-v9";
@@ -43,3 +44,5 @@ export function makeReportCardsV9Response(
 ): ReportCardsV9Response {
   return makeSharedReportCardsV9Response(V9_RESPONSE_PRESET, makeV9Card, overrides);
 }
+
+export const makeV9Pillars = makeReportCardsV9Pillars;

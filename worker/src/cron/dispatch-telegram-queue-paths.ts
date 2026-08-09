@@ -4,7 +4,7 @@ import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
   emptyResult,
@@ -124,7 +124,7 @@ export async function executeCircuitOpenQueuePath({
 }: CircuitOpenQueuePathContext): Promise<DispatchResult & { skipped: "circuit-open" }> {
   const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "pending-drain",
     message: "Draining due Telegram pending rows while fresh fanout is circuit-gated",
     providerFamily: "telegram-api",
@@ -173,7 +173,7 @@ export async function executeCircuitOpenQueuePath({
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulTelegramEffect);
   }
 
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Skipped fresh Telegram fanout while preserving pending queue lifecycle",
     providerFamily: "telegram-dispatch",
@@ -208,7 +208,7 @@ export async function executeEventlessFastPath({
   reportProgress,
   markTelegramDeliveryStarted,
 }: EventlessFastPathContext): Promise<DispatchResult> {
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "pending-drain",
     message: "Draining due Telegram pending rows on eventless run",
     providerFamily: "telegram-api",
@@ -273,7 +273,7 @@ export async function executeEventlessFastPath({
     result.pendingEnqueued > 0 ||
     result.pendingAttempted === 0;
   await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Completed eventless Telegram dispatch",
     providerFamily: "telegram-dispatch",

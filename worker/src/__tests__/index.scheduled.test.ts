@@ -325,11 +325,18 @@ vi.mock("../lib/cron-logger", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/cron-lease", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/cron-lease")>();
+vi.mock("../lib/cron-lease-primitives", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/cron-lease-primitives")>();
   return {
     ...original,
     runCronWithLease: cronMocks.runCronWithLease,
+  };
+});
+
+vi.mock("../lib/scheduled-slot-fence", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/scheduled-slot-fence")>();
+  return {
+    ...original,
     runScheduledSlotWithFence: cronMocks.runScheduledSlotWithFence,
   };
 });

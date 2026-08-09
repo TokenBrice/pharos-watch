@@ -8,7 +8,7 @@ import {
 } from "../lib/constants";
 import { fetchTextWithRetry } from "../lib/fetch-retry";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 
 interface KinesisChainConfig {
   stablecoinId: string;

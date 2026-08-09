@@ -56,6 +56,12 @@ export interface StaleSlotReconciliationSummary {
 
 export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 
+/**
+ * Exact `cron_runs.error` text the fence writes when it expires a stale slot.
+ * The duration watchdog matches on it verbatim, so the two must never drift.
+ */
+export const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
+
 export function cacheKeySegment(value: string): string {
   const normalized = value
     .toLowerCase()

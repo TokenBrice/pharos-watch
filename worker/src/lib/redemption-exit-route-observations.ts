@@ -2,8 +2,9 @@ import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backsto
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ExitRouteCapacityPoint, ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
+import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
+import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
@@ -195,26 +196,6 @@ function resolveCostBps(
   return ((variableFeeUsd + fixedCostUsd) / requestedNotionalUsd) * 10_000;
 }
 
-function buildCapacityPoint(
-  requestedNotionalUsd: number,
-  scoringCapacityUsd: number,
-  config: RedemptionBackstopConfig,
-  resolvedFeeBps: number | null,
-  boundedUnknownFee: boolean,
-): ExitRouteCapacityPoint {
-  const costBps = resolveCostBps(config, resolvedFeeBps, requestedNotionalUsd);
-  const executableUsd =
-    (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) || boundedUnknownFee
-      ? Math.min(requestedNotionalUsd, scoringCapacityUsd)
-      : 0;
-  return {
-    requestedNotionalUsd,
-    maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-    executableUsd,
-    completionRatio: executableUsd / requestedNotionalUsd,
-  };
-}
-
 /**
  * Projects an existing reviewed redemption capacity into P4's common request.
  * Eventual, daily, queued, stale, or cost-unbounded evidence remains visible
@@ -277,13 +258,12 @@ export function buildRedemptionExitRouteObservation(
     .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
     .sort((left, right) => left - right);
   const capacityCurve = requests.map((request) =>
-    buildCapacityPoint(
-      request,
-      input.scoringCapacityUsd!,
-      input.config,
-      input.resolvedFeeBps,
-      boundedUnknownFee,
-    ),
+    buildExitRouteCapacityPoint({
+      requestedNotionalUsd: request,
+      capacityUsd: input.scoringCapacityUsd!,
+      costBps: resolveCostBps(input.config, input.resolvedFeeBps, request),
+      admitUnboundedCost: boundedUnknownFee,
+    }),
   );
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);

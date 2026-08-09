@@ -4,7 +4,7 @@ const { sweepMock } = vi.hoisted(() => ({
   sweepMock: vi.fn(),
 }));
 
-vi.mock("../../lib/cron-lease", () => ({
+vi.mock("../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: sweepMock,
 }));
 

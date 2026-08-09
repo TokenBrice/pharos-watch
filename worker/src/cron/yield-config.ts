@@ -22,6 +22,7 @@ import {
   PRICE_DERIVED_FALLBACK_IDS as RAW_PRICE_DERIVED_FALLBACK_IDS,
   QUARANTINED_DETERMINISTIC_ADAPTERS as RAW_QUARANTINED_DETERMINISTIC_ADAPTERS,
   RATE_DERIVED_CONFIGS as RAW_RATE_DERIVED_CONFIGS,
+  YIELD_ADAPTER_LIFECYCLE as RAW_YIELD_ADAPTER_LIFECYCLE,
 } from "./yield-config-rate-sources";
 import { YIELD_VARIANT_MAP as RAW_YIELD_VARIANT_MAP } from "./yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "./yield-config-weighted-pools";
@@ -50,6 +51,7 @@ const derivedYieldConfig = deriveYieldRegistry({
   autoLendingSafetyBypassIds: RAW_AUTO_LENDING_SAFETY_BYPASS_IDS,
   quarantinedDeterministicAdapters: RAW_QUARANTINED_DETERMINISTIC_ADAPTERS,
   intentionalGapReasons: RAW_INTENTIONAL_GAP_REASONS,
+  adapterLifecycle: RAW_YIELD_ADAPTER_LIFECYCLE,
 });
 
 export const YIELD_SOURCE_REGISTRY = derivedYieldConfig.registry;

@@ -7,15 +7,21 @@ import {
   CronLeaseLostError,
   CronLeaseStateObserverError,
   CronTimeoutError,
-  SCHEDULED_SLOT_JOB_BUDGET_MS,
-  isRetriableD1OverloadError,
   releaseCronLease,
   renewCronLease,
   runCronWithLease,
+} from "../cron-lease-primitives";
+import {
+  SCHEDULED_SLOT_JOB_BUDGET_MS,
+} from "../cron-timeouts";
+import {
+  isRetriableD1OverloadError,
   runWithOverloadRetry,
+} from "../d1-overload-retry";
+import {
   runScheduledSlotWithFence,
   sweepStaleScheduledSlotExecutions,
-} from "../cron-lease";
+} from "../scheduled-slot-fence";
 import { createScheduledRuntimeContext } from "../../handlers/scheduled/context";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";

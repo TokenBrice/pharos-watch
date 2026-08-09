@@ -1,5 +1,5 @@
 import { throwIfAborted } from "../lib/abort";
-import { sweepStaleScheduledSlotExecutions } from "../lib/cron-lease";
+import { sweepStaleScheduledSlotExecutions } from "../lib/scheduled-slot-fence";
 import type { CronResult } from "../lib/cron-logger";
 
 export async function runCronSlotSweeper(

@@ -9,7 +9,7 @@ import {
 } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { writeDewsPublishedGeneration } from "../../lib/dews-publication-pointer";
 import type { DewsComputedRow } from "./contracts";
 import { toErrorMessage } from "../../lib/error-utils";

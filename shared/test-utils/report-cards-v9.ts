@@ -118,6 +118,26 @@ function buildBreakdowns(
   } satisfies V9Breakdowns;
 }
 
+/** Explicit three-pillar block for suites that assert on specific pillar scores. */
+export function makeReportCardsV9Pillars(scores: {
+  backing: number | null;
+  exit: number | null;
+  control: number | null;
+}): SafetyScoreV9CurrentCard["pillars"] {
+  const pillar = (score: number | null) => ({
+    score,
+    evidenceLevel: "adequate" as const,
+    freshness: "current" as const,
+    components: [...PILLAR_COMPONENTS],
+    reasons: [],
+  });
+  return {
+    backing: pillar(scores.backing),
+    exit: pillar(scores.exit),
+    control: pillar(scores.control),
+  };
+}
+
 export function makeReportCardsV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {

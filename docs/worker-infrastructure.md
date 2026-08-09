@@ -831,7 +831,7 @@ Chunks statements into batches of 100 (D1's batch limit), executes sequentially,
 
 ### Cron Lease Primitives (Phase C)
 
-Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and are part of `worker/migrations/0000_baseline.sql`.
+Lease primitives are implemented in `worker/src/lib/cron-lease-primitives.ts` and are part of `worker/migrations/0000_baseline.sql`.
 Scheduled slot fencing is backed by migration `0074_cron_slot_executions.sql`.
 
 ```sql

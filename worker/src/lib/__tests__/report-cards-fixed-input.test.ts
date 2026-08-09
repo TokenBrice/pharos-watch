@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityData, ExitRouteObservation } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
@@ -16,12 +14,12 @@ import {
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
   computeReportCardsRegistryFingerprint,
-  createReportCardsFixedInput,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheArtifact,
   parseReportCardsFixedInputCacheValue,
 } from "../report-cards-fixed-input";
 import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9-supply-attribution";
+import { makeV9RegistryFixedInput } from "../../test-helpers/v9-fixed-input";
 import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
@@ -46,38 +44,15 @@ import {
 } from "../safety-score-v9-xaut-supply-attribution-contract";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
-  const dexUpdatedAt = Object.values(dexLiqMap)[0]?.updatedAt ?? 1_783_891_100;
-  return createReportCardsFixedInput({
+  return makeV9RegistryFixedInput({
     captureKind: "public-reconstruction",
-    capturedAt: "2026-07-12T22:00:00.000Z",
     sourceGeneration: "fixture-generation",
-    dexGenerationId: `dex-liquidity-${dexUpdatedAt}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "fixture-revision",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: 1_783_891_200,
-    updatedAt: 1_783_891_200,
-    liquidityStale: false,
     redemptionStale: false,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: dexUpdatedAt, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    activeDepegPeakBpsById: {},
-    dexLiqMap,
-    redemptionBackstopMap: {},
-    bluechipMap: {},
     resolvedBlacklistStatuses: {
       "usdt-tether": true,
       "usdc-circle": true,
     },
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
+    dexLiqMap,
   });
 }
 
@@ -259,50 +234,7 @@ function dexRow(exitRouteObservations: ExitRouteObservation[]): DexLiquidityData
   };
 }
 
-function exactFixedInput() {
-  const dexUpdatedAt = 1_783_891_100;
-  return createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    capturedAt: "2026-07-12T22:00:00.000Z",
-    sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1783891200`,
-    dexGenerationId: `dex-liquidity-${dexUpdatedAt}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "fixture-revision",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: 1_783_891_200,
-    updatedAt: 1_783_891_200,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: dexUpdatedAt, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    activeDepegPeakBpsById: {},
-    dexLiqMap: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
-        coin.id,
-        {
-          liquidityScore: null,
-          concentrationHhi: null,
-          poolCount: 0,
-          chainCount: 0,
-          methodologyVersion: "fixture",
-          updatedAt: dexUpdatedAt,
-        },
-      ]),
-    ),
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: Object.fromEntries(ACTIVE_STABLECOINS.map((coin) => [coin.id, false])),
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
-  });
-}
+const exactFixedInput = makeV9RegistryFixedInput;
 
 describe("retained v3 fixed report-card input", () => {
   it("persists V9-only legacy supply attribution without changing the base identity", async () => {

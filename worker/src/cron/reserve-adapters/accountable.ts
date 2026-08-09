@@ -6,10 +6,9 @@ import {
   buildCoverageShortfallWarnings,
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
@@ -522,10 +521,10 @@ export async function fetchAccountableReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "accountable");
   const params = parseAccountableParams(config);
-  const payload = await fetchJsonWithRetry<AccountableDashboardResponse>(
-    primaryInput.url,
+  const payload = await fetchJsonAdapterInput<AccountableDashboardResponse>(
+    config,
+    "accountable",
     signal,
     12_000,
     ctx,

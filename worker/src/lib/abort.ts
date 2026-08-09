@@ -5,6 +5,21 @@ export function abortError(signal?: AbortSignal): Error {
   return new Error("Operation aborted");
 }
 
+/**
+ * The signal's own abort reason, verbatim, falling back to `fallback()` when
+ * the platform supplied none.
+ *
+ * Unlike `abortError`, non-Error reasons pass through unchanged — `DOMException`
+ * is not an `Error` subclass in Workers, and downstream `name === "AbortError"`
+ * checks depend on it surviving. Each caller therefore keeps its own fallback:
+ * stream readers must throw an `AbortError`-named `DOMException`, while D1 and
+ * budget waiters throw a plain `Error`. Changing a site's fallback type is a
+ * behavior change, not a cleanup.
+ */
+export function abortReason(signal: AbortSignal, fallback: () => unknown): unknown {
+  return signal.reason ?? fallback();
+}
+
 export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw abortError(signal);

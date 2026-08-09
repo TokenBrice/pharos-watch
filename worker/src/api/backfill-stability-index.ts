@@ -11,7 +11,7 @@ import {
 } from "../lib/psi-replay";
 import type { PsiUniverseCache } from "../lib/psi-history-universe";
 import { runAdminJob } from "../lib/admin-job";
-import { acquireCronLease, createLeaseOwner, releaseCronLease, renewCronLease } from "../lib/cron-lease";
+import { acquireCronLease, createLeaseOwner, releaseCronLease, renewCronLease } from "../lib/cron-lease-primitives";
 import { logWorkerEvent } from "../lib/structured-log";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";

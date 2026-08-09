@@ -5,14 +5,14 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 const requestMocks = vi.hoisted(() => ({
-  fetchJsonWithRetry: vi.fn(),
+  fetchJsonAdapterInput: vi.fn(),
 }));
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   return {
     ...actual,
-    fetchJsonWithRetry: requestMocks.fetchJsonWithRetry,
+    fetchJsonAdapterInput: requestMocks.fetchJsonAdapterInput,
   };
 });
 
@@ -30,7 +30,7 @@ const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
 ) as FraxBalanceSheetResponse;
 
 beforeEach(() => {
-  requestMocks.fetchJsonWithRetry.mockReset();
+  requestMocks.fetchJsonAdapterInput.mockReset();
 });
 
 /* ---------- v2 balance-sheet tests ---------- */
@@ -227,7 +227,7 @@ const FPI_COLLATERAL_SAMPLE: FraxFpiCollateralResponse = {
 
 describe("adaptFraxFpiCollateral", () => {
   it("publishes no route metadata when the atomic issuer payload fails", async () => {
-    requestMocks.fetchJsonWithRetry.mockRejectedValueOnce(new Error("issuer API unavailable"));
+    requestMocks.fetchJsonAdapterInput.mockRejectedValueOnce(new Error("issuer API unavailable"));
     const coin = TRACKED_META_BY_ID.get("fpi-frax");
     expect(coin?.liveReservesConfig).toBeDefined();
 
@@ -244,7 +244,7 @@ describe("adaptFraxFpiCollateral", () => {
     ).rejects.toThrow("issuer API unavailable");
 
     expect(publishedResult).toBeNull();
-    expect(requestMocks.fetchJsonWithRetry).toHaveBeenCalledTimes(1);
+    expect(requestMocks.fetchJsonAdapterInput).toHaveBeenCalledTimes(1);
   });
 
   it("excludes self-held FPI from collateral slices and nets it against liabilities", () => {

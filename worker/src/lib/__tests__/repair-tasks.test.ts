@@ -5,7 +5,7 @@ import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types"
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
-  buildRepairTaskId,
+  buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
   DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
   loadRepairDebtSummary,
@@ -112,7 +112,7 @@ function seedNaturalPredecessorFixture(
 
 describe("repair tasks", () => {
   it("builds deterministic repair task ids", () => {
-    expect(buildRepairTaskId("ddr-repair-required-event", "42")).toBe("repair:ddr-repair-required-event:42");
+    expect(buildDdrRepairTaskId("42")).toBe("repair:ddr-repair-required-event:42");
   });
 
   it("dual-writes current DDR repair debt and closes stale DDR tasks", async () => {

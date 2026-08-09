@@ -92,7 +92,7 @@ describe("V9 safety consumer projections", () => {
         aggregateLabel: "weighted-safety-aggregate",
         score: 88,
         assetGrade: null,
-        pillars: { backing: 92, exit: 88, control: 90 },
+        pillars: { backing: 88, exit: 90, control: 92 },
         dependencyExposure: [{
           upstreamAssetId: "asset-a",
           dependentAssetId: "asset-b",

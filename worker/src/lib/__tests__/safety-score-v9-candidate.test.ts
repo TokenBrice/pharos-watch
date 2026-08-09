@@ -1,4 +1,3 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
@@ -7,10 +6,8 @@ import {
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import type { ExitRouteObservation } from "@shared/types/exit-route";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9Candidate,
   buildSafetyScoreV9PublicationFromNormalizedInput,
@@ -22,75 +19,32 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
+import {
+  makeV9FixedInput,
+  v9NotApplicableStatus as notApplicableStatus,
+  v9Status as status,
+  v9TestClockSec,
+} from "../../test-helpers/v9-fixed-input";
 
-// 2026-08-09T00:00:00Z — kept ahead of the newest reviewed registry dates the
-// usdc-circle capture below reads (mint-authority review 2026-08-08), so the
-// extension's "review is later than the scoring clock" guard stays untripped.
-const AS_OF_SEC = 1_786_233_600;
+// One day past the newest reviewed registry date the usdc-circle capture below
+// reads, so the extension's "review is later than the scoring clock" guard stays
+// untripped without a hand-pinned literal that curation keeps invalidating.
+const AS_OF_SEC = v9TestClockSec();
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const PUBLISHED_AT_SEC = AS_OF_SEC + 10;
 
-function status(observationState: "known" | "missing" = "known", policyRuleId = "fixture.review") {
-  return {
-    applicability: { state: "required" as const, policyRuleId, rationale: null, gapId: null },
-    observationState,
-    evidenceRefIds: observationState === "known" ? ["placeholder:evidence"] : [],
-    gapIds: observationState === "known" ? [] : ["placeholder:gap"],
-  };
-}
-
-function notApplicableStatus(policyRuleId: string) {
-  return {
-    applicability: {
-      state: "not-applicable" as const,
-      policyRuleId,
-      rationale: "Reviewed as not applicable for the fixture.",
-      gapId: null,
-    },
-    observationState: "known" as const,
-    evidenceRefIds: ["placeholder:evidence"],
-    gapIds: [],
-  };
-}
-
-function route(assetId: string): ExitRouteObservation {
-  return {
-    routeId: "dex:primary",
-    routeFamily: "dex-amm",
-    scope: {
-      kind: "chain-contract",
-      chain: "ethereum",
-      contractOrPoolId: `${assetId}:primary`,
-      protocol: "fixture-dex",
-    },
-    requestedNotionalUsd: 100_000,
-    settlementHorizonSec: 300,
-    maxCostBps: 200,
-    executableUsd: 80_000,
-    completionRatio: 0.8,
-    output: { kind: "fiat", currency: "USD", assetKeys: ["fiat:USD"] },
-    evidenceKind: "reserve-based-amm-simulation",
-    confidence: "high",
-    scoreEligible: true,
-    observedAt: OBSERVED_AT_SEC,
-    freshnessSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
-    commonModeKeys: ["chain:ethereum", "protocol:fixture-dex"],
-    capacityCurve: [
-      {
-        requestedNotionalUsd: 100_000,
-        maxCostBps: 200,
-        executableUsd: 80_000,
-        completionRatio: 0.8,
-      },
-      {
-        requestedNotionalUsd: 1_000_000,
-        maxCostBps: 200,
-        executableUsd: 400_000,
-        completionRatio: 0.4,
-      },
-    ],
-  };
-}
+const FIXTURE_RESERVES = [
+  {
+    name: "Custodied cash",
+    pct: 100,
+    risk: "very-low" as const,
+    assetClass: "cash" as const,
+    issuerOrObligor: "issuer:alpha",
+    riskFactors: ["custody" as const, "counterparty" as const],
+    liquidityHorizon: "immediate" as const,
+    maturityDaysMax: 0,
+  },
+];
 
 function exactFixedInput(
   assetId: string,
@@ -101,114 +55,17 @@ function exactFixedInput(
     includeDexObservations?: boolean;
   } = {},
 ) {
-  return createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds: [assetId],
-    capturedAt: "2026-07-13T00:00:00.000Z",
-    sourceGeneration: `report-cards:fixture:${assetId}:${liquidityScore}`,
-    dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "registry:fixture",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+  return makeV9FixedInput({
+    assetId,
     clockSec: AS_OF_SEC,
-    updatedAt: AS_OF_SEC,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {
-      [assetId]: {
-        id: assetId,
-        symbol: "ALPHA",
-        name: "Alpha",
-        pegType: "peggedUSD",
-        pegCurrency: "USD",
-        governance: "centralized",
-        currentDeviationBps: 1,
-        pegScore: 99,
-        priceSource: "fixture-price",
-        priceObservedAt: OBSERVED_AT_SEC,
-        pegPct: 99,
-        severityScore: 0,
-        spreadPenalty: 0,
-        eventCount: 0,
-        worstDeviationBps: 1,
-        activeDepeg: false,
-        lastEventAt: null,
-        trackingSpanDays: 365,
-        methodologyVersion: "peg:fixture-v1",
-      },
-    },
-    activeDepegPeakBpsById: {},
-    dexLiqMap: {
-      [assetId]: {
-        liquidityScore,
-        concentrationHhi: 0.5,
-        poolCount: 1,
-        chainCount: 1,
-        coverageClass: "primary",
-        coverageConfidence: 1,
-        liquidityEvidenceClass: "measured",
-        hasMeasuredLiquidityEvidence: true,
-        effectiveTvlUsd: 1_000_000,
-        balanceMeasuredTvlUsd: 1_000_000,
-        organicMeasuredTvlUsd: 1_000_000,
-        exitRouteObservations: options.includeDexObservations === false ? [] : [route(assetId)],
-        ...(options.includeObservedDexCoverage === false
-          ? {}
-          : {
-              exitRouteObservationCoverage: {
-                status: "populated" as const,
-                capabilityMatrixVersion: "p4a.4",
-                retainedPoolCount: 1,
-                observationCount: 1,
-                scoreEligibleObservationCount: 1,
-                scoreEligiblePoolCount: 1,
-                scoreEligibleCapabilityPoolCount: 1,
-                unsupportedPoolCount: 0,
-                evidenceCounts: { "reserve-based-amm-simulation": 1 },
-                unsupportedReasons: {},
-              },
-            }),
-        methodologyVersion: options.dexMethodologyVersion ?? "dex:fixture-v1",
-        updatedAt: OBSERVED_AT_SEC,
-      },
-    },
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: { [assetId]: false },
-    liveReserveMap: {
-      [assetId]: [
-        {
-          name: "Custodied cash",
-          pct: 100,
-          risk: "very-low",
-          assetClass: "cash",
-          issuerOrObligor: "issuer:alpha",
-          riskFactors: ["custody", "counterparty"],
-          liquidityHorizon: "immediate",
-          maturityDaysMax: 0,
-        },
-      ],
-    },
-    liveReserveProvenanceMap: {
-      [assetId]: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
-    },
-    chainCirculatingById: {
-      [assetId]: {
-        ethereum: {
-          current: 10_000_000,
-          circulatingPrevDay: 10_000_000,
-          circulatingPrevWeek: 10_000_000,
-          circulatingPrevMonth: 10_000_000,
-        },
-      },
-    },
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
+    liquidityScore,
+    reserves: FIXTURE_RESERVES,
+    sourceGeneration: `report-cards:fixture:${assetId}:${liquidityScore}`,
+    routeContractOrPoolId: `${assetId}:primary`,
+    dexCapabilityMatrixVersion: "p4a.4",
+    includeDexCoverage: options.includeObservedDexCoverage,
+    includeDexObservations: options.includeDexObservations,
+    dexMethodologyVersion: options.dexMethodologyVersion,
   });
 }
 

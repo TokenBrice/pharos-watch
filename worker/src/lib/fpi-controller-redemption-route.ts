@@ -1,5 +1,6 @@
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
-import type { ExitRouteCapacityPoint, ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
+import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { z } from "zod";
 
@@ -193,16 +194,6 @@ export function parseAcceptedFpiControllerV9RouteState(value: unknown): FpiContr
   return parsed.success && parsed.data.status === "accepted" ? parsed.data.state : null;
 }
 
-function buildCapacityPoint(requestedNotionalUsd: number, capacityUsd: number): ExitRouteCapacityPoint {
-  const executableUsd = Math.min(requestedNotionalUsd, capacityUsd);
-  return {
-    requestedNotionalUsd,
-    maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-    executableUsd,
-    completionRatio: executableUsd / requestedNotionalUsd,
-  };
-}
-
 export function buildFpiControllerV9ExitRouteObservation(args: {
   state: FpiControllerV9RouteState;
   modeledExitSizeUsd: number | null;
@@ -226,7 +217,10 @@ export function buildFpiControllerV9ExitRouteObservation(args: {
     .sort((left, right) => left - right);
   const withinCost = state.allInCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
   const capacityCurve = requests.map((request) =>
-    buildCapacityPoint(request, withinCost ? state.capacityUsd : 0),
+    buildExitRouteCapacityPoint({
+      requestedNotionalUsd: request,
+      capacityUsd: withinCost ? state.capacityUsd : 0,
+    }),
   );
   const point = capacityCurve.find(
     (candidate) => candidate.requestedNotionalUsd === args.modeledExitSizeUsd,

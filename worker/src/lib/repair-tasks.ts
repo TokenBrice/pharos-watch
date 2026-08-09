@@ -8,7 +8,7 @@ import {
   loadCanonicalIncidents,
 } from "./depeg-resolver-incident-store";
 import { buildInClause, isMissingTableError } from "./db";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 
 export type RepairTaskState = "open" | "claimed" | "deferred" | "closed" | "failed" | "cancelled";
 
@@ -25,8 +25,12 @@ const DDR_REPAIR_RUNNER_LINK_REASON = "Repair-task runner adopted a T1.2-safe li
 const DDR_REPAIR_RUNNER_CURRENT_REASON =
   "Repair-task runner advanced a T1.2-safe canonical current source";
 
-export interface RepairTaskInput {
-  kind: string;
+/**
+ * DDR is the only repair-task kind this lane has ever produced. `kind` stays a
+ * table column (the status projection still groups by it) but is no longer a
+ * parameter: every writer below stamps `DDR_REPAIR_TASK_KIND`.
+ */
+interface RepairTaskInput {
   subjectId: string;
   priority?: number;
   nextAttemptAt?: number | null;
@@ -139,8 +143,8 @@ export function isDdrRepairTaskRunnerEnabled(value: unknown): boolean {
   return !["0", "false", "no", "off", "disabled"].includes(value.trim().toLowerCase());
 }
 
-export function buildRepairTaskId(kind: string, subjectId: string): string {
-  return `repair:${kind}:${subjectId}`;
+export function buildDdrRepairTaskId(subjectId: string): string {
+  return `repair:${DDR_REPAIR_TASK_KIND}:${subjectId}`;
 }
 
 function normalizePriority(priority: number | null | undefined): number {
@@ -155,7 +159,7 @@ async function upsertRepairTask(
   db: D1Database,
   input: RepairTaskInput & { nowSec: number },
 ): Promise<void> {
-  const taskId = buildRepairTaskId(input.kind, input.subjectId);
+  const taskId = buildDdrRepairTaskId(input.subjectId);
   await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -191,7 +195,7 @@ async function upsertRepairTask(
       )
       .bind(
         taskId,
-        input.kind,
+        DDR_REPAIR_TASK_KIND,
         input.subjectId,
         normalizePriority(input.priority),
         input.nextAttemptAt ?? null,
@@ -207,7 +211,6 @@ async function upsertRepairTask(
 async function closeRepairTasksNotInSubjects(
   db: D1Database,
   input: {
-    kind: string;
     activeSubjectIds: readonly string[];
     nowSec: number;
   },
@@ -226,7 +229,7 @@ async function closeRepairTasksNotInSubjects(
            WHERE kind = ?
              AND ${closableStateSql()}`,
         )
-        .bind(input.nowSec, input.nowSec, input.kind, input.nowSec)
+        .bind(input.nowSec, input.nowSec, DDR_REPAIR_TASK_KIND, input.nowSec)
         .run(),
       3,
     );
@@ -247,7 +250,7 @@ async function closeRepairTasksNotInSubjects(
            AND ${closableStateSql()}
            AND subject_id NOT IN (${inClause.sql})`,
       )
-      .bind(input.nowSec, input.nowSec, input.kind, input.nowSec, ...inClause.binds)
+      .bind(input.nowSec, input.nowSec, DDR_REPAIR_TASK_KIND, input.nowSec, ...inClause.binds)
       .run(),
     3,
   );
@@ -263,7 +266,6 @@ export async function syncDdrRepairDebtTasks(
   if (signal?.aborted) throw signal.reason ?? new Error("DDR repair task sync aborted");
   for (const event of events) {
     await upsertRepairTask(db, {
-      kind: DDR_REPAIR_TASK_KIND,
       subjectId: String(event.eventId),
       priority: 50,
       payload: {
@@ -276,7 +278,6 @@ export async function syncDdrRepairDebtTasks(
   }
 
   const closed = await closeRepairTasksNotInSubjects(db, {
-    kind: DDR_REPAIR_TASK_KIND,
     activeSubjectIds: events.map((event) => String(event.eventId)),
     nowSec,
   });

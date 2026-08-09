@@ -1,5 +1,5 @@
 import { batchExecute, buildInClause } from "./db";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { throwIfAborted } from "./abort";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {

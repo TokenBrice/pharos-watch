@@ -12,6 +12,9 @@ const {
 vi.mock("../abort", () => ({
   sleepWithSignal: sleepWithSignalMock,
   throwIfAborted: throwIfAbortedMock,
+  // Real behavior: `response-body` reads it through this module, and the
+  // per-attempt timeout assertions below depend on the actual abort reason.
+  abortReason: (signal: AbortSignal, fallback: () => unknown) => signal.reason ?? fallback(),
 }));
 
 import {

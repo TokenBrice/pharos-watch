@@ -8,7 +8,7 @@ import {
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { toErrorMessage } from "../../lib/error-utils";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";

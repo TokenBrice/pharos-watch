@@ -42,11 +42,10 @@ export function createYieldProgressReporter(
     await reportCronProgress(reportProgress, {
       stage,
       message,
+      providerFamily,
       itemsDone: options.itemsDone,
       itemsTotal: options.itemsTotal ?? progressTotal,
       metadata: {
-        providerFamily,
-        phase: stage,
         countTotals: defaultCountTotals,
         ...options.metadata,
       },

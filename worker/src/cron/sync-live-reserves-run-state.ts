@@ -1,7 +1,7 @@
 import { getCache } from "../lib/db-cache";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../lib/operational-cache-keys";
 import { breakerKeyForConfig, type ConfiguredCoin } from "./sync-live-reserves-shared";
 import { toErrorMessage } from "../lib/error-utils";

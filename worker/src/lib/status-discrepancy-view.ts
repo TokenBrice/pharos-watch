@@ -47,20 +47,20 @@ export function buildDiscrepancy(
   const probeSeverity = SEVERITY[probe.status];
   const severityDelta = statusSeverity - probeSeverity;
   const freshProbe = probeAgeSeconds <= STATUS_SYSTEM_FRESHNESS_SEC;
-  const hasDivergence = freshProbe && Math.abs(severityDelta) >= 1;
+  const divergent = hasDivergence(overallStatus, probe, now);
 
   const discrepancyReason: StatusDiscrepancyReason = !freshProbe
     ? "probe-stale"
-    : hasDivergence
+    : divergent
       ? "probe-disagrees"
       : "in-sync";
 
   return {
-    hasDivergence,
+    hasDivergence: divergent,
     severityDelta,
     statusSeverity,
     probeSeverity,
-    details: hasDivergence ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s` : null,
+    details: divergent ? `status=${overallStatus}, probe=${probe.status}, probeAge=${probeAgeSeconds}s` : null,
     probeAgeSeconds,
     consecutiveDivergent,
     discrepancyReason,

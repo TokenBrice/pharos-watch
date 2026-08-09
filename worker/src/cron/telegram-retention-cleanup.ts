@@ -1,8 +1,9 @@
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { toErrorMessage } from "../lib/error-utils";
+import { type CappedDeleteResult, deleteCapped } from "./shared/capped-delete";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
   countTelegramProcessedUpdateBacklog,
@@ -105,10 +106,7 @@ async function pruneTelegramProcessedUpdatesCapped(
   };
 }
 
-export interface CappedDeleteResult {
-  pruned: number;
-  cappedAtLimit: boolean;
-}
+export type { CappedDeleteResult };
 
 interface CappedDeleteOptions {
   signal?: AbortSignal;
@@ -117,27 +115,21 @@ interface CappedDeleteOptions {
   cutoffBindCount?: 1 | 2;
 }
 
-async function deleteOlderThanCapped(
+function deleteOlderThanCapped(
   db: D1Database,
   sql: string,
   cutoff: number | string,
   options: CappedDeleteOptions = {},
 ): Promise<CappedDeleteResult> {
   const { signal, totalLimit = RETENTION_DELETE_BATCH_LIMIT, cutoffBindCount = 2 } = options;
-  let pruned = 0;
-  while (pruned < totalLimit) {
-    throwIfAborted(signal);
-    const batchLimit = Math.min(RETENTION_DELETE_BATCH_LIMIT, totalLimit - pruned);
-    const binds = cutoffBindCount === 2 ? [cutoff, cutoff, batchLimit] : [cutoff, batchLimit];
-    const result = await runWithOverloadRetry(() => db.prepare(sql).bind(...binds).run(), 3, signal);
-    const batchPruned = Number(result.meta?.changes ?? 0);
-    pruned += batchPruned;
-    if (batchPruned < batchLimit) break;
-  }
-  return {
-    pruned,
-    cappedAtLimit: pruned >= totalLimit,
-  };
+  return deleteCapped(
+    db,
+    sql,
+    (limit) => (cutoffBindCount === 2 ? [cutoff, cutoff, limit] : [cutoff, limit]),
+    RETENTION_DELETE_BATCH_LIMIT,
+    totalLimit,
+    signal,
+  );
 }
 
 async function pruneTelegramHighGrowthRetention(
@@ -284,17 +276,9 @@ async function pruneTelegramHighGrowthRetention(
     result.cappedAtLimit ||= staleUnresolvedJobs.cappedAtLimit;
     throwIfAborted(signal);
 
-    let staleUnresolvedSourcesPruned = 0;
-    while (staleUnresolvedSourcesPruned < highGrowthDeleteLimit) {
-      throwIfAborted(signal);
-      const batchLimit = Math.min(
-        RETENTION_DELETE_BATCH_LIMIT,
-        highGrowthDeleteLimit - staleUnresolvedSourcesPruned,
-      );
-      const deleted = await runWithOverloadRetry(
-        () => db
-          .prepare(
-            `/* pharos:telegram:stale-unresolved-sources-retention */
+    const staleUnresolvedSources = await deleteCapped(
+      db,
+      `/* pharos:telegram:stale-unresolved-sources-retention */
              DELETE FROM telegram_alert_source_events
               WHERE detected_at < ?
                 AND rowid IN (
@@ -321,18 +305,13 @@ async function pruneTelegramHighGrowthRetention(
                    ORDER BY source.detected_at ASC, source.rowid ASC
                    LIMIT ?
                 )`,
-          )
-          .bind(unresolvedCutoff, unresolvedCutoff, nowSec, batchLimit)
-          .run(),
-        3,
-        signal,
-      );
-      const batchPruned = Number(deleted.meta?.changes ?? 0);
-      staleUnresolvedSourcesPruned += batchPruned;
-      if (batchPruned < batchLimit) break;
-    }
-    result.staleUnresolvedSourcesPruned = staleUnresolvedSourcesPruned;
-    result.cappedAtLimit ||= staleUnresolvedSourcesPruned >= highGrowthDeleteLimit;
+      (limit) => [unresolvedCutoff, unresolvedCutoff, nowSec, limit],
+      RETENTION_DELETE_BATCH_LIMIT,
+      highGrowthDeleteLimit,
+      signal,
+    );
+    result.staleUnresolvedSourcesPruned = staleUnresolvedSources.pruned;
+    result.cappedAtLimit ||= staleUnresolvedSources.cappedAtLimit;
     throwIfAborted(signal);
 
     const oldestLegacyTarget = await runWithOverloadRetry(
@@ -386,17 +365,15 @@ async function pruneTelegramHighGrowthRetention(
   return result;
 }
 
-async function deleteCachePrefixOlderThanCapped(
+function deleteCachePrefixOlderThanCapped(
   db: D1Database,
   prefix: string,
   cutoff: number,
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  const result = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `DELETE FROM cache
+  return deleteCapped(
+    db,
+    `DELETE FROM cache
             WHERE key IN (
               SELECT key
                 FROM cache
@@ -405,17 +382,11 @@ async function deleteCachePrefixOlderThanCapped(
                ORDER BY updated_at ASC, key ASC
                LIMIT ?
             )`,
-        )
-        .bind(`${prefix}%`, cutoff, RETENTION_DELETE_BATCH_LIMIT)
-        .run(),
-    3,
+    (limit) => [`${prefix}%`, cutoff, limit],
+    RETENTION_DELETE_BATCH_LIMIT,
+    RETENTION_DELETE_BATCH_LIMIT,
     signal,
   );
-  const pruned = Number(result.meta?.changes ?? 0);
-  return {
-    pruned,
-    cappedAtLimit: pruned >= RETENTION_DELETE_BATCH_LIMIT,
-  };
 }
 
 export function pruneTelegramMiniAppMutationBurstCache(

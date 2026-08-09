@@ -2,8 +2,10 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { sleepWithSignal } from "./abort";
 import {
   runCronWithLease,
+} from "./cron-lease-primitives";
+import {
   runWithOverloadRetry,
-} from "./cron-lease";
+} from "./d1-overload-retry";
 import type { CronResult } from "./cron-logger";
 
 interface CoreSlotRow {

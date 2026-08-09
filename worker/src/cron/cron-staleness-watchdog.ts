@@ -4,7 +4,7 @@ import {
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
 import type { CacheStatus } from "@shared/types/status";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
 import { runChunkedInFilter } from "../lib/db";

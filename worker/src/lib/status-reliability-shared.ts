@@ -5,7 +5,7 @@ import type {  StatusCause,
 } from "@shared/types/status";
 import { clamp } from "@shared/lib/math";
 import { decodeJsonString } from "./cache-json";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logMalformedJsonPath } from "./json-decode-observability";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";

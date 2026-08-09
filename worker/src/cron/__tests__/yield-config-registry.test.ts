@@ -20,8 +20,8 @@ import {
 import {
   INTENTIONAL_GAP_REASONS,
   QUARANTINED_DETERMINISTIC_PROBE_CONFIGS,
+  YIELD_ADAPTER_LIFECYCLE,
 } from "../yield-config-rate-sources";
-import { YIELD_ADAPTER_LIFECYCLE } from "../yield-config-registry";
 
 const onChainIds = new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId));
 const rateDerivedIds = new Set(RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId));

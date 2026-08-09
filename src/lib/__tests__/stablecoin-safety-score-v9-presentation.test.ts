@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
-import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import {
   buildStablecoinSafetyScoreV9Presentation,
   describeSafetyScoreV9Components,
   humanizeSafetyScoreV9Value,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
+
+// These suites author breakdowns whose published scores must match the
+// card pillars, so they declare the pillars instead of tracking the shared
+// fixture's default quality score.
+const BREAKDOWN_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("stablecoin V9 safety presentation", () => {
   /**
@@ -193,7 +198,7 @@ describe("stablecoin V9 safety presentation", () => {
   });
 
   it("adapts numeric V9 breakdowns without inventing control weights", () => {
-    const card = makeV9Card();
+    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     card.breakdowns = {
       ...breakdownsFixture(),
       backing: {
@@ -366,7 +371,7 @@ describe("stablecoin V9 safety presentation", () => {
   });
 
   it("rolls loose bridges into one composite carrying the cohort's worst score", () => {
-    const card = makeV9Card();
+    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     card.breakdowns = {
       ...breakdownsFixture(),
       control: {
@@ -403,7 +408,7 @@ describe("stablecoin V9 safety presentation", () => {
   });
 
   it("folds low-weight reserve slices into a tail and tints only weak rows", () => {
-    const card = makeV9Card();
+    const card = makeV9Card({ pillars: BREAKDOWN_PILLARS });
     const slice = (key: string, score: number, weight: number) => ({
       key,
       label: key,

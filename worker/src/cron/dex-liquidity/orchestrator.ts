@@ -1,7 +1,7 @@
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityMetrics, LlamaPool } from "./types";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
@@ -212,7 +212,7 @@ export async function stageDexLiquidityScoring(
       sourceState: scoringSourceState,
       poolState,
       onChunkBatchPersisted: async ({ chunkCount, recordCount, payloadBytes }) => {
-        await reportDexLiquidityProgress(ctx, {
+        await reportCronProgress(ctx.reportProgress, {
           stage: "scoring-stage-persistence",
           message: "Persisting bounded DEX scoring-stage chunks",
           providerFamily: "d1",
@@ -404,30 +404,6 @@ function getPersistenceSkipReason(criticalSourceFailures: string[]): string | nu
   return null;
 }
 
-async function reportDexLiquidityProgress(
-  ctx: DexLiquidityRunContext,
-  update: {
-    stage: string;
-    message: string;
-    providerFamily: string;
-    itemsDone?: number;
-    itemsTotal?: number;
-    metadata?: Record<string, unknown>;
-  },
-): Promise<void> {
-  await reportCronProgress(ctx.reportProgress, {
-    stage: update.stage,
-    message: update.message,
-    itemsDone: update.itemsDone,
-    itemsTotal: update.itemsTotal,
-    metadata: {
-      providerFamily: update.providerFamily,
-      phase: update.stage,
-      ...update.metadata,
-    },
-  });
-}
-
 function logDirectApiSourceSummary(
   integration: DirectApiIntegrationResult,
   circuitEvents: DexLiquidityDirectApiPhase["circuitEvents"],
@@ -455,7 +431,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   const fallbackSignals: string[] = [];
   console.log(`[dex-liquidity] Starting sync`);
   throwIfAborted(ctx.signal);
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "source-loading",
     message: "Loading DEX liquidity source references",
     providerFamily: "dex-liquidity",
@@ -487,7 +463,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     stablecoinPriceById,
     chainRpcs: ctx.chainRpcs,
   });
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "direct-api-fetch",
     message: "Fetching protocol-native DEX liquidity",
     providerFamily: "protocol-native-dex",
@@ -504,7 +480,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
   const compactedDirectApi = compactDirectApiFetchPhasePools(directApiPhase, lookups);
   directApiPhase = compactedDirectApi.phase;
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "direct-api-fetch-complete",
     message: "Completed protocol-native DEX liquidity fetch",
     providerFamily: "protocol-native-dex",
@@ -582,7 +558,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   if (!dataSources) {
     throw new Error("dex-liquidity: catastrophic source failure (DL yields + Curve unavailable)");
   }
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "primary-sources-loaded",
     message: "Loaded DefiLlama and Curve liquidity sources",
     providerFamily: "defillama",
@@ -626,7 +602,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   // Downstream phases use only the derived maps, so release the raw response trees now.
   dataSources.curvePayloads.length = 0;
 
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "subgraph-enrichment",
     message: "Fetching subgraph liquidity enrichment",
     providerFamily: "subgraph",
@@ -647,7 +623,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     validationReferences,
   });
   failedSources.push(...subgraphEnrichment.failedSources);
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "subgraph-enrichment-complete",
     message: "Completed subgraph enrichment",
     providerFamily: "subgraph",
@@ -705,7 +681,7 @@ async function buildDexLiquidityPoolState(
   ctx: DexLiquidityRunContext,
   sourceState: DexLiquiditySourceState,
 ): Promise<DexLiquidityPoolState> {
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "pool-processing",
     message: "Merging primary, staged, direct, and fallback pools",
     providerFamily: "dex-liquidity",
@@ -812,7 +788,7 @@ async function buildDexLiquidityPoolState(
   sourceState.lookups.symbolToChainScopedIds = new Map();
   sourceState.lookups.addressToId = new Map();
 
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "pool-processing-core-complete",
     message: "Completed primary and direct pool integration",
     providerFamily: "dex-liquidity",
@@ -863,7 +839,7 @@ async function buildDexLiquidityPoolState(
     confirmedExactKeysByProtocol: new Map(),
   };
 
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "pool-processing-staged-complete",
     message: "Completed staged pool merge",
     providerFamily: "dex-liquidity",
@@ -882,7 +858,7 @@ async function buildDexLiquidityPoolState(
     priceObservations: sourceState.priceObservations,
     directCexOrderbookDepth: sourceState.directCexOrderbookDepth,
   });
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "pool-processing-complete",
     message: "Completed pool merge and bounded market telemetry",
     providerFamily: "dex-liquidity",
@@ -931,7 +907,7 @@ async function scoreDexLiquidityPoolState(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
 ): Promise<DexLiquidityScoreState> {
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "scoring",
     message: "Scoring DEX liquidity coverage",
     providerFamily: "internal",
@@ -1007,7 +983,7 @@ async function scoreDexLiquidityPoolState(
     );
   }
   throwIfAborted(ctx.signal);
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "scoring-complete",
     message: "Completed DEX liquidity scoring",
     providerFamily: "internal",
@@ -1042,7 +1018,7 @@ async function persistDexLiquidityScoreState(
 ): Promise<DexLiquidityPersistenceState> {
   const skippedReason = getPersistenceSkipReason(sourceState.criticalSourceFailures);
   if (skippedReason) {
-    await reportDexLiquidityProgress(ctx, {
+    await reportCronProgress(ctx.reportProgress, {
       stage: "persistence-skipped",
       message: `Skipping DEX liquidity publication: ${skippedReason}`,
       providerFamily: "d1",
@@ -1087,7 +1063,7 @@ async function persistDexLiquidityScoreState(
     };
   }
 
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence",
     message: "Publishing DEX liquidity generation",
     providerFamily: "d1",
@@ -1123,7 +1099,7 @@ async function persistDexLiquidityScoreState(
     throw new Error("DEX liquidity persistence completed without a publication generation id");
   }
   poolState.metrics.clear();
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-generation-complete",
     message: "Published bounded DEX liquidity generation batches",
     providerFamily: "d1",
@@ -1143,7 +1119,7 @@ async function persistDexLiquidityScoreState(
   );
   sourceState.stablecoinPriceById.clear();
   sourceState.priceObservations.clear();
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-prices-complete",
     message: "Atomically published the staged DEX price generation",
     providerFamily: "d1",
@@ -1178,7 +1154,7 @@ async function persistDexLiquidityScoreState(
   );
   sourceCoverageCompleteByStablecoin.clear();
   scoreState.retainedPoolsByStablecoin.clear();
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-challengers-complete",
     message: "Published bounded DEX challenger batches",
     providerFamily: "d1",
@@ -1198,7 +1174,7 @@ async function persistDexLiquidityScoreState(
     historyRowsPruned: 0,
     retentionPruneFailed: false,
   };
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-history-complete",
     message: "Reconciled DEX liquidity history",
     providerFamily: "d1",
@@ -1208,14 +1184,14 @@ async function persistDexLiquidityScoreState(
 
   await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
   scoreState.tvlStabilityMap.clear();
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-depth-complete",
     message: "Atomically published staged DEX depth stability",
     providerFamily: "d1",
     itemsDone: scoreState.scoreResults.size,
     itemsTotal: scoreState.scoreResults.size,
   });
-  await reportDexLiquidityProgress(ctx, {
+  await reportCronProgress(ctx.reportProgress, {
     stage: "persistence-complete",
     message: "Published DEX liquidity generation",
     providerFamily: "d1",

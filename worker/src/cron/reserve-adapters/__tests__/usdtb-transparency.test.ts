@@ -6,7 +6,7 @@ vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   return {
     ...actual,
-    fetchJsonWithRetry: vi.fn(),
+    fetchJsonAdapterInput: vi.fn(),
   };
 });
 
@@ -15,7 +15,7 @@ import {
   fetchUsdtbTransparencyReserves,
   type UsdtbBackingAndSupplyPayload,
 } from "../usdtb-transparency";
-import { fetchJsonWithRetry } from "../helpers";
+import { fetchJsonAdapterInput } from "../helpers";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 
@@ -165,13 +165,14 @@ describe("adaptUsdtbTransparency", () => {
 
 describe("fetchUsdtbTransparencyReserves", () => {
   it("fetches the configured backing-and-supply endpoint and adapts the payload", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(USDTB_BACKING);
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(USDTB_BACKING);
     const config = makeConfig();
 
     const result = await fetchUsdtbTransparencyReserves(makeCoin(), config, signal);
 
-    expect(fetchJsonWithRetry).toHaveBeenCalledWith(
-      "https://usdtb.money/api/transparency/backing-and-supply/current",
+    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
+      config,
+      "usdtb-transparency",
       signal,
       12_000,
       undefined,
@@ -180,7 +181,7 @@ describe("fetchUsdtbTransparencyReserves", () => {
   });
 
   it("propagates an error when the endpoint request fails", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
+    vi.mocked(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://usdtb.money/api/transparency/backing-and-supply/current"));
     const config = makeConfig();
 
     await expect(fetchUsdtbTransparencyReserves(makeCoin(), config, signal)).rejects.toThrow("HTTP 500");

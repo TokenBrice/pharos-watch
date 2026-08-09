@@ -1,8 +1,9 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "../../lib/error-utils";
+import { deleteCapped } from "../shared/capped-delete";
 
 export const MINT_BURN_EVENT_RETENTION_SEC = 8 * DAY_SECONDS;
 export const MINT_BURN_HOURLY_RETENTION_SEC = 95 * DAY_SECONDS;
@@ -52,33 +53,6 @@ interface MintBurnRetentionOptions {
   eventRunLimit?: number;
   hourlyBatchLimit?: number;
   hourlyRunLimit?: number;
-}
-
-async function deleteCapped(
-  db: D1Database,
-  sql: string,
-  bindsForLimit: (limit: number) => unknown[],
-  batchLimit: number,
-  runLimit: number,
-  signal?: AbortSignal,
-): Promise<{ deletedRows: number; cappedAtLimit: boolean }> {
-  let deletedRows = 0;
-  while (deletedRows < runLimit) {
-    throwIfAborted(signal);
-    const limit = Math.min(batchLimit, runLimit - deletedRows);
-    const result = await runWithOverloadRetry(
-      () => db.prepare(sql).bind(...bindsForLimit(limit)).run(),
-      3,
-      signal,
-    );
-    const deleted = Number(result.meta?.changes ?? 0);
-    deletedRows += deleted;
-    if (deleted < limit) break;
-  }
-  return {
-    deletedRows,
-    cappedAtLimit: deletedRows >= runLimit,
-  };
 }
 
 async function repairMissingHourlyRows(
@@ -296,7 +270,7 @@ async function pruneEventRows(
       runLimit,
       signal,
     );
-    result.deletedRows = deleted.deletedRows;
+    result.deletedRows = deleted.pruned;
     result.cappedAtLimit = deleted.cappedAtLimit;
 
     const oldest = await runWithOverloadRetry(
@@ -394,7 +368,7 @@ async function pruneHourlyRows(
       runLimit,
       signal,
     );
-    result.deletedRows = deleted.deletedRows;
+    result.deletedRows = deleted.pruned;
     result.cappedAtLimit = deleted.cappedAtLimit;
 
     const oldest = await runWithOverloadRetry(

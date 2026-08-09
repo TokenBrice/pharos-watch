@@ -28,7 +28,7 @@ import {
   fetchStarknetTotalSupply,
   probeTrackedTokenSupply,
 } from "../../reserve-adapters/helpers";
-import { runBoundedQueue } from "../../shared/bounded-queue";
+import { mapWithConcurrency } from "../../../lib/concurrency";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
 
@@ -149,11 +149,10 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
     );
   }
 
-  const balances = await runBoundedQueue({
-    items: exclusionConfig.holderAddresses,
-    concurrency: EXCLUDED_BALANCE_READ_CONCURRENCY,
-    signal: input.signal,
-    worker: (holderAddress) =>
+  const balances = await mapWithConcurrency(
+    exclusionConfig.holderAddresses,
+    EXCLUDED_BALANCE_READ_CONCURRENCY,
+    (holderAddress) =>
       fetchOnchainUint256({
         contract: input.supplyContract.address,
         data: encodeBalanceOfCallData(holderAddress),
@@ -163,7 +162,8 @@ async function adjustOnChainSupplyForExcludedBalances(input: {
         rpcMode: "public-rpc",
         chain: input.supplyContract.chain,
       }),
-  });
+    { signal: input.signal },
+  );
 
   if (balances.some((balance): balance is null => balance == null)) {
     throw new Error("configured excluded-balance read returned null");

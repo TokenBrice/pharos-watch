@@ -1,4 +1,4 @@
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { recordProducerOutcome } from "../../lib/producer-history";
 import { getRuntimeProducerIdentity, type ScheduledRuntimeContext } from "./context";
 

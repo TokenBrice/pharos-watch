@@ -1,6 +1,6 @@
 import { throwIfAborted } from "./abort";
 import { executeAtomicBatch } from "./db";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import { parseJson } from "./json-parse";
 import { buildTelegramMessage, sendToChat, type TelegramCreds } from "./telegram";

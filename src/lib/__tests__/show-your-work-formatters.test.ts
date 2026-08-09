@@ -26,7 +26,7 @@ describe("show-your-work formatters", () => {
     const table = formatReportCardV9(card, "9.0");
 
     expect(table.versionLabel).toBe("9.0");
-    expect(table.rows.find((row) => row.label === "Backing pillar")?.value).toBe("88.0");
+    expect(table.rows.find((row) => row.label === "Backing pillar")?.value).toBe("80.0");
     expect(table.rows.find((row) => row.label === "Pre-cap score")?.value).toBe("86.9");
     expect(table.rows.find((row) => row.label === "Binding cap")?.value).toBe("84 (track-record:<24m)");
     expect(table.formula).toContain("bounded-headroom aggregation");

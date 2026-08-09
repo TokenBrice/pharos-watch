@@ -22,7 +22,7 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { executeAdaptiveMulticall } from "./adaptive-multicall";
-import { forEachWithConcurrency } from "./concurrency";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 
@@ -828,7 +828,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
       groupsByChain.set(request.policy.chain, group);
     }
 
-    await forEachWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
+    await mapWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
       const requestsByBlock = new Map<number, EncodedCurveCryptoSwapRequest[]>();
       for (const request of chainRequests) {
         const blockRequests = requestsByBlock.get(request.blockNumber) ?? [];

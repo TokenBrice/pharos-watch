@@ -11,7 +11,7 @@ import {
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import {

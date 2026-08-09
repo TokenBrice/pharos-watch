@@ -29,7 +29,7 @@ import { parseJsonObject } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { rotateFromCursor } from "../shared/cursor-rotation";
-import { forEachWithConcurrency } from "./concurrency";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import {
   buildDexMeasuredQuoteGenerationId,
   loadLatestPublishedDexMeasuredTargets,
@@ -899,7 +899,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     chainStates.set(state.target.chain, rows);
   }
-  await forEachWithConcurrency([...chainStates], 3, async ([chain, rows]) => {
+  await mapWithConcurrency([...chainStates], 3, async ([chain, rows]) => {
     if (!rpcBudget.canRequestChain(chain)) {
       markBudgetStop(rows, rpcBudget.stopReason);
       return;
@@ -1084,7 +1084,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     uniswapV4StatesByChain.set(state.target.chain, rows);
   }
-  await forEachWithConcurrency([...uniswapV4StatesByChain.values()], 3, async (rows) => {
+  await mapWithConcurrency([...uniswapV4StatesByChain.values()], 3, async (rows) => {
     const outcomes = await resolveUniswapV4PoolBindings({
       requests: rows.map((state) => ({
         target: state.target,
@@ -1118,7 +1118,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     quoterStatesByChain.set(state.target.chain, rows);
   }
-  await forEachWithConcurrency([...quoterStatesByChain.values()], 3, async (rows) => {
+  await mapWithConcurrency([...quoterStatesByChain.values()], 3, async (rows) => {
     const rowsByFactory = new Map<string, TargetQuoteState[]>();
     for (const state of rows) {
       const deployment = state.deployment!;
@@ -1191,7 +1191,7 @@ export async function syncDexMeasuredExecution(
       rows.push(request);
       byChain.set(request.state.target.chain, rows);
     }
-    await forEachWithConcurrency([...byChain.values()], 3, async (chainRequests) => {
+    await mapWithConcurrency([...byChain.values()], 3, async (chainRequests) => {
       const byAdapter = new Map<TargetDeployment["kind"], typeof chainRequests>();
       for (const request of chainRequests) {
         const kind = request.state.deployment!.kind;

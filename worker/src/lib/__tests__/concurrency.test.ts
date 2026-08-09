@@ -74,6 +74,34 @@ describe("mapWithConcurrency", () => {
     expect(started).toEqual([0, 1]);
   });
 
+  it("throws before work when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("queue aborted"));
+    let started = 0;
+
+    await expect(
+      mapWithConcurrency([1, 2], 1, async (n) => {
+        started += 1;
+        return n;
+      }, { signal: controller.signal }),
+    ).rejects.toThrow("queue aborted");
+    expect(started).toBe(0);
+  });
+
+  it("stops scheduling new work once the signal aborts mid-run", async () => {
+    const controller = new AbortController();
+    const started: number[] = [];
+
+    await expect(
+      mapWithConcurrency([0, 1, 2, 3], 1, async (n) => {
+        started.push(n);
+        if (n === 0) controller.abort(new Error("mid-run abort"));
+        return n;
+      }, { signal: controller.signal }),
+    ).rejects.toThrow("mid-run abort");
+    expect(started).toEqual([0]);
+  });
+
   it("rejects when maxInFlight is not a positive integer", async () => {
     await expect(mapWithConcurrency([1], 0, async (n) => n)).rejects.toThrow(RangeError);
     await expect(mapWithConcurrency([1], -1, async (n) => n)).rejects.toThrow(RangeError);

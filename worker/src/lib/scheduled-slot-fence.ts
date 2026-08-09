@@ -5,6 +5,7 @@ import {
   reconcileStaleSlotArtifactsAndRecordEvent,
   getExpectedJobsForScheduledSlot,
   hasActiveChildLeaseForScheduledSlot,
+  STALE_SLOT_ERROR,
   type StaleSlotExecutionArtifact,
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
@@ -108,7 +109,6 @@ export interface ScheduledSlotSweepSummary {
   }>;
 }
 
-const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
 async function getScheduledSlotExecution(
   db: D1Database,

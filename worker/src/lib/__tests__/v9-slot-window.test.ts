@@ -4,8 +4,11 @@ const leaseMocks = vi.hoisted(() => ({
   runCronWithLease: vi.fn(),
 }));
 
-vi.mock("../cron-lease", () => ({
+vi.mock("../cron-lease-primitives", () => ({
   runCronWithLease: leaseMocks.runCronWithLease,
+}));
+
+vi.mock("../d1-overload-retry", () => ({
   runWithOverloadRetry: (
     run: () => Promise<unknown>,
   ) => run(),

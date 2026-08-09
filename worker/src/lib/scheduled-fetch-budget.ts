@@ -1,4 +1,5 @@
 import { CRON_CONNECTION_BUDGET } from "@shared/lib/cron-jobs";
+import { abortReason } from "./abort";
 
 interface AllocationWaiter {
   weight: number;
@@ -15,9 +16,8 @@ export interface ScheduledFetchBudgetSnapshot {
   waiting: number;
 }
 
-function abortReason(signal: AbortSignal): unknown {
-  return signal.reason ?? new Error("scheduled fetch allocation aborted");
-}
+const fetchBudgetAbortReason = (signal: AbortSignal): unknown =>
+  abortReason(signal, () => new Error("scheduled fetch allocation aborted"));
 
 /**
  * Slot-local weighted semaphore for declared child fetch allocations. It does
@@ -52,7 +52,7 @@ export class ScheduledFetchBudget {
     if (!Number.isInteger(weight) || weight < 0 || weight > this.capacity) {
       throw new Error(`Scheduled fetch allocation ${weight} exceeds slot capacity ${this.capacity}`);
     }
-    if (signal?.aborted) throw abortReason(signal);
+    if (signal?.aborted) throw fetchBudgetAbortReason(signal);
     if (weight === 0) return () => {};
 
     return new Promise<() => void>((resolve, reject) => {
@@ -61,7 +61,7 @@ export class ScheduledFetchBudget {
         waiter.abortListener = () => {
           const index = this.waiters.indexOf(waiter);
           if (index >= 0) this.waiters.splice(index, 1);
-          reject(abortReason(signal));
+          reject(fetchBudgetAbortReason(signal));
           this.drain();
         };
         signal.addEventListener("abort", waiter.abortListener, { once: true });
@@ -86,7 +86,7 @@ export class ScheduledFetchBudget {
       if (waiter.signal?.aborted) {
         this.waiters.shift();
         waiter.signal.removeEventListener("abort", waiter.abortListener!);
-        waiter.reject(abortReason(waiter.signal));
+        waiter.reject(fetchBudgetAbortReason(waiter.signal));
         continue;
       }
       if (this.allocated + waiter.weight > this.capacity) return;

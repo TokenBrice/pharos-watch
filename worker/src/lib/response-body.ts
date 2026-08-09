@@ -1,3 +1,4 @@
+import { abortReason } from "./abort";
 import { parseJson } from "./json-parse";
 
 export async function drainResponseBody(response: Response): Promise<void> {
@@ -36,9 +37,8 @@ export async function cancelUnsuccessfulResponseBodyQuietly(response: Response |
   await cancelResponseBodyQuietly(response);
 }
 
-function abortReason(signal: AbortSignal): unknown {
-  return signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
-}
+const responseBodyAbortReason = (signal: AbortSignal): unknown =>
+  abortReason(signal, () => new DOMException("The operation was aborted.", "AbortError"));
 
 function cancelResponseBodyForAbort(response: Response): void {
   if (!response.body) return;
@@ -93,13 +93,13 @@ async function readResponseTextStreamWithSignal(
 
   if (signal) {
     if (signal.aborted) {
-      await reader.cancel(abortReason(signal)).catch(() => undefined);
-      throw abortReason(signal);
+      await reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
+      throw responseBodyAbortReason(signal);
     }
     abortPromise = new Promise<never>((_resolve, reject) => {
       onAbort = () => {
-        void reader.cancel(abortReason(signal)).catch(() => undefined);
-        reject(abortReason(signal));
+        void reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
+        reject(responseBodyAbortReason(signal));
       };
       signal.addEventListener("abort", onAbort, { once: true });
     });
@@ -108,8 +108,8 @@ async function readResponseTextStreamWithSignal(
   try {
     for (;;) {
       if (signal?.aborted) {
-        await reader.cancel(abortReason(signal)).catch(() => undefined);
-        throw abortReason(signal);
+        await reader.cancel(responseBodyAbortReason(signal)).catch(() => undefined);
+        throw responseBodyAbortReason(signal);
       }
       const result = abortPromise
         ? await Promise.race([reader.read(), abortPromise])
@@ -141,7 +141,7 @@ async function readResponseTextStreamWithSignal(
       }
     }
 
-    if (signal?.aborted) throw abortReason(signal);
+    if (signal?.aborted) throw responseBodyAbortReason(signal);
     text += decoder.decode();
     return text;
   } finally {
@@ -213,14 +213,14 @@ async function readResponseBodyWithSignal<TResult>(
   if (!signal) return await read();
   if (signal.aborted) {
     cancelResponseBodyForAbort(response);
-    throw abortReason(signal);
+    throw responseBodyAbortReason(signal);
   }
 
   let onAbort: (() => void) | null = null;
   const abortPromise = new Promise<never>((_resolve, reject) => {
     onAbort = () => {
       cancelResponseBodyForAbort(response);
-      reject(abortReason(signal));
+      reject(responseBodyAbortReason(signal));
     };
     signal.addEventListener("abort", onAbort, { once: true });
   });

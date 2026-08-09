@@ -2,7 +2,7 @@ import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
-import { staleSlotEventCacheKey } from "../cron-lease";
+import { staleSlotEventCacheKey } from "../scheduled-slot-fence";
 import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 

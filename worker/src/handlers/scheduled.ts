@@ -3,9 +3,11 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shar
 import type { Env } from "../lib/env";
 import {
   getScheduledSlotControlledDeadlineMs,
+} from "../lib/cron-timeouts";
+import {
   runScheduledSlotWithFence,
   type ScheduledSlotExecutionOptions,
-} from "../lib/cron-lease";
+} from "../lib/scheduled-slot-fence";
 import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";

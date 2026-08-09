@@ -77,7 +77,7 @@ jobs:
           npm exec vitest -- \
             scripts/maintenance/__tests__/generate-safety-score-v9-shock-coverage-registry.test.ts \
             worker/src/lib/__tests__/safety-score-v9-extension-shock.test.ts \
-            worker/src/lib/__tests__/safety-score-v9-fact-set.test.ts \
+            worker/src/lib/__tests__/safety-score-v9-fact-set-peg-mechanism-evidence.test.ts \
             --run
 
       - name: Detect journal diff

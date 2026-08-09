@@ -15,7 +15,16 @@ import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
-import { normalizeReserveRecoveryMode } from "../../lib/reserve-recovery-mode";
+
+type ReserveRecoveryMode = "off" | "shadow" | "reconcile" | "recover";
+
+function normalizeReserveRecoveryMode(value: string | null | undefined): ReserveRecoveryMode {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "shadow" || normalized === "reconcile" || normalized === "recover") {
+    return normalized;
+  }
+  return "off";
+}
 
 const RECOVERY_CHECKPOINT_JOB = "sync-live-reserves";
 const RECOVERY_LEASE_SEC = 15 * 60;

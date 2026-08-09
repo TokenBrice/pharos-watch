@@ -1,5 +1,6 @@
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { ExitRouteCapacityPoint, ExitRouteObservation } from "@shared/types/exit-route";
+import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { z } from "zod";
 
@@ -494,24 +495,6 @@ export function parseAcceptedSfrxusdCrosschainV9RouteState(
     : null;
 }
 
-function buildCapacityPoint(
-  requestedNotionalUsd: number,
-  capacityUsd: number,
-  allInCostBps: number,
-): ExitRouteCapacityPoint {
-  const executableUsd =
-    allInCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps
-      ? Math.min(requestedNotionalUsd, capacityUsd)
-      : 0;
-  return {
-    requestedNotionalUsd,
-    maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-    executableUsd,
-    completionRatio: executableUsd / requestedNotionalUsd,
-    ...(executableUsd > 0 ? { executionCostBps: allInCostBps } : {}),
-  };
-}
-
 export function buildSfrxusdCrosschainV9ExitRouteObservation(args: {
   state: SfrxusdCrosschainV9RouteState;
   modeledExitSizeUsd: number | null;
@@ -541,11 +524,12 @@ export function buildSfrxusdCrosschainV9ExitRouteObservation(args: {
   }
 
   const capacityCurve = state.protocolCostCurve.map((point) =>
-    buildCapacityPoint(
-      point.requestedNotionalUsd,
-      state.capacity.capacityUsd,
-      point.allInCostBps!,
-    ),
+    buildExitRouteCapacityPoint({
+      requestedNotionalUsd: point.requestedNotionalUsd,
+      capacityUsd: state.capacity.capacityUsd,
+      costBps: point.allInCostBps!,
+      publishExecutionCost: true,
+    }),
   );
   const exactPoint = capacityCurve.find(
     (point) => point.requestedNotionalUsd === modeledExitSizeUsd,

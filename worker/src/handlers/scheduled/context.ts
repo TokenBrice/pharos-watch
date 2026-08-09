@@ -2,11 +2,13 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { getScheduledTaskDescriptor } from "@shared/lib/scheduled-runner-registry";
 import {
   createLeaseOwner,
-  getCronTimeoutBudgetMetadata,
-  resolveCronTimeoutBudget,
   runCronWithLease,
   type CronLeaseOptions,
-} from "../../lib/cron-lease";
+} from "../../lib/cron-lease-primitives";
+import {
+  getCronTimeoutBudgetMetadata,
+  resolveCronTimeoutBudget,
+} from "../../lib/cron-timeouts";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";

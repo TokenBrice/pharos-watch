@@ -1,7 +1,7 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
 import { buildInClause } from "./db";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import {
   LIVE_RESERVE_HISTORY_RETENTION_SEC,
