@@ -3,6 +3,7 @@ import type {
   MintAuthorityClientControlSummary,
   MintAuthorityClientSummary,
 } from "@shared/types/stablecoin-client-meta";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -26,6 +27,7 @@ import {
 } from "@/lib/stablecoin-detail-bridge-client";
 import {
   projectCustodyClientSummary,
+  shouldDisplayCustodyModule,
   type CustodyClientSummary,
 } from "@/lib/stablecoin-detail-custody-client";
 import {
@@ -150,6 +152,8 @@ interface BuildStablecoinDetailClientCoinOptions {
   parentById?: ReadonlyMap<string, StablecoinMeta>;
 }
 
+const EMPTY_ARCHETYPE_REGISTRY: ReadonlyMap<string, StablecoinMeta> = new Map();
+
 function collectMintAuthorityParentSummaries(
   summary: MintAuthorityClientSummary | null,
   parentById: ReadonlyMap<string, StablecoinMeta> | undefined,
@@ -192,8 +196,11 @@ export function buildStablecoinDetailClientCoin(
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
   const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
   const bridgeRouteRiskSummary = projectBridgeRouteRiskClientSummary(coin);
-  const custodyProfileSummary = projectCustodyClientSummary(coin);
-  const oracleRiskSummary = projectOracleRiskClientSummary(coin);
+  const resolvedArchetype = resolveMechanismArchetype(coin, options.parentById ?? EMPTY_ARCHETYPE_REGISTRY);
+  const custodyProfileSummary = shouldDisplayCustodyModule(coin, resolvedArchetype)
+    ? projectCustodyClientSummary(coin)
+    : null;
+  const oracleRiskSummary = resolvedArchetype === "cdp" ? projectOracleRiskClientSummary(coin) : null;
   return {
     ...clientCoin,
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),

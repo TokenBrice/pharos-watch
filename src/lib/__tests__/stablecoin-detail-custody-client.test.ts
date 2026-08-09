@@ -1,7 +1,7 @@
 // src/lib/__tests__/stablecoin-detail-custody-client.test.ts
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
-import { projectCustodyClientSummary } from "../stablecoin-detail-custody-client";
+import { projectCustodyClientSummary, shouldDisplayCustodyModule } from "../stablecoin-detail-custody-client";
 
 function coinWith(custodyProfile: unknown): StablecoinMeta {
   return { id: "test-coin", custodyProfile } as unknown as StablecoinMeta;
@@ -76,5 +76,31 @@ describe("projectCustodyClientSummary", () => {
   it("maps unknown segregation to the undisclosed posture", () => {
     const summary = projectCustodyClientSummary(coinWith({ ...USDC_LIKE_PROFILE, segregation: "unknown" }));
     expect(summary!.postureKey).toBe("undisclosed");
+  });
+});
+
+describe("shouldDisplayCustodyModule", () => {
+  it("shows the module for an explicit centralized custodyModel even on a cdp archetype", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: "institutional-regulated" }, "cdp")).toBe(true);
+  });
+
+  it("hides the module for an explicit onchain custodyModel even on a fiat-cash archetype", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: "onchain" }, "fiat-cash")).toBe(false);
+  });
+
+  it("hides the module for a cdp archetype with no explicit custodyModel", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "cdp")).toBe(false);
+  });
+
+  it("hides the module for an algorithmic archetype with no explicit custodyModel", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "algorithmic")).toBe(false);
+  });
+
+  it("shows the module for a fiat-cash archetype with no explicit custodyModel", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, "fiat-cash")).toBe(true);
+  });
+
+  it("shows the module for a null archetype with no explicit custodyModel", () => {
+    expect(shouldDisplayCustodyModule({ custodyModel: undefined }, null)).toBe(true);
   });
 });

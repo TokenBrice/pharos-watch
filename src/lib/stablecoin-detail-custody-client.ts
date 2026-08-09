@@ -5,6 +5,7 @@ import type {
   CustodyProviderRole,
   CustodyRehypothecation,
   CustodySegregation,
+  MechanismArchetype,
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types";
@@ -134,6 +135,22 @@ function composeSummary(profile: CustodyProfile): string {
   const first = `${lead}; ${SEGREGATION_CLAUSES[profile.segregation]}${bankruptcy ? ` ${bankruptcy}` : ""}.`;
   const rehypothecation = REHYPOTHECATION_SENTENCES[profile.rehypothecation];
   return rehypothecation ? `${first} ${rehypothecation}` : first;
+}
+
+/**
+ * Owner display rule (2026-08-09): the custody module is for mechanisms that
+ * centrally custody assets. An explicit curated custodyModel wins; without
+ * one, on-chain mechanism archetypes (cdp, algorithmic) are suppressed. The
+ * resilience-defaults inference is deliberately NOT used here: it maps
+ * crypto-backed:centralized-dependent to "onchain", which would wrongly hide
+ * genuinely custodial coins that merely lack an explicit custodyModel.
+ */
+export function shouldDisplayCustodyModule(
+  coin: Pick<StablecoinMeta, "custodyModel">,
+  resolvedArchetype: MechanismArchetype | null,
+): boolean {
+  if (coin.custodyModel) return coin.custodyModel !== "onchain";
+  return resolvedArchetype !== "cdp" && resolvedArchetype !== "algorithmic";
 }
 
 export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClientSummary | null {
