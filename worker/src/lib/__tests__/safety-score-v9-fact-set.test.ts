@@ -5210,7 +5210,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         const draft = structuredClone(exactFixedInput());
         const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
         observation.maxCostBps = 300;
-        observation.capacityCurve = observation.capacityCurve.map((point) => ({ ...point, maxCostBps: 300 }));
+        observation.capacityCurve = (observation.capacityCurve ?? []).map((point) => ({ ...point, maxCostBps: 300 }));
         const fixed = rebuild(draft);
         const reviewed = strategyVaultExtension();
         reviewed.assets[0]!.routeReviews = reviewed.assets[0]!.routeReviews.map((review) => ({

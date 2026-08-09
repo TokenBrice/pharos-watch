@@ -30,7 +30,7 @@ const DEXSCREENER_MAX_REQUESTS = 1;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
-const DEXSCREENER_ROTATION_INTERVAL_MS = 15 * 60 * 1_000;
+export const DEXSCREENER_ROTATION_INTERVAL_MS = 15 * 60 * 1_000;
 const DEXSCREENER_PASS_TIMEOUT_ERROR = new DOMException(
   `DexScreener pass timed out after ${DEXSCREENER_PASS_BUDGET_MS}ms`,
   "TimeoutError",
@@ -213,6 +213,16 @@ export async function runDexScreenerPass(
   db: D1Database | undefined,
   signal?: AbortSignal,
   previousMissingGenerationsById?: ReadonlyMap<string, number>,
+  /**
+   * Wall clock driving the chain-rotation cycle. Production leaves it
+   * undefined and reads the real clock; a caller that needs a reproducible
+   * pick (a test, a replay) pins it. Without this the chain a run selects
+   * depends on the quarter-hour it happens to execute in, so an assertion on
+   * which deployment leads passes locally and fails in CI — which is why the
+   * pinned URL in `enrich-prices-fallback-cmc-jupiter.test.ts` had to be
+   * weakened to a prefix at `ebe1340c7`.
+   */
+  nowMs?: number,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -257,7 +267,7 @@ export async function runDexScreenerPass(
       return left.asset.id.localeCompare(right.asset.id);
     });
 
-  const rotationCycle = Math.floor(Date.now() / DEXSCREENER_ROTATION_INTERVAL_MS);
+  const rotationCycle = Math.floor((nowMs ?? Date.now()) / DEXSCREENER_ROTATION_INTERVAL_MS);
   const dexCandidates = rankedDexCandidates;
 
   const exactCandidateCount = dexCandidates.filter((entry) => entry.exactTargets.length > 0).length;
