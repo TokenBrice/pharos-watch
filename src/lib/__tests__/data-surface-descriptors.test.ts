@@ -498,7 +498,9 @@ describe("data surface descriptors", () => {
       },
       stability: {
         path: "/api/stability-index?detail=true",
-        metaMaxAgeSec: 86_400,
+        // 2x the 1800s producer interval since the WS0.7 freshness fix; was a
+        // 24h budget that hid PSI incidents for a day.
+        metaMaxAgeSec: 3600,
         producerIntervalSec: 1800,
       },
       pegSummary: {

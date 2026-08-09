@@ -23,3 +23,4 @@ export const CRON_DAILY_DIGEST = CRON_INTERVALS["daily-digest"] * 1000;
 export const CRON_SUPPLY_SNAPSHOT = CRON_INTERVALS["snapshot-supply"] * 1000;
 export const CRON_SAFETY_GRADE_HISTORY = CRON_INTERVALS["snapshot-safety-grade-history"] * 1000;
 export const CRON_CHARTS = CRON_INTERVALS["sync-stablecoin-charts"] * 1000;
+export const CRON_USDS_STATUS = CRON_INTERVALS["sync-usds-status"] * 1000;

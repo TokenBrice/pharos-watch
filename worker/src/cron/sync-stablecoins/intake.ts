@@ -60,6 +60,11 @@ export type StablecoinsIntakeResult =
 const DEFILLAMA_STABLECOINS_URL = `${DEFILLAMA_BASE}/stablecoins?includePrices=true`;
 const DL_PARSE_MAX_ATTEMPTS = 3;
 const DL_PARSE_RETRY_BASE_DELAY_MS = 500;
+// Transport-level retries run on the first attempt only. The parse-retry loop
+// below re-fetches on a corrupt body, so leaving `fetchTextWithRetry` at its
+// 2-retry default on every pass allowed 3 x 3 = 9 upstream requests in the worst
+// case, against the ADR-4 per-run request budget. Capped at 3 + 1 + 1 = 5.
+const DL_TRANSPORT_RETRIES_FIRST_ATTEMPT = 2;
 
 type DefillamaStablecoinsPayload = {
   peggedAssets: PeggedAsset[];
@@ -85,7 +90,7 @@ async function fetchDefillamaStablecoinsPayload(
     const result = await fetchTextWithRetry(
       DEFILLAMA_STABLECOINS_URL,
       signal ? { signal } : undefined,
-      2,
+      attempt === 0 ? DL_TRANSPORT_RETRIES_FIRST_ATTEMPT : 0,
       { returnFinalResponse: true },
     );
     if (!result?.response.ok) {

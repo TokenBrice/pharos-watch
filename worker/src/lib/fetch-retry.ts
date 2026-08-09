@@ -37,12 +37,26 @@ function jitterDelayMs(delayMs: number): number {
   return Math.max(0, Math.round(delayMs * (0.5 + Math.random() * 0.5)));
 }
 
+/**
+ * Rate-limit wait for a 429 response: the upstream `Retry-After` header when it
+ * is a sane delta-seconds value, otherwise the caller's fallback backoff.
+ * Exported so hand-rolled 429 loops (paginated direct-API fetchers) honour
+ * `Retry-After` through the same parse as `fetchWithRetry`.
+ */
+export function resolveRateLimitDelayMs(
+  response: Response,
+  fallbackDelayMs: number,
+  maxRetryDelayMs?: number,
+): number {
+  const retryAfter = response.headers?.get?.("Retry-After");
+  const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
+  const delayMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : fallbackDelayMs;
+  return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
+}
+
 function getRetryDelayMs(response: Response, attempt: number, maxRetryDelayMs?: number): number | null {
   if (response.status === 429) {
-    const retryAfter = response.headers?.get?.("Retry-After");
-    const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
-    const delayMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
-    return maxRetryDelayMs != null ? Math.min(delayMs, maxRetryDelayMs) : delayMs;
+    return resolveRateLimitDelayMs(response, 5000, maxRetryDelayMs);
   }
   if (response.status === 529) {
     const delayMs = Math.min(30_000, jitterDelayMs(5_000 * 2 ** attempt));

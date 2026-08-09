@@ -36,7 +36,6 @@ import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stabil
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
   CRON_15MIN,
-  CRON_24H,
   CRON_30MIN,
   CRON_BLACKLIST,
   CRON_BLUECHIP,
@@ -47,6 +46,7 @@ import {
   CRON_SAFETY_GRADE_HISTORY,
   CRON_SUPPLY_SNAPSHOT,
   CRON_TELEGRAM_PULSE,
+  CRON_USDS_STATUS,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@/lib/schema-like";
 import type { NonUsdSharePoint } from "@/lib/non-usd-share-types";
@@ -141,10 +141,10 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 90) => ({
       queryKey: ["dex-liquidity-history", stablecoinId, days] as const,
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
-      // Not derived: the producer (`sync-dex-liquidity`, 30 min) rewrites today's
-      // row every run, but the surface is a daily-granularity chart and has always
-      // polled daily. Left as a literal pending a deliberate cadence decision.
-      producerIntervalMs: CRON_24H,
+      // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity` (30 min)
+      // delete-and-replaces today's `dex_liquidity_history` row every run, so the
+      // chart's newest point changes half-hourly even though its granularity is daily.
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
     }),
   ),
   digestArchive: defineApiQuery(
@@ -353,7 +353,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["usds-status"] as const,
       path: API_PATHS.usdsStatus(),
-      producerIntervalMs: CRON_15MIN,
+      // `sync-usds-status` runs daily (0 8 * * *); the `usdsStatus` freshness lane
+      // already declares that cadence.
+      producerIntervalMs: CRON_USDS_STATUS,
     },
     "plain",
     createLazySchema<UsdsStatusResponse>(

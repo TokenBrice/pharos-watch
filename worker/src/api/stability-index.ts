@@ -5,6 +5,7 @@ import {
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -253,6 +254,10 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       asOf: computedAt,
     }),
   }, {
-    headers: addFreshnessHeaders({ "Cache-Control": CACHE_PROFILES.standard }, computedAt, DAY_SECONDS),
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.standard },
+      computedAt,
+      API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
+    ),
   });
 };

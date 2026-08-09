@@ -16,6 +16,7 @@ import { depegEventsInfiniteQueryOptions } from "../use-depeg-events";
 import { supplyHistoryQueryOptions } from "../use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions } from "../use-mint-burn-flows";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { CRON_30MIN } from "@/lib/cron-intervals";
 
 function queryContext<TQueryKey extends readonly unknown[]>(
   queryKey: TQueryKey,
@@ -96,8 +97,9 @@ describe("query option builders", () => {
     const dexOptions = dexLiquidityHistoryQueryOptions("usdc-circle", 90);
 
     expect(dexOptions.queryKey).toEqual(["dex-liquidity-history", "usdc-circle", 90]);
-    expect(dexOptions.staleTime).toBe(24 * 60 * 60 * 1000);
-    expect(dexOptions.refetchInterval).toBe(2 * 24 * 60 * 60 * 1000);
+    // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity`, 30 min.
+    expect(dexOptions.staleTime).toBe(CRON_30MIN);
+    expect(dexOptions.refetchInterval).toBe(2 * CRON_30MIN);
   });
 
   it("passes TanStack Query cancellation signals to API fetches", async () => {

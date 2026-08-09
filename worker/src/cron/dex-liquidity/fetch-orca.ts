@@ -7,6 +7,7 @@ import {
 import { rethrowIfAborted, sleepWithSignal } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
+import { resolveRateLimitDelayMs } from "../../lib/fetch-retry";
 import {
   buildDirectApiRequestSignal,
 } from "./direct-api-policy";
@@ -24,6 +25,9 @@ import {
 const ORCA_API = "https://api.orca.so/v2/solana/pools";
 const ORCA_RATE_LIMIT_RETRIES = 3;
 const ORCA_RATE_LIMIT_BACKOFF_MS = 1_000;
+// Ceiling for an upstream-declared Retry-After wait: the paginated run must stay
+// inside its half-hourly slot rather than sleeping out a two-minute header.
+const ORCA_RATE_LIMIT_MAX_BACKOFF_MS = 15_000;
 const ORCA_PAGES_PER_RUN = 4;
 const ORCA_SOURCE_KEY = "orca:solana";
 
@@ -129,8 +133,15 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
         await cancelResponseBodyQuietly(res);
         break;
       }
+      // Honour Retry-After through the shared fetch-retry parse; the exponential
+      // backoff is only the fallback when the header is absent or unusable.
+      const rateLimitDelayMs = resolveRateLimitDelayMs(
+        res,
+        ORCA_RATE_LIMIT_BACKOFF_MS * 2 ** attempt,
+        ORCA_RATE_LIMIT_MAX_BACKOFF_MS,
+      );
       await cancelResponseBodyQuietly(res);
-      await sleepWithSignal(ORCA_RATE_LIMIT_BACKOFF_MS * 2 ** attempt, signal);
+      await sleepWithSignal(rateLimitDelayMs, signal);
     }
 
     if (!res) {

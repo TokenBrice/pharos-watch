@@ -40,27 +40,36 @@ export function getCacheFreshnessLane(cacheKey: string): CacheFreshnessLaneConfi
 export const API_FRESHNESS_MAX_AGE_SEC = {
   stablecoins: DATA_SURFACE_DESCRIPTORS.stablecoins.endpointMaxAgeSec,
   stablecoinCharts: CACHE_FRESHNESS_LANES.stablecoinCharts.endpointMaxAgeSec,
+  // 2x `sync-stablecoins` (900 s): /api/chains aggregates the stablecoins cache that job writes.
   chains: 1800,
+  // `sync-stablecoins` interval: peg summary is derived from the same cache generation.
   pegSummary: 900,
+  // `sync-stablecoins` interval: depeg detection runs inside that job (cron/sync-stablecoins/post-enrichment.ts).
   depegEvents: 900,
   stressSignals: DATA_SURFACE_DESCRIPTORS.stressSignals.endpointMaxAgeSec,
   reportCards: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
+  // `compute-depeg-resolver` interval (quarter-hourly lane).
   depegResolver: 900,
   depegResolverReview: 900,
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
+  // `snapshot-supply` writes one row per day (explicit `intervalSec: DAY_SECONDS`).
   supplyHistory: DAY_SECONDS,
   mintBurnFlows: CRON_INTERVALS["sync-mint-burn"] * 2,
+  // Tighter than its producer (`sync-mint-burn`, 1800 s): the events feed warns after one missed run.
   mintBurnEvents: 900,
   blacklist: CRON_INTERVALS["sync-blacklist"],
   blacklistSummary: CRON_INTERVALS["sync-blacklist"],
   dexLiquidity: DATA_SURFACE_DESCRIPTORS.dexLiquidity.endpointMaxAgeSec,
   yieldRankings: DATA_SURFACE_DESCRIPTORS.yieldRankings.endpointMaxAgeSec,
   yieldHistory: DATA_SURFACE_DESCRIPTORS.yieldHistory.endpointMaxAgeSec,
-  stabilityIndex: DAY_SECONDS,
+  // 2x `stability-index` (half-hourly PSI compute, which writes a sample every run).
+  stabilityIndex: CRON_INTERVALS["stability-index"] * 2,
+  // `daily-digest` runs once per day (05:08 UTC lane).
   dailyDigest: DAY_SECONDS,
   digestArchive: DAY_SECONDS,
   bluechip: CACHE_FRESHNESS_LANES.bluechipRatings.endpointMaxAgeSec,
   usdsStatus: CACHE_FRESHNESS_LANES.usdsStatus.endpointMaxAgeSec,
+  // Reads `supply_history`, written daily by `snapshot-supply`.
   nonUsdShare: DAY_SECONDS,
 } as const;
 
