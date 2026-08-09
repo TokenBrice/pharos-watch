@@ -34,26 +34,30 @@ describe("cron job schedule metadata", () => {
     );
   });
 
-  // The V9 publication consumes whatever attribution packet exists when it runs.
-  // If the capture is scheduled after the publication, every publication consumes
-  // the previous cycle's packet and burns most of the 45-minute consumer
-  // acceptance window before it starts. For xaut-tether that is not a soft
-  // degradation: safetyScoreV9ChainRows returns no rows without a packet, so the
-  // card takes the 55 control-unverified ceiling instead of its 78. Each
-  // publication minute must be preceded, within its own half hour, by a capture
-  // that itself follows the prepare slot producing the capture's source input.
-  it("schedules every V9 capture between its prepare slot and its publication", () => {
+  // applySafetyScoreV9SupplyAttributionGeneration admits a generation only when
+  // captureClockSec <= fixedInput.clockSec: a publication must not depend on an
+  // observation taken after its own input snapshot. prepare-safety-score-v9-input
+  // stamps that clock, so a capture must precede the prepare slot it will be
+  // consumed against — NOT sit between prepare and the publication. A capture in
+  // that gap is rejected as capture-clock-after-consumer, and
+  // isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred then skips the
+  // publication on every subsequent cycle. Proven in production on 2026-08-09:
+  // moving the grid to 5,20,35,50 froze publications at the 10:22 slot with
+  // reason supply-attribution-generation-cadence-deferred.
+  //
+  // The capture must also stay inside the 45-minute consumer acceptance window,
+  // or the publication rejects it as generation-stale and xaut-tether falls to
+  // the 55 control-unverified ceiling (safetyScoreV9ChainRows returns no rows
+  // for XAUT without a packet).
+  // The generation cache is a single row, so each capture overwrites the last and
+  // the publication only ever sees the MOST RECENT capture. It is that capture,
+  // not the best-fitting one, that must satisfy both admission rules.
+  it("keeps the last V9 capture before each publication admissible", () => {
     const minutesOf = (schedule: string): number[] =>
       schedule.split(" ")[0]!.split(",").map(Number);
 
-    // prepare-safety-score-v9-input is the last long job in halfHourlyChartsOffset;
-    // that slot's worst observed completion is start + 130s. quarterHourly, which
-    // runV9AfterCoreWithinWindow gates on, is worst observed at start + 212s. Both
-    // clear three minutes after the halfHourlyChartsOffset minute.
-    const PREPARE_SETTLE_MINUTES = 3;
-    // The capture runs 6-19s and must release the shared V9 memory lane before the
-    // publication acquires it.
-    const PUBLICATION_HEADROOM_MINUTES = 2;
+    // SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC.
+    const CONSUMER_ACCEPTANCE_WINDOW_MINUTES = 45;
 
     const prepareMinutes = minutesOf(CRON_SCHEDULES.halfHourlyChartsOffset);
     const captureMinutes = minutesOf(CRON_SCHEDULES.v9SupplyAttributionOffset);
@@ -62,21 +66,30 @@ describe("cron job schedule metadata", () => {
       const prepareMinute = Math.max(
         ...prepareMinutes.filter((minute) => minute < publishMinute),
       );
-      const eligible = captureMinutes.filter(
-        (minute) =>
-          minute >= prepareMinute + PREPARE_SETTLE_MINUTES &&
-          minute <= publishMinute - PUBLICATION_HEADROOM_MINUTES,
-      );
+      // Lag back from the publication, wrapping the hour so a capture in the
+      // previous half hour is still reachable.
+      const lagOf = (minute: number) =>
+        minute < publishMinute ? publishMinute - minute : publishMinute - minute + 60;
+      const lastCaptureLag = Math.min(...captureMinutes.map(lagOf));
+      const prepareLag = publishMinute - prepareMinute;
+
+      // captureClockSec <= fixedInput.clockSec: the last capture must be at or
+      // before the prepare slot, i.e. at least as far back from the publication.
       expect(
-        eligible,
-        `no V9 capture between prepare :${prepareMinute} and publication :${publishMinute}`,
-      ).not.toHaveLength(0);
+        lastCaptureLag,
+        `the last V9 capture before publication :${publishMinute} lands after prepare :${prepareMinute}, so it is rejected as capture-clock-after-consumer and the publication cadence-defers forever`,
+      ).toBeGreaterThanOrEqual(prepareLag);
+
+      expect(
+        lastCaptureLag,
+        `the last V9 capture before publication :${publishMinute} is older than the ${CONSUMER_ACCEPTANCE_WINDOW_MINUTES}min consumer window`,
+      ).toBeLessThanOrEqual(CONSUMER_ACCEPTANCE_WINDOW_MINUTES);
     }
   });
 
   it("captures V9 supply attribution before its dedicated publication trigger", () => {
     expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe(
-      "5,20,35,50 * * * *",
+      "8,23,38,53 * * * *",
     );
     expect(CRON_SCHEDULES.v9PublicationOffset).toBe(
       "22,52 * * * *",

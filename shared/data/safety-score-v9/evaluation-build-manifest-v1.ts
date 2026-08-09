@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "bf0d96c00699ff10ddef2e90ca875e33e7f4d7811413ab0c9cf3688f3f105b5d"
+      "sha256": "afe3d7f7f8696bf6f45342cfd4bdda69cb576ebcac25bd08b2393935e5f8c391"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -521,7 +521,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "ec714ab954fcfcdaf244559cff010bd111c33286c6a0eeb10cd04faa30f2e039"
+  "digest": "e55c583699185724a8051115932c2109cf33a0e8047e9966fe1aa6f65cbe473b"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
