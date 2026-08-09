@@ -36,7 +36,10 @@ describe("classifyChangedFiles", () => {
     expect(contract.families.map((family: { id: string }) => family.id)).toContain("stablecoin-registry");
     expect(contract.docsToRead).toContain("docs/stablecoin-data.md");
     expect(contract.checks).toContain("npm run check:stablecoin-data");
-    expect(contract.hardRules).toContain("Do not add manual supply overrides.");
+    // The family's supply-override hard rule must reach the contract. Its exact
+    // wording is owner-editable in docs/doc-ownership.json (it was reworded by
+    // 38dbd97cf), so pin the invariant rather than the sentence.
+    expect(contract.hardRules.some((rule: string) => /supply overrides?\b/i.test(rule))).toBe(true);
     expect(contract.deploy.pagesImpact).toBe(true);
     expect(contract.deploy.workerImpact).toBe(true);
   });

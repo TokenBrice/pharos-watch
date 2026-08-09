@@ -1,7 +1,6 @@
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
-  type ReportCardsV9CardFixturePreset,
   type ReportCardsV9ResponseFixturePreset,
 } from "@shared/test-utils/report-cards-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
@@ -11,44 +10,6 @@ const A64 = "a".repeat(64);
 const B64 = "b".repeat(64);
 const C64 = "c".repeat(64);
 const D64 = "d".repeat(64);
-
-const V9_CARD_PRESET = {
-  defaultScore: 84,
-  defaultQualityScore: 86,
-  qualityScoreFromOverridePillars: false,
-  defaultPegMultiplier: 0.98,
-  defaultPegAdjustedScore: 84,
-  pillarComponents: ["reviewed-component"],
-  pillarOffsets: {
-    backing: { offset: 2, maximum: 100 },
-    exit: { offset: -2, minimum: 0 },
-    control: { offset: 0 },
-  },
-  defaultWeakestPillar: "exit",
-  breakdowns: {
-    nullWhenAnyPillarIsNull: false,
-    backingComponent: {
-      key: "reviewed-component",
-      label: "Reviewed component",
-    },
-    exit: {
-      stressRequest: null,
-      primaryRoute: {
-        key: "reviewed-route",
-        label: "Reviewed route",
-        routeFamily: "issuer-redemption",
-      },
-    },
-    controlComponent: {
-      key: "oracle",
-      label: "Oracle design",
-      kind: "oracle",
-      posture: "reviewed",
-    },
-  },
-  accessPostureSignals: ["issuer-controls"],
-  overridesBeforeDerivedValues: true,
-} satisfies ReportCardsV9CardFixturePreset;
 
 const V9_RESPONSE_PRESET = {
   safetyScoreIdentity: {
@@ -74,7 +35,7 @@ const V9_RESPONSE_PRESET = {
 export function makeV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
-  return makeReportCardsV9Card(V9_CARD_PRESET, overrides);
+  return makeReportCardsV9Card(overrides);
 }
 
 export function makeReportCardsV9Response(

@@ -10,6 +10,7 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mjs";
 import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -693,24 +694,27 @@ function getRepoChangedFiles({ baseRef, execFile = execFileSync, headRef, staged
   if (baseRef || headRef) {
     const base = baseRef || "origin/main";
     const head = headRef || "HEAD";
-    const raw = execFile("git", ["diff", "--name-only", `${base}...${head}`], {
+    const raw = execFile("git", ["diff", "--name-only", "-z", `${base}...${head}`], {
       cwd: REPO_ROOT,
       encoding: "utf8",
     });
-    return raw.split(/\r?\n/g);
+    return splitNullDelimited(raw);
   }
 
   if (staged) {
-    const raw = execFile("git", ["diff", "--name-only", "--cached"], { cwd: REPO_ROOT, encoding: "utf8" });
-    return raw.split(/\r?\n/g);
+    const raw = execFile("git", ["diff", "--name-only", "--cached", "-z"], { cwd: REPO_ROOT, encoding: "utf8" });
+    return splitNullDelimited(raw);
   }
 
-  const trackedRaw = execFile("git", ["diff", "--name-only", "HEAD", "--"], { cwd: REPO_ROOT, encoding: "utf8" });
-  const untrackedRaw = execFile("git", ["ls-files", "--others", "--exclude-standard"], {
+  const trackedRaw = execFile("git", ["diff", "--name-only", "-z", "HEAD", "--"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
-  return [...trackedRaw.split(/\r?\n/g), ...untrackedRaw.split(/\r?\n/g)];
+  const untrackedRaw = execFile("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  return [...splitNullDelimited(trackedRaw), ...splitNullDelimited(untrackedRaw)];
 }
 
 export function readChangedFiles(options = {}) {

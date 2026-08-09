@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { matchesGlob } from "node:path";
+import { splitNullDelimited } from "./changed-files.mjs";
 
 export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
   "shared/data/stablecoins/coins/**",
@@ -11,8 +12,7 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
 ];
 
 function parseNullDelimitedPaths(output) {
-  return String(output ?? "")
-    .split("\0")
+  return splitNullDelimited(output)
     .map((path) => path.trim().replaceAll("\\", "/").replace(/^\.\//, ""))
     .filter(Boolean);
 }

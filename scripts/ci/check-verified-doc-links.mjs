@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mjs";
+import { reportViolations } from "../lib/report-violations.mjs";
 
 const repoRoot = process.cwd();
 const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
@@ -240,12 +241,11 @@ for (const filePath of verifiedDocFiles) {
   }
 }
 
-if (errors.length > 0) {
-  console.error("Verified documentation link check failed:");
-  for (const error of errors) {
-    console.error(`  ${error}`);
-  }
-  process.exit(1);
-}
-
-console.log(`Verified documentation links passed for ${verifiedDocFiles.length} files.`);
+process.exit(
+  reportViolations({
+    label: "Verified documentation links",
+    heading: "Verified documentation link check failed",
+    violations: errors,
+    scannedCount: verifiedDocFiles.length,
+  }),
+);

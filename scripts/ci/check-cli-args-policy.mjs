@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { dirname, extname, posix, resolve } from "node:path";
 import ts from "typescript";
 import { CLI_ARGV_EXEMPTION_CATEGORIES, CLI_ARGV_POLICY } from "../lib/cli-argv-policy.mjs";
+import { reportViolations } from "../lib/report-violations.mjs";
 import { runAsCli } from "../lib/source-files.mjs";
+import { getScriptKind } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 const STRICT_PARSER_CALL_PATTERN = /\bparseStrictCliArgs\s*\(/;
@@ -20,23 +22,8 @@ function normalizeRepoPath(path) {
   return path.replaceAll("\\", "/");
 }
 
-function scriptKindForPath(path) {
-  switch (extname(path)) {
-    case ".js":
-    case ".cjs":
-    case ".mjs":
-      return ts.ScriptKind.JS;
-    case ".jsx":
-      return ts.ScriptKind.JSX;
-    case ".tsx":
-      return ts.ScriptKind.TSX;
-    default:
-      return ts.ScriptKind.TS;
-  }
-}
-
 export function sourceUsesProcessArgv(source, path = "source.ts") {
-  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, scriptKindForPath(path));
+  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, getScriptKind(path));
   let found = false;
 
   function visit(node) {
@@ -305,11 +292,14 @@ export function checkCliArgsPolicy({
     readSource: (path) => readFileSync(resolve(cwd, path), "utf8"),
   });
 
-  if (result.errors.length > 0) {
-    stderr.write("CLI argument policy check failed:\n");
-    for (const error of result.errors) stderr.write(`  ${error}\n`);
-    return 1;
-  }
+  const status = reportViolations({
+    label: "CLI argument policy",
+    heading: "CLI argument policy check failed",
+    violations: result.errors,
+    stdout,
+    stderr,
+  });
+  if (status !== 0) return status;
 
   stdout.write(
     `CLI argument policy: OK (${result.counts.discovered} entrypoints; ${result.counts.strict} strict, ${result.counts.exempt} exempt)\n`,

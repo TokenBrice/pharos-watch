@@ -1,4 +1,4 @@
-import type { RedemptionRouteFamily } from "../../shared/types/redemption";
+import type { RedemptionRouteFamily } from "@shared/types/redemption";
 
 export const REDEMPTION_COVERAGE_DISPOSITIONS = ["add", "defer", "hard-reject", "needs-research"] as const;
 export type RedemptionCoverageDisposition = (typeof REDEMPTION_COVERAGE_DISPOSITIONS)[number];

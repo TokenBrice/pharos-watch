@@ -99,7 +99,6 @@
     "check:cli-args-policy": "node scripts/ci/check-cli-args-policy.mjs",
     "check:shared-types-imports": "node scripts/ci/check-shared-types-imports.mjs",
     "check:client-registry-imports": "node scripts/ci/check-client-registry-imports.mjs",
-    "check:supply-helper-usage": "node scripts/ci/check-supply-helper-usage.mjs",
     "check:hook-polling-window": "node scripts/ci/check-hook-polling-window.mjs",
     "check:structural": "npm run check:cron-console-usage && npm run check:provider-resilience && npm run check:fetch-body-timeouts && npm run check:script-entrypoints && npm run check:cli-args-policy && npm run check:stale-flags && npm run check:hook-polling-window && npm run check:dependency-review-gaps",
     "check:site-csp-sync": "tsx scripts/ci/check-site-csp-sync.ts",

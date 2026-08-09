@@ -16,9 +16,16 @@ import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
 describe("normalizeChangedFiles", () => {
-  it("normalizes separators and removes blank lines", () => {
-    expect(normalizeChangedFiles("worker\\src\\index.ts\n\nsrc/app/page.tsx\n")).toEqual([
+  it("normalizes separators and removes blank entries", () => {
+    expect(normalizeChangedFiles("worker\\src\\index.ts\0\0src/app/page.tsx\0")).toEqual([
       "worker/src/index.ts",
+      "src/app/page.tsx",
+    ]);
+  });
+
+  it("keeps a path containing a newline intact", () => {
+    expect(normalizeChangedFiles("src/app/we\nird.tsx\0src/app/page.tsx\0")).toEqual([
+      "src/app/we\nird.tsx",
       "src/app/page.tsx",
     ]);
   });
@@ -248,7 +255,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("runs only the Pages path for frontend-only push diffs", () => {
-    const execFile = () => "src/app/page.tsx\ndocs/testing.md\n";
+    const execFile = () => "src/app/page.tsx\0docs/testing.md\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -265,7 +272,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("runs only the worker path for worker-only push diffs", () => {
-    const execFile = () => "worker/src/api/health.ts\ndocs/testing.md\n";
+    const execFile = () => "worker/src/api/health.ts\0docs/testing.md\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -282,7 +289,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("keeps both deploy paths enabled for shared or deploy-infra changes", () => {
-    const execFile = () => "src/app/page.tsx\nshared/lib/classification.ts\n";
+    const execFile = () => "src/app/page.tsx\0shared/lib/classification.ts\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -307,7 +314,7 @@ describe("classifyDeployChanges", () => {
         "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",
-      ].join("\n");
+      ].join("\0");
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -323,7 +330,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
-    const execFile = () => ".github/workflows/pages-release.yml\n";
+    const execFile = () => ".github/workflows/pages-release.yml\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -340,7 +347,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("skips the deploy path for docs-only push diffs", () => {
-    const execFile = () => "docs/testing.md\ndocs/process/notes.md\n";
+    const execFile = () => "docs/testing.md\0docs/process/notes.md\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -359,7 +366,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("validates test-only Pages changes without publishing them", () => {
-    const execFile = () => "src/components/__tests__/header.test.tsx\n";
+    const execFile = () => "src/components/__tests__/header.test.tsx\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -376,7 +383,7 @@ describe("classifyDeployChanges", () => {
   });
 
   it("publishes when production source is renamed into a test path", () => {
-    const execFile = () => "src/components/header.tsx\nsrc/components/__tests__/header.test.tsx\n";
+    const execFile = () => "src/components/header.tsx\0src/components/__tests__/header.test.tsx\0";
 
     const result = classifyDeployChanges({
       baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
@@ -393,7 +400,7 @@ describe("classifyDeployChanges", () => {
     const received: unknown[] = [];
     const execFile = (cmd: string, args: readonly string[]) => {
       received.push([cmd, args]);
-      return "src/app/page.tsx\n";
+      return "src/app/page.tsx\0";
     };
 
     classifyDeployChanges({
@@ -404,7 +411,7 @@ describe("classifyDeployChanges", () => {
     });
 
     expect(received).toEqual([
-      ["git", ["diff", "--name-only", "--no-renames", "aaa; touch /tmp/should-not-run...bbb && echo injected"]],
+      ["git", ["diff", "--name-only", "--no-renames", "-z", "aaa; touch /tmp/should-not-run...bbb && echo injected"]],
     ]);
   });
 });

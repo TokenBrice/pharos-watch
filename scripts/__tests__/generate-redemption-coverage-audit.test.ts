@@ -12,7 +12,7 @@ import {
   runCli,
   validateReviewedRedemptionDispositions,
 } from "../maintenance/generate-redemption-coverage-audit";
-import type { ReviewedRedemptionCoverageDisposition } from "../lib/redemption-coverage-dispositions";
+import type { ReviewedRedemptionCoverageDisposition } from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 import { makeCoverageCoin } from "./helpers/coverage-coin";
 
 const coin = (input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">) =>

@@ -1,11 +1,18 @@
+// ADR-2 has two halves. The frontend→worker half (`src/`, `shared/`,
+// `scripts/`, `functions/` must not import `worker/src/**`) is expressed as a
+// `no-restricted-imports` block in `eslint.config.mjs`, so it runs on every
+// changed file via `lint:changed` instead of only when a worker file moves.
+// This script keeps the half ESLint cannot express — the worker→frontend ban is
+// on *any* `@/` or `src/` specifier, not the enumerable `src/lib/*` shapes the
+// ESLint block lists — plus the waiver registry and its cross-checks.
 import { readFileSync } from "node:fs";
 import { collectSourceFiles } from "../lib/source-files.mjs";
 
 const WORKER_SRC_DIR = "worker/src";
+const ESLINT_CONFIG_PATH = "eslint.config.mjs";
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"]);
 const SOURCE_FILE_EXCLUDED_DIRS = new Set();
 const WORKER_TO_FRONTEND_IMPORT_PATTERN = /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
-const FRONTEND_TO_WORKER_IMPORT_PATTERN = /(?:from\s+["'][^"']*worker\/src\/|import\s*\(\s*["'][^"']*worker\/src\/)/;
 
 function formatMatches(matches) {
   for (const match of matches) {
@@ -21,7 +28,10 @@ function formatMatches(matches) {
 //
 // Every entry below MUST have a matching section in
 // `docs/process/boundary-waivers.md`. The invariant is enforced by
-// `scripts/__tests__/worker-boundary-waivers.test.ts`.
+// `scripts/__tests__/worker-boundary-waivers.test.ts`. Each entry's `file` must
+// also appear in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`,
+// which is where the frontend→worker rule now lives; `checkEslintWaiverSync()`
+// below fails the check if the two drift apart.
 const BOUNDARY_WAIVERS = [
   {
     id: "frozen-invariants-lifecycle-registry-check",
@@ -76,22 +86,41 @@ function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
   }
 }
 
+// The frontend→worker half is enforced by ESLint, so every waived file has to
+// be excluded there too. Assert the two lists agree; a waiver that is only
+// recorded here would silently stop being waived (and one that is only ignored
+// in the ESLint config would escape the cap and the documentation requirement).
+function checkEslintWaiverSync() {
+  let config;
+  try {
+    config = readFileSync(ESLINT_CONFIG_PATH, "utf8");
+  } catch (error) {
+    console.error(`[boundary] unable to read ${ESLINT_CONFIG_PATH}`);
+    console.error(error instanceof Error ? error.message : String(error));
+    return false;
+  }
+
+  const missing = BOUNDARY_WAIVERS.filter((waiver) => !config.includes(`"${waiver.file}"`));
+  if (missing.length > 0) {
+    console.error(
+      `[boundary] waiver drift: ${ESLINT_CONFIG_PATH} must ignore every BOUNDARY_WAIVERS file for the frontend→worker rule`,
+    );
+    for (const waiver of missing) console.error(`  ${waiver.id}: ${waiver.file}`);
+    return false;
+  }
+
+  return true;
+}
+
 const allWorkerOk = runBoundaryCheck("all worker sources", {
   rootDir: WORKER_SRC_DIR,
   excludeTests: false,
   forbiddenPattern: WORKER_TO_FRONTEND_IMPORT_PATTERN,
 });
 
-const appDirs = ["src", "shared", "scripts", "functions"];
-const allFrontendBoundaryOk = appDirs.every((dir) =>
-  runBoundaryCheck(`${dir} sources`, {
-    rootDir: dir,
-    excludeTests: false,
-    forbiddenPattern: FRONTEND_TO_WORKER_IMPORT_PATTERN,
-  }),
-);
+const waiversInSync = checkEslintWaiverSync();
 
-if (!allWorkerOk || !allFrontendBoundaryOk) {
+if (!allWorkerOk || !waiversInSync) {
   process.exit(1);
 }
 

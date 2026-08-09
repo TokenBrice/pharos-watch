@@ -3,6 +3,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
+import { reportViolations } from "../lib/report-violations.mjs";
 import { collectSourceFiles } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
 
@@ -132,12 +133,11 @@ for (const file of files) {
   }
 }
 
-if (errors.length > 0) {
-  console.error("Client stablecoin registry import check failed:");
-  for (const error of errors) {
-    console.error(`  ${error}`);
-  }
-  process.exit(1);
-}
-
-console.log(`Client stablecoin registry import check passed for ${files.length} source files.`);
+process.exit(
+  reportViolations({
+    label: "Client stablecoin registry imports",
+    heading: "Client stablecoin registry import check failed",
+    violations: errors,
+    scannedCount: files.length,
+  }),
+);

@@ -1,19 +1,12 @@
-import { readdirSync } from "node:fs";
-import { extname, join, resolve } from "node:path";
+import { resolve } from "node:path";
+import { collectSourceFiles } from "./source-files.mjs";
+
+// Documentation trees have no test/mock directories to skip, so the walker runs
+// with an empty exclusion set rather than the source-scanner default.
+const NO_EXCLUDED_DIRS = new Set();
 
 export function collectMarkdownFiles(rootDir) {
-  const files = [];
-  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
-    const entryPath = join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectMarkdownFiles(entryPath));
-      continue;
-    }
-    if (entry.isFile() && extname(entry.name) === ".md") {
-      files.push(entryPath);
-    }
-  }
-  return files;
+  return collectSourceFiles(rootDir, { extensions: [".md"], excludedDirs: NO_EXCLUDED_DIRS });
 }
 
 export function getVerifiedDocFiles(repoRoot = process.cwd()) {

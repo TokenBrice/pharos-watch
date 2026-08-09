@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mjs";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 
 /**
  * Enforces the AGENTS.md polling rule: cron-backed hooks must derive
@@ -112,19 +113,13 @@ export function scanHookPollingWindow({
 }
 
 export function printHookPollingWindowReport(report) {
-  if (report.violations.length > 0) {
-    process.stderr.write("Hook polling-window violations:\n\n");
-    for (const violation of report.violations) {
-      process.stderr.write(`  ${violation.file}: ${violation.reason}\n`);
-    }
-    process.stderr.write(
-      "\nDerive staleTime/refetchInterval from getPollingWindow(cronInterval) or createPollingQueryOptions(...).\n",
-    );
-    return 1;
-  }
-
-  process.stdout.write(formatScannedOk("Hook polling window", report.scannedFiles.length));
-  return 0;
+  return reportViolations({
+    label: "Hook polling window",
+    heading: "Hook polling-window violations",
+    violations: report.violations.map((violation) => `${violation.file}: ${violation.reason}`),
+    hint: "Derive staleTime/refetchInterval from getPollingWindow(cronInterval) or createPollingQueryOptions(...).",
+    scannedCount: report.scannedFiles.length,
+  });
 }
 
 export function main(argv = process.argv.slice(2), cwd = process.cwd()) {

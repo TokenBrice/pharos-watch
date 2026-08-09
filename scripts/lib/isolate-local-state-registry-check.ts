@@ -1,6 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import ts from "typescript";
+import { collectSourceFiles } from "./source-files.mjs";
+import { getScriptKind } from "./ts-ast.mjs";
 import type { IsolateLocalStateRegistryEntry } from "../../shared/lib/isolate-local-state-registry";
 
 export interface IsolateLocalStateCandidate {
@@ -13,16 +15,13 @@ const MUTABLE_CONSTRUCTOR = /new (?:Map|Set|WeakMap|WeakSet|IsolateLocalState)\b
 const RECORDER_FACTORY = /createBufferedAttributionRecorder\b/;
 const STATEFUL_CONTAINER_NAME = /(cache|counter|key|limiter|limit|state|promise|initialization|window|secret|queue|buffer|pending|inflight)/i;
 
+const STATE_SCAN_EXTENSIONS = new Set([".ts", ".tsx"]);
+const STATE_SCAN_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
+
 function listSourceFiles(root: string, sourcePath: string): string[] {
-  const absolutePath = resolve(root, sourcePath);
-  return readdirSync(absolutePath, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = resolve(absolutePath, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "__tests__" || entry.name === "__mocks__" || entry.name === "test-helpers"
-        ? []
-        : listSourceFiles(root, relative(root, entryPath));
-    }
-    return /\.(ts|tsx)$/.test(entry.name) ? [entryPath] : [];
+  return collectSourceFiles(resolve(root, sourcePath), {
+    extensions: STATE_SCAN_EXTENSIONS,
+    excludedDirs: STATE_SCAN_EXCLUDED_DIRS,
   });
 }
 
@@ -76,7 +75,13 @@ function isMutationOfCandidate(node: ts.Node, candidates: Map<string, boolean>):
 
 function findCandidatesInFile(root: string, file: string): IsolateLocalStateCandidate[] {
   const sourcePath = relative(root, file);
-  const source = ts.createSourceFile(sourcePath, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true);
+  const source = ts.createSourceFile(
+    sourcePath,
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    getScriptKind(file),
+  );
   const candidates = new Map<string, boolean>();
 
   for (const statement of source.statements) {

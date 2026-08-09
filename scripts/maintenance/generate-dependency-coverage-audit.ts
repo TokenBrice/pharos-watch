@@ -47,7 +47,7 @@ import {
   type DependencyAdapterMappingReview,
   type DependencyTargetDisposition,
   type DependencyTargetLifecycle,
-} from "../lib/dependency-target-dispositions";
+} from "@shared/data/coverage-dispositions/dependency-target-dispositions";
 
 const MISSING_CANDIDATE_LIMIT = 50;
 const RESERVE_SLICE_LIMIT = 50;

@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
+import { reportViolations } from "../lib/report-violations.mjs";
 import { collectSourceFiles } from "../lib/source-files.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -161,17 +162,18 @@ export function collectScriptEntrypointErrors({ root = process.cwd() } = {}) {
   return { errors, scannedFileCount: files.length };
 }
 
-export function runScriptEntrypointCheck({ root = process.cwd(), consoleImpl = console, exit = process.exit } = {}) {
+export function runScriptEntrypointCheck({ root = process.cwd(), exit = process.exit } = {}) {
   const { errors, scannedFileCount } = collectScriptEntrypointErrors({ root });
-  if (errors.length > 0) {
-    consoleImpl.error("Script entrypoint check failed:");
-    for (const error of errors) {
-      consoleImpl.error(`  ${error}`);
-    }
+  const status = reportViolations({
+    label: "Script entrypoint references",
+    heading: "Script entrypoint check failed",
+    violations: errors,
+    scannedCount: scannedFileCount,
+  });
+  if (status !== 0) {
     exit(1);
     return false;
   }
-  consoleImpl.log(`Script entrypoint references passed for ${scannedFileCount} files.`);
   return true;
 }
 

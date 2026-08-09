@@ -13,6 +13,7 @@ import {
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
@@ -86,10 +87,9 @@ export function isAllZeroSha(ref) {
 export function getChangedFilesFromGit(ref, { execFile = execFileSync, consoleImpl = console } = {}) {
   if (!ref || isAllZeroSha(ref)) return [];
   try {
-    const raw = execFile("git", ["diff", "--name-only", `${ref}...HEAD`], { encoding: "utf8" });
-    return raw
-      .split(/\r?\n/g)
-      .map((line) => normalizePath(line.trim()))
+    const raw = execFile("git", ["diff", "--name-only", "-z", `${ref}...HEAD`], { encoding: "utf8" });
+    return splitNullDelimited(raw)
+      .map((path) => normalizePath(path))
       .filter(Boolean);
   } catch (err) {
     const message = `[coverage] Could not diff against explicit ref "${ref}": ${String(err).slice(0, 200)}`;

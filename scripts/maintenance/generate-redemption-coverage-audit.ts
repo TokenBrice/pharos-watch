@@ -21,7 +21,7 @@ import {
   type RedemptionCoverageDisposition,
   type RedemptionCoverageReasonCode,
   type ReviewedRedemptionCoverageDisposition,
-} from "../lib/redemption-coverage-dispositions";
+} from "@shared/data/coverage-dispositions/redemption-coverage-dispositions";
 
 export type { RedemptionCoverageDisposition, RedemptionCoverageReasonCode };
 

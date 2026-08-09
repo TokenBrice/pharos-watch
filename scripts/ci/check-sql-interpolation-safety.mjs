@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mjs";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;
@@ -45,18 +46,13 @@ export function scanSqlInterpolationSafety(roots = DEFAULT_SQL_SAFETY_ROOTS, cwd
 }
 
 export function printSqlInterpolationSafetyReport(report) {
-  if (report.violations.length > 0) {
-    process.stderr.write("SQL interpolation sites missing allowlist validation or SAFETY comment:\n\n");
-    for (const violation of report.violations) {
-      process.stderr.write(`  ${violation.file}:${violation.line}: ${violation.text}\n`);
-    }
-    process.stderr.write(`\n${report.violations.length} violation(s) found.\n`);
-    process.stderr.write("Fix: add allowlist Set + .has() validation, or a // SAFETY: comment.\n");
-    return 1;
-  }
-
-  process.stdout.write(formatScannedOk("SQL interpolation safety", report.scannedFiles.length));
-  return 0;
+  return reportViolations({
+    label: "SQL interpolation safety",
+    heading: "SQL interpolation sites missing allowlist validation or SAFETY comment",
+    violations: report.violations.map((violation) => `${violation.file}:${violation.line}: ${violation.text}`),
+    hint: "Fix: add allowlist Set + .has() validation, or a // SAFETY: comment.",
+    scannedCount: report.scannedFiles.length,
+  });
 }
 
 export function parseSqlSafetyRoots(argv = process.argv.slice(2)) {

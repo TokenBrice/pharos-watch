@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 /** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
 
@@ -82,8 +83,7 @@ function readListingClassById(sourcePath = LISTING_DECISIONS_JSON_ABS) {
  * contract.
  */
 function readStringLiteralArrayExport(exportName, sourcePath = CLIENT_META_TS_ABS) {
-  const sourceText = readFileSync(sourcePath, "utf8");
-  const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const { sourceFile } = parseSourceFile(sourcePath);
   let fields = null;
 
   function unwrapExpression(expression) {

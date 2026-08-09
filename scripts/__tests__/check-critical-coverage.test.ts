@@ -63,14 +63,14 @@ describe("critical coverage changed-file detection", () => {
     const calls: unknown[] = [];
     const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
-      return "worker\\src\\api\\status.ts\n";
+      return "worker\\src\\api\\status.ts\0";
     });
 
     expect(
       getChangedFilesFromGit("origin/main; touch /tmp/should-not-run", { execFile }),
     ).toEqual(["worker/src/api/status.ts"]);
     expect(calls).toEqual([
-      ["git", ["diff", "--name-only", "origin/main; touch /tmp/should-not-run...HEAD"]],
+      ["git", ["diff", "--name-only", "-z", "origin/main; touch /tmp/should-not-run...HEAD"]],
     ]);
   });
 

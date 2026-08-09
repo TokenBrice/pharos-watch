@@ -375,7 +375,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test (41 files at relocation), including Picker route/component copy and checked-in worked examples.
 - `scripts/__tests__/weekly-curation-digest.test.ts` owns attestor-tier, coin one-liner, and mechanism-archetype coverage as an ordinary noncritical domain test. It reads authored per-coin entries and preserves the editorial rubric: all active/pre-launch coins need nonblank one-liners, more than 20% missing attestor tiers fails the independent-audit cohort, and unknown baseline IDs or more than 27% missing archetypes fails the fixed non-variant/non-frozen cohort.
 - `npm run audit:coverage -- --domain=redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
-- `npm run audit:coverage -- --domain=redemption-coverage --check` requires every active unconfigured asset to have a source-reviewed row in `scripts/lib/redemption-coverage-dispositions.ts`. It rejects missing, duplicate, unknown, inactive, configured-stale, and malformed reviews and ranks the queue by canonical market-cap order. The backlog counts are no longer ratcheted: a growing gap list is curation work, not a merge failure.
+- `npm run audit:coverage -- --domain=redemption-coverage --check` requires every active unconfigured asset to have a source-reviewed row in `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts`. It rejects missing, duplicate, unknown, inactive, configured-stale, and malformed reviews and ranks the queue by canonical market-cap order. The backlog counts are no longer ratcheted: a growing gap list is curation work, not a merge failure.
 - `worker/src/lib/__tests__/redemption-backstops-store.test.ts` now covers completed-run snapshot manifests for `redemption_backstop_runs`, including generation-filtered reads and current/history rows written with `snapshot_run_id`.
 
 ### Test style
@@ -528,6 +528,17 @@ describe("syncFxRates", () => {
 | `react-hooks/set-state-in-effect`         | error | Standard pattern for reading localStorage/sessionStorage on mount                            |
 | `react-hooks/purity`                      | error | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | error | TanStack Virtual `useVirtualizer()` — known library limitation                               |
+
+**Import boundaries** — `no-restricted-imports` blocks carry the lint-shaped architectural rules so they run on every changed file through `lint:changed` instead of a separate scanner:
+
+| Scope | Restriction |
+| ----- | ----------- |
+| `worker/src/**` | No bare `viem` or non-`viem/utils` subpaths; no `src/lib/*` / `@/lib/*` (ADR-2, worker→frontend half) |
+| `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). Waived files come from `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.mjs`, which cross-checks that each waived path is ignored in `eslint.config.mjs` |
+| `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
+| `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |
+
+Because flat config *replaces* a rule's options when several config objects match the same file, the blocks above compose their pattern lists from shared constants rather than relying on merging.
 
 **Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.claude/`, `.codex-autorunner/`, `agents/**`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
 
