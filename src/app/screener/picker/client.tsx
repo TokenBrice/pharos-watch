@@ -5,18 +5,11 @@ import {
   decodeSelectorState,
   highestValidStep,
   isValidSelectorSnapshotId,
-  preHighlightForDepeg,
-  shouldSkipExitStep,
   softConfirmationForHorizon,
   toSelectorInput,
   useSelectorState,
-  type SelectorDepeg,
-  type SelectorExit,
-  type SelectorHorizon,
-  type SelectorPeg,
   type SelectorProfile,
   type SelectorStep,
-  type SelectorVenue,
 } from "./selector-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -26,16 +19,10 @@ import { SelectorMobileForm } from "@/components/selector/selector-mobile-form";
 import type { SelectorOutput } from "@shared/lib/selector";
 import { ResultPane } from "./result-pane";
 import {
-  DEPEG_OPTIONS,
-  EXIT_OPTIONS,
-  HORIZON_OPTIONS,
-  LEGEND_BY_PROFILE_Q4,
-  PEG_OPTIONS,
   PROFILE_LABEL,
+  PROFILE_LEGEND,
   PROFILE_OPTIONS,
-  QUESTION_HELPER_COPY,
-  VENUE_OPTIONS_BY_PROFILE,
-  YIELD_PEG_SET,
+  SELECTOR_QUESTIONS,
   computeTotalSteps,
   stepLegend,
 } from "./picker-options";
@@ -86,11 +73,8 @@ export function SelectorClient() {
   const selector = useSelector(input, state.sid);
   const output = "output" in selector ? selector.output : null;
   const renderResult = state.step === "result" || state.sid != null;
-  const pegOptions = useMemo(
-    () => (state.profile === "yield" ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value)) : PEG_OPTIONS),
-    [state.profile],
-  );
-  const mobileCompletion = useMemo(() => computeMobileCompletion(state), [state]);
+  const profile = state.profile;
+  const totalSteps = computeTotalSteps(state.profile, state.horizon, state.depegTolerance);
   const restorableRun = useMemo(
     () => (hydrated && !restoreDismissed && isInitialSelectorState(state) ? readStoredSelectorRun() : null),
     [hydrated, restoreDismissed, state],
@@ -195,8 +179,7 @@ export function SelectorClient() {
     }
   }, [output]);
 
-  const showMobileForm =
-    hydrated && isMobile && typeof state.step === "number" && state.step >= 2 && state.profile != null;
+  const showMobileForm = hydrated && isMobile && typeof state.step === "number" && state.step >= 2;
   const tradingDataStaleExceeded = isTradingDataStale(output);
 
   if (!hydrated) {
@@ -241,8 +224,8 @@ export function SelectorClient() {
             ref={legendRef as React.Ref<HTMLLegendElement>}
             questionId="q1"
             step={1}
-            totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-            legend="What are you using this stablecoin for?"
+            totalSteps={totalSteps}
+            legend={PROFILE_LEGEND}
             options={PROFILE_OPTIONS}
             value={state.profile}
             onChange={(v) => dispatch({ type: "set-profile", value: v as SelectorProfile })}
@@ -251,29 +234,11 @@ export function SelectorClient() {
             }}
           />
         </>
-      ) : showMobileForm && state.profile ? (
+      ) : profile == null ? null : showMobileForm ? (
         <SelectorMobileForm
           state={state}
-          profile={state.profile}
-          pegOptions={pegOptions}
-          horizonOptions={HORIZON_OPTIONS}
-          depegOptions={DEPEG_OPTIONS}
-          venueOptions={VENUE_OPTIONS_BY_PROFILE[state.profile]}
-          exitOptions={EXIT_OPTIONS}
-          isVenueMulti={state.profile !== "treasury"}
-          preHighlightDepeg={preHighlightForDepeg(state.profile, state.horizon)}
-          legendQ2="Which peg currency should it target?"
-          legendQ3="How long do you plan to hold this position?"
-          legendQ4="How tight does the peg need to hold?"
-          legendQ5={LEGEND_BY_PROFILE_Q4[state.profile]}
-          legendQ6="If something goes wrong, how fast do you need to be out?"
-          helperQ3={QUESTION_HELPER_COPY[4]}
-          helperQ4={QUESTION_HELPER_COPY[5]}
-          onSetPeg={(v) => dispatch({ type: "set-peg", value: v })}
-          onSetHorizon={(v) => dispatch({ type: "set-horizon", value: v })}
-          onSetDepeg={(v) => dispatch({ type: "set-depeg", value: v })}
-          onSetVenue={(v) => dispatch({ type: "set-venue", value: v })}
-          onSetExit={(v) => dispatch({ type: "set-exit", value: v })}
+          profile={profile}
+          onAnswer={dispatch}
           onAdjustProfile={() =>
             dispatch({
               type: "restore-session",
@@ -281,116 +246,50 @@ export function SelectorClient() {
             })
           }
           onSeeResults={() => dispatch({ type: "advance-to-result" })}
-          {...mobileCompletion}
         />
-      ) : state.step === 2 && state.profile ? (
-        <SelectorQuestionCard<SelectorPeg>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q2"
-          step={2}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          profileLabel={PROFILE_LABEL[state.profile]}
-          legend="Which peg currency should it target?"
-          legendSubtext={
-            state.profile === "yield" ? "Yield is limited to pegs with benchmark and source coverage." : undefined
-          }
-          helper={QUESTION_HELPER_COPY[2]}
-          options={pegOptions}
-          value={state.pegCurrency}
-          onChange={(v) => dispatch({ type: "set-peg", value: v as SelectorPeg })}
-          onBack={handleBack}
-          onNext={() => dispatch({ type: "answer-peg", value: state.pegCurrency })}
-        />
-      ) : state.step === 3 && state.profile ? (
-        <SelectorQuestionCard<SelectorHorizon>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q3"
-          step={3}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          profileLabel={PROFILE_LABEL[state.profile]}
-          legend="How long do you plan to hold this position?"
-          helper={QUESTION_HELPER_COPY[3]}
-          options={HORIZON_OPTIONS}
-          value={state.horizon}
-          onChange={(v) => dispatch({ type: "set-horizon", value: v as SelectorHorizon })}
-          softConfirmation={
-            softConfirmationForHorizon(state.profile, state.horizon)
-              ? {
-                  triggerWhen: (state.profile === "trading" ? "6mplus" : "lt24h") as SelectorHorizon,
-                  message: softConfirmationForHorizon(state.profile, state.horizon)!.message,
-                  onContinue: () => {
-                    if (state.horizon) {
-                      dispatch({ type: "answer-horizon", value: state.horizon });
+      ) : (
+        SELECTOR_QUESTIONS.filter((question) => question.step === state.step).map((question) => {
+          const softConfirmation =
+            question.questionId === "q3" ? softConfirmationForHorizon(profile, state.horizon) : null;
+          return (
+            <SelectorQuestionCard
+              key={question.questionId}
+              ref={legendRef as React.Ref<HTMLLegendElement>}
+              questionId={question.questionId}
+              step={question.step}
+              totalSteps={totalSteps}
+              profileLabel={PROFILE_LABEL[profile]}
+              legend={question.legend(profile)}
+              legendSubtext={question.legendSubtext?.(profile)}
+              helper={question.helper}
+              options={question.options(profile)}
+              multi={question.multi?.(profile)}
+              value={question.value(state, profile)}
+              preHighlight={question.preHighlight?.(state, profile)}
+              onChange={(v) => dispatch(question.setAction(v))}
+              softConfirmation={
+                softConfirmation
+                  ? {
+                      triggerWhen: profile === "trading" ? "6mplus" : "lt24h",
+                      message: softConfirmation.message,
+                      onContinue: () => {
+                        if (state.horizon) {
+                          dispatch({ type: "answer-horizon", value: state.horizon });
+                        }
+                      },
+                      onChangeProfile: handleAdjust,
                     }
-                  },
-                  onChangeProfile: handleAdjust,
-                }
-              : undefined
-          }
-          onBack={handleBack}
-          onNext={() => {
-            if (state.horizon) dispatch({ type: "answer-horizon", value: state.horizon });
-          }}
-        />
-      ) : state.step === 4 && state.profile ? (
-        <SelectorQuestionCard<SelectorDepeg>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q4"
-          step={4}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          profileLabel={PROFILE_LABEL[state.profile]}
-          legend="How tight does the peg need to hold?"
-          helper={QUESTION_HELPER_COPY[4]}
-          options={DEPEG_OPTIONS}
-          value={state.depegTolerance}
-          onChange={(v) => dispatch({ type: "set-depeg", value: v as SelectorDepeg })}
-          preHighlight={preHighlightForDepeg(state.profile, state.horizon)}
-          onBack={handleBack}
-          onNext={() => {
-            if (state.depegTolerance) dispatch({ type: "answer-depeg", value: state.depegTolerance });
-          }}
-        />
-      ) : state.step === 5 && state.profile ? (
-        <SelectorQuestionCard<SelectorVenue>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q5"
-          step={5}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          profileLabel={PROFILE_LABEL[state.profile]}
-          legend={LEGEND_BY_PROFILE_Q4[state.profile]}
-          helper={QUESTION_HELPER_COPY[5]}
-          options={VENUE_OPTIONS_BY_PROFILE[state.profile]}
-          multi={state.profile !== "treasury"}
-          value={state.profile === "treasury" ? (state.venue[0] ?? null) : state.venue}
-          onChange={(v) => {
-            const next = Array.isArray(v) ? v : [v as SelectorVenue];
-            dispatch({ type: "set-venue", value: next });
-          }}
-          onBack={handleBack}
-          onNext={() => {
-            if (state.venue.length > 0) {
-              dispatch({ type: "answer-venue", value: state.venue });
-            }
-          }}
-        />
-      ) : state.step === 6 && state.profile ? (
-        <SelectorQuestionCard<SelectorExit>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q6"
-          step={6}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          profileLabel={PROFILE_LABEL[state.profile]}
-          legend="If something goes wrong, how fast do you need to be out?"
-          helper={QUESTION_HELPER_COPY[6]}
-          options={EXIT_OPTIONS}
-          value={state.exitSpeed}
-          onChange={(v) => dispatch({ type: "set-exit", value: v as SelectorExit })}
-          onBack={handleBack}
-          onNext={() => {
-            if (state.exitSpeed) dispatch({ type: "answer-exit", value: state.exitSpeed });
-          }}
-        />
-      ) : null}
+                  : undefined
+              }
+              onBack={handleBack}
+              onNext={() => {
+                const action = question.answerAction(state);
+                if (action) dispatch(action);
+              }}
+            />
+          );
+        })
+      )}
     </div>
   );
 }
@@ -474,36 +373,6 @@ function isTradingDataStale(output: SelectorOutput | null): boolean {
       return ageSeconds > limit;
     });
   });
-}
-
-function computeMobileCompletion(state: {
-  pegCurrency: SelectorPeg | null;
-  profile: SelectorProfile | null;
-  horizon: SelectorHorizon | null;
-  depegTolerance: SelectorDepeg | null;
-  venue: readonly SelectorVenue[];
-  exitSpeed: SelectorExit | null;
-}): {
-  answeredCount: number;
-  requiredCount: number;
-  completionLabel: string;
-} {
-  const skipExit = shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance);
-  const requiredCount = skipExit ? 4 : 5;
-  const answeredCount = [
-    state.pegCurrency != null,
-    state.horizon != null,
-    state.depegTolerance != null,
-    state.venue.length > 0,
-    skipExit || state.exitSpeed != null,
-  ]
-    .slice(0, requiredCount)
-    .filter(Boolean).length;
-  return {
-    answeredCount,
-    requiredCount,
-    completionLabel: `${answeredCount} of ${requiredCount} answers complete`,
-  };
 }
 
 function formatTimestamp(timestamp: number): string {

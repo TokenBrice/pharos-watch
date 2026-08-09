@@ -2,25 +2,16 @@
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { AnchorHTMLAttributes, ReactNode } from "react";
 
 import { CoverageMatrixCard, CoverageMobileResults } from "./coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
 import type { StablecoinMeta } from "@shared/types";
 
-type MockLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
-  href: string | { pathname?: string };
-  children: ReactNode;
-};
-
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: MockLinkProps) => (
-    <a href={typeof href === "string" ? href : (href.pathname ?? "")} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 vi.mock("@/hooks/use-is-mobile", () => ({
   useIsMobile: () => false,

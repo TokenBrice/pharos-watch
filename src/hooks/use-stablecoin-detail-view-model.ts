@@ -13,6 +13,7 @@ import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useQuerySlice, useQuerySlices } from "@/hooks/use-query-slice";
 import { refetchQueryGroup, type QueryRefetchFn } from "@/lib/query-refetch-group";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import {
@@ -52,102 +53,89 @@ export function useStablecoinDetailViewModel({
   logoSrc,
   supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
-  const {
-    data: supplyData,
-    isLoading: supplyLoading,
-    error: supplyError,
-    dataUpdatedAt: supplyUpdatedAt,
-    refetch: refetchSupply,
-  } = useSupplyHistory(id);
-  const {
-    data: listData,
-    isLoading: listLoading,
-    isError: isListError,
-    error: listError,
-    dataUpdatedAt: listUpdatedAt,
-    refetch: refetchList,
-    meta: listMeta,
-  } = useStablecoins();
-  const {
-    data: pegSummaryData,
-    dataUpdatedAt: pegUpdatedAt,
-    error: pegError,
-    refetch: refetchPeg,
-    meta: pegMeta,
-  } = usePegSummary();
-  const {
-    data: liquidityMap,
-    isLoading: liquidityLoading,
-    dataUpdatedAt: liqUpdatedAt,
-    error: liquidityError,
-    refetch: refetchLiquidity,
-    meta: liquidityMeta,
-  } = useDexLiquidity();
-  const {
-    data: reportCardsData,
-    dataUpdatedAt: rcUpdatedAt,
-    error: reportCardsError,
-    refetch: refetchReportCards,
-    meta: reportCardsMeta,
-  } = useReportCardsV9();
-  const {
-    data: redemptionBackstopsData,
-    dataUpdatedAt: rbUpdatedAt,
-    error: redemptionBackstopsError,
-    refetch: refetchRedemptionBackstops,
-    meta: redemptionBackstopsMeta,
-  } = useRedemptionBackstops();
-  const {
-    data: yieldRankingsData,
-    isLoading: yieldRankingsLoading,
-    error: yieldRankingsError,
-    dataUpdatedAt: yieldRankingsUpdatedAt,
-    refetch: refetchYieldRankings,
-    meta: yieldRankingsMeta,
-  } = useYieldRankings();
-  const {
-    data: stressSignalsData,
-    isLoading: stressSignalsLoading,
-    error: stressSignalsError,
-    dataUpdatedAt: stressSignalsUpdatedAt,
-    refetch: refetchStressSignals,
-    meta: stressSignalsMeta,
-  } = useStressSignals();
+  const supplyQuery = useSupplyHistory(id);
+  const listQuery = useStablecoins();
+  const pegQuery = usePegSummary();
+  const liquidityQuery = useDexLiquidity();
+  const reportCardsQuery = useReportCardsV9();
+  const redemptionBackstopsQuery = useRedemptionBackstops();
+  const yieldRankingsQuery = useYieldRankings();
+  const stressSignalsQuery = useStressSignals();
   const flowsEnabled = supplementalQueryControls?.flows ?? true;
   const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
   const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
   const reservesEnabled = !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
-  const {
-    data: flowsData,
-    isLoading: isFlowsLoading,
-    error: flowsError,
-    dataUpdatedAt: flowsUpdatedAt,
-    meta: flowsMeta,
-    refetch: refetchFlows,
-  } = useMintBurnFlows(24, { enabled: flowsEnabled });
-  const {
-    data: blacklistSummary,
-    isLoading: isBlacklistLoading,
-    error: blacklistError,
-    dataUpdatedAt: blacklistUpdatedAt,
-    meta: blacklistMeta,
-    refetch: refetchBlacklist,
-  } = useBlacklistSummary({ enabled: blacklistEnabled });
+  const flowsQuery = useMintBurnFlows(24, { enabled: flowsEnabled });
+  const blacklistQuery = useBlacklistSummary({ enabled: blacklistEnabled });
   const liveReserves = useStablecoinReserves(id, reservesEnabled);
+
+  const queries = useQuerySlices({
+    supplyHistory: supplyQuery,
+    stablecoinList: listQuery,
+    pegSummary: pegQuery,
+    dexLiquidity: liquidityQuery,
+    reportCards: reportCardsQuery,
+    redemptionBackstops: redemptionBackstopsQuery,
+  });
+  const yieldRankings = useQuerySlice(yieldRankingsQuery);
+  const stressSignals = useQuerySlice(stressSignalsQuery);
+  const flowsSlice = useQuerySlice(flowsQuery);
+  const blacklistSlice = useQuerySlice(blacklistQuery);
+
+  // The three supplemental lanes are query-gated: when disabled they must present as an
+  // inert resource rather than as a stale one, which is the `enabled` fan-out below.
+  const flows = useMemo(
+    () => ({
+      data: flowsEnabled ? flowsSlice.data : undefined,
+      isLoading: flowsEnabled && flowsSlice.isLoading,
+      error: flowsEnabled ? flowsSlice.error : null,
+      dataUpdatedAt: flowsEnabled ? flowsSlice.dataUpdatedAt : 0,
+      meta: flowsEnabled ? flowsSlice.meta : null,
+      enabled: flowsEnabled,
+    }),
+    [flowsEnabled, flowsSlice],
+  );
+  const blacklist = useMemo(
+    () => ({
+      summary: blacklistEnabled ? blacklistSlice.data : undefined,
+      isLoading: blacklistEnabled && blacklistSlice.isLoading,
+      error: blacklistEnabled ? blacklistSlice.error : null,
+      dataUpdatedAt: blacklistEnabled ? blacklistSlice.dataUpdatedAt : 0,
+      meta: blacklistEnabled ? blacklistSlice.meta : null,
+      enabled: blacklistEnabled,
+    }),
+    [blacklistEnabled, blacklistSlice],
+  );
+  const reserves = useMemo(
+    () => ({
+      live: reservesEnabled ? liveReserves.reserveResult : null,
+      error: reservesEnabled ? liveReserves.error : null,
+      dataUpdatedAt: reservesEnabled ? liveReserves.dataUpdatedAt : 0,
+      isLoading: reservesEnabled && liveReserves.isLoading,
+      enabled: reservesEnabled,
+    }),
+    [
+      reservesEnabled,
+      liveReserves.reserveResult,
+      liveReserves.error,
+      liveReserves.dataUpdatedAt,
+      liveReserves.isLoading,
+    ],
+  );
 
   const handleRetryAll = useCallback(() => {
     return refetchQueryGroup(
       [
-        refetchSupply,
-        refetchList,
-        refetchPeg,
-        refetchLiquidity,
-        refetchReportCards,
-        refetchRedemptionBackstops,
-        refetchYieldRankings,
-        refetchStressSignals,
-        ...(flowsEnabled ? [refetchFlows] : []),
-        ...(blacklistEnabled ? [refetchBlacklist] : []),
+        supplyQuery.refetch,
+        listQuery.refetch,
+        pegQuery.refetch,
+        liquidityQuery.refetch,
+        reportCardsQuery.refetch,
+        redemptionBackstopsQuery.refetch,
+        yieldRankingsQuery.refetch,
+        stressSignalsQuery.refetch,
+        ...(flowsEnabled ? [flowsQuery.refetch] : []),
+        ...(blacklistEnabled ? [blacklistQuery.refetch] : []),
         ...(reservesEnabled ? [liveReserves.refetch] : []),
       ],
       {
@@ -158,109 +146,25 @@ export function useStablecoinDetailViewModel({
     liveReserves.refetch,
     blacklistEnabled,
     flowsEnabled,
-    refetchBlacklist,
-    refetchFlows,
-    refetchLiquidity,
-    refetchList,
-    refetchPeg,
-    refetchRedemptionBackstops,
-    refetchReportCards,
-    refetchStressSignals,
-    refetchSupply,
-    refetchYieldRankings,
+    blacklistQuery.refetch,
+    flowsQuery.refetch,
+    liquidityQuery.refetch,
+    listQuery.refetch,
+    pegQuery.refetch,
+    redemptionBackstopsQuery.refetch,
+    reportCardsQuery.refetch,
+    stressSignalsQuery.refetch,
+    supplyQuery.refetch,
+    yieldRankingsQuery.refetch,
     reservesEnabled,
   ]);
 
   const viewModel = useMemo(
     () =>
       buildStablecoinDetailViewModel({
-        core: {
-          id,
-          coin,
-          summary,
-          logoSrc,
-          handleRetryAll,
-        },
-        queries: {
-          supplyHistory: {
-            data: supplyData,
-            isLoading: supplyLoading,
-            error: supplyError,
-            dataUpdatedAt: supplyUpdatedAt,
-          },
-          stablecoinList: {
-            data: listData,
-            isLoading: listLoading,
-            isError: isListError,
-            error: listError,
-            dataUpdatedAt: listUpdatedAt,
-            meta: listMeta,
-          },
-          pegSummary: {
-            data: pegSummaryData,
-            dataUpdatedAt: pegUpdatedAt,
-            error: pegError,
-            meta: pegMeta,
-          },
-          dexLiquidity: {
-            data: liquidityMap,
-            isLoading: liquidityLoading,
-            dataUpdatedAt: liqUpdatedAt,
-            error: liquidityError,
-            meta: liquidityMeta,
-          },
-          reportCards: {
-            data: reportCardsData,
-            dataUpdatedAt: rcUpdatedAt,
-            error: reportCardsError,
-            meta: reportCardsMeta,
-          },
-          redemptionBackstops: {
-            data: redemptionBackstopsData,
-            dataUpdatedAt: rbUpdatedAt,
-            error: redemptionBackstopsError,
-            meta: redemptionBackstopsMeta,
-          },
-        },
-        supplemental: {
-          yieldRankings: {
-            data: yieldRankingsData,
-            isLoading: yieldRankingsLoading,
-            error: yieldRankingsError,
-            dataUpdatedAt: yieldRankingsUpdatedAt,
-            meta: yieldRankingsMeta,
-          },
-          stressSignals: {
-            data: stressSignalsData,
-            isLoading: stressSignalsLoading,
-            error: stressSignalsError,
-            dataUpdatedAt: stressSignalsUpdatedAt,
-            meta: stressSignalsMeta,
-          },
-          flows: {
-            data: flowsEnabled ? flowsData : undefined,
-            isLoading: flowsEnabled && isFlowsLoading,
-            error: flowsEnabled ? flowsError : null,
-            dataUpdatedAt: flowsEnabled ? flowsUpdatedAt : 0,
-            meta: flowsEnabled ? flowsMeta : null,
-            enabled: flowsEnabled,
-          },
-          blacklist: {
-            summary: blacklistEnabled ? blacklistSummary : undefined,
-            isLoading: blacklistEnabled && isBlacklistLoading,
-            error: blacklistEnabled ? blacklistError : null,
-            dataUpdatedAt: blacklistEnabled ? blacklistUpdatedAt : 0,
-            meta: blacklistEnabled ? blacklistMeta : null,
-            enabled: blacklistEnabled,
-          },
-          reserves: {
-            live: reservesEnabled ? liveReserves.reserveResult : null,
-            error: reservesEnabled ? liveReserves.error : null,
-            dataUpdatedAt: reservesEnabled ? liveReserves.dataUpdatedAt : 0,
-            isLoading: reservesEnabled && liveReserves.isLoading,
-            enabled: reservesEnabled,
-          },
-        },
+        core: { id, coin, summary, logoSrc, handleRetryAll },
+        queries,
+        supplemental: { yieldRankings, stressSignals, flows, blacklist, reserves },
       }),
     [
       id,
@@ -268,60 +172,12 @@ export function useStablecoinDetailViewModel({
       summary,
       logoSrc,
       handleRetryAll,
-      supplyData,
-      supplyLoading,
-      supplyError,
-      supplyUpdatedAt,
-      listData,
-      listLoading,
-      isListError,
-      listError,
-      listUpdatedAt,
-      listMeta,
-      pegSummaryData,
-      pegUpdatedAt,
-      pegError,
-      pegMeta,
-      liquidityMap,
-      liquidityLoading,
-      liqUpdatedAt,
-      liquidityError,
-      liquidityMeta,
-      reportCardsData,
-      rcUpdatedAt,
-      reportCardsError,
-      reportCardsMeta,
-      redemptionBackstopsData,
-      rbUpdatedAt,
-      redemptionBackstopsError,
-      redemptionBackstopsMeta,
-      yieldRankingsData,
-      yieldRankingsLoading,
-      yieldRankingsError,
-      yieldRankingsUpdatedAt,
-      yieldRankingsMeta,
-      stressSignalsData,
-      stressSignalsLoading,
-      stressSignalsError,
-      stressSignalsUpdatedAt,
-      stressSignalsMeta,
-      flowsEnabled,
-      flowsData,
-      isFlowsLoading,
-      flowsError,
-      flowsUpdatedAt,
-      flowsMeta,
-      blacklistEnabled,
-      blacklistSummary,
-      isBlacklistLoading,
-      blacklistError,
-      blacklistUpdatedAt,
-      blacklistMeta,
-      reservesEnabled,
-      liveReserves.reserveResult,
-      liveReserves.error,
-      liveReserves.dataUpdatedAt,
-      liveReserves.isLoading,
+      queries,
+      yieldRankings,
+      stressSignals,
+      flows,
+      blacklist,
+      reserves,
     ],
   );
 

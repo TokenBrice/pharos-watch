@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS, getEndpointOpsProxyTimeoutMs } from "@shared/lib/api-endpoints";
 import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
+import type { OpsAdminProxyEnv } from "../lib/ops-env";
+import { makePagesProxyContext } from "./helpers/pages-context";
 import {
   matchesHttpResponseObservation,
   observeHttpResponse,
@@ -23,6 +25,11 @@ const BASE_ENV = {
   OPS_API_SERVICE_TOKEN_ID: "id",
   OPS_API_SERVICE_TOKEN_SECRET: "secret",
 };
+
+/** Pages context bag for the `/api/admin/[[path]]` catch-all. */
+function adminContext(request: Request, env: OpsAdminProxyEnv = BASE_ENV) {
+  return makePagesProxyContext({ request, env, mountPath: "/api/admin" });
+}
 
 function readFetchInit(fetchSpy: unknown): RequestInit {
   const calls = (fetchSpy as { mock: { calls: Array<unknown[]> } }).mock.calls;
@@ -89,11 +96,7 @@ describe("ops admin proxy", () => {
           }),
       ),
     );
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
     const observed = await observeHttpResponse(response, [
       "Cache-Control",
       "CDN-Cache-Control",
@@ -117,22 +120,14 @@ describe("ops admin proxy", () => {
   });
 
   it("rejects requests from non-ops hosts", async () => {
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(new Request("https://pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
 
   it("rejects non-allowlisted admin paths", async () => {
-    const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/not-real"),
-      env: BASE_ENV,
-      params: { path: "not-real" },
-    });
+    const response = await onRequest(adminContext(new Request("https://ops.pharos.watch/api/admin/not-real")));
 
     expect(response.status).toBe(404);
   });
@@ -141,11 +136,7 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(new Request("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(401);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -158,11 +149,7 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     verifyAccessJwtUserIdentity.mockResolvedValueOnce(null);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
@@ -179,11 +166,9 @@ describe("ops admin proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeCookieAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(
+      adminContext(makeCookieAuthedRequest("https://ops.pharos.watch/api/admin/status")),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -213,13 +198,11 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status", {
+    const response = await onRequest(
+      adminContext(new Request("https://ops.pharos.watch/api/admin/status", {
         headers: { "cf-access-token": "valid-access-token" },
-      }),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     expect(verifyAccessJwtUserIdentity).toHaveBeenCalledWith({
@@ -239,13 +222,11 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
         headers: { "Cf-Access-Authenticated-User-Email": "spoofed@evil.example" },
-      }),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     const upstreamInit = readFetchInit(fetchSpy);
@@ -258,11 +239,9 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/backfill-depegs", { method: "GET" }),
-      env: BASE_ENV,
-      params: { path: "backfill-depegs" },
-    });
+    const response = await onRequest(
+      adminContext(new Request("https://ops.pharos.watch/api/admin/backfill-depegs", { method: "GET" })),
+    );
 
     expect(response.status).toBe(405);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -274,13 +253,11 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
-      }),
-      env: BASE_ENV,
-      params: { path: ["api-keys", "42", "update"] },
-    });
+      })),
+    );
 
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: "Forbidden" });
@@ -291,14 +268,12 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
         headers: { Origin: "https://evil.example" },
-      }),
-      env: BASE_ENV,
-      params: { path: ["api-keys", "42", "update"] },
-    });
+      })),
+    );
 
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: "Forbidden" });
@@ -315,14 +290,12 @@ describe("ops admin proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
         headers: { Origin: "https://ops.pharos.watch" },
-      }),
-      env: BASE_ENV,
-      params: { path: ["api-keys", "42", "update"] },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -337,13 +310,11 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeStreamedAuthedPost(["{}"], {
+    const response = await onRequest(
+      adminContext(makeStreamedAuthedPost(["{}"], {
         "Content-Length": String(MAX_OPS_ADMIN_REQUEST_BODY_BYTES + 1),
-      }),
-      env: BASE_ENV,
-      params: { path: "backfill-depegs" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({ error: "Request body too large" });
@@ -359,11 +330,7 @@ describe("ops admin proxy", () => {
     });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeStreamedAuthedPost(['{"dry', 'Run":true}']),
-      env: BASE_ENV,
-      params: { path: "backfill-depegs" },
-    });
+    const response = await onRequest(adminContext(makeStreamedAuthedPost(['{"dry', 'Run":true}'])));
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -377,11 +344,9 @@ describe("ops admin proxy", () => {
     });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeStreamedAuthedPost(["x".repeat(MAX_OPS_ADMIN_REQUEST_BODY_BYTES), "x"]),
-      env: BASE_ENV,
-      params: { path: "backfill-depegs" },
-    });
+    const response = await onRequest(
+      adminContext(makeStreamedAuthedPost(["x".repeat(MAX_OPS_ADMIN_REQUEST_BODY_BYTES), "x"])),
+    );
 
     expect(response.status).toBe(413);
     expect(await response.json()).toEqual({ error: "Request body too large" });
@@ -399,11 +364,9 @@ describe("ops admin proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin?limit=1"),
-      env: BASE_ENV,
-      params: { path: "api-key-requests-admin" },
-    });
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin?limit=1")),
+    );
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -427,18 +390,16 @@ describe("ops admin proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/reject", {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/reject", {
         method: "POST",
         headers: {
           Origin: "https://ops.pharos.watch",
           "Idempotency-Key": "idem-123",
           "X-Pharos-Admin": "1",
         },
-      }),
-      env: BASE_ENV,
-      params: { path: ["api-key-requests-admin", "akr_abc12345", "reject"] },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Idempotency-Key")).toBe("idem-123");
@@ -463,17 +424,15 @@ describe("ops admin proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest(
+    const response = await onRequest(
+      adminContext(makeAuthedRequest(
         "https://ops.pharos.watch/api/admin/api-key-requests-admin/akr_abc12345/release-claim",
         {
           method: "POST",
           headers: { Origin: "https://ops.pharos.watch" },
         },
-      ),
-      env: BASE_ENV,
-      params: { path: ["api-key-requests-admin", "akr_abc12345", "release-claim"] },
-    });
+      )),
+    );
 
     expect(response.status).toBe(403);
     const headers = new Headers(readFetchInit(fetchSpy).headers);
@@ -485,14 +444,12 @@ describe("ops admin proxy", () => {
   });
 
   it("returns 500 when the service-token pair is incomplete", async () => {
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status"), {
         ...BASE_ENV,
         OPS_API_SERVICE_TOKEN_SECRET: undefined,
-      },
-      params: { path: "status" },
-    });
+      }),
+    );
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Ops API proxy is not configured" });
@@ -502,11 +459,12 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: { ...BASE_ENV, OPS_API_ORIGIN: "https://attacker.example" },
-      params: { path: "status" },
-    });
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status"), {
+        ...BASE_ENV,
+        OPS_API_ORIGIN: "https://attacker.example",
+      }),
+    );
 
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -517,14 +475,12 @@ describe("ops admin proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: {
+    const response = await onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status"), {
         ...BASE_ENV,
         CF_ACCESS_OPS_UI_AUD: undefined,
-      },
-      params: { path: "status" },
-    });
+      }),
+    );
 
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "Ops UI Access validation is not configured" });
@@ -543,11 +499,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream auth failed" });
@@ -565,11 +517,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBeNull();
@@ -587,11 +535,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBeNull();
@@ -612,11 +556,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(503);
     expect(response.headers.get("Retry-After")).toBe("60");
@@ -633,11 +573,7 @@ describe("ops admin proxy", () => {
       }),
     );
 
-    const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream fetch failed" });
@@ -658,11 +594,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const responsePromise = onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     await vi.advanceTimersByTimeAsync(20_000);
 
@@ -688,11 +620,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
-      env: BASE_ENV,
-      params: { path: "status" },
-    });
+    const responsePromise = onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
 
     await vi.advanceTimersByTimeAsync(20_000);
 
@@ -722,11 +650,9 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status-history?limit=10"),
-      env: BASE_ENV,
-      params: { path: "status-history" },
-    });
+    const responsePromise = onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status-history?limit=10")),
+    );
 
     await vi.advanceTimersByTimeAsync(20_000);
 
@@ -749,11 +675,9 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/audit-depeg-history?dry-run=true"),
-      env: BASE_ENV,
-      params: { path: "audit-depeg-history" },
-    });
+    const responsePromise = onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/audit-depeg-history?dry-run=true")),
+    );
 
     await vi.advanceTimersByTimeAsync(45_000);
 
@@ -776,11 +700,9 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/request-source-stats"),
-      env: BASE_ENV,
-      params: { path: "request-source-stats" },
-    });
+    const responsePromise = onRequest(
+      adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/request-source-stats")),
+    );
 
     await vi.advanceTimersByTimeAsync(10_000);
 

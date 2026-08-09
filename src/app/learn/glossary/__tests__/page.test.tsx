@@ -1,5 +1,4 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import GlossaryPage from "../page";
 import { GLOSSARY_ENTRIES } from "../content";
@@ -9,13 +8,10 @@ vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ children, href, className }: { children: ReactNode; href: string; className?: string }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 vi.mock("@/lib/page-metadata", () => ({
   buildPageMetadata: (input: unknown) => input,

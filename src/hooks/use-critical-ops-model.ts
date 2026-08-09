@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useHealth } from "@/hooks/api-hooks";
+import { useQuerySlices } from "@/hooks/use-query-slice";
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useStatus } from "@/hooks/use-status";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
@@ -63,11 +64,12 @@ export function useCriticalOpsModel() {
   const statusQuery = useStatus();
   const healthQuery = useHealth();
   const probesQuery = useEndpointProbes({ mode: "critical" });
-  const nowMs = useStalenessBoundaryNow([
-    statusQuery.dataUpdatedAt,
-    healthQuery.dataUpdatedAt,
-    probesQuery.dataUpdatedAt,
-  ]);
+  const { status, health, probes } = useQuerySlices({
+    status: statusQuery,
+    health: healthQuery,
+    probes: probesQuery,
+  });
+  const nowMs = useStalenessBoundaryNow([status.dataUpdatedAt, health.dataUpdatedAt, probes.dataUpdatedAt]);
 
   const handleRefresh = useCallback(() => {
     void refetchQueryGroup([statusQuery.refetch, healthQuery.refetch, probesQuery.refetch], {
@@ -75,38 +77,30 @@ export function useCriticalOpsModel() {
     });
   }, [healthQuery.refetch, probesQuery.refetch, statusQuery.refetch]);
 
-  const requiredUpdatedAt = [statusQuery.dataUpdatedAt, healthQuery.dataUpdatedAt, probesQuery.dataUpdatedAt];
+  const requiredUpdatedAt = [status.dataUpdatedAt, health.dataUpdatedAt, probes.dataUpdatedAt];
   const hasCompleteRequiredEvidence =
-    statusQuery.data != null &&
-    healthQuery.data != null &&
-    probesQuery.data !== undefined &&
+    status.data != null &&
+    health.data != null &&
+    probes.data !== undefined &&
     requiredUpdatedAt.every((value) => value > 0);
   const lastUpdated = hasCompleteRequiredEvidence ? Math.min(...requiredUpdatedAt) : 0;
-  const initialLoadError = statusQuery.data == null && statusQuery.error instanceof Error ? statusQuery.error : null;
-  const backgroundStatusError =
-    statusQuery.data != null && statusQuery.error instanceof Error ? statusQuery.error : null;
-
-  const statusData = statusQuery.data;
-  const healthData = healthQuery.data;
-  const probesData = probesQuery.data;
-  const healthError = healthQuery.error instanceof Error ? healthQuery.error : null;
-  const probesError = probesQuery.error instanceof Error ? probesQuery.error : null;
-  const statusUpdatedAt = statusQuery.dataUpdatedAt;
-  const healthUpdatedAt = healthQuery.dataUpdatedAt;
-  const probesUpdatedAt = probesQuery.dataUpdatedAt;
+  const initialLoadError = status.data == null && status.error instanceof Error ? status.error : null;
+  const backgroundStatusError = status.data != null && status.error instanceof Error ? status.error : null;
+  const healthError = health.error instanceof Error ? health.error : null;
+  const probesError = probes.error instanceof Error ? probes.error : null;
 
   const model = useMemo(
     () =>
-      statusData
+      status.data
         ? buildStatusDashboardData({
-            data: statusData,
-            healthData,
-            probes: probesData,
+            data: status.data,
+            healthData: health.data,
+            probes: probes.data,
             probeLabel: "Critical browser probes",
             querySyncs: {
-              statusUpdatedAt,
-              healthUpdatedAt,
-              probesUpdatedAt,
+              statusUpdatedAt: status.dataUpdatedAt,
+              healthUpdatedAt: health.dataUpdatedAt,
+              probesUpdatedAt: probes.dataUpdatedAt,
               historyUpdatedAt: 0,
               requestSourceUpdatedAt: 0,
             },
@@ -119,30 +113,19 @@ export function useCriticalOpsModel() {
             historyTransitions: undefined,
           })
         : null,
-    [
-      backgroundStatusError,
-      healthData,
-      healthError,
-      healthUpdatedAt,
-      nowMs,
-      probesData,
-      probesError,
-      probesUpdatedAt,
-      statusData,
-      statusUpdatedAt,
-    ],
+    [backgroundStatusError, health, healthError, nowMs, probes, probesError, status],
   );
 
   return {
     backgroundStatusError,
-    data: statusQuery.data,
+    data: status.data,
     handleRefresh,
-    healthData: healthQuery.data,
+    healthData: health.data,
     initialLoadError,
-    isLoading: statusQuery.isLoading,
+    isLoading: status.isLoading,
     lastUpdated,
     model,
-    probes: probesQuery.data,
-    probesLoading: probesQuery.isLoading,
+    probes: probes.data,
+    probesLoading: probes.isLoading,
   };
 }

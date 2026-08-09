@@ -140,7 +140,6 @@ export function useContagionGraphModel({
   focusCoinId,
   maxNodes,
 }: UseContagionGraphModelOptions) {
-  const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
   const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
@@ -191,7 +190,7 @@ export function useContagionGraphModel({
     () => buildSimulationKey(nodes, links.length, supernodeState.tierById),
     [links.length, nodes, supernodeState.tierById],
   );
-  const drag = useContagionGraphDrag({ svgRef, nodeMap, basePositions, simulationKey });
+  const drag = useContagionGraphDrag({ nodeMap, basePositions, simulationKey });
   const resolvedLinks = useMemo(
     () => resolveGraphLinks(links, supernodeState.tierById),
     [links, supernodeState.tierById],
@@ -223,7 +222,7 @@ export function useContagionGraphModel({
   }, []);
 
   const handleNodeKeyDown = useCallback(
-    (event: React.KeyboardEvent, nodeId: string) => {
+    (event: React.KeyboardEvent<SVGGElement>, nodeId: string) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         setSelectedNeighborhoodId(nodeId);
@@ -239,8 +238,10 @@ export function useContagionGraphModel({
         links: resolvedLinks,
         positions: drag.positions,
       });
+      // Resolved from the event's own <svg> so the inline card and the fullscreen dialog each
+      // move focus inside the stage the key press came from.
       const target = bestId
-        ? (svgRef.current?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null)
+        ? (event.currentTarget.ownerSVGElement?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null)
         : null;
       target?.focus();
     },
@@ -298,7 +299,6 @@ export function useContagionGraphModel({
   }, [handleClearSelection]);
 
   return {
-    svgRef,
     nodes,
     supernodeState,
     focusMode,

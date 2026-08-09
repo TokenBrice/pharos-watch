@@ -1,15 +1,13 @@
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 
 import { ARCHETYPE_CONTENT } from "@/app/learn/mechanisms/content";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 import { ArchetypeExplainerBody } from "@/app/learn/mechanisms/explainer-shell";
 

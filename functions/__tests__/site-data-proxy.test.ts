@@ -8,6 +8,7 @@ import {
   observeHttpResponse,
   type HttpResponseObservation,
 } from "../../scripts/test-utils/http-response-contract";
+import { makePagesProxyContext } from "./helpers/pages-context";
 
 function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
   return {
@@ -18,6 +19,15 @@ function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> =
     SITE_API_SHARED_SECRET: "shared-secret",
     ...overrides,
   };
+}
+
+/** Pages context bag for the `/_site-data/[[path]]` catch-all. */
+function siteDataContext(
+  request: Request,
+  env: ReturnType<typeof makeEnv> = makeEnv(),
+  waitUntil?: (promise: Promise<unknown>) => void,
+) {
+  return makePagesProxyContext({ request, env, mountPath: "/_site-data", waitUntil });
 }
 
 function makeWaitUntil() {
@@ -71,13 +81,11 @@ describe("site-data proxy", () => {
       ),
     );
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
     const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age"]);
     const expected: HttpResponseObservation = {
       status: 200,
@@ -95,62 +103,50 @@ describe("site-data proxy", () => {
   });
 
   it("rejects requests without Origin or Referer", async () => {
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins"),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins")));
 
     expect(response.status).toBe(404);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("rejects direct Pages preview requests without Origin or Referer", async () => {
-    const response = await onRequest({
-      request: new Request("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins"),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+    const response = await onRequest(
+      siteDataContext(new Request("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins")),
+    );
 
     expect(response.status).toBe(404);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("rejects requests from foreign origins", async () => {
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://evil.example.com" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(404);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("rejects non-allowlisted paths", async () => {
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/status", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/status", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "status" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(404);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
   it("enforces GET-only method rules", async () => {
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         method: "POST",
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("GET");
@@ -173,13 +169,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
@@ -199,13 +193,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { "If-None-Match": '"stablecoins-v1"', Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(304);
     expect(cacheMatch).not.toHaveBeenCalled();
@@ -229,13 +221,11 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestD1Database();
 
-    const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/_site-data/stablecoin-summary/usdt-tether", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://ops.pharos.watch/_site-data/stablecoin-summary/usdt-tether", {
         headers: { Accept: "application/json", Origin: "https://ops.pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: ["stablecoin-summary", "usdt-tether"] },
-    });
+      }), makeEnv(db)),
+    );
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -286,13 +276,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/events?limit=1", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/events?limit=1", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "events" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ events: [] });
@@ -321,14 +309,11 @@ describe("site-data proxy", () => {
     const db = makeTestD1Database();
     const ctx = makeWaitUntil();
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoin/usdt-tether", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoin/usdt-tether", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: ["stablecoin", "usdt-tether"] },
-      waitUntil: ctx.waitUntil,
-    });
+      }), makeEnv(db), ctx.waitUntil),
+    );
 
     expect(response.status).toBe(200);
     expect(ctx.waitUntil).toHaveBeenCalled();
@@ -363,13 +348,11 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestD1Database();
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db, { REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(db, { REQUEST_SOURCE_ATTRIBUTION_DISABLED: "true" })),
+    );
 
     expect(response.status).toBe(200);
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO site_data_request_stats"))).toBe(false);
@@ -388,13 +371,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(makeTestD1Database(), { DB: undefined }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(makeTestD1Database(), { DB: undefined })),
+    );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
@@ -414,13 +395,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -441,13 +420,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Warning")).toContain("Response is stale");
@@ -467,13 +444,11 @@ describe("site-data proxy", () => {
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("45");
@@ -492,13 +467,11 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestD1Database();
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/public-status-history", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/public-status-history", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: "public-status-history" },
-    });
+      }), makeEnv(db)),
+    );
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -533,13 +506,11 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestD1Database();
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/telegram-pulse", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/telegram-pulse", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: "telegram-pulse" },
-    });
+      }), makeEnv(db)),
+    );
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -567,13 +538,11 @@ describe("site-data proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: undefined }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: undefined })),
+    );
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
@@ -585,13 +554,11 @@ describe("site-data proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: "not a url" }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: "not a url" })),
+    );
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
@@ -607,13 +574,11 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
     const db = makeTestD1Database();
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(db),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(db)),
+    );
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "Site API upstream fetch failed" });
@@ -644,13 +609,11 @@ describe("site-data proxy", () => {
       { status: 200, headers: { "Content-Type": "application/json" } },
     )));
 
-    const responsePromise = onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const responsePromise = onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(makeTestD1Database(), { DB: undefined }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(makeTestD1Database(), { DB: undefined })),
+    );
 
     await vi.advanceTimersByTimeAsync(10_000);
 
@@ -669,13 +632,11 @@ describe("site-data proxy", () => {
       },
     )));
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(502);
     expect(cancel).toHaveBeenCalledOnce();
@@ -694,13 +655,11 @@ describe("site-data proxy", () => {
       { status: 200 },
     )));
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(),
-      params: { path: "stablecoins" },
-    });
+      })),
+    );
 
     expect(response.status).toBe(502);
     expect(cancel).toHaveBeenCalledOnce();
@@ -716,13 +675,11 @@ describe("site-data proxy", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoins", {
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
         headers: { Origin: "https://pharos.watch" },
-      }),
-      env: makeEnv(makeTestD1Database(), { SITE_API_SHARED_SECRET: " " }),
-      params: { path: "stablecoins" },
-    });
+      }), makeEnv(makeTestD1Database(), { SITE_API_SHARED_SECRET: " " })),
+    );
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });

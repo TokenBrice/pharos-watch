@@ -3,11 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import DepegPage from "@/app/depeg/page";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 vi.mock("next/dynamic", () => ({
   default: (_loader: unknown, options?: { loading?: () => ReactNode }) => {

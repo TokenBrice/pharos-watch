@@ -8,6 +8,7 @@ import {
   usePegSummary,
   useReportCardsV9,
 } from "@/hooks/api-hooks";
+import { useQuerySlices } from "@/hooks/use-query-slice";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
@@ -33,32 +34,26 @@ export function useCompareDataModel({
   selectedIds,
   flowHours,
 }: UseCompareDataModelOptions) {
-  const { data: listData, dataUpdatedAt, error: listError, refetch: refetchList, meta: listMeta } = useStablecoins();
-  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg, meta: pegMeta } = usePegSummary();
-  const {
-    data: bluechipData,
-    dataUpdatedAt: bcUpdatedAt,
-    error: bluechipError,
-    refetch: refetchBluechip,
-    meta: bluechipMeta,
-  } = useBluechipRatings();
-  const {
-    data: dexData,
-    dataUpdatedAt: liqUpdatedAt,
-    error: dexError,
-    refetch: refetchLiquidity,
-    meta: dexMeta,
-  } = useDexLiquidity();
-  const {
-    data: reportCardsData,
-    dataUpdatedAt: rcUpdatedAt,
-    error: reportCardsError,
-    refetch: refetchReportCards,
-    meta: reportCardsMeta,
-  } = useReportCardsV9();
+  const listQuery = useStablecoins();
+  const pegQuery = usePegSummary();
+  const bluechipQuery = useBluechipRatings();
+  const dexQuery = useDexLiquidity();
+  const reportCardsQuery = useReportCardsV9();
   const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
 
-  const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
+  const { list, peg, bluechip, dex, reportCards } = useQuerySlices({
+    list: listQuery,
+    peg: pegQuery,
+    bluechip: bluechipQuery,
+    dex: dexQuery,
+    reportCards: reportCardsQuery,
+  });
+  const listData = list.data;
+  const pegSummary = peg.data;
+  const dexData = dex.data;
+  const reportCardsData = reportCards.data;
+
+  const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error;
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -167,11 +162,11 @@ export function useCompareDataModel({
 
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
-      refetchList,
-      refetchPeg,
-      refetchBluechip,
-      refetchLiquidity,
-      refetchReportCards,
+      listQuery.refetch,
+      pegQuery.refetch,
+      bluechipQuery.refetch,
+      dexQuery.refetch,
+      reportCardsQuery.refetch,
       refetchFlows,
       ...detailQueries.map((query) => query.refetch),
       ...flowCoinQueries.map((query) => query.refetch),
@@ -181,46 +176,31 @@ export function useCompareDataModel({
   }, [
     detailQueries,
     flowCoinQueries,
-    refetchBluechip,
+    bluechipQuery.refetch,
     refetchFlows,
-    refetchLiquidity,
-    refetchList,
-    refetchPeg,
-    refetchReportCards,
+    dexQuery.refetch,
+    listQuery.refetch,
+    pegQuery.refetch,
+    reportCardsQuery.refetch,
   ]);
 
   return {
-    bluechipData,
-    bluechipError,
-    bluechipMeta,
-    bcUpdatedAt,
+    bluechip,
     comparisonCoins,
-    dataUpdatedAt,
     detailErrors,
     detailLoading,
     detailQueries,
-    dexData,
-    dexError,
-    dexMeta,
+    dex,
     flowCardData,
     flowCoinQueries,
     flowData,
     flowSeries,
     globalError,
-    liqUpdatedAt,
-    listData,
-    listError,
-    listMeta,
-    pegError,
-    pegMeta,
+    list,
+    peg,
     pegRates,
-    pegSummary,
-    pegUpdatedAt,
     radarCards,
-    rcUpdatedAt,
-    reportCardsData,
-    reportCardsError,
-    reportCardsMeta,
+    reportCards,
     supplySeries,
     handleRetry,
   };

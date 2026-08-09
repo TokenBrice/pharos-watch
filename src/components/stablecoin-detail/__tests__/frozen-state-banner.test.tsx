@@ -4,11 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { StablecoinObituary } from "@shared/types";
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 const { FrozenStateBanner } = await import("../frozen-state-banner");
 

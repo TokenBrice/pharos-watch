@@ -20,7 +20,7 @@ import type {
 } from "@shared/types/market";
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
-import type { SafetyScoreHistoryResponse } from "@shared/types/report-cards";
+import type { SafetyScoreHistoryResponse } from "@shared/types/safety-score-history";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { HealthResponse } from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
@@ -316,7 +316,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   safetyScoreHistory: defineParameterizedApiQuery(
     "meta",
     createLazySchema<SafetyScoreHistoryResponse>(
-      async () => (await import("@shared/types/report-cards")).SafetyScoreHistoryResponseSchema,
+      async () => (await import("@shared/types/safety-score-history")).SafetyScoreHistoryResponseSchema,
     ),
     (stablecoinId: string, days: number = 3650) => ({
       queryKey: ["safety-score-history", stablecoinId, days] as const,

@@ -5,13 +5,10 @@ import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 // Minimal StablecoinData factory — only fields ComparisonTable cares about
 function makeData(circulating: number, circulatingPrevWeek?: number): StablecoinData {

@@ -9,15 +9,8 @@ import { SelectorResultSummary } from "@/components/selector/selector-result-sum
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
 
 vi.mock("next/link", async () => {
-  const React = await import("react");
-  return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(function MockLink(
-      { href, children, ...rest },
-      ref,
-    ) {
-      return React.createElement("a", { ref, href, ...rest }, children);
-    }),
-  };
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
 });
 
 afterEach(() => {

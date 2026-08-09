@@ -2,7 +2,6 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { useRef } from "react";
 import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 
 beforeAll(() => {
@@ -33,7 +32,6 @@ beforeAll(() => {
 });
 
 function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
-  const svgRef = useRef<SVGSVGElement>(null);
   const {
     positions,
     handlePointerDown,
@@ -41,7 +39,6 @@ function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
     handlePointerUp,
     consumeDragMovedSincePointerDown,
   } = useContagionGraphDrag({
-    svgRef,
     nodeMap: new Map([["node-1", { r: 12 }]]),
     basePositions: new Map([["node-1", { x: 100, y: 100 }]]),
     simulationKey,
@@ -50,7 +47,6 @@ function DragHarness({ simulationKey = "stable" }: { simulationKey?: string }) {
 
   return (
     <svg
-      ref={svgRef}
       data-testid="drag-svg"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

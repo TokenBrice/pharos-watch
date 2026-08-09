@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,9 +8,10 @@ vi.mock("next/font/local", () => ({
 import { ChangelogEntryCard } from "@/components/changelog-entry-card";
 import type { ChangelogEntry } from "@/data/changelogs/types";
 
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 const MOCK_ENTRY: ChangelogEntry = {
   dateRange: { from: "2026-03-17", to: "2026-03-24" },

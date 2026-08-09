@@ -82,8 +82,8 @@ interface NodeRenderProps {
   nodeScale: number;
   suppressHubLabels: boolean;
   showTickerLabels: boolean;
-  onPointerDown: (event: PointerEvent, nodeId: string) => void;
-  onKeyDown: (event: KeyboardEvent, nodeId: string) => void;
+  onPointerDown: (event: PointerEvent<SVGGElement>, nodeId: string) => void;
+  onKeyDown: (event: KeyboardEvent<SVGGElement>, nodeId: string) => void;
   onMouseEnter: (nodeId: string) => void;
   onMouseLeave: () => void;
   onFocus: (nodeId: string) => void;
@@ -422,7 +422,6 @@ export function ContagionGraphSvg({
   edgeTooltipEl,
 }: ContagionGraphSvgProps) {
   const {
-    svgRef,
     nodes,
     visibleLinks,
     visibleNodeIds,
@@ -445,7 +444,6 @@ export function ContagionGraphSvg({
   };
   return (
     <svg
-      ref={svgRef}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       className={fillHeight ? "w-full lg:h-full" : "w-full"}
       style={{ cursor: dragId ? "grabbing" : "default" }}

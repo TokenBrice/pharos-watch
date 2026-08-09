@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { cleanup, render } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Infrastructure, StablecoinMeta } from "@shared/types";
 
@@ -13,13 +12,10 @@ vi.mock("@/lib/feature-flags", () => ({
   isHeroVerdictEnabled: isHeroVerdictEnabledMock,
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 vi.mock("@/components/bluechip-header-badge", () => ({
   BluechipHeaderBadge: () => null,

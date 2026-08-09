@@ -3,6 +3,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { DEWSSummary } from "@/components/dews-summary";
+import { installMatchMediaMock } from "@/test-utils/frontend";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -29,14 +30,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 beforeAll(() => {
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    value: vi.fn().mockImplementation(() => ({
-      matches: true,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  });
+  installMatchMediaMock(true);
 });
 
 afterEach(() => {

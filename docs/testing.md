@@ -204,6 +204,19 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 
 Frontend jsdom tests should use `installMatchMediaMock()`, `cleanupFrontendTest()`, `resetBrowserStorage()`, and `createNextLinkMock()` from `src/test-utils/frontend.ts` instead of hand-rolling `matchMedia`, browser-storage cleanup, or `next/link` mocks. Keep test-local mocks only when the test needs behavior that differs from the shared helper.
 
+`vi.mock` factories are hoisted above imports, so `createNextLinkMock` must be pulled in from inside the factory:
+
+```ts
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
+```
+
+The mock renders a plain `<a>` with a forwarded ref and passes every other prop through, so tests that assert on `className`, `target`, or `data-*` attributes work unchanged.
+
+`installMatchMediaMock(matches)` takes either a boolean or a `(query: string) => boolean` predicate, which covers query-dependent suites (simulated viewport widths, `(prefers-reduced-motion: reduce)`) without rebuilding the `MediaQueryList` shape.
+
 ### Mock D1 (`worker/src/test-helpers/__shared/mock-d1.ts`)
 
 Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.

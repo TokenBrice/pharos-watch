@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
+import { useQuerySlices } from "@/hooks/use-query-slice";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
@@ -118,20 +119,12 @@ export function DepegClient() {
     isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
-  const {
-    data: resolverData,
-    error: resolverError,
-    dataUpdatedAt: resolverUpdatedAt,
-    meta: resolverMeta,
-    refetch: refetchResolver,
-  } = resolver;
-  const {
-    data: resolverReviewData,
-    error: resolverReviewError,
-    dataUpdatedAt: resolverReviewUpdatedAt,
-    meta: resolverReviewMeta,
-    refetch: refetchResolverReview,
-  } = resolverReview;
+  const { resolverSlice, resolverReviewSlice } = useQuerySlices({
+    resolverSlice: resolver,
+    resolverReviewSlice: resolverReview,
+  });
+  const resolverData = resolverSlice.data;
+  const resolverReviewData = resolverReviewSlice.data;
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -240,17 +233,25 @@ export function DepegClient() {
     pegError ??
     dewsError ??
     eventsError ??
-    (resolverEnabled ? resolverError : null) ??
-    (resolverReviewerEnabled ? resolverReviewError : null);
+    (resolverEnabled ? resolverSlice.error : null) ??
+    (resolverReviewerEnabled ? resolverReviewSlice.error : null);
   const handleRetry = useCallback(() => {
     return refetchQueryGroup([
       refetchPeg,
       refetchDews,
       refetchEvents,
-      ...(resolverEnabled ? [refetchResolver] : []),
-      ...(resolverReviewerEnabled ? [refetchResolverReview] : []),
+      ...(resolverEnabled ? [resolver.refetch] : []),
+      ...(resolverReviewerEnabled ? [resolverReview.refetch] : []),
     ]);
-  }, [refetchDews, refetchEvents, refetchPeg, refetchResolver, refetchResolverReview, resolverEnabled, resolverReviewerEnabled]);
+  }, [
+    refetchDews,
+    refetchEvents,
+    refetchPeg,
+    resolver.refetch,
+    resolverReview.refetch,
+    resolverEnabled,
+    resolverReviewerEnabled,
+  ]);
   const freshnessQueries: StaleQuery[] = [
     { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
     { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
@@ -259,19 +260,19 @@ export function DepegClient() {
   if (resolverEnabled) {
     freshnessQueries.push({
       preset: "depegResolver",
-      dataUpdatedAt: resolverUpdatedAt,
-      error: resolverError,
+      dataUpdatedAt: resolverSlice.dataUpdatedAt,
+      error: resolverSlice.error,
       hasData: resolverData != null,
-      meta: resolverMeta,
+      meta: resolverSlice.meta,
     });
   }
   if (resolverReviewerEnabled) {
     freshnessQueries.push({
       preset: "depegResolverReview",
-      dataUpdatedAt: resolverReviewUpdatedAt,
-      error: resolverReviewError,
+      dataUpdatedAt: resolverReviewSlice.dataUpdatedAt,
+      error: resolverReviewSlice.error,
       hasData: resolverReviewData != null,
-      meta: resolverReviewMeta,
+      meta: resolverReviewSlice.meta,
     });
   }
 
@@ -383,7 +384,7 @@ export function DepegClient() {
       ) : null}
       {resolverReviewerEnabled ? (
         <SectionErrorBoundary name="depeg-resolver-reviewer">
-          <DepegResolverReviewerModule data={resolverReviewData} error={resolverReviewError} logos={logos} />
+          <DepegResolverReviewerModule data={resolverReviewData} error={resolverReview.error} logos={logos} />
         </SectionErrorBoundary>
       ) : null}
 

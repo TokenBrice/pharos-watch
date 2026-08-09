@@ -8,7 +8,6 @@ interface PositionedNode {
 }
 
 interface UseContagionGraphDragOptions {
-  svgRef: React.RefObject<SVGSVGElement | null>;
   nodeMap: Map<string, PositionedNode>;
   basePositions: Map<string, { x: number; y: number }>;
   simulationKey: string;
@@ -41,7 +40,6 @@ function projectClientPoint(
 }
 
 export function useContagionGraphDrag({
-  svgRef,
   nodeMap,
   basePositions,
   simulationKey,
@@ -81,10 +79,12 @@ export function useContagionGraphDrag({
     return next;
   }, [basePositions, pinnedPositions]);
 
-  const handlePointerDown = useCallback((event: React.PointerEvent, nodeId: string) => {
+  // The stage can be mounted twice at once (inline card + fullscreen dialog) over one shared
+  // model, so the owning <svg> is resolved from the event rather than from a single shared ref.
+  const handlePointerDown = useCallback((event: React.PointerEvent<SVGGElement>, nodeId: string) => {
     if (event.isPrimary === false) return;
     event.preventDefault();
-    const svgPoint = projectClientPoint(svgRef.current, event.clientX, event.clientY);
+    const svgPoint = projectClientPoint(event.currentTarget.ownerSVGElement, event.clientX, event.clientY);
     if (!svgPoint) return;
     const position = positions.get(nodeId);
     if (!position) return;
@@ -101,12 +101,12 @@ export function useContagionGraphDrag({
       nx: position.x,
       ny: position.y,
     };
-  }, [positions, simulationKey, svgRef]);
+  }, [positions, simulationKey]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
     const activeDragId = dragIdRef.current;
     if (!activeDragId || dragSimulationKeyRef.current !== simulationKey || !dragStart.current) return;
-    const svgPoint = projectClientPoint(svgRef.current, event.clientX, event.clientY);
+    const svgPoint = projectClientPoint(event.currentTarget, event.clientX, event.clientY);
     if (!svgPoint) return;
 
     const dx = svgPoint.x - dragStart.current.mx;
@@ -128,7 +128,7 @@ export function useContagionGraphDrag({
       }
       return { simulationKey, positions: next };
     });
-  }, [nodeMap, simulationKey, svgRef]);
+  }, [nodeMap, simulationKey]);
 
   const handlePointerUp = useCallback(() => {
     dragIdRef.current = null;

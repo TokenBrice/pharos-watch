@@ -14,8 +14,6 @@ interface ContagionGraphProps {
   focusCoinId?: string;
   minimalChrome?: boolean;
   maxNodes?: number;
-  fullscreenMode?: boolean;
-  showFullscreenControl?: boolean;
 }
 
 export function ContagionGraph({
@@ -26,8 +24,6 @@ export function ContagionGraph({
   focusCoinId,
   minimalChrome,
   maxNodes,
-  fullscreenMode = false,
-  showFullscreenControl = true,
 }: ContagionGraphProps) {
   const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes });
 
@@ -39,24 +35,5 @@ export function ContagionGraph({
     return <div className="min-w-0 lg:h-full">{stage}</div>;
   }
 
-  return (
-    <ContagionGraphShell
-      fullscreenGraph={
-        <ContagionGraph
-          cards={cards}
-          dependencyEdges={dependencyEdges}
-          mcapMap={mcapMap}
-          logos={logos}
-          focusCoinId={focusCoinId}
-          maxNodes={maxNodes}
-          fullscreenMode
-          showFullscreenControl={false}
-        />
-      }
-      fullscreenMode={fullscreenMode}
-      graph={graph}
-      showFullscreenControl={showFullscreenControl}
-      stage={stage}
-    />
-  );
+  return <ContagionGraphShell graph={graph} stage={stage} />;
 }

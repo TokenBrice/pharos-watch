@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
-import { cleanupFrontendTest } from "@/test-utils/frontend";
+import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 
@@ -43,22 +43,9 @@ const rowWithSeries: ScreenerRow = {
 };
 
 function installViewportMatchMedia(width: number) {
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: vi.fn().mockImplementation((query: string) => {
-      const maxWidth = /max-width:\s*(\d+)px/.exec(query)?.[1];
-      return {
-        matches: maxWidth ? width <= Number(maxWidth) : false,
-        media: query,
-        onchange: null,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      };
-    }),
+  installMatchMediaMock((query) => {
+    const maxWidth = /max-width:\s*(\d+)px/.exec(query)?.[1];
+    return maxWidth ? width <= Number(maxWidth) : false;
   });
 }
 

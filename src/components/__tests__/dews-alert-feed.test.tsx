@@ -4,17 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import type { StressSignalEntry } from "@shared/types";
-import type { ReactNode } from "react";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
   usePrefetchStablecoin: () => vi.fn(),
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ children, href, ...props }: { children: ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
-  ),
-}));
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 afterEach(cleanup);
 
