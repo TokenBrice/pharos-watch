@@ -132,10 +132,14 @@ Format the surviving commits as `CommitRef[]`:
 
 Order: newest first (matches `git log` default and existing entries).
 
+**Cap the list at 20 entries** — the changelog card renders at most 20 and shows
+"… and N more" from `stats.totalCommits`. Keep the newest 20 after filtering and
+drop the rest; git history is the archive.
+
 #### 10. Self-check before writing
 
 Hard checks (must pass):
-- `commits.length === stats.totalCommits` (the card renders `stats.totalCommits`; divergence misleads readers).
+- `commits.length === Math.min(stats.totalCommits, 20)` (the card renders `stats.totalCommits` as the count and the first 20 rows as the list).
 - Every `summary[i].tag` is one of the five enum values.
 - Every `summary[i].description.length <= 220`.
 - `headline.length <= 120`.
@@ -148,7 +152,7 @@ Soft checks (warn, don't block):
 - A cluster touches a methodology but has no `href`.
 - A coin count / adapter count / methodology version cited in the summary doesn't match the source of truth.
 
-`stats.totalCommits` reflects the **filtered** count (after step 3); every published entry satisfies `commits.length === stats.totalCommits`.
+`stats.totalCommits` reflects the **filtered** count (after step 3) and is the authoritative number; `commits[]` holds only the newest 20 of them.
 
 #### 11. Write the entry file
 
