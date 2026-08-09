@@ -25,6 +25,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { scoreToGrade } from "@shared/lib/report-card-core";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   ReportCardsV9CurrentResponseSchema,
@@ -32,8 +33,10 @@ import {
 } from "@shared/types/report-cards-v9";
 import {
   PegSummaryResponseSchema,
+  StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
   type PegSummaryResponse,
+  type StablecoinListResponse,
   type StressSignalsAllResponse,
 } from "@shared/types/market";
 import {
@@ -61,6 +64,10 @@ const PEG_SUMMARY_ENDPOINT = {
   apiPath: API_PATHS.pegSummary(),
   fixtureName: "peg-summary",
 } as const;
+const STABLECOINS_ENDPOINT = {
+  apiPath: API_PATHS.stablecoins(),
+  fixtureName: "stablecoins",
+} as const;
 
 const FIXTURES_DIR = (() => {
   const i = process.argv.indexOf("--fixtures");
@@ -87,6 +94,7 @@ export interface Current {
   dewsBand: string | null;
   dewsScore: number | null;
   depegCount: number | null;
+  circulatingUsd?: number | null;
 }
 
 export interface Finding {
@@ -136,6 +144,19 @@ function parseCount(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function parseUsdAmount(raw: string, suffix: string | undefined): number | null {
+  const value = Number(raw.replace(/,/g, ""));
+  if (!Number.isFinite(value)) return null;
+  const multiplier = suffix?.toUpperCase() === "B"
+    ? 1_000_000_000
+    : suffix?.toUpperCase() === "M"
+      ? 1_000_000
+      : suffix?.toUpperCase() === "K"
+        ? 1_000
+        : 1;
+  return value * multiplier;
+}
+
 // --- live data --------------------------------------------------------------
 
 interface LiveEndpoint {
@@ -180,14 +201,17 @@ export function buildCurrentMap(
   cards: ReportCardsV9CurrentResponse["cards"],
   stress: StressSignalsAllResponse["signals"],
   peg: PegSummaryResponse["coins"],
+  stablecoins: StablecoinListResponse["peggedAssets"] = [],
 ): Map<string, Current> {
   const pegById = new Map(peg.map((coin) => [coin.id, coin]));
+  const stablecoinById = new Map(stablecoins.map((coin) => [coin.id, coin]));
   const map = new Map<string, Current>();
 
   for (const card of cards) {
     const meta = TRACKED_META_BY_ID.get(card.id);
     const dews = stress[card.id];
     const pegRow = pegById.get(card.id);
+    const stablecoin = stablecoinById.get(card.id);
     const pegScore = typeof pegRow?.pegScore === "number" ? pegRow.pegScore : null;
     const backingScore = card.pillars.backing.score;
     const exitScore = card.pillars.exit.score;
@@ -208,16 +232,18 @@ export function buildCurrentMap(
       dewsBand: dews?.band ?? null,
       dewsScore: typeof dews?.score === "number" ? dews.score : null,
       depegCount: typeof pegRow?.eventCount === "number" ? pegRow.eventCount : null,
+      ...(stablecoin ? { circulatingUsd: getCirculatingRaw(stablecoin) } : {}),
     });
   }
   return map;
 }
 
 export async function loadCurrent(): Promise<Map<string, Current>> {
-  const [cardsRaw, stressRaw, pegRaw] = await Promise.all([
+  const [cardsRaw, stressRaw, pegRaw, stablecoinsRaw] = await Promise.all([
     fetchJson(REPORT_CARDS_ENDPOINT),
     fetchJson(STRESS_SIGNALS_ENDPOINT),
     fetchJson(PEG_SUMMARY_ENDPOINT),
+    fetchJson(STABLECOINS_ENDPOINT),
   ]);
 
   const cards = parseLiveContract(
@@ -227,7 +253,8 @@ export async function loadCurrent(): Promise<Map<string, Current>> {
   );
   const stress = parseLiveContract("stress-signals", StressSignalsAllResponseSchema, stressRaw);
   const peg = parseLiveContract("peg-summary", PegSummaryResponseSchema, pegRaw);
-  return buildCurrentMap(cards.cards, stress.signals, peg.coins);
+  const stablecoins = parseLiveContract("stablecoins", StablecoinListResponseSchema, stablecoinsRaw);
+  return buildCurrentMap(cards.cards, stress.signals, peg.coins, stablecoins.peggedAssets);
 }
 
 // --- claim extraction -------------------------------------------------------
@@ -301,6 +328,52 @@ export function extractFindings(text: string, cur: Current): Finding[] {
     seen.add(key);
     out.push(f);
   };
+
+  // Static adoption and balance-sheet figures require a dated, displayed
+  // source even when no current producer can compare like-for-like values.
+  const volatileUsdRe = /\$([\d,.]+)\s*([KMB])?\s+(?:in\s+)?(circulation|market\s+cap|TVL)\b/gi;
+  for (const match of t.matchAll(volatileUsdRe)) {
+    const claimed = parseUsdAmount(match[1], match[2]);
+    push({
+      kind: "volatile-dollar-claim",
+      claim: match[0],
+      claimed: claimed == null ? match[0] : String(claimed),
+      current: "manual dated/source review required",
+      severity: "medium",
+    });
+    if (claimed == null || cur.circulatingUsd == null || !/circulation|market\s+cap/i.test(match[3])) continue;
+    const ratio = Math.abs(claimed - cur.circulatingUsd) / Math.max(cur.circulatingUsd, 1);
+    if (ratio < 0.1) continue;
+    push({
+      kind: "cross-chain-circulation-drift",
+      claim: match[0],
+      claimed: String(claimed),
+      current: String(cur.circulatingUsd),
+      severity: ratio >= 0.5 ? "high" : "medium",
+    });
+  }
+
+  const holderScopeRe = /\b([\d,]+)\s+(holders?|users?)\b/gi;
+  for (const match of t.matchAll(holderScopeRe)) {
+    push({
+      kind: "holder-address-scope",
+      claim: match[0],
+      claimed: match[1],
+      current: "define chain scope, addresses vs users, contract/EOA handling, deduplication, and block/date",
+      severity: "medium",
+    });
+  }
+
+  const financingComparisonRe = /[^.]{0,120}(?:\braised\b[^.]{0,120}\$[\d,.]+\s*[KMB]?|\$[\d,.]+\s*[KMB]?[^.]{0,120}\braised\b)[^.]{0,160}\b(?:circulation|market\s+cap|supply|used)\b[^.]{0,80}/gi;
+  for (const match of t.matchAll(financingComparisonRe)) {
+    push({
+      kind: "financing-to-product-scale",
+      claim: match[0],
+      claimed: "parent/project financing compared with product scale",
+      current: "manual economic-comparability review required",
+      severity: "high",
+    });
+  }
 
   // 1. Overall grade + score: "B+ safety grade at 75", "B- report card at 69",
   //    "A grade at 85". Both letter and number checked against the overall card.

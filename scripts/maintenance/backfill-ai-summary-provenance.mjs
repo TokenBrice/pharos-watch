@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 /**
  * One-shot idempotent backfill: writes operator-confirmed AI-disclosure
- * provenance onto every entry of `data/ai-summaries.json` that does not
- * already carry `authoredBy`. Existing entries that already declare an
- * `authoredBy` are left untouched, so the script is safe to re-run after
- * the `write-ai-summaries` skill starts emitting curated values.
+ * provenance onto explicitly listed entries of `data/ai-summaries.json` that
+ * do not already carry `authoredBy`. The manifest must provide independently
+ * verified facts and review dates for every requested ID.
  *
  * Values applied per entry (only when missing):
  *   authoredBy = "ai"
  *   model      = --model, AI_SUMMARY_MODEL, MODEL_OVERRIDE, or the legacy default
  *   reviewedBy = AI_SUMMARY_REVIEWED_BY
  *   reviewedAt = AI_SUMMARY_REVIEWED_AT
- *   factsAsOf  = entry.updatedAt
+ *   factsAsOf  = manifest[id].factsAsOf
  *
  * Run via:
- *   AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance -- --model claude-opus-4-7
+ *   AI_SUMMARY_REVIEWED_BY="@TokenBrice" npm run backfill:ai-summary-provenance -- --manifest agents/ai-summary-provenance.json --model claude-opus-4-7
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -33,13 +32,13 @@ const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
 const USAGE = `Usage: npm run backfill:ai-summary-provenance -- [options]
 
 Options:
-  --model <name>  Model identifier (overrides AI_SUMMARY_MODEL)
+  --manifest <path> JSON object mapping IDs to explicit factsAsOf and reviewedAt dates
+  --model <name>    Model identifier (overrides AI_SUMMARY_MODEL)
   --dry-run       Validate and report changes without writing the file
   -h, --help      Show this help
 
 Required environment:
-  AI_SUMMARY_REVIEWED_BY
-  AI_SUMMARY_REVIEWED_AT (YYYY-MM-DD)`;
+  AI_SUMMARY_REVIEWED_BY`;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isIsoDate(value) {
@@ -53,37 +52,42 @@ export function parseAiSummaryBackfillArgs(argv, env = process.env) {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       "dry-run": { type: "boolean" },
+      manifest: { type: "string" },
       model: { type: "string" },
     },
   });
   const help = values.help === true;
   const reviewedBy = env.AI_SUMMARY_REVIEWED_BY?.trim() ?? "";
-  const reviewedAt = env.AI_SUMMARY_REVIEWED_AT?.trim() ?? "";
+  const manifest = typeof values.manifest === "string" ? values.manifest.trim() : "";
   const model = typeof values.model === "string"
     ? values.model.trim()
     : env.AI_SUMMARY_MODEL?.trim() || env.MODEL_OVERRIDE?.trim() || "claude-opus-4-7";
   if (!help) {
     assertCliUsage(Boolean(reviewedBy), "AI_SUMMARY_REVIEWED_BY is required");
-    assertCliUsage(isIsoDate(reviewedAt), "AI_SUMMARY_REVIEWED_AT must be a real YYYY-MM-DD date");
+    assertCliUsage(Boolean(manifest), "--manifest is required");
     assertCliUsage(Boolean(model), "--model must be non-empty");
   }
   return {
     dryRun: values["dry-run"] === true,
     help,
+    manifest,
     model,
-    reviewedAt,
     reviewedBy,
   };
 }
 
-export function backfillAiSummaryProvenance(data, defaults, { onInvalidEntry } = {}) {
+export function backfillAiSummaryProvenance(data, defaults, { manifest, onInvalidEntry } = {}) {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("AI summaries did not parse to an object root");
   }
 
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new Error("provenance manifest must be an object keyed by summary ID");
+  }
   let updated = 0;
   let skipped = 0;
-  for (const id of Object.keys(data)) {
+  for (const id of Object.keys(manifest)) {
+    if (!(id in data)) throw new Error(`provenance manifest references unknown summary ID: ${id}`);
     const entry = data[id];
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       onInvalidEntry?.(id);
@@ -94,7 +98,10 @@ export function backfillAiSummaryProvenance(data, defaults, { onInvalidEntry } =
       skipped += 1;
       continue;
     }
-    const updatedAt = typeof entry.updatedAt === "string" ? entry.updatedAt : "";
+    const dates = manifest[id];
+    if (!dates || typeof dates !== "object" || !isIsoDate(dates.factsAsOf) || !isIsoDate(dates.reviewedAt)) {
+      throw new Error(`provenance manifest entry ${id} requires real factsAsOf and reviewedAt dates`);
+    }
     data[id] = {
       title: entry.title,
       text: entry.text,
@@ -102,8 +109,8 @@ export function backfillAiSummaryProvenance(data, defaults, { onInvalidEntry } =
       authoredBy: "ai",
       model: defaults.model,
       reviewedBy: defaults.reviewedBy,
-      reviewedAt: defaults.reviewedAt,
-      factsAsOf: updatedAt,
+      reviewedAt: dates.reviewedAt,
+      factsAsOf: dates.factsAsOf,
     };
     updated += 1;
   }
@@ -119,7 +126,10 @@ export function runAiSummaryProvenanceBackfill({
   if (writeCliHelpIfRequested(options, USAGE)) return;
 
   const data = JSON.parse(readFileSync(summariesPath, "utf8"));
+  const manifestPath = resolve(ROOT, options.manifest);
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   const result = backfillAiSummaryProvenance(data, options, {
+    manifest,
     onInvalidEntry: (id) => process.stderr.write(`backfill: entry ${id} is not an object, skipping\n`),
   });
   if (!options.dryRun) {
