@@ -105,7 +105,6 @@
     "worker/src/lib/publication-contract.ts": 85.8,
     "shared/lib/safety-score-publication.ts": 100,
     "shared/lib/safety-score-v9-input-identity.ts": 100,
-    "worker/src/lib/identified-active-safety-score-source.ts": 100,
     "worker/src/lib/safety-score-active-source.ts": 100,
     "worker/src/lib/safety-score-history-v2.ts": 84,
     "worker/src/lib/safety-score-v9-anchor-gate.ts": 94.2,

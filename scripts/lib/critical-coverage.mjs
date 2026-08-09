@@ -107,7 +107,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/publication-contract.ts",
   "shared/lib/safety-score-publication.ts",
   "shared/lib/safety-score-v9-input-identity.ts",
-  "worker/src/lib/identified-active-safety-score-source.ts",
   "worker/src/lib/safety-score-active-source.ts",
   "worker/src/lib/safety-score-history-v2.ts",
   "worker/src/lib/safety-score-v9-anchor-gate.ts",
