@@ -418,7 +418,6 @@ const YieldSafetySnapshotMetaSchema = z.object({
   reason: z.string().nullable(),
   // The retired cache label remains accepted only for persisted pre-V9 payloads.
   source: z.enum(["safety-score-v9-publication", "report-card-cache"]).optional(),
-  expectedModel: z.literal("v9").optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   methodologyVersion: z.string().nullable().optional(),
@@ -433,7 +432,6 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
   reason: z.string().nullable(),
   // Non-V9 labels are historical readers, not live source choices.
   source: z.enum(["safety-score-v9-publication", "report-card-cache", "report-cards:snapshot", "computed-report-cards"]),
-  expectedModel: z.literal("v9").optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable(),
   methodologyVersion: z.string().nullable(),
