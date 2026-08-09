@@ -5,7 +5,7 @@ import type {
   ApiKeyTrafficClass,
   ApiKeyUpdateRequest,
 } from "@shared/types";
-import { API_KEY_TIER_VALUES } from "@shared/types";
+import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
 import {
   API_KEY_DEFAULT_EXPIRY_SEC,
   API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
