@@ -604,7 +604,7 @@ Returns chain-level core stablecoin and cash-equivalent aggregates with Chain He
   "globalChange7dPct": 0.0045,
   "globalChange30dPct": 0.018,
   "updatedAt": 1710500000,
-  "healthMethodologyVersion": "1.4"
+  "healthMethodologyVersion": "1.5"
 }
 ```
 
@@ -618,7 +618,7 @@ Returns chain-level core stablecoin and cash-equivalent aggregates with Chain He
 | `globalChange7dPct`        | `number`         | 7d change for total tracked stablecoin supply as a decimal share                         |
 | `globalChange30dPct`       | `number`         | 30d change for total tracked stablecoin supply as a decimal share                        |
 | `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot                                |
-| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.4"`)                               |
+| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.5"`)                               |
 
 `_meta.dependencies.reportCards` is present when the endpoint can determine report-card freshness. When that dependency is stale or unavailable, `healthScore` degrades to `null` and the route UI surfaces the dependency reason instead of pretending the chain is fully fresh.
 
@@ -2358,12 +2358,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.15",
+    "methodologyVersion": "9.16",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.15",
+    "version": "9.16",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2646,7 +2646,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.15",
+      "methodologyVersion": "9.16",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2657,7 +2657,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.15",
+      "methodologyVersion": "9.16",
       "publishedAt": 1772000700
     }
   },
@@ -2671,7 +2671,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
   },
   "methodology": {
     "version": "8.37",
-    "currentVersion": "8.37",
+    "currentVersion": "8.38",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2834,7 +2834,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.37",
+  "methodologyVersion": "v8.38",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2848,7 +2848,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.37",
+      "methodologyVersion": "v8.38",
       "updatedAt": 1779210000
     }
   ]
@@ -2901,7 +2901,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   },
   "methodology": {
     "version": "8.37",
-    "currentVersion": "8.37",
+    "currentVersion": "8.38",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2937,7 +2937,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "pysAtPublish": 42.7,
   "pysInputsAtPublish": {
     "schemaVersion": 1,
-    "methodologyVersion": "8.37",
+    "methodologyVersion": "8.38",
     "apy30d": 12.1,
     "safetyScore": 81,
     "varianceScore": 0.18,

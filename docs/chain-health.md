@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** `v1.4`
+- **Current methodology version:** `v1.5`
 - **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
 - **Version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/methodology-versions/chain-health.ts`)
 - **API source:** `worker/src/api/chains.ts`
@@ -22,7 +22,7 @@ The frontend chain profile coordinates `GET /api/chains` with `GET /api/stableco
 
 ## Formula
 
-Current `v1.4` composite:
+Current `v1.5` composite:
 
 ```text
 0.30 * quality
@@ -64,11 +64,11 @@ Consequence: on a chain with partial coverage, `quality` describes the rated por
 
 ## L2BEAT Snapshot
 
-`v1.4` treats L2BEAT as a static methodology input, not as a live API dependency. Matched Pharos chain IDs are explicit aliases to L2BEAT project IDs; examples include `optimism -> optimism` (public slug `op-mainnet`), `zksync -> zksync2`, `polygon-zkevm -> polygonzkevm`, `morph-l2 -> morph`, `manta -> mantapacific`, and `swellchain -> swell`.
+`v1.5` treats L2BEAT as a static methodology input, not as a live API dependency. Matched Pharos chain IDs are explicit aliases to L2BEAT project IDs; examples include `optimism -> optimism` (public slug `op-mainnet`), `zksync -> zksync2`, `polygon-zkevm -> polygonzkevm`, `morph-l2 -> morph`, `manta -> mantapacific`, and `swellchain -> swell`.
 
 Stage scores are `Stage 2 -> 100`, `Stage 1 -> 80`, `Stage 0 -> 55`, and `Not applicable` / `Under review -> 50`. Risk sentiments score as `good -> 100`, `warning -> 60`, `bad -> 20`, and neutral/under-review values as `50`.
 
-L2BEAT audit helpers also expose Interop-backed bridge-route review candidates for Safety Score research. Live Safety Score scoring does not consume the Chain Health snapshot directly in `v1.4`; bridge-route scoring consumes only curated `bridgeRouteRisk` metadata once a reviewer writes a sourced profile.
+L2BEAT audit helpers also expose Interop-backed bridge-route review candidates for Safety Score research. Live Safety Score scoring does not consume the Chain Health snapshot directly in `v1.5`; bridge-route scoring consumes only curated `bridgeRouteRisk` metadata once a reviewer writes a sourced profile.
 
 `GET /api/chains` keeps the numeric `healthFactors.chainEnvironment` field and adds `chainEnvironmentEvidence` beside it. Matched projects return the consumed L2BEAT project ID, slug, stage score, risk score, five risk fields, and snapshot source date; unmatched chains return the fallback Pharos resilience tier. This is evidence/provenance only and does not introduce live L2BEAT fetching.
 
