@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -18,6 +20,18 @@ import { cn } from "@/lib/utils";
 
 /** Inline branches beyond this count move into the disclosure, sorted forward. */
 const INLINE_BRANCH_LIMIT = 6;
+
+// Same fold rule as MechanismReviewPanel and BridgingCard: cut in the string,
+// not with line-clamp, so the fold does not move with the viewport. 14 of 81
+// CDP oracle summaries run past 400 characters.
+const SUMMARY_LEAD_CHARS = 320;
+const SUMMARY_COLLAPSE_THRESHOLD = 420;
+
+function buildLead(summary: string) {
+  const cut = summary.slice(0, SUMMARY_LEAD_CHARS);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
 
 function branchHasDetail(branch: OracleBranchClientRow): boolean {
   return (
@@ -88,7 +102,11 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
  * most fiat-backed issuers.
  */
 export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClientSummary | null }) {
+  const [summaryOpen, setSummaryOpen] = useState(false);
   if (!summary) return null;
+
+  const collapsible = summary.summary.length > SUMMARY_COLLAPSE_THRESHOLD;
+  const showLead = collapsible && !summaryOpen;
 
   const facts: FactGridItem[] = [
     ...(summary.branchCount > 0
@@ -123,7 +141,22 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
         </Badge>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        <p className="text-sm leading-relaxed text-muted-foreground">{summary.summary}</p>
+        <div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {showLead ? buildLead(summary.summary) : summary.summary}
+          </p>
+          {collapsible ? (
+            <button
+              type="button"
+              onClick={() => setSummaryOpen((value) => !value)}
+              aria-expanded={summaryOpen}
+              className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-xs font-medium text-frost-blue"
+            >
+              {summaryOpen ? "Show less" : "Read more"}
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", summaryOpen && "rotate-180")} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
         <FactGrid aria-label="Oracle and liquidation facts" items={facts} />
         {inlineBranches.length > 0 ? (
           <div>

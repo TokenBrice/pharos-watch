@@ -36,4 +36,17 @@ describe("BridgingCard", () => {
     expect(renderToStaticMarkup(<BridgingCard summary={null} />)).toBe("");
     expect(renderToStaticMarkup(<BridgingCard />)).toBe("");
   });
+
+  it("keeps short summaries un-collapsed with no Read more control", () => {
+    const html = renderToStaticMarkup(<BridgingCard summary={SUMMARY} />);
+    expect(html).not.toContain("Read more");
+  });
+
+  it("cuts long summaries to a lead behind Read more", () => {
+    const longSummary = `${"Native routes are reviewed as issuer-native multichain issuance. ".repeat(12)}TAIL-MARKER`;
+    const html = renderToStaticMarkup(<BridgingCard summary={{ ...SUMMARY, summary: longSummary }} />);
+    expect(html).toContain("Read more");
+    expect(html).toContain("…");
+    expect(html).not.toContain("TAIL-MARKER"); // collapsed lead only
+  });
 });

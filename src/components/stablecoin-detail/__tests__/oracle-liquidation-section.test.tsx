@@ -71,6 +71,13 @@ describe("OracleLiquidationSection", () => {
     expect(html).not.toContain("<details open");
   });
 
+  it("cuts long profile summaries to a lead behind Read more", () => {
+    const longSummary = `${"External feeds with response validation and per-branch shutdown. ".repeat(12)}TAIL-MARKER`;
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={{ ...SUMMARY, summary: longSummary }} />);
+    expect(html).toContain("Read more");
+    expect(html).not.toContain("TAIL-MARKER"); // collapsed lead only
+  });
+
   it("renders nothing without an oracle summary", () => {
     expect(renderToStaticMarkup(<OracleLiquidationSection summary={null} />)).toBe("");
     expect(renderToStaticMarkup(<OracleLiquidationSection />)).toBe("");
