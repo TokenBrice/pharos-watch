@@ -601,11 +601,19 @@ function transferMaterialScope(
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
+    const chainId = resolveChainId(deployment.chain);
+    return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
+  });
+  const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
   if (totalSupplyUsd <= 0) {
     return {
-      authoritativeDeploymentKeys: [],
+      authoritativeDeploymentKeys,
       materialDeploymentKeys: [],
       materialDeploymentScopeComplete: false,
+      // No supply rows at all: only a declared supported-chain contract can
+      // make this asset addressable by the contract-scope machinery.
+      deploymentModel: authoritativeDeploymentKeys.length > 0 ? "contract-addressable" : "non-contract-native",
     };
   }
 
@@ -619,11 +627,6 @@ function transferMaterialScope(
       supplyByChainId.set(chainId, (supplyByChainId.get(chainId) ?? 0) + row.current);
     }
   }
-  const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
-    const chainId = resolveChainId(deployment.chain);
-    return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
-  });
-  const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
   const deploymentsByChainId = new Map<string, string[]>();
   for (const deployment of authoritativeDeployments) {
     deploymentsByChainId.set(deployment.chainId, [
@@ -645,6 +648,13 @@ function transferMaterialScope(
       unresolvedSupplyUsd / totalSupplyUsd < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
       materialChainIds.length > 0 &&
       materialChainIds.every((chainId) => (deploymentsByChainId.get(chainId)?.length ?? 0) > 0),
+    // Addressable as soon as the registry names one supported-chain contract or
+    // one supported chain carries a material share of supply. Everything else
+    // is a chain-native deployment the contract-scope machinery cannot reach.
+    deploymentModel:
+      authoritativeDeploymentKeys.length > 0 || materialChainIds.length > 0
+        ? "contract-addressable"
+        : "non-contract-native",
   };
 }
 
@@ -773,13 +783,20 @@ function adaptAccessReview(
     : legacyTransferState === "known"
       ? "restrictable"
       : null;
+  // Owner ruling 2026-08-10: an "inherited" verdict whose upstream resolves to
+  // no tracked asset used to drop the whole freeze review, which published the
+  // asset as never reviewed and erased the exposure the reviewer measured. The
+  // review is retained instead, without asserting an upstream identity this
+  // branch cannot verify: no `upstreamAssetId`, no failure domain, and the
+  // ordinary `possible` reach an unproven freeze surface carries.
+  const namedUpstream = status === "inherited" && inheritedResolvable;
   const freezeReview =
-    review === undefined || (status === "inherited" && !inheritedResolvable)
+    review === undefined
       ? []
       : [
           {
             reviewKey: `blacklist:${meta.id}`,
-            source: status === "inherited" ? ("upstream" as const) : ("blacklist" as const),
+            source: namedUpstream ? ("upstream" as const) : ("blacklist" as const),
             status: requiredStatus(
               "v9.access.freeze-review",
               freezeState,
@@ -789,9 +806,9 @@ function adaptAccessReview(
             reach:
               status === false ? ("none" as const) : status === true ? ("individual" as const) : ("possible" as const),
             controlKey: null,
-            upstreamAssetId: status === "inherited" ? inheritedFrom : null,
+            upstreamAssetId: namedUpstream ? inheritedFrom : null,
             failureDomains:
-              status === "inherited" && inheritedFrom
+              namedUpstream && inheritedFrom
                 ? [
                     {
                       // A declared parent transmits freeze reach through the
@@ -815,6 +832,12 @@ function adaptAccessReview(
         transferReview ? transferEvidenceKeys : legacyTransferState === "missing" ? [] : blacklistEvidenceKeys,
       ),
       posture: transferPosture,
+      // Owner ruling 2026-08-10: the applicability basis for a transfer fact
+      // that is known from the curated review alone because the asset has no
+      // contract deployment scope to complete (see `reviewIsOutsideContractScope`).
+      ...(transferResolution?.structuralDisposition !== undefined
+        ? { structuralDisposition: transferResolution.structuralDisposition }
+        : {}),
     },
     freeze: {
       status: requiredStatus(
@@ -831,8 +854,16 @@ function adaptAccessReview(
       // The upstream may be named by a declared parent OR by a curated reserve
       // slice (see `resolveReserveSliceUpstreamAssetId`) — both are named
       // tracked assets, which is the whole requirement.
-      ...(status === "inherited" && inheritedResolvable && freezeState === "bounded-unknown"
-        ? { structuralDisposition: "inherited-upstream" as const }
+      // Owner ruling 2026-08-10: when the same current review names no tracked
+      // upstream, the honest fact is still structural — inherited exposure with
+      // an untracked counterparty — so it is measured as such rather than
+      // reported as an unreviewed asset.
+      ...(status === "inherited" && freezeState === "bounded-unknown"
+        ? {
+            structuralDisposition: inheritedResolvable
+              ? ("inherited-upstream" as const)
+              : ("inherited-untracked-upstream" as const),
+          }
         : {}),
     },
   };

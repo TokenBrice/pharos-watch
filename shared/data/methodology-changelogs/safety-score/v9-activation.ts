@@ -261,3 +261,22 @@ export const SAFETY_SCORE_V9_STRESS_STATE_DIGEST_REMOVAL: MethodologyChangelogEn
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_ACCESS_STRUCTURAL_APPLICABILITY: MethodologyChangelogEntry = {
+  version: "9.16",
+  title: "A reviewed access fact stops being reported as unreviewed",
+  date: "2026-08-10",
+  effectiveAt: 1786672800,
+  summary:
+    "Two engine mechanisms made the access branch publish 'we never looked' about assets it had looked at. The transfer scope test is contract-addressed, so a chain-native asset with no contracts by design could never satisfy it; and an inherited freeze verdict whose upstream is not a tracked asset was deleted rather than measured. Both now resolve to an explicit structural fact, and neither invents data where no current review exists.",
+  impact: [
+    "A curated transfer review publishes a known posture with the applicability basis `non-contract-native` when the asset offers nothing the contract-scope machinery can address — no supported-chain contract, no material supported-chain supply — and every reviewed deployment sits on a chain outside the supported chain registry. The curated review is then the complete deployment scope, not a partial view of one",
+    "That path is fail-closed on every leg: one supported-chain deployment, any material supported-chain supply, a review touching a supported chain, or a stale or absent review, and the asset keeps gapping as `missing-access-review` exactly as before. Three assets qualify — FUSD on Zano and the two Zephyr protocol assets",
+    "An `inherited` freeze verdict that names no tracked upstream is retained as `inherited-untracked-upstream` instead of being dropped. No upstream id and no failure domain are asserted, because the branch verifies neither; the reach stays `possible` and the gap is the measured `inherited-access-exposure` rather than missing data. Seven assets move: DAI, crvUSD, BUCK, FPI, lisUSD, LUAUSD, and NXUSD",
+    "Freeze facts stay bounded-unknown for scoring; the freeze exposure those seven assets publish moves from `unknown` to the measured `possible`. Transfer facts that become known publish a posture where they previously published none",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged; no card changes grade",
+    "The curation incentive is corrected at the source: an honest `inherited` verdict is no longer penalised as an unreviewed asset, which is what pushed the wave-1 over-suppression of 29 verdicts restored in `1134ab32f`",
+  ],
+  commits: [],
+  reconstructed: false,
+};

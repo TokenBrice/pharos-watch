@@ -45,6 +45,24 @@ own review must resolve to a direct holder freeze. A declared parent takes prece
 unchanged either way — the freeze facts stay `bounded-unknown`, and the disposition only changes how
 the gap is attributed.
 
+When the same current `inherited` verdict names **no** tracked upstream, the review is retained with
+`structuralDisposition: "inherited-untracked-upstream"`: no `upstreamAssetId` and no failure domain
+are asserted (the branch verifies neither), the freeze review keeps its `possible` reach, and the gap
+is still the measured `inherited-access-exposure` rather than `missing-access-review`. Dropping that
+review — the behaviour before the 2026-08-10 owner ruling — published assets such as `dai-makerdao`
+and `crvusd-curve` as never reviewed and erased the exposure the reviewer had measured.
+
+The transfer half of the branch has its own structural case. `resolveSafetyScoreV9ReviewedTransferFact()`
+in `worker/src/lib/safety-score-v9-extension-transfer.ts` normally requires the curated
+`transfer-review-overlays-v1.json` entry to cover every material *contract* deployment, which a
+chain-native asset with no `contracts[]` by design (fUSD on Zano, the Zephyr protocol assets) can
+never satisfy. When the registry offers nothing contract-addressable — no supported-chain contract
+and no material supported-chain supply — **and** every reviewed deployment sits on a chain outside
+the supported chain registry, the curated review is the complete deployment scope, so the transfer
+fact publishes as known with `structuralDisposition: "non-contract-native"` recording that
+applicability basis. Every leg is fail-closed: one supported-chain deployment, or a missing curated
+review, and the asset keeps gapping as `missing-access-review`.
+
 Curators must not write `canBeBlacklisted: false` to suppress an honest `inherited` verdict. The
 `upstreamSuppressionRationale` escape hatch exists for false-positive inferences (a same-symbol
 collision, for example), not for "the upstream actor cannot freeze our holder balances" — that

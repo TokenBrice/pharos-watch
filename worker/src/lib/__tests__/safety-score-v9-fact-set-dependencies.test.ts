@@ -416,7 +416,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       });
     });
 
-    it("refuses an unnamed, unscored, or not-directly-freezable upstream", () => {
+    it("refuses to name an unnamed, unscored, or not-directly-freezable upstream but still measures it", () => {
       const cases: [string, [string, unknown][]][] = [
         // No `coinId`: the slice names no asset, so there is nothing to attribute.
         ["unnamed", [["alpha", holderMeta([{ name: "USDC", pct: 90 }])]]],
@@ -435,9 +435,36 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
       ];
       for (const [label, entries] of cases) {
         const access = buildAccess(entries);
-        expect(access?.freeze.structuralDisposition, label).toBeUndefined();
-        expect(access?.freeze.reviews, label).toEqual([]);
+        // Owner ruling 2026-08-10: no upstream identity may be asserted, but
+        // the evidenced inherited verdict is a measured structural fact rather
+        // than missing data, so the review is retained instead of dropped —
+        // dropping it published these assets as never reviewed.
+        expect(access?.freeze.structuralDisposition, label).toBe("inherited-untracked-upstream");
+        expect(access?.freeze.reviews, label).toMatchObject([
+          {
+            source: "blacklist",
+            reach: "possible",
+            upstreamAssetId: null,
+            failureDomains: [],
+          },
+        ]);
+        expect(access?.freeze.status.observationState, label).toBe("bounded-unknown");
       }
+    });
+
+    it("classifies the untracked-upstream gap as measured exposure, not a missing review", () => {
+      const entries: [string, unknown][] = [["alpha", holderMeta([{ name: "USDC", pct: 90 }])]];
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(threeAssetInput(), buildExtension(entries));
+      const freezeGaps = compiled.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
+      expect(freezeGaps.length).toBeGreaterThan(0);
+      expect(
+        freezeGaps.every(
+          (gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse",
+        ),
+      ).toBe(true);
+      expect(freezeGaps.some((gap) => gap.message.includes("not a tracked asset"))).toBe(true);
     });
   });
 
