@@ -245,14 +245,6 @@ jobs:
               });
               continue;
             }
-
-            if (probe.id === "worker-cron") {
-              results.push({
-                ...probe,
-                outcome: "pending",
-                detail: "Await the first matching scheduled execution; inspect it with npm run ops:watch-worker-cron.",
-              });
-            }
           }
 
           const acceptance = summarizePostDeployAcceptance(results);

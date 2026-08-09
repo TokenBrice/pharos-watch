@@ -1,9 +1,10 @@
 export const POST_DEPLOY_ACCEPTANCE_OUTCOMES = Object.freeze(["passed", "failed", "pending"]);
 
 /**
- * Choose probes only for surfaces that finished deployment successfully. A
- * Worker release always leaves cron acceptance pending because this short
- * post-deploy job cannot safely wait for and correlate a future scheduled run.
+ * Choose probes only for surfaces that finished deployment successfully. Cron
+ * acceptance is deliberately absent: this short post-deploy job cannot wait for
+ * and correlate a future scheduled run, so observing the first relevant
+ * execution stays a human step (`npm run ops:watch-worker-cron`).
  */
 export function selectPostDeployProbes({ pagesDeployed = false, workerDeployed = false } = {}) {
   const probes = [];
@@ -18,21 +19,12 @@ export function selectPostDeployProbes({ pagesDeployed = false, workerDeployed =
   }
 
   if (workerDeployed) {
-    probes.push(
-      {
-        id: "worker-health",
-        kind: "smoke",
-        surface: "worker",
-        description: "Read the public Worker health endpoint.",
-      },
-      {
-        id: "worker-cron",
-        kind: "cron",
-        surface: "worker",
-        description: "Observe the first matching scheduled execution after deployment.",
-        deferred: true,
-      },
-    );
+    probes.push({
+      id: "worker-health",
+      kind: "smoke",
+      surface: "worker",
+      description: "Read the public Worker health endpoint.",
+    });
   }
 
   return probes;

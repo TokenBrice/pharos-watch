@@ -6,8 +6,8 @@
  * smoke runner (fetch/retry plumbing, OG-image checks, scope logic).
  *
  * REDEMPTION_ENUMS mirrors the RedemptionRouteFamily/etc. TypeScript unions in
- * shared/types/redemption; scripts/__tests__/smoke-api-redemption-enums.test.ts
- * guards that mirror against the Zod schemas.
+ * shared/types/redemption. The mirror is hand-maintained: deriving it from the
+ * Zod schemas would remove the drift risk entirely and is the better fix.
  */
 
 import { assert } from "./smoke-runtime.mjs";

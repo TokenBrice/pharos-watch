@@ -15,7 +15,6 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
       "scripts/lib/telegram-load-scenarios.ts",
       "scripts/lib/telegram-load-guard.mjs",
       "scripts/__tests__/check-telegram-load.test.ts",
-      "scripts/__tests__/telegram-load-guard.test.ts",
     ],
     examples: ["scripts/ci/check-telegram-load.ts"],
   },
