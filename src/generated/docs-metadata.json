@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-08-10T00:29:27+02:00",
+    "dateModified": "2026-08-10T01:57:54+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -36,7 +36,7 @@
     "dateCreated": "2026-02-28T12:27:51+01:00"
   },
   "dews": {
-    "dateModified": "2026-08-09T23:43:55+02:00",
+    "dateModified": "2026-08-10T01:51:30+02:00",
     "dateCreated": "2026-03-01T16:18:28+01:00"
   },
   "dex-liquidity": {
@@ -48,7 +48,7 @@
     "dateCreated": "2026-02-25T19:21:45+01:00"
   },
   "report-cards": {
-    "dateModified": "2026-08-09T21:42:39+02:00",
+    "dateModified": "2026-08-10T01:57:54+02:00",
     "dateCreated": "2026-02-25T19:21:45+01:00"
   },
   "redemption-backstops": {
@@ -56,15 +56,15 @@
     "dateCreated": "2026-03-12T23:06:41+01:00"
   },
   "chain-health": {
-    "dateModified": "2026-08-10T00:28:31+02:00",
+    "dateModified": "2026-08-10T01:57:54+02:00",
     "dateCreated": "2026-04-19T03:17:40+02:00"
   },
   "mint-burn-flows": {
-    "dateModified": "2026-08-10T00:30:52+02:00",
+    "dateModified": "2026-08-10T01:57:54+02:00",
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "yield-intelligence": {
-    "dateModified": "2026-08-10T00:30:13+02:00",
+    "dateModified": "2026-08-10T01:57:54+02:00",
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "shadow-stablecoins": {
