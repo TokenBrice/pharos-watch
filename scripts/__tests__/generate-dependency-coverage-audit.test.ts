@@ -546,6 +546,57 @@ describe("generate-dependency-coverage-audit", () => {
     expect(audit.summary.manualDependencyReviewGapCount).toBe(3);
   });
 
+  it("accepts a review of the variantOf wrapper edge the schema already sanctions", () => {
+    // `reviewableDependencies` in `shared/lib/stablecoins/schema.ts` counts the
+    // `variantOf` wrapper edge alongside manual `dependencies[]`, so ratifying
+    // it is valid curation, not a stale row. Reading it as stale is what put
+    // `manualDependencyReviewGaps: 1` in the wave-1 ratchet for sUSDai.
+    const variant = coin({
+      id: "vault-variant",
+      variantOf: "parent-asset",
+      dependencyReview: {
+        reviewedAt: "2026-07-30",
+        reviewer: "fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Docs", url: "https://example.test/vault" }],
+        rationale: "The whole share resolves serially to the parent through the reviewed vault.",
+        relationships: [
+          { id: "parent-asset", type: "wrapper", weight: 1, reason: "Serial wrapper claim on the parent." },
+        ],
+      },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [coin({ id: "parent-asset" }), variant],
+    });
+
+    expect(audit.manualDependencyReviewGaps).toEqual([]);
+    expect(audit.summary.manualDependencyReviewGapCount).toBe(0);
+  });
+
+  it("still reports a relationship that names neither a manual, reserve, nor variant edge", () => {
+    const variant = coin({
+      id: "vault-variant",
+      variantOf: "parent-asset",
+      dependencyReview: {
+        reviewedAt: "2026-07-30",
+        reviewer: "fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Docs", url: "https://example.test/vault" }],
+        rationale: "Fixture review naming an edge the coin does not have.",
+        relationships: [
+          { id: "unrelated", type: "wrapper", weight: 1, reason: "Stale fixture row." },
+        ],
+      },
+    });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [coin({ id: "parent-asset" }), coin({ id: "unrelated" }), variant],
+    });
+
+    expect(audit.manualDependencyReviewGaps).toEqual([
+      expect.objectContaining({ coinId: "vault-variant", dependencyId: "unrelated", reason: "stale-relationship" }),
+    ]);
+  });
+
   it("validates unavailable-target and dynamic adapter registries against current runtime facts", () => {
     const mapped = coin({ id: "mapped", liveReservesConfig: liveConfig("accountable") });
     const upstream = coin({ id: "upstream" });
