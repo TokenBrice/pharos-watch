@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   defineBackstopRegistry,
   defineBatch,
-  defineOverride,
   defineRecordEntries,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
@@ -56,12 +55,11 @@ describe("validateRedemptionBackstopRegistry", () => {
   it("lets a later entry with an override reason win", () => {
     const registry = defineBackstopRegistry([
       ...defineBatch(["usdt-tether"], baseConfig),
-      defineOverride(
-        "usdt-tether",
-        baseConfig,
-        { settlementModel: "days" },
-        "Reviewed issuer terms document slower settlement.",
-      ),
+      {
+        id: "usdt-tether",
+        config: { ...baseConfig, settlementModel: "days" as const },
+        overrideReason: "Reviewed issuer terms document slower settlement.",
+      },
     ]);
 
     expect(registry["usdt-tether"].settlementModel).toBe("days");
@@ -220,13 +218,12 @@ describe("validateRedemptionBackstopRegistry", () => {
   it("carries entry override and source-file metadata into the merged registry and audit", () => {
     const issuerEntries = [
       ...defineBatch(["usdt-tether"], baseConfig, { sourceFilePath: "issuer-base.ts" }),
-      defineOverride(
-        "usdt-tether",
-        baseConfig,
-        { settlementModel: "days" },
-        "Reviewed issuer terms document slower settlement.",
-        { sourceFilePath: "issuer-override.ts" },
-      ),
+      {
+        id: "usdt-tether",
+        config: { ...baseConfig, settlementModel: "days" as const },
+        overrideReason: "Reviewed issuer terms document slower settlement.",
+        sourceFilePath: "issuer-override.ts",
+      },
     ];
     const manifest: RedemptionBackstopConfigManifestEntry[] = [
       {

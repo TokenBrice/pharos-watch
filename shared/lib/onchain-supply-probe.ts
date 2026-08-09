@@ -476,6 +476,8 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
   return CHAIN_META[contract.chain]?.type === "evm" && EVM_ADDRESS_RE.test(contract.address) ? "evm" : null;
 }
 
+// Test seam (keep exported): the per-chain address-format matrix is asserted
+// directly; the resolver wrappers below are the production entry points.
 export function supportsOnchainSupplyProbe(contract: OnchainSupplyContract): boolean {
   return onchainSupplyProbeFamily(contract) !== null;
 }

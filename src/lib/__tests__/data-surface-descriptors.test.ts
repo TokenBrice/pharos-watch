@@ -278,7 +278,7 @@ describe("data surface descriptors", () => {
     }
   });
 
-  it("pins non-derived cache freshness lanes and keeps descriptors aligned", () => {
+  it("pins the cache freshness lanes and proves descriptors project them", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.stablecoins).toMatchObject({
       cacheKey: "stablecoins",
       producerJob: "sync-stablecoins",
@@ -312,6 +312,10 @@ describe("data surface descriptors", () => {
     });
     expect(FRESHNESS_SENTINEL_CACHE_KEYS).toEqual(["dex-liquidity", "yield-data", "dews"]);
 
+    // Descriptors no longer restate these five fields: they spread the lane via
+    // `surfaceFreshnessLaneFields(...)`. This is now a copy-matches-source check
+    // (the copy is derived), plus proof that lane documentation strings stay off
+    // the descriptor and that the cacheKey lookup still resolves to the same lane.
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
       if (!("cacheFreshnessLaneKey" in surface) || !surface.cacheFreshnessLaneKey) continue;
 
@@ -331,6 +335,8 @@ describe("data surface descriptors", () => {
       expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(
         lane.freshnessSentinelKey,
       );
+      expect(surface).not.toHaveProperty("endpointBudgetReason");
+      expect(surface).not.toHaveProperty("availabilityBudgetReason");
     }
   });
 

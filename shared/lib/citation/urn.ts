@@ -91,6 +91,9 @@ export function formatPharosUrn(
  * Strict validation: lowercase only, hyphens not underscores, `urn:pharos:`
  * prefix required, entity-class must be in the closed enum.
  */
+// The documented inverse of `formatPharosUrn` (docs/pharos-urn.md). No runtime
+// caller today; its suite is the round-trip guard for the formatter, which is
+// in production via `src/lib/pharos-urn-json-ld.ts`.
 export function parsePharosUrn(urn: string): PharosUrn | null {
   if (typeof urn !== "string") return null;
   if (!urn.startsWith(URN_PREFIX)) return null;

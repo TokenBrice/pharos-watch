@@ -9,7 +9,6 @@ import {
   venueRiskTierOf,
   venueRiskWeightedOf,
 } from "@shared/lib/yield-source-risk-registry";
-import { YIELD_RISK_CONFIG_METADATA } from "@shared/lib/yield-source-risk-metadata";
 
 // Structural-integrity gate for the canonical shared/lib registry. The worker
 // cron test (worker/src/cron/__tests__/yield-source-risk.test.ts) exercises the
@@ -30,9 +29,9 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
         expect(score, `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
         expect(score, `${protocol}.${category}`).toBeLessThanOrEqual(5);
       }
-      const metadata = YIELD_RISK_CONFIG_METADATA[protocol];
-      expect(metadata.evidence.length, protocol).toBeGreaterThan(0);
-      expect(metadata.rationale.length, protocol).toBeGreaterThan(0);
+      // Reviewer provenance lives on the entry itself; every enrolled protocol carries both.
+      expect(config.evidence?.length ?? 0, protocol).toBeGreaterThan(0);
+      expect(config.rationale?.length ?? 0, protocol).toBeGreaterThan(0);
     }
   });
 

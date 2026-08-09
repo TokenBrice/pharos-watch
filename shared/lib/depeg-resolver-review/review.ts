@@ -46,7 +46,7 @@ function medianReviewForSignedError(signedErrorSec: number): DdrrMedianReview {
   return "median_exact";
 }
 
-export function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrVerdictReview {
+function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrVerdictReview {
   if (isDataIssueOutcome(outcome.actualOutcome)) return "data_issue";
   if (assessment.resolutionTier === "insufficient_signal") return "unscored_insufficient_signal";
   if (outcome.actualOutcome === "still_open") return "pending";
@@ -67,7 +67,7 @@ export function reviewVerdict(assessment: DdrrAssessmentInput, outcome: DdrrDeri
   return "data_issue";
 }
 
-export function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrDurationReviewResult {
+function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDerivedOutcome): DdrrDurationReviewResult {
   if (isDataIssueOutcome(outcome.actualOutcome)) {
     return {
       durationReview: "data_issue",
@@ -147,7 +147,7 @@ export function reviewDuration(assessment: DdrrAssessmentInput, outcome: DdrrDer
   };
 }
 
-export function reviewHorizons(
+function reviewHorizons(
   assessment: DdrrAssessmentInput,
   outcome: DdrrDerivedOutcome,
   nowSec: number,

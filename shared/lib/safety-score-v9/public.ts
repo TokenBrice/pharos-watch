@@ -743,6 +743,9 @@ function allPublicReasonCodes(input: V9PublicCardProjectionInput): V9ReasonCode[
   ]);
 }
 
+// Test seam (keep exported): the public-projection suite asserts single-card
+// output without assembling a whole response envelope. Production callers go
+// through `buildSafetyScoreV9Response`.
 export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): SafetyScoreV9CurrentCard {
   const caps = input.trace.caps.map((cap) => ({
     kind: cap.kind,

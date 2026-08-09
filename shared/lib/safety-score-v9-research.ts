@@ -1,3 +1,7 @@
+// Verification seam (deliberate, keep): this module exists so replay/verification
+// suites can re-run V9 scoring against a validated policy envelope out of band.
+// It has no production consumer by design — do not delete it as "unused code"
+// (Codebase Health Pass WS6.10, ruled 2026-08-09).
 import {
   CompiledV9AssetInputSchema,
   V9ScoringInputSchema,

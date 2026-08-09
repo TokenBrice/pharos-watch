@@ -32,6 +32,8 @@ const frozenSnapshotSchema = z
     }
   });
 
+// Test seam (keep exported): the fail-closed rejection path can only be
+// exercised directly — `FROZEN_SNAPSHOTS` below is parsed once at module load.
 export function parseFrozenSnapshots(input: unknown, source: string): FrozenSnapshot[] {
   const parsed = z.array(frozenSnapshotSchema).safeParse(input);
   if (!parsed.success) {

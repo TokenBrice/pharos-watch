@@ -54,7 +54,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/math.ts",
-      "sha256": "aec837be0c25ea625ea5302e2119ed3f4bbfa7ada66b7ef3655a9b89cafe3f90"
+      "sha256": "30284283d8814341e2b0cd7179bd5bede5e60b9edfd9bfb8f43d13426bb541c2"
     },
     {
       "path": "shared/lib/methodology-versions/base.ts",
@@ -90,7 +90,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
-      "sha256": "a51e78921be534e78a51b2a799d1ee087a9c7a4dd86d544837c4d139cebeb764"
+      "sha256": "f3ab771517bdcc0fed2a6d37253d6041425a086ff8b64c5258b4f9bf6513d2e5"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/index.ts",
@@ -521,7 +521,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "e55c583699185724a8051115932c2109cf33a0e8047e9966fe1aa6f65cbe473b"
+  "digest": "44d86bc7e068da6fac23f11f5ef6d2f546a76da7d9cdaf885c5cb2ccda7fcc95"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -2,7 +2,6 @@ import type {
   BackingType,
   CollateralQuality,
   CustodyModel,
-  GovernanceQuality,
   GovernanceType,
   ReserveRisk,
 } from "../types";
@@ -51,12 +50,6 @@ const DEFAULT_RESILIENCE_FACTORS: Record<`${BackingType}:${GovernanceType}`, Res
   },
 };
 
-const DEFAULT_GOVERNANCE_QUALITY: Record<GovernanceType, GovernanceQuality> = {
-  decentralized: "dao-governance",
-  "centralized-dependent": "multisig",
-  centralized: "single-entity",
-};
-
 export const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
   "very-low": 100,
   low: 75,
@@ -67,8 +60,4 @@ export const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
 
 export function inferResilienceDefaults(backing: BackingType, governance: GovernanceType): ResilienceDefaults {
   return DEFAULT_RESILIENCE_FACTORS[`${backing}:${governance}`];
-}
-
-export function inferGovernanceQuality(governance: GovernanceType): GovernanceQuality {
-  return DEFAULT_GOVERNANCE_QUALITY[governance];
 }
