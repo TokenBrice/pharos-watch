@@ -14,7 +14,11 @@ import {
 // scoring clock, so authoring a review advances this snapshot with it.
 // 2026-08-08: the reviewed mint reconciliation/supervision pass dated 14 assets
 // 2026-08-08, one day past the previous 2026-08-07 snapshot.
-const CLOCK_SEC = 1_786_147_200;
+// 2026-08-10: the v9.14 commodity-claim migration dated 15 archetype reviews and
+// 13 mechanism overlays 2026-08-09. The mechanism overlay also has to clear its
+// same-day admission gate, which requires a full UTC day to have elapsed since
+// `reviewedAt` — hence 08-10 rather than 08-09.
+const CLOCK_SEC = 1_786_320_000;
 const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
 function resourceRoute(assetId: string) {

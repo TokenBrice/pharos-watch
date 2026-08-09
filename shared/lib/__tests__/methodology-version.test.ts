@@ -139,16 +139,14 @@ describe("createMethodologyVersion", () => {
   });
 });
 
-describe("Safety Score v9.14 commodity-claim entry (prepared, unpublished)", () => {
-  // `createMethodologyVersion` makes wiring an entry and bumping
-  // current-version.json one atomic act, and 9.13 set the precedent that the
-  // pair lands with the behaviour it describes. The v9.14 engine ships with zero
-  // assets on the new archetype, so the entry stays out of the published
-  // changelog until the phase-2 migration. Phase 2 deletes this case.
-  it("is authored but not yet in the published changelog", () => {
+describe("Safety Score v9.14 commodity-claim entry", () => {
+  // Replaces the phase-1 "prepared, unpublished" guard. The entry, the current
+  // version, and the migration that moves scores now land together, which is
+  // what `createMethodologyVersion` enforces and what 9.13 set as precedent.
+  it("is published as the current version", () => {
     expect(SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.version).toBe("9.14");
-    expect(SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => entry.version)).not.toContain("9.14");
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("9.13");
+    expect(SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]).toBe(SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE);
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("9.14");
   });
 });
 

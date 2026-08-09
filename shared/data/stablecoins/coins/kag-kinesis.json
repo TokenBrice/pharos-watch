@@ -13,7 +13,7 @@
   },
   "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
   "pegMechanism": "KMS Labs' ERC-20 KAG is backed 1:1 by Kinesis-native KAG after compliance onboarding; native KAG is then redeemable for allocated physical silver through Kinesis Cayman. ERC-20 balances do not accrue Kinesis transaction-fee yield.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "kinesis-silver",
@@ -217,5 +217,17 @@
       ]
     }
   },
-  "launchDate": "2025-09-11"
+  "launchDate": "2025-09-11",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "KAG is a direct allocated-commodity claim on silver: Kinesis discloses that holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and publishes a recurring Bureau Veritas physical audit program. Migrated to commodity-claim under methodology v9.14; the owner ruling scopes the archetype to all direct commodity claims, silver included.",
+    "sources": [
+      {
+        "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody)",
+        "url": "https://kinesis.money/trust-security/"
+      }
+    ]
+  }
 }

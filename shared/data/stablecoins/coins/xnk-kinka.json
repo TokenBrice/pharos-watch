@@ -13,12 +13,12 @@
   },
   "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
   "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "Kinka's issuer whitepaper states that each XNK represents one troy fine ounce of 99.99% Japanese-brand physical gold, with bullion held at Loomis International and physical exchange through the issuer's disclosed redemption process. The reference is gold, not USD; fiat-cash is retained only as the repository's established fully-reserved commodity-token archetype, with commodityOunces carrying the operative claim measurement.",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "Kinka's whitepaper states that each XNK represents one fine troy ounce of 99.99% Japanese-brand physical gold, with bullion held at Loomis International, custody assumed by Gold Management LLC, and physical exchange from a 321.5 XNK minimum for ten 1 kg bars. Rewritten for methodology v9.14: the prior review recorded that the archetype enum had no commodity-claim value and kept fiat-cash as the repository's placeholder commodity-token archetype, with commodityOunces carrying the operative claim measurement. The archetype now states it directly.",
     "sources": [
       {
         "label": "Kinka whitepaper",

@@ -13,12 +13,12 @@
   },
   "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
   "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "VNX identifies each VNXAU as direct ownership of one gram of LBMA-certified physical gold, with individually serialised bars and physical collection or delivery. The closed V9 archetype enum has no commodity-claim value; fiat-cash is retained only as the existing issuer-reserve-and-redemption category and does not imply a USD peg.",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "VNX identifies each VNXAU as direct ownership of one gram of LBMA-certified physical gold, with individually serialised bars and physical collection or delivery, and AREVA's agreed-upon-procedures report as of 2025-12-31 reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply. Rewritten for methodology v9.14: the prior review recorded that the closed V9 archetype enum had no commodity-claim value and kept fiat-cash as a placeholder. That value now exists, so the placeholder is retired.",
     "sources": [
       {
         "label": "VNX Gold product disclosure",

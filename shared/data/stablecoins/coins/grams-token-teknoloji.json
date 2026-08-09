@@ -13,7 +13,7 @@
   },
   "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.0321507466,
   "detailProvider": "commodity",
   "geckoId": "gram-silver",
@@ -290,5 +290,21 @@
     "changedAt": "2026-07-15",
     "reviewBy": "2026-08-15",
     "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "GRAMS is a one-gram silver claim: Token Teknoloji's proof pages list physical silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank against issued tokens. Migrated to commodity-claim under methodology v9.14; the owner ruling scopes the archetype to all direct commodity claims, silver included. The coin carries no curated mechanism overlay, so its commodity components stay on the conservative compiler fallback.",
+    "sources": [
+      {
+        "label": "Token Teknoloji Gram Silver (GRAMS) product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ]
   }
 }

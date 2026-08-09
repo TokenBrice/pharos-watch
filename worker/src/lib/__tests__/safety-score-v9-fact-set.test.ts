@@ -1303,6 +1303,45 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
   });
 
+  it("publishes a not-applicable oracle review for a commodity claim", () => {
+    // v9.14 regression. A claim on identified metal has no oracle- or
+    // liquidation-dependent stabilization path, so it belongs in
+    // `ORACLE_FREE_ARCHETYPES` alongside fiat-cash and tbill. Phase 1 could not
+    // catch the omission — its guard held zero coins on the archetype — and the
+    // migration measurement showed every gold token acquiring a spurious
+    // `missing-oracle-profile` gap and a collapsed control pillar.
+    // A reviewed mint authority is what makes the economic-control block exist
+    // at all; the oracle branch inside it is what this case is about.
+    const mintAuthority = {
+      mintPath: "issuer-direct-mint",
+      authorityPosture: "concentrated-admin",
+      confidence: "verified",
+      summary: "Prudential issuer fixture.",
+      supervision: "prudential",
+      review: {
+        sources: [{ label: "Supervisor", url: "https://example.com/supervisor" }],
+        evidence: "The issuer is prudentially supervised.",
+        reviewer: "Fixture reviewer",
+        reviewedAt: "1970-01-01",
+      },
+    };
+    const oracleStatus = (archetype: string) =>
+      buildSafetyScoreV9BaselineExtension(exactFixedInput(), {
+        metaById: new Map([
+          ["alpha", { id: "alpha", mechanismArchetype: archetype, launchDate: "2020-01-01", mintAuthority }],
+        ]) as never,
+      }).assets[0]!.economicControlReview?.oracle.status;
+
+    expect(oracleStatus("commodity-claim")).toMatchObject({
+      applicability: {
+        state: "not-applicable",
+        rationale: expect.stringContaining("no oracle- or liquidation-dependent stabilization path"),
+      },
+    });
+    // A CDP still has to answer the question.
+    expect(oracleStatus("cdp")).toMatchObject({ observationState: "missing" });
+  });
+
   it("materializes fuzzy quarter implementation dates at the conservative quarter end", () => {
     const clockSec = Date.parse("2026-07-28T00:00:00Z") / 1_000;
     const fixed = exactFixedInput({ clockSec });

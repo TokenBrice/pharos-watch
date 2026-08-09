@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
   "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "pleasing-gold",
@@ -381,5 +381,21 @@
       ]
     }
   },
-  "launchDate": "2025-10-22"
+  "launchDate": "2025-10-22",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "PGOLD is a direct commodity claim: the binding Terms of Sale and Service say each token is intended to correspond to an undivided interest in vaulted LBMA-standard metal held with qualified Hong Kong custodians, and the product documentation states one token represents one troy ounce of 99.99% gold with KYC-gated physical redemption. Migrated to commodity-claim under methodology v9.14. The migration does not strengthen the evidence: custody continuity and assurance remain sourced nondisclosures.",
+    "sources": [
+      {
+        "label": "Pleasing PGOLD binding Terms of Sale and Service",
+        "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service.md"
+      },
+      {
+        "label": "Pleasing How PGOLD Works disclosure",
+        "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/how-pgold-works.md"
+      }
+    ]
+  }
 }

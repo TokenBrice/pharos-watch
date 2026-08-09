@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
   "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "pax-gold",
@@ -274,5 +274,21 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2019-09-05"
+  "launchDate": "2019-09-05",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "PAXG is a direct allocated-commodity claim: the current Pax Gold terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure, and KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces while naming Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers. Migrated to commodity-claim under methodology v9.14; fiat-cash was only ever the nearest available issuer-reserve category.",
+    "sources": [
+      {
+        "label": "Pax Gold terms and conditions",
+        "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+      },
+      {
+        "label": "KPMG PAXG redemption-assets report as of May 29, 2026",
+        "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+      }
+    ]
+  }
 }

@@ -1477,7 +1477,13 @@ function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegRe
   return { referenceKind: "fiat", referenceKey: pegCurrency, failureDomains: [] };
 }
 
-const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund"]);
+// A claim on identified metal has no oracle- or liquidation-dependent
+// stabilization path any more than a custodial cash claim does: nothing is
+// liquidated against a price feed, and the token-versus-metal spread is the peg
+// layer's measurement. `commodity-claim` was added here at the v9.14 phase-2
+// migration — phase 1 could not have caught the omission, because its
+// zero-coin guard meant no asset ever reached this branch on the new archetype.
+const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
 
 // V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
 // CDP should be graded on the per-market oracle branches that carry material

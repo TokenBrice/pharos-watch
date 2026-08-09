@@ -13,19 +13,19 @@
   },
   "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
   "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-B wave6",
-    "rationale": "Gold DAO documents GLDT issuance against locked GLD NFT gold certificates, with physical gold underlying the certificates. The live claim is an issuer/protocol-managed, asset-backed commodity receipt rather than a borrower CDP, NAV fund share, or algorithmic stablecoin; within the available taxonomy, fiat-cash is the applicable direct-asset-claim archetype. Its GOLD reference remains distinct from a USD peg.",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "GLDT references physical gold through the GLD NFT deed structure, so it belongs with the direct commodity claims rather than with fiat-cash. The archetype placement is not an endorsement of the claim: Gold DAO's binding terms expressly state that GLDT is not legal ownership of gold and that Gold DAO does not guarantee redemption or conversion, and a holder must first reverse-swap GLDT into a GLD NFT, which alone is described as a deed to a bar. Migrated under methodology v9.14; that documented disclaimer is graded in the commodity components, where the September 2025 KPMG factual-findings report naming Loomis Schweiz AG, Kloten anchors custody.",
     "sources": [
       {
-        "label": "Gold DAO GLDT documentation",
-        "url": "https://docs.gold-dao.org/tokens/gldt"
+        "label": "Gold DAO binding terms of service",
+        "url": "https://docs.gold-dao.org/legal/terms-of-service"
       },
       {
-        "label": "Gold DAO technology documentation",
+        "label": "Gold DAO physical redemption documentation",
         "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
       }
     ]

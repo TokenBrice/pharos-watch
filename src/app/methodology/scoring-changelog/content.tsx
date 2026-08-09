@@ -4,6 +4,7 @@ import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-ver
 import {
   SAFETY_SCORE_V9_ACTIVATION,
   SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
+  SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE,
   SAFETY_SCORE_V9_EXIT_BOUNDARY_UNIFICATION,
   SAFETY_SCORE_V9_INCIDENT_DECAY_SEVERITY,
   SAFETY_SCORE_V9_EXIT_REDUNDANCY,
@@ -29,6 +30,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.14": (
+    <>
+      <p>{SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.13": (
     <>
       <p>{SAFETY_SCORE_V9_WRAPPER_OPERATOR_CLASSIFICATION.summary}</p>

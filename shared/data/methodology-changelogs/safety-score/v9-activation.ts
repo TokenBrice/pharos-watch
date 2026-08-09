@@ -130,30 +130,10 @@ export const SAFETY_SCORE_V9_EXIT_REDUNDANCY: MethodologyChangelogEntry = {
   reconstructed: false,
 };
 
-/**
- * v9.14 — PREPARED, NOT YET PUBLISHED.
- *
- * This entry is deliberately absent from the changelog array in
- * `shared/lib/methodology-versions/safety-score.ts`. `createMethodologyVersion()`
- * enforces `currentVersion === newest changelog entry`, so wiring an entry and
- * bumping `current-version.json` is one atomic act, and 9.13 set the precedent
- * that the pair lands in the same commit as the behaviour it describes
- * (ac1602f85). The v9.14 engine lands with zero assets on the new archetype, so
- * publishing 9.14 now would advertise a methodology version that moves no score
- * and would relabel every score in the 9.14 window before the migration exists.
- *
- * Phase 2 (per-coin migration) must, in one commit:
- *   1. set `date` / `effectiveAt` to the real v9.14 release moment,
- *   2. append the measured mover bullets from the full-set replay,
- *   3. add this export to the `changelog` array in
- *      `shared/lib/methodology-versions/safety-score.ts`,
- *   4. set `shared/lib/methodology-versions/current-version.json` to `9.14`,
- *   5. regenerate the V9 evaluation-build manifest.
- */
 export const SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE: MethodologyChangelogEntry = {
   version: "9.14",
   title: "Commodity claims get their own archetype",
-  date: "2026-08-08",
+  date: "2026-08-09",
   effectiveAt: 1786233603,
   summary:
     "Gold and silver tokens stop being scored as custodial cash. The new `commodity-claim` mechanism archetype asks the questions the asset actually poses — legal title to identified bars, vault custody continuity, bar-list assurance, and operable physical redemption — instead of reusing the fiat-cash reserve component names and smuggling the real semantics in through a mechanism profile.",
@@ -163,6 +143,9 @@ export const SAFETY_SCORE_V9_COMMODITY_CLAIM_ARCHETYPE: MethodologyChangelogEntr
     "There is deliberately no price-basis component. A commodity token's reference price is the metal, and the peg layer already measures the token-versus-reference spread; adding a backing component for it would double-count. Price-coupling context belongs in the physical-redemption rationale",
     "Gold-collateralized dollar tokens are not commodity claims and stay in their dollar archetypes with metal recorded as allocated-commodity reserve; the archetype is for direct claims on the commodity itself",
     "Commodity-claim components follow the same ratified strict evidence standard as fiat-cash and tbill: they are compiler-bounded, only a source-cited curated overlay may claim them, and insufficient disclosure records a sourced unavailable disposition that stays bounded and non-scoring",
+    "A commodity claim is oracle-free like custodial cash and T-bill claims: nothing is liquidated against a price feed, so the oracle review publishes not-applicable instead of demanding a profile that cannot exist",
+    "Fifteen assets migrate off fiat-cash: XAUT, PAXG, XAUm, XAGm, PGOLD, VNXAU, GLDT, DGLD, CGO, KAU, KAG, GGBR, GRAMG, GRAMS, and XNK. Gold-referenced dollar and franc tokens (USDKG, CHFAU) and tokenized metal ETF shares (IAUON, SLVON) keep their existing archetypes",
+    "Measured over the full active registry at a fixed input, 12 of 337 cards move and none flips a grade. Three lose one point — PAXG 79 to 78, XAUm 73 to 72, VNXAU 71 to 70 — where the newly asked physical-redemption question is not answered by the sources already pinned in their reviews. XAUT's exit pillar is unchanged at 35, because the exit fact is now derived from the same curated redemption component rather than declared twice",
     "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
   ],
   commits: [],

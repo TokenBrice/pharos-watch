@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
   "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "tether-gold",
@@ -356,7 +356,7 @@
       },
       {
         "label": "USDT0 / XAUt0 lock-and-mint design",
-      "url": "https://docs.usdt0.to/"
+        "url": "https://docs.usdt0.to/"
       },
       {
         "label": "USDT0 site",
@@ -901,6 +901,22 @@
             "url": "https://stablescan.xyz/block/32623152"
           }
         ]
+      }
+    ]
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "XAUT is a direct allocated-commodity claim, not a fiat-cash claim: the BDO ISAE 3000R reasonable-assurance report as of 2026-06-30 records 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT outstanding, states that the Swiss-vaulted Gold Reserves are owned by XAUT holders rather than by TG Commodities, and describes undivided ownership rights in specified bars; the Tether Gold FAQ documents whole-bar physical redemption subject to account, lot-size, and Swiss-delivery conditions. Migrated to commodity-claim under methodology v9.14, which replaces the allocated-commodity-claim profile projection that previously rode fiat-cash. The four commodity components carry the same nine profile facts losslessly.",
+    "sources": [
+      {
+        "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026",
+        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+      },
+      {
+        "label": "Tether Gold FAQ (allocated-bar ownership and physical redemption terms)",
+        "url": "https://gold.tether.to/faq"
       }
     ]
   }
