@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { canonicalArrayBy, compareText } from "./safety-score-v9-fact-primitives";
+import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
 
 const CanonicalTextSchema = z
   .string()

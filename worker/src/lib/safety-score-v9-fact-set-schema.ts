@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { canonicalV9DependencyEdgeKey } from "@shared/lib/safety-score-v9/facts";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   defaultV9DependencyEconomicRole,

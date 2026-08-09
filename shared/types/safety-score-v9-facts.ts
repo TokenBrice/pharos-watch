@@ -18,7 +18,6 @@ import {
   V9FailureDomainRefSchema,
   V9ObservationStateSchema,
   canonicalArrayBy,
-  compareText,
   type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
