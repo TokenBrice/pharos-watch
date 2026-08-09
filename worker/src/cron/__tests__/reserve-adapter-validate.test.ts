@@ -3,25 +3,82 @@ import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapt
 import { LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters-schemas";
 import { validateAdapterOutput } from "../reserve-adapters/validate";
 
+type AdapterKey = keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
+
+/** The single 100% slice every metadata-focused case uses as its reserve body. */
+const FULL_SLICE = [{ name: "A", pct: 100, risk: "low" }] as const;
+
+/**
+ * The adapter context `validateAdapterOutput` reads, projected from the real
+ * definition so the policy under test is the shipped one.
+ *
+ * `redemptionTelemetry` is opt-in: cases that assert *non*-redemption policy
+ * deliberately withhold it, and supplying it would change which redemption
+ * checks run.
+ */
+function adapterContext(key: AdapterKey, options: { redemptionTelemetry?: boolean } = {}) {
+  // The definition union is heterogeneous — not every adapter declares
+  // `validation` or `redemptionTelemetry` — so project the fields the validator
+  // reads rather than narrowing the union at every call site.
+  const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[key] as {
+    sourceModel: unknown;
+    evidenceClass: unknown;
+    sharedSourceMode: unknown;
+    redemptionTelemetry?: unknown;
+    validation?: unknown;
+  };
+  return {
+    key,
+    fetch: async () => ({ slices: [] }),
+    sourceModel: definition.sourceModel,
+    evidenceClass: definition.evidenceClass,
+    sharedSourceMode: definition.sharedSourceMode,
+    ...(options.redemptionTelemetry === true
+      ? { redemptionTelemetry: definition.redemptionTelemetry }
+      : {}),
+    validation: definition.validation,
+  };
+}
+
 describe("validateAdapterOutput", () => {
-  it("accepts valid slices summing to 100", () => {
-    const result = validateAdapterOutput({
+  it.each([
+    {
+      label: "slices summing to exactly 100",
       slices: [
         { name: "A", pct: 60, risk: "low" },
         { name: "B", pct: 40, risk: "medium" },
       ],
-    });
+      warningCount: 0,
+    },
+    {
+      // 102% stays valid but still records the (non-fatal) deviation warning.
+      label: "a sum deviation inside the tolerance band",
+      slices: [
+        { name: "A", pct: 51, risk: "low" },
+        { name: "B", pct: 51, risk: "medium" },
+      ],
+      warningCount: 1,
+    },
+  ])("accepts $label", ({ slices, warningCount }) => {
+    const result = validateAdapterOutput({ slices: slices as never });
     expect(result.valid).toBe(true);
-    expect(result.warnings).toHaveLength(0);
+    expect(result.warnings).toHaveLength(warningCount);
   });
 
-  it("warns when slices sum deviates from 100 by more than 5 points", () => {
-    const result = validateAdapterOutput({
-      slices: [{ name: "A", pct: 80, risk: "low" }],
-    });
+  it.each([
+    { label: "a non-positive pct", slices: [{ name: "A", pct: 0, risk: "low" }, { name: "B", pct: 100, risk: "medium" }], code: "invalid-pct" },
+    { label: "a negative pct", slices: [{ name: "A", pct: -10, risk: "low" }, { name: "B", pct: 110, risk: "medium" }], code: "invalid-pct" },
+    { label: "a NaN pct", slices: [{ name: "A", pct: NaN, risk: "low" }], code: "invalid-pct" },
+    { label: "an Infinity pct", slices: [{ name: "A", pct: Infinity, risk: "low" }], code: "invalid-pct" },
+    { label: "an empty slice list", slices: [], code: "empty-slices" },
+    { label: "an 80% total", slices: [{ name: "A", pct: 80, risk: "low" }], code: "pct-sum-deviation" },
+    { label: "a 94% total", slices: [{ name: "A", pct: 94, risk: "low" }], code: "pct-sum-deviation" },
+    { label: "a 95% total", slices: [{ name: "A", pct: 95, risk: "low" }], code: "pct-sum-deviation" },
+    { label: "a 105% total", slices: [{ name: "A", pct: 55, risk: "low" }, { name: "B", pct: 50, risk: "medium" }], code: "pct-sum-deviation" },
+  ])("rejects $label with a $code warning", ({ slices, code }) => {
+    const result = validateAdapterOutput({ slices: slices as never });
     expect(result.valid).toBe(false);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0].code).toBe("pct-sum-deviation");
+    expect(result.warnings[0].code).toBe(code);
   });
 
   it("rejects slices with invalid risk enum values", () => {
@@ -71,107 +128,50 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("rejects slices with non-positive pct", () => {
-    const result = validateAdapterOutput({
-      slices: [
-        { name: "A", pct: 0, risk: "low" },
-        { name: "B", pct: 100, risk: "medium" },
-      ],
-    });
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0].code).toBe("invalid-pct");
-  });
-
-  it("rejects slices with negative pct", () => {
-    const result = validateAdapterOutput({
-      slices: [
-        { name: "A", pct: -10, risk: "low" },
-        { name: "B", pct: 110, risk: "medium" },
-      ],
-    });
-    expect(result.valid).toBe(false);
-  });
-
-  it("rejects slices with NaN pct", () => {
-    const result = validateAdapterOutput({
-      slices: [{ name: "A", pct: NaN, risk: "low" }],
-    });
-    expect(result.valid).toBe(false);
-  });
-
-  it("accepts slices with sum deviation within tolerance", () => {
-    const result = validateAdapterOutput({
-      slices: [
-        { name: "A", pct: 51, risk: "low" },
-        { name: "B", pct: 51, risk: "medium" },
-      ],
-    });
-    expect(result.valid).toBe(true);
-  });
-
-  it("rejects empty slices array", () => {
-    const result = validateAdapterOutput({ slices: [] });
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0].code).toBe("empty-slices");
-  });
-
-  it("rejects slices with Infinity pct", () => {
-    const result = validateAdapterOutput({
-      slices: [{ name: "A", pct: Infinity, risk: "low" }],
-    });
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0].code).toBe("invalid-pct");
-  });
-
-  it("rejects a 95% total as incomplete", () => {
-    const result = validateAdapterOutput({
-      slices: [{ name: "A", pct: 95, risk: "low" }],
-    });
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0].code).toBe("pct-sum-deviation");
-  });
-
-  it("rejects a 105% total as overcounted", () => {
-    const result = validateAdapterOutput({
-      slices: [
-        { name: "A", pct: 55, risk: "low" },
-        { name: "B", pct: 50, risk: "medium" },
-      ],
-    });
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0].code).toBe("pct-sum-deviation");
-  });
-
-  it("rejects a 94% total as incomplete", () => {
-    const result = validateAdapterOutput({
-      slices: [{ name: "A", pct: 94, risk: "low" }],
-    });
-    expect(result.valid).toBe(false);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0].code).toBe("pct-sum-deviation");
-  });
-
-  it("warns when upstream source data is older than the adapter policy allows", () => {
+  it.each([
+    {
+      label: "upstream source data older than the adapter policy allows",
+      adapterKey: "ethena" as AdapterKey,
+      metadata: { sourceTimestamp: 1_000, freshnessMode: "verified" },
+      now: 1_000 + 4 * 86400,
+      code: "stale-source-data",
+    },
+    {
+      label: "a source timestamp without an explicit freshnessMode",
+      adapterKey: "ethena" as AdapterKey,
+      metadata: { sourceTimestamp: 1_000 },
+      now: undefined,
+      code: "freshness-mode-missing",
+    },
+    {
+      label: "an unverified output without reason metadata",
+      adapterKey: "reservoir" as AdapterKey,
+      metadata: { freshnessMode: "unverified" },
+      now: undefined,
+      code: "freshness-reason-missing",
+    },
+    {
+      label: "a freshnessMode the adapter definition disallows",
+      adapterKey: "fx" as AdapterKey,
+      metadata: { freshnessMode: "verified", sourceTimestamp: 1_000 },
+      now: undefined,
+      code: "freshness-mode-disallowed",
+    },
+    {
+      label: "material unknown exposure above the adapter threshold",
+      adapterKey: "reservoir" as AdapterKey,
+      metadata: { unknownExposurePct: 8 },
+      now: undefined,
+      code: "material-unknown-exposure",
+    },
+  ])("warns about $label with a $code warning", ({ adapterKey, metadata, now, code }) => {
     const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { sourceTimestamp: 1_000, freshnessMode: "verified" },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-        now: 1_000 + 4 * 86400,
-      },
+      { slices: [...FULL_SLICE] as never, metadata: metadata as never },
+      { adapter: adapterContext(adapterKey) as never, ...(now == null ? {} : { now }) },
     );
 
     expect(result.valid).toBe(true);
-    expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === code)).toBe(true);
   });
 
   it("accepts source timestamps inside the late-monthly disclosure source-age policy", () => {
@@ -191,316 +191,97 @@ describe("validateAdapterOutput", () => {
     expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
   });
 
-  it("rejects source timestamps beyond the future skew window", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { sourceTimestamp: 1_000 + 601, freshnessMode: "verified" },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-        now: 1_000,
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("future-source-timestamp");
-  });
-
   it("allows source timestamps within the future skew window", () => {
     const result = validateAdapterOutput(
       {
         slices: [{ name: "A", pct: 100, risk: "low" }],
         metadata: { sourceTimestamp: 1_000 + 600, freshnessMode: "verified" },
       },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-        now: 1_000,
-      },
+      { adapter: adapterContext("ethena") as never, now: 1_000 },
     );
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((warning) => warning.code === "future-source-timestamp")).toBe(false);
   });
 
-  it("rejects redemption source timestamps beyond the future skew window", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: {
-          freshnessMode: "not-applicable",
-          redemption: { sourceTimestamp: 1_000 + 601 },
-        },
+  it.each([
+    {
+      label: "a source timestamp beyond the future skew window",
+      adapterKey: "ethena" as AdapterKey,
+      redemptionTelemetry: false,
+      metadata: { sourceTimestamp: 1_000 + 601, freshnessMode: "verified" },
+      now: 1_000,
+      code: "future-source-timestamp",
+    },
+    {
+      label: "a redemption source timestamp beyond the future skew window",
+      adapterKey: "cap-vault" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: { freshnessMode: "not-applicable", redemption: { sourceTimestamp: 1_000 + 601 } },
+      now: 1_000,
+      code: "future-source-timestamp",
+    },
+    {
+      label: "verified freshness without a source timestamp",
+      adapterKey: "ethena" as AdapterKey,
+      redemptionTelemetry: false,
+      metadata: { freshnessMode: "verified" },
+      now: undefined,
+      code: "verified-freshness-missing-source-timestamp",
+    },
+    {
+      label: "a redemption capacity ratio outside [0, 1]",
+      adapterKey: "ethena" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: { immediateRedeemableRatio: 1.5 },
+      now: undefined,
+      code: "invalid-redemption-capacity-ratio",
+    },
+    {
+      label: "redemption capacity from an adapter without capacity telemetry",
+      adapterKey: "circle-transparency" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: { redemption: { capacityUsd: 10_000, capacityRatioOfSupply: 0.1 } },
+      now: undefined,
+      code: "unsupported-redemption-capacity-telemetry",
+    },
+    {
+      label: "a direct redemption kind from a proxy adapter",
+      adapterKey: "ethena" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: {
+        redemption: { capacityUsd: 10_000, capacityRatioOfSupply: 0.1, capacityKind: "live-direct" },
       },
+      now: undefined,
+      code: "redemption-capacity-kind-mismatch",
+    },
+    {
+      label: "an unknown redemption route status",
+      adapterKey: "cap-vault" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: { redemption: { routeStatus: "halted" } },
+      now: undefined,
+      code: "invalid-redemption-route-status",
+    },
+    {
+      label: "an unknown redemption route status source",
+      adapterKey: "cap-vault" as AdapterKey,
+      redemptionTelemetry: true,
+      metadata: { redemption: { routeStatusSource: "spreadsheet" } },
+      now: undefined,
+      code: "invalid-redemption-route-status-source",
+    },
+  ])("rejects $label with a $code fatal", ({ adapterKey, redemptionTelemetry, metadata, now, code }) => {
+    const result = validateAdapterOutput(
+      { slices: [...FULL_SLICE] as never, metadata: metadata as never },
       {
-        adapter: {
-          key: "cap-vault",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
-        },
-        now: 1_000,
+        adapter: adapterContext(adapterKey, { redemptionTelemetry }) as never,
+        ...(now == null ? {} : { now }),
       },
     );
 
     expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("future-source-timestamp");
-  });
-
-  it("rejects independent outputs that claim verified freshness without a source timestamp", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { freshnessMode: "verified" },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("verified-freshness-missing-source-timestamp");
-  });
-
-  it("warns when independent outputs provide a timestamp without explicit freshnessMode", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { sourceTimestamp: 1_000 },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.warnings.some((warning) => warning.code === "freshness-mode-missing")).toBe(true);
-  });
-
-  it("warns when unverified independent outputs omit reason metadata", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { freshnessMode: "unverified" },
-      },
-      {
-        adapter: {
-          key: "reservoir",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.warnings.some((warning) => warning.code === "freshness-reason-missing")).toBe(true);
-  });
-
-  it("rejects outputs whose freshnessMode is disallowed by the adapter definition", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { freshnessMode: "verified", sourceTimestamp: 1_000 },
-      },
-      {
-        adapter: {
-          key: "fx",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.warnings.some((warning) => warning.code === "freshness-mode-disallowed")).toBe(true);
-  });
-
-  it("warns when material unknown exposure exceeds the adapter threshold", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { unknownExposurePct: 8 },
-      },
-      {
-        adapter: {
-          key: "reservoir",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sharedSourceMode,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(true);
-    expect(result.warnings.some((warning) => warning.code === "material-unknown-exposure")).toBe(true);
-  });
-
-  it("rejects invalid redemption capacity ratios", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { immediateRedeemableRatio: 1.5 },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("invalid-redemption-capacity-ratio");
-  });
-
-  it("rejects redemption capacity from adapters without capacity telemetry", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { redemption: { capacityUsd: 10_000, capacityRatioOfSupply: 0.1 } },
-      },
-      {
-        adapter: {
-          key: "circle-transparency",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["circle-transparency"].validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("unsupported-redemption-capacity-telemetry");
-  });
-
-  it("rejects direct redemption kind from proxy adapters", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: {
-          redemption: {
-            capacityUsd: 10_000,
-            capacityRatioOfSupply: 0.1,
-            capacityKind: "live-direct",
-          },
-        },
-      },
-      {
-        adapter: {
-          key: "ethena",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("redemption-capacity-kind-mismatch");
-  });
-
-  it("rejects invalid redemption route status telemetry", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: {
-          redemption: {
-            routeStatus: "halted",
-          },
-        },
-      },
-      {
-        adapter: {
-          key: "cap-vault",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("invalid-redemption-route-status");
-  });
-
-  it("rejects invalid redemption route status source telemetry", () => {
-    const result = validateAdapterOutput(
-      {
-        slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: {
-          redemption: {
-            routeStatusSource: "spreadsheet",
-          },
-        },
-      },
-      {
-        adapter: {
-          key: "cap-vault",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
-        },
-      },
-    );
-
-    expect(result.valid).toBe(false);
-    expect(result.warnings[0]?.code).toBe("invalid-redemption-route-status-source");
+    expect(result.warnings[0]?.code).toBe(code);
   });
 
   it("collects all redemption fatals when multiple violations occur simultaneously", () => {
@@ -514,17 +295,7 @@ describe("validateAdapterOutput", () => {
           },
         },
       },
-      {
-        adapter: {
-          key: "cap-vault",
-          fetch: async () => ({ slices: [] }),
-          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sourceModel,
-          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].evidenceClass,
-          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].sharedSourceMode,
-          redemptionTelemetry: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].redemptionTelemetry,
-          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS["cap-vault"].validation,
-        },
-      },
+      { adapter: adapterContext("cap-vault", { redemptionTelemetry: true }) as never },
     );
 
     expect(result.valid).toBe(false);

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
+import { mockRegistry } from "../../test-helpers/cron";
 
 const OPTIONAL_RPC_MISSING_TARGET_EXAMPLE_LIMIT = 20;
 
@@ -36,10 +37,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     },
   ];
 
-  return {
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map(stablecoins.map((coin) => [coin.id, coin])),
-  };
+  return mockRegistry({ stablecoins });
 });
 
 vi.mock("../yield-sync/sources", () => ({

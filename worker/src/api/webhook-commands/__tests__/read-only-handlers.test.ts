@@ -18,6 +18,7 @@ import { handleSample, SAMPLE_COIN_ID } from "../sample";
 import { handleStatus } from "../status";
 import { handleTop } from "../top";
 import { handleWhy } from "../why";
+import { createTelegramFetchSpy } from "../../../test-helpers/__shared/telegram";
 
 vi.mock("../../telegram-webhook-insights", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../telegram-webhook-insights")>();
@@ -44,8 +45,7 @@ type InlineButton = {
   web_app?: { url?: string };
 };
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const statusFixture: StatusForCoin = {
   stablecoinId: "usdc-circle",
@@ -112,8 +112,7 @@ describe("read-only webhook command handlers", () => {
     vi.mocked(buildTopMessage).mockReset();
     vi.mocked(buildWhyMessage).mockReset();
     vi.mocked(loadStatusForCoin).mockReset();
-    fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    resetTelegramFetchSpy();
   });
 
   it("/help, /presets, and /sample reply through context helpers without D1 mutation", async () => {

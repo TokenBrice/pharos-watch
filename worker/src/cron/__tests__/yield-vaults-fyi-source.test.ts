@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockRegistry } from "../../test-helpers/cron";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -18,10 +19,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     },
   ];
 
-  return {
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map(stablecoins.map((coin) => [coin.id, coin])),
-  };
+  return mockRegistry({ stablecoins });
 });
 
 vi.mock("../../lib/circuit-breaker", async (importOriginal) => ({

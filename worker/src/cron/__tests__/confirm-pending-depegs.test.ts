@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
@@ -7,22 +8,7 @@ vi.mock("../../lib/db", () => ({
   isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
 
-vi.mock("../../lib/fetch-retry", () => {
-  const fetchWithRetry = vi.fn();
-  return {
-    fetchWithRetry,
-    fetchJsonWithRetry: vi.fn(async (...args: unknown[]) => {
-      const response = await fetchWithRetry(...args);
-      if (!response) return null;
-      if (!(response instanceof Response)) return response;
-      if (!response.ok) {
-        await response.body?.cancel();
-        return null;
-      }
-      return { response, body: await response.json() };
-    }),
-  };
-});
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), notOkAsNull: true, passthroughNonResponse: true }));
 
 vi.mock("../../lib/cex-tickers", () => {
   const fetchBinancePricesDetailed = vi.fn(async () => ({

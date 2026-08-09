@@ -1,19 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
-import { mockRegistry, mockCircuitBreaker, mockCircuitOutcomeRecord } from "../../test-helpers/cron";
+import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 
-const fetchWithRetryMock = vi.fn();
-const fetchJsonWithRetryMock = vi.fn(async (...args: unknown[]) => {
-  const response = await fetchWithRetryMock(...args);
-  if (!response) return null;
-  return { response, body: await response.json() };
-});
-const fetchTextWithRetryMock = vi.fn(async (...args: unknown[]) => {
-  const response = await fetchWithRetryMock(...args);
-  if (!response) return null;
-  return { response, body: await response.text() };
-});
+const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
 function mockFetchWithRetry(routes: Parameters<typeof mockFetch>[0]): ReturnType<typeof mockFetch> {
   const spy = mockFetch(routes, { requireMatch: true, stubGlobal: false });
@@ -327,12 +317,10 @@ vi.mock("../../lib/resolve-market-cap", () => ({
   resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0),
 }));
 
-// Stub fetch-retry to delegate to global fetch
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
-  fetchJsonWithRetry: (...args: unknown[]) => fetchJsonWithRetryMock(...args),
-  fetchTextWithRetry: (...args: unknown[]) => fetchTextWithRetryMock(...args),
-}));
+// Stub fetch-retry; `mockFetchWithRetry` below points the base at global fetch
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
+
+import { fetchJsonWithRetry, fetchTextWithRetry } from "../../lib/fetch-retry";
 
 // Stub circuit-breaker
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
@@ -458,8 +446,8 @@ describe("syncStablecoins", () => {
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(mockCircuitOutcomeRecord());
     fetchWithRetryMock.mockReset();
-    fetchJsonWithRetryMock.mockClear();
-    fetchTextWithRetryMock.mockClear();
+    vi.mocked(fetchJsonWithRetry).mockClear();
+    vi.mocked(fetchTextWithRetry).mockClear();
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
       totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
     });

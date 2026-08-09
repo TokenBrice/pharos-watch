@@ -55,6 +55,21 @@ function quoteSqlIdentifier(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
+/**
+ * Insert one row from a named column map. Seeds in this suite carry 22 columns
+ * whose meaning is not recoverable from a positional argument list — naming them
+ * at the call site is what makes a wrong `alert_safety` visible in review.
+ */
+function insertRow(sqlite: DatabaseSync, table: string, row: Record<string, unknown>): void {
+  const columns = Object.keys(row);
+  sqlite
+    .prepare(
+      `INSERT INTO ${quoteSqlIdentifier(table)} (${columns.map(quoteSqlIdentifier).join(", ")}) `
+      + `VALUES (${columns.map(() => "?").join(", ")})`,
+    )
+    .run(...(Object.values(row) as never[]));
+}
+
 function schemaSentinelValue(table: string, column: SqliteColumnInfo, oldChatId: string): unknown {
   if (column.name === "chat_id") return oldChatId;
   if (column.name === "stablecoin_id") return "schema-parity-coin";
@@ -343,172 +358,112 @@ describe("migrateTelegramChatId", () => {
     const oldChatId = "-123";
     const newChatId = "-100123";
 
-    sqlite.prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
-        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-        global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
-        consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      oldChatId,
-      "legacy-group",
-      1,
-      0,
-      1,
-      0,
-      1,
-      1,
-      0,
-      1,
-      0,
-      1,
-      1,
-      22,
-      6,
-      75,
-      "Europe/Belgrade",
-      1_700_000_900,
-      1,
-      1_700_000_100,
-      100,
-      300,
-    );
-    sqlite.prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id, username, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch, global_alert_reserve,
-        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-        global_depeg_worsening_bps_step, timezone, alert_snooze_until_ts,
-        consecutive_block_count, consecutive_block_first_at, created_at, last_active_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      newChatId,
-      null,
-      0,
-      1,
-      0,
-      1,
-      0,
-      0,
-      1,
-      0,
-      1,
-      0,
-      0,
-      8,
-      20,
-      null,
-      null,
-      null,
-      3,
-      null,
-      200,
-      250,
-    );
+    insertRow(sqlite, "telegram_subscribers", {
+      chat_id: oldChatId,
+      username: "legacy-group",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 1, alert_launch: 0, alert_reserve: 1,
+      global_alert_dews: 1, global_alert_depeg: 0, global_alert_safety: 1,
+      global_alert_launch: 0, global_alert_reserve: 1,
+      quiet_hours_enabled: 1, quiet_hours_start_utc: 22, quiet_hours_end_utc: 6,
+      global_depeg_worsening_bps_step: 75,
+      timezone: "Europe/Belgrade",
+      alert_snooze_until_ts: 1_700_000_900,
+      consecutive_block_count: 1,
+      consecutive_block_first_at: 1_700_000_100,
+      created_at: 100,
+      last_active_at: 300,
+    });
+    insertRow(sqlite, "telegram_subscribers", {
+      chat_id: newChatId,
+      username: null,
+      alert_dews: 0, alert_depeg: 1, alert_safety: 0, alert_launch: 1, alert_reserve: 0,
+      global_alert_dews: 0, global_alert_depeg: 1, global_alert_safety: 0,
+      global_alert_launch: 1, global_alert_reserve: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: 8, quiet_hours_end_utc: 20,
+      global_depeg_worsening_bps_step: null,
+      timezone: null,
+      alert_snooze_until_ts: null,
+      consecutive_block_count: 3,
+      consecutive_block_first_at: null,
+      created_at: 200,
+      last_active_at: 250,
+    });
 
-    const insertSubscription = sqlite.prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve,
-        alert_dews_override, alert_depeg_override, alert_safety_override,
-        alert_launch_override, alert_reserve_override,
-        dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertSubscription.run(
-      oldChatId,
-      "usdc",
-      1, 0, 1, 0, 1,
-      0, 1, 0, 1, 0,
-      "ALERT", "downgrade", 50, 500,
-    );
-    insertSubscription.run(
-      newChatId,
-      "usdc",
-      0, 1, 0, 1, 0,
-      1, 0, 1, 0, 1,
-      null, null, null, 900,
-    );
-    insertSubscription.run(
-      oldChatId,
-      "dai",
-      0, 0, 0, 0, 0,
-      1, 1, 1, 1, 1,
-      null, null, null, null,
-    );
+    const insertSubscription = (row: Record<string, unknown>): void =>
+      insertRow(sqlite, "telegram_subscriptions", row);
+    insertSubscription({
+      chat_id: oldChatId, stablecoin_id: "usdc",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 1, alert_launch: 0, alert_reserve: 1,
+      alert_dews_override: 0, alert_depeg_override: 1, alert_safety_override: 0,
+      alert_launch_override: 1, alert_reserve_override: 0,
+      dews_min_band: "ALERT", safety_mode: "downgrade",
+      depeg_worsening_bps_step: 50, alert_snooze_until_ts: 500,
+    });
+    insertSubscription({
+      chat_id: newChatId, stablecoin_id: "usdc",
+      alert_dews: 0, alert_depeg: 1, alert_safety: 0, alert_launch: 1, alert_reserve: 0,
+      alert_dews_override: 1, alert_depeg_override: 0, alert_safety_override: 1,
+      alert_launch_override: 0, alert_reserve_override: 1,
+      dews_min_band: null, safety_mode: null,
+      depeg_worsening_bps_step: null, alert_snooze_until_ts: 900,
+    });
+    insertSubscription({
+      chat_id: oldChatId, stablecoin_id: "dai",
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0, alert_reserve: 0,
+      alert_dews_override: 1, alert_depeg_override: 1, alert_safety_override: 1,
+      alert_launch_override: 1, alert_reserve_override: 1,
+      dews_min_band: null, safety_mode: null,
+      depeg_worsening_bps_step: null, alert_snooze_until_ts: null,
+    });
 
-    sqlite.prepare(`
-      INSERT INTO telegram_preset_subscriptions (
-        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
-        depeg_worsening_bps_step, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(oldChatId, "usd-top25", 1, 0, 1, 100, 100, 250);
-    sqlite.prepare(`
-      INSERT INTO telegram_preset_subscriptions (
-        chat_id, preset_id, alert_dews, alert_depeg, alert_safety,
-        depeg_worsening_bps_step, created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(newChatId, "usd-top25", 0, 1, 0, null, 200, 300);
+    insertRow(sqlite, "telegram_preset_subscriptions", {
+      chat_id: oldChatId, preset_id: "usd-top25",
+      alert_dews: 1, alert_depeg: 0, alert_safety: 1,
+      depeg_worsening_bps_step: 100, created_at: 100, updated_at: 250,
+    });
+    insertRow(sqlite, "telegram_preset_subscriptions", {
+      chat_id: newChatId, preset_id: "usd-top25",
+      alert_dews: 0, alert_depeg: 1, alert_safety: 0,
+      depeg_worsening_bps_step: null, created_at: 200, updated_at: 300,
+    });
 
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_disambiguation (
-        chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-        remaining_tickers, expires_at, action_type, action_payload, initiator_user_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(oldChatId, "dews", "[]", "USD", "[]", "[]", 1_700_001_000, "setup-step", "{\"old\":true}", "42");
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_disambiguation (
-        chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
-        remaining_tickers, expires_at, action_type, action_payload, initiator_user_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(newChatId, "safety", "[]", "EUR", "[]", "[]", 1_700_001_500, "subscribe", "{\"new\":true}", "43");
+    insertRow(sqlite, "telegram_pending_disambiguation", {
+      chat_id: oldChatId, alert_types: "dews", resolved_ids: "[]", ambiguous_ticker: "USD",
+      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_000,
+      action_type: "setup-step", action_payload: "{\"old\":true}", initiator_user_id: "42",
+    });
+    insertRow(sqlite, "telegram_pending_disambiguation", {
+      chat_id: newChatId, alert_types: "safety", resolved_ids: "[]", ambiguous_ticker: "EUR",
+      candidates: "[]", remaining_tickers: "[]", expires_at: 1_700_001_500,
+      action_type: "subscribe", action_payload: "{\"new\":true}", initiator_user_id: "43",
+    });
 
-    sqlite.prepare(`
-      INSERT INTO telegram_chat_delivery_diagnostics (
-        chat_id, last_successful_delivery_at, last_successful_reply_at,
-        last_delivery_attempt_at, recent_failure_class, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(oldChatId, 300, 700, 800, "forbidden", 900);
-    sqlite.prepare(`
-      INSERT INTO telegram_chat_delivery_diagnostics (
-        chat_id, last_successful_delivery_at, last_successful_reply_at,
-        last_delivery_attempt_at, recent_failure_class, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(newChatId, 500, null, 750, null, 850);
+    insertRow(sqlite, "telegram_chat_delivery_diagnostics", {
+      chat_id: oldChatId, last_successful_delivery_at: 300, last_successful_reply_at: 700,
+      last_delivery_attempt_at: 800, recent_failure_class: "forbidden", updated_at: 900,
+    });
+    insertRow(sqlite, "telegram_chat_delivery_diagnostics", {
+      chat_id: newChatId, last_successful_delivery_at: 500, last_successful_reply_at: null,
+      last_delivery_attempt_at: 750, recent_failure_class: null, updated_at: 850,
+    });
 
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
-      VALUES (?, ?, ?, ?)
-    `).run(oldChatId, "old duplicate", 100, `${oldChatId}:same`);
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
-      VALUES (?, ?, ?, ?)
-    `).run(newChatId, "new duplicate", 100, `${newChatId}:same`);
-    sqlite.prepare(`
-      INSERT INTO telegram_pending_alerts (chat_id, message_html, created_at, dedupe_key)
-      VALUES (?, ?, ?, ?)
-    `).run(oldChatId, "old unique", 100, `${oldChatId}:unique`);
+    insertRow(sqlite, "telegram_pending_alerts", {
+      chat_id: oldChatId, message_html: "old duplicate", created_at: 100, dedupe_key: `${oldChatId}:same`,
+    });
+    insertRow(sqlite, "telegram_pending_alerts", {
+      chat_id: newChatId, message_html: "new duplicate", created_at: 100, dedupe_key: `${newChatId}:same`,
+    });
+    insertRow(sqlite, "telegram_pending_alerts", {
+      chat_id: oldChatId, message_html: "old unique", created_at: 100, dedupe_key: `${oldChatId}:unique`,
+    });
 
-    sqlite.prepare(`
-      INSERT INTO telegram_alert_job_targets (
-        job_id, target_key, chat_id, alert_type, pending_dedupe_key, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `).run("job-old", `${oldChatId}:unique`, oldChatId, "depeg", `${oldChatId}:unique`, 100);
-    sqlite.prepare(`
-      INSERT INTO telegram_alert_dead_letters (
-        chat_id, message_html, created_at, expired_at, reason
-      ) VALUES (?, ?, ?, ?, ?)
-    `).run(oldChatId, "expired", 100, 200, "ttl_expired");
+    insertRow(sqlite, "telegram_alert_job_targets", {
+      job_id: "job-old", target_key: `${oldChatId}:unique`, chat_id: oldChatId,
+      alert_type: "depeg", pending_dedupe_key: `${oldChatId}:unique`, created_at: 100,
+    });
+    insertRow(sqlite, "telegram_alert_dead_letters", {
+      chat_id: oldChatId, message_html: "expired", created_at: 100, expired_at: 200, reason: "ttl_expired",
+    });
     sqlite.prepare(`
       INSERT INTO telegram_recap_preferences
         (chat_id, enabled, delivery_hour_local, next_due_at, created_at, updated_at)

@@ -1,16 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import { mockFetchRetry } from "../../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../lib/fetch-retry", () => ({
-  fetchWithRetry: fetchWithRetryMock,
-  fetchTextWithRetry: async (...args: unknown[]) => {
-    const response = await fetchWithRetryMock(...args);
-    if (!response) return null;
-    return { response, body: await response.text() };
-  },
-}));
+vi.mock("../../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {

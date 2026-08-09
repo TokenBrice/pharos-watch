@@ -3,6 +3,7 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { buildPriceValidationContext } from "../../../lib/price-validation";
 import { runFallbackPriceEnrichmentPhase } from "../fallback-enrichment";
 import type { PeggedAsset } from "../enrich-prices";
+import { makePeggedAsset } from "./_fixtures";
 
 const phaseMocks = vi.hoisted(() => ({
   authoritativeOverrideStats: { applied: 0 },
@@ -49,18 +50,17 @@ vi.mock("../post-enrichment", () => ({
 const NOW_SEC = 1_700_000_000;
 
 function makeAsset(): PeggedAsset {
-  return {
+  return makePeggedAsset({
     id: "fallback-usd",
     name: "Fallback USD",
     symbol: "FUSD",
     geckoId: "fallback-usd",
-    pegType: "peggedUSD",
     pegMechanism: "fiat-backed",
     price: null,
     circulating: { peggedUSD: 1_000_000 },
     chainCirculating: {},
     chains: [],
-  };
+  });
 }
 
 describe("runFallbackPriceEnrichmentPhase", () => {

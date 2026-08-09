@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { telegramApiCalls, telegramCallBody } from "../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  telegramApiCalls,
+  telegramCallBody,
+} from "../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 
@@ -14,8 +18,7 @@ const {
   handleSettingsCommand,
 } = await import("../telegram-webhook-settings");
 
-const fetchSpy = vi.fn();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);
@@ -47,8 +50,7 @@ function subscriptionRow(stablecoinId: string): SubscriptionRow & Record<string,
 }
 
 beforeEach(() => {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  resetTelegramFetchSpy();
 });
 
 describe("handleSettingsCommand", () => {
@@ -537,7 +539,7 @@ describe("handleSettingsCallback — per-coin", () => {
         first: null,
       },
     ]);
-    fetchSpy.mockImplementation(async (url: string) => {
+    fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false }), { status: 400 });
       }
@@ -569,7 +571,7 @@ describe("handleSettingsCallback — per-coin", () => {
         first: null,
       },
     ]);
-    fetchSpy.mockImplementation(async (url: string) => {
+    fetchSpy.mockImplementation(async (url) => {
       if (String(url).includes("editMessageText")) {
         return new Response(JSON.stringify({ ok: false, description: "Bad Request: message is not modified" }), {
           status: 400,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockRegistry } from "../../test-helpers/cron";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
@@ -8,18 +9,12 @@ import {
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_META_BY_ID: new Map([
-    ["usdt-tether", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
-    ["usdc-circle", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
-    ["dai-makerdao", { flags: { backing: "crypto-backed" }, commodityOunces: undefined }],
-  ]),
-  TRACKED_STABLECOINS: [],
-  ACTIVE_STABLECOINS: [],
-  ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
-  ACTIVE_META_BY_ID: new Map(),
-  READABLE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
-  READABLE_META_BY_ID: new Map(),
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [
+    { id: "usdt-tether", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "usdc-circle", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "dai-makerdao", flags: { backing: "crypto-backed" }, commodityOunces: undefined },
+  ],
 }));
 
 vi.mock("@shared/lib/stablecoins/aggregate-registry", () => ({

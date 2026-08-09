@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../../test-helpers/cron";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -11,10 +12,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       contracts: [{ chain: "ethereum", address: "0xbbb", decimals: 18 }],
     },
   ];
-  return {
-    TRACKED_STABLECOINS: stablecoins,
-    ACTIVE_STABLECOINS: stablecoins,
-  };
+  return mockRegistry({ stablecoins });
 });
 
 vi.mock("../../dex-liquidity/pool-helpers", () => ({

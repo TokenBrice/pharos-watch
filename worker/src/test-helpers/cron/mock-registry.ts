@@ -35,6 +35,7 @@ export interface MockRegistryOptions {
 
 export interface MockRegistryExports {
   TRACKED_STABLECOINS: MockRegistryStablecoin[];
+  TRACKED_IDS: Set<string>;
   ACTIVE_STABLECOINS: MockRegistryStablecoin[];
   ACTIVE_IDS: Set<string>;
   ACTIVE_META_BY_ID: Map<string, MockRegistryStablecoin>;
@@ -59,6 +60,7 @@ export function mockRegistry(options: MockRegistryOptions): MockRegistryExports 
   const frozenMetaById = new Map(frozenStablecoins.map((coin) => [coin.id, coin]));
   return {
     TRACKED_STABLECOINS: stablecoins,
+    TRACKED_IDS: new Set(stablecoins.map((coin) => coin.id)),
     ACTIVE_STABLECOINS: stablecoins,
     ACTIVE_IDS: new Set(stablecoins.map((coin) => coin.id)),
     ACTIVE_META_BY_ID: activeMetaById,

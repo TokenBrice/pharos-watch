@@ -3,7 +3,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { mockCircuitBreaker } from "../../test-helpers/cron";
+import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
@@ -50,68 +50,15 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
     },
   ];
+  // The digest's core aggregate universe is deliberately narrower than the
+  // fixture registry: PAXG/XAUT stay tracked (mint-burn reads their contracts)
+  // but are excluded from the id sets the aggregate iterates.
   const ids = new Set(["usdt-tether", "usdc-circle"]);
   return {
-    TRACKED_STABLECOINS: stablecoins,
-    ACTIVE_STABLECOINS: stablecoins,
-    TRACKED_META_BY_ID: new Map([
-      [
-        "usdt-tether",
-        {
-          id: "usdt-tether",
-          symbol: "USDT",
-          flags: { yieldBearing: false },
-          contracts: [
-            { chain: "ethereum", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
-            { chain: "tron", address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
-            { chain: "arbitrum", address: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", decimals: 6 },
-            { chain: "optimism", address: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", decimals: 6 },
-            { chain: "polygon", address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6 },
-            { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
-            { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
-          ],
-          tradedContracts: [{ chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 }],
-        },
-      ],
-      [
-        "usdc-circle",
-        {
-          id: "usdc-circle",
-          symbol: "USDC",
-          flags: { yieldBearing: false },
-          contracts: [
-            { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6 },
-            { chain: "arbitrum", address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6 },
-            { chain: "base", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6 },
-            { chain: "optimism", address: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6 },
-            { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
-            { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
-          ],
-        },
-      ],
-      [
-        "paxg-paxos",
-        {
-          id: "paxg-paxos",
-          symbol: "PAXG",
-          flags: { yieldBearing: false },
-          contracts: [{ chain: "ethereum", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18 }],
-        },
-      ],
-      [
-        "xaut-tether",
-        {
-          id: "xaut-tether",
-          symbol: "XAUT",
-          flags: { yieldBearing: false },
-          contracts: [{ chain: "ethereum", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6 }],
-        },
-      ],
-    ]),
+    ...mockRegistry({ stablecoins }),
     TRACKED_IDS: ids,
     ACTIVE_IDS: ids,
     FROZEN_IDS: new Set<string>(["usr-resolv"]),
-    FROZEN_META_BY_ID: new Map<string, never>(),
   };
 });
 

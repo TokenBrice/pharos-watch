@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { lastSendMessageBody, telegramApiCallBody } from "../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  lastSendMessageBody,
+  telegramApiCallBody,
+} from "../../test-helpers/__shared/telegram";
 
 // Stub the insights module so /why callback tests do not need to drive the
 // full report-cards snapshot pipeline. Coverage callback uses buildCoverageMessage
@@ -30,8 +34,7 @@ const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 
-const fetchSpy = vi.fn();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 function lastSentMessageBody(): {
   text: string;
@@ -110,8 +113,7 @@ function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
 }
 
 beforeEach(() => {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  resetTelegramFetchSpy();
   // mockRejectedValueOnce expires after a single call so subsequent tests reuse
   // the original sendAuditedTelegramReply impl bound at vi.mock construction.
   vi.mocked(sendAuditedTelegramReply).mockClear();

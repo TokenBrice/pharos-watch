@@ -1,16 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildPreviousTrustedPriceLookup } from "../pricing";
 import type { PeggedAsset } from "../enrich-prices";
+import { makePeggedAsset } from "./_fixtures";
 import type { PriceCacheEntry } from "../../../lib/db-cache";
 
 const NOW_SEC = 1_700_000_000;
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
-    id: "usdt-tether",
-    name: "Tether",
-    symbol: "USDT",
-    pegType: "peggedUSD",
+  return makePeggedAsset({
     price: 1.0,
     priceSource: "pyth",
     priceConfidence: "single-source",
@@ -19,7 +16,7 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     priceUpdatedAt: NOW_SEC - 60,
     agreeSources: ["pyth"],
     ...overrides,
-  };
+  });
 }
 
 function makeCacheEntry(overrides: Partial<PriceCacheEntry> = {}): PriceCacheEntry {

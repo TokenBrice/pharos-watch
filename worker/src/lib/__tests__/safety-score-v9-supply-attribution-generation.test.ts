@@ -43,13 +43,17 @@ import {
   parseSafetyScoreV9SupplyAttributionGeneration,
   serializeSafetyScoreV9SupplyAttributionGeneration,
 } from "../safety-score-v9-supply-attribution-generation";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import {
+  createSafetyScoreV9FullRegistryInput,
+  FULL_REGISTRY_CLOCK_SEC,
+} from "./fixtures/safety-score-v9-full-registry-input";
 
-// Mirrors `CLOCK_SEC` in the full-registry input fixture: this suite re-clocks
-// that input, so a source clock behind the fixture's own DEX observation would
-// re-derive a negative `inputFreshness.dexLiquidity.ageSeconds`. Advance both
-// together. Every offset below is relative, so the timeline shifts intact.
-const SOURCE_CLOCK_SEC = 1_786_320_000;
+// Mirrors the full-registry input fixture's own clock: this suite re-clocks that
+// input, so a source clock behind the fixture's own DEX observation would
+// re-derive a negative `inputFreshness.dexLiquidity.ageSeconds`. Both now derive
+// from `v9TestClockSec()`, so they advance together. Every offset below is
+// relative, so the timeline shifts intact.
+const SOURCE_CLOCK_SEC = FULL_REGISTRY_CLOCK_SEC;
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 

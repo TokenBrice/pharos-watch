@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../test-helpers/cron";
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
+  stablecoins: [
     { id: "brz-transfero", flags: { pegCurrency: "BRL", navToken: false } },
     { id: "eurc-circle", flags: { pegCurrency: "EUR", navToken: false } },
     { id: "xaut-tether", flags: { pegCurrency: "GOLD", navToken: false } },
@@ -13,18 +14,6 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
     { id: "ousg-ondo-finance", flags: { pegCurrency: "USD", navToken: true } },
     { id: "fpi-frax", flags: { pegCurrency: "VAR", navToken: true } },
   ],
-  TRACKED_META_BY_ID: new Map([
-    ["brz-transfero", { flags: { pegCurrency: "BRL", navToken: false } }],
-    ["eurc-circle", { flags: { pegCurrency: "EUR", navToken: false } }],
-    ["xaut-tether", { flags: { pegCurrency: "GOLD", navToken: false } }],
-    ["kau-kinesis", { flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 1 / 31.1035 }],
-    ["cgo-comtech", { flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 1 / 31.1035 }],
-    ["ggbr-goldfish-gold", { flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 }],
-    ["kag-kinesis", { flags: { pegCurrency: "SILVER", navToken: false } }],
-    ["jpyc-jpyc", { flags: { pegCurrency: "JPY", navToken: false } }],
-    ["ousg-ondo-finance", { flags: { pegCurrency: "USD", navToken: true } }],
-    ["fpi-frax", { flags: { pegCurrency: "VAR", navToken: true } }],
-  ]),
 }));
 
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";

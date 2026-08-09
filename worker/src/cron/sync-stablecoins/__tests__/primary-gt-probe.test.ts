@@ -6,16 +6,10 @@ import {
 } from "../enrich-prices-primary-gt-probe";
 import { createValidationContextResolver } from "../pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
+import { makePeggedAsset } from "./_fixtures";
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
-    id: "usdt-tether",
-    name: "Tether",
-    symbol: "USDT",
-    pegType: "peggedUSD",
-    circulating: { ethereum: 1_000_000 },
-    ...overrides,
-  };
+  return makePeggedAsset({ circulating: { ethereum: 1_000_000 }, ...overrides });
 }
 
 function makePrimaryResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {

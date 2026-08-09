@@ -1,17 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { mockFetchRetry } from "../../test-helpers/cron";
 
-const fetchWithRetryMock = vi.fn();
+const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 const DAY_SECONDS = 86_400;
 
-vi.mock("../../lib/fetch-retry", () => ({
-  fetchWithRetry: (...args: unknown[]) => fetchWithRetryMock(...args),
-  fetchJsonWithRetry: async (...args: unknown[]) => {
-    const response = await fetchWithRetryMock(...args) as Response | null;
-    return response ? { response, body: await response.json() } : null;
-  },
-}));
+vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: fetchWithRetryMock }));
 
 import { auditEvents, handleAuditDepegHistoryTrusted } from "../audit-depeg-history";
 

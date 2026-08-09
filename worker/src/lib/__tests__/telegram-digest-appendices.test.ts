@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockRegistry } from "../../test-helpers/cron";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
@@ -70,12 +71,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_STABLECOINS: TRACKED_STABLECOINS_MOCK,
-  TRACKED_META_BY_ID: new Map(TRACKED_STABLECOINS_MOCK.map((coin) => [coin.id, coin])),
-  FROZEN_IDS: new Set<string>(),
-  FROZEN_META_BY_ID: new Map<string, never>(),
-}));
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: TRACKED_STABLECOINS_MOCK }));
 
 vi.mock("../db-cache", () => ({
   getCache: mockGetCache,

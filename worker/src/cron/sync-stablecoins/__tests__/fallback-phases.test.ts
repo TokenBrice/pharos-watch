@@ -8,6 +8,7 @@ import {
 import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
 import { runFallbackDepegFollowThrough } from "../fallback-publish";
 import type { PeggedAsset } from "../enrich-prices";
+import { makePeggedAsset } from "./_fixtures";
 
 const fallbackMocks = vi.hoisted(() => ({
   runDepegPipeline: vi.fn(async (..._args: unknown[]) => ({
@@ -39,12 +40,11 @@ vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
 const NOW_SEC = 1_700_000_000;
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
+  return makePeggedAsset({
     id: "fixture-usd",
     name: "Fixture USD",
     symbol: "FUSD",
     geckoId: "fixture-usd",
-    pegType: "peggedUSD",
     pegMechanism: "fiat-backed",
     price: 1,
     priceSource: "coingecko",
@@ -54,7 +54,7 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     chainCirculating: {},
     chains: [],
     ...overrides,
-  };
+  });
 }
 
 describe("CoinGecko fallback phases", () => {

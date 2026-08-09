@@ -3,6 +3,7 @@ import { applyConsensusResults, createValidationContextResolver } from "../sync-
 import { validatePrimaryPriceCandidate } from "../../lib/price-publish-policy";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 
 vi.mock("../../lib/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
@@ -12,14 +13,7 @@ vi.mock("../../lib/price-publish-policy", () => ({
 const validatePrimaryPriceCandidateMock = vi.mocked(validatePrimaryPriceCandidate);
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
-    id: "usdt-tether",
-    name: "Tether",
-    symbol: "USDT",
-    pegType: "peggedUSD",
-    pegMechanism: "fiat-backed",
-    ...overrides,
-  };
+  return makePeggedAsset({ pegMechanism: "fiat-backed", ...overrides });
 }
 
 function makePriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPriceResult {

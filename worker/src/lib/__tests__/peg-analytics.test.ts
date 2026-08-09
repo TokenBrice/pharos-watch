@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockRegistry } from "../../test-helpers/cron";
 
 const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   STABLECOINS_MOCK: [
@@ -21,11 +22,7 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins/registry", () => ({
-  TRACKED_STABLECOINS: STABLECOINS_MOCK,
-  ACTIVE_STABLECOINS: STABLECOINS_MOCK,
-  TRACKED_META_BY_ID: new Map(STABLECOINS_MOCK.map((coin: { id: string }) => [coin.id, coin])),
-}));
+vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({ stablecoins: STABLECOINS_MOCK }));
 
 vi.mock("@shared/lib/peg-score", () => ({
   PEG_SCORE_LOOKBACK_SEC: 126_230_400,

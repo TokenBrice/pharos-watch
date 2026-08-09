@@ -1,8 +1,29 @@
+import { vi, type Mock } from "vitest";
+
 type FetchSpyLike = {
   mock: {
     calls: unknown[][];
   };
 };
+
+export type TelegramFetchSpy = Mock<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>;
+
+/**
+ * The Telegram Bot API transport seam every webhook-side suite installs: a
+ * global `fetch` spy that answers `{ ok: true }` unless a test says otherwise.
+ *
+ * Call `reset()` in `beforeEach` — clearing the spy also restores the default
+ * OK response, which is what the hand-rolled copies of this preamble each did.
+ */
+export function createTelegramFetchSpy(): { fetchSpy: TelegramFetchSpy; reset: () => void } {
+  const fetchSpy: TelegramFetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+  vi.stubGlobal("fetch", fetchSpy);
+  const reset = (): void => {
+    fetchSpy.mockReset();
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  };
+  return { fetchSpy, reset };
+}
 
 export function telegramApiCalls(fetchSpy: FetchSpyLike, method: string): unknown[][] {
   return fetchSpy.mock.calls.filter((call) => String(call[0]).includes(method));

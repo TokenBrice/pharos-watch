@@ -29,6 +29,7 @@ vi.mock("../../lib/native-peg-implied-prices", async () => {
 });
 
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { makePeggedAsset } from "../sync-stablecoins/__tests__/_fixtures";
 import { isAbortResult, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
@@ -43,7 +44,7 @@ function makeValidationContext(asset: PeggedAsset): PriceValidationContext {
 }
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
-  return {
+  return makePeggedAsset({
     id: "eurc-circle",
     name: "EURC",
     symbol: "EURC",
@@ -56,7 +57,7 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
     priceConfidence: "single-source",
     navToken: false,
     ...overrides,
-  };
+  });
 }
 
 describe("runPostEnrichmentPricePipeline", () => {

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
-import { lastSendMessageBody } from "../../../test-helpers/__shared/telegram";
+import {
+  createTelegramFetchSpy,
+  lastSendMessageBody,
+} from "../../../test-helpers/__shared/telegram";
 import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
 import type { WebhookCommandContext } from "../context";
 import { handleCancel } from "../cancel";
@@ -27,8 +30,7 @@ type TelegramSendBody = {
   reply_markup?: { inline_keyboard?: InlineButton[][] };
 };
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
   return {
@@ -103,8 +105,7 @@ function subscriberRow(overrides: Record<string, unknown> = {}) {
 
 describe("webhook command handlers", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    resetTelegramFetchSpy();
   });
 
   it("/subscribe persists a direct coin follow and returns a subscription summary", async () => {

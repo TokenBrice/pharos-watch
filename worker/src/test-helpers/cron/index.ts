@@ -17,3 +17,4 @@ export { mockCircuitBreaker, mockCircuitOutcomeRecord } from "./mock-circuit-bre
 export type { MockCircuitBreakerOptions, MockCircuitBreakerExports } from "./mock-circuit-breaker";
 
 export { mockFetchRetry } from "./mock-fetch-retry";
+export type { MockFetchRetryOptions } from "./mock-fetch-retry";
