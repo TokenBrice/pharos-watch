@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-08-03 to 2026-08-09
+
+Mint Authority and Exit fold into Safety Score V9, the V8 engine is retired, and 25 reserve proofs are corrected.
+
+- **Mint authority folded in**: Safety Score 9.1 merges mint grading into the control pillar and deletes the standalone Mint Authority engine. Curated postures became validated annotations, and 113 supervised issuers were re-evidenced.
+- **One exit engine**: Redemption methodology v4.3 consolidates exit scoring: the legacy effective score and the shadow same-notional engine are gone, the Selector reads the published V9 Exit pillar, and ladder boundaries unify on at-or-above.
+- **V8 retired**: Scoring now runs on a native v4 input bound to the V9 evaluation build, with envelope v2 identity and a replay diff comparator gating the cutover. The V8 engine and its manifest were deleted outright.
+- **Honest reserve proofs**: A phased proof-of-reserves sweep corrected 25 overstated records and refreshed majors, regional issuers, and DeFi dashboards in lockstep. A new guard stops PoR and composition dates drifting apart again.
+- **Coin page rebuild**: Stablecoin detail pages gained custody, regulatory-standing, and oracle and liquidation sections, plus unified evidence modules drawn on control rails, hash-aware folds, and a new Bridging module.
+- **Wave-1 curation**: Research landed 121 mechanism overlays, control and access reviews across the C01-C12 set, reserve composition curation for 79 coins, and wave-3 long-tail dossiers. syrupUSDC is now an RWA credit fund.
+- **Deeper DEX discovery**: DEX discovery registered verified providers for 50 deployment chains, added a Stellar Horizon provider with sweep-aware census bounds, reported complete DexScreener pool counts, and made oversized sweeps resumable.
+- **Coverage and editorial**: Tori trUSD and JPYSC were promoted to active tracking, the v9.14 commodity-claim archetype migrated gold-backed assets onto a shared model, and 40 AI editorial summaries were rewritten against the current scoring set.
+
 ## 2026-07-27 to 2026-08-02
 
 Safety Score V9 goes live with mechanism-backed coin pages, a wave-7/8 evidence drain, and five new FX pegs.
