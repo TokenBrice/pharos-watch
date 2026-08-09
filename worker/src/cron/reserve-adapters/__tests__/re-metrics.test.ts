@@ -15,29 +15,30 @@ describe("adaptReMetrics", () => {
     const result = adaptReMetrics(SAMPLE_HTML);
 
     expect(result.slices).toEqual([
-      { name: "Off-chain insurance / reinsurance capital", pct: 83.3, risk: "medium" },
+      { name: "Off-chain insurance / reinsurance capital", pct: 81.6, risk: "medium" },
       {
         name: "sUSDe (delta-neutral ETH basis)",
-        pct: 15.7,
+        pct: 15,
         risk: "high",
         coinId: "susde-ethena",
         depType: "collateral",
       },
+      { name: "USDC reserves", pct: 2.5, risk: "low", coinId: "usdc-circle" },
       { name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
-      { name: "USDC reserves", pct: 0.2, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT reserves", pct: 0.1, risk: "low", coinId: "usdt-tether" },
       { name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
     ]);
     expect(result.metadata).toMatchObject({
       chainBreakdownCount: 4,
       trackedTokenCount: 6,
-      offchainCapitalUsd: 177667132.2437341,
-      sourceTimestamp: Date.UTC(2026, 5, 29) / 1000,
+      offchainCapitalUsd: 179595196.93262026,
+      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
       freshnessMode: "verified",
       stableAssetUsd: expect.any(Number),
-      immediateRedeemableUsd: 38999607.14142658,
+      immediateRedeemableUsd: 45535373.18748523,
       redemptionRowsCount: 4,
       redemption: {
-        capacityUsd: 38999607.14142658,
+        capacityUsd: 45535373.18748523,
         capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-api",
         routeStatus: "unknown",
@@ -53,12 +54,12 @@ describe("adaptReMetrics", () => {
 
     expect(result.slices[0]).toEqual({
       name: "Off-chain insurance / reinsurance capital",
-      pct: 83.3,
+      pct: 81.6,
       risk: "medium",
     });
     expect(result.metadata).toMatchObject({
-      offchainCapitalUsd: 177667132.2437341,
-      sourceTimestamp: Date.UTC(2026, 5, 29) / 1000,
+      offchainCapitalUsd: 179595196.93262026,
+      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
       freshnessMode: "verified",
     });
   });

@@ -11,6 +11,10 @@ const ROOT_DIR = resolve(TEST_DIR, "../../../../..");
 const FIXTURES_DIR = resolve(TEST_DIR, "fixtures");
 const REFRESH_SCRIPT = resolve(ROOT_DIR, "scripts/maintenance/refresh-reserve-html-fixtures.ts");
 const CAPTURED_AT_RE = /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/;
+// Fixtures whose upstream source no longer exists carry an `archived:` header
+// explaining why. They are frozen on purpose: the refresh script must not list
+// them, and they are exempt from the 90-day staleness bound.
+const ARCHIVED_RE = /<!--\s*archived:\s*(\S[^>]*?)\s*-->/;
 const MAX_FIXTURE_AGE_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -89,10 +93,20 @@ describe("http-html adapter fixture coverage", () => {
     }
   });
 
-  it.each(htmlFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
+  const archivedFixtureNames = htmlFixtureNames.filter((name) =>
+    ARCHIVED_RE.test(readFileSync(resolve(FIXTURES_DIR, name), "utf8")));
+  const refreshableFixtureNames = htmlFixtureNames.filter((name) => !archivedFixtureNames.includes(name));
+
+  it.each(refreshableFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
     const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
     const result = inspectFixtureFreshness(fixtureName, content);
     expect(result.error, result.error).toBeUndefined();
+  });
+
+  it.each(archivedFixtureNames)("%s documents why it is archived instead of refreshed", (fixtureName) => {
+    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
+    const reason = content.match(ARCHIVED_RE)?.[1] ?? "";
+    expect(reason.trim().length, `Archived fixture ${fixtureName} must state why it is frozen`).toBeGreaterThan(20);
   });
 
   it("keeps the 90-day boundary, invalid/missing headers, and future timestamps explicit", () => {
@@ -120,11 +134,13 @@ describe("http-html adapter fixture coverage", () => {
     });
   });
 
-  it("refresh script can refresh every checked-in HTML fixture", () => {
+  it("refresh script lists every refreshable fixture and no archived or deleted one", () => {
     const script = readFileSync(REFRESH_SCRIPT, "utf8");
     const refreshFixtures = new Set(Array.from(script.matchAll(/fixture:\s*"([^"]+\.html)"/g), (match) => match[1]));
-    const missing = htmlFixtureNames.filter((fixtureName) => !refreshFixtures.has(fixtureName));
+    const missing = refreshableFixtureNames.filter((fixtureName) => !refreshFixtures.has(fixtureName));
+    const orphaned = [...refreshFixtures].filter((fixtureName) => !refreshableFixtureNames.includes(fixtureName)).sort();
 
     expect(missing).toEqual([]);
+    expect(orphaned).toEqual([]);
   });
 });
