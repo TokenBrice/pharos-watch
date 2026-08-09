@@ -20,7 +20,7 @@
   "protocolSlug": "qidao",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "On-chain enumeration on 2026-08-08 of 71 QiDao vault contracts across 12 chains found ~2,099,471 MAI of recorded vault debt in 63 debt-bearing markets. ~71.7% of that debt sits in 15 Fantom markets whose price sources all revert (Multichain-era stranded debt), and a further ~1.3% sits in other dead-oracle markets (Polygon Celsius-era cxETH/cxADA/cxDOGE/CEL/FXS/dQUICK, Polygon stMATIC, Moonbeam GLMR, BSC DODO), where liquidation, withdrawal, and borrowing are all bricked. Every live market reads exactly one Chainlink feed — or a QiDao custom composite over one Chainlink feed — and the vault contract consumes only the answer field of latestRoundData() with no staleness check, no heartbeat enforcement, and no fallback; the only remedy is an owner-gated changeEthPriceSource by QiDao Safes. No stability pool, insurance fund, or bad-debt backstop exists on any observed deployment (stabilityPool is the zero address), and deeply underwater vaults cannot be liquidated at all because the SafeMath collateral payout underflows.",
+    "summary": "On-chain enumeration on 2026-08-08 of 71 QiDao vault contracts across 12 chains found ~2,099,471 MAI of recorded vault debt in 63 debt-bearing markets. ~71.7% of that debt sits in 15 Fantom markets whose price sources all revert (Multichain-era stranded debt), and a further ~1.3% sits in other dead-oracle markets (Polygon Celsius-era cxETH/cxADA/cxDOGE/CEL/FXS/dQUICK, Polygon stMATIC, Moonbeam GLMR, BSC DODO), where liquidation, withdrawal, and borrowing are all bricked. Every live market reads exactly one Chainlink feed — or a QiDao custom composite over one Chainlink feed — and the vault contract consumes only the answer field of latestRoundData() with no staleness check, no heartbeat enforcement, and no fallback; the only remedy is an owner-gated changeEthPriceSource by QiDao Safes. No stability pool, insurance fund, or bad-debt backstop exists on any observed deployment (stabilityPool is the zero address), and deeply underwater vaults cannot be liquidated at all because the SafeMath collateral payout underflows. Direct eth_call probes on 2026-08-09 (Fantom 122814200, Polygon 91727016-91727114, Moonbeam 16786674-16786696) confirm the dead-oracle markets are uncallable rather than merely undelayed: liquidateVault reverts with empty return data inside the price read, while the identical call on a live market returns the 'Vault is not below minimum collateral percentage' require string. liquidationDelaySec is therefore recorded as 0 only on branches with at least one operable market, and is deliberately left unrecorded on the four wholly dead-oracle branches (fantom-dead-oracle-legacy, polygon-dead-oracle-legacy, polygon-stmatic, moonbeam-glmr), whose true waiting time is unbounded and cannot be expressed in a non-negative-integer field.",
     "branchModel": "multi-branch",
     "reviewedAt": "2026-08-08",
     "reviewer": "wave3-longtail-l02 (research agent)",
@@ -35,7 +35,7 @@
         "url": "https://www.mai.finance/"
       },
       {
-        "label": "QiDao protocol repo — erc20Stablecoin.sol (liquidateVault, getEthPriceSource, no staleness check)",
+        "label": "QiDao protocol repo — erc20Stablecoin.sol (liquidateVault, getEthPriceSource, no staleness check; re-read 2026-08-09 confirming liquidateVault carries no delay, grace-period, auction, or timestamp term)",
         "url": "https://github.com/0xlaozi/qidao/blob/main/contracts/erc20Stablecoin/erc20Stablecoin.sol"
       },
       {
@@ -191,7 +191,7 @@
             "note": "Wind-down: debtRatio=67 (liquidator repays ~1.5%), gainRatio=1500; 4 vaults with debt totaling 19.75 MAI."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() — any MAI holder repays 1/debtRatio of a below-minimum vault's debt and extracts collateral worth the repayment times gainRatio/10 at the oracle price. In practice no liquidation can execute on Fantom because the oracle call itself reverts.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() — any MAI holder repays 1/debtRatio of a below-minimum vault's debt and extracts collateral worth the repayment times gainRatio/10 at the oracle price. In practice no liquidation can execute on Fantom because the oracle call itself reverts. Re-proved by direct eth_call at Fantom block 122814200 (2026-08-09) against the BTC vault 0xE5996a2c, corroborated byte-identically on a second endpoint (rpc.fantom.network): stabilityPool() is the zero address and liquidateVault(uint256) is present in the deployed bytecode, so liquidation is permissionless and dispatchable, and vault 34 is a live position (ownerOf 0xd53064c88994119c281cc9e66c01a669e4a7715d, 0.00055772 BTC collateral, 6.652475 MAI debt) — yet checkCollateralPercentage(34), checkLiquidation(34), and liquidateVault(34) all revert with empty return data, while ownerOf(999999) on the same contract still returns its ERC721 revert string, placing the failure inside the price read rather than in any require. liquidationDelaySec is deliberately left unrecorded on this branch: erc20Stablecoin.liquidateVault contains no delay, grace-period, auction, or timestamp term at all (source re-read 2026-08-09), so the branch has no positive delay to report, but liquidation here is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express. Recording 0 would render as 'liquidation delay: none' on a branch where liquidation cannot execute.",
         "backstop": "No protocol backstop: stabilityPool is the zero address on the observed deployments and there is no stability pool, insurance fund, or committed bad-debt buyer. QiDao historically settled Multichain-era bad debt ad hoc from the DAO treasury on Polygon ($668k, per DL News); the Fantom residue (~1.51M MAI) remains unsettled with the chain's tokens in dispute.",
         "shutdownOrBadDebtBehavior": "The vault contract defines no global shutdown, settlement, or debt-socialization path. On Fantom the entire deployment is de facto frozen: dead oracles brick liquidation, withdrawal, and borrowing, and the recorded bad debt (Multichain-era, collateral devalued) remains on the books indefinitely. QiDao's site says Fantom tokens 'return to holders once its dispute is resolved' — an off-chain process, not a contract mechanism.",
         "debtSharePct": 71.72,
@@ -208,8 +208,12 @@
             "url": "https://ftmscan.com/address/0xE5996a2cB60eA57F03bf332b5ADC517035d8d094"
           },
           {
-            "label": "Fantom public RPC used for enumeration (fantom.drpc.org), block 122806117",
+            "label": "Fantom public RPC used for enumeration (fantom.drpc.org), block 122806117; liquidation-callability probes re-run at block 122814200, 2026-08-09",
             "url": "https://fantom.drpc.org"
+          },
+          {
+            "label": "Second Fantom public RPC corroborating the 2026-08-09 liquidation-callability probes at block 122814200",
+            "url": "https://rpc.fantom.network"
           },
           {
             "label": "QiDao MAI website (Fantom dispute note)",
@@ -801,7 +805,7 @@
             "note": "Wind-down: raw _minimumCollateralPercentage=50000; debtRatio=1, gainRatio=1010; 18 vaults with debt totaling 2.40 MAI; 56.70 dQUICK collateral."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with debtRatio=1 (full-debt repayment) and a 1% gainRatio bonus under wind-down parameters. In practice no liquidation can execute because the oracle call reverts.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with debtRatio=1 (full-debt repayment) and a 1% gainRatio bonus under wind-down parameters. In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016 (2026-08-09): getEthPriceSource() reverts with empty return data on all six vaults (cxETH 0x7d36999a, cxADA 0x506533B9, cxDOGE 0x7CbF49E4, CEL 0x178f1c95, FXS 0xff2c44fb, dQUICK 0x649Aa6E6), stabilityPool() on cxETH is the zero address, and on the live cxETH position 36 (34.752181 MAI debt) checkCollateralPercentage(36), checkLiquidation(36), and liquidateVault(36) all revert empty. The control is decisive: on the live Polygon WETH market 0xb5b31e6a at the same block, the identical liquidateVault call reverts with the reason string 'Vault is not below minimum collateral percentage', proving the endpoint returns revert strings and that the collateral-ratio require is the only gate on a working market. liquidationDelaySec is deliberately left unrecorded on this branch: the QiDao vault contract has no delay, grace-period, auction, or timestamp term anywhere in liquidateVault, but these markets are not undelayed — they are uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: stabilityPool is the zero address at the observed block; no stability pool, insurance fund, or committed bad-debt buyer exists. The 2023 Polygon bad-debt settlement ($668k from the DAO treasury, per DL News) was an ad hoc governance action and did not cover these markets.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. These markets are de facto frozen: dead oracles brick liquidation, withdrawal, and borrowing, so the 25.1k MAI of mostly Celsius-collateralized bad debt remains on the books indefinitely.",
         "debtSharePct": 1.2,
@@ -819,7 +823,7 @@
             "url": "https://polygonscan.com/address/0x506533B9C16eE2472A6BF37cc320aE45a0a24F11"
           },
           {
-            "label": "Polygon public RPC used for enumeration (polygon-bor-rpc.publicnode.com), block 91674649",
+            "label": "Polygon public RPC used for enumeration (polygon-bor-rpc.publicnode.com), block 91674649; liquidation-callability probes and the live-market control re-run at block 91727016, 2026-08-09",
             "url": "https://polygon-bor-rpc.publicnode.com"
           },
           {
@@ -1056,7 +1060,7 @@
             "note": "debtRatio=2 (50% repayment), gainRatio=1100 (10% bonus), closingFee=0, openingFee=0; 28 vaults with debt totaling 719.60 MAI; 26,700.64 stMATIC collateral; remaining mint capacity 9,633.59 MAI."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with 50% repayment and a 10% bonus. In practice no liquidation can execute because the oracle call reverts.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus — this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Polygon block 91727016-91727114 (2026-08-09): stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts with empty return data, and on the live position 5 (448.290758 MAI debt) checkCollateralPercentage(5), checkLiquidation(5), and liquidateVault(5,0) all revert empty — whereas the same liquidateVault(id,0) call on the live Polygon WETH market 0xb5b31e6a returns the reason string 'Vault is not below minimum collateral percentage', so the empty reverts here originate in the price read, not in a require. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: stabilityPool is the zero address at the observed block; no stability pool, insurance fund, or committed bad-debt buyer exists.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. With the oracle dead, the 719.60 MAI of debt and the deposited stMATIC are frozen in place until the owner Safe repoints changeEthPriceSource.",
         "debtSharePct": 0.03,
@@ -1071,7 +1075,7 @@
             "url": "https://polygonscan.com/address/0x9A05b116b56304F5f4B3F1D5DA4641bFfFfae6Ab"
           },
           {
-            "label": "Polygon public RPC used for enumeration (polygon-bor-rpc.publicnode.com), block 91674649",
+            "label": "Polygon public RPC used for enumeration (polygon-bor-rpc.publicnode.com), block 91674649; liquidation-callability probes and the live-market control re-run at blocks 91727016-91727114, 2026-08-09",
             "url": "https://polygon-bor-rpc.publicnode.com"
           },
           {
@@ -1816,7 +1820,7 @@
             "note": "debtRatio=2 (50% repayment), gainRatio=1100 (10% bonus), closingFee=50; 31 vaults with debt totaling 1,494.39 MAI; 19,808.99 GLMR collateral."
           }
         ],
-        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault() with 50% repayment and a 10% bonus. In practice no liquidation can execute because the oracle call reverts.",
+        "liquidationMechanism": "Designed mechanism (currently inoperative): permissionless partial liquidation via liquidateVault(vaultID, front) with 50% repayment and a 10% bonus — this newer vault build exposes liquidateVault(uint256,uint256), not the legacy liquidateVault(uint256). In practice no liquidation can execute because the oracle call reverts. Re-proved by direct eth_call at Moonbeam blocks 16786674-16786696 (2026-08-09): ethPriceSource() is 0x4497B606be93e773bbA5eaCFCb2ac5E2214220Eb and its latestRoundData() reverts, stabilityPool() is the zero address, debtRatio()=2 and gainRatio()=1100 are unchanged, getEthPriceSource() reverts, and on the live position 42 (8.330497 MAI debt, ownerOf 0x02282d4342b0258e202b8e1a3497a5102720f703) checkCollateralPercentage(42), checkLiquidation(42), and liquidateVault(42,0) all revert with empty return data. liquidationDelaySec is deliberately left unrecorded on this branch: the vault contract has no delay, grace-period, auction, or timestamp term, but this market is not undelayed — it is uncallable at every block, an unbounded wait the schema's non-negative-integer field cannot express, and recording 0 would render as 'liquidation delay: none'.",
         "backstop": "No protocol backstop: no stability pool, insurance fund, or committed bad-debt buyer exists on this deployment.",
         "shutdownOrBadDebtBehavior": "No global shutdown, settlement, or debt-socialization path exists in the vault contract. With the oracle dead, the 1,494.39 MAI of debt and the deposited GLMR are frozen in place until the owner Safe repoints changeEthPriceSource.",
         "debtSharePct": 0.07,
@@ -1831,7 +1835,7 @@
             "url": "https://moonscan.io/address/0x3A82F4da24F93a32dc3C2A28cFA9D6E63EC28531"
           },
           {
-            "label": "Moonbeam public RPC used for enumeration (moonbeam-rpc.publicnode.com), block 16774912",
+            "label": "Moonbeam public RPC used for enumeration (moonbeam-rpc.publicnode.com), block 16774912; liquidation-callability probes re-run at blocks 16786674-16786696, 2026-08-09",
             "url": "https://moonbeam-rpc.publicnode.com"
           },
           {
