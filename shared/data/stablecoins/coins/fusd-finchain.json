@@ -5,11 +5,9 @@
   "oneLiner": "FUSD is FinChain's BMA-licensed, rebasing dollar stablecoin backed by tokenized U.S. Treasury bills and money-market funds.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Tokenized U.S. Treasury bills and money-market funds, including Taikang Kaitai U.S. Dollar Money Market Fund, ChinaAMC USD Digital Money Market Fund (Tokenized Unlisted Class), and BNY Mellon U.S. Dollar Liquidity Fund",
   "pegMechanism": "Eligible customers mint and redeem through FinChain; FUSD targets a fixed $1 token value while balances rebase daily to distribute reserve yield from the underlying tokenized Treasury and money-market fund portfolio",

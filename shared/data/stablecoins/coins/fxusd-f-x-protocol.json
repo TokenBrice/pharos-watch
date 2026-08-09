@@ -5,11 +5,7 @@
   "oneLiner": "fxUSD is f(x) Protocol's CDP-minted dollar overcollateralized by WBTC and wstETH, with a Stability Pool arbitraging Curve to defend the peg.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "WBTC (majority) and wstETH deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized; WBTC custody by BitGo/Coinbase introduces centralized dependency",
   "pegMechanism": "CDP-style with overcollateralization and liquidations; f(x) Protocol Stability Pool arbitrages the USDC/fxUSD Curve pool to defend the peg; two yield strategies: (1) Curve LP with FXN gauge, (2) Stability Pool with wstETH real yield, fxSAVE autocompound, or FXN gauge; fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",

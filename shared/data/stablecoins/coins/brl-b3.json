@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
   "pegMechanism": "Issuer-managed Brazilian-real settlement token for B3's tokenization platform; B3 materials describe it as value-linked to fiat currency and as the real-denominated settlement instrument for tokenized-asset trading",

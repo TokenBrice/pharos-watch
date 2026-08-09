@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the June 30, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
   "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",

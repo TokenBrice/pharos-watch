@@ -8,10 +8,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Euro-denominated fiat reserves held separately from Circle operating funds at regulated financial institutions in the EEA",
   "pegMechanism": "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",

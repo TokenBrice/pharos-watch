@@ -5,11 +5,8 @@
   "oneLiner": "USDon is Ondo Global Markets' USD settlement token, backed by cash held by Ondo at a brokerage.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "mechanismArchetype": "fiat-cash",
   "collateral": "U.S. dollar cash held by Ondo at a brokerage for USDon settlement",

@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
   "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",

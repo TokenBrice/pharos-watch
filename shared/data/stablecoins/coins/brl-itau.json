@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Pre-launch: Itau is evaluating a BRL- or USD-denominated stablecoin pending Brazil's Consulta Publica 111 framework. The bank already participates in the DREX wholesale CBDC pilot and would source distribution rails and custody from its existing regulated infrastructure, but no reserve composition has been publicly committed.",
   "pegMechanism": "Pre-launch: peg maintenance is not yet defined; launch is contingent on the final shape of BCB Consulta Publica 111, including self-custody rules and bank-issuer permissions. Itau is expected to use direct bank-issuer mint/redeem rails consistent with its existing custodial and FX infrastructure.",

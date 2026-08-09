@@ -5,10 +5,8 @@
   "oneLiner": "hbUSDT is Hyperbeat's yield-bearing USDT vault token on HyperEVM, exposing holders to DeFi lending and strategy returns over Tether's underlying par.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "usdt-tether",

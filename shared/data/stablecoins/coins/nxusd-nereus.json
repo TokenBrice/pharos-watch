@@ -7,11 +7,7 @@
   "oneLiner": "NXUSD is a Nereus Finance overcollateralized CDP issued on Avalanche and Polygon; the token has shown a sustained soft-depeg pattern between $0.95 and $1.01.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral",
   "pegMechanism": "Borrowed stablecoin minted against overcollateralized deposits in Nereus markets and repaid or liquidated through protocol rules",

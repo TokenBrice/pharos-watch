@@ -5,10 +5,8 @@
   "oneLiner": "stkGHO is Aave Umbrella's slashable safety-module staking receipt over GHO; depositors earn Umbrella rewards and absorb GHO deficits via automated slashing.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "canBeBlacklisted": true,

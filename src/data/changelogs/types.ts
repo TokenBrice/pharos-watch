@@ -34,9 +34,13 @@ export interface ChangelogEntry {
   summary: SummaryItem[];
   /**
    * `totalCommits` is the number of commits in the date window after noise
-   * filtering, and MUST equal `commits.length` below. Every published entry
-   * satisfies this invariant.
+   * filtering. It is the authoritative count and MAY exceed `commits.length`.
    */
   stats: { totalCommits: number };
+  /**
+   * The rendered commit list, capped at the 20 the changelog card shows.
+   * Anything beyond that is counted by `stats.totalCommits` and archived in
+   * git history — do not re-expand this array.
+   */
   commits: CommitRef[];
 }

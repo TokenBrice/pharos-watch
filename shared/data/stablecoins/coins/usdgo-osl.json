@@ -5,11 +5,8 @@
   "oneLiner": "USDGO is OSL's yield-bearing Solana dollar issued with Anchorage Digital Bank, passing EFFR-linked reserve yield to holders.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
   "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",

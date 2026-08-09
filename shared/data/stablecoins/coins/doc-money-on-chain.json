@@ -5,11 +5,7 @@
   "oneLiner": "DOC is Money On Chain's overcollateralized USD stablecoin on Rootstock, minted against rBTC vaults with permissionless DOC-for-rBTC redemption.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "rBTC locked in Money On Chain smart contracts on Rootstock",
   "pegMechanism": "DOC targets 1 USD through overcollateralized rBTC backing, protocol incentives, and permissionless DOC-to-rBTC redemption through the Money On Chain dApp",

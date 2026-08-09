@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "OTHER",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned 1:1 Georgian Lari-denominated reserves under National Bank of Georgia Order No. 52/04 (100% reserve backing, full redemption rights); reserve composition, custodian, and attestation not yet disclosed",
   "pegMechanism": "Pre-launch fiat-referenced stablecoin digitally representing the Georgian Lari; designed for 1:1 GEL backing with full redemption rights under NBG oversight, though chains, contracts, reserve disclosures, and launch timing remain unannounced",

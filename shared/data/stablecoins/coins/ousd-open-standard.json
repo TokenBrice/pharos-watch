@@ -5,11 +5,7 @@
   "oneLiner": "Open USD is Open Standard's fully-reserved consortium dollar, backed by 140+ firms including Visa, Mastercard, and BlackRock; launch expected in 2026.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Fully-reserved U.S. dollar backing for Open USD; Open Standard states most reserve earnings are shared with consortium partners after an operating fee. Reserve composition, custodian, and attestation are not yet public.",
   "pegMechanism": "Issuer-managed 1:1 USD mint and redemption with zero fees and no volume limits for consortium partners; operated by Open Standard, an independent company governed by a board of its partner businesses. Positioned as GENIUS Act-compliant. Contracts, reserve reporting, and named custodians are pending launch.",

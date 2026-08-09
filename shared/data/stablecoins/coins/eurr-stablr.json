@@ -7,10 +7,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions",
   "pegMechanism": "Direct 1:1 redemption through StablR",

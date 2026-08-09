@@ -5,11 +5,7 @@
   "oneLiner": "USDh is Hermetica's BTC-backed synthetic dollar on Stacks, kept near $1 by pairing spot BTC long with equal-size short BTC perpetual futures positions on CEXes.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Dual yield-engine backing: BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges (delta-neutral), plus STRC digital-credit exposure added in 2026 (Saturn USDat route with Galaxy execution and Clear Street custody, and tokenized STRCx via Backed Assets/Kraken); BTC margin reserves custodied off-exchange via Copper (Clearloop) and Ceffu (MirrorX), with monthly custodian attestations of assets, liabilities and reserve coverage",
   "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",

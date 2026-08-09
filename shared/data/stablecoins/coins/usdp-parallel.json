@@ -5,11 +5,7 @@
   "oneLiner": "USDp is Parallel's DAO-governed dollar minted against a whitelisted basket of overcollateralized stablecoins through a licensed Angle Transmuter fork.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
   "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",

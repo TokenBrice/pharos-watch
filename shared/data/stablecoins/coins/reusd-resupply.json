@@ -5,11 +5,7 @@
   "oneLiner": "REUSD is Resupply's CDP stablecoin minted against Curve Lend and Fraxlend vault shares (crvUSD/frxUSD); a 1% communal-redemption fee sets a price floor.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
   "pegMechanism": "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",

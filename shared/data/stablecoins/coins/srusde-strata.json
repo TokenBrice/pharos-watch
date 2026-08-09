@@ -5,10 +5,8 @@
   "oneLiner": "srUSDe is Strata's senior tranche over a USDe yield strategy; the junior tranche absorbs first-loss while exits depend on tranche liquidity, not 1:1 redemption.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

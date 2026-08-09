@@ -5,11 +5,7 @@
   "oneLiner": "USDF is Aster's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
   "pegMechanism": "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",

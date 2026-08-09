@@ -5,11 +5,8 @@
   "oneLiner": "ZeUSD is Zoth's deprecated V1 RWA-backed dollar token, minted at a fixed collateral valuation and burned to reclaim recorded collateral; V2 is separate.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
   "pegMechanism": "Tracked V1 records collateral value and ZeUSD debt when a deposit is minted, then requires the recorded ZeUSD amount to be burned before returning the recorded collateral. It has no continuing position-health check or forced-liquidation path; the shared deposit/redemption router pause was active at the reviewed finalized block.",

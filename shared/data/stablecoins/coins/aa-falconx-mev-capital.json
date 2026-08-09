@@ -5,7 +5,6 @@
   "oneLiner": "AA_FalconXUSDC is a Pareto FalconX Credit Vault token: USDC exposure to FalconX institutional credit lines curated by M11 Credit.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

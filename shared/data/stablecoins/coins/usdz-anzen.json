@@ -5,11 +5,8 @@
   "oneLiner": "USDz is Anzen's RWA dollar backed 1:1 by SPCT, a permissioned token representing a diversified portfolio of U.S. private-credit assets.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Diversified U.S. private-credit assets tokenized as permissioned Secured Private Credit Tokens (SPCT), with USDz backed 1:1 by SPCT",
   "pegMechanism": "USDz is minted and redeemed 1:1 against SPCT through audited smart contracts; secondary-market arbitrage supports the dollar peg",

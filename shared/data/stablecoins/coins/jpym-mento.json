@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "JPY",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint JPYm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",

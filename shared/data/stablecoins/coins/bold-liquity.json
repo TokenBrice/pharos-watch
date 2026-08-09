@@ -5,11 +5,7 @@
   "oneLiner": "BOLD is Liquity V2's decentralized dollar stablecoin, minted from immutable overcollateralized CDP vaults against WETH, wstETH, and rETH only.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
   "pegMechanism": "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",

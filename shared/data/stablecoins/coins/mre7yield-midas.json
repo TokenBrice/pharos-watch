@@ -5,10 +5,8 @@
   "oneLiner": "mRe7YIELD is a Midas NAV-accreting liquid-yield token wrapping Re7 Capital DeFi lending, liquidity, restaking, and funding-rate strategies; not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",

@@ -5,10 +5,8 @@
   "oneLiner": "spUSDC is Spark's ERC-4626 V2 savings wrapper of USDC; share price compounds the Vault Savings Rate while exits redeem from vault USDC liquidity.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -5,11 +5,7 @@
   "oneLiner": "USDRIF is RIF On Chain's dollar token on Rootstock, minted against RIF token collateral via overcollateralized CDP-style positions.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "RIF tokens and DOC (Dollar on Chain) V3 multi-collateral reserves.",
   "pegMechanism": "USDRIF is minted through RIF on Chain using RIF and DOC V3 collateral, with the peg supported by a multi-collateral CDP/redemption design rather than a fiat reserve account.",

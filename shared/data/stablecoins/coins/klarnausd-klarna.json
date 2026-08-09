@@ -5,11 +5,7 @@
   "oneLiner": "KlarnaUSD is Klarna's planned USD stablecoin on Tempo, issued via Bridge (Stripe) Open Issuance; mainnet contracts and reserves pending.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned USD-denominated reserve assets managed through Bridge Open Issuance; public reserve composition and attestations are pending mainnet launch",
   "pegMechanism": "Pre-launch USD stablecoin built on Bridge Open Issuance and Tempo testnet infrastructure; expected to mint and redeem through Bridge/Klarna regulated channels once public issuance begins, with contracts and reserve reporting still pending",

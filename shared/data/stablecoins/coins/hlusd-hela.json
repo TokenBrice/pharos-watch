@@ -6,11 +6,7 @@
   "oneLiner": "HLUSD is the HeLa ecosystem's centralized dollar stablecoin, backed by fiat and fiat-equivalent reserves and used as the HeLa runtime settlement asset.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
   "pegMechanism": "Fiat-collateralized 1:1 USD peg: HLUSD is minted against off-chain USDC reserves and redeemable at 1 HLUSD = 1 USD, with issuance and redemption controlled by HeLa's on-chain role-based mint/burn governance (MintProposer/MintVoter quorum and Admin). HLUSD also serves as HeLa Chain's native gas token. Pricing and market-cap coverage are sourced from CoinGecko because the native HeLa chain is not modeled in Pharos.",

@@ -5,11 +5,7 @@
   "oneLiner": "USX is Solstice's Solana dollar, backed by audited cash, tokenized Treasuries, and delta-neutral hedged positions with Accountable solvency proofs.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Diversified reserve of audited cash, tokenized Treasuries, and delta-neutral hedged positions; Solstice publishes aggregate collateralization but not current category weights",
   "pegMechanism": "Overcollateralized institutional issuance with multi-oracle pricing and PDA-controlled minting; Accountable publishes aggregate reserve-versus-supply solvency proofs, while secondary access remains available through Solana DeFi markets",

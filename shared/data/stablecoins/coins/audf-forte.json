@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Australian dollar reserves and cash-equivalent reserve assets held separately from Forte's operational funds",
   "pegMechanism": "Direct 1:1 redemption for AUD through Forte Securities Australia Pty Ltd for eligible account holders to approved bank accounts, with monthly independent reserve audits and daily reserve monitoring",

@@ -5,11 +5,8 @@
   "oneLiner": "USDM is MegaETH's dollar stablecoin issued on Ethena's USDtb rails, backed ~90% by BlackRock BUIDL tokenized Treasuries; reserve yield funds sequencer costs.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
   "pegMechanism": "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",

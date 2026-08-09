@@ -5,11 +5,7 @@
   "oneLiner": "IST was Agoric's Inter Protocol stable token, formerly minted against vault collateral and PSM deposits before governance sunset the protocol in 2025.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
   "pegMechanism": "IST was minted through Inter Protocol vaults and PSM facilities. Agoric governance approved a wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",

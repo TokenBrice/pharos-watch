@@ -5,11 +5,7 @@
   "oneLiner": "UUSD is Anything Labs's issuer-controlled BSC dollar token; current public materials do not identify its backing assets or peg-maintenance mechanism.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Undisclosed; Anything Labs markets UUSD as reserve-backed but publishes no collateral composition, reserve assets, or attestation in the whitepaper, site, or repo",
   "pegMechanism": "Undisclosed; the whitepaper and docs describe no peg-maintenance mechanism. On-chain, UUSD is an upgradeable Ownable proxy ERC-20 on BSC with owner-controlled (4/6 Safe) mint and burn",

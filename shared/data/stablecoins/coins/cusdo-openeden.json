@@ -5,7 +5,6 @@
   "oneLiner": "cUSDO is OpenEden's non-rebasing wrapper of USDO that compounds T-Bill yield through price appreciation rather than balance changes.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

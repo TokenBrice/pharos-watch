@@ -5,10 +5,8 @@
   "oneLiner": "autoUSD is Auto Finance's yield-bearing USDC autopool token on Ethereum, rebalancing across DeFi destinations while Royco Dawn lists tranche markets.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "canBeBlacklisted": true,

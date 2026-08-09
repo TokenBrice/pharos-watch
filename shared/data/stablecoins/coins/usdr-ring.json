@@ -5,11 +5,7 @@
   "oneLiner": "USDR is Ring Protocol's centrally managed synthetic dollar minted against protocol-controlled crypto collateral, with no public redemption route documented.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Ring protocol crypto collateral and strategy assets managed through the protocol reserve system",
   "pegMechanism": "USDR is collateralized by a Protocol Controlled Value (PCV) reserve funded through bonding-curve issuance; PCV is allocated to liquidity and the token can be over- or under-collateralized depending on reserve conditions; no holder-exercisable redemption route is source-reviewed for Pharos backstop scoring",

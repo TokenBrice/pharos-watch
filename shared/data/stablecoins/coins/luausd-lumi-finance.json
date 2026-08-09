@@ -5,10 +5,7 @@
   "oneLiner": "LUAUSD is Lumi Finance's nonstandard dollar reference token on Arbitrum, tied to LUA floor-price mechanics rather than 1:1 fiat redemption.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Over-collateralized by LUA staked at the protocol floor price, plus a diversified stablecoin reserve of USDT and USDC held as protocol-owned liquidity (including Lumi's Curve pool)",

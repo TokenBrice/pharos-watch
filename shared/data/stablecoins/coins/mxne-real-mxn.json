@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Backed by Etherfuse CETES Stablebonds — short-duration (~7-day) Mexican federal government Treasury bills (CETES), held across regulated Mexican custodians with a majority at BBVA Mexico and held through INDEVAL; reserves segregated from Etherfuse corporate funds, issued via Brale's regulated US stack",
   "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",

@@ -7,10 +7,8 @@
   "oneLiner": "USD3 is a Reserve Protocol RToken/DTF backed by yield-bearing USDC and USDS wrappers (Aave, Compound, Steakhouse, Sky savings), governed by RSR stakers.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",

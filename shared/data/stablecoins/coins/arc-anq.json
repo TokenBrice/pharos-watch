@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "INR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC",
   "pegMechanism": "Proposed issuer-managed INR peg: ARC is expected to trade 1:1 with the Indian rupee and be minted only after issuers acquire eligible cash or cash-equivalent reserves such as cash balances, fixed deposits, or government securities; business-account issuance and whitelisted transfers are intended to keep the token inside India's regulated payments perimeter",

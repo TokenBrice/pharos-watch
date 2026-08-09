@@ -5,11 +5,8 @@
   "oneLiner": "wM is M0 Protocol's non-rebasing 1:1 ERC-20 wrapper around M, with M backed by short-term U.S. Treasury bills held in bankruptcy-remote SPVs.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "variantOf": "m-m0",
   "variantKind": "pure-wrapper",

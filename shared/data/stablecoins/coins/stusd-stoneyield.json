@@ -6,10 +6,8 @@
   "oneLiner": "stUSD is StoneYield's BNB Chain yield wrapper over USDC routed through a Venus-linked strategy layer; tracked as a managed wrapper, not a plain fiat stablecoin.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "pegReferenceId": "usdc-circle",

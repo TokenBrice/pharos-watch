@@ -7,11 +7,7 @@
   "oneLiner": "kUSD is Kerne Protocol's Base-native synthetic dollar, live at genesis scale and currently backed 1:1 by USDC while its hedge vault is rebuilt.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Currently backed 1:1 by USDC split across three on-chain Peg Stability Module contracts (1,113.885006 USDC against 1,112.707154 kUSD outstanding as of 2026-07-23): the live mint PSM (0xaBDE1138), retired mint PSM (0x07eBb486), and original redeem-reserve PSM (0xFf3025ec). By design kUSD is a delta-neutral synthetic dollar: a WETH vault leg paired with an equal short on Hyperliquid (Lido/wstETH staking long plus perpetual funding), but that vault leg is in a disclosed degraded state pending a v2 redeploy and is excluded from published reserves, so live backing is presently the combined USDC PSM reserve only.",
   "pegMechanism": "1:1 mint and redemption against USDC through on-chain Peg Stability Modules: minting routes through the live KUSDPSM at 0xaBDE1138 (10 bps base fee, 10,000,000 USDC cap), while the retired mint PSM at 0x07eBb486 and original PSM at 0xFf3025ec remain redemption reserves. Only 0xaBDE1138 holds the kUSD MINTER_ROLE. The intended steady-state peg pairs the PSM with a delta-neutral basis trade (wstETH staking long, Hyperliquid perpetual short) so holders carry no directional ETH exposure; that hedge leg is currently degraded and excluded.",

@@ -79,7 +79,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(paths).not.toContain("shared/lib/safety-score-v9/scenario-evaluator.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9-compiler.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9-research.ts");
-    expect(paths).not.toContain("shared/data/safety-score-v9/exit-route-calibration-v1.json");
     // Reviewed transfer rows are point-in-time facts. The loader/schema is
     // build-bound above; row contents are bound by the V9 fact-set digest.
     expect(paths).not.toContain("shared/data/safety-score-v9/transfer-review-overlays-v1.json");

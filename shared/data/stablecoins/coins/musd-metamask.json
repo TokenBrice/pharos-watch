@@ -5,11 +5,8 @@
   "oneLiner": "MetaMask USD is a Bridge-issued (Stripe) dollar stablecoin on M0 protocol, backed by short-dated U.S. T-bills and cash with on-chain Validator attestations.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

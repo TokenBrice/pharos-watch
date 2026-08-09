@@ -6,7 +6,6 @@
   "oneLiner": "USD3 is 3Jane's yield-bearing senior share in a USDC-funded credit pool, protected first by the junior sUSD3 tranche.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

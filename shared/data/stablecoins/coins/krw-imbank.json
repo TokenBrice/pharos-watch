@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
   "pegMechanism": "Pre-launch bank-led KRW stablecoin proof-of-concept on Kaia: iM Bank and Finger are testing KRW reserve reconciliation with BTQ QSSN/PQC security infrastructure; production mint, redemption, and reserve reporting terms remain pending",

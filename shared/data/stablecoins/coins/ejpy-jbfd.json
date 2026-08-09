@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned 1:1 JPY backing held in trust under a trust-type scheme with Japan Blockchain Foundation as settlor; trust assets bankruptcy-remote; specific reserve composition and trustee not yet disclosed",
   "pegMechanism": "Pre-launch trust-type (Type III electronic payment instrument) yen stablecoin under Japan's Payment Services Act; designed for 1:1 JPY redemption with reserves held by a licensed trust bank, issued on Japan Open Chain first and Ethereum next, with trustee selection and launch timing still pending",

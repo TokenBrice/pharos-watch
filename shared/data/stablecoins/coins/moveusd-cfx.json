@@ -8,11 +8,7 @@
   "oneLiner": "MOVEUSD is CFX's Solana bank-deposit dollar token backed 1:1 by USD deposits in beneficiary accounts at FDIC-insured banks.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "U.S. dollar deposits held 1:1 in beneficiary accounts at participating FDIC-insured banks for approved CFX customers.",
   "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to settle one-to-one against bank deposits rather than a Treasury reserve portfolio.",

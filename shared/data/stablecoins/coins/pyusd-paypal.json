@@ -5,11 +5,7 @@
   "oneLiner": "PYUSD is PayPal's regulated dollar stablecoin issued by Paxos, redeemable 1:1 and backed by U.S. Treasury reverse repos and cash deposits.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
   "pegMechanism": "Direct 1:1 redemption through PayPal/Paxos",

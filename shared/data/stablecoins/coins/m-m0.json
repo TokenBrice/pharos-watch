@@ -5,11 +5,8 @@
   "oneLiner": "M is M0's institutional dollar stablecoin, minted by permissioned Minters against eligible collateral with on-chain Validator attestations.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

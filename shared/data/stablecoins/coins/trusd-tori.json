@@ -7,11 +7,7 @@
   "oneLiner": "trUSD is Tori Finance's synthetic dollar wrapping delta-neutral institutional trading strategies, mintable 1:1 against USDC or USDT.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Delta-neutral trading positions across global markets: hedged money markets, futures arbitrage, calendar spreads, and options strategies; all positions backed by USDC and USDT deposits with real-time verification via Accountable DVN",
   "pegMechanism": "1:1 mint and redeem against USDC or USDT with 0.1% fee; peg maintained by arbitrage incentives and delta-neutral portfolio construction offsetting directional exposure",

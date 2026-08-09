@@ -5,7 +5,6 @@
   "oneLiner": "OUSG is Ondo's tokenized U.S. T-Bill fund backed mainly by BlackRock BUIDL; a NAV-accreting share (not $1-pegged) limited to U.S. Qualified Purchasers.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

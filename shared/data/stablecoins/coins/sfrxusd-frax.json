@@ -5,10 +5,8 @@
   "oneLiner": "sfrxUSD is Frax's staking wrapper of frxUSD; the exchange rate compounds with custodian and protocol yield, with frxUSD-tier T-bill custodial backing.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "frxusd-frax",

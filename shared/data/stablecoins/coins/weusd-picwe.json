@@ -5,11 +5,7 @@
   "oneLiner": "WEUSD is PicWe's omni-chain wrapper with disputed USDC-vs-USDT/MOVE backing and a recent off-peg market price.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "PicWe's current public docs describe WEUSD as minted and redeemed 1:1 against USDC during Phase 1, while the mint-authority review and earlier PicWe materials describe basket-style backing around 9 USDT + 1 MOVE. Pharos treats the backing model as disputed until PicWe reconciles the documentation with on-chain and market evidence.",
   "pegMechanism": "Issuer-operated mint/redeem route through PicWe contracts. Current PicWe docs describe 1:1 USDC mint and redemption, but earlier basket materials and persistent secondary-market pricing near $0.91 indicate unresolved redemption/backing ambiguity.",

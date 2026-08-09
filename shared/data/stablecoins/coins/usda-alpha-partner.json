@@ -5,11 +5,7 @@
   "oneLiner": "USDA is Alpha Partners' BSC-only dollar token whose backing is described only as protocol-managed collateral and liquidity reserves; mechanism opaque.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Undisclosed and unverified. AP Web3 / Alpha Partners markets USDA as 1:1 USD-backed by reserves with 'FDIC protection', but publishes no reserve composition, proof of reserves, or attestation; the FDIC claim is unsubstantiated (FDIC does not insure stablecoins). Backing is opaque.",
   "pegMechanism": "Undocumented. The issuer publishes no mint/redeem or peg-maintenance mechanism. On-chain USDA is a BSC ERC-20 with a role-gated mint, an address blacklist, and modifiable transfer tax/fees; no peg-stabilization process is described.",

@@ -8,10 +8,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CAD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies CADm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a CADm-specific borrower trove.",
   "pegMechanism": "CADm is issued through Mento v2's USDm/CADm Broker and BiPoolManager exchange. A USDm-to-CADm swap burns incoming USDm and mints outgoing CADm; the reverse burns CADm and mints USDm. The virtual pool prices swaps from the CAD/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",

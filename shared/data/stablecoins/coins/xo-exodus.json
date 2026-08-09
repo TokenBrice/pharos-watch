@@ -5,11 +5,8 @@
   "oneLiner": "XO is MoonPay's Solana dollar token, issued through M0 infrastructure and backed by segregated U.S. dollars and other high-quality liquid assets.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

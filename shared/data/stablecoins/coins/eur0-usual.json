@@ -8,9 +8,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module",
   "pegMechanism": "Users mint EUR0 by depositing eligible euro RWA collateral such as Spiko EUTBL, or indirectly by depositing EURC while a collateral provider supplies the RWA; redemption swaps EUR0 back into the underlying euro collateral through Usual's dApp",

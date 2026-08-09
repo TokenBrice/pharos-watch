@@ -5,7 +5,6 @@
   "oneLiner": "sUSD1+ is Lorenzo's staked receipt over the USD1+ synthetic-dollar strategy backed by WLFI USD1 reserve yield and delta-neutral strategy returns on BNB Chain.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

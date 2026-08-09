@@ -18,11 +18,7 @@
   },
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
   "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",

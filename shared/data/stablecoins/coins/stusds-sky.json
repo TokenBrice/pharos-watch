@@ -5,10 +5,8 @@
   "oneLiner": "stUSDS is Sky's risk-capital staking module over USDS funding SKY-backed borrowing; holders earn the stUSDS Rate and absorb shortfall and governance slashing.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -8,10 +8,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "XOF",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Shared Mento Reserve: Mento's current backing configuration classifies XOFm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in an XOFm-specific trove.",
   "pegMechanism": "XOFm is issued through Mento v2's USDm/XOFm Broker and BiPoolManager exchange. A USDm-to-XOFm swap burns incoming USDm and mints outgoing XOFm; the reverse burns XOFm and mints USDm. The virtual pool prices swaps from the XOF/USD oracle feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",

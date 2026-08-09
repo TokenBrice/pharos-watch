@@ -7,11 +7,7 @@
   "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "100% USDC backing held in the WEMIX3.0 Treasury; the DIOS stabilizer (Treasury-In/Treasury-Out protocols) maintains the 1:1 USDC peg.",
   "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ Treasury USDC collateral and DIOS stabilization to keep WEMIX$ near one U.S. dollar.",

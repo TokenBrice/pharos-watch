@@ -9,11 +9,7 @@
   "pythFeedId": "0x32f9acbe011c749c3f402d6aa0e091513672279ef06e1fd1d392dc4466491f80",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
   "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",

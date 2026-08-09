@@ -7,11 +7,8 @@
   "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Overcollateralized Tether Gold (XAUT) deposited into the Alloy by Tether Ethereum vault; XAUT represents physical gold stored in Swiss vaults",
   "pegMechanism": "KYC-verified, whitelisted users mint aUSDT by depositing Ethereum XAUT into Alloy vaults, with positions limited by a 75% maximum mint-to-value ratio. Users return aUSDT to withdraw XAUT collateral, and whitelisted liquidators can repay aUSDT against undercollateralized positions.",

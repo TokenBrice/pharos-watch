@@ -5,11 +5,7 @@
   "oneLiner": "bnUSD is Balanced's cross-chain decentralized dollar backed by crypto loan collateral and USDC or USDT held in its Stability Fund.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "SODAX cross-chain money-market borrower collateral backing all facilitator-minted bnUSD; measured 2026-07-30 at Sonic block 76778944: ~39.8% sodahyTB (HiYield Treasury Bill Vault), ~23.7% sodaUSDC, ~7.2% sodaBTC, ~6.9% sodaBNB, ~3.7% each sodaAVAX and sodaSUI, ~3.4% sodasftUSD, ~2.3% sodaETH, ~2.0% sodaUSDT, and a long tail of other SODAX-wrapped crypto collateral. Stability Fund approved-stablecoin 1:1 swaps mint through the same facilitator, so those stablecoin deposits are part of the measured borrower-collateral base",
   "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",

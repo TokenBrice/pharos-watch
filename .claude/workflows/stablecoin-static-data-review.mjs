@@ -52,7 +52,7 @@ Only FACTUAL, verifiable metadata is in scope. For each field, decide whether th
 IN SCOPE (flag concrete, sourced problems):
 - identity: name, symbol (on-chain casing), oneLiner, flags.pegCurrency vs the asset it actually tracks.
 - mechanism: collateral prose, pegMechanism prose, mechanismArchetype (must match documented design).
-- flags: backing, governance, yieldBearing, rwa, navToken — check internal consistency (e.g. backing='rwa-backed' but rwa=false; yieldConfig present but yieldBearing=false; base vs wrapper yield convention).
+- flags: backing, governance, yieldBearing, rwa, navToken (source files omit schema defaults pegCurrency="USD", yieldBearing=false, rwa=false, navToken=false — an absent key means the default, not missing data) — check internal consistency (e.g. backing='rwa-backed' but rwa=false; yieldConfig present but yieldBearing=false; base vs wrapper yield convention).
 - mint-authority: only concrete factual errors — malformed/short EVM addresses (must be 40 hex chars after 0x), threshold/signerCount contradicted by a cited source. Do NOT re-audit narrative/provenance prose.
 - chains-contracts: missing chain deployments that are officially announced+live; wrong/typo contract addresses; wrong decimals. Verify against official docs / block explorers / rwa.xyz when possible.
 - identifiers: geckoId, llamaId, cmcSlug, pythFeedId, protocolSlug resolve to THIS asset.

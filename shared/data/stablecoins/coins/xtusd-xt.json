@@ -5,11 +5,7 @@
   "oneLiner": "XTUSD is XT.com/XSC's MakerDAO-style vault dollar, minted against overcollateralized XTDao crypto vaults with limited public on-chain tooling for Pharos.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Overcollateralized XTDao vault collateral on XSC; issuer materials describe XT as the initial collateral asset with protocol support for additional collateral over time, but public live collateral composition remains hard to verify without XSC tooling.",
   "pegMechanism": "XTDao CDP: users mint XTUSD against overcollateralized vaults; risky vaults are auctioned to keep collateral above outstanding debt. Secondary market and account liquidity run through XT.com, and Pharos does not model a fiat cash redemption window.",

@@ -5,7 +5,6 @@
   "oneLiner": "nTBILL is Nest's NAV-accreting Treasury vault token, routing into Janus Henderson JTRSY and Superstate USTB short-duration T-bill exposure.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

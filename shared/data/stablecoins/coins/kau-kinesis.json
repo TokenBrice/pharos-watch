@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by LBMA-approved allocated physical gold in ABX vaults.",
   "pegMechanism": "ERC-20 KAU is redeemable for Kinesis-native KAU through KMS Labs after compliance onboarding, then for physical gold through Kinesis Cayman subject to platform terms; no Kinesis fee-yield accrues on ERC-20 balances.",

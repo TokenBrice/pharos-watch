@@ -5,11 +5,7 @@
   "oneLiner": "USDa is Avalon's BTC-backed CDP stablecoin with 1:1 USDT convertibility, leveraging institutional credit lines and proprietary HFT liquidation logic.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "FBTC (tokenized BTC, Cobo-custodied) deposited as overcollateralized CDP; USDT/USDC can be deposited 1:1 (exempt from liquidation); protocol assets held with Cobo, Fireblocks, and Coinbase Prime custody and backed by multi-billion-dollar institutional balance sheets",
   "pegMechanism": "1:1 USDT convertibility (redemptions require loan repayment or conversion to USDT); overcollateralized against FBTC priced by Redstone oracle; HFT liquidation algorithm sells collateral on centralized exchanges to restore target LTV; cross-chain via LayerZero OFT",

@@ -5,11 +5,7 @@
   "oneLiner": "USDF is Flipcash's dollar stablecoin and the first Coinbase Custom Stablecoin, collateralized 1:1 by USDC via Coinbase's stablecoin-as-a-service platform.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
   "pegMechanism": "Coinbase Custom Stablecoin model: Coinbase handles issuance, redemption, custody, security, and compliance; USDF is designed to maintain a stable U.S. dollar value and relies on Coinbase-managed reserve backing and redemption mechanics",

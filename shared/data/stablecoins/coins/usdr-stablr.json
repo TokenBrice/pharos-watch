@@ -5,11 +5,7 @@
   "oneLiner": "USDR is StablR's MiCA-licensed dollar e-money token; minting and redemption have been suspended since a May 2026 cybersecurity incident.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash and short-term government bonds held with regulated European financial institutions",
   "pegMechanism": "Direct 1:1 redemption through StablR (MFSA-supervised EMI)",

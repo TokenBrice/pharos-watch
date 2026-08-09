@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CNH",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH",
   "pegMechanism": "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; the issuer publishes reported circulating AxCNH and corresponding CNH reserves on its transparency page",

@@ -8,10 +8,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "BRL",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Shared Mento Reserve: Mento's current analytics configuration classifies BRLm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a BRLm-specific trove.",
   "pegMechanism": "BRLm is issued through Mento v2's USDm/BRLm Broker and BiPoolManager exchange. A USDm-to-BRLm swap burns incoming USDm and mints outgoing BRLm; the reverse burns BRLm and mints USDm. The constant-sum virtual pool prices swaps from the BRL/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",

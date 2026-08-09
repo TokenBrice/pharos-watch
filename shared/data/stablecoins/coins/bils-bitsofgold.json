@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "OTHER",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 New Israeli Shekel reserves held in segregated dedicated bank accounts within Israel (foreign custody excluded), audited by Ernst & Young, with custody and issuance infrastructure provided by Fireblocks",
   "pegMechanism": "Regulator-approved shekel stablecoin on Solana (token extensions) issued by Bits of Gold under the Capital Market, Insurance and Savings Authority framework; redeemable 1:1 for shekels from segregated Israeli reserves, with QEDIT zero-knowledge privacy and a deliberately gradual, limited initial rollout",

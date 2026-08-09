@@ -7,10 +7,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Mento Reserve holding sUSDS, AUSD, CELO, USDC, EURC, USDT, axlEUROC, and stETH; overcollateralized with a stable-asset backing mandate.",
   "pegMechanism": "Mento V3 reserve-backed FX model: EURm is minted and redeemed against the shared Mento Reserve through Fixed-Price Market Maker (FPMM) pools that quote a Chainlink EUR oracle rate rather than deriving price from pool reserves, with on-chain trading limits and circuit breakers halting trade when the oracle is stale or off-peg.",

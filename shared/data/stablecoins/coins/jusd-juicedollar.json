@@ -5,11 +5,7 @@
   "oneLiner": "JUSD is Juice Dollar's Citrea dollar, minted through oracle-free BTC positions or 1:1 stablecoin bridge reserves using a Frankencoin/d-EURO architecture.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Wrapped cBTC (WCBTC, the Citrea Bitcoin L2 native-coin wrapper) deposited in oracle-free overcollateralized positions, plus StablecoinBridge routes that mint JUSD 1:1 against external Citrea stablecoins USDC.e, USDT.e and ctUSD (Citrea USD); protocol is a d-EURO / Frankencoin (ZCHF) architecture fork.",
   "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",

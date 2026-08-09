@@ -5,11 +5,7 @@
   "oneLiner": "USDGLO is Brale-issued dollar stablecoin whose reserve yield is directed to extreme-poverty alleviation, redeemable 1:1 against cash and U.S. government debt.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash, cash equivalents, and U.S. government-backed debt held by Brale in segregated, unencumbered accounts",
   "pegMechanism": "Brale-issued fiat-backed stablecoin redeemable 1:1 for USD or USDC by eligible Brale customers; Brale manages reserves and liquidity for redemption obligations",

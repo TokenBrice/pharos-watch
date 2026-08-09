@@ -189,11 +189,13 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
   });
 
   it("keeps pure wrappers, native savings, Stability Pools, and strategy vaults distinct", () => {
+    // Raw source file: `flags.navToken` is a schema default and is intentionally
+    // absent here (`StablecoinFlagsSchema` supplies `false`).
+    expect(wmAsset.flags).not.toHaveProperty("navToken");
     expect(wmAsset).toMatchObject({
       variantOf: "m-m0",
       variantKind: "pure-wrapper",
       pegReferenceId: "m-m0",
-      flags: { navToken: false },
     });
     expect(sdaiAsset.variantKind).toBe("savings-passthrough");
     expect(sboldAsset.variantKind).toBe("risk-absorption");

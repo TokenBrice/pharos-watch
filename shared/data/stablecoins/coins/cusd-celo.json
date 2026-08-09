@@ -5,11 +5,7 @@
   "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo and Monad (formerly cUSD), backed by the live Mento reserve and CDP/liquidity infrastructure.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Mento reserve holding AUSD, sUSDS, CELO, USDT, EURC, USDC, stETH, and ETH; reserve composition is pulled from the live Mento reserve API and changes over time.",
   "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",

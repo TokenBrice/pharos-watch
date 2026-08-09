@@ -5,7 +5,6 @@
   "oneLiner": "USTB is Invesco's tokenized short-duration Treasury fund, managed by Invesco Advisers on Superstate infrastructure for accredited investors.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

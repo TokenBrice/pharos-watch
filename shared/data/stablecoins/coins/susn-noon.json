@@ -5,7 +5,6 @@
   "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from private credit, CLOs, DeFi lending, and T-bills, with delta-neutral CEX strategies on top.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

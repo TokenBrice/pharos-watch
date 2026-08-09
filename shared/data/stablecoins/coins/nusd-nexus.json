@@ -7,11 +7,7 @@
   "oneLiner": "NUSD is a legacy Synapse bridge-liquidity stable asset backed by a DAI/USDC/USDT pool, with the dollar peg inherited from the underlying basket.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Synapse stable-swap pool assets backed by DAI, USDC, and USDT liquidity across supported bridge deployments",
   "pegMechanism": "Bridge-liquidity stable asset minted and redeemed through Synapse pool routes, with the dollar peg inherited from the underlying stablecoin basket and pool arbitrage",

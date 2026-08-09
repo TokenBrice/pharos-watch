@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "OTHER",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned 1:1 AED reserves held in segregated, regulated accounts supporting full redemption at par, governed by audited smart contracts with real-time reserve attestations; custodian and reserve composition not yet disclosed",
   "pegMechanism": "Pre-launch AED-backed payment token under the CBUAE Payment Token Services Regulation; designed for 1:1 dirham redemption from segregated reserves with real-time on-chain attestations, though chains, contracts, issuing-entity structure, and launch timing remain unannounced pending completion of regulatory and operational requirements",

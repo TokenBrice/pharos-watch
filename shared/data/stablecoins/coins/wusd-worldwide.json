@@ -5,11 +5,8 @@
   "oneLiner": "WUSD is WSPN's centralized dollar stablecoin, redeemable 1:1 against cash, cash equivalents, and short-term U.S. Treasury bills in segregated accounts.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
   "pegMechanism": "Direct 1:1 redemption through WSPN; fiat minted/burned on deposit/withdrawal with reserves verified by independent third-party audits",

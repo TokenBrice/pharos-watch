@@ -5,10 +5,8 @@
   "oneLiner": "gtUSDCp is the Gauntlet-curated MetaMorpho V2 vault for USDC, an ERC-4626 wrapper compounding USDC lending yield across permissioned Morpho markets.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -6,10 +6,9 @@ import {
   buildGeneratedPerCoinAsset,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
-  findNonEmptyLegacyStablecoinShards,
-  formatLegacyShardEntriesIssue,
+  findRecreatedRetiredStablecoinAssetFiles,
+  formatRecreatedRetiredAssetFileIssue,
   loadGeneratedPerCoinCoins,
-  loadLegacyStablecoinEntries,
   loadPerCoinStablecoinEntries,
   loadStablecoinDomainSidecarEntries,
   syncGeneratedPerCoinAsset,
@@ -49,27 +48,12 @@ function makeCoin(id: string, overrides: Record<string, unknown> = {}): Stableco
   } as StablecoinSourceEntry["coin"];
 }
 
-function makeEntry(
-  id: string,
-  file: string,
-  sourceKind: StablecoinSourceEntry["sourceKind"],
-  legacyShard?: StablecoinSourceEntry["legacyShard"],
-): StablecoinSourceEntry {
+function makeEntry(id: string, file: string): StablecoinSourceEntry {
   return {
     coin: makeCoin(id),
     file,
     id,
-    legacyShard,
-    sourceKind,
   };
-}
-
-function writeLegacyShards(rootDir: string, usdMajorCoins: unknown[] = []): void {
-  writeJson(rootDir, "shared/data/stablecoins/usd-major.json", usdMajorCoins);
-  writeJson(rootDir, "shared/data/stablecoins/usd-minor.json", []);
-  writeJson(rootDir, "shared/data/stablecoins/non-usd.json", []);
-  writeJson(rootDir, "shared/data/stablecoins/commodity.json", []);
-  writeJson(rootDir, "shared/data/stablecoins/pre-launch.json", []);
 }
 
 function makeReserves(): Array<Record<string, unknown>> {
@@ -156,8 +140,8 @@ afterEach(() => {
 describe("stablecoin catalog source helpers", () => {
   it("detects duplicate IDs across per-coin source files", () => {
     const issues = findDuplicateStablecoinIds([
-      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle.json", "per-coin"),
-      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle-copy.json", "per-coin"),
+      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle.json"),
+      makeEntry("usdc-circle", "shared/data/stablecoins/coins/usdc-circle-copy.json"),
     ]);
 
     expect(issues).toHaveLength(1);
@@ -172,8 +156,8 @@ describe("stablecoin catalog source helpers", () => {
     const issues = findCanonicalOrderIssues(
       ["alpha-usd", "alpha-usd", "missing-usd"],
       [
-        makeEntry("alpha-usd", "shared/data/stablecoins/coins/alpha-usd.json", "per-coin"),
-        makeEntry("beta-usd", "shared/data/stablecoins/coins/beta-usd.json", "per-coin"),
+        makeEntry("alpha-usd", "shared/data/stablecoins/coins/alpha-usd.json"),
+        makeEntry("beta-usd", "shared/data/stablecoins/coins/beta-usd.json"),
       ],
     );
 
@@ -184,20 +168,18 @@ describe("stablecoin catalog source helpers", () => {
     });
   });
 
-  it("formats nonempty legacy shard issues with per-coin edit instructions", () => {
+  it("rejects a recreated retired category shard", () => {
     const rootDir = makeTempRoot();
-    writeLegacyShards(rootDir, [makeCoin("legacy-usd")]);
+    expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([]);
 
-    const issues = findNonEmptyLegacyStablecoinShards(loadLegacyStablecoinEntries(rootDir));
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({
-      count: 1,
-      file: "shared/data/stablecoins/usd-major.json",
-      legacyShard: "usd-major.json",
-    });
+    writeJson(rootDir, "shared/data/stablecoins/usd-major.json", [makeCoin("legacy-usd")]);
 
-    expect(formatLegacyShardEntriesIssue(issues[0]!)).toContain(
-      "Legacy shards are read-only compatibility shells; edit shared/data/stablecoins/coins/<id>.json " +
+    expect(findRecreatedRetiredStablecoinAssetFiles(rootDir)).toEqual([
+      "shared/data/stablecoins/usd-major.json",
+    ]);
+    expect(formatRecreatedRetiredAssetFileIssue("shared/data/stablecoins/usd-major.json")).toContain(
+      "retired legacy category shard must not exist. " +
+        "Edit shared/data/stablecoins/coins/<id>.json " +
         "and regenerate shared/data/stablecoins/coins.generated.json instead.",
     );
   });
@@ -433,7 +415,6 @@ describe("stablecoin catalog source helpers", () => {
     const reserves = makeReserves();
     const expectedCoin = makeCoin("split-usd", { reserves });
 
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/split-usd.json", makeCoin("split-usd"));
     writeJson(rootDir, "shared/data/stablecoins/domains/reserves/split-usd.json", {
       id: "split-usd",
@@ -472,7 +453,6 @@ describe("stablecoin catalog source helpers", () => {
 
   it("fails check mode when the generated per-coin aggregate is stale", () => {
     const rootDir = makeTempRoot();
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", makeCoin("per-coin-usd"));
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
 
@@ -483,7 +463,6 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const perCoin = makeCoin("per-coin-usd");
 
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", perCoin);
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
 
@@ -497,7 +476,6 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const perCoin = makeCoin("per-coin-usd");
 
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", perCoin);
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", [
       makeCoin("stale-variant-usd", {
@@ -514,7 +492,6 @@ describe("stablecoin catalog source helpers", () => {
   it("validates the newly generated aggregate before writing it", () => {
     const rootDir = makeTempRoot();
 
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/parent-usd.json", makeCoin("parent-usd"));
     writeJson(
       rootDir,
@@ -541,7 +518,6 @@ describe("stablecoin catalog source helpers", () => {
     const rootDir = makeTempRoot();
     const duplicateCoin = makeCoin("duplicate-usd");
 
-    writeLegacyShards(rootDir);
     writeJson(rootDir, "shared/data/stablecoins/coins/duplicate-usd.json", duplicateCoin);
     writeJson(rootDir, "shared/data/stablecoins/coins/duplicate-usd-copy.json", duplicateCoin);
     writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);

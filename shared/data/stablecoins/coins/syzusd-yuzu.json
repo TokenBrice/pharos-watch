@@ -5,10 +5,8 @@
   "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma and Monad.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

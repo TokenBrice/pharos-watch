@@ -5,11 +5,7 @@
   "oneLiner": "DOLA is Inverse Finance's CDP-style stablecoin minted against overcollateralized loans in the FiRM lending protocol, with USDS as a peg backstop.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
   "pegMechanism": "DOLA is minted through Inverse Finance FiRM Fed and PSM Fed facilities, with legacy Frontier Fed liquidity winding down. Supply expands or contracts through governed lending-market and PSM rails rather than the old DEX Liquidity Fed model.",

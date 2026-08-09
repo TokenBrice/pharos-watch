@@ -475,7 +475,7 @@ function runStablecoinDataCheck(): void {
 
   if (errorCount === 0) {
     try {
-      syncGeneratedPerCoinAsset({ check: true });
+      syncGeneratedPerCoinAsset({ check: true, entries: perCoinEntries });
       process.stdout.write(`${GENERATED_PER_COIN_ASSET_FILE}: generated aggregate is current\n`);
     } catch (error) {
       reportError(error instanceof Error ? error.message : String(error));

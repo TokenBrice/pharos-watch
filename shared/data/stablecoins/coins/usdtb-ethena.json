@@ -6,11 +6,8 @@
   "mechanismArchetype": "tbill",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "~99% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in cash at FDIC-insured major commercial banks; issued by Anchorage Digital Bank N.A.; reserves held in segregated fiduciary trust accounts for the benefit of USDtb holders, with BUIDL self-custodied by Anchorage in segregated wallets (May 2026 Deloitte-examined reserve report)",
   "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",

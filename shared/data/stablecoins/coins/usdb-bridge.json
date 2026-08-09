@@ -5,11 +5,7 @@
   "oneLiner": "USDB is Bridge's (Stripe) dollar stablecoin powering Stripe Stablecoin Financial Accounts, backed 1:1 by cash and BlackRock MMFs under an OCC trust charter.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
   "pegMechanism": "Bridge-issued reserve stablecoin: USDB is always backed 1:1 by cash and short-duration BlackRock money market funds, with Bridge APIs supporting fiat and stablecoin conversions including free USDB/USDC conversion",

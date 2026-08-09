@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "GOLD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
   "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",

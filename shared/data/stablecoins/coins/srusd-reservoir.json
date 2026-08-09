@@ -5,7 +5,6 @@
   "oneLiner": "srUSD is Reservoir's savings wrapper of rUSD; share price accrues yield from RWA, lending vaults, and credit strategies on the Reservoir balance sheet.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

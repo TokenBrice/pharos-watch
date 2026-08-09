@@ -5,10 +5,8 @@
   "oneLiner": "fxSAVE is the yield-bearing vault receipt over f(x) Protocol's fxUSD savings strategy, inheriting fxUSD's WBTC and wstETH CDP collateral risk.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -79,11 +79,11 @@ In parallel work, finish all base/sidecar moves before regenerating shared proje
 ```bash
 npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 node scripts/build-data/build-client-registry.mjs
-node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs
+npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts
 node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs
 ```
 
-For a layout-only move, the full, client, compliance, prevalidated, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
+For a layout-only move, the full, client, compliance, and legacy-redirect artifacts must remain byte-identical. If they change, stop and inspect the projection before proceeding.
 
 Validation:
 

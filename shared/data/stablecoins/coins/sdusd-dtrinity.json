@@ -5,10 +5,8 @@
   "oneLiner": "sdUSD is dTRINITY's yield-bearing dUSD vault receipt; staked dUSD is supplied into dLEND and the share price accrues lending yield.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "dusd-dtrinity",

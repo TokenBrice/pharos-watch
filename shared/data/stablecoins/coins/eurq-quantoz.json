@@ -7,10 +7,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",

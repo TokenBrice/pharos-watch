@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "NGN",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Naira reserves held 1:1 against outstanding cNGN, comprising deposits at licensed Nigerian commercial banks plus naira money-market funds and short-term FGN treasury bills, verified by monthly independent attestations",
   "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",

@@ -5,11 +5,7 @@
   "oneLiner": "USDP is Paxos's regulated dollar stablecoin, redeemable 1:1 and backed by U.S. Treasury bills, overnight repos, and FDIC-insured cash.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
   "pegMechanism": "Direct 1:1 redemption through Paxos",

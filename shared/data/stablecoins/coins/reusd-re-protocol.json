@@ -5,7 +5,6 @@
   "oneLiner": "reUSD is Re Protocol's senior NAV-based tranche, backed by onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral (Cayman Islands).",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

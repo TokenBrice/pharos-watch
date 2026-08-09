@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Physical gold reported in custody at Philoro in Liechtenstein; the latest AUP reconciles 13,100 tokens to 13,100 gross grams but does not validate gold quality, value, legal rights, or physical presence",
   "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",

@@ -7,11 +7,7 @@
   "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Held reserves per the March 2026 attestation: tokenized asset-backed tokens (Superstate USTB ~65%, USDC ~13%), US government money market funds (~22%), and cash and cash equivalents at US-regulated banks (~1%). Eligible reserves per the stablecoin terms also include short-term US Treasury bills (<=3 months), overnight reverse repurchase agreements collateralized by US Treasuries, deposit accounts, and tokenized versions of these assets. Offchain reserves managed by BlackRock and custodied with JPMorgan Chase; onchain reserves managed by Superstate and custodied via Fireblocks MPC infrastructure. Designed by Native Markets, issued by Bridge Building Inc. (a subsidiary of Stripe, Inc., incorporated in Delaware).",
   "pegMechanism": "Direct 1:1 mint/redemption through Bridge Building Inc. (a Stripe subsidiary, FinCEN MSB); fully reserved by cash and cash equivalents, US government money market funds, and asset-backed tokens (Superstate USTB, USDC); monthly independent-accountant (BPM LLP) attestations under the AICPA 2025 Criteria for Stablecoin Reporting (Asset-Backed Fiat Pegged Tokens)",

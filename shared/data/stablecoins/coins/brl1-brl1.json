@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Brazilian-real reserve portfolio backing BRL1 at a 1:1 target, including Brazilian federal LFT bonds, repo agreements, and cash",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",

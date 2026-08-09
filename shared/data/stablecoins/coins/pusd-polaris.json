@@ -5,11 +5,8 @@
   "oneLiner": "pUSD is Polaris's pre-launch Liquity-style CDP stablecoin minted against pETH; a Stability Pool routes borrower interest and liquidation flows to holders.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "pETH / ETH-derived collateral posted in Polaris CDPs, with protocol revenue and liquidation flows routed to pUSD Stability Pool participants rather than offchain reserve yield",
   "pegMechanism": "Pre-launch Liquity-style CDP stablecoin: borrowers post pETH collateral to mint pUSD, undercollateralized positions are liquidated through a Stability Pool, and pUSD holders can earn borrower-interest and liquidation-flow yield once runtime sources are live",

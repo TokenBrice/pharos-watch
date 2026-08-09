@@ -5,11 +5,8 @@
   "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar directly backed by Sonic frxUSD and therefore inherits Frax's upstream reserve exposure.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Sonic frxUSD held 1:1 by the USSD BrandedCustodian contract on Sonic. USSD inherits frxUSD's upstream reserve exposure rather than directly holding Frax's tokenized Treasury and approved-stablecoin portfolio.",
   "pegMechanism": "USSD is minted and redeemed 1:1 against Sonic frxUSD through Frax-derived permissionless contracts. Broader approved-asset and tokenized-Treasury routes belong to the upstream frxUSD reserve layer; cross-chain USSD additionally relies on its omnichain infrastructure.",

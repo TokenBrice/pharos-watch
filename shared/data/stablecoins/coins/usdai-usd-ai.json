@@ -5,11 +5,7 @@
   "oneLiner": "USDai is USD.AI's non-yielding base dollar, backed 1:1 by PYUSD and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

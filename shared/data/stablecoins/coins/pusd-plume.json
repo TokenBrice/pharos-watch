@@ -5,11 +5,7 @@
   "oneLiner": "pUSD is Plume's dollar stablecoin minted 1:1 against USDC in a Nucleus BoringVault; zero-fee redemption on Ethereum or Plume Chain with OFAC compliance checks.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 backed by USDC deposited into a Nucleus BoringVault",
   "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",

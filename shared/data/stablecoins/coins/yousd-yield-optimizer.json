@@ -5,10 +5,8 @@
   "oneLiner": "yoUSD is an ERC-4626 yield-aggregator on Base that rebalances USDC across 50+ whitelisted DeFi protocols, with NAV appreciating from accrued strategy yield.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "pegReferenceId": "usdc-circle",

@@ -5,11 +5,8 @@
   "oneLiner": "rwaUSDi is Multipli's KYB-gated credit class backed by private credit, structured finance, project finance, asset-backed loans, and market-neutral funds.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Isolated basket of institutional credit assets: private credit, structured finance, project finance, asset-backed loans, plus market-neutral fund strategies (Nomura, Fasanara, Edge Capital), with periodic NAV and scheduled non-instant redemption.",
   "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",

@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
   "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with contracts, redemption terms, and reserve reports pending",

@@ -5,11 +5,7 @@
   "oneLiner": "USDCV is Societe Generale-FORGE's MiCA-regulated U.S. dollar stablecoin, redeemable 1:1 against cash and HQLA segregated at BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition",
   "pegMechanism": "Direct 1:1 redemption through SG-FORGE",

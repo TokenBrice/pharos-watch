@@ -5,10 +5,8 @@
   "oneLiner": "sYUSD is Aegis's staking wrapper of YUSD; share price accrues delta-neutral BTC funding-rate yield with a 7-day cooldown before YUSD can be withdrawn.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

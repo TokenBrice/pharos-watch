@@ -5,11 +5,8 @@
   "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under Hong Kong issuer disclosures.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
   "pegMechanism": "Direct 1:1 redemption through Hex Trust",

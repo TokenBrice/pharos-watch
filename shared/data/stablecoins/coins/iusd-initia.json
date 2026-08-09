@@ -5,11 +5,7 @@
   "oneLiner": "iUSD is a single-chain Initia wrapper of bridged Agora AUSD; reserve yield is redirected to ecosystem incentives and redemption routes through AUSD.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "variantOf": "ausd-agora",
   "variantKind": "pure-wrapper",

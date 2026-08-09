@@ -5,10 +5,8 @@
   "oneLiner": "DUSD is Dialectic's USDC-accounted Makina strategy share with queued exits, live backlog-adjusted USDC buffer capacity, and upstream USDC freeze exposure.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "usdc-circle",

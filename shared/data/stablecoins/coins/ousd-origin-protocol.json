@@ -5,11 +5,8 @@
   "oneLiner": "OUSD is Origin Protocol's yield-bearing rebasing USDC wrapper; deposits are deployed across Morpho and Curve strategies and yield is paid via rebase.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "USDC deployed into DeFi strategies (Morpho, Curve)",
   "pegMechanism": "Minted 1:1 against USDC into the OUSD Vault, which deploys backing into Morpho lending and a Curve OUSD/USDC AMO; $1 par is held by 1:1 Vault redemption to USDC (a ~10 minute buffer delay, up to 24 hours when the buffer needs to be refilled) plus instant Curve AMO swap arbitrage. Yield is distributed via daily rebasing.",

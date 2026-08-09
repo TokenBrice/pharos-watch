@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "CHF-denominated reserve assets held 1:1 in separate accounts at regulated EU credit institutions, as CHF cash or eligible low-risk CHF HQLAs under MiCAR and German payment-services law",
   "pegMechanism": "Direct 1:1 redemption through AllUnity; holders have statutory right of redemption at par value under MiCA Article 49; mint and redeem via AllUnity platform with straight-through processing",

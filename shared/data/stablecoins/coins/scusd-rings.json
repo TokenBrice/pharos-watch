@@ -5,11 +5,7 @@
   "oneLiner": "scUSD is Rings' wrapper minted from supported stablecoins routed through Veda BoringVault DeFi strategies; yield is activated by staking into stkscUSD.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Stablecoin deposits routed through Trevee (formerly Rings) / Veda BoringVault infrastructure into curated DeFi lending strategies (e.g. Aave, Morpho); supported collateral includes USDC, USDT, DAI, GHO, and Sonic USDC.e",
   "pegMechanism": "Users deposit supported stablecoins to mint scUSD and redeem scAssets after a documented cooldown period; yield is primarily activated by staking scUSD into stkscUSD rather than by holding liquid scUSD itself.",

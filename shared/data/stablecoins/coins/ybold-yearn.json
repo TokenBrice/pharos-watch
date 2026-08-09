@@ -5,10 +5,8 @@
   "oneLiner": "yBOLD is Yearn's ERC-4626 vault deploying BOLD into Liquity V2 Stability Pools, accruing liquidation fees and protocol interest over Liquity's CDP dollar.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "decentralized",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "bold-liquity",

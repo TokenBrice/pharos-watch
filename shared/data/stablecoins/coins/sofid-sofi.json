@@ -5,11 +5,7 @@
   "oneLiner": "SoFiUSD is SoFi Bank's USD stablecoin, fully reserved by cash at the bank's Federal Reserve master account; minted and redeemed 1:1 via BitGo infrastructure.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 USD reserves held as cash or cash equivalents at SoFi Bank's Federal Reserve master account; reserves earn interest on reserve balances (IORB) retained by SoFi, not passed to holders",
   "pegMechanism": "1:1 mint and redeem via BitGo infrastructure; instant conversions between dollars and SOFID",

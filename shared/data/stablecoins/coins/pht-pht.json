@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "PHP",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
   "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit approved collateral to mint PHT; undercollateralized vaults liquidate through independent Dutch auctions; live stablecoin paths divide Chainlink stablecoin/USD numerators by an owner-set APACX PHP/USD denominator; LayerZero OFT supports cross-chain bridging",

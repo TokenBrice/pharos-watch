@@ -5,10 +5,8 @@
   "oneLiner": "mHYPER is a Midas NAV-accreting liquid-yield token wrapping Hyperithm market-neutral stablecoin strategies; permissioned mint/redeem, not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues, held under Fordefi MPC custody (manager holds the trading key share, Midas holds an admin/policy share). Tokenholders hold a qualified subordinated claim against Midas (no ownership of the underlying assets), secured by a Security Agent lien on the Collateral Account for tokenholders.",

@@ -877,6 +877,15 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
 export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown> = z
   .array(StablecoinMetaAssetSchema)
   .superRefine(refineMintAuthorityCatalog);
+
+/**
+ * Catalog-level invariants only. Use when every record has already been parsed
+ * through `StablecoinMetaAssetSchema`, so the cross-record checks run without a
+ * second per-record pass.
+ */
+export const StablecoinMetaCatalogInvariantsSchema: z.ZodType<StablecoinMeta[], unknown> = z
+  .array(z.custom<StablecoinMeta>())
+  .superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
 export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z

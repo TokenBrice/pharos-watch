@@ -8,7 +8,6 @@
     "pegCurrency": "VAR",
     "governance": "decentralized",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "DAO-whitelisted assets locked in overcollateralized ShadeLend vaults; current collateral identities, balances, and weights are private on Secret Network",

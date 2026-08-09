@@ -5,11 +5,9 @@
   "oneLiner": "WTGXX is WisdomTree's SEC-registered '40 Act government money market fund tokenized at a stable $1 NAV, with reserves in Treasuries, repos, and cash.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Short-term U.S. Treasury bills, Treasury floating-rate notes, and tri-party repurchase agreements held by the WisdomTree Treasury Money Market Digital Fund (renamed from WisdomTree Government Money Market Digital Fund on 2025-11-01); a Rule 2a-7 '40 Act-registered money market fund managed by WisdomTree Digital Management with Voya Investment Management as sub-adviser, recorded natively on-chain via the WisdomTree Connect platform",
   "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",

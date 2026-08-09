@@ -5,10 +5,8 @@
   "oneLiner": "savUSD is Avant's yield-bearing wrapper of avUSD; share price compounds with delta-neutral strategy yield, exits inherit avUSD's USDC redemption.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

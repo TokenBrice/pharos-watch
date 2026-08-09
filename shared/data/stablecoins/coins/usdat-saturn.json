@@ -5,11 +5,8 @@
   "oneLiner": "USDat is Saturn's non-yield-bearing M0-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

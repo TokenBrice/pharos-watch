@@ -5,10 +5,8 @@
   "oneLiner": "USP is PikuDAO's NAV-appreciating yield-fund token backed by Turkey-FX delta-neutral arbitrage, DeFi allocations, and a stablecoin buffer, KYC-gated.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",

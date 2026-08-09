@@ -5,11 +5,7 @@
   "oneLiner": "USDf is Falcon Finance's overcollateralized synthetic dollar minted 1:1 from stablecoins or via dynamic ratios against BTC, ETH, SOL, and altcoin collateral.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Crypto assets backing USDf and the USDf Earn strategy, including BTC and stablecoins, with delta-neutral hedging on centralized exchanges; tokenized real-world assets (USTB, JAAA, JTRSY, plus tokenized gold/equities/CETES) accepted with dynamic overcollateralization ratios",
   "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",

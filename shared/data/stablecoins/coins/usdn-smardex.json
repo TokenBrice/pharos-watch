@@ -5,11 +5,8 @@
   "oneLiner": "USDN is SMARDEX's wstETH-backed synthetic dollar, held near $1 by protocol long-side mechanics targeting delta-neutral exposure on a two-step oracle flow.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
   "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
