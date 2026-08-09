@@ -2,7 +2,6 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ApiKeyAuditEntry } from "@shared/types";
 import { makeApiKeySummary } from "@/test-utils/api-key-fixtures";
 import { STATUS_FIXTURE_NOW_SECONDS } from "@/test-utils/status-fixtures";
 
@@ -14,21 +13,9 @@ vi.mock("@/hooks/use-credential-lifecycle-summary", () => ({
   useCredentialLifecycleSummary: useCredentialLifecycleSummaryMock,
 }));
 
-import { buildCredentialSummaryItems, CredentialSummaryCard } from "../credential-summary-card";
+import { CredentialSummaryCard } from "../credential-summary-card";
 
 const NOW = STATUS_FIXTURE_NOW_SECONDS;
-
-function makeAuditEntry(overrides: Partial<ApiKeyAuditEntry>): ApiKeyAuditEntry {
-  return {
-    id: 1,
-    apiKeyId: 1,
-    action: "rotated",
-    actor: "admin",
-    detail: null,
-    createdAt: NOW - 3_600,
-    ...overrides,
-  };
-}
 
 const KEYS = [
   // Active, far-future expiry.
@@ -41,39 +28,9 @@ const KEYS = [
   makeApiKeySummary(3, { isActive: false, expiresAt: null }),
 ];
 
-const AUDIT_ENTRIES = [
-  makeAuditEntry({ id: 1, action: "rotated", createdAt: NOW - 86_400 }),
-  makeAuditEntry({ id: 2, action: "deactivated", createdAt: NOW - 2 * 86_400 }),
-  // Routine issuance is not an anomaly.
-  makeAuditEntry({ id: 3, action: "created", createdAt: NOW - 3_600 }),
-  // Outside the 7-day window.
-  makeAuditEntry({ id: 4, action: "rotated", createdAt: NOW - 9 * 86_400 }),
-];
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-});
-
-describe("buildCredentialSummaryItems", () => {
-  it("matches the API Management inventory predicates and the 7-day anomaly window", () => {
-    const items = buildCredentialSummaryItems({ keys: KEYS, auditEntries: AUDIT_ENTRIES, nowSeconds: NOW });
-    const byLabel = Object.fromEntries(items.map((item) => [item.label, item.value]));
-
-    expect(byLabel).toEqual({
-      Active: "3",
-      "Expiring soon": "1",
-      Expired: "1",
-      "Non-expiring": "1",
-      "Audit anomalies": "2",
-    });
-  });
-
-  it("renders missing evidence as Unknown, never zero", () => {
-    const items = buildCredentialSummaryItems({ keys: null, auditEntries: null, nowSeconds: NOW });
-
-    expect(items.every((item) => item.value === "Unknown")).toBe(true);
-  });
 });
 
 describe("CredentialSummaryCard", () => {

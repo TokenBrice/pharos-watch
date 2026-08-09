@@ -7,24 +7,15 @@ import { selectorComponentReadingLabel } from "@shared/lib/selector/selector-lab
 interface SelectorLowerRankedRowProps {
   entry: SelectorLowerRanked;
   pegCurrency: SelectorInput["pegCurrency"];
-  /**
-   * Pre-rendered prose. The engine's `what-to-watch-templates.ts` is expected
-   * to emit the bold verdict + muted teaching line keyed off `reasonKey`.
-   */
-  verdictText?: string;
-  teachingText?: string;
 }
 
 export function SelectorLowerRankedRow({
   entry,
   pegCurrency,
-  verdictText,
-  teachingText,
 }: SelectorLowerRankedRowProps) {
-  const verdict = verdictText ?? entry.verdictText ?? `${entry.symbol} needs review`;
+  const verdict = entry.verdictText ?? `${entry.symbol} needs review`;
   const teaching =
-    teachingText
-    ?? entry.teachingText
+    entry.teachingText
     ?? (entry.failedComponent
       ? `Lower-ranked for this profile because its ${readableComponent(entry.failedComponent)} reading did not clear the selected profile threshold.`
       : "Lower-ranked for this profile after the same filters and weights were applied.");

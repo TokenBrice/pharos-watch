@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 
 export function HomeAltHeroChartFallback() {
   return (
@@ -9,7 +9,7 @@ export function HomeAltHeroChartFallback() {
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
-      <HomeAltInlineChartSkeleton />
+      <ChartSkeleton aria-hidden className="h-full w-full" />
     </div>
   );
 }

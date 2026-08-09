@@ -13,7 +13,6 @@ declare global {
 
 type EventMap = {
   // Tier 1 — Feature Adoption
-  stress_test_run: { target_coin: string; target_grade: string; affected_count: number };
   comparison_created: { coin_count: number; coin_ids: string };
   comparison_preset_selected: { preset: string };
   comparison_exported: { method: string; coin_count: number };
@@ -54,7 +53,6 @@ type EventMap = {
   portfolio_preset_loaded: { preset: string };
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
-  panel_toggled: { panel: string; action: string };
   // Tier 4 — Web Vitals
   web_vital: {
     name:

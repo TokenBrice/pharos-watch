@@ -23,8 +23,6 @@ interface SelectorShortlistCardProps {
   isMobile: boolean;
   /** Logo URL keyed by coin id. Optional. */
   logoUrl?: string;
-  whyText?: string;
-  watchText?: string;
   /**
    * When true (single-result shortlist), promote the per-card Open detail link
    * to a filled primary button. With multiple results, Compare these is the
@@ -161,15 +159,13 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     profile,
     isMobile,
     logoUrl,
-    whyText,
-    watchText,
     prominentOpenDetail = false,
     yieldSourceUrl,
     yieldInspectionHref,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
-  const resolvedWhyText = whyText ?? rec.whyText;
-  const resolvedWatchText = watchText ?? rec.watchText;
+  const resolvedWhyText = rec.whyText;
+  const resolvedWatchText = rec.watchText;
 
   const detailHref = `/stablecoin/${rec.id}/`;
   const profileLabel = selectorProfileLabel(profile);

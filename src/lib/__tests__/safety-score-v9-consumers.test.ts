@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildRegistryFreezeFallback,
-  buildV9AccessCoverageProjection,
-  buildV9DependencyProjection,
   buildV9PortfolioProjection,
   buildV9SafetyTableRows,
-  getV9BluechipFloorAvailability,
   getV9GradeRiskBucket,
-  getV9StressAvailability,
   resolveV9ConsumerResponse,
 } from "@/lib/safety-score-v9-consumers";
 import {
@@ -69,48 +64,6 @@ describe("V9 safety consumer projections", () => {
     expect(rows.value[0]).not.toHaveProperty("dimensions");
   });
 
-  it("projects serial and basket materiality without V8 dependency semantics", () => {
-    const cards = [
-      makeV9Card({ id: "asset-a" }),
-      makeV9Card({
-        id: "asset-b",
-        dependencies: {
-          serial: [{ upstreamAssetId: "asset-a", score: 84, blocked: true }],
-          basket: [{ upstreamAssetId: "asset-c", score: null, weight: 0.25, boundedUnknown: true }],
-          cycleBlocked: false,
-          reasonCodes: [],
-        },
-      }),
-    ];
-    const response = makeReportCardsV9Response({ cards });
-    const projected = buildV9DependencyProjection(response, response.safetyScoreIdentity);
-    expect(projected.status).toBe("available");
-    if (projected.status !== "available") return;
-    expect(projected.value.edges).toEqual([
-      expect.objectContaining({ from: "asset-a", to: "asset-b", materiality: "serial-blocked", weight: null }),
-      expect.objectContaining({ from: "asset-c", to: "asset-b", materiality: "basket-bounded-unknown", weight: 0.25 }),
-    ]);
-  });
-
-  it("uses V9 access/evidence for coverage and labels registry fallback as non-V9 evidence", () => {
-    const response = makeReportCardsV9Response();
-    const projection = buildV9AccessCoverageProjection(response, response.safetyScoreIdentity, "usdc-circle");
-    expect(projection).toMatchObject({
-      status: "available",
-      value: {
-        freezeStatus: "direct",
-        liveReserveFresh: null,
-        provenance: "v9-access-posture",
-        evidence: { level: "adequate", freshness: "current" },
-      },
-    });
-    expect(buildRegistryFreezeFallback("possible")).toEqual({
-      status: "possible",
-      provenance: "registry-fallback",
-      countsAsV9Evidence: false,
-    });
-  });
-
   it("builds a three-pillar portfolio aggregate without inventing an asset grade", () => {
     const cards = [
       makeV9Card({ id: "asset-a", score: 80, grade: "A-", qualityScore: 82, pegAdjustedScore: 80 }),
@@ -150,7 +103,7 @@ describe("V9 safety consumer projections", () => {
     });
   });
 
-  it("fails closed for NR portfolios and unapproved V9 stress and Bluechip rules", () => {
+  it("fails closed for NR portfolios", () => {
     const nrCard = makeV9Card({
       score: null,
       grade: "NR",
@@ -169,14 +122,6 @@ describe("V9 safety consumer projections", () => {
     expect(buildV9PortfolioProjection(response, response.safetyScoreIdentity, [{ coinId: nrCard.id, amount: 1 }])).toEqual({
       status: "unavailable",
       reason: "portfolio-card-not-rated",
-    });
-    expect(getV9StressAvailability(response, response.safetyScoreIdentity)).toEqual({
-      status: "unavailable",
-      reason: "v9-stress-mapping-unapproved",
-    });
-    expect(getV9BluechipFloorAvailability(response, response.safetyScoreIdentity)).toEqual({
-      status: "unavailable",
-      reason: "v9-bluechip-floor-unreviewed",
     });
   });
 });

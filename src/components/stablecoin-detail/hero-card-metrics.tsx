@@ -11,21 +11,8 @@ import {
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { PegGauge } from "@/components/peg-gauge";
-import { MethodologyLinkBadge } from "@/components/methodology-link-badge";
-import type { MetricKey } from "@/lib/methodology-anchors";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
-
-/**
- * Map a tertiary-metric `key` to a methodology anchor. Metrics without a
- * mapping (e.g. excess-yield, performance-vs-usd, blacklistable) skip the
- * (method) badge — those have their own contextual hint links elsewhere.
- */
-const METRIC_TO_METHODOLOGY: Record<string, MetricKey | undefined> = {
-  dews: "dews",
-  "peg-score": "peg-score",
-  liquidity: "liquidity-score",
-};
 
 export interface HeroTertiaryMetricConfig {
   key: string;
@@ -35,9 +22,6 @@ export interface HeroTertiaryMetricConfig {
   subValue?: string;
   colorClass?: string;
   accentClass?: string;
-  /** Extra classes on the rendered chip (e.g. xl:hidden when the metric is
-   *  promoted to a KPI tile at xl per the Figma coin template). */
-  className?: string;
 }
 
 export interface HeroSignalRailItem {
@@ -237,153 +221,90 @@ export function HeroCompactTertiaryCell({ metric }: { metric: HeroTertiaryMetric
 }
 
 function MetricChip({
-  metricKey,
   label,
   value,
   subValue,
   colorClass = "text-foreground",
   accentClass,
-  mobile = false,
-  mobileFull = false,
   mobileHideSub = false,
-  className,
 }: {
-  metricKey?: string;
   label: React.ReactNode;
   value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
   accentClass?: string;
-  mobile?: boolean;
-  mobileFull?: boolean;
   mobileHideSub?: boolean;
-  className?: string;
 }) {
   const isEmpty = value === "—";
-  const methodologyMetric = metricKey ? METRIC_TO_METHODOLOGY[metricKey] : undefined;
 
   return (
     // Passive stat chip — deliberately NOT .pharos-control-pill, which is
     // reserved for interactive controls; accentClass stays a data-driven
     // severity border (allowed carve-out).
     <div
-      className={`rounded-lg border border-border/60 bg-background/45 ${
-        mobile
-          ? `flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${mobileFull ? "col-span-2" : ""}`
-          : "flex items-center gap-2 px-3 py-2"
-      } ${accentClass ?? ""} ${className ?? ""}`}
+      className={`rounded-lg border border-border/60 bg-background/45 flex w-full min-w-0 items-center justify-start gap-1.5 px-2.5 py-1.5 ${accentClass ?? ""}`}
     >
       {label ? (
-        <span
-          className={`${mobile ? "text-[10px]" : "text-[11px]"} font-medium uppercase tracking-wider text-muted-foreground`}
-        >
-          {label}
-        </span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
       ) : null}
       <span
-        className={`${mobile ? "text-lg" : "text-base"} font-bold pharos-numeric ${colorClass}`}
+        className={`text-lg font-bold pharos-numeric ${colorClass}`}
         aria-hidden={isEmpty ? "true" : undefined}
       >
         {value}
       </span>
       {isEmpty && <span className="sr-only">data unavailable</span>}
-      {subValue && !(mobile && mobileHideSub) && (
-        <span className={`${mobile ? "min-w-0 truncate text-[11px]" : "text-xs"} text-muted-foreground`}>
-          {subValue}
-        </span>
+      {subValue && !mobileHideSub && (
+        <span className="min-w-0 truncate text-[11px] text-muted-foreground">{subValue}</span>
       )}
-      {methodologyMetric && !isEmpty && !mobile ? <MethodologyLinkBadge metric={methodologyMetric} /> : null}
     </div>
   );
 }
 
 export function HeroTertiaryMetrics({
   metrics,
-  earlyPegScore,
-  trackingSpanDays,
   activeDepeg,
-  mobile = false,
   trailing,
 }: {
   metrics: HeroTertiaryMetricConfig[];
-  earlyPegScore: boolean;
-  trackingSpanDays: number;
   activeDepeg: boolean;
-  mobile?: boolean;
   trailing?: ReactNode;
 }) {
-  if (mobile) {
-    const regularMetrics = metrics.filter((metric) => metric.key !== "performance-vs-usd");
-    const performanceMetric = metrics.find((metric) => metric.key === "performance-vs-usd");
-
-    return (
-      <>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {regularMetrics.map((metric) => (
-            <MetricChip
-              key={metric.key}
-              metricKey={metric.key}
-              label={metric.mobileLabel ?? metric.label}
-              value={metric.value}
-              subValue={metric.subValue}
-              colorClass={metric.colorClass}
-              accentClass={metric.accentClass}
-              mobile
-              mobileHideSub={metric.key === "excess-yield"}
-            />
-          ))}
-        </div>
-        {performanceMetric ? (
-          <div className="mt-2">
-            <MetricChip
-              metricKey={performanceMetric.key}
-              label={performanceMetric.mobileLabel ?? performanceMetric.label}
-              value={performanceMetric.value}
-              subValue={performanceMetric.subValue}
-              colorClass={performanceMetric.colorClass}
-              accentClass={performanceMetric.accentClass}
-              mobile
-              mobileHideSub
-            />
-          </div>
-        ) : null}
-        {trailing ? <div className="mt-2 flex flex-wrap items-center gap-2">{trailing}</div> : null}
-
-        {activeDepeg && (
-          <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
-            Active depeg detected
-          </div>
-        )}
-      </>
-    );
-  }
+  const regularMetrics = metrics.filter((metric) => metric.key !== "performance-vs-usd");
+  const performanceMetric = metrics.find((metric) => metric.key === "performance-vs-usd");
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        {metrics.map((metric) => (
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {regularMetrics.map((metric) => (
           <MetricChip
             key={metric.key}
-            metricKey={metric.key}
-            label={metric.label}
+            label={metric.mobileLabel ?? metric.label}
             value={metric.value}
             subValue={metric.subValue}
             colorClass={metric.colorClass}
             accentClass={metric.accentClass}
-            className={metric.className}
+            mobileHideSub={metric.key === "excess-yield"}
           />
         ))}
-        {trailing}
-        {earlyPegScore && (
-          <span className="text-xs text-amber-600 dark:text-amber-400">
-            Early peg score · {trackingSpanDays}d tracked
-          </span>
-        )}
       </div>
+      {performanceMetric ? (
+        <div className="mt-2">
+          <MetricChip
+            label={performanceMetric.mobileLabel ?? performanceMetric.label}
+            value={performanceMetric.value}
+            subValue={performanceMetric.subValue}
+            colorClass={performanceMetric.colorClass}
+            accentClass={performanceMetric.accentClass}
+            mobileHideSub
+          />
+        </div>
+      ) : null}
+      {trailing ? <div className="mt-2 flex flex-wrap items-center gap-2">{trailing}</div> : null}
 
       {activeDepeg && (
-        <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
-          Active depeg detected — view details in Depeg History
+        <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+          Active depeg detected
         </div>
       )}
     </>
@@ -394,14 +315,12 @@ interface HeroPriceCardProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   price: HeroCardViewModel["price"];
-  mobile?: boolean;
 }
 
 export function HeroPriceCard({
   coin,
   coinData,
   price: { pegRef, gaugeDeviationBps, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
-  mobile = false,
 }: HeroPriceCardProps) {
   const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable && !isNavToken;
   // Full 4-decimal precision on every tier: at 3 decimals a stablecoin price
@@ -409,26 +328,18 @@ export function HeroPriceCard({
   const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
 
   return (
-    <div
-      className={
-        mobile
-          ? "rounded-xl border border-border/60 bg-background/45 px-3 py-2.5"
-          : "rounded-xl bg-background/30 px-4 py-3"
-      }
-    >
-      <div className={`flex items-center ${mobile ? "gap-2" : "gap-3"}`}>
-        {showGauge && <PegGauge deviationBps={gaugeDeviationBps} className={mobile ? "w-12" : "w-16 xl:w-20"} />}
+    <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        {showGauge && <PegGauge deviationBps={gaugeDeviationBps} className="w-12" />}
         <div>
           <p className="pharos-kicker">Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}</p>
           <p
-            className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} ${
-              mobile ? "text-xl" : "text-2xl xl:text-3xl"
-            }`}
+            className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} text-xl`}
           >
             {price}
           </p>
           <p
-            className={`pharos-numeric ${mobile ? "mt-1 text-xs" : "mt-0.5 text-xs"} ${
+            className={`pharos-numeric mt-1 text-xs ${
               pegReferenceUnavailable
                 ? "text-muted-foreground"
                 : isNavToken
@@ -453,27 +364,17 @@ export function HeroMarketCapCard({
   mcap,
   safePrevDay,
   prevDayTrendClass,
-  mobile = false,
 }: {
   coin: StablecoinMeta;
   coinData?: StablecoinData;
   mcap: number;
   safePrevDay: number | null;
   prevDayTrendClass: string;
-  mobile?: boolean;
 }) {
   return (
-    <div
-      className={
-        mobile
-          ? "rounded-xl border border-border/60 bg-background/45 px-3 py-2.5"
-          : "rounded-xl bg-background/30 px-4 py-3"
-      }
-    >
+    <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
       <p className="pharos-kicker">Market Cap</p>
-      <p className={`font-bold pharos-numeric tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
-        {formatCurrency(mcap)}
-      </p>
+      <p className="font-bold pharos-numeric tracking-tight text-lg">{formatCurrency(mcap)}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>}
       <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
@@ -492,7 +393,6 @@ export function HeroSupplyCard({
   hasPrevMonth,
   safePrevMonth,
   prevMonthTrendClass,
-  mobile = false,
 }: {
   supply: number | null;
   coinSymbol: string;
@@ -502,52 +402,28 @@ export function HeroSupplyCard({
   hasPrevMonth: boolean;
   safePrevMonth: number | null;
   prevMonthTrendClass: string;
-  mobile?: boolean;
 }) {
-  if (mobile) {
-    return (
-      <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="pharos-kicker">Supply</p>
-            <p className="text-base font-bold pharos-numeric">
-              {supply != null ? formatSupply(supply) : "—"}{" "}
-              <span className="text-xs text-muted-foreground">{coinSymbol}</span>
+  return (
+    <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="pharos-kicker">Supply</p>
+          <p className="text-base font-bold pharos-numeric">
+            {supply != null ? formatSupply(supply) : "—"}{" "}
+            <span className="text-xs text-muted-foreground">{coinSymbol}</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
+            {formatTrendPercent(mcap, safePrevWeek)} <span className="text-muted-foreground">7d</span>
+          </p>
+          {hasPrevMonth && (
+            <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
+              {formatTrendPercent(mcap, safePrevMonth)} <span className="text-muted-foreground">30d</span>
             </p>
-          </div>
-          <div className="text-right">
-            <p className={`text-xs pharos-numeric ${prevWeekTrendClass}`}>
-              {formatTrendPercent(mcap, safePrevWeek)} <span className="text-muted-foreground">7d</span>
-            </p>
-            {hasPrevMonth && (
-              <p className={`text-xs pharos-numeric ${prevMonthTrendClass}`}>
-                {formatTrendPercent(mcap, safePrevMonth)} <span className="text-muted-foreground">30d</span>
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl bg-background/30 px-4 py-3">
-      <p className="pharos-kicker">Supply</p>
-      <p className="text-2xl font-bold pharos-numeric tracking-tight">
-        {supply != null ? formatSupply(supply) : "—"}{" "}
-        <span className="text-sm text-muted-foreground">{coinSymbol}</span>
-      </p>
-      <p className="mt-1 whitespace-nowrap text-xs pharos-numeric">
-        <span className={prevWeekTrendClass}>{formatTrendPercent(mcap, safePrevWeek)}</span>
-        <span className="text-muted-foreground"> 7d</span>
-        {hasPrevMonth && (
-          <>
-            <span className="text-muted-foreground"> · </span>
-            <span className={prevMonthTrendClass}>{formatTrendPercent(mcap, safePrevMonth)}</span>
-            <span className="text-muted-foreground"> 30d</span>
-          </>
-        )}
-      </p>
     </div>
   );
 }

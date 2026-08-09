@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { HomeAltInlineChartSkeleton } from "@/components/home-alt-inline-chart-skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import {
   CHART_ORANGE,
@@ -483,7 +483,7 @@ export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
         <HomeAltChartFrame width={width} height={height} rows={rows} yDomain={yDomain} />
       ) : (
         <div className="h-full p-5">
-          <HomeAltInlineChartSkeleton />
+          <ChartSkeleton aria-hidden className="h-full w-full" />
         </div>
       )}
     </div>

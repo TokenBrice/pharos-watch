@@ -175,14 +175,13 @@ export function HeroCardMobileSection({
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <HeroPriceCard coin={coin} coinData={coinData} price={price} mobile />
+        <HeroPriceCard coin={coin} coinData={coinData} price={price} />
         <HeroMarketCapCard
           coin={coin}
           coinData={coinData}
           mcap={market.mcap}
           safePrevDay={market.safePrevDay}
           prevDayTrendClass={market.prevDayTrendClass}
-          mobile
         />
       </div>
 
@@ -195,15 +194,11 @@ export function HeroCardMobileSection({
         hasPrevMonth={market.hasPrevMonth}
         safePrevMonth={market.safePrevMonth}
         prevMonthTrendClass={market.prevMonthTrendClass}
-        mobile
       />
 
       <HeroTertiaryMetrics
         metrics={tertiaryMetrics}
-        earlyPegScore={peg.earlyPegScore}
-        trackingSpanDays={peg.trackingSpanDays}
         activeDepeg={peg.activeDepeg}
-        mobile
         trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
       />
     </div>

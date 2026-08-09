@@ -85,7 +85,6 @@ describe("SelectorShortlistCard", () => {
         recommendation={baseRecommendation}
         profile="treasury"
         isMobile={false}
-        whyText="USDC ranks here because Safety A and Resilience 91 anchor the Treasury profile."
       />,
     );
 

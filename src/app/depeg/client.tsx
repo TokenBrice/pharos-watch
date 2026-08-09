@@ -29,7 +29,7 @@ import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
+import type { DepegTrackerRow } from "@/lib/depeg-sort";
 
 interface DepegCoverageMetrics {
   dewsCoverageCount: number;

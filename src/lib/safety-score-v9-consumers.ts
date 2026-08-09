@@ -62,19 +62,6 @@ export function resolveV9ConsumerResponse(
   return { status: "available", identity: parsed.data.safetyScoreIdentity, value: parsed.data };
 }
 
-function selectV9Card(
-  input: unknown,
-  expectedIdentity: V9ConsumerIdentity,
-  cardId: string,
-): V9ConsumerResult<V9ConsumerCard> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
-  if (response.status === "unavailable") return response;
-  const card = response.value.cards.find((candidate) => candidate.id === cardId);
-  return card
-    ? { status: "available", identity: response.identity, value: card }
-    : { status: "unavailable", reason: "card-unavailable" };
-}
-
 // Re-exported so existing imports of `V9GradeRiskBucket` / `getV9GradeRiskBucket`
 // from this module keep compiling unchanged; the shared bucket rule now lives
 // in @shared/lib/safety-grade-buckets (also consumed by the worker's
@@ -146,40 +133,8 @@ export function buildV9SafetyTableMap(
     : rows;
 }
 
-export interface V9DependencyProjection {
-  edges: V9ConsumerResponse["dependencyGraph"]["edges"];
-  nodeGrades: Record<string, V9Grade>;
-}
-
-export function buildV9DependencyProjection(
-  input: unknown,
-  expectedIdentity: V9ConsumerIdentity,
-): V9ConsumerResult<V9DependencyProjection> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
-  if (response.status === "unavailable") return response;
-  return {
-    status: "available",
-    identity: response.identity,
-    value: {
-      edges: response.value.dependencyGraph.edges,
-      nodeGrades: Object.fromEntries(response.value.cards.map((card) => [card.id, card.grade])),
-    },
-  };
-}
-
 export type V9FreezeStatus = "not-observed" | "possible" | "upstream" | "direct" | "unknown";
 export type V9ResolvedBlacklistStatus = boolean | "possible" | "inherited" | null;
-
-export interface V9AccessCoverageProjection {
-  cardId: string;
-  score: number | null;
-  evidence: SafetyScoreV9Card["evidence"];
-  accessPosture: SafetyScoreV9Card["accessPosture"];
-  freezeStatus: V9FreezeStatus;
-  dependencyCount: number;
-  liveReserveFresh: null;
-  provenance: "v9-access-posture";
-}
 
 function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
   switch (card.accessPosture.freezeExposure) {
@@ -210,42 +165,6 @@ export function getV9ResolvedBlacklistStatus(
     case undefined:
       return null;
   }
-}
-
-export function buildV9AccessCoverageProjection(
-  input: unknown,
-  expectedIdentity: V9ConsumerIdentity,
-  cardId: string,
-): V9ConsumerResult<V9AccessCoverageProjection> {
-  const selected = selectV9Card(input, expectedIdentity, cardId);
-  if (selected.status === "unavailable") return selected;
-  const card = selected.value;
-  return {
-    status: "available",
-    identity: selected.identity,
-    value: {
-      cardId,
-      score: card.score,
-      evidence: card.evidence,
-      accessPosture: card.accessPosture,
-      freezeStatus: mapV9FreezeStatus(card),
-      dependencyCount: card.dependencies.serial.length + card.dependencies.basket.length,
-      liveReserveFresh: null,
-      provenance: "v9-access-posture",
-    },
-  };
-}
-
-export interface RegistryFreezeFallback {
-  status: boolean | "possible" | "inherited" | null;
-  provenance: "registry-fallback";
-  countsAsV9Evidence: false;
-}
-
-export function buildRegistryFreezeFallback(
-  status: RegistryFreezeFallback["status"],
-): RegistryFreezeFallback {
-  return { status, provenance: "registry-fallback", countsAsV9Evidence: false };
 }
 
 export interface V9PortfolioProjection {
@@ -327,22 +246,4 @@ export function buildV9PortfolioProjection(
       dependencyExposure,
     },
   };
-}
-
-export function getV9StressAvailability(
-  input: unknown,
-  expectedIdentity: V9ConsumerIdentity,
-): V9ConsumerResult<never> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
-  if (response.status === "unavailable") return response;
-  return { status: "unavailable", reason: "v9-stress-mapping-unapproved" };
-}
-
-export function getV9BluechipFloorAvailability(
-  input: unknown,
-  expectedIdentity: V9ConsumerIdentity,
-): V9ConsumerResult<never> {
-  const response = resolveV9ConsumerResponse(input, expectedIdentity);
-  if (response.status === "unavailable") return response;
-  return { status: "unavailable", reason: "v9-bluechip-floor-unreviewed" };
 }

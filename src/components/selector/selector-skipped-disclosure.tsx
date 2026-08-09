@@ -4,7 +4,6 @@ import type { SkippedCoin } from "@shared/lib/selector";
 
 interface SelectorSkippedDisclosureProps {
   coins: readonly SkippedCoin[];
-  defaultOpen?: boolean;
 }
 
 /**
@@ -12,16 +11,10 @@ interface SelectorSkippedDisclosureProps {
  * the missing signal names per row. Surfaces names + missing signals per R1
  * (DAO Treasurer C5).
  */
-export function SelectorSkippedDisclosure({
-  coins,
-  defaultOpen = false,
-}: SelectorSkippedDisclosureProps) {
+export function SelectorSkippedDisclosure({ coins }: SelectorSkippedDisclosureProps) {
   if (coins.length === 0) return null;
   return (
-    <details
-      open={defaultOpen}
-      className="rounded-lg border border-border/55 bg-card/40 px-3 py-2 text-sm"
-    >
+    <details className="rounded-lg border border-border/55 bg-card/40 px-3 py-2 text-sm">
       <summary className="pharos-focus-ring cursor-pointer rounded-sm font-medium text-foreground">
         Skipped coins disclosure ({coins.length})
       </summary>

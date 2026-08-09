@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
-import { FRONTEND_API_QUERY_BASE_REGISTRY } from "@/lib/api-query-base-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import {
   API_FRESHNESS_MAX_AGE_SEC,
   CACHE_AVAILABILITY_MAX_AGE_SEC,
@@ -29,7 +29,7 @@ type FrontendQueryRegistry = Record<
   FrontendStaticQueryDescriptor | ((...args: never[]) => FrontendStaticQueryDescriptor)
 >;
 
-const FRONTEND_QUERY_REGISTRY = FRONTEND_API_QUERY_BASE_REGISTRY as unknown as FrontendQueryRegistry;
+const FRONTEND_QUERY_REGISTRY = FRONTEND_API_QUERY_DESCRIPTORS as unknown as FrontendQueryRegistry;
 const API_FRESHNESS_BY_KEY = API_FRESHNESS_MAX_AGE_SEC as Record<string, number>;
 const CACHE_FRESHNESS_LANES_BY_KEY = CACHE_FRESHNESS_LANES as Record<string, CacheFreshnessLaneConfig>;
 const DATA_HEALTH_PRESETS_BY_KEY = DATA_HEALTH_PRESETS as Record<string, { label: string; staleTime: number }>;
@@ -251,8 +251,8 @@ describe("data surface descriptors", () => {
 
   it("derives dynamic yield history frontend descriptors from the descriptor builder", () => {
     const surface = DATA_SURFACE_DESCRIPTORS.yieldHistory;
-    const frontendWithSource = FRONTEND_API_QUERY_BASE_REGISTRY.yieldHistory("usdc", 365, "source", "aave-v3");
-    const frontendWithoutSource = FRONTEND_API_QUERY_BASE_REGISTRY.yieldHistory("usdt", 90, "best", null);
+    const frontendWithSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "aave-v3");
+    const frontendWithoutSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdt", 90, "best", null);
 
     expect(frontendWithSource.path).toBe(surface.buildApiPath("usdc", 365, "source", "aave-v3"));
     expect(frontendWithSource.queryKey).toEqual(surface.buildQueryKey("usdc", 365, "source", "aave-v3"));
