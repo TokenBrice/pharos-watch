@@ -584,7 +584,6 @@ export interface MergedRow {
   effectiveTvlUsd: number | null;
   concentrationHhi: number | null;
   chainTvl: Record<string, number>;
-  effectiveExitScore: number | null;
 
   pharosYieldScore: number | null;
   apy30d: number | null;

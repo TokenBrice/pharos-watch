@@ -5,11 +5,7 @@
   "oneLiner": "NECT is Beraborrow's Liquity v2-style overcollateralized stablecoin on Berachain, minted against iBGT, WBERA, BTC/ETH variants, and Kodiak Island LPs.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Berachain-native Collateral Vault branches: iBGT (Infrared liquid staked BGT), iBERA, WBERA, pumpBTC, solvBTC, solvBTC.bbn, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
   "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",

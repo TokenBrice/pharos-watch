@@ -1,5 +1,6 @@
 import type { RepairDebtSummary } from "@shared/types/status";
-import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
+import { unixNowSec as nowSec } from "@shared/lib/time-constants";
+import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import { createCronResult, type StructuredCronResult } from "./cron-result";
 import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
@@ -128,10 +129,6 @@ function staleClaimWhereSql(): string {
 
 function closableStateSql(): string {
   return "(state IN ('open', 'deferred') OR (state = 'failed' AND (next_attempt_at IS NULL OR next_attempt_at <= ?)))";
-}
-
-function nowSec(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 function throwIfAborted(signal: AbortSignal | undefined): void {

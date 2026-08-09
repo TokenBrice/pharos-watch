@@ -5,11 +5,7 @@
   "oneLiner": "MUSD is Mezo's BTC-only overcollateralized stablecoin on Mezo's Bitcoin L2, minted at 110% minimum against native and wrapped BTC via Liquity v1.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Bitcoin only; minimum 110% collateral ratio",
   "pegMechanism": "BTC-only overcollateralized CDP with direct $1 BTC redemption; operates on Mezo (Bitcoin L2, not Ethereum or a Stage 1 L2)",

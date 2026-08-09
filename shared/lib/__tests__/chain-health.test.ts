@@ -130,14 +130,22 @@ describe("computeQualityScore", () => {
     expect(computeQualityScore(coins, 0.5)).toBeNull();
   });
 
-  it("uses default 40 for unrated coins when coverage is sufficient", () => {
+  it("excludes unrated supply and renormalizes over rated supply", () => {
     const coins = [
       { safetyScore: 80, supplyUsd: 800_000 },
       { safetyScore: null as number | null, supplyUsd: 200_000 },
     ];
     const score = computeQualityScore(coins, 0.5);
-    // 80% at 80, 20% at 40 => 72
-    expect(score).toBe(72);
+    // Unrated supply is dropped from numerator and denominator => 80, not an imputed blend.
+    expect(score).toBe(80);
+  });
+
+  it("keeps the coverage gate as the only not-rated signal", () => {
+    const coins = [
+      { safetyScore: 90, supplyUsd: 499_000 },
+      { safetyScore: null as number | null, supplyUsd: 501_000 },
+    ];
+    expect(computeQualityScore(coins, 0.5)).toBeNull();
   });
 });
 

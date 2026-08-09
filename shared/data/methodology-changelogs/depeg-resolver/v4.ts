@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.2",
+    title: "Mint-posture predicates unified; mint-scoped non-inflatability recognised",
+    date: "2026-08-10",
+    effectiveAt: 1786665600,
+    summary:
+      "DDR's mint-posture tests now read shared predicates instead of per-engine literal sets, and the mint-scoped `none-resolved-mint` posture earns the weak R1 non-inflatable-supply anchor it previously fell through entirely. No resolution tier, factor weight, duration landmark, or stratum assignment changes.",
+    impact: [
+      "Posture set membership moved to `isFragileMintPosture` / `isUnboundedMintPosture` / `isNoPrivilegedMintPosture` / `isNoPrivilegedMintChainPosture` in shared/lib/safety-score-v9/mint-posture.ts; K1's risky-minter leg, K1's severe-surge rung and the structural-class legs all read the same source, so a future posture value is classified once instead of at each site",
+      "14 wrapper assets annotated `none-resolved-mint` (sUSDe, sDAI, sGHO, scrvUSD, stUSDS, sBOLD, sDOLA, srUSD, sdUSD, said, steakUSDC, steakUSDT, yvUSDC, eEARN) now publish the R1 recovery anchor at the weak rung during an event, labelled `No privileged mint authority on this token (wrapped supply can still expand)`",
+      "The strong R1 rung remains whole-of-chain only: a wrapper's parent can still print, so `none-resolved-mint` cannot satisfy the strong-anchor leg of the tier rule. Only strong anchors enter that rule, so no verdict, sealed prediction or duration stratum moves",
+      "Structural-class stratification is unchanged: `none-resolved-mint` still confers no robustness of its own, matching the whole-of-chain definition in shared/types/core.ts",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.1",
     title: "Structural inputs read published Safety Score outputs",
     date: "2026-08-08",

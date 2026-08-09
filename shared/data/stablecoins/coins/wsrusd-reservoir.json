@@ -5,7 +5,6 @@
   "oneLiner": "wsrUSD is a non-rebasing ERC-4626 savings wrapper of Reservoir's rUSD stablecoin, accruing yield from T-bill, DeFi lending, and basis strategies behind rUSD.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

@@ -5,10 +5,8 @@
   "oneLiner": "mAPOLLO is a Midas NAV-accreting liquid-yield token wrapping an Apollo Crypto managed strategy; permissioned mint/redeem, not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",

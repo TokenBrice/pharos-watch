@@ -8,10 +8,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CLP",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Chilean-peso cash and liquid local-currency instruments backing Ripio wCLP at a one Chilean peso target",
   "pegMechanism": "WCLP is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",

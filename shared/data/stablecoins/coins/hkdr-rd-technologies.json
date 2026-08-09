@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
   "pegMechanism": "Planned HKD fiat-referenced stablecoin targeting 1:1 HKD backing and regulated issuer redemption under the HKMA Stablecoins Ordinance; as of 2026-05-13, RD InnoTech remains pre-launch and was not included in the first HKMA licensed issuer batch",

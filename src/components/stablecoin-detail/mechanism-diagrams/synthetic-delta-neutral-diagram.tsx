@@ -15,18 +15,27 @@ interface SyntheticDeltaNeutralDiagramProps {
   symbol: string;
   steps?: ReadonlyArray<{ label?: string; subtitle?: string }>;
   stressFootnote?: string;
+  strategy?: "perp-short" | "borrow-stake";
 }
 
 export function SyntheticDeltaNeutralDiagram({
   symbol,
   steps: overrideSteps,
-  stressFootnote = SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE,
+  stressFootnote,
+  strategy = "perp-short",
 }: SyntheticDeltaNeutralDiagramProps) {
-  const defaults = [
-    { label: "Crypto deposit", subtitle: "spot collateral" },
-    { label: "Long spot + short perp", subtitle: "delta-neutral hedge" },
-    { label: `${symbol} minted`, subtitle: "funding-rate yield" },
-  ] as const;
+  const borrowStake = strategy === "borrow-stake";
+  const defaults = borrowStake
+    ? [
+        { label: "Stablecoin deposit", subtitle: "lending collateral" },
+        { label: "Borrow native + stake", subtitle: "matched carry exposure" },
+        { label: `${symbol} base token`, subtitle: "carry routed separately" },
+      ]
+    : [
+        { label: "Crypto deposit", subtitle: "spot collateral" },
+        { label: "Long spot + short perp", subtitle: "delta-neutral hedge" },
+        { label: `${symbol} minted`, subtitle: "funding-rate yield" },
+      ];
 
   const merged = defaults.map((d, i) => ({
     label: overrideSteps?.[i]?.label ?? d.label,
@@ -44,11 +53,17 @@ export function SyntheticDeltaNeutralDiagram({
 
   return (
     <MechanismDiagramShell
-      ariaLabel={`Crypto deposited as spot collateral is hedged with equal short perp positions; the funding rate paid by perp longs becomes the yield on ${symbol}.`}
-      description={`Users deposit crypto as spot collateral; the protocol opens an equal-size short perpetual futures position to neutralize price exposure; the funding rate paid by perp longs flows to ${symbol} holders as yield.`}
+      ariaLabel={borrowStake
+        ? `Stablecoin collateral is lent while native assets are borrowed and staked as matched exposure; ${symbol} remains the non-yielding base token and carry is routed to its staked wrapper and the protocol.`
+        : `Crypto deposited as spot collateral is hedged with equal short perp positions; the funding rate paid by perp longs becomes the yield on ${symbol}.`}
+      description={borrowStake
+        ? `Stablecoin deposits are supplied to lending markets; the protocol borrows native assets and stakes the borrowed exposure; strategy carry is routed separately from the non-yielding ${symbol} base token.`
+        : `Users deposit crypto as spot collateral; the protocol opens an equal-size short perpetual futures position to neutralize price exposure; the funding rate paid by perp longs flows to ${symbol} holders as yield.`}
       desktopHeight={step2Callout ? 140 : 120}
       steps={steps}
-      stressFootnote={stressFootnote}
+      stressFootnote={stressFootnote ?? (borrowStake
+        ? "stress: borrow cost or liquidation shock"
+        : SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE)}
     >
       <DiagramStep
         x={0}
@@ -76,7 +91,7 @@ export function SyntheticDeltaNeutralDiagram({
           fontWeight={600}
           fill="currentColor"
         >
-          Long spot
+          {borrowStake ? "Stake native" : "Long spot"}
         </text>
         <polygon
           points="34,42 42,42 38,49"
@@ -89,7 +104,7 @@ export function SyntheticDeltaNeutralDiagram({
           fontWeight={600}
           fill="currentColor"
         >
-          Short perp
+          {borrowStake ? "Borrow native" : "Short perp"}
         </text>
       </DiagramStep>
       <DiagramArrow x={350} />
@@ -106,7 +121,7 @@ export function SyntheticDeltaNeutralDiagram({
         toX={500}
         baseY={30}
         peakY={6}
-        label="funding"
+        label={borrowStake ? "carry" : "funding"}
         labelY={9}
       />
     </MechanismDiagramShell>

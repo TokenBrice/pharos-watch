@@ -1,4 +1,5 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
@@ -120,10 +121,6 @@ const DEWS_MAX_AGE_SEC = 4 * 3600;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
 const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
-
-function nowSec(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
   return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;

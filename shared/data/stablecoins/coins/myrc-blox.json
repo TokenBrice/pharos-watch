@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "MYR",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Malaysian ringgit-denominated reserve assets held at Malaysian financial institutions; current asset classes, institutions, and weights are not publicly disclosed",
   "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",

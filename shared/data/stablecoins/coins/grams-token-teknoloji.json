@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "One gram of physical silver per GRAMS, with Token Teknoloji proof pages listing silver held at Kuveyt Türk, VakıfBank, Ziraat Participation, and Akbank",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",

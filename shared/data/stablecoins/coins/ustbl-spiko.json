@@ -5,7 +5,6 @@
   "oneLiner": "USTBL is Spiko's regulated short-term U.S. Treasury fund tokenized for EU and global investors under an AMF-authorized UCITS money market structure.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

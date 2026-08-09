@@ -3006,6 +3006,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
     "classificationSource": "safety-score-v9-publication"
   },
   "coins": [CoinFlow, ...],
+  "chains": [{ "chainId": "ethereum", "netFlow24hUsd": -12000000 }, ...],
   "hourly": [HourlyFlow, ...],
   "updatedAt": 1772000000,
   "windowHours": 24,
@@ -3027,11 +3028,14 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `intensitySemantics`   | `string`         | Scoring semantics version identifier (currently `"signed-v2"`)                                       |
 | `classificationSource` | `string` | Source of flight-to-quality classification (`"safety-score-v9-publication"` or `"unavailable"`) |
 
+This payload is the single producer of the Bank Run Gauge. Internal consumers (daily digest) read the published `24`-hour aggregate and re-bin it rather than recomputing a composite — see [Mint/Burn Flows: Bank Run Gauge](./mint-burn-flows.md#bank-run-gauge-composite).
+
 **Top-level metadata**
 
 | Field         | Type     | Description                                                                                                        |
 | ------------- | -------- | ------------------------------------------------------------------------------------------------------------------ |
 | `windowHours` | `number` | Requested chart window for `hourly[]`                                                                              |
+| `chains`      | `array`  | Per-chain 24h net flow over the same tracked-pair universe as `coins`, sorted by absolute net flow (descending): `{ chainId, netFlow24hUsd }`. Fixed to the canonical 24h window even when `hours` changes. Absent from publications written before the Bank Run Gauge unification |
 | `scope`       | `object` | Current ingestion scope, for example `{ chainIds: ["ethereum", "arbitrum"], label: "Configured issuance chains" }` |
 | `sync`        | `object` | Latest critical-lane freshness metadata, warning state, and optional `classificationWarning`                       |
 
@@ -3596,12 +3600,12 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
   "profile": "treasury",
   "provenance": "pharos-verified",
   "snapshotSchemaVersion": 3,
-  "engineVersion": "selector-v2.0",
+  "engineVersion": "selector-v2.1",
   "datasetHash": "<64-character canonical dataset hash>",
   "verification": {
     "kind": "pharos-server-recomputed-v1",
     "datasetHash": "<same 64-character canonical dataset hash>",
-    "engineVersion": "selector-v2.0"
+    "engineVersion": "selector-v2.1"
   },
   "timestamp": 1715000000000,
   "input": {

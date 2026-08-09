@@ -5,10 +5,8 @@
   "oneLiner": "sBOLD is K3 Capital's ERC-4626 wrapper of BOLD; deposits route to Liquity V2 Stability Pools to earn interest and liquidation gains, with BOLD-tier CDP risk.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "bold-liquity",

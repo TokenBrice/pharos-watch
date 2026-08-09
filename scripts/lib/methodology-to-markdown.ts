@@ -1,6 +1,6 @@
 import {
   toMethodologyVersionLabel,
-} from "../../shared/lib/methodology-version";
+} from "../../shared/lib/methodology-versions/base";
 import {
   METHODOLOGY_CHANGELOG_MARKDOWN_KEYS,
   getMethodologyChangelogEntryByMarkdownKey,

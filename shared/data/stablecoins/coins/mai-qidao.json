@@ -5,11 +5,7 @@
   "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across 15 chains and has traded persistently below its $1 target.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
   "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",

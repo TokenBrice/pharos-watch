@@ -44,7 +44,7 @@ describe("handleBlacklist", () => {
   it("returns an inexact lower-bound total by default without running COUNT(*)", async () => {
     const db = mockD1([
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { events: unknown[]; total: number; totalExact: boolean };
@@ -58,7 +58,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 42 }] },
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?includeTotal=true"));
     const body = (await res.json()) as { total: number; totalExact: boolean };
     expect(body.total).toBe(42);
@@ -70,7 +70,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const body = (await res.json()) as { methodology: Record<string, unknown> };
     expect(body.methodology).toHaveProperty("version");
@@ -92,7 +92,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 2 }] },
       { match: "blacklist_events", rows: [historicalRow, newerRow] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=stablecoin&sortDirection=asc"));
     const body = (await res.json()) as { methodology: { version: string; isCurrent: boolean } };
     expect(body.methodology.version).toBe("3.0");
@@ -103,7 +103,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const body = (await res.json()) as { events: Array<Record<string, unknown>> };
     const event = body.events[0];
@@ -131,7 +131,7 @@ describe("handleBlacklist", () => {
     const emptyDb = mockD1([
       { match: "COUNT", rows: [{ total: 0 }] },
       { match: "blacklist_events", rows: [] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(emptyDb, new URL("https://x/api/blacklist"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { events: unknown[]; total: number };
@@ -140,7 +140,7 @@ describe("handleBlacklist", () => {
   });
 
   it("rejects invalid stablecoin ID with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=<script>"));
     expect(res.status).toBe(400);
   });
@@ -149,7 +149,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
     expect(res.status).toBe(200);
   });
@@ -159,7 +159,7 @@ describe("handleBlacklist", () => {
       const db = mockD1([
         { match: "COUNT", rows: [{ total: 0 }] },
         { match: "blacklist_events", rows: [] },
-      ]);
+      ], { requireMatch: true });
       const res = await handleBlacklist(db, new URL(`https://x/api/blacklist?stablecoin=${symbol}`));
       expect(res.status, symbol).toBe(200);
     }
@@ -169,7 +169,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 0 }] },
       { match: "blacklist_events", rows: [] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
     expect(res.status).toBe(200);
   });
@@ -187,7 +187,7 @@ describe("handleBlacklist", () => {
   });
 
   it("rejects invalid chain parameter with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chain=InvalidChain"));
     expect(res.status).toBe(400);
   });
@@ -205,25 +205,25 @@ describe("handleBlacklist", () => {
   });
 
   it("rejects invalid chainId parameter with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=unknown-chain"));
     expect(res.status).toBe(400);
   });
 
   it("rejects known chainIds outside blacklist tracker coverage", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=fantom"));
     expect(res.status).toBe(400);
   });
 
   it("rejects mismatched chain and chainId parameters", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chain=Tron&chainId=ethereum"));
     expect(res.status).toBe(400);
   });
 
   it("rejects invalid eventType with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=hack"));
     expect(res.status).toBe(400);
   });
@@ -240,13 +240,13 @@ describe("handleBlacklist", () => {
   });
 
   it("rejects invalid sortBy with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=amount"));
     expect(res.status).toBe(400);
   });
 
   it("rejects invalid sortDirection with 400", async () => {
-    const db = mockD1([]);
+    const db = mockD1([], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortDirection=sideways"));
     expect(res.status).toBe(400);
   });
@@ -266,7 +266,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
@@ -278,7 +278,7 @@ describe("handleBlacklist", () => {
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
       { match: "cron_runs", rows: [], first: { started_at: now - 30 } },
-    ]);
+    ], { requireMatch: true });
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const age = Number(res.headers.get("X-Data-Age"));
     const body = await res.json() as { methodology: { asOf: number } };
@@ -293,7 +293,7 @@ describe("handleBlacklist", () => {
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
-    ]);
+    ], { requireMatch: true });
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const age = Number(res.headers.get("X-Data-Age"));
@@ -302,7 +302,7 @@ describe("handleBlacklist", () => {
   });
 
   it("rejects oversized limit values instead of silently clamping them", async () => {
-    const res = await handleBlacklist(mockD1([]), new URL("https://x/api/blacklist?limit=999999"));
+    const res = await handleBlacklist(mockD1([], { requireMatch: true }), new URL("https://x/api/blacklist?limit=999999"));
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 0 and 1000" });
   });
@@ -320,7 +320,7 @@ describe("handleBlacklist", () => {
   });
 
   it("caps legacy offset pagination and accepts the maximum supported offset", async () => {
-    const rejected = await handleBlacklist(mockD1([]), new URL("https://x/api/blacklist?offset=25001"));
+    const rejected = await handleBlacklist(mockD1([], { requireMatch: true }), new URL("https://x/api/blacklist?offset=25001"));
     expect(rejected.status).toBe(400);
 
     let dataBinds: unknown[] = [];
@@ -338,7 +338,7 @@ describe("handleBlacklist", () => {
         makeBlacklistRow({ id: "b", stablecoin: "USDT", timestamp: 200 }),
         makeBlacklistRow({ id: "a", stablecoin: "USDT", timestamp: 100 }),
       ] },
-    ]);
+    ], { requireMatch: true });
     const first = await handleBlacklist(
       firstDb,
       new URL("https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc"),
@@ -346,7 +346,7 @@ describe("handleBlacklist", () => {
     const firstBody = await first.json() as { nextCursor: string | null };
     expect(firstBody.nextCursor).toBeTruthy();
 
-    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
+    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }], { requireMatch: true });
     const next = await handleBlacklist(
       nextDb,
       new URL(`https://x/api/blacklist?limit=1&sortBy=stablecoin&sortDirection=asc&cursor=${firstBody.nextCursor}`),
@@ -364,7 +364,7 @@ describe("handleBlacklist", () => {
         makeBlacklistRow({ id: "newer", timestamp: 200 }),
         makeBlacklistRow({ id: "older", timestamp: 100 }),
       ] },
-    ]);
+    ], { requireMatch: true });
     const first = await handleBlacklist(
       firstDb,
       new URL("https://x/api/blacklist?limit=1"),
@@ -372,7 +372,7 @@ describe("handleBlacklist", () => {
     const firstBody = await first.json() as { nextCursor: string | null };
     expect(firstBody.nextCursor).toBeTruthy();
 
-    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }]);
+    const nextDb = mockD1([{ match: "blacklist_events", rows: [] }], { requireMatch: true });
     const next = await handleBlacklist(
       nextDb,
       new URL(`https://x/api/blacklist?limit=1&cursor=${firstBody.nextCursor}`),

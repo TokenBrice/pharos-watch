@@ -5,11 +5,7 @@
   "oneLiner": "satUSD is River's omni-CDP stablecoin overcollateralized by BTC, ETH, BNB, and LSTs; collateral stays source-chain and satUSD is minted via LayerZero OFT.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
   "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",

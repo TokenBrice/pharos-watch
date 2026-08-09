@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Token Teknoloji's public materials conflict: product copy says equivalent PAXG is held on-chain, while the same page's FAQ and the issuer's reserve disclosures say physical gold is held at Turkish banks, the Central Bank, and company vaults. No current primary evidence reconciles the reserve form or proportions.",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",

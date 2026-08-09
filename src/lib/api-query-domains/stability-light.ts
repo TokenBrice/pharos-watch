@@ -1,6 +1,6 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { isRecord } from "@shared/lib/type-guards";
+import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import type { StabilityIndexResponse } from "@shared/types/stability";
 import { CRON_30MIN } from "@/lib/cron-intervals";
 import { defineApiQuery } from "@/lib/api-query-contract";
@@ -8,10 +8,6 @@ import type { SchemaLike, SchemaLikeResult } from "@/lib/schema-like";
 
 function invalid(path: readonly PropertyKey[], message: string): SchemaLikeResult<StabilityIndexResponse> {
   return { success: false, error: { issues: [{ path, message }] } };
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
 }
 
 function validateComponents(value: unknown): readonly [readonly PropertyKey[], string] | null {

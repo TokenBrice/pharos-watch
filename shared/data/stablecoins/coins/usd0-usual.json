@@ -22,11 +22,8 @@
   },
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

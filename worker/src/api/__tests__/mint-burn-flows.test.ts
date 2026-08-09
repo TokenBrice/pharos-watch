@@ -193,6 +193,8 @@ describe("handleMintBurnFlows contract tests", () => {
             burn_volume_usd: 0,
             net_flow_usd: 5_000_000,
           },
+          // usdai-usd-ai/arbitrum is a tracked pair; a usdc-circle/arbitrum row
+          // would be filtered out by the same universe guard that shapes `coins`.
           {
             stablecoin_id: "usdai-usd-ai",
             chain_id: "arbitrum",
@@ -687,6 +689,78 @@ describe("handleMintBurnFlows contract tests", () => {
     // coins whose intensity is measured on one chain but whose supply lives on many.
     expect(body.gauge.trackedMcapUsd).toBe(30_000_000_000);
     expect(body.gauge.trackedMcapUsd).not.toBe(34_000_000_000);
+  });
+
+  it("publishes the per-chain 24h net breakdown sorted by absolute net flow", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const cacheValue = JSON.stringify({
+      peggedAssets: [
+        { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 30_000_000_000 } },
+      ],
+    });
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 2,
+            burn_count: 1,
+            mint_volume_usd: 40_000_000,
+            burn_volume_usd: 10_000_000,
+            net_flow_usd: 30_000_000,
+          },
+          {
+            stablecoin_id: "usdai-usd-ai",
+            chain_id: "arbitrum",
+            hour_ts: now - 3600,
+            mint_count: 0,
+            burn_count: 3,
+            mint_volume_usd: 0,
+            burn_volume_usd: 50_000_000,
+            net_flow_usd: -50_000_000,
+          },
+        ],
+      },
+      { match: "SUM(net_flow_usd) as net_flow_usd", rows: [] },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            day_ts: tenDaysAgoDay,
+            daily_net: 0,
+            daily_abs: 100_000_000,
+          },
+        ],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cacheValue, updated_at: now }],
+        first: { key: "stablecoins", value: cacheValue, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    // Single source for the digest's top-chains block: same tracked-pair
+    // universe as `coins`, ordered by absolute 24h net flow.
+    expect(body.chains).toEqual([
+      { chainId: "arbitrum", netFlow24hUsd: -50_000_000 },
+      { chainId: "ethereum", netFlow24hUsd: 30_000_000 },
+    ]);
   });
 
   it("keeps negative net flow separate from positive pressure shift semantics", async () => {

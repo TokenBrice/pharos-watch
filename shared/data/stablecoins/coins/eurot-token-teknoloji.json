@@ -7,10 +7,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
   "pegMechanism": "Issuer-managed mint and burn process intended to keep each EUROT matched 1:1 with euro reserves; holders can trade EUROT through Bitlo, but no Pharos-reviewed direct redemption backstop is modeled",

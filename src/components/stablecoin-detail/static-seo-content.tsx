@@ -390,6 +390,15 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                     <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{disclosure}</p>
                   ) : null;
                 })()}
+                {summary.sources?.length ? (
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Sources: {renderInlineList(summary.sources.map((source) => (
+                      <Link key={source.url} href={source.url} className={INLINE_LINK_CLASS}>
+                        {source.label}
+                      </Link>
+                    )))}
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </div>

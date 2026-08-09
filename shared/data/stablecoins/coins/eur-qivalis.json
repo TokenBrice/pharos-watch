@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned 100% reserve backing — at least 40% in bank deposits with the remainder in short-term euro-area sovereign bonds diversified across EU countries, with 24/7 redemption; Qivalis states that no stablecoins or tokens have been issued yet",
   "pegMechanism": "Pre-launch MiCA-oriented euro stablecoin design: Qivalis describes a regulated 1:1-backed euro token with safeguarded reserves and reliable on-demand access once official issuance begins",

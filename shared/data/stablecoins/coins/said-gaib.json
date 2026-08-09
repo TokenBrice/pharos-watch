@@ -5,7 +5,6 @@
   "oneLiner": "sAID is GAIB's staked AI Dollar vault: AID is deposited into an ERC-4626 vault tracking AI infrastructure financing NAV with a 30-day FIFO unstaking cycle.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

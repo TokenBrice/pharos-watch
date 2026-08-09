@@ -1,4 +1,4 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { v9TestClockSec } from "../../../test-helpers/v9-fixed-input";
 import { createReportCardsFixedInput } from "../../report-cards-fixed-input";

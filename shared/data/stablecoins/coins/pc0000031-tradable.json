@@ -5,11 +5,9 @@
   "oneLiner": "PC0000031 is a KYC-gated Tradable senior secured term note on a North American rent-financing platform; contract-priced at $1 par, not a liquid stablecoin.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Senior secured term notes tied to a North American rent-financing platform and tokenized through Tradable private-credit issuance rails.",
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",

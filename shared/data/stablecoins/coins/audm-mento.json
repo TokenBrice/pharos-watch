@@ -8,10 +8,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "AUD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard)",
   "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing AUDm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the AUDm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg",

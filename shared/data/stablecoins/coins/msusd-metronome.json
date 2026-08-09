@@ -5,11 +5,7 @@
   "oneLiner": "msUSD is Metronome's overcollateralized synth stablecoin minted against USDC, DAI, ETH, WBTC, and Vesper yield tokens at 75-85% CF, with no direct redemption.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75\u201385%",
   "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75\u201385%) to mint msUSD at a fixed 1% annual fee; no direct redemption \u2014 only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",

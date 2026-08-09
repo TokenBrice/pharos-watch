@@ -5,11 +5,8 @@
   "oneLiner": "DAI is MakerDAO/Sky's dollar stablecoin, minted from crypto and RWA vaults and supported by stablecoin PSM liquidity.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
   "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC\u2194DAI swaps; SKY (formerly MKR) acts as backstop (minted and sold to cover bad debt)",

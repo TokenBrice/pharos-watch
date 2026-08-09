@@ -5,11 +5,7 @@
   "oneLiner": "GHO is Aave's decentralized dollar stablecoin, minted by borrowing against any Aave V3 collateral, with peg defended by stablecoin-backed stability modules.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
   "pegMechanism": "Overcollateralized minting via the Aave V3 facilitator model; live GSM redemption is centered on yield-bearing stability modules such as stataUSDC and stataUSDT, with steward-managed facilitator limits reinforcing the peg",

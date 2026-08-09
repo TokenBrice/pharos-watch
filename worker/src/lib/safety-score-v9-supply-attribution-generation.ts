@@ -1,3 +1,4 @@
+import { uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import {
   SupplyAttributionJournalIdSchema,
@@ -240,10 +241,6 @@ export type SafetyScoreV9SupplyAttributionGeneration = z.infer<
   typeof SafetyScoreV9SupplyAttributionGenerationSchema
 >;
 
-function uniqueSorted(values: Iterable<string>): string[] {
-  return [...new Set(values)].sort();
-}
-
 function exactStrings(
   left: readonly string[],
   right: readonly string[],
@@ -401,7 +398,7 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
   const recordsByAsset = journalRecordsByAsset(input.capture.journalRecords);
   assertCaptureBindings({ ...input, recordsByAsset });
   const expectedAssetIds = uniqueSorted(input.capture.expectedAssetIds);
-  const observedAssetIds = uniqueSorted(recordsByAsset.keys());
+  const observedAssetIds = uniqueSorted([...recordsByAsset.keys()]);
   const acceptedAssetIds = uniqueSorted(
     Object.keys(input.capture.attributionById),
   );

@@ -5,7 +5,6 @@
   "oneLiner": "SPKCC is the USD share class of Spiko's regulated French AIF combining a digital-asset cash-and-carry basis strategy with short-duration T-bill collateral.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

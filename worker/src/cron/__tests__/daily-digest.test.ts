@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
@@ -117,6 +117,7 @@ import {
   collectActiveDepegs,
   collectResolvedDepegs,
   collectSupplyVelocity,
+  collectMintBurnFlows,
   type CollectorContext,
 } from "../daily-digest/collectors";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
@@ -294,6 +295,70 @@ function makePublishedDewsTables(dewsRows: TestDewsRow[]): MockTableConfig[] {
       rows: dewsRows.map((row) => ({ ...row })),
     },
   ];
+}
+
+const PUBLISHED_GAUGE_SCORE = 37.5;
+
+/**
+ * The published aggregate mint/burn flow payload the digest re-bins. Its coin
+ * universe is the API's tracked-pair universe (PAXG included), which is wider
+ * than the digest's core aggregate id set on purpose.
+ */
+function publishedGaugePayload(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    gauge: {
+      score: PUBLISHED_GAUGE_SCORE,
+      band: "HEALTHY",
+      flightToQuality: false,
+      flightIntensity: 0,
+      classificationSource: "safety-score-v9-publication",
+    },
+    coins: [
+      {
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        flowIntensity: 100,
+        pressureShiftScore: 100,
+        netFlow24hUsd: 200_000_000,
+      },
+      {
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        flowIntensity: -83.33,
+        pressureShiftScore: -83.33,
+        netFlow24hUsd: -50_000_000,
+      },
+      {
+        stablecoinId: "paxg-paxos",
+        symbol: "PAXG",
+        flowIntensity: null,
+        pressureShiftScore: null,
+        netFlow24hUsd: -3_000_000,
+      },
+    ],
+    chains: [
+      { chainId: "ethereum", netFlow24hUsd: 150_000_000 },
+      { chainId: "arbitrum", netFlow24hUsd: -3_000_000 },
+    ],
+    ...overrides,
+  };
+}
+
+function publishedGaugeTable(
+  options: { value?: string; ageSec?: number } = {},
+): MockTableConfig {
+  const nowSec = Math.floor(Date.now() / 1000);
+  return {
+    match: "SELECT value, updated_at FROM cache WHERE key = ?",
+    matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+    rows: [],
+    first: {
+      value: options.value ?? JSON.stringify(publishedGaugePayload()),
+      updated_at: nowSec - (options.ageSec ?? 300),
+    },
+  };
 }
 
 function makeBaseTables(
@@ -957,50 +1022,10 @@ describe("generateDailyDigest", () => {
     expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
-  it("includes mint-burn flow data in stored input when hourly data exists", async () => {
-    const baseTables = makeBaseTables();
+  it("re-bins the published Bank Run Gauge into the stored input", async () => {
     const db = mockD1([
-      ...baseTables,
-      // 24h aggregate — match on SUM(mint_volume_usd) which is unique to this query
-      {
-        match: "SUM(mint_volume_usd)",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            chain_id: "ethereum",
-            mint_24h: 500_000_000,
-            burn_24h: 300_000_000,
-            net_24h: 200_000_000,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            chain_id: "ethereum",
-            mint_24h: 100_000_000,
-            burn_24h: 150_000_000,
-            net_24h: -50_000_000,
-          },
-        ],
-      },
-      // 30d baseline — match on "/ 30.0" which is unique to this query
-      {
-        match: "/ 30.0",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            chain_id: "ethereum",
-            avg_daily_net: 50_000_000,
-            avg_daily_abs: 200_000_000,
-            data_days: 30,
-          },
-          {
-            stablecoin_id: "usdc-circle",
-            chain_id: "ethereum",
-            avg_daily_net: -10_000_000,
-            avg_daily_abs: 80_000_000,
-            data_days: 25,
-          },
-        ],
-      },
+      ...makeBaseTables(),
+      publishedGaugeTable(),
     ]);
 
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -1008,24 +1033,36 @@ describe("generateDailyDigest", () => {
 
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
     const storedInput = JSON.parse(String(insertBinds?.[3]));
-    expect(storedInput.mintBurnFlows).toBeDefined();
-    expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
-    expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
-    expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+    // Verbatim re-bin of the published composite: the digest must not recompute
+    // a gauge of its own (WS0.1 — one gauge, one universe, one mcap basis).
+    expect(storedInput.mintBurnFlows.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(storedInput.mintBurnFlows.gaugeBand).toBe("HEALTHY");
+    expect(storedInput.mintBurnFlows.flightToQuality).toEqual({
+      active: false,
+      // PAXG is outside the digest's core aggregate universe but inside the
+      // published gauge universe, so its net flow now reaches the FTQ split.
+      safeNetUsd: 150_000_000,
+      riskyNetUsd: -3_000_000,
+    });
+    expect(storedInput.mintBurnFlows.topPressure.map((row: { symbol: string }) => row.symbol)).toEqual([
+      "USDT",
+      "USDC",
+    ]);
     // One canonical loader serves both the digest collectors and the FTQ
     // classifier, so the suite's healthy source classifies here. The
     // fail-closed FTQ arms are covered by
     // daily-digest/__tests__/mint-burn-ftq.test.ts.
     expect(storedInput.mintBurnFlows.classificationSource).toBe("safety-score-v9-publication");
     expect(storedInput.mintBurnFlows.classificationReason).toBeNull();
-    expect(storedInput.mintBurnFlows.topChains).toBeDefined();
-    expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
-    expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
-    expect(storedInput.mintBurnFlows.topChains.length).toBeGreaterThan(0);
-    expect(storedInput.mintBurnFlows.topChains[0]).toMatchObject({
-      chainId: expect.any(String),
-      netUsd: expect.any(Number),
-    });
+    expect(storedInput.mintBurnFlows.topChains).toEqual([
+      { chainId: "ethereum", netUsd: 150_000_000 },
+      { chainId: "arbitrum", netUsd: -3_000_000 },
+    ]);
+
+    // The digest no longer touches mint_burn_hourly at all.
+    expect(
+      (db as MockD1Database).getHistory().some((entry) => entry.sql.includes("mint_burn_hourly")),
+    ).toBe(false);
 
     const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       messages: { content: string }[];
@@ -2315,6 +2352,60 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
     yesterdayTs,
   };
 }
+
+describe("collectMintBurnFlows", () => {
+  it("omits the block without degrading when no gauge has been published yet", async () => {
+    const degradedReasons: string[] = [];
+    const db = mockD1([]);
+
+    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toEqual([]);
+  });
+
+  it("degrades when the published gauge is malformed", async () => {
+    const degradedReasons: string[] = [];
+    const db = mockD1([publishedGaugeTable({ value: '{"gauge":{"score":"nope"}}' })]);
+
+    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toEqual(["mint-burn-gauge-malformed"]);
+  });
+
+  it("degrades when the published gauge predates the current digest cycle", async () => {
+    const degradedReasons: string[] = [];
+    const db = mockD1([publishedGaugeTable({ ageSec: 25 * 3600 })]);
+
+    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toEqual(["mint-burn-gauge-expired"]);
+  });
+
+  it("still re-bins a stale publication but records the staleness", async () => {
+    const degradedReasons: string[] = [];
+    const db = mockD1([publishedGaugeTable({ ageSec: 3 * 3600 })]);
+
+    const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
+
+    expect(result?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(degradedReasons).toEqual(["mint-burn-gauge-stale"]);
+  });
+
+  it("never derives the gauge from mint_burn_hourly", async () => {
+    const db = mockD1([publishedGaugeTable()]);
+
+    const result = await collectMintBurnFlows(makeCollectorCtx(db));
+
+    expect(result?.gaugeScore).toBe(PUBLISHED_GAUGE_SCORE);
+    expect(result?.gaugeBand).toBe("HEALTHY");
+    expect(
+      (db as MockD1Database).getHistory().some((entry) => entry.sql.includes("mint_burn_hourly")),
+    ).toBe(false);
+  });
+});
 
 describe("collectActiveDepegs", () => {
   beforeEach(() => {

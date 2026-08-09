@@ -5,11 +5,8 @@
   "oneLiner": "USDKG is Gold Dollar's Kyrgyz-Republic-licensed dollar stablecoin backed by ~376 kg of physical LBMA gold bars custodied via state enterprise Kyrgyzaltyn.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
   "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",

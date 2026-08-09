@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
   "pegMechanism": "KRW-native Maroo model: OKRW is designed as a Korean Won stablecoin pegged 1:1 to KRW and used as the network's native fee token; Maroo's dual-track transaction model routes regulated activity through pre-approval and compliance checks while open-path activity remains permissionless",

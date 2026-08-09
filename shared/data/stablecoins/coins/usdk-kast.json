@@ -5,11 +5,8 @@
   "oneLiner": "USDK is KAST's 1:1 extension of M0's M token on Solana; it inherits M's upstream collateral and governance while KAST retains the underlying yield.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

@@ -4,12 +4,11 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { CronRun, CronStaleArtifact } from "@shared/types";
 import { formatCronRunStatus, formatCronRunTiming, isCronRunNotStarted } from "@/lib/cron-workbench-model";
+import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import {
   formatDurationValue,
   formatTimestamp,
   getCronStatusColor,
-  readNumber,
-  readRecord,
   readString,
 } from "./cron-lane-format";
 

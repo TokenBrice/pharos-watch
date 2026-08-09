@@ -13,16 +13,16 @@
  * The event type slug is `methodology.bumped:<domain>` per the wire grammar
  * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
  */
-import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "@shared/lib/blacklist-tracker-version";
-import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "@shared/lib/chain-health-version";
-import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "@shared/lib/depeg-dews-version";
-import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "@shared/lib/liquidity-score-version";
-import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_METHODOLOGY_CHANGELOG } from "@shared/lib/pricing-pipeline-version";
-import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/stability-index-version";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
-import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/yield-methodology-version";
+import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/chain-health";
+import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/depeg-dews";
+import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/liquidity-score";
+import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/mint-burn-flow";
+import { PRICING_PIPELINE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/pricing-pipeline";
+import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/stability-index";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/redemption-backstop";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/safety-score";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/yield-methodology";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
@@ -35,7 +35,7 @@ import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
 import {
   buildTapeEventId,

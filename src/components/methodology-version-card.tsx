@@ -2,7 +2,7 @@ import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
   type MethodologyChangelogEntry,
-} from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/base";
 
 export type { MethodologyChangelogEntry };
 

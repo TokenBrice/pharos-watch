@@ -6,11 +6,7 @@
   "oneLiner": "lvUSD is LeverUp's Monad liquidity-layer stablecoin minted against USDC; MON backs the separate LVMON token.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "USDC collateral supporting LeverUp's liquidity-layer stablecoin (lvUSD) for perpetuals and margin trading; MON collateral backs the separate LVMON token.",
   "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",

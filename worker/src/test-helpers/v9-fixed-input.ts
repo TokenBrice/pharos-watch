@@ -6,7 +6,7 @@
  * fact-set prologue byte for byte; every divergence the other suites relied on
  * is an explicit option so no caller has to fork the builder again.
  */
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";

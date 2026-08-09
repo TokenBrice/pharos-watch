@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "RUB",
     "governance": "centralized",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "An undisclosed Russian-ruble reserve basket that issuer materials variously describe as deposits and as deposits plus short-term assets; current constituent weights, institutions, custody, and assurance evidence are unavailable",
   "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",

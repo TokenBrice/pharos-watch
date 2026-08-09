@@ -2,7 +2,7 @@ import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from 
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
 import { toErrorMessage } from "../lib/error-utils";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,

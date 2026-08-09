@@ -31,6 +31,3 @@ export {
 
 /** Reconstructed changelog data. */
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG = pricing.changelog;
-
-/** Resolve Pricing Pipeline methodology version active at a given Unix timestamp (seconds). */
-export const getPricingPipelineVersionAt = pricing.getVersionAt;

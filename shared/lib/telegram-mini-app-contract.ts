@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fnv1a32Hex } from "./fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "./telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "./telegram-presets";
 import { TELEGRAM_RECAP_DEFAULT_DELIVERY_HOUR_LOCAL } from "./telegram-recap-policy";
@@ -519,18 +520,9 @@ export type TelegramMiniAppResponse = z.infer<typeof TelegramMiniAppResponseSche
 export type TelegramMiniAppPortabilityResponse = z.infer<typeof TelegramMiniAppPortabilityResponseSchema>;
 export type TelegramMiniAppBulkWatchlistResponse = z.infer<typeof TelegramMiniAppBulkWatchlistResponseSchema>;
 
-function fnv1a32(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
-
 export function telegramMiniAppStateRevision(state: TelegramMiniAppMutableState): string {
   const serialized = JSON.stringify(state);
-  return `state-v1-${serialized.length}-${fnv1a32(serialized)}`;
+  return `state-v1-${serialized.length}-${fnv1a32Hex(serialized)}`;
 }
 
 export function createTelegramMiniAppSnapshot(state: TelegramMiniAppMutableState): TelegramMiniAppSnapshot {

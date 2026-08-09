@@ -187,7 +187,7 @@ lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} c
   "Regenerate after every merged batch:");
 lines.push("");
 lines.push("```bash");
-lines.push("# 0. node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs  # generated registry is gitignored and goes stale against coin edits");
+lines.push("# 0. npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts  # generated catalog aggregate is gitignored and goes stale against coin edits");
 lines.push("# 1. fresh exact capture + replay");
 lines.push("# 2. node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> --output <this file>");
 lines.push("```");

@@ -5,11 +5,7 @@
   "oneLiner": "JUSD is an issuer-managed dollar stablecoin with crypto collateral and protocol-managed reserve liquidity; redemption backstop is not source-verified by Pharos.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Self-described \"diversified reserve of high-quality assets\" managed by the issuer; the 2023 whitepaper claims supply is minted/burned as the issuer adds or reduces backing assets but names no specific reserve assets, custodians, or amounts and publishes no attestation.",
   "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",

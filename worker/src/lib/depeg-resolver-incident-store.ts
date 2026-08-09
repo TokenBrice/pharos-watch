@@ -1,4 +1,4 @@
-import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
+import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";

@@ -1,6 +1,6 @@
 import {
   DDRR_REVIEWER_VERSION,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DDRR_PUBLIC_WARNING,

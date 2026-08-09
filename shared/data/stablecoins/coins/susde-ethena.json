@@ -6,10 +6,8 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "usde-ethena",

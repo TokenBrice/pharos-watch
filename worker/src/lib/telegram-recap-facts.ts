@@ -4,6 +4,7 @@ import {
   type TelegramRecapFactType,
 } from "@shared/lib/telegram-recap-policy";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isFiniteNumber } from "@shared/lib/type-guards";
 import { parseJsonObject } from "./json-parse";
 
 export type TelegramRecapSeverity = "critical" | "warning" | "notice" | "info";
@@ -44,10 +45,6 @@ function parseSeverity(value: string): TelegramRecapSeverity | null {
   if (value === "critical" || value === "severe") return "critical";
   if (value === "warning" || value === "notice" || value === "info") return value;
   return null;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isString(value: unknown): value is string {

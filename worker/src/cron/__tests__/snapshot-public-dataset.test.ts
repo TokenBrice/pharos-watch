@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import {

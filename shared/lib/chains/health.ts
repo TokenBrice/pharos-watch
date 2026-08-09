@@ -1,7 +1,8 @@
 import type { ChainResilienceTier } from "./index";
 import type { ChainEnvironmentEvidence, ChainHealthFactors, HealthBand } from "../../types/chains";
 import { L2BEAT_CHAIN_RISK_SNAPSHOT_META, getL2BeatChainEnvironmentAssessment } from "./l2beat-risk";
-import { BPS_PER_UNIT, bandFromThresholds } from "../math";
+import { bandFromThresholds } from "../math";
+import { deriveDepegSignal } from "../depeg-signals";
 
 export { CHAIN_HEALTH_METHODOLOGY_VERSION as HEALTH_METHODOLOGY_VERSION } from "./health-version";
 
@@ -11,7 +12,6 @@ export const CONCENTRATION_WEIGHT = 0.20;
 export const PEG_STABILITY_WEIGHT = 0.20;
 export const BACKING_DIVERSITY_WEIGHT = 0.10;
 
-const DEFAULT_UNRATED_SAFETY_SCORE = 40;
 const QUALITY_COVERAGE_THRESHOLD = 0.5;
 const PEG_DEVIATION_SCORE_DIVISOR_BPS = 5;
 const ROBUST_HEALTH_BAND_MIN = 80;
@@ -68,11 +68,12 @@ export function computePegStabilityScore(coins: PegStabilityCoin[]): number {
   for (const coin of coins) {
     if (coin.supplyUsd <= 0) continue;
     let coinScore: number;
-    if (coin.price == null || coin.pegRef <= 0) {
-      coinScore = 50; // neutral for no-price
+    const signal = coin.price == null ? null : deriveDepegSignal(coin.price, coin.pegRef);
+    if (signal == null) {
+      coinScore = 50; // neutral for no-price / unusable peg reference
     } else {
-      const deviationBps = Math.abs(coin.price - coin.pegRef) / coin.pegRef * BPS_PER_UNIT;
-      coinScore = Math.max(0, 100 - deviationBps / PEG_DEVIATION_SCORE_DIVISOR_BPS);
+      // `absRawBps` is the unrounded deviation, matching the previous inline formula.
+      coinScore = Math.max(0, 100 - (signal.absRawBps ?? signal.absBps) / PEG_DEVIATION_SCORE_DIVISOR_BPS);
     }
     weightedSum += coinScore * coin.supplyUsd;
     totalWeight += coin.supplyUsd;
@@ -86,26 +87,33 @@ interface QualityCoin {
   supplyUsd: number;
 }
 
-/** Quality: supply-weighted average of safety scores. Null if <50% coverage by value. */
+/**
+ * Quality: supply-weighted average of safety scores over *rated* supply only.
+ *
+ * Not-rated (NR) supply is excluded from both the numerator and the denominator
+ * rather than imputed a score. Imputing a value would assert a risk judgement
+ * Pharos has not made; the coverage gate below is what carries the "we do not
+ * know enough about this chain" signal — under 50% rated supply the factor is
+ * `null`, which nulls the whole composite.
+ */
 export function computeQualityScore(
   coins: QualityCoin[],
   coverageThreshold = QUALITY_COVERAGE_THRESHOLD,
 ): number | null {
   let totalSupply = 0;
   let ratedSupply = 0;
+  let weightedSum = 0;
   for (const coin of coins) {
     totalSupply += coin.supplyUsd;
-    if (coin.safetyScore != null) ratedSupply += coin.supplyUsd;
+    if (coin.safetyScore == null) continue;
+    ratedSupply += coin.supplyUsd;
+    weightedSum += coin.safetyScore * coin.supplyUsd;
   }
   if (totalSupply === 0) return null;
   if (ratedSupply / totalSupply < coverageThreshold) return null;
+  if (ratedSupply === 0) return null;
 
-  let weightedSum = 0;
-  for (const coin of coins) {
-    const score = coin.safetyScore ?? DEFAULT_UNRATED_SAFETY_SCORE;
-    weightedSum += score * coin.supplyUsd;
-  }
-  return Math.round(weightedSum / totalSupply);
+  return Math.round(weightedSum / ratedSupply);
 }
 
 /** Chain environment evidence: uses L2BEAT matched-chain risk first, then falls back to the resilience tier. */

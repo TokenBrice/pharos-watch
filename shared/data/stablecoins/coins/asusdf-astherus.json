@@ -5,10 +5,8 @@
   "oneLiner": "asUSDF is the staked, NAV-accreting wrapper of Aster's USDF, capturing yield from underlying delta-neutral and funding-fee strategies on Binance/MirrorX.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "pegReferenceId": "usdf-astherus",
@@ -101,9 +99,9 @@
         "url": "https://bsc-dataseed.bnbchain.org"
       }
     ],
-    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) is a direct non-proxy AccessControl + ERC20Pausable token. Verified source and Sourcify ABI expose ADMIN_ROLE pause()/unpause() and route _update through ERC20Pausable, so a privileged pause freezes ordinary transfer, transferFrom, mint, and burn for every holder (global transfer restriction). The ABI has no blacklist/freeze/blocklist mapping and no holder-selective allowlist; the only holder-affecting privilege beyond pause is MINTER_AND_BURN_ROLE burn(address from,uint256 amount), which destroys an arbitrary balance without allowance. Re-checked 2026-07-30 at BSC block 113073068: paused() was false; hasRole(ADMIN_ROLE) was false for both the Astherus timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 and the asUSDFEarn wrapper 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695. DEFAULT_ADMIN_ROLE still administers ADMIN_ROLE, so the six-hour timelock can re-grant pause authority. Global pause freeze is therefore a known direct access surface; holder-specific blacklist is absent. Upstream USDF freeze exposure remains additional via variantOf usdf-astherus.",
-    "reviewer": "Grok T01 safety-v9 unknown-reduction w2",
-    "reviewedAt": "2026-07-30"
+    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) is a direct non-proxy AccessControl + ERC20Pausable token. Verified source and Sourcify ABI expose ADMIN_ROLE pause()/unpause() and route _update through ERC20Pausable, so a privileged pause freezes ordinary transfer, transferFrom, mint, and burn for every holder (global transfer restriction). The ABI has no blacklist/freeze/blocklist mapping and no holder-selective allowlist; the only holder-affecting privilege beyond pause is MINTER_AND_BURN_ROLE burn(address from,uint256 amount), which destroys an arbitrary balance without allowance. Re-verified 2026-08-09 on BSC: paused() returned false, the EIP-1967 implementation slot was zero (no implementation swap since the prior review), and the Astherus governance Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f holds ADMIN_ROLE directly (hasRole(0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775, Safe) = 1; getThreshold() = 4), while the timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 does not hold ADMIN_ROLE (hasRole = 0). This corrects the 2026-07-30 framing: global pause authority is live in a 4-of-8 Safe today, not gated behind a six-hour timelock re-grant. The asUSDFEarn wrapper 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695 holds MINTER_AND_BURN_ROLE, and the timelock retains DEFAULT_ADMIN_ROLE and can rotate roles after its delay. Global pause freeze plus privileged burn-from is a known direct access surface; holder-specific blacklist is absent. Upstream USDF freeze exposure remains additional via variantOf usdf-astherus.",
+    "reviewer": "Kimi ACCESS-FREEZE AF01 (verified FV-A)",
+    "reviewedAt": "2026-08-09"
   },
   "collateralQuality": "exotic",
   "custodyModel": "cex",

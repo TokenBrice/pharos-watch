@@ -44,7 +44,6 @@ function makeRow(overrides: Partial<MergedRow> = {}): MergedRow {
     effectiveTvlUsd: 50_000_000,
     concentrationHhi: 0.3,
     chainTvl: { ethereum: 40_000_000, base: 10_000_000 },
-    effectiveExitScore: 80,
     pharosYieldScore: 80,
     apy30d: 5,
     apyVariance30d: 0.5,
@@ -416,13 +415,16 @@ describe("trading exclusions", () => {
     ).toBeNull();
   });
 
+  // Since `selector-v2.1` the floor reads the published V9 Exit pillar
+  // (`safetyLiquidityScore`) directly; the duplicate `effectiveExitScore` row
+  // field that carried a character-identical copy of it is gone.
   it("effective-exit-floor under 24h: 45 excluded, 55 passes", () => {
     const day = makeInput({ profile: "trading", exitSpeed: "24h" });
     expect(
-      evaluateExclusions(makeRow({ effectiveExitScore: 45 }), day),
+      evaluateExclusions(makeRow({ safetyLiquidityScore: 45 }), day),
     ).toEqual(expect.objectContaining({ reason: "effective-exit-floor" }));
     expect(
-      evaluateExclusions(makeRow({ effectiveExitScore: 55 }), day),
+      evaluateExclusions(makeRow({ safetyLiquidityScore: 55 }), day),
     ).toBeNull();
   });
 });
@@ -486,6 +488,45 @@ describe("input-driven exclusions", () => {
         makeInput({ custodyOk: "regulated-only" }),
       ),
     ).toEqual(expect.objectContaining({ reason: "custody-regulated-only-violation" }));
+  });
+
+  // `selector-v2.1`. Before the row read curated custody, the only two custody
+  // models it could ever carry were `onchain` and `institutional-regulated` —
+  // the entire range of the V8 `backing × governance` inference table. An
+  // exchange-custodied coin was therefore inferred `onchain` and cleared the
+  // "on-chain only" rail; unregulated institutional custody was inferred
+  // `institutional-regulated` and cleared the "regulated only" rail. Both rails
+  // now see the reviewed value, so `cex` fails each of them.
+  it("cex custody fails both custody rails", () => {
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "cex" }),
+        makeInput({ custodyOk: "onchain-only" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "custody-onchain-only-violation" }));
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "cex" }),
+        makeInput({ custodyOk: "regulated-only" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "custody-regulated-only-violation" }));
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "cex" }),
+        makeInput({ custodyOk: "any" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("unregulated and sanctioned institutional custody fail the regulated rail", () => {
+    for (const custodyModel of ["institutional-unregulated", "institutional-sanctioned"] as const) {
+      expect(
+        applyInputDrivenExclusions(
+          makeRow({ custodyModel }),
+          makeInput({ custodyOk: "regulated-only" }),
+        ),
+      ).toEqual(expect.objectContaining({ reason: "custody-regulated-only-violation" }));
+    }
   });
 
   it("yieldNativeOnly + lending deployment excluded", () => {

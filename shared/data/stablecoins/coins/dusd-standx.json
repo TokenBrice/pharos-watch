@@ -5,11 +5,8 @@
   "oneLiner": "DUSD is StandX's delta-neutral synthetic dollar, redeemable 1:1 against USDT/USDC and backed by hedged BTC/ETH/SOL positions on CEXes via Ceffu custody.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
   "pegMechanism": "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",

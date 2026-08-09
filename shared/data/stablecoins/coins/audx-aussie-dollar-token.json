@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Backed 1:1 by Australian-dollar cash and government-backed instruments such as Treasury Bills and Notes, held by TAU Pty Ltd trading as AUDX Token",
   "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",

@@ -107,9 +107,22 @@ const MintBurnHourlyBucketSchema = z.object({
 });
 export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
 
+/**
+ * Per-chain 24h net flow over the same tracked-pair universe as `coins`.
+ * Published so consumers (daily digest) read one chain breakdown instead of
+ * re-deriving one from a different universe. Optional: publications written
+ * before the gauge unification do not carry it.
+ */
+const MintBurnAggregateChainSchema = z.object({
+  chainId: z.string(),
+  netFlow24hUsd: z.number().finite(),
+});
+export type MintBurnAggregateChain = z.infer<typeof MintBurnAggregateChainSchema>;
+
 export const MintBurnFlowsResponseSchema = z.object({
   gauge: MintBurnGaugeSchema,
   coins: z.array(MintBurnCoinFlowSchema),
+  chains: z.array(MintBurnAggregateChainSchema).optional(),
   hourly: z.array(MintBurnHourlyBucketSchema),
   updatedAt: z.number(),
   windowHours: z.number().int().positive().optional(),

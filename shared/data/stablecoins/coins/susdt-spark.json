@@ -5,10 +5,8 @@
   "oneLiner": "spUSDT is Spark's yield-bearing USDT wrapper for Spark Liquidity Layer allocations, accruing protocol-set returns from SLL deployment routes.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -16,11 +16,7 @@
   },
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "WETH, weETH, rswETH, and swETH in overcollateralized Liquity v2-style CDP markets on Swellchain; the configured SWELL branch is currently shut down in live on-chain telemetry",
   "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",

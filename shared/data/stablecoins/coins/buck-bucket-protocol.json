@@ -5,11 +5,7 @@
   "oneLiner": "BUCK is Bucket Protocol's overcollateralized Sui-native dollar stablecoin minted from SUI, BTC, ETH, and LSTs through CDP vaults with PSM stablecoin swaps.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
   "pegMechanism": "Overcollateralized CDPs with per-asset minimum collateral ratios (e.g. 110% for SUI); hard peg via direct BUCK redemption for collateral with dynamic redemption fee; soft peg via PSM enabling 1:1 swaps with USDC/USDT; liquidations via Tank module",

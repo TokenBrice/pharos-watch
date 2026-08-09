@@ -3,7 +3,7 @@ import {
   attachDdrPublicRowHash,
   computeDdrPublicRowHash,
 } from "@shared/lib/depeg-resolver/public-contract";
-import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
+import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   type DdrCanonicalIncident,
   type DdrCanonicalIncidentInput,

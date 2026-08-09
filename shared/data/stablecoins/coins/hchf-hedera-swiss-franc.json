@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CHF",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "infrastructures": [
     "liquity-v1"

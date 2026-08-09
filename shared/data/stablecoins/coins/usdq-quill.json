@@ -5,11 +5,7 @@
   "oneLiner": "USDQ is Quill's Liquity-v2 fork on Scroll, minted from user-set interest CDPs against wETH, wstETH, weETH, and SCR collateral.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
   "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",

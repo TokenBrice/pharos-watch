@@ -16,11 +16,7 @@
   },
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Main Street docs described msUSD mint/redemption against USDC and strategy assets, but third-party verification was terminated and Pharos no longer treats the reserve base as active, verified dollar backing.",
   "pegMechanism": "Formerly redeemed by verified users through capacity-limited USDC withdrawals after a protocol cooldown. Following the June 2026 verification failure and depeg, Pharos treats msUSD as a frozen collapse case rather than an active redeemable dollar.",

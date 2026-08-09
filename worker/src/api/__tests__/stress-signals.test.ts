@@ -459,7 +459,7 @@ describe("handleStressSignals contract tests", () => {
   });
 
   it("rejects unknown stablecoin ID with 404", async () => {
-    const db = mockD1();
+    const db = mockD1([], { requireMatch: true });
     const url = new URL("https://x/api/stress-signals?stablecoin=../etc/passwd");
     const res = await handleStressSignals(db, url);
 
@@ -469,7 +469,7 @@ describe("handleStressSignals contract tests", () => {
   });
 
   it("rejects pre-launch stablecoin ID with 404", async () => {
-    const db = mockD1();
+    const db = mockD1([], { requireMatch: true });
     const url = new URL(`https://x/api/stress-signals?stablecoin=${preLaunchStablecoinId}&days=7`);
     const res = await handleStressSignals(db, url);
 

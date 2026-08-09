@@ -69,15 +69,15 @@ jobs:
           fi
           if [ "$refresh_ok" != "true" ]; then
             echo "::warning::release data refresh failed; building from the committed snapshot"
-            git checkout -- data/digests.json data/depeg-events.json public/datasets public/sheets
-            git clean -fd -- public/datasets public/sheets
+            git checkout -- data/digests.json data/depeg-events.json public/datasets
+            git clean -fd -- public/datasets
             echo "- Data refresh: FAILED (fail-open), built from committed snapshot" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- Data refresh: OK (${refreshed_digest_count} digest entries)" >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Build clean production export
         env:
-          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,stablecoin-prevalidated-registry,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
+          GENERATED_ARTIFACTS_SKIP: stablecoin-catalog,world-map,sitemap-dates,case-study-client-index,docs-metadata,cemetery-dataset,public-datasets,homepage-bootstrap,postman,openapi,report-card-registry-fingerprint,legacy-stablecoin-redirects,stablecoin-client-registry,api-reference,og-editorial,og-learn,og-case-studies
           PUBLIC_DATASETS_API_URL: ""
           PUBLIC_DATASETS_API_KEY: ""
           PUBLIC_DATASETS_REQUIRE_API: ""

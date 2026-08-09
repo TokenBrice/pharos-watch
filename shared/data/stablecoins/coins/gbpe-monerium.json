@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
   "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",

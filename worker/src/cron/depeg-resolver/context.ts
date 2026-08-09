@@ -8,7 +8,7 @@ import {
   type DdrSafetyContextProvenance,
   type DdrV9ExitContext,
 } from "@shared/lib/depeg-resolver";
-import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
+import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";

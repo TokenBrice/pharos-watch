@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import { chunkArray } from "../src/lib/collections";

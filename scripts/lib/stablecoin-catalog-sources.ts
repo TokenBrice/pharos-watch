@@ -10,12 +10,15 @@ import {
   STABLECOIN_SOURCE_DOMAIN_VALUES,
   StablecoinMetaAssetArraySchema,
   StablecoinMetaAssetSchema,
+  StablecoinMetaCatalogInvariantsSchema,
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
 } from "../../shared/lib/stablecoins/schema";
 
 export const STABLECOIN_DATA_DIR = "shared/data/stablecoins";
-export const LEGACY_STABLECOIN_ASSET_FILES = [
+// Retired category shards. They were emptied compatibility shells before deletion;
+// the check below only guards against one ever being recreated.
+export const RETIRED_STABLECOIN_ASSET_FILES = [
   "usd-major.json",
   "usd-minor.json",
   "non-usd.json",
@@ -28,16 +31,11 @@ export const STABLECOIN_DOMAIN_SOURCE_DIR = `${STABLECOIN_DATA_DIR}/domains`;
 export const GENERATED_PER_COIN_ASSET_FILE = `${STABLECOIN_DATA_DIR}/coins.generated.json`;
 export const STABLECOIN_SOURCE_DOMAINS = [...STABLECOIN_SOURCE_DOMAIN_VALUES];
 
-export type StablecoinLegacyAssetFile = typeof LEGACY_STABLECOIN_ASSET_FILES[number];
-export type StablecoinCatalogSourceKind = "legacy" | "per-coin";
-
 export interface StablecoinSourceEntry {
   coin: StablecoinMeta;
   file: string;
   id: string;
-  legacyShard?: StablecoinLegacyAssetFile;
   sidecarFiles?: string[];
-  sourceKind: StablecoinCatalogSourceKind;
 }
 
 export interface StablecoinDomainSidecarEntry {
@@ -53,13 +51,6 @@ export interface StablecoinDuplicateIdIssue {
   id: string;
 }
 
-export interface StablecoinLegacyShardEntriesIssue {
-  count: number;
-  entries: StablecoinSourceEntry[];
-  file: string;
-  legacyShard: StablecoinLegacyAssetFile;
-}
-
 export interface CanonicalOrderIssues {
   duplicateIds: string[];
   missingIds: string[];
@@ -68,6 +59,8 @@ export interface CanonicalOrderIssues {
 
 export interface SyncGeneratedPerCoinAssetOptions {
   check?: boolean;
+  /** Already-validated per-coin entries; loaded from disk when omitted. */
+  entries?: StablecoinSourceEntry[];
   rootDir?: string;
 }
 
@@ -124,18 +117,6 @@ function parseSingleAsset(relativePath: string, rootDir: string): StablecoinMeta
   }
 
   throw new Error(`[stablecoin-assets] Invalid ${relativePath}: ${formatSchemaIssues(result.error.issues)}`);
-}
-
-function parseGeneratedPerCoinAsset(value: unknown): StablecoinMeta[] {
-  const result = StablecoinMetaAssetArraySchema.safeParse(value);
-  if (result.success) {
-    return result.data as StablecoinMeta[];
-  }
-
-  throw new Error(
-    `[stablecoin-assets] Generated ${GENERATED_PER_COIN_ASSET_FILE} is invalid: ` +
-    formatSchemaIssues(result.error.issues),
-  );
 }
 
 function parseDomainSidecar(
@@ -215,10 +196,10 @@ function mergeStablecoinSidecars(
   sidecars: StablecoinDomainSidecarEntry[],
 ): StablecoinSourceEntry {
   if (sidecars.length === 0) {
-    return {
-      ...entry,
-      coin: parseSingleAssetValue(entry.coin, entry.file),
-    };
+    // Sidecar-free entries were already parsed through the full catalog schema
+    // in `loadPerCoinStablecoinEntries`; re-parsing here would be a second pass
+    // over identical data.
+    return entry;
   }
 
   const patch: Record<string, unknown> = {};
@@ -269,17 +250,11 @@ function mergeStablecoinSidecars(
   };
 }
 
-export function loadLegacyStablecoinEntries(rootDir = process.cwd()): StablecoinSourceEntry[] {
-  return LEGACY_STABLECOIN_ASSET_FILES.flatMap((file) => {
-    const relativePath = `${STABLECOIN_DATA_DIR}/${file}`;
-    return parseAssetArray(relativePath, rootDir).map((coin) => ({
-      coin,
-      file: relativePath,
-      id: coin.id,
-      legacyShard: file,
-      sourceKind: "legacy" as const,
-    }));
-  });
+export function findRecreatedRetiredStablecoinAssetFiles(rootDir = process.cwd()): string[] {
+  // Repo-owned catalog helpers only probe checked-in stablecoin metadata paths.
+  return RETIRED_STABLECOIN_ASSET_FILES
+    .map((file) => `${STABLECOIN_DATA_DIR}/${file}`)
+    .filter((relativePath) => existsSync(resolve(rootDir, relativePath)));
 }
 
 export function loadStablecoinDomainSidecarEntries(rootDir = process.cwd()): StablecoinDomainSidecarEntry[] {
@@ -328,14 +303,22 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
     return [];
   }
 
+  const sidecarsById = groupSidecarsById(sidecars);
+
   // Repo-owned catalog helpers only enumerate the checked-in per-coin source directory.
   const baseEntries = readdirSync(absoluteDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((entry) => {
       const relativePath = `${PER_COIN_SOURCE_DIR}/${entry.name}`;
-      const coin = parseSingleAsset(relativePath, rootDir);
       const expectedId = stablecoinIdFromJsonFileName(entry.name);
+      // A coin with sidecars needs the permissive pre-merge parse first, because
+      // the catalog invariants only hold once the sidecar fields are merged back
+      // in. A coin without sidecars is already complete, so it goes straight
+      // through the full catalog schema exactly once.
+      const coin = (sidecarsById.get(expectedId)?.length ?? 0) > 0
+        ? parseSingleAsset(relativePath, rootDir)
+        : parseSingleAssetValue(readJson(relativePath, rootDir), relativePath);
       if (coin.id !== expectedId) {
         throw new Error(
           `[stablecoin-assets] ${relativePath}: coin id "${coin.id}" must match file id "${expectedId}"`,
@@ -346,7 +329,6 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
         coin,
         file: relativePath,
         id: coin.id,
-        sourceKind: "per-coin" as const,
       };
     });
 
@@ -359,7 +341,6 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
     }
   }
 
-  const sidecarsById = groupSidecarsById(sidecars);
   return baseEntries.map((entry) => mergeStablecoinSidecars(entry, sidecarsById.get(entry.id) ?? []));
 }
 
@@ -389,49 +370,10 @@ export function findDuplicateStablecoinIds(entries: StablecoinSourceEntry[]): St
     .map((group) => ({ entries: group, id: group[0]!.id }));
 }
 
-export function findNonEmptyLegacyStablecoinShards(
-  entries: StablecoinSourceEntry[],
-): StablecoinLegacyShardEntriesIssue[] {
-  const byShard = new Map<StablecoinLegacyAssetFile, StablecoinSourceEntry[]>();
-
-  for (const entry of entries) {
-    if (entry.sourceKind !== "legacy" || !entry.legacyShard) {
-      continue;
-    }
-
-    const existing = byShard.get(entry.legacyShard);
-    if (existing) {
-      existing.push(entry);
-    } else {
-      byShard.set(entry.legacyShard, [entry]);
-    }
-  }
-
-  return [...byShard.entries()]
-    .map(([legacyShard, shardEntries]) => ({
-      count: shardEntries.length,
-      entries: shardEntries,
-      file: `${STABLECOIN_DATA_DIR}/${legacyShard}`,
-      legacyShard,
-    }))
-    .sort((a, b) => a.file.localeCompare(b.file));
-}
-
-export function formatLegacyShardEntriesIssue(issue: StablecoinLegacyShardEntriesIssue): string {
-  const sampleIds = issue.entries
-    .slice(0, 8)
-    .map((entry) => entry.id)
-    .join(", ");
-  const extraCount = issue.count - 8;
-  const idDetails = sampleIds
-    ? ` IDs: ${sampleIds}${extraCount > 0 ? `, and ${extraCount} more` : ""}.`
-    : "";
-
+export function formatRecreatedRetiredAssetFileIssue(relativePath: string): string {
   return (
-    `${issue.file}: legacy stablecoin shard contains ${issue.count} ` +
-    `${issue.count === 1 ? "entry" : "entries"}.${idDetails} ` +
-    `Legacy shards are read-only compatibility shells; edit ${PER_COIN_SOURCE_DIR}/<id>.json ` +
-    `and regenerate ${GENERATED_PER_COIN_ASSET_FILE} instead.`
+    `${relativePath}: retired legacy category shard must not exist. ` +
+    `Edit ${PER_COIN_SOURCE_DIR}/<id>.json and regenerate ${GENERATED_PER_COIN_ASSET_FILE} instead.`
   );
 }
 
@@ -452,17 +394,17 @@ export function findCanonicalOrderIssues(
 }
 
 export function buildGeneratedPerCoinAsset(entries: StablecoinSourceEntry[]): StablecoinMeta[] {
-  return entries
-    .filter((entry) => entry.sourceKind === "per-coin")
+  return [...entries]
     .sort((a, b) => a.file.localeCompare(b.file))
     .map((entry) => entry.coin);
 }
 
 export function syncGeneratedPerCoinAsset({
   check = false,
+  entries,
   rootDir = process.cwd(),
 }: SyncGeneratedPerCoinAssetOptions = {}): SyncGeneratedPerCoinAssetResult {
-  const perCoinEntries = loadPerCoinStablecoinEntries(rootDir);
+  const perCoinEntries = entries ?? loadPerCoinStablecoinEntries(rootDir);
   const duplicateIssues = findDuplicateStablecoinIds(perCoinEntries);
   if (duplicateIssues.length > 0) {
     const details = duplicateIssues
@@ -473,7 +415,17 @@ export function syncGeneratedPerCoinAsset({
     throw new Error(`Duplicate per-coin stablecoin IDs detected while generating per-coin asset: ${details}`);
   }
 
-  const expected = formatJson(parseGeneratedPerCoinAsset(buildGeneratedPerCoinAsset(perCoinEntries)));
+  // `perCoinEntries` already came out of the per-record catalog schema, so only
+  // the cross-record invariants still need to run over the projection.
+  const projection = buildGeneratedPerCoinAsset(perCoinEntries);
+  const catalogResult = StablecoinMetaCatalogInvariantsSchema.safeParse(projection);
+  if (!catalogResult.success) {
+    throw new Error(
+      `[stablecoin-assets] Generated ${GENERATED_PER_COIN_ASSET_FILE} is invalid: ` +
+      formatSchemaIssues(catalogResult.error.issues),
+    );
+  }
+  const expected = formatJson(projection);
   const absoluteGeneratedPath = resolve(rootDir, GENERATED_PER_COIN_ASSET_FILE);
   // Repo-owned catalog helpers only check the checked-in generated aggregate path.
   const current = existsSync(absoluteGeneratedPath)

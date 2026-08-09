@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Synthetic gold exposure, not vaulted bullion: each token represents the USD value of one troy ounce of gold at the LBMA PM spot price. Backed by USDC held on-chain and at prime broker Hidden Road, with gold price exposure obtained via CME gold futures. Issued as a Tenbin AssetCo (BVI) SPC debt-note (a UCC Article 12 controllable electronic record)",
   "pegMechanism": "KYC-gated mint and redemption through a Controller that processes off-chain signed orders; a Tenbin backend signer holds the on-chain minter role. Redemption pays the gold-denominated value in a USD stablecoin, not physical metal. On-chain pricing uses a Chainlink tGLD/USD blended price feed",

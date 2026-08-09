@@ -197,14 +197,20 @@ function hasText(value: string | null | undefined): boolean {
   return value != null && value.trim().length > 0;
 }
 
-export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags> = z
+/**
+ * Source coin files omit the four modal members below; the schema supplies them.
+ * `backing` and `governance` have no dominant value and stay required. Parsed
+ * output is always the full flag set, so every generated aggregate and runtime
+ * consumer still sees explicit values.
+ */
+export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags, unknown> = z
   .object({
     backing: z.enum(BACKING_TYPE_VALUES),
-    pegCurrency: z.enum(PEG_CURRENCY_VALUES),
+    pegCurrency: z.enum(PEG_CURRENCY_VALUES).default("USD"),
     governance: z.enum(GOVERNANCE_TYPE_VALUES),
-    yieldBearing: z.boolean(),
-    rwa: z.boolean(),
-    navToken: z.boolean(),
+    yieldBearing: z.boolean().default(false),
+    rwa: z.boolean().default(false),
+    navToken: z.boolean().default(false),
   })
   .strict();
 

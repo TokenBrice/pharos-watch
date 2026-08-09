@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
   "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",

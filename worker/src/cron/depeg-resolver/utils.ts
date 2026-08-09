@@ -6,7 +6,7 @@ import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { curatedMintPostureBand, resolveV9MintPostureBand } from "@shared/lib/safety-score-v9/mint-posture";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";

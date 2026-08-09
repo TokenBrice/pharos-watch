@@ -127,12 +127,12 @@ describe("report-card blacklist authority", () => {
     // dllr-sovryn: re-audited up to a resolved Yes — manager-gated burn plus an
     // owner-settable MassetManager proxy establish direct holder intervention.
     expect(resolved.get("dllr-sovryn")).toBe(true);
-    // fxd-fathom: C09 (XDC block 105873757) verified no direct holder freeze on
-    // the pinned FathomStablecoin logic, so the earlier "possible" upgrade-path
-    // grade moves to the transfer overlay. The reviewed CGO (Comtech Gold)
-    // collateral sleeve keeps a positive blacklistable reserve share, so
-    // FreezeWatch resolves the remaining exposure upstream.
-    expect(resolved.get("fxd-fathom")).toBe("inherited");
+    // fxd-fathom: the 2026-08-09 AF01 re-review (verified FV-A, ProxyAdmin
+    // owner re-read on-chain) supersedes C09's "inherited": the CGO sleeve the
+    // upstream resolution rested on is now 0.001% of collateral and the
+    // remaining reserves are XDC-family with no freezable stablecoin, so the
+    // material exposure is the single-EOA ProxyAdmin upgrade path — "possible".
+    expect(resolved.get("fxd-fathom")).toBe("possible");
     // cjpy-yamato: C10 (Ethereum block 25712439) re-audited up to a resolved Yes
     // — the bound CurrencyOS can call burn(address,uint256) without allowance
     // and its 2-of-4 governance Safe can register Yamato callers.

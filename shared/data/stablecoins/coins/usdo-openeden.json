@@ -5,11 +5,9 @@
   "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, VBILL), RLUSD, and USDC, issued under a Bermuda DABA license.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "USDO is backed by OpenEden reserve assets including tokenized U.S. Treasury bill exposure through TBILL, BlackRock BUIDL, VBILL, and a liquidity buffer of RLUSD and USDC.",
   "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",

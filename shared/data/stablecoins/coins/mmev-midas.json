@@ -5,10 +5,8 @@
   "oneLiner": "mMEV is a Midas NAV-accreting liquid-yield token wrapping MEV Capital's DeFi lending, liquidity, arbitrage, and liquidation strategies; not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",

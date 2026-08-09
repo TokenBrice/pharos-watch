@@ -9,11 +9,8 @@
   "cmcSlug": "pathusd",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",

@@ -9,10 +9,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
   "pegMechanism": "Prepaid-payment instrument under Japan's Payment Services Act: yen deposited in advance is issued 1:1 as JPYC v1 tokens backed by JPYC Inc. yen reserves. Tokens are non-refundable to cash by design and usable only for payments and free balance transfers; new issuance ended 1 June 2025 ahead of migration to the redeemable funds-transfer-token JPYC.",

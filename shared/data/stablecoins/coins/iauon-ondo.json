@@ -5,9 +5,7 @@
   "oneLiner": "IAUon is Ondo's tokenized iShares Gold Trust exposure, a NAV-style ETF tracker for non-U.S. investors rather than a $1 stablecoin.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
     "rwa": true,
     "navToken": true
   },

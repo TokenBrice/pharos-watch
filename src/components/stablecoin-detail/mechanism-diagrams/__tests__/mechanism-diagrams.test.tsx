@@ -187,6 +187,23 @@ describe("mechanismDiagramFor", () => {
     expect(container.textContent).toContain("stress: SVB freeze (March 2023)");
   });
 
+  it("renders ftUSD with borrow/stake semantics and no perp-only text", () => {
+    const { container, desktopSvg } = renderDiagram("synthetic-delta-neutral", "ftUSD", {
+      override: {
+        syntheticStrategy: "borrow-stake",
+        steps: [
+          { label: "Stablecoin deposit", subtitle: "USDC / USDT / USSD collateral" },
+          { label: "Borrow native + stake", subtitle: "WETH / wS into wstETH / stS" },
+          { label: "ftUSD base token", subtitle: "carry to sftUSD + protocol" },
+        ],
+        stressFootnote: "stress: borrow-cost, oracle/liquidation, or withdrawal-buffer shock",
+      },
+    });
+    expectText(container, ["Stablecoin deposit", "Stake native", "Borrow native", "carry", "sftUSD"]);
+    expect(container.textContent).not.toMatch(/short perp|funding-rate|funding inversion/i);
+    expect(desktopSvg.getAttribute("aria-label")).toContain("borrowed and staked");
+  });
+
   describe("wrapper diagram", () => {
     it("renders the parent's archetype + variant box", () => {
       const node = mechanismDiagramFor("synthetic-delta-neutral", "sUSDe", {

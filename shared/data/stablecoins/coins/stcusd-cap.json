@@ -5,10 +5,8 @@
   "oneLiner": "stcUSD is Cap's ERC-4626 staked wrapper of cUSD; share price accrues reserve and operator-lending yield, with cUSD-tier proportional-basket exit risk.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

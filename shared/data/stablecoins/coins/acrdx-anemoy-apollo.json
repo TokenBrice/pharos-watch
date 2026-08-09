@@ -5,7 +5,6 @@
   "oneLiner": "ACRDX is a permissioned, NAV-accreting share token from Anemoy and Centrifuge giving on-chain access to Apollo's diversified private credit strategy.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

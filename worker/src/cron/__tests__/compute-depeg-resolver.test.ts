@@ -3,7 +3,7 @@ import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/dep
 import type { DdrRow } from "@shared/types/depeg-resolver";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
-import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/depeg-resolver-version";
+import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";

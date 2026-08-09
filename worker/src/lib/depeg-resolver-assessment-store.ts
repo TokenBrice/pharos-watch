@@ -1,4 +1,4 @@
-import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import type { DdrAssessmentCheckpoint } from "@shared/types/depeg-resolver";
 import { batchExecute } from "./db";
 

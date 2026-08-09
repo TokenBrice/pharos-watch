@@ -1,6 +1,6 @@
 import type { StablecoinMeta } from "../../types";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
-import { STABLECOIN_META_ASSETS_PREVALIDATED } from "../../data/stablecoins/coins.prevalidated.generated";
+import coinsGeneratedAsset from "../../data/stablecoins/coins.generated.json";
 import {
   isActiveStablecoinMeta,
   isDelistedStablecoinMeta,
@@ -11,7 +11,11 @@ import {
 } from "./status";
 
 const CANONICAL_ORDER = canonicalOrderAsset as readonly string[];
-const PER_COIN_SOURCE_COINS = STABLECOIN_META_ASSETS_PREVALIDATED as readonly StablecoinMeta[];
+// `coins.generated.json` is emitted by the catalog generator, which parses every
+// source file through the full Zod registry schema first. Casting here keeps the
+// validator out of browser-facing chunks; `npm run check:stablecoin-data` is the
+// authoritative validation of the artifact.
+const PER_COIN_SOURCE_COINS = coinsGeneratedAsset as unknown as readonly StablecoinMeta[];
 
 const byId = new Map(PER_COIN_SOURCE_COINS.map((stablecoin) => [stablecoin.id, stablecoin]));
 

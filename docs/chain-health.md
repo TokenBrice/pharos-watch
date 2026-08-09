@@ -4,7 +4,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 - **Current methodology version:** `v1.4`
 - **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
-- **Version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/chain-health-version.ts`)
+- **Version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/methodology-versions/chain-health.ts`)
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
 - **Public changelog route:** `/methodology/chain-health-changelog/`
@@ -38,11 +38,19 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 
 | Factor             | Weight | Source                                                                   | Semantics                                                                                                                                                                                                                                                                |
 | ------------------ | -----: | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average. Unrated coins default to `40`, but the factor returns `null` when rated supply is below 50% of chain supply.                                                                                                                       |
+| `quality`          |    30% | report-card cache                                                        | Supply-weighted Safety Score average over rated supply only. Not-rated supply is excluded from both the numerator and the denominator; the factor returns `null` when rated supply is below 50% of chain supply.                                                        |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Missing prices contribute neutral `50`.                                                                                                                                                                                                   |
+| `pegStability`     |    20% | cached prices + peg rates                                                | Supply-weighted peg proximity. Deviation comes from the shared `deriveDepegSignal(...)` primitive (`shared/lib/depeg-signals.ts`), the same derivation the depeg pipeline uses. Missing or unusable prices contribute neutral `50`.                                       |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
+
+## Not-Rated Policy
+
+Chain Health has exactly one not-rated (NR) mechanism: the 50% rated-supply coverage gate on `quality`.
+
+Supply whose stablecoin has no published Safety Score is excluded from the `quality` average — it contributes to neither the numerator nor the denominator. Pharos does not impute a score for unrated supply, because any imputed number is a risk judgement that has not been made. Below 50% rated supply the factor is `null`, which nulls the whole composite (`healthScore` and `healthBand` are `null`) rather than publishing a number derived from a minority of the chain's supply.
+
+Consequence: on a chain with partial coverage, `quality` describes the rated portion of that chain's supply, and the coverage gate — not a synthetic score — is what withholds publication when coverage is too thin.
 
 ## Bands
 
@@ -66,16 +74,16 @@ L2BEAT audit helpers also expose Interop-backed bridge-route review candidates f
 
 Maintenance commands:
 
-- `npm run check:l2beat-snapshot-coverage` validates that explicit Pharos aliases still point at checked-in snapshot projects.
-- `npm run audit:l2beat-snapshot-coverage -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
+- `npm run audit:coverage -- --domain=l2beat-snapshot -- --check` validates that explicit Pharos aliases still point at checked-in snapshot projects.
+- `npm run audit:coverage -- --domain=l2beat-snapshot -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
 - `npm run candidates:l2beat-bridge-routes` writes an advisory `agents/l2beat-bridge-route-candidates.md` queue for reviewed `bridgeRouteRisk` profiles. Safety Score V9 can consume a profile only after it is verified and curated into per-coin metadata.
 
 ## Update Contract
 
 When Chain Health behavior changes, update these files together:
 
-1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, and the `shared/lib/chain-health.ts` facade if exports change
-2. `shared/lib/methodology-versions/chain-health.ts` and the `shared/lib/chain-health-version.ts` facade if exports change
+1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, `shared/lib/depeg-signals.ts` (shared peg-deviation primitive), and the `shared/lib/chain-health.ts` facade if exports change
+2. `shared/lib/methodology-versions/chain-health.ts` and the `shared/lib/methodology-versions/chain-health.ts` facade if exports change
 3. `docs/chain-health.md`
 4. `shared/data/methodology-changelogs/chain-health/`
 5. `docs/chains-page.md`

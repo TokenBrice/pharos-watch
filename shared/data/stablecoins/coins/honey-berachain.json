@@ -5,11 +5,7 @@
   "oneLiner": "Honey is Berachain's native fully-collateralized dollar token, minted 1:1 against approved stable assets where some routes carry mint/redeem fees.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "1:1 basket of USDC.e, USDt0, BYUSD, and USDe on Berachain",
   "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",

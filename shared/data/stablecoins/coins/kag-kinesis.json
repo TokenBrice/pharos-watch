@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
   "pegMechanism": "KMS Labs' ERC-20 KAG is backed 1:1 by Kinesis-native KAG after compliance onboarding; native KAG is then redeemable for allocated physical silver through Kinesis Cayman. ERC-20 balances do not accrue Kinesis transaction-fee yield.",

@@ -5,10 +5,8 @@
   "oneLiner": "syrupUSDT is Maple's ERC-4626 receipt for USDT lent to institutional borrowers as overcollateralized fixed-rate loans; withdrawals served by a FIFO queue.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "pegReferenceId": "usdt-tether",

@@ -17,7 +17,6 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 | `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for all catalog metadata and lifecycle state                                            |
 | `shared/data/stablecoins/domains/<domain>/*.json`                                                               | Optional strict sidecars for migrated reserves, mint-authority, compliance, and risk-review research             |
 | `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
-| `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries                                                        |
 | `shared/data/stablecoins/canonical-order.json`                                                                  | Canonical tracked order used to build `TRACKED_STABLECOINS`                                                      |
 | `shared/data/stablecoins/listing-decisions.json`                                                                | Compact exhaustive catalog ID to listing-class map                                                              |
 | `shared/data/stablecoins/AGENTS.md`                                                                             | Agent notes pinned to the registry directory                                                                     |
@@ -46,10 +45,9 @@ Useful repo references before editing:
 ## Guardrails
 
 - Use canonical Pharos IDs in `ticker-issuer` format, all lowercase.
-- New tracked entries belong in per-coin JSON assets, not in executable TypeScript arrays or legacy category shards.
+- New tracked entries belong in per-coin JSON assets, not in executable TypeScript arrays.
 - For an existing coin with a research sidecar, update the sidecar and keep every field owned by that domain out of the base file. Do not create sidecars for unrelated scalar metadata.
 - Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin metadata edits; do not edit the generated aggregate by hand.
-- Keep `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` empty compatibility shells. `npm run check:stablecoin-data` guards this.
 - New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs even though legacy numeric keys still exist.
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
@@ -85,7 +83,7 @@ Do not expect pre-launch assets to show up in live worker-driven coverage until 
 - Identify exactly one JSON file under `shared/data/stablecoins/coins/`, normally named for the canonical stablecoin ID.
 - Plan `status: "pre-launch"` in that per-coin file for upcoming assets, regardless of peg. Remove the pre-launch status once the asset activates and has enough live metadata for active public surfaces.
 - Do not edit the registry yet unless you are updating an already-approved existing entry. New active additions should pass Phase 1 and have a Phase 2 research packet first.
-- Do not add entries to `pre-launch.json`, `usd-major.json`, `usd-minor.json`, `non-usd.json`, or `commodity.json`; those legacy shards are read-only compatibility shells and should remain empty.
+- Do not recreate the deleted legacy category shards (`pre-launch.json`, `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`); `npm run check:stablecoin-data` fails if any of those filenames reappears.
 
 ### 0c. Plan canonical order
 
@@ -158,11 +156,11 @@ These skills do not replace review — they are research scaffolding. Always ver
 - target per-coin registry file
 - lifecycle status: active or pre-launch
 - `flags.backing`
-- `flags.pegCurrency`
+- `flags.pegCurrency` (schema default `"USD"` — omit when USD)
 - `flags.governance`
-- `flags.yieldBearing`
-- `flags.rwa`
-- `flags.navToken`
+- `flags.yieldBearing` (schema default `false` — omit when false)
+- `flags.rwa` (schema default `false` — omit when false)
+- `flags.navToken` (schema default `false` — omit when false)
 - `collateral`
 - `pegMechanism`
 - `links`
@@ -243,6 +241,7 @@ Use a nearby coin only as a structural example. The schemas and `npm run check:s
 
 - `flags.backing` should describe the actual reserve base, not the marketing story.
 - `structured-tranche` is reserved for runtime opportunity rows such as Royco Dawn senior/junior vaults. Do not use it for ordinary static stablecoin metadata unless the tracked asset is itself a tranche wrapper.
+- Author only the flags that differ from the schema defaults. `StablecoinFlagsSchema` supplies `pegCurrency: "USD"`, `yieldBearing: false`, `rwa: false`, and `navToken: false` when the key is absent, so the parsed record and every generated aggregate still carry explicit values. `backing` and `governance` have no default and are always required.
 - `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
 - `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Every coin — including pre-launch — requires a `blacklistabilityReview` whose `reviewedStatus` matches the resolved status; `check:stablecoin-data` fails on any entry without one. Explicit `canBeBlacklisted: false` overrides that suppress an inherited status additionally need `upstreamSuppressionRationale`. Admin mint authority belongs in the Mint Authority review, not in FreezeWatch. Do not invent `"inherited"` in metadata; that is computed later.
 - `mintAuthority` is curated metadata that feeds the standalone Mint Authority Score and Safety Score V9 Economic Control facts. It does not create selector exclusions. Do not add it from scanner output alone, and do not use it as a workaround for blacklistability/freezability review. Active variants require an explicit `mintAuthority` review, normally `wrapped-or-variant-inherited` with `inheritedFrom` set to `variantOf`, so inherited mint risk cannot silently become an unresolved V9 gap.
@@ -495,7 +494,7 @@ Every one of these hashes or enumerates the tracked catalog, so a coin addition 
 
 | Artifact | Regenerate with | Notes |
 | --- | --- | --- |
-| `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` | `node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs` | Report cards read this precomputed fingerprint instead of hashing the catalog at runtime |
+| `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` | `npx tsx scripts/maintenance/generate-report-card-registry-fingerprint.ts` | Report cards read this precomputed fingerprint instead of hashing the catalog at runtime |
 | `public/datasets/stablecoin-cemetery.json` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Only the `coins.generated.json` source checksum moves for a live addition; the paired `.csv` moves only when a frozen or dead row changes |
 | `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
 | `src/generated/sitemap-dates.json` | `npx tsx scripts/maintenance/generate-sitemap-dates.ts` | Commit-derived: the coin source must be committed first. See Phase 7. |
@@ -503,7 +502,7 @@ Every one of these hashes or enumerates the tracked catalog, so a coin addition 
 Also regenerate the gitignored projections, which are not committed but which the build, the
 tests, and `check:stablecoin-data` all read:
 `coins.generated.json`, `coins.client.generated.json`, `coins.compliance.generated.json`,
-`coins.telegram-mini-app.generated.json`, `coins.prevalidated.generated.ts`, and
+`coins.telegram-mini-app.generated.json` and
 `legacy-llama-redirects.generated.json` (only moves when the coin has a `llamaId`).
 
 Gotcha worth recognising: if the client projection is stale, a large number of unrelated test
@@ -791,9 +790,9 @@ Commit the sitemap output separately or amend it into the source commit without 
 
 You can also run the individual checks directly when iterating:
 
-- new redemption config -> `npm run check:redemption-backstops`
-- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run check:l2beat-snapshot-coverage`
-- dependency/process context review -> `npm run check:dependency-coverage` and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
+- new redemption config -> `npm run audit:coverage -- --domain=redemption-backstops`
+- L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run audit:coverage -- --domain=l2beat-snapshot -- --check`
+- dependency/process context review -> `npm run audit:dependency-coverage` (report) or `npm run check:dependency-review-gaps` (gate), and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
 - verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
 If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:

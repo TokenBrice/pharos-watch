@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "GBP",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Mento's CDP architecture uses USDm as the collateral asset for GBPm; the public reserve API is a portfolio view rather than an exhaustive borrower-position inventory",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",

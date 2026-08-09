@@ -5,11 +5,8 @@
   "oneLiner": "ctUSD is Citrea's native USD stablecoin issued by MoonPay on M0 Protocol, backed by U.S. Treasuries and cash with on-chain reserve attestations.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

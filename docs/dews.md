@@ -4,11 +4,11 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 ## Methodology Versioning
 
-DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
+DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/methodology-versions/depeg-dews.ts`.
 
 - **Current methodology version:** `v6.1`
 - **Public changelog page:** `/methodology/depeg-changelog/`
-- **Canonical source:** `shared/lib/depeg-dews-version.ts`
+- **Canonical source:** `shared/lib/methodology-versions/depeg-dews.ts`
 
 Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
 

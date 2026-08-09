@@ -9,6 +9,12 @@
  */
 
 import type { DdrFactor, DdrResolution, DdrResolutionTier } from "../../types/depeg-resolver";
+import {
+  isFragileMintPosture,
+  isNoPrivilegedMintChainPosture,
+  isNoPrivilegedMintPosture,
+  isUnboundedMintPosture,
+} from "../safety-score-v9/mint-posture";
 import { isTerminalStablecoinStatus } from "../stablecoin-lifecycle";
 import type {
   DdrActiveEventInput,
@@ -26,20 +32,11 @@ const RISKY_MINT_PATHS = new Set([
   "amo-or-custodian-hybrid",
   "facilitator-bucket-mint",
 ]);
-// See `FRAGILE_POSTURES` in strata.ts: `unbounded-reconciled` refines the
-// unbounded class rather than leaving it, so K1's risky-minter leg treats it
-// exactly like `unbounded-or-compromised`. The finer curated vocabulary is a
-// display and band distinction; it must not silently relax a depeg verdict.
-const RISKY_POSTURES = new Set([
-  "concentrated-admin",
-  "unbounded-reconciled",
-  "unbounded-or-compromised",
-]);
-// The severe rung stays reserved for an *economically unbounded* minter observed
-// surging supply. Both unbounded rungs qualify: reconciliation is after-the-fact
-// evidence, so it does not bound how much can be printed during the event. A
-// merely concentrated admin surges at the elevated rung instead.
-const SEVERE_SURGE_POSTURES = new Set(["unbounded-reconciled", "unbounded-or-compromised"]);
+// Mint-posture set membership lives in `safety-score-v9/mint-posture`:
+// K1's risky-minter leg is exactly the fragile set (so the finer curated
+// `unbounded-reconciled` rung cannot silently relax a depeg verdict), and the
+// severe surge rung is exactly the economically unbounded subset (a merely
+// concentrated admin surges at the elevated rung instead).
 const SEVERE_VERY_HIGH_RISK_RESERVE_PCT = 30;
 const ELEVATED_HIGH_RISK_RESERVE_PCT = 40;
 const HARD_COLLATERAL_RESERVE_PCT = 80;
@@ -240,7 +237,7 @@ function killSignals(
   const depth = depthBucket(active.peakDeviationBps);
   const deep = depth === "severe" || depth === "catastrophic";
   const riskyMinter =
-    (coin.authorityPosture != null && RISKY_POSTURES.has(coin.authorityPosture)) ||
+    isFragileMintPosture(coin.authorityPosture) ||
     (coin.mintPath != null && RISKY_MINT_PATHS.has(coin.mintPath)) ||
     (coin.mintAuthorityScoreBand != null && DDR_K1_RISKY_MAS_BANDS.has(coin.mintAuthorityScoreBand));
   const supplyExpanding =
@@ -251,7 +248,7 @@ function killSignals(
   // K1 — supply weaponization (below-peg only)
   if (below && riskyMinter && (supplyExpanding || recentMintIncident)) {
     const sev =
-      (coin.authorityPosture != null && SEVERE_SURGE_POSTURES.has(coin.authorityPosture) && supply.mintSurge === true) ||
+      (isUnboundedMintPosture(coin.authorityPosture) && supply.mintSurge === true) ||
       (recentMintIncident && deep)
         ? "severe"
         : "elevated";
@@ -405,8 +402,15 @@ function killSignals(
 function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live: DdrLiveContext): RawFactor[] {
   const out: RawFactor[] = [];
 
-  // R1 — non-inflatable supply
-  if (coin.authorityPosture === "none-resolved" || coin.mintPath === "immutable-user-collateralized") {
+  // R1 — non-inflatable supply. Three rungs, by how far the non-inflatability
+  // claim reaches:
+  //   strong — whole-of-chain: nothing on the mint path can print.
+  //   weak   — governance-bounded user collateral: printing is constrained.
+  //   weak   — mint-scoped `none-resolved-mint`: this token has no minter of its
+  //            own, but the wrapped parent still does, so the claim can grow
+  //            indirectly. Real evidence, not a strong structural anchor; only
+  //            strong anchors move the resolution tier.
+  if (isNoPrivilegedMintChainPosture(coin.authorityPosture) || coin.mintPath === "immutable-user-collateralized") {
     out.push({
       code: "R1_noninflatable_supply",
       kind: "anchor",
@@ -419,6 +423,13 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
       kind: "anchor",
       severity: "weak",
       label: "User-collateralized supply (governance-bounded)",
+    });
+  } else if (isNoPrivilegedMintPosture(coin.authorityPosture)) {
+    out.push({
+      code: "R1_noninflatable_supply",
+      kind: "anchor",
+      severity: "weak",
+      label: "No privileged mint authority on this token (wrapped supply can still expand)",
     });
   }
 

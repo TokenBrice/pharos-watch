@@ -5,10 +5,8 @@
   "oneLiner": "eEARN is Ember's yield-bearing USDC vault token on Ethereum, with Royco Dawn tranche markets wrapping its vault shares.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "canBeBlacklisted": true,

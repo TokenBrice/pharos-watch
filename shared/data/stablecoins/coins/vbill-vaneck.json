@@ -5,7 +5,6 @@
   "oneLiner": "VBILL is VanEck's tokenized T-bill share advised by Van Eck Absolute Return Advisers and administered via Securitize/State Street.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

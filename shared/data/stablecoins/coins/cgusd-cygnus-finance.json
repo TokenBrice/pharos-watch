@@ -5,11 +5,9 @@
   "oneLiner": "cgUSD is Cygnus Finance's rebasing USD stablecoin on Base, backed by short-term U.S. Treasuries and stablecoins, with daily rebases reflecting NAV.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
   "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",

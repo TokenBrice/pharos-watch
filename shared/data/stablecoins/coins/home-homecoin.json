@@ -7,11 +7,9 @@
   "oneLiner": "HOME is HomeCoin's dollar stablecoin backed by U.S. home-loan liens and property receivables, with foreclosure as the ultimate recovery path.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "canBeBlacklisted": "possible",
   "blacklistabilityReview": {

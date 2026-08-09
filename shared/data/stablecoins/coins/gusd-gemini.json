@@ -5,11 +5,7 @@
   "oneLiner": "Gemini Dollar (GUSD) is Gemini Trust's NYDFS-chartered dollar stablecoin, redeemable 1:1 against cash at State Street/Western Alliance plus short U.S. T-bills.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
   "pegMechanism": "Direct 1:1 redemption through Gemini",

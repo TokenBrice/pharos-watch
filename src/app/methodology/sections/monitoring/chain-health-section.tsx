@@ -86,8 +86,8 @@ export function ChainHealthMethodologySection() {
               <TableCell className="whitespace-normal px-4 py-2 font-medium">Quality</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">30%</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">
-                Supply-weighted average of Pharos Safety Scores for stablecoins on the chain. Unrated coins default to
-                40. Returns null if rated supply &lt; 50% of total.
+                Supply-weighted average of Pharos Safety Scores for stablecoins on the chain. Not-rated supply is
+                excluded and the average renormalizes over rated supply. Returns null if rated supply &lt; 50% of total.
               </TableCell>
             </TableRow>
             <TableRow className="align-top">
@@ -316,7 +316,7 @@ export function ChainHealthMethodologySection() {
         </pre>
         <p className="text-foreground font-medium mt-4">PulseChain (Tier 3)</p>
         <pre className="overflow-x-auto rounded-lg bg-muted/50 px-4 py-3 text-xs pharos-numeric">
-          {`quality      = 72  (DAI + unrated coins defaulting to 40)
+          {`quality      = 72  (rated supply only — not-rated coins excluded)
     environment  = 20  (tier 3 — unproven, centralized)
     concentration= 67  (DAI ~39%, rest ~12% each)
     pegStability = 98  (coins on peg)

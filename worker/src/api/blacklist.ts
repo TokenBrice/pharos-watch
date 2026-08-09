@@ -12,8 +12,8 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   getBlacklistTrackerMethodologyVersionAt,
-} from "@shared/lib/blacklist-tracker-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/blacklist-tracker";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getSupportedBlacklistChainIds, getSupportedBlacklistChainNames } from "../lib/blacklist-coverage-manifest";
 import {

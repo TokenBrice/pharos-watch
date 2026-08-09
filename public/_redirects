@@ -111,3 +111,11 @@
 /stablecoin/pusd-pleasing /coverage/ 301
 /stablecoin/phpc-coins-ph/* /coverage/ 301
 /stablecoin/phpc-coins-ph /coverage/ 301
+
+# Google Sheets IMPORTDATA aliases. The dataset mirrors under
+# /datasets/<topic>/latest.csv are the single published copy; /sheets/<topic>.csv
+# was a byte-duplicate and is now a permanent alias of it.
+/sheets/top-stablecoins.csv /datasets/top-stablecoins/latest.csv 301
+/sheets/depeg-history.csv /datasets/depeg-history/latest.csv 301
+/sheets/scores-latest.csv /datasets/scores-latest/latest.csv 301
+/sheets/peg-mechanism-distribution.csv /datasets/peg-mechanism-distribution/latest.csv 301

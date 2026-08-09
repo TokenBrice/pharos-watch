@@ -1,3 +1,4 @@
+import { unixNowSec as nowSec } from "@shared/lib/time-constants";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { throwIfAborted } from "./abort";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
@@ -190,10 +191,6 @@ export class ScheduledCheckpointOwnershipLostError extends Error {
     );
     this.name = "ScheduledCheckpointOwnershipLostError";
   }
-}
-
-function nowSec(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 function parseChildDispositions(value: string): Record<string, ScheduledChildDisposition> {

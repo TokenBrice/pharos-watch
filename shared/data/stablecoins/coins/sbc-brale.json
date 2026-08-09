@@ -5,11 +5,7 @@
   "oneLiner": "SBC is Brale's centralized USD stablecoin backed 1:1 by cash and short-duration U.S. Treasuries in segregated accounts at regulated financial institutions.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
   "pegMechanism": "Direct 1:1 redemption through Brale (registered MSB and licensed U.S. money transmitter)",

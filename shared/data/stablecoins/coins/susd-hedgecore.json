@@ -5,11 +5,8 @@
   "oneLiner": "HedgeCore sUSD is a soul-bound BSC yield wrapper minted from USDC and routed through Venus lending; early redemption is operator-controlled, not a backstop.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "USDC supplied to the Venus Protocol USDC lending market on BNB Chain via HedgeCore's StrategyRouter and Venus USD vault; the on-chain vUSDC lending position is the only backing (no fiat reserve or attestation)",
   "pegMechanism": "Users deposit USDC to mint soul-bound sUSD 1:1; Venus lending interest accrues in vUSDC and is distributed to holders by operator-triggered rewardMint() calls (93% to sUSD holders, 7% protocol fee); liquidity is provided only through a one-way hUSDC->sUSD ERC-20 wrapper (no reverse conversion), and redemption is operator-controlled rather than a free liquid backstop",

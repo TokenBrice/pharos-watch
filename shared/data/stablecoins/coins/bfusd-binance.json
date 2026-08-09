@@ -5,11 +5,8 @@
   "oneLiner": "BFUSD is a Binance account product redeemable inside Binance against USD stablecoins, backed by an opaque collateral pool and hedging portfolio.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
-    "rwa": false,
-    "navToken": false
+    "yieldBearing": true
   },
   "collateral": "Delta-hedged crypto positions (spot crypto such as ETH offset by equal short futures to collect funding fees), staked crypto (e.g. ETH staking via Binance Earn), and a USDT-seeded BFUSD Reserve Fund (~1.1M USDT, ~105% collateral value ratio at Nov 2024 launch); all assets are legally and beneficially owned by Binance, with no holder claim",
   "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",

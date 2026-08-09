@@ -9,3 +9,8 @@ export const WEEK_SECONDS = 7 * DAY_SECONDS;
 export const THIRTY_DAYS_SECONDS = 30 * DAY_SECONDS;
 
 export const DAY_MS = DAY_SECONDS * MS_PER_SECOND;
+
+/** Current Unix time in whole seconds — the epoch unit every Pharos store and API uses. */
+export function unixNowSec(): number {
+  return Math.floor(Date.now() / MS_PER_SECOND);
+}

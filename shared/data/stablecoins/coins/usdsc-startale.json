@@ -5,11 +5,8 @@
   "oneLiner": "USDSC is Startale's 1:1 wrapper around M0's $M on Soneium, backed by short-term U.S. Treasury bills with collateral attested on-chain by M0 Validators.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

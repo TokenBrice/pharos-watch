@@ -63,5 +63,4 @@ export {
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "./constants";
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG = safetyScore.changelog;
-export const getSafetyScoreVersionAt = safetyScore.getVersionAt;
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS = safetyScore.versionLabels;

@@ -118,6 +118,13 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       safetyProvenance: rowSafetyProvenance,
       safetyResilienceScore: safety?.pillars.backing.score ?? null,
       safetyDecentralizationScore: safety?.pillars.control.score ?? null,
+      // The published V9 Exit pillar is the single exit read. It used to be
+      // duplicated onto a second row field, `effectiveExitScore`, which had
+      // once preferred the redemption snapshot's legacy max(DEX, redemption)
+      // blend and fallen back to the pillar; once that blend was retired the
+      // two fields were character-identical. `selector-v2.1` drops the
+      // duplicate — the exclusion floor, the `strong-exit` why-key, and the
+      // exclusion prose all read the pillar directly.
       safetyLiquidityScore: safety?.pillars.exit.score ?? null,
       custodyModel: resolveCustodyModel(meta),
       bluechipGrade: bluechip?.grade ?? null,
@@ -126,13 +133,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
       concentrationHhi: dex?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},
-      // The published V9 Exit pillar is the exit read. It used to prefer the
-      // redemption snapshot's legacy `effectiveExitScore` — a
-      // max(DEX, redemption) blend over a supply denominator — and fall back to
-      // the pillar, treating two answers to two different questions as
-      // interchangeable. The pillar is the one that measures same-notional exit
-      // capacity, so it is the only one consulted.
-      effectiveExitScore: safety?.pillars.exit.score ?? null,
 
       pharosYieldScore: yieldEntry?.pharosYieldScore ?? null,
       apy30d: yieldEntry?.apy30d ?? null,
@@ -222,7 +222,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,
         chainTvl: sortRecord(row.chainTvl),
-        effectiveExitScore: row.effectiveExitScore,
         bluechipGrade: row.bluechipGrade,
         supplyUsd: row.supplyUsd,
         isRecentListing: row.isRecentListing,
@@ -277,7 +276,21 @@ function resolveBlacklistability(
   }
 }
 
+/**
+ * Curated `custodyModel` first, V8 inference only as a fallback.
+ *
+ * `inferResilienceDefaults` reads a 9-cell `backing × governance` table whose
+ * range is just two of the six `CUSTODY_MODEL_VALUES` — `onchain` and
+ * `institutional-regulated`. Reading it as the row's custody model made the
+ * Selector structurally unable to observe `cex`, `institutional-top`,
+ * `institutional-unregulated`, or `institutional-sanctioned`: exchange-custodied
+ * coins were inferred `onchain` and passed the "on-chain only" custody rail,
+ * while unregulated institutional custody was inferred `institutional-regulated`
+ * and passed the "regulated only" rail. Curated review is the authority; the
+ * inference stays as the fallback for coins with no reviewed custody model.
+ */
 function resolveCustodyModel(meta: StablecoinClientMeta): MergedRow["custodyModel"] {
+  if (meta.custodyModel != null) return meta.custodyModel;
   const defaults = inferResilienceDefaults(meta.flags.backing, meta.flags.governance);
   return defaults.custodyModel ?? null;
 }

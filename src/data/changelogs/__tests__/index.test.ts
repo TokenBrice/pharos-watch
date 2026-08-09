@@ -27,6 +27,9 @@ describe("changelogs barrel", () => {
       }
       expect(entry.stats.totalCommits).toBeGreaterThan(0);
       expect(entry.commits.length).toBeGreaterThan(0);
+      // Authored commit lists are capped at the rendered 20; git is the archive.
+      expect(entry.commits.length).toBeLessThanOrEqual(20);
+      expect(entry.stats.totalCommits).toBeGreaterThanOrEqual(entry.commits.length);
     }
   });
 

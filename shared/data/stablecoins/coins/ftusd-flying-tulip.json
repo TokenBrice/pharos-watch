@@ -2,7 +2,7 @@
   "id": "ftusd-flying-tulip",
   "name": "Flying Tulip USD",
   "symbol": "ftUSD",
-  "oneLiner": "ftUSD is Flying Tulip's stablecoin minted 1:1 against USDC or USDT, with deposits supplied to Aave for low-risk carry; a delta-neutral leg is planned.",
+  "oneLiner": "ftUSD is Flying Tulip's non-yielding base dollar; Ethereum and Sonic lend stablecoins and run borrow-and-stake carry, while sftUSD receives yield.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,21 +11,21 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and USDT supplied to Aave for low-risk interest; this stablecoin lending is the only on-chain strategy currently live, with the delta-neutral leg (borrow a native asset such as Sonic S against the deposits and stake it for carry) documented as a staged roadmap item; distributed strategy yield routes to sftUSD stakers while unstaked ftUSD proceeds accrue to the protocol treasury",
-  "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contracts; deposits are currently supplied to Aave for low-risk carry, with a delta-neutral leg (borrow a native asset against the collateral and stake it) documented as a staged roadmap item targeting net market exposure near zero; ftUSD circuit-breaker contracts enforce position caps, rebalancing bands, and withdrawal rate limits",
+  "collateral": "Cross-chain reserves currently contain USDC, USDT, and a small Sonic USSD position supplied through Aave-compatible lending markets. The live Ethereum strategy borrows WETH and stakes into wstETH exposure; Sonic borrows wS and stakes into stS exposure. Strategy yield is distributed to sftUSD stakers while yield attributable to unstaked ftUSD accrues to the protocol. Borrow costs, staking yield, venue oracle and liquidation mechanics, withdrawal liquidity, and smart-contract execution remain backing risks.",
+  "pegMechanism": "The peg and redemption rail mints and redeems ftUSD on-chain against supported stablecoins. Separately, the reserve strategy lends those deposits and runs borrow-and-stake carry on Ethereum and Sonic, using position caps, health factors, rebalancing controls, and withdrawal circuit breakers to manage leverage and liquidity.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "defillama",
   "geckoId": "flying-tulip-usd",
   "llamaId": "421",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
-    "summary": "Flying Tulip documents ftUSD as an on-chain dollar designed around delta-neutral strategies and explicitly states that ftUSD and sftUSD use no oracles or centralized systems. Strategy venues and risk controls can change, but the token itself is not a borrower-owned collateral market with an oracle-triggered liquidation branch.",
+    "summary": "The ftUSD mint/redeem token path is documented as oracleless, but the live reserve strategies borrow against collateral in Aave-compatible markets and therefore depend on venue price oracles and liquidation mechanics. The token is not itself a borrower-owned collateral market with an oracle-triggered liquidation branch.",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
       "reviewedAt": "2026-07-14",
       "reviewer": "Codex Safety Score V9 oracle review",
-      "rationale": "Flying Tulip describes ftUSD as a delta-neutral stablecoin wrapper with on-chain strategy deposits, optional staking, and a staged CDP-style roadmap item rather than a live borrower-owned collateral market. The official product documentation explicitly states that ftUSD and sftUSD use no oracles, so there is no current token-level liquidation branch to inventory.",
+      "rationale": "Flying Tulip describes an oracleless ftUSD mint/redeem token path rather than a borrower-owned collateral market. Its live lending strategies are a separate reserve layer with venue oracle and liquidation exposure, so this disposition is limited to the token-level branch model.",
       "sources": [
         {
           "label": "Flying Tulip ftUSD product documentation",
@@ -48,7 +48,7 @@
     "url": "https://flyingtulip.com/ftusd/dashboard/",
     "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Flying Tulip dashboard (reads reserve state client-side via on-chain contract calls; no server reserves API exists in any of the 36 page bundles and archive captures are pre-hydration shells, so the dashboard is statically unverifiable by design)"
+    "provider": "Flying Tulip real-time dashboard/API (issuer-operated cross-chain collateral, supply, and strategy telemetry; no independent third-party attestation)"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
@@ -125,6 +125,22 @@
     {
       "label": "Docs",
       "url": "https://docs.flyingtulip.com/"
+    },
+    {
+      "label": "ftUSD dashboard",
+      "url": "https://flyingtulip.com/ftusd/dashboard/"
+    },
+    {
+      "label": "ftUSD product docs",
+      "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+    },
+    {
+      "label": "Contract addresses",
+      "url": "https://docs.flyingtulip.com/contract-addresses/"
+    },
+    {
+      "label": "Capital allocation and perpetual PUT",
+      "url": "https://docs.flyingtulip.com/capital-allocation/"
     }
   ],
   "contracts": [
@@ -160,7 +176,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "ftUSD on both Ethereum and Sonic is controlled by the same 3/5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the minter contract (0x56c5892b). The minter contract is a UUPS proxy (impl 0xf47bb65f on Sonic) with no separate ProxyAdmin. Identical ownership confirmed on both chains.",
+    "summary": "ftUSD on both Ethereum and Sonic is controlled by the same self-controlled, no-timelock 3-of-5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the upgradeable minter contract (0x56c5892b). Ethereum has a Safe Allowance Module with a bounded native-asset allowance; it has no reviewed ftUSD minter call path. Sonic reports no enabled module.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -171,12 +187,16 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "ftUSD token owner / masterMinter",
-      "observedAt": "2026-06-11",
-      "observedBlock": 73503133,
+      "observedAt": "2026-08-09",
+      "observedBlock": 25720088,
       "sources": [
         {
           "label": "Flying Tulip contract addresses",
           "url": "https://docs.flyingtulip.com/contract-addresses/"
+        },
+        {
+          "label": "Flying Tulip ftUSD Ethereum minter",
+          "url": "https://etherscan.io/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
         },
         {
           "label": "Flying Tulip ftUSD Sonic minter",
@@ -208,10 +228,75 @@
             "url": "https://etherscan.io/address/0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
           }
         ],
-        "evidence": "minter() returned this address at Ethereum block 25166592; Flying Tulip docs describe 1:1 mint/redeem against USDC/USDT through on-chain contracts. At block 25295183: eth_getCode returned 76 bytes (small contract, not an EOA); owner() on the minter contract returned 0x1118e1c057211306a40a4d7006c040dbfe1370cb (the 3/5 Safe that is also masterMinter), confirming the Safe controls the minter contract."
+        "evidence": "At Ethereum block 25720088, token owner() and masterMinter() returned Safe 0x1118e1c0, token minter() returned this contract, and minter owner() returned the same Safe. The minter's EIP-1967 implementation slot resolved to 0x986841b77f3aa934d315d48121842e3c622e5440 and its admin slot was zero, consistent with a UUPS-controlled path."
       },
       {
         "chain": "ethereum",
+        "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "label": "ftUSD token owner / masterMinter",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xB7B543337539219A5a1326aCB71dBa8Bba408bc8",
+            "0x3c42749709BF354B3aE0Db29Fd2dd88089b21B4E",
+            "0xf9E5aF16243041cE3141284D225CAfC0fC749a10",
+            "0x09E2B49280f1879172b2C3345d08896921707881",
+            "0xD0CA88388d1732594D611535314e9B6745396f5A"
+          ],
+          "enabledModules": [
+            "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
+          ],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25720088,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "ftUSD owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+          },
+          {
+            "label": "Safe Allowance Module documentation",
+            "url": "https://docs.safe.global/home/ai-agent-quickstarts/agent-with-spending-limit"
+          },
+          {
+            "label": "Ethereum module-enabling transaction",
+            "url": "https://etherscan.io/tx/0x8d38eadf5e68cfe1e4395c5f5360500dc17925b8c773e538dc95c0274ac51a22"
+          }
+        ],
+        "evidence": "At Ethereum block 25720088, owner() and masterMinter() returned this Safe, which also owned the minter contract. The Safe API returned threshold 3 of 5, zero guard, and Allowance Module 0xCFbF...3134. The module reported signer 0xf9E5...9a10 as its sole delegate, with a 2 ETH weekly allowance, 0.1 ETH spent in the current period, and zero allowances for ftUSD, USDC, USDT, and WETH. Its transfer allowance does not establish a call path that can authorize or upgrade the ftUSD minter without the Safe threshold."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "label": "ftUSD minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Flying Tulip contract addresses",
+            "url": "https://docs.flyingtulip.com/contract-addresses/"
+          },
+          {
+            "label": "Sonic ftUSD minter",
+            "url": "https://sonicscan.org/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
+          }
+        ],
+        "evidence": "At Sonic block 77315268, token owner() and masterMinter() returned Safe 0x1118e1c0, token minter() returned this contract, and minter owner() returned the same Safe. The minter's EIP-1967 implementation slot resolved to 0x986841b77f3aa934d315d48121842e3c622e5440 and its admin slot was zero, matching the Ethereum UUPS-controlled path."
+      },
+      {
+        "chain": "sonic",
         "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
         "label": "ftUSD token owner / masterMinter",
         "role": "minter-admin",
@@ -233,16 +318,16 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25295183,
+          "observedBlock": 77315268,
           "source": "safe-api"
         },
         "sources": [
           {
-            "label": "ftUSD owner Safe API",
-            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+            "label": "ftUSD Sonic owner Safe API",
+            "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
           }
         ],
-        "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard. The minter contract (0x56c5892b...) is also owned by this Safe (confirmed at block 25295183)."
+        "evidence": "At Sonic block 77315268, token owner(), masterMinter(), and minter owner() all returned this Safe. The Sonic Safe API separately returned the same five owners, threshold 3, zero guard, no enabled modules, and the same fallback handler as Ethereum. No timelock was established."
       }
     ],
     "reconciliation": "unknown",
@@ -262,18 +347,18 @@
           "url": "https://docs.flyingtulip.com/contract-addresses/"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code; owner() returns 3/5 Safe 0x1118e1c0. At Sonic block 73503133: owner() = 0x1118e1c0, masterMinter() = 0x1118e1c0, minter() = 0x56c5892b (UUPS proxy, impl 0xf47bb65f, no ProxyAdmin slot). The same 3/5 Safe controls the entire mint surface on both chains. ftUSD's entire mint surface (token owner, masterMinter, and the upgradeable minter contract) is controlled by a single 3-of-5 Safe with no timelock on both Ethereum and Sonic, so the mint is self-controlled with no independent bound and does not earn a raiseable escape. Backing is shown only on Flying Tulip's own real-time dashboard with no independent third-party attestation, so reconciliation is unknown, and no financial regulator supervises the issuer, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16"
+      "evidence": "At Ethereum block 25720088 and Sonic block 77315268, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and minter owner() returned the same Safe. Both minter proxies resolved to EIP-1967 implementation 0x986841b77f3aa934d315d48121842e3c622e5440 with a zero admin slot. The same 3-of-5 Safe therefore controls the entire mint and upgrade surface on both chains with no reviewed timelock or independent cap. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer.",
+      "reviewer": "Codex ftUSD correction review",
+      "reviewedAt": "2026-08-09"
     }
   },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "single-entity",
+  "governanceQuality": "multisig",
   "reserves": [
     {
       "name": "USDC strategy wrappers (Ethereum and Sonic)",
-      "pct": 67.865,
+      "pct": 68.7296,
       "risk": "medium",
       "coinId": "usdc-circle",
       "assetClass": "protocol-position",
@@ -288,7 +373,7 @@
     },
     {
       "name": "USDT strategy wrapper (Ethereum)",
-      "pct": 31.9591,
+      "pct": 31.1012,
       "risk": "medium",
       "coinId": "usdt-tether",
       "assetClass": "protocol-position",
@@ -303,7 +388,7 @@
     },
     {
       "name": "USSD strategy wrapper (Sonic)",
-      "pct": 0.1759,
+      "pct": 0.1692,
       "risk": "medium",
       "coinId": "ussd-sonic-labs",
       "assetClass": "protocol-position",
@@ -319,8 +404,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex dependency review",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Codex ftUSD correction review",
     "confidence": "verified",
     "sources": [
       {
@@ -332,12 +417,28 @@
         "url": "https://docs.flyingtulip.com/product-suite/ft-usd/#how-ftusd-works"
       }
     ],
-    "rationale": "The official dashboard API reported $2,910,351.8662 of USDC wrapper TVL across Ethereum and Sonic, $1,370,549.6573 of Ethereum USDT wrapper TVL, and $7,542.7045 of Sonic USSD wrapper TVL. Normalizing the complete $4,288,444.22799 collateral set produces the authored 67.8650%, 31.9591%, and 0.1759% shares. Each API address exactly matches the corresponding tracked stablecoin deployment.",
+    "rationale": "The issuer dashboard API snapshot lastUpdated 2026-08-09T21:22:45Z reported $3,221,228.5173 of USDC collateral across Ethereum and Sonic, $1,457,656.8216 of Ethereum USDT collateral, and $7,926.5709 of Sonic USSD collateral. Normalizing the complete $4,686,811.9099 collateral set produces the authored 68.7296%, 31.1012%, and 0.1692% shares. Each API address matches the reviewed deployment.",
     "compositionBasis": "Cross-chain collateral wrapper TVL in the official ftUSD dashboard API, aggregated by collateral token",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-08-09",
     "scope": "full-composition",
     "knownUnknownExposure": "The dashboard API identifies every current Ethereum and Sonic collateral wrapper and its underlying token address.",
     "knownUnknownExposurePct": 0
+  },
+  "liveReservesConfig": {
+    "adapter": "flying-tulip-ftusd",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "ftusd-flying-tulip",
+    "display": {
+      "url": "https://flyingtulip.com/ftusd/dashboard/",
+      "label": "Flying Tulip ftUSD dashboard (issuer-operated)"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+      }
+    }
   },
   "launchDate": "2026-02-23"
 }

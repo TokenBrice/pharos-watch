@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
   "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",

@@ -5,10 +5,8 @@
   "oneLiner": "sDAI is MakerDAO/Sky's savings-rate wrapper of DAI; deposit DAI, accrue the Dai Savings Rate through a rising exchange rate, with DAI-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

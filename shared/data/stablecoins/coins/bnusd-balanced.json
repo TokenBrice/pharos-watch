@@ -5,11 +5,7 @@
   "oneLiner": "bnUSD is Balanced's cross-chain decentralized dollar backed by crypto loan collateral and USDC or USDT held in its Stability Fund.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "SODAX cross-chain money-market borrower collateral backing all facilitator-minted bnUSD; measured 2026-07-30 at Sonic block 76778944: ~39.8% sodahyTB (HiYield Treasury Bill Vault), ~23.7% sodaUSDC, ~7.2% sodaBTC, ~6.9% sodaBNB, ~3.7% each sodaAVAX and sodaSUI, ~3.4% sodasftUSD, ~2.3% sodaETH, ~2.0% sodaUSDT, and a long tail of other SODAX-wrapped crypto collateral. Stability Fund approved-stablecoin 1:1 swaps mint through the same facilitator, so those stablecoin deposits are part of the measured borrower-collateral base",
   "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",
@@ -1215,7 +1211,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "bnUSD is minted on ICON (canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb, ~97% of DefiLlama-tracked supply) and every tracked off-ICON deployment is a burn-mint representation settled through Balanced's own xCall messaging: on Base, Avalanche, Arbitrum, BSC, and Optimism only the chain's xCall contract can invoke handleCallMessage to mint, per the verified BalancedDollar source; on Injective the CW20 bnUSD minter is the cw_xcall contract. Token UUPS ownership and xCallManager ownership sit with the Balanced ops EOA 0x9920c455 (EVM) / inj106a2du (Injective). All six routes re-verified on-chain 2026-08-08 (implementation, owner, xCall, iconBnUSD, and totalSupply reads; Injective via LCD minter/admin/token_info queries). DefiLlama's ICON/Archway/Havah raw chain labels (~98.9% of tracked supply) have no Pharos chain mapping and remain an accepted unmatched-label pool routed to the policy maintainer. Caveat: a v2 facilitator-minted Balanced Dollar token exists on the Sonic hub (0x94dc79ce9c515ba4ae4d195da8e6ab86c69bfc38, supply 1,401,091 bnUSD on 2026-08-08) per SODAX docs and the coin's own reserveReview; it is not in contracts[], has no DefiLlama-tracked supply, and deliberately has no route row here — flagged for a coordinated follow-up rather than invented.",
+    "summary": "bnUSD is minted on ICON (canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb, ~97% of DefiLlama-tracked supply) and every tracked off-ICON deployment is a burn-mint representation settled through Balanced's own xCall messaging: on Base, Avalanche, Arbitrum, BSC, and Optimism only the chain's xCall contract can invoke handleCallMessage to mint, per the verified BalancedDollar source; on Injective the CW20 bnUSD minter is the cw_xcall contract. Token UUPS ownership and xCallManager ownership sit with the Balanced ops EOA 0x9920c455 (EVM) / inj106a2du (Injective). All six routes re-verified on-chain 2026-08-08 (implementation, owner, xCall, iconBnUSD, and totalSupply reads; Injective via LCD minter/admin/token_info queries). DefiLlama's ICON/Archway/Havah raw chain labels (~98.9% of tracked supply) have no Pharos chain mapping and remain an accepted unmatched-label pool routed to the policy maintainer. Caveat: a v2 facilitator-minted Balanced Dollar token exists on the Sonic hub (0x94dc79ce9c515ba4ae4d195da8e6ab86c69bfc38, supply 1,401,091 bnUSD on 2026-08-08) per SODAX docs and the coin's own reserveReview; it is not in contracts[], has no DefiLlama-tracked supply, and deliberately has no route row here — flagged for a coordinated follow-up rather than invented. The two remaining unsupported-chain deployments are now address-authenticated for a future wiring: on Archway the canonical bnUSD is CW20 archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7 (contract label \"Balanced Dollar\", code_id 502; token_info name Balanced Dollar / symbol bnUSD / 18 decimals / total_supply 17,555.38; minter query returns the cw_xcall contract archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6 with cap null, and the wasm admin is archway17j96tj3xr02cua5fvf3t95nxhshzgc2x2yfsfy0ktmvw6t2jnfms6j8kup), and on Havah it is IRC2 cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc (symbol() bnUSD, getXCall() cx00104193d0a593c4b57fda544d1b7c88b8ed4fae, getXCallManager() cx49afee1a85186bacb921c5a8ee1df329e006e340) \u2014 both re-read live on 2026-08-09 and both listed as bnUSD(old) for archway-1 / 0x100.icon in Balanced\u0027s own xTokens registry, i.e. the same ICON-hub xCall burn-mint spoke pattern as the reviewed routes. They remain outside contracts[] and outside routes[] until those chains are Pharos-supported, because a route row without a matching catalog deployment reads as an unmatched route.",
     "reviewedAt": "2026-08-08",
     "reviewer": "wave3-longtail-L03 (research agent)",
     "confidence": "verified",
@@ -1246,6 +1242,18 @@
       {
         "label": "Injective LCD",
         "url": "https://lcd.injective.network"
+      },
+      {
+        "label": "Balanced xTokens registry (pinned) \u2014 Archway/Havah bnUSD addresses",
+        "url": "https://github.com/balancednetwork/balanced-network-interface/blob/3f4fecb9e7d0b30a0bf2c6c8744128e3220dd811/packages/xwagmi/src/constants/xTokens.ts"
+      },
+      {
+        "label": "Archway LCD \u2014 bnUSD CW20 contract_info/token_info/minter",
+        "url": "https://api.mainnet.archway.io/cosmwasm/wasm/v1/contract/archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7"
+      },
+      {
+        "label": "Havah RPC \u2014 bnUSD IRC2 symbol/getXCall reads",
+        "url": "https://ctz.havah.io/api/v3"
       },
       {
         "label": "DefiLlama stablecoins API — BNUSD (id 204) per-chain circulating",

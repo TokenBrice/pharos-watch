@@ -142,8 +142,11 @@ export const CBRT_TLREF_SERIES_CODE = "TP.BISTTLREF.ORAN";
 export const BENCHMARK_FETCH_TIMEOUT_MS = 15_000;
 export const BENCHMARK_FETCH_MAX_RETRIES = 2;
 export const PYS_SCALING_FACTOR = 8;
-/** Default safety score for unrated coins (navTokens, coins with insufficient data). */
-export const DEFAULT_SAFETY_SCORE = 40;
+/**
+ * Default safety score for unrated coins (navTokens, coins with insufficient data).
+ * Single definition lives with the PYS formula it feeds.
+ */
+export { PYS_DEFAULT_SAFETY_SCORE as DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 /** Minimum report-card score for a coin to qualify for automatic yield discovery (C- = 50). */
 export const MIN_SAFETY_SCORE_FOR_YIELD = 50;
 /** Minimum APY (%) for auto-discovered lending pools to be eligible. */

@@ -5,10 +5,8 @@
   "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma and Monad.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {
@@ -25,12 +23,24 @@
       {
         "label": "syzUSD Monad deployment",
         "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+      },
+      {
+        "label": "Pinned official StakedYuzuUSD source (commit 49676c4)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/StakedYuzuUSD.sol"
+      },
+      {
+        "label": "Plasma public RPC used for fixed-block reads",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Monad public RPC used for fixed-block reads",
+        "url": "https://rpc.monad.xyz"
       }
     ],
     "sourceFreeRationale": "The wrapper implementations establish no direct holder freeze, while upstream yzUSD and reserve-asset access exposure remains inherited.",
-    "evidence": "The verified Plasma vault's pause is scoped to mint and redemption, and neither the Plasma nor Monad implementation exposes a holder blacklist or freeze selector. syzUSD therefore has no direct freeze path in the reviewed deployments and inherits the parent's upstream access exposure.",
-    "reviewer": "GPT SOL-NR-A wave6",
-    "reviewedAt": "2026-07-22"
+    "evidence": "Re-verified 2026-08-09 on both deployments. At Plasma block 29369955 the syzUSD proxy 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 resolves EIP-1967 implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and admin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, paused() is false, and freeze-family probes such as isBlacklisted(address) revert; that ProxyAdmin's owner() is Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with getThreshold() 4 and no timelock. At Monad block 94595184 the proxy 0x484be0540ad49f351eaa04eeb35df0f937d4e73f resolves implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and admin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331, whose owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() 43200 seconds. The issuer's pinned source documents pause() as scoped to mint and redeem, adds no transfer hook, and blocks rescueTokens on the vault asset while supply is nonzero, so no live holder-selective freeze exists locally; the live proxy admins mean one could be added by upgrade. Backing is the single 100% reserve slice yzusd-yuzu, whose own verdict is possible over issuer-freezable reserve assets, so the named upstream exposure is retained and the verdict stays inherited rather than being collapsed into a token-local possible.",
+    "reviewer": "GPT SOL-NR-A wave6; re-verified by Kimi ACCESS-FREEZE AF03 and Claude FV-B access/freeze verification",
+    "reviewedAt": "2026-08-09"
   },
   "variantOf": "yzusd-yuzu",
   "variantKind": "strategy-vault",

@@ -5,11 +5,8 @@
   "oneLiner": "RUSD is RIB / Royal Coins' centralized dollar stablecoin backed by issuer-managed cash and short-term liquid reserve assets with KYC-gated mint and redemption.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Issuer-managed fiat reserve assets and short-term liquid instruments disclosed by Royal/R Coins materials",
   "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",

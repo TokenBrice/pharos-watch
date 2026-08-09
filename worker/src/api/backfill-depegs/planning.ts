@@ -1,4 +1,5 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { getCirculatingRaw } from "@shared/lib/supply";
@@ -14,7 +15,6 @@ import {
   PEG_TO_FX,
   SECONDARY_PEG_TO_FX,
   OTHER_COIN_FX,
-  COMMODITY_PEGS,
   fetchHistoricalFxRates,
   fetchHistoricalSecondaryFxRates,
   buildCommodityMedianSeriesFromCg,
@@ -176,7 +176,7 @@ export async function buildBackfillPlan(opts: {
       historicalFxStartDate = earliestDate;
     }
 
-    if (COMMODITY_PEGS.has(peg)) {
+    if (isCommodityPeg(peg)) {
       neededCommodityPegs.add(peg as CommodityPeg);
     } else {
       const secondaryFx = SECONDARY_PEG_TO_FX[peg];

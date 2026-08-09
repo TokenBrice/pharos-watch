@@ -7,11 +7,7 @@
   "oneLiner": "iUSD is Indigo Protocol's decentralized synthetic dollar on Cardano, minted against overcollateralized CDP vaults of Cardano-native assets.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "Overcollateralized Indigo Protocol CDP vaults using ADA or DAO-whitelisted Cardano native tokens, plus stablecoins deposited through governed iUSD peg-stability modules",
   "pegMechanism": "Overcollateralized multi-collateral CDP synthetic dollar with per-iAsset Stability Pools, collateral redemptions, DAO-set interest and collateral parameters, and governed peg-stability modules that can mint or redeem iUSD against approved stablecoins",

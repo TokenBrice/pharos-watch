@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KGS",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",

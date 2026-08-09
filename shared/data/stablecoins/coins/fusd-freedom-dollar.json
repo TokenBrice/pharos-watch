@@ -5,11 +5,7 @@
   "oneLiner": "FUSD is the Zano privacy-chain dollar token with a self-published ZANO reserve dashboard; redemption is limited and it is not bridged to tracked Pharos chains.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "FUSD is minted against ZANO reserves deposited into the Freedom Dollar DAO contract, with initial overcollateralization above 1000%. Reserves are staked on Zano and publicly visible on-chain.",
   "pegMechanism": "Algorithmic Zano-backed mint/redemption design: users mint FUSD by depositing ZANO into the Freedom Dollar DAO, with very high initial overcollateralization and on-chain reserve visibility.",

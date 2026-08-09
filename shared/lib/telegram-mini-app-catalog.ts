@@ -1,4 +1,5 @@
 import searchableCoinsAsset from "../data/stablecoins/coins.telegram-mini-app.generated.json";
+import { fnv1a32Hex } from "./fnv1a";
 import { TELEGRAM_PRESET_DEFINITIONS } from "./telegram-presets";
 
 export interface TelegramMiniAppCatalogCoin {
@@ -18,15 +19,6 @@ export interface TelegramMiniAppCatalogPreset {
 export interface TelegramMiniAppCatalog {
   recommendedPresets: readonly TelegramMiniAppCatalogPreset[];
   searchableCoins: readonly TelegramMiniAppCatalogCoin[];
-}
-
-function fnv1a32(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 const recommendedPresets = TELEGRAM_PRESET_DEFINITIONS.map((preset) =>
@@ -52,4 +44,4 @@ export const TELEGRAM_MINI_APP_CATALOG: TelegramMiniAppCatalog = Object.freeze({
 });
 
 /** Content-derived version shared by the Worker and the static client build. */
-export const TELEGRAM_MINI_APP_CATALOG_VERSION = `catalog-v1-${fnv1a32(JSON.stringify(TELEGRAM_MINI_APP_CATALOG))}`;
+export const TELEGRAM_MINI_APP_CATALOG_VERSION = `catalog-v1-${fnv1a32Hex(JSON.stringify(TELEGRAM_MINI_APP_CATALOG))}`;

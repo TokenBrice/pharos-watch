@@ -8,10 +8,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Mexican-peso fiat cash deposited in a Mexican bank account, backing Ripio wMXN one-to-one against the Mexican peso per Ripio's wFIAT token certification",
   "pegMechanism": "Issuer-controlled wFIAT token: the Ripio affiliate mints WMXN against local Mexican-peso reserves and burns supply as needed, holding 1 WMXN = 1 MXN through on/off-ramp convertibility on Ripio and other VASP platforms plus DEX arbitrage; holders have no contractual on-chain redemption right",

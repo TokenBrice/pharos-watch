@@ -5,11 +5,7 @@
   "oneLiner": "USDQ is Quantoz Payments' MiCA-authorized dollar e-money token, backed by cash, deposits, and EU and U.S. government bonds.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",

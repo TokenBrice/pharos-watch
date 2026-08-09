@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
 import {
   getRedemptionBackstopVersionAt,
-} from "@shared/lib/redemption-backstop-version";
+} from "@shared/lib/methodology-versions/redemption-backstop";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";

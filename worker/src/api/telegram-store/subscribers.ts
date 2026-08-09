@@ -1,3 +1,4 @@
+import { unixNowSec as unixNow } from "@shared/lib/time-constants";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { executeAtomicBatch } from "../../lib/db";
 import type { SubscriberRow } from "../telegram-webhook-shared";
@@ -6,9 +7,8 @@ import {
   type TelegramOperationBatchOptions,
 } from "./_internals";
 
-export function unixNow(): number {
-  return Math.floor(Date.now() / 1000);
-}
+/** Re-exported under the worker-local name every Telegram store module already imports. */
+export { unixNow };
 
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";

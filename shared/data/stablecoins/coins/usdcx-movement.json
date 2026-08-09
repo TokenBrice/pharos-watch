@@ -5,11 +5,7 @@
   "oneLiner": "USDCx is Movement's native USDC-backed dollar issued 1:1 via Circle's xReserve smart contract, with CCTP/Gateway transfers to and from USDC on other chains.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
   "pegMechanism": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve smart contract, which issues USDCx 1:1; redemption burns USDCx and releases the underlying USDC back to the user. xReserve also enables 1:1 transfers between USDCx and USDC across supported chains via Circle CCTP and Gateway without third-party bridges.",
@@ -76,11 +72,19 @@
       {
         "label": "Movement USDCx package module at reviewed ledger version",
         "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+      },
+      {
+        "label": "Movement USDCx package resources (owner, upgrade policy) re-read 2026-08-09",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+      },
+      {
+        "label": "Movement USDCx admin multisig resources (4-of-6) re-read 2026-08-09",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources"
       }
     ],
-    "evidence": "Circle documents xReserve as locking USDC to back partner-chain tokens one-to-one, and Movement identifies USDCx as its xReserve-backed stablecoin. This creates inherited Circle-USDC reserve and redemption exposure. The reviewed Movement USDCx module establishes attester-authorized minting and an admin upgrade path, but does not establish a Circle or Movement holder-level blacklist, freeze, seizure, pause, or transfer-restriction path for USDCx balances. The inherited status therefore does not claim direct holder-balance control.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-08-09 at Movement ledger_version 192151559 (block_height 83362507); the 2026-07-14 inherited verdict stands with a stronger token-local record. The deployed usdcx module exposes no holder-selective freeze, blacklist, denylist, or seizure entry point, and its paused asserts gate only mint and burn_internal, so the module never sits on holder-to-holder fungible-asset transfers; a TransferRef is generated and stored in usdcx::Management but no function uses it. The local surface is not immutable: the circle_remote package (module usdcx) carries upgrade_policy 1 (compatible) at upgrade_number 0 and its ObjectCore owner is Movement-native multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, re-read as 0x1::multisig_account::MultisigAccount with 4 required signatures over 6 owners and no timelock, so holder controls could be added by upgrade. The dominant, named exposure is still upstream: USDCx is issued 1:1 against USDC locked in Circle's xReserve, the sole reserve slice is usdc-circle at 100%, and usdc-circle's own review is reviewedStatus true (Circle holder blacklist). The honest end-state therefore remains inherited over usdc-circle rather than a token-local possible verdict, which would drop the named upstream failure domain without adding any live control.",
+    "reviewer": "Kimi ACCESS-FREEZE AF03; verified and adjusted by Claude FV-B access/freeze verification",
+    "reviewedAt": "2026-08-09"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

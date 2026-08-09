@@ -36,11 +36,6 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     fixture: "circle-usdc.html",
   },
   {
-    name: "Buck transparency",
-    url: "https://buck.io/transparency",
-    fixture: "buck-io.html",
-  },
-  {
     // The canonical `www.firstdigitallabs.com/transparency` host answers automation
     // with a Cloudflare 403 challenge, so refreshes target the issuer's own Webflow
     // origin — the same-provider fallback the live-reserves config already uses.
@@ -63,12 +58,12 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     url: "https://www.sgforge.com/product/coinvertible/",
     fixture: "sgforge-coinvertible-eur.html",
   },
-  {
-    name: "USDH (usdh-native-markets) reserves",
-    url: "https://usdh.com/reserves",
-    fixture: "usdh-native-markets.html",
-  },
 ];
+
+// Sources deliberately not refreshed:
+// - `buck-io.html`: fixture deleted with the adapter in "Remove orphaned live reserve adapters".
+// - `usdh-native-markets.html`: usdh.com sunset on 2026-07-17 and /reserves now 301s to a sunset
+//   notice, so a refresh would overwrite the archived capture the retired adapter's tests parse.
 
 const USER_AGENT = "Mozilla/5.0 (compatible; pharos-fixture-refresh/1.0)";
 

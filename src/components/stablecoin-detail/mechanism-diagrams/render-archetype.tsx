@@ -21,6 +21,7 @@ export function renderArchetype(
       <SyntheticDeltaNeutralDiagram
         symbol={symbol}
         steps={steps}
+        strategy={override?.syntheticStrategy}
         {...(stressFootnote !== undefined ? { stressFootnote } : {})}
       />
     );

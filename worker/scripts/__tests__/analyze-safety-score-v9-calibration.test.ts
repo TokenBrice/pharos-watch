@@ -1,4 +1,4 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../../src/lib/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9-candidate";

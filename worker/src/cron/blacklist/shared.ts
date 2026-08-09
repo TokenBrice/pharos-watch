@@ -6,7 +6,7 @@ import type {
 } from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
 import type { ChainConfig } from "../../lib/blacklist-contracts";
 
 export function shouldSuppressAsMirrorZero(

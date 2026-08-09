@@ -5,7 +5,6 @@
   "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

@@ -153,6 +153,7 @@ export type StablecoinClientMeta = Pick<
   | "yieldConfig"
   | "reserves"
   | "collateralQuality"
+  | "custodyModel"
 > & {
   /** Compact decision-ledger projection used by client aggregate filters. */
   listingClass: ListingClass;
@@ -201,4 +202,5 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "yieldConfig",
   "reserves",
   "collateralQuality",
+  "custodyModel",
 ] as const satisfies ReadonlyArray<keyof StablecoinClientMeta>;

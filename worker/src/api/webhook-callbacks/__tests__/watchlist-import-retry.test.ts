@@ -74,7 +74,7 @@ describe("watchlist import confirmation retry", () => {
           preference_generation: 6,
         }],
       },
-    ]);
+    ], { requireMatch: true });
     const requests: Array<Record<string, unknown>> = [];
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);

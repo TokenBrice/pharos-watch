@@ -5,11 +5,7 @@
   "oneLiner": "HYUSD is issued by isolated SOL-LST, cbBTC, and USDC pools whose liabilities reconcile to the live token supply.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "Independent SOL-LST, cbBTC, and USDC pools measured from the deployed Hylo program, with each pool's xASSET tranche absorbing collateral-price exposure before HYUSD",
   "pegMechanism": "Each isolated pool maintains the Hylo invariant in which its xASSET tranche absorbs collateral-price changes while HYUSD remains the stable claim; pool liabilities reconcile to HYUSD supply.",

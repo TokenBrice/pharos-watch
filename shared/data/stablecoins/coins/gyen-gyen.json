@@ -19,10 +19,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
   "pegMechanism": "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",

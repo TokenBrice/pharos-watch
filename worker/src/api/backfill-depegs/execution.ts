@@ -1,4 +1,5 @@
 import { getPegReference } from "@shared/lib/peg-rates";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import type { D1Database } from "@cloudflare/workers-types";
 import { RUB_FALLBACK } from "../../lib/constants";
 import {
@@ -6,7 +7,6 @@ import {
   PEG_TO_FX,
   SECONDARY_PEG_TO_FX,
   OTHER_COIN_FX,
-  COMMODITY_PEGS,
   buildFxLookup,
 } from "../../lib/backfill-fx";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
@@ -101,7 +101,7 @@ export async function executeBackfillForCoin(opts: {
 
   if (peg === "USD") {
     getPegRef = () => 1;
-  } else if (COMMODITY_PEGS.has(peg)) {
+  } else if (isCommodityPeg(peg)) {
     // Commodity peg (gold/silver): use historical spot price series
     const series = commoditySeries[peg] ?? [];
     const fallback = currentPegRef > 0 ? currentPegRef : 1;

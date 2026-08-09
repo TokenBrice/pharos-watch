@@ -5,6 +5,7 @@ import {
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -14,8 +15,8 @@ import {
   PSI_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION_LABEL,
   getPsiMethodologyVersionAt,
-} from "@shared/lib/stability-index-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/stability-index";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
@@ -253,6 +254,10 @@ export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Re
       asOf: computedAt,
     }),
   }, {
-    headers: addFreshnessHeaders({ "Cache-Control": CACHE_PROFILES.standard }, computedAt, DAY_SECONDS),
+    headers: addFreshnessHeaders(
+      { "Cache-Control": CACHE_PROFILES.standard },
+      computedAt,
+      API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
+    ),
   });
 };

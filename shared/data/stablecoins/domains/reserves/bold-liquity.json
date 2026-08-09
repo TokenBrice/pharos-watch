@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "wstETH (Lido)",
-      "pct": 63.9,
+      "pct": 58.7,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido DAO and Ethereum validators",
@@ -12,7 +12,7 @@
     },
     {
       "name": "WETH",
-      "pct": 19.6,
+      "pct": 23.1,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum protocol and WETH9 contract",
@@ -21,7 +21,7 @@
     },
     {
       "name": "rETH (Rocket Pool)",
-      "pct": 16.5,
+      "pct": 18.2,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Rocket Pool DAO and node operators",
@@ -30,8 +30,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
     "confidence": "verified",
     "sources": [
       {
@@ -56,8 +56,8 @@
       }
     ],
     "rationale": "Liquity documents BOLD as overcollateralized by WETH, wstETH, and rETH only, with direct redemptions. The configured on-chain adapter's current branch snapshot resolves all three live collateral rows and supplies the point-in-time weights below; those weights remain dynamic and are not treated as permanent composition.",
-    "compositionBasis": "Liquity V2 permitted collateral, official stats, and the configured Ethereum branch snapshot; percentages rounded to one decimal",
-    "compositionAsOf": "2026-07-14",
+    "compositionBasis": "Liquity V2 permitted collateral, official stats, and the configured Ethereum branch snapshot; percentages rounded to one decimal. Refreshed 2026-08-09 from api.liquity.org/v2/ethereum.json (branch coll_value wstETH 42,370,714.84 / WETH 16,640,459.96 / rETH 13,175,569.92 of total_coll_value 72,186,744.73), corroborated by the same branch ActivePool balances the configured adapter reads.",
+    "compositionAsOf": "2026-08-09",
     "scope": "full-composition",
     "knownUnknownExposure": "No material collateral row is unclassified in this snapshot; branch weights are point-in-time and may change with protocol activity.",
     "knownUnknownExposurePct": 0

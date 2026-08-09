@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
   "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",

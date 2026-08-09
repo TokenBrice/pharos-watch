@@ -5,11 +5,8 @@
   "oneLiner": "USDS is Sky's upgraded successor to DAI, minted 1:1 from DAI or against the same Maker vault system of RWA, USDC, and crypto collateral.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Upgraded 1:1 successor to DAI on the same vault system, with current exposure organized across Sky Agent/Star buckets: Stablecoins/PSM around 38%, Spark around 28%, Grove RWA around 23%, Obex around 5%, Core crypto around 4%, Staking around 1%, and Legacy RWA around 1%; percentages drift with vault and Agent allocation changes.",
   "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",

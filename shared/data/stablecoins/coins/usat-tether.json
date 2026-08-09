@@ -5,11 +5,7 @@
   "oneLiner": "USAT is Tether's GENIUS-era U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash and reverse repurchase agreements collateralized by U.S. Treasuries, held for USAT reserves under Anchorage Digital Bank issuance.",
   "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",

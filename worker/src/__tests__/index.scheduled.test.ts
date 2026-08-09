@@ -402,7 +402,7 @@ describe("worker.scheduled", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
       throw new Error("scheduled smoke attempted a live fetch");
     });
-    const db = mockD1();
+    const db = mockD1([], { requireMatch: true });
     const env = {
       DB: db,
       CORS_ORIGIN: "https://pharos.watch",
@@ -1023,7 +1023,7 @@ describe("worker.scheduled", () => {
 
   it("runs only critical mint/burn on the dedicated :04/:24/:44 trigger", async () => {
     const { ctx, waits } = makeCtx();
-    const db = mockD1();
+    const db = mockD1([], { requireMatch: true });
     const env = {
       DB: db,
       CORS_ORIGIN: "https://pharos.watch",

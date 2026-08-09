@@ -5,11 +5,7 @@
   "oneLiner": "DUSD is a legacy Fluid Finance USD token on Arbitrum whose current reserve composition, custody, and redemption operability are not publicly verified.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Current reserve assets and custodians are not established by a recent issuer disclosure. Fluid Finance's December 2021 launch FAQ described 1:1 USD cash backing in safeguarded partner-bank accounts, but that future-oriented design is not a current reserve report.",
   "pegMechanism": "Fluid Finance's 2021 launch design described issuer-operated mint and redemption against USD plus an oracle-published offchain balance ceiling. Current redemption availability, oracle operation, reserve balances, and banking counterparties are evidence-blocked.",

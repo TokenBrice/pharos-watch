@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const CHAIN_HEALTH_V1: readonly MethodologyChangelogEntry[] = [
   {
+    version: "1.5",
+    title: "Not-rated supply excluded from chain quality",
+    date: "2026-08-10",
+    effectiveAt: 1786320000,
+    summary:
+      "Chain Health quality now averages Safety Scores over rated supply only instead of imputing a 40 for not-rated supply, and the peg-stability factor derives deviation from the shared depeg-signal primitive rather than a local formula copy.",
+    impact: [
+      "Not-rated supply is excluded from both the numerator and the denominator of the `quality` factor; the 50% rated-supply coverage gate is now the only not-rated mechanism, and below it the whole composite stays `null`",
+      "Removed the implicit `40` (the D-grade threshold) previously assigned to unrated coins — an imputed risk judgement Pharos had not made",
+      "5 of 105 published chains move: manta 71 → 88, stacks 82 → 90, megaeth 50 → 54, metis 87 → 89, cardano 71 → 72 quality; health scores move by at most 5 points and no chain changes health band",
+      "Peg stability now calls the shared `deriveDepegSignal(...)` used by the depeg pipeline; the derivation is numerically identical (unrounded bps) and no chain's `pegStability` changed",
+      "Non-positive or non-finite prices now score neutral `50` like a missing price instead of scoring `0` or poisoning the chain average with `NaN`",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "1.4",
     title: "L2BEAT chain-risk environment scoring",
     date: "2026-06-12",

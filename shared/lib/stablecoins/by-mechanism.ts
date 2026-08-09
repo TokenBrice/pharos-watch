@@ -1,6 +1,7 @@
 import type { MechanismArchetype, StablecoinMeta, StablecoinStatus } from "../../types";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/core";
 import { resolveMechanismArchetype } from "../classification/resolve-mechanism-archetype";
+import { isCommodityPeg } from "../filter-tags";
 import {
   ACTIVE_STABLECOINS,
   ACTIVE_META_BY_ID,
@@ -10,8 +11,6 @@ import {
   QUARANTINED_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "./registry";
-
-const COMMODITY_PEG_CURRENCIES = new Set(["GOLD", "SILVER"] as const);
 
 type LifecycleStatus = StablecoinStatus;
 
@@ -23,7 +22,7 @@ interface LifecycleFilterOptions {
 }
 
 function isNotCommodity(coin: StablecoinMeta): boolean {
-  return !COMMODITY_PEG_CURRENCIES.has(coin.flags.pegCurrency as "GOLD" | "SILVER");
+  return !isCommodityPeg(coin.flags.pegCurrency);
 }
 
 /**

@@ -5,11 +5,8 @@
   "oneLiner": "pmUSD is RAAC's f(x)-fork dollar fToken minted against TokenBlender/ION.au gold collateral; xPM absorbs volatility and sUSDS-based PSM defends the peg.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "TokenBlender (TB) base token held on-chain in RAAC's RWf(x) Treasury; TB is minted against I-ON Digital's ION.au token held in the TokenBlender contract, and ION.au represents a gold-backed digital security and in-situ gold claim",
   "pegMechanism": "RWf(x), an f(x) protocol fork, mints pmUSD as the fToken against TB / ION.au-linked collateral; xPM absorbs collateral-price volatility while pmUSD is configured for stable fNAV; minting and system operations are manager-only through authorized silo multisigs. PSM (Peg Stability Module) is the primary peg defense tool: arbitrageurs swap pmUSD → sUSDS at $1 face value when pmUSD trades at a discount on-chain; swaps are one-directional and pause if the sUSDS reserve falls below 20% of PSM assets",

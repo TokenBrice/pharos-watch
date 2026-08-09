@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import initiaIusdAsset from "../../../data/stablecoins/coins/iusd-initia.json";
+import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses, type BlacklistStatus } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
@@ -88,7 +89,8 @@ describe("stablecoin variants", () => {
   });
 
   it("models Initia iUSD as a pure serial wrapper of AUSD", () => {
-    const iusd = initiaIusdAsset as StablecoinMeta;
+    // Parse the source file so schema-defaulted flags (navToken) are present.
+    const iusd = StablecoinMetaSourceAssetSchema.parse(initiaIusdAsset);
 
     expect(iusd).toMatchObject({
       variantOf: "ausd-agora",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/depeg-resolver-version";
+import { DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrResponseSchema,
   type DdrPredictionErratum,

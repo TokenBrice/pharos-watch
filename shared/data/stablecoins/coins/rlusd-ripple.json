@@ -5,11 +5,7 @@
   "oneLiner": "RLUSD is Ripple's NYDFS-chartered dollar stablecoin redeemable 1:1 and backed by USD deposits, cash equivalents, and short-term U.S. Treasuries.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
   "pegMechanism": "Direct 1:1 redemption through Ripple",

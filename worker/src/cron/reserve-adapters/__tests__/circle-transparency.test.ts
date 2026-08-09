@@ -25,20 +25,20 @@ describe("adaptCircleTransparency", () => {
     expect(total).toBeCloseTo(100, 10);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
+      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
     });
   });
 
   it("uses Circle's reserve disclosure date when the page exposes one", () => {
-    const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Jun 25, 2026</div>`, "usdc");
+    const result = adaptCircleTransparency(`${CIRCLE_HTML}<div>As of Aug 06, 2026</div>`, "usdc");
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
-      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
+      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
+        sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
@@ -63,10 +63,10 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
-      { name: "<3-Month U.S. Treasuries", pct: 70.7, risk: "very-low" },
-      { name: "Other Bank Deposits", pct: 14.9, risk: "very-low" },
-      { name: "Deposits at Systemically Important Institutions", pct: 13.5, risk: "very-low" },
-      { name: "Overnight Reverse Treasury Repo", pct: 0.9, risk: "very-low" },
+      { name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
+      { name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
+      { name: "Deposits at Systemically Important Institutions", pct: 12.5, risk: "very-low" },
+      { name: "Overnight Reverse Treasury Repo", pct: 1.7, risk: "very-low" },
     ]);
   });
 
@@ -74,8 +74,8 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
-      { name: "Other Bank Deposits", pct: 98.7, risk: "very-low" },
-      { name: "Deposits at Systemically Important Institutions", pct: 1.3, risk: "very-low" },
+      { name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
+      { name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
     ]);
   });
 
@@ -92,11 +92,11 @@ describe("adaptCircleTransparency", () => {
     const farPadding = "<div>" + "x".repeat(3_000) + "</div>";
     const stalePageBanner = `<div>As of Jan 01, 2020</div>${farPadding}`;
     const futureBanner = `${farPadding}<div>As of Feb 02, 2022</div>`;
-    const adversarial = `${stalePageBanner}${CIRCLE_HTML}<div>As of Jun 25, 2026</div>${futureBanner}`;
+    const adversarial = `${stalePageBanner}${CIRCLE_HTML}<div>As of Aug 06, 2026</div>${futureBanner}`;
     const result = adaptCircleTransparency(adversarial, "usdc");
 
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 5, 25) / 1000,
+      sourceTimestamp: Date.UTC(2026, 7, 6) / 1000,
     });
   });
 

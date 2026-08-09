@@ -27,7 +27,7 @@ import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/yield-methodology-version";
+} from "@shared/lib/methodology-versions/yield-methodology";
 
 interface YieldHistoryRow {
   recorded_at: number;

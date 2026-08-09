@@ -3,7 +3,7 @@ import {
   type YieldPublicDecisionLedger,
   type YieldSourceInputMeta,
 } from "@shared/types/yield";
-import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
 import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";

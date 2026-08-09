@@ -5,11 +5,7 @@
   "oneLiner": "USDH is Hubble Protocol's decentralized Solana stablecoin backed by overcollateralized CDP vaults and USDC held through its Peg Stability Module.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "94.4468% USDC deposited through the Peg Stability Module and 5.5532% Hubble CDP-backed issuance at the latest pinned read; the CDP collateral-asset weights remain incomplete",
   "pegMechanism": "Borrowers mint USDH against overcollateralized Solana vaults, while the Peg Stability Module supports zero-slippage USDH/USDC conversion and holds deposited USDC as direct backing",

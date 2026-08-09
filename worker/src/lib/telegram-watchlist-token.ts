@@ -7,6 +7,7 @@
  * corruption or tampering; it is not authentication.
  */
 
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import { TELEGRAM_MINI_APP_CATALOG_VERSION } from "@shared/lib/telegram-mini-app-catalog";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -93,15 +94,6 @@ interface WatchlistTokenV3Body {
 
 const DIRECT_BINARY_ROW_BYTES = 6;
 const PRESET_BINARY_ROW_BYTES = 5;
-
-function fnv1a32(input: string): number {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-}
 
 function buildHashRegistry(ids: Iterable<string>): ReadonlyMap<number, string | null> {
   const registry = new Map<number, string | null>();

@@ -5,11 +5,9 @@
   "oneLiner": "USDN is Noble chain's native rebasing yield-bearing dollar backed by short-term U.S. T-bills via M0, with T-bill yield accruing directly to USDN balances.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

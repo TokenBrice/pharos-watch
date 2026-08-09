@@ -9,10 +9,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
   "pegMechanism": "Direct 1:1 redemption through Anchored Coins",

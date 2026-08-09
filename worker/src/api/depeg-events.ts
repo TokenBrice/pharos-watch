@@ -23,8 +23,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/depeg-dews-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/depeg-dews";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "../lib/error-utils";

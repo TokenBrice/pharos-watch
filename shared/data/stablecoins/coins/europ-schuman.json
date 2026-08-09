@@ -8,10 +8,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
   "pegMechanism": "Direct 1:1 redemption through Schuman Financial",

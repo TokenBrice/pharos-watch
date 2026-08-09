@@ -5,11 +5,9 @@
   "oneLiner": "Gate USD is Gate exchange's yield-bearing dollar, minted 1:1 by staking USDT or USDC and backed mostly by short-term T-bills with CEX-managed yield strategies.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
   "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",

@@ -90,3 +90,82 @@ export function curatedMintPostureBand(posture: MintAuthorityPosture | null | un
   if (posture == null || posture === "unknown") return null;
   return CURATED_ONLY_POSTURE_BANDS[posture] ?? POSTURE_BANDS[posture as V9MintPosture] ?? null;
 }
+
+/*
+ * ---------------------------------------------------------------------------
+ * Posture predicates — the single source of mint-posture set membership.
+ *
+ * Every engine that asks a yes/no question about a mint posture asks it here,
+ * so a vocabulary addition is handled once instead of falling through unnamed
+ * literal comparisons at each call site. The vocabulary has grown twice
+ * (`unbounded-reconciled`, `none-resolved-mint`) and both times the membership
+ * of these sets had to be re-derived by hand at every site.
+ *
+ * The predicates take `string | null | undefined` rather than
+ * `MintAuthorityPosture`: consumers such as the Depeg Duration Resolver carry
+ * the posture as an opaque registry string, and an unrecognized value must
+ * answer `false` to every predicate rather than fail to typecheck.
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * Postures asserting that *this asset* has no privileged mint path. Scope
+ * differs between the two members and callers must choose deliberately:
+ * `none-resolved` is whole-of-chain (nothing anywhere on the mint path can
+ * print, and for a wrapper only when the parent is itself `none-resolved`),
+ * while `none-resolved-mint` is mint-scoped to this asset and leaves the
+ * parent's own mint authority untouched. Use this predicate when the question
+ * is "can a privileged party mint *this token* directly"; use
+ * `isNoPrivilegedMintChainPosture` when the question is "can this claim be
+ * inflated at all".
+ */
+const NO_PRIVILEGED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
+  "none-resolved",
+  "none-resolved-mint",
+]);
+
+/** Whole-of-chain non-inflatability — the strict subset of the above. */
+const NO_PRIVILEGED_MINT_CHAIN_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>(["none-resolved"]);
+
+/**
+ * Postures whose minter can expand the claim at will. `unbounded-reconciled` is
+ * a supervisory refinement *within* the unbounded class, not an exit from it:
+ * reconciliation is after-the-fact evidence rather than a bound, so it belongs
+ * to the adverse set exactly like `unbounded-or-compromised`. Adopting the finer
+ * curated vocabulary must never relax a verdict.
+ */
+const FRAGILE_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
+  "concentrated-admin",
+  "unbounded-reconciled",
+  "unbounded-or-compromised",
+]);
+
+/**
+ * The *economically unbounded* rungs — the strict subset of the fragile set that
+ * can print without limit during a live event. A merely concentrated admin is
+ * fragile but not unbounded.
+ */
+const UNBOUNDED_MINT_POSTURES: ReadonlySet<string> = new Set<MintAuthorityPosture>([
+  "unbounded-reconciled",
+  "unbounded-or-compromised",
+]);
+
+/** True when no privileged party can mint this asset directly (either scope). */
+export function isNoPrivilegedMintPosture(posture: string | null | undefined): boolean {
+  return posture != null && NO_PRIVILEGED_MINT_POSTURES.has(posture);
+}
+
+/** True only for the whole-of-chain finding: the claim cannot be inflated anywhere. */
+export function isNoPrivilegedMintChainPosture(posture: string | null | undefined): boolean {
+  return posture != null && NO_PRIVILEGED_MINT_CHAIN_POSTURES.has(posture);
+}
+
+/** True when the minter is concentrated or economically unbounded. */
+export function isFragileMintPosture(posture: string | null | undefined): boolean {
+  return posture != null && FRAGILE_MINT_POSTURES.has(posture);
+}
+
+/** True when minting is economically unbounded, reconciled or not. */
+export function isUnboundedMintPosture(posture: string | null | undefined): boolean {
+  return posture != null && UNBOUNDED_MINT_POSTURES.has(posture);
+}

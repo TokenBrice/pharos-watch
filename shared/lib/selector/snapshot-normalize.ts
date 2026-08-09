@@ -26,6 +26,26 @@ import type {
 } from "./types";
 
 const SUPPORTED_ENGINE_VERSIONS = new Set<string>(SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS);
+
+/**
+ * Engine versions whose weight vectors, component projection, and critical
+ * sets match the current engine.
+ *
+ * The read path used to test `engineVersion === SELECTOR_VERSION`, which is
+ * only correct while there is exactly one post-`v2.0` version. `selector-v2.1`
+ * changed the `MergedRow` shape and the custody data source; it did not touch
+ * weights, components, or critical sets, so a stored `v2.0` snapshot must keep
+ * replaying against the current sets rather than falling through to the legacy
+ * `v1.x` ones. Add a version here only when it shares the current component
+ * contract; a version that re-bases weights or critical sets starts a new
+ * generation and needs its own branch.
+ */
+const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>(["selector-v2.0", SELECTOR_VERSION]);
+
+function isCurrentGenerationEngine(engineVersion: string): boolean {
+  return CURRENT_GENERATION_ENGINE_VERSIONS.has(engineVersion);
+}
+
 const KNOWN_MISSING_SIGNALS = new Set([
   "safetyGrade",
   "safetyResilienceScore",
@@ -87,7 +107,7 @@ function criticalComponentsFor(
   engineVersion: string,
   profile: SelectorProfile,
 ): ReadonlySet<WeightKey> {
-  return engineVersion === SELECTOR_VERSION
+  return isCurrentGenerationEngine(engineVersion)
     ? CRITICAL_COMPONENTS_BY_PROFILE[profile]
     : LEGACY_CRITICAL_COMPONENTS_BY_PROFILE[profile];
 }
@@ -237,13 +257,13 @@ function projectRecommendation(
   const identity = canonicalIdentity(recommendation.id);
   if (!identity) return null;
   if (
-    engineVersion === SELECTOR_VERSION
+    isCurrentGenerationEngine(engineVersion)
     && recommendation.relaxedReason != null
     && recommendation.relaxedReason !== "peg-score-floor"
   ) {
     return null;
   }
-  const components = engineVersion === SELECTOR_VERSION
+  const components = isCurrentGenerationEngine(engineVersion)
     ? projectCurrentComponents(input, recommendation.components)
     : projectLegacyComponents(recommendation.components);
   if (!components || hasDuplicates(recommendation.whyKeys)) return null;

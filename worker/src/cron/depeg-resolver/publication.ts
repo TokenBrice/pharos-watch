@@ -3,7 +3,7 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION,
   DDR_VERSION_STAMP,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   buildForecastReadinessBackstop,
   forecastReadinessScore,

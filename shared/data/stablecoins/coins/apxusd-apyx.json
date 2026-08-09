@@ -5,11 +5,8 @@
   "oneLiner": "apxUSD is Apyx's DAT preferred-equity-backed dollar with a cash/T-Bill buffer; whitelist-only primary mint/redeem settles in USDC.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) \u2014 variable-rate, dividend-bearing preferred equity from companies holding digital assets (e.g., Strategy STRC, Strive SATA), held in excess of apxUSD outstanding, plus a cash and short-term U.S. Treasury Bill buffer (incl. USDC) for liquidity; redemptions settle in USDC, with preferred-share positions sold to USDC under stress",
   "pegMechanism": "Whitelisted primary-market mint/redeem with USDC settlement at Redemption Value; secondary liquidity and arbitrage support non-whitelisted holders, while Protocol-Owned Liquidity provides an additional stability buffer during market stress.",

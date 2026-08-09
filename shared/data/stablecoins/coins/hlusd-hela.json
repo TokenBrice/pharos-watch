@@ -6,11 +6,7 @@
   "oneLiner": "HLUSD is the HeLa ecosystem's centralized dollar stablecoin, backed by fiat and fiat-equivalent reserves and used as the HeLa runtime settlement asset.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
   "pegMechanism": "Fiat-collateralized 1:1 USD peg: HLUSD is minted against off-chain USDC reserves and redeemable at 1 HLUSD = 1 USD, with issuance and redemption controlled by HeLa's on-chain role-based mint/burn governance (MintProposer/MintVoter quorum and Admin). HLUSD also serves as HeLa Chain's native gas token. Pricing and market-cap coverage are sourced from CoinGecko because the native HeLa chain is not modeled in Pharos.",
@@ -172,9 +168,9 @@
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "The documented model is clear but the live controller inventory is not: MintProposer/MintVoter may propose and approve arbitrary mint amounts to whitelisted users once mintQuorum is reached, and Admin governs the role/quorum configuration. No numeric supply cap is documented, so economic cap semantics remain unbounded; as a runtime-governed native asset, reserve reconciliation is not applicable. On 2026-08-08 the official EVM gateway was live at chain id 8668 and block 660832, but it exposes neither the runtime-native role roster/current quorum values nor the runtime code-upgrade authority. Current governance, architecture, endpoint, tokenomics, whitepaper, explorer, and public repository review still identify no upgrade executor, threshold, or timelock. The review is therefore explicitly unresolved rather than scoreable.",
-      "reviewer": "OpenAI Codex C09 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "The documented model is clear but the live controller inventory is not: MintProposer/MintVoter may propose and approve arbitrary mint amounts to whitelisted users once mintQuorum is reached, and Admin governs the role/quorum configuration. No numeric supply cap is documented, so economic cap semantics remain unbounded; as a runtime-governed native asset, reserve reconciliation is not applicable. On 2026-08-08 the official EVM gateway was live at chain id 8668 and block 660832, but it exposes neither the runtime-native role roster/current quorum values nor the runtime code-upgrade authority. Current governance, architecture, endpoint, tokenomics, whitepaper, explorer, and public repository review still identify no upgrade executor, threshold, or timelock. The review is therefore explicitly unresolved rather than scoreable. Re-checked 2026-08-09 with new source-level evidence: the stablecoin governance module is public in HelaNetwork/helanetwork-sdk (runtime-sdk/src/modules/accounts/mod.rs), where mint executes inside the vote handler once yes-votes from MintVoter holders reach ceil(voter_total * quorum / 100), quorum defaults to 100 when never configured, and the mint routine carries no supply-cap check, so caps remain unbounded in code. A direct MintST path exists with no caller-role check, gated only by the mintst_disabled runtime parameter; the public EVM-runtime genesis (helanetwork-evm-runtime/src/lib.rs) was re-read on 2026-08-09 and still sets mintst_disabled: true, burnst_disabled: true and hard-codes chain_initiator hela01qp3fu89xmt5s3trszky6k6z0e2qka9hklsj5h6jn. The live gateway re-read the same day returned eth_chainId 0x21dc (8668) and web3_clientVersion 'oasis/hela-mainnet-20251014-git4f94f25/go1.19.3'; that commit is absent from the public HelaNetwork repositories, so drift between the deployed runtime and the public source cannot be excluded. The live MintProposer/MintVoter/Admin roster and configured quorum values remain enumerable only through oasis-node runtime queries (accounts.RoleAddresses / accounts.Quorum / accounts.Parameters, per helanetwork-cli cmd/managest.go) and no public gRPC endpoint exposes them, so the review stays unresolved.",
+      "reviewer": "Kimi ACCESS-FREEZE AF05 (verified FV-A)",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "HLUSD governance",
@@ -195,6 +191,22 @@
         {
           "label": "HeLa architecture",
           "url": "https://docs.helalabs.com/build-on-hela/hela-architecture"
+        },
+        {
+          "label": "HeLa accounts module source (stablecoin mint/vote governance)",
+          "url": "https://github.com/HelaNetwork/helanetwork-sdk/blob/main/runtime-sdk/src/modules/accounts/mod.rs"
+        },
+        {
+          "label": "HeLa EVM runtime genesis (chain_initiator, mintst_disabled)",
+          "url": "https://github.com/HelaNetwork/helanetwork-evm-runtime/blob/main/src/lib.rs"
+        },
+        {
+          "label": "HeLa CLI managest (role and quorum query methods)",
+          "url": "https://github.com/HelaNetwork/helanetwork-cli/blob/main/cmd/managest.go"
+        },
+        {
+          "label": "HeLa mainnet RPC (chain id 8668 live reads)",
+          "url": "https://mainnet-rpc.helachain.com"
         }
       ],
       "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",

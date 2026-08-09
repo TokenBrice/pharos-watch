@@ -110,7 +110,7 @@ function whyKeyTriggers(
     case "low-stress":
       return row.dewsScore != null && row.dewsScore <= 20;
     case "strong-exit":
-      return row.effectiveExitScore != null && row.effectiveExitScore >= 75;
+      return row.safetyLiquidityScore != null && row.safetyLiquidityScore >= 75;
     default:
       return false;
   }

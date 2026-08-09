@@ -5,11 +5,7 @@
   "oneLiner": "USDsui is Sui's native dollar issued by Bridge (FinCEN-registered MSB) and redeemable 1:1, backed by short-dated U.S. Treasuries, repos, MMFs, and cash.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Bridge Open Issuance USD reserves backed at least 1:1 by equivalent fiat value, including short-dated U.S. Treasuries, overnight Treasury repos, government money-market funds, and cash in segregated bankruptcy-remote accounts",
   "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",

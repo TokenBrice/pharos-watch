@@ -22,8 +22,8 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/depeg-dews-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/depeg-dews";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 
 const PEG_TYPE_BY_CURRENCY: Record<string, string> = {

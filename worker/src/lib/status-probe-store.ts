@@ -3,7 +3,7 @@ import type {
   StatusProbePlaneSummary,
   StatusProbeSummary,
 } from "@shared/types/status";
-import { isRecord } from "@shared/lib/type-guards";
+import { isRecord, numberValue as readNumber } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import {
   buildStatusProbeRunIdempotencyKey,
@@ -30,10 +30,6 @@ const PROBE_COMPARISON_REASONS = new Set([
   "external-worse",
   "internal-worse",
 ]);
-
-function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function readStatus(value: unknown): StatusProbePlaneSummary["status"] | null {
   return typeof value === "string" && STATUS_LEVELS.has(value) ? value as StatusProbePlaneSummary["status"] : null;

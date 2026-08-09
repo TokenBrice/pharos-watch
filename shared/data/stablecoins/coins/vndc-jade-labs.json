@@ -6,10 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "VND",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Issuer-disclosed VNDC 2.0 USDT/USDC smart-contract collateral on Polygon and BNB Smart Chain; reserve and redemption claims remain high-risk after the March 2026 ONUS/VNDC investigation",
   "pegMechanism": "Issuer-controlled mint and redemption through ONUS/VNDC Hub; VNDC 2.0 disclosures describe USDT/USDC collateral pools rather than direct VND bank reserves, with redemption reliability impaired by the March 2026 investigation and withdrawal disruptions",

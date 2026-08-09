@@ -17,19 +17,19 @@ describe("adaptSgForgeCoinvertible", () => {
     ]);
     expect(result.metadata).toMatchObject({
       coinType: "eur",
-      circulationAmount: 123482987.54,
-      cashAmount: 123482987.54,
+      circulationAmount: 139700459.12,
+      cashAmount: 139700459.12,
       collateralizationRatio: 1,
       cashCoveragePct: 100,
       bankName: "Societe Generale",
       bankPct: 100,
-      lastUpdate: "30/06/2026",
-      sourceTimestamp: Date.UTC(2026, 5, 30) / 1000,
+      lastUpdate: "9/08/2026",
+      sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
       freshnessMode: "verified",
       redemption: {
         capacityKind: "documented-bound",
         freshnessKind: "verified-source-timestamp",
-        sourceTimestamp: Date.UTC(2026, 5, 30) / 1000,
+        sourceTimestamp: Date.UTC(2026, 7, 9) / 1000,
         routeStatus: "unknown",
         holderEligibility: "verified-customer",
       },
@@ -51,9 +51,9 @@ describe("adaptSgForgeCoinvertible", () => {
   });
 
   it("accepts current SG Forge markup with a line break and four-digit slash date", () => {
-    const html = SAMPLE_HTML
-      .replace("123 482 987,54 <span", "123 482 987,54 <br/><span")
-      .replace(CURRENT_LAST_UPDATE_RE, "Last update 2/06/2026");
+    // The live fixture already carries the `<br/>` between the amount and the
+    // "Last update" span, so only the date needs to be pinned here.
+    const html = SAMPLE_HTML.replace(CURRENT_LAST_UPDATE_RE, "Last update 2/06/2026");
     const result = adaptSgForgeCoinvertible(html, "eur", { nowSec: Date.UTC(2026, 5, 2, 12) / 1000 });
 
     expect(result.metadata).toMatchObject({
@@ -91,7 +91,7 @@ describe("adaptSgForgeCoinvertible", () => {
   });
 
   it("degrades when cash coverage falls below circulation", () => {
-    const undercoveredHtml = SAMPLE_HTML.replace(/123 482 987,54\s+€/, "122 000 000,00 €");
+    const undercoveredHtml = SAMPLE_HTML.replace(/139 700 459,12\s+€/, "138 000 000,00 €");
     const result = adaptSgForgeCoinvertible(undercoveredHtml, "eur");
 
     expect(result.metadata?.collateralizationRatio).toBeLessThan(0.995);

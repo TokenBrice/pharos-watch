@@ -5,11 +5,7 @@
   "oneLiner": "ZSD is Zephyr Protocol's dollar stablecoin on a Monero-derived private chain, minted from ZEPH base-coin collateral through a Djed-inspired reserve mechanism.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "decentralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "decentralized"
   },
   "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
   "pegMechanism": "Users mint or redeem ZSD against ZEPH through Zephyr's Djed-inspired reserve mechanism, with oracle pricing and reserve-ratio constraints maintaining the dollar target",

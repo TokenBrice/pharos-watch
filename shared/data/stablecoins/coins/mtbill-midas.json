@@ -5,7 +5,6 @@
   "oneLiner": "mTBILL is Midas's NAV-accreting tokenized U.S. T-Bill fund via BlackRock IB01 ETF, FMA-regulated rails, with daily Ankura Trust NAV attestations.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

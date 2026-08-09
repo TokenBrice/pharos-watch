@@ -5,11 +5,7 @@
   "oneLiner": "RUSD is Revolut's pre-launch USD stablecoin proposal under MiCA rails (CySEC CASP + Lithuanian EMI); ticker, chains, and reserve disclosures still unannounced.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
   "pegMechanism": "Planned MiCA-compliant electronic-money token issued by Revolut's Lithuanian EMI with 1:1 USD mint and redemption; distribution and chain selection unannounced.",

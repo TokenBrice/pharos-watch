@@ -5,11 +5,7 @@
   "oneLiner": "PUSD is Polymarket's USDC-backed prediction-market account stablecoin on Polygon; minted when users deposit USDC and redeemable through the Polymarket app.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
   "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",

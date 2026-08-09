@@ -5,11 +5,7 @@
   "oneLiner": "FDUSD is a BVI-issued dollar stablecoin from First Digital Labs, redeemable 1:1 and backed by U.S. Treasury bills, cash, and bank deposits.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
   "pegMechanism": "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",

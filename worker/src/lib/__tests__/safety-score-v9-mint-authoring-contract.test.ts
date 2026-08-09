@@ -1,6 +1,6 @@
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-schemas";

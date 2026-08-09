@@ -5,13 +5,24 @@ import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
+import {
+  DEBT_EXPORTS,
+  DEBT_MODULES,
+  SCANNER_BLIND_SPOT_EXPORTS,
+  SCANNER_BLIND_SPOT_MODULES,
+} from "../lib/unused-code-allowlist.mjs";
 
 const ROOT = process.cwd();
 const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
-const SOURCE_DIRS = ["src", "shared", "worker/src", "functions"];
+// Consumer surfaces that are walked for imports. `scripts/` and `worker/scripts/`
+// are scanned but never reported on: they are legitimate consumers of shared and
+// worker modules (build-data generators, maintenance CLIs, CI checks), and before
+// they were walked every script-side consumer showed up as a false "unused export".
+const SOURCE_DIRS = ["src", "shared", "worker/src", "functions", "scripts", "worker/scripts"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".js", ".mjs"]);
 const REPORTABLE_DIR_PREFIXES = ["src/", "shared/", "worker/src/", "functions/"];
 const UNUSED_EXPORT_DIR_PREFIXES = ["src/", "shared/", "worker/src/", "functions/"];
+const VITEST_CONFIG = "vitest.config.ts";
 
 const ROOT_ENTRYPOINT_PATTERNS = [
   /^src\/app\//,
@@ -20,273 +31,20 @@ const ROOT_ENTRYPOINT_PATTERNS = [
   /^worker\/src\/handlers\/scheduled\.ts$/,
 ];
 
-const MODULE_ALLOWLIST = new Set([
-  "src/components/ui/command.tsx",
-  "worker/src/__mocks__/resvg-stub.ts",
-  "worker/src/__mocks__/satori-stub.ts",
-  "worker/src/__mocks__/wasm-module-stub.ts",
-  // Public compatibility shim; current label consumers use the light constants
-  // module so they do not pull methodology body data into client bundles.
-  "shared/lib/mint-authority-version.ts",
-  // Script-only Safety Score v9 evidence queue producer/parser. The maintenance
-  // CLI and its tests live outside this runtime-only dependency graph.
-  "shared/lib/safety-score-v9/evidence-gap-queue.ts",
-  // Protocol measurement schemas are consumed by scripts/lib/mechanism-measurement,
-  // which is intentionally outside this runtime-only dependency graph.
-  "shared/lib/protocol-api-sources/index.ts",
-  // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
-  // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
-  // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
-  // is now consumed by src/components/command-palette-root.tsx.)
+// Both allowlists keep their section so the audit can name it in failures.
+const withSection = (entries, section) =>
+  Object.entries(entries).map(([entry, reason]) => [entry, { section, reason }]);
+
+const MODULE_ALLOWLIST = new Map([
+  ...withSection(SCANNER_BLIND_SPOT_MODULES, "SCANNER_BLIND_SPOTS"),
+  ...withSection(DEBT_MODULES, "DEBT"),
 ]);
-const EXPORT_ALLOWLIST = new Set([
-  "shared/lib/protocol-api-sources/decimal.ts::CANONICAL_DECIMAL_PATTERN",
-  "shared/lib/protocol-api-sources/decimal.ts::JSON_NUMBER_TOKEN_KEY",
-  "shared/lib/protocol-api-sources/decimal.ts::jsonNumberToken",
-  "shared/lib/protocol-api-sources/decimal.ts::canonicalizeDecimal",
-  "shared/lib/protocol-api-sources/decimal.ts::DecimalSourceSchema",
-  "shared/lib/protocol-api-sources/decimal.ts::JsonNumberDecimalSourceSchema",
-  "shared/lib/protocol-api-sources/decimal.ts::CanonicalDecimalSchema",
-  "shared/lib/protocol-api-sources/ethena.ts::ETHENA_PROTOCOL_API_URLS",
-  "shared/lib/protocol-api-sources/ethena.ts::EthenaCollateralizationStatusSchema",
-  "shared/lib/protocol-api-sources/ethena.ts::EthenaProofOfReservesSchema",
-  "shared/lib/protocol-api-sources/falcon.ts::FALCON_TRANSPARENCY_URL",
-  "shared/lib/protocol-api-sources/falcon.ts::FalconTransparencySchema",
-  // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
-  "worker/src/__mocks__/satori-stub.ts::__stub",
-  "worker/src/__mocks__/wasm-module-stub.ts::__stub",
-  "worker/src/__mocks__/resvg-stub.ts::__stub",
-  // Intra-cluster sibling-module exports surfaced after Phase 4 Wave 3 decompositions —
-  // each export IS consumed by a sibling file in the same folder but the static scan
-  // doesn't reach sibling consumption. Allowlist rather than drop because each is
-  // genuinely consumed within its cluster.
-  "worker/src/cron/dews/source-state/fallback.ts::isBootstrapAllowedMissingTableSource",
-  "worker/src/cron/dews/source-state/hydration.ts::DEWS_STALE_DEX_LIQUIDITY_SEC",
-  "worker/src/cron/dews/source-state/hydration.ts::DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC",
-  "worker/src/cron/dews/source-state/legacy-bridge.ts::getNumber",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts::buildSupplementalAsset",
-  "worker/src/cron/yield-sync/cache.ts::YieldRankingsPublishedCutoffResult",
-  "worker/src/cron/yield-sync/cache.ts::ParsedYieldSupplementalSourcesCache",
-  "worker/src/cron/yield-sync/cache/normalization.ts::toNullableString",
-  "worker/src/cron/yield-sync/cache/normalization.ts::toStringArray",
-  "worker/src/lib/dews/evidence-policy.ts::EVIDENCE_STRESS_THRESHOLD",
-  "worker/src/lib/dews/evidence-policy.ts::hasStressEvidence",
-  "worker/src/lib/redemption-backstop-capacity.ts::CapacityResolution",
-  // Consumed at build time by scripts/build-data/build-client-registry.mjs as
-  // the canonical field allowlist; the validator reads the array at runtime
-  // outside the TS import graph the static scan walks.
-  "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_META_FIELDS",
-  "shared/types/stablecoin-client-meta.ts::GENIUS_CLIENT_PROFILE_FIELDS",
-  "shared/types/stablecoin-client-meta.ts::GENIUS_COMPLIANCE_PROFILE_FIELDS",
-  "shared/lib/api-endpoints/index.ts::buildQueryPath",
-  "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",
-  "shared/lib/api-endpoints/index.ts::EndpointMethodValidationError",
-  "shared/lib/api-endpoints/index.ts::EndpointProbeGroup",
-  "shared/lib/api-endpoints/index.ts::EndpointPublicApiAccess",
-  "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
-  "shared/lib/chains/health-version.ts::getChainHealthMethodologyVersionAt",
-  "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER",
-  "shared/lib/chains/l2beat-audit.ts::findL2BeatAliasIntegrityIssues",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_SCORES",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_SENTIMENT_SCORES",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_WEIGHT",
-  "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_WEIGHT",
-  // Backward-compatible type export for callers that imported the old lib path.
-  "shared/lib/cause-of-death.ts::CauseOfDeath",
-  // Consumed by scripts/lib/methodology-to-markdown.ts for checked-in markdown
-  // export generation outside this runtime source graph.
-  "shared/lib/methodology-versions/registry.ts::METHODOLOGY_CHANGELOG_MARKDOWN_KEYS",
-  "shared/lib/methodology-versions/registry.ts::getMethodologyChangelogEntryByMarkdownKey",
-  // Consumed by scripts/lib/telegram-load-scenarios.ts. The load gate stays
-  // coupled to the production policy module even though scripts are outside
-  // this runtime-only import graph.
-  "shared/lib/telegram-delivery-policy.ts::TELEGRAM_LOAD_GUARD_ASSUMPTIONS",
-  "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
-  "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX",
-  "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
-  "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
-  // Consumed by the report-card calibration CLI outside this runtime-only scan.
-  // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
-  // their inputs coupled to the production policy, timing, and envelope schemas.
-  "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
-  // Consumed by the deterministic aggregation replay CLI outside the runtime graph.
-  "shared/lib/safety-score-v9/scoped-risk.ts::applyV9AllocatedScopedRiskAdjustments",
-  // Retained inside published digests for historical identity compatibility
-  // after their activation-gate roles were retired.
-  "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST",
-  // Evidence queue entrypoints are consumed by its maintenance CLI and CLI
-  // contract tests, both outside the runtime graph scanned here.
-  "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",
-  "shared/lib/safety-score-v9/evidence-gap-queue.ts::parseV9EvidenceGapQueue",
-  // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
-  "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
-  // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
-  "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",
-  "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
-  // Report-card survivor of the retired V8 engine: consumed through
-  // `report-card-policy.ts` directly rather than through this barrel.
-  "shared/lib/report-cards.ts::inferResilienceDefaults",
-  // Consumed by scripts/ci/check-site-csp-sync.ts and static-export tooling
-  // outside the runtime source graph scanned by this checker.
-  "shared/lib/site-csp.ts::buildStaticContentSecurityPolicy",
-  "shared/lib/safety-score-version.ts::getSafetyScoreVersionAt",
-  "shared/lib/stablecoin-id-registry.ts::ALL_LIVE_COINS",
-  "shared/lib/stablecoins/schema.ts::StablecoinMetaAssetSchema",
-  "shared/lib/stablecoins/schema.ts::StablecoinMetaAssetArraySchema",
-  "shared/lib/stablecoins/schema.ts::CanonicalOrderAssetSchema",
-  "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetSchema",
-  "shared/lib/stablecoins/schema.ts::DeadStablecoinAssetArraySchema",
-  // Consumed by scripts/lib/stablecoin-catalog-sources.ts for per-coin
-  // catalog field ordering and domain sidecar validation.
-  "shared/lib/stablecoins/schema.ts::STABLECOIN_META_ASSET_FIELD_ORDER",
-  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_VALUES",
-  "shared/lib/stablecoins/schema.ts::StablecoinReservesSidecarSchema",
-  "shared/lib/stablecoins/schema.ts::StablecoinMetaSourceAssetSchema",
-  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_FIELDS",
-  "shared/lib/stablecoins/schema.ts::STABLECOIN_SOURCE_DOMAIN_SCHEMAS",
-  "shared/types/stablecoin-meta-schemas.ts::OracleRiskBranchSchema",
-  "shared/types/stablecoin-meta-schemas.ts::BridgeRouteProtocolEvidenceSchema",
-  // Consumed by scripts/lib/stablecoin-catalog-sources.ts (out-of-scan-scope).
-  "shared/lib/stablecoins/schema.ts::findDuplicateStablecoinCatalogIds",
-  "shared/lib/tracked-stablecoin-utils.ts::findTrackedContract",
-  "shared/lib/yield-scoring.ts::PYS_DEFAULT_SAFETY_SCORE",
-  "src/components/providers.tsx::ToastContext",
-  "src/components/providers.tsx::useToastContext",
-  "src/components/ui/badge.tsx::badgeVariants",
-  "src/components/ui/button.tsx::buttonVariants",
-  "src/components/ui/card.tsx::CardFooter",
-  "src/components/ui/command.tsx::Command",
-  "src/components/ui/command.tsx::CommandDialog",
-  "src/components/ui/command.tsx::CommandList",
-  "src/components/ui/command.tsx::CommandEmpty",
-  "src/components/ui/command.tsx::CommandGroup",
-  "src/components/ui/command.tsx::CommandItem",
-  "src/components/ui/command.tsx::CommandInput",
-  "src/components/ui/command.tsx::CommandShortcut",
-  "src/components/ui/command.tsx::CommandSeparator",
-  // Enforced by the table-primitives source audit, which inspects the exported component name.
-  "src/components/chart-primitives/data-table.tsx::ChartDataTable",
-  "src/components/ui/dialog.tsx::DialogClose",
-  "src/components/ui/dialog.tsx::DialogOverlay",
-  "src/components/ui/dialog.tsx::DialogPortal",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuPortal",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuGroup",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuRadioGroup",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuRadioItem",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuShortcut",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuSub",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuSubTrigger",
-  "src/components/ui/dropdown-menu.tsx::DropdownMenuSubContent",
-  "src/components/ui/sheet.tsx::SheetClose",
-  "src/components/ui/sheet.tsx::SheetFooter",
-  "src/hooks/use-api-query.ts::createApiQueryFnWithMeta",
-  "src/hooks/use-preferences.ts::isColumnId",
-  "src/lib/compare-config.ts::ID_TO_COMPARE_COIN",
-  // Consumed by scripts/ci/check-frozen-invariants.ts (out-of-scan-scope).
-  "src/lib/compare-pages.ts::STATIC_COMPARE_PAIRS",
-  // Consumed by scripts/maintenance/generate-homepage-bootstrap.ts for static
-  // bootstrap payload generation outside this runtime source graph.
-  "src/lib/homepage-bootstrap.ts::HomepageBootstrapQueryId",
-  // Consumed by scripts/ci/check-cron-connection-budget.ts (out-of-scan-scope).
-  "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
-  "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET_ENTRIES",
-  // Consumed by scripts/ci/check-cron-schedule-sync.ts (out-of-scan-scope).
-  "shared/lib/scheduled-runner-registry.ts::SCHEDULED_SLOT_PLANS",
-  "shared/lib/scheduled-runner-registry.ts::flattenScheduledSlotPlanJobs",
-  "shared/lib/scheduled-runner-registry.ts::getScheduledSlotPlanBudgetEntries",
-  "src/lib/coverage.ts::countAvailableFeatures",
-  "src/lib/yield-constants.ts::WARNING_SIGNAL_LABELS",
-  // Storage key + snapshot reader exported for tests and one-off lookups
-  // (e.g. compare-config presets). External consumption is intermittent.
-  "src/hooks/use-watchlist.ts::WATCHLIST_STORAGE_KEY",
-  "src/hooks/use-watchlist.ts::readWatchlistSnapshot",
-  // Consumed internally by buildAllCoinTrackerLinks; the static scan does not
-  // resolve same-file references.
-  "src/lib/coin-tracker-links.ts::buildCoinTrackerLink",
-  // parsePaletteInput + buildCompareHrefFromCoinIds are consumed by
-  // src/components/command-palette-root.tsx. resolveCoinIdFromToken is only consumed
-  // internally by parsePaletteInput; the static scan does not resolve same-file
-  // references, so it stays allowlisted.
-  "src/lib/command-palette-verbs.ts::resolveCoinIdFromToken",
-  "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
-  "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
-  "worker/src/api/telegram-webhook-messages.ts::describeSubscriptionSettings",
-  "worker/src/api/telegram-webhook-messages.ts::describeGlobalAlertSettings",
-  "worker/src/api/telegram-webhook-messages.ts::formatCoinLines",
-  "worker/src/api/telegram-webhook-messages.ts::buildMiniAppOnlyKeyboard",
-  "worker/src/api/telegram-webhook-parsing.ts::parseStoredSetCommand",
-  "worker/src/api/telegram-webhook-parsing.ts::parseStringArray",
-  "worker/src/api/telegram-webhook-parsing.ts::parseResolvedCoins",
-  "worker/src/api/telegram-webhook-resolution.ts::resolveCoinTargets",
-  "worker/src/cron/blacklist/evm-source.ts::parseEvmLogs",
-  "worker/src/cron/blacklist/evm-source.ts::resolveRpcLogTarget",
-  "worker/src/cron/dex-liquidity/challenger-persistence.ts::selectDexPriceChallengerRowsFromPools",
-  "worker/src/cron/dex-liquidity/geckoterminal-shared.ts::getGtPoolKind",
-  // Consumed by worker/scripts/generate-safety-score-v9-b1-root-ledger.ts
-  // outside this runtime-only scan.
-  "worker/src/cron/dex-liquidity/deployment-census-coverage.ts::buildDexKnownEmptyRouteCoverage",
-  "worker/src/cron/dex-liquidity/pool-identity.ts::buildKnownPoolIdentityIndex",
-  "worker/src/cron/dex-liquidity/token-resolution.ts::normalizeTokenAddress",
-  "worker/src/cron/dex-liquidity/token-resolution.ts::resolveStablecoinToken",
-  "worker/src/cron/reserve-adapters/helpers.ts::isHttpHtmlInput",
-  "worker/src/cron/reserve-adapters/helpers.ts::fetchErc20TotalSupply",
-  "worker/src/cron/sync-stablecoins/metadata.ts::buildPriceSourceHealth",
-  "worker/src/cron/sync-stablecoins/shared.ts::sumPegBuckets",
-  "worker/src/cron/telegram-alert-snapshots.ts::SNAPSHOT_MAX_AGE_SEC",
-  "worker/src/cron/telegram-alert-snapshots.ts::SAFETY_GRADE_RANK",
-  "worker/src/lib/chain-registry.ts::CG_CHAIN_REVERSE",
-  "worker/src/lib/chain-registry.ts::GT_CHAIN_REVERSE",
-  "worker/src/lib/cron-lease.ts::isRetriableD1OverloadError",
-  "worker/src/lib/dex-api-common.ts::DIRECT_API_MAX_POOL_TVL_USD",
-  "worker/src/lib/external-api-schemas.ts::TronEventResultSchema",
-  "worker/src/lib/external-api-schemas.ts::TronEventSchema",
-  // Consumed by worker/scripts calibration tests outside this runtime-only scan.
-  "worker/src/lib/report-cards-fixed-input.ts::computeDexLiquidityPayloadFingerprint",
-  "shared/lib/env-contract.ts::ENV_BINDINGS",
-  "shared/lib/env-contract.ts::getAllEnvBindingKeys",
-  "worker/src/lib/live-reserves-store.ts::getConfiguredLiveReserveCoins",
-  "worker/src/lib/live-reserves-store.ts::upsertReserveComposition",
-  "worker/src/lib/mint-burn-health-config.ts::computeMintBurnSyncFreshnessStatus",
-  "worker/src/lib/mint-burn-scoring.ts::MIN_ACTIVITY_USD",
-  "worker/src/lib/schemas.ts::CronMetadataSchema",
-  "worker/src/lib/stability-index.ts::BAND_COLORS",
-  "worker/src/__mocks__/resvg-stub.ts::Resvg",
-  "worker/src/__mocks__/resvg-stub.ts::initWasm",
-  "worker/src/__mocks__/resvg-stub.ts::initResvg",
-  "worker/src/__mocks__/resvg-stub.ts::resvgWasmModule",
-  "worker/src/__mocks__/satori-stub.ts::init",
-  "worker/src/__mocks__/satori-stub.ts::satori",
-  // Consumed only by test files (live-reserve-adapters-schemas.test.ts); the
-  // static scan counts test imports as usage but the CI unused-code guard does
-  // not, so it must be allowlisted explicitly. Keep exported until a production
-  // reserve-adapter config adopts this wider staleness window.
-  "shared/lib/live-reserve-adapters-schemas.ts::LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC",
-  // Public/script/test helper surfaces intentionally kept exported even when no
-  // runtime source currently imports them.
-  "shared/lib/api-endpoints/datasets.ts::PUBLIC_DATASET_TOPICS",
-  "shared/lib/redemption-backstop-configs/schema.ts::currentUtcDate",
-  "src/components/command-palette-model.ts::scoreStablecoinSearchMatch",
-  "src/components/command-palette-model.ts::isExactStablecoinSymbolMatch",
-  "src/components/command-palette-model.ts::stablecoinProminenceBonus",
-  "src/components/chart-primitives/data-table.tsx::capDataForTable",
-  "src/components/table/table-label.ts::withFallbackTableAriaLabel",
-  "src/components/table/table-label.ts::hasTableCaptionChild",
-  "src/lib/alt-peg-packing.ts::DEFAULT_COLLISION_ITERATIONS",
-  "src/lib/api.ts::normalizeApiDependencyMeta",
-  "src/lib/exports/csv.ts::escapeCsvField",
-  "src/lib/exports/csv.ts::buildCsv",
-  "src/lib/homepage-bootstrap-shared.ts::descriptorMaxAgeMs",
-  "src/lib/yield-data-source.ts::YIELD_DATA_SOURCE_META",
-  "worker/src/api/dex-liquidity-evidence.ts::isTrendworthyLiquiditySnapshot",
-  "worker/src/api/telegram-webhook-pending-gate.ts::canActOnPendingOwner",
-  "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_ANYWHERE",
-  "worker/src/cron/daily-digest/voice-guards.ts::FORBIDDEN_TICS_CLOSER",
-  "worker/src/cron/reserve-adapters/slice-math.ts::RATIO_SCALE",
-  "worker/src/lib/fx-rate-state.ts::resetFxRateStateForTests",
-  "worker/src/lib/psi-history-universe.ts::buildPsiHistoricalUniverseForDay",
-  "worker/src/cron/yield-sync/cache.ts::parseRiskFreeRatesCache",
-  "worker/src/cron/yield-sync/cache.ts::filterValidDlPools",
+const EXPORT_ALLOWLIST = new Map([
+  ...withSection(SCANNER_BLIND_SPOT_EXPORTS, "SCANNER_BLIND_SPOTS"),
+  ...withSection(DEBT_EXPORTS, "DEBT"),
 ]);
+
+const VITEST_ALIASES = loadVitestAliases();
 
 const files = collectSourceFiles();
 const fileSet = new Set(files);
@@ -319,12 +77,18 @@ for (const file of files) {
   const info = moduleInfo.get(file);
   if (!isReportableModule(rel) || isTestFile(rel) || isRootEntrypoint(rel)) continue;
 
-  if ((runtimeInbound.get(file)?.size ?? 0) === 0 && !MODULE_ALLOWLIST.has(rel)) {
-    deadModules.push({
-      file: rel,
-      reason:
-        info.exports.size === 0 && info.hasSideEffectsOnly ? "unreferenced module" : "unreferenced module or dead shim",
-    });
+  if ((runtimeInbound.get(file)?.size ?? 0) === 0) {
+    if (!MODULE_ALLOWLIST.has(rel)) {
+      deadModules.push({
+        file: rel,
+        reason:
+          info.exports.size === 0 && info.hasSideEffectsOnly
+            ? "unreferenced module"
+            : "unreferenced module or dead shim",
+      });
+    }
+    // Either way the module verdict covers the whole file: reporting each of its
+    // exports again would just duplicate the same finding.
     continue;
   }
 
@@ -354,8 +118,12 @@ if (unusedExports.length > 0) {
 
 if (AUDIT_ALLOWLIST) {
   const stale = [];
-  for (const entry of EXPORT_ALLOWLIST) {
+  for (const [entry, meta] of EXPORT_ALLOWLIST) {
     const [file, symbol] = entry.split("::");
+    if (!meta.reason) {
+      stale.push({ entry, reason: `missing one-line reason in ${meta.section}` });
+      continue;
+    }
     try {
       statSync(file);
     } catch {
@@ -371,7 +139,11 @@ if (AUDIT_ALLOWLIST) {
       stale.push({ entry, reason: "symbol no longer exported from file" });
     }
   }
-  for (const mod of MODULE_ALLOWLIST) {
+  for (const [mod, meta] of MODULE_ALLOWLIST) {
+    if (!meta.reason) {
+      stale.push({ entry: mod, reason: `missing one-line reason in ${meta.section}` });
+      continue;
+    }
     try {
       statSync(mod);
     } catch {
@@ -386,7 +158,11 @@ if (AUDIT_ALLOWLIST) {
     process.stderr.write(`\n${stale.length} stale entry/entries.\n`);
     process.exit(1);
   }
-  process.stdout.write("Allowlist audit: all entries valid.\n");
+  const debtCount = Object.keys(DEBT_MODULES).length + Object.keys(DEBT_EXPORTS).length;
+  const blindSpotCount = Object.keys(SCANNER_BLIND_SPOT_MODULES).length + Object.keys(SCANNER_BLIND_SPOT_EXPORTS).length;
+  process.stdout.write(
+    `Allowlist audit: all entries valid (${blindSpotCount} SCANNER_BLIND_SPOTS, ${debtCount} DEBT).\n`,
+  );
 }
 
 if (deadModules.length === 0 && unusedExports.length === 0) {
@@ -556,21 +332,84 @@ function hasExportModifier(node) {
 }
 
 function resolveModule(fromFile, specifier) {
-  if (!specifier.startsWith(".") && !specifier.startsWith("@/") && !specifier.startsWith("@shared/")) {
-    return null;
+  let candidate = null;
+
+  if (specifier.startsWith(".")) {
+    candidate = resolve(dirname(fromFile), specifier);
+  } else {
+    candidate = resolveAliasSpecifier(specifier);
   }
 
-  let candidate;
-  if (specifier.startsWith("@/")) {
-    candidate = resolve(ROOT, "src", specifier.slice(2));
-  } else if (specifier.startsWith("@shared/")) {
-    candidate = resolve(ROOT, "shared", specifier.slice("@shared/".length));
-  } else {
-    candidate = resolve(dirname(fromFile), specifier);
-  }
+  if (!candidate) return null;
 
   const resolved = resolveWithExtensions(candidate);
   return resolved && fileSet.has(resolved) ? resolved : null;
+}
+
+/**
+ * Resolve a bare specifier through the vitest `resolve.alias` table.
+ *
+ * Covers both the path aliases (`@/…`, `@shared/…`) and the exact-match stub
+ * aliases (`satori/standalone`, `@resvg/resvg-wasm`, …) that redirect packages
+ * to `worker/src/__mocks__/*`. Without the exact-match half, the stub modules
+ * and every export on them looked unreferenced because their only importers use
+ * the aliased package specifier.
+ */
+function resolveAliasSpecifier(specifier) {
+  let best = null;
+  for (const [key, target] of VITEST_ALIASES) {
+    if (specifier === key) return target;
+    if (!specifier.startsWith(`${key}/`)) continue;
+    // Longest key wins so "@shared/x" never resolves through the "@" alias.
+    if (!best || key.length > best.key.length) {
+      best = { key, path: resolve(target, specifier.slice(key.length + 1)) };
+    }
+  }
+  return best?.path ?? null;
+}
+
+/**
+ * Read `resolve.alias` out of vitest.config.ts so the scanner's module
+ * resolution stays in sync with the one the test runner actually uses.
+ * Fails closed: an unreadable or unexpected config shape is a hard error
+ * rather than a silent loss of resolution coverage.
+ */
+function loadVitestAliases() {
+  const configPath = resolve(ROOT, VITEST_CONFIG);
+  const { sourceFile } = parseSourceFile(configPath);
+  const aliases = new Map();
+
+  visit(sourceFile, (node) => {
+    if (!ts.isPropertyAssignment(node)) return;
+    const keyName = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : null;
+    if (keyName !== "alias" || !ts.isObjectLiteralExpression(node.initializer)) return;
+
+    for (const property of node.initializer.properties) {
+      if (!ts.isPropertyAssignment(property)) continue;
+      const specifier =
+        ts.isStringLiteral(property.name) || ts.isIdentifier(property.name) ? property.name.text : null;
+      const target = resolveAliasTarget(property.initializer);
+      if (specifier && target) aliases.set(specifier, target);
+    }
+  });
+
+  for (const required of ["@", "@shared"]) {
+    if (!aliases.has(required)) {
+      console.error(
+        `Unable to read the "${required}" alias from ${VITEST_CONFIG}; refusing to scan with partial resolution.`,
+      );
+      process.exit(1);
+    }
+  }
+  return aliases;
+}
+
+/** `path.resolve(__dirname, "src")` / `path.resolve(__dirname, "worker/src/__mocks__/x.ts")` → absolute path. */
+function resolveAliasTarget(initializer) {
+  if (ts.isStringLiteral(initializer)) return resolve(ROOT, initializer.text);
+  if (!ts.isCallExpression(initializer)) return null;
+  const segments = initializer.arguments.filter(ts.isStringLiteral).map((argument) => argument.text);
+  return segments.length > 0 ? resolve(ROOT, ...segments) : null;
 }
 
 function resolveWithExtensions(basePath) {

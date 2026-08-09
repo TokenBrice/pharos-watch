@@ -20,7 +20,7 @@
  * absorbs duplicates. Watermark advancement keeps the scan cheap on re-runs.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
+import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/depeg-dews";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";

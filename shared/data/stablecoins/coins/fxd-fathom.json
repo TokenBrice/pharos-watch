@@ -9,11 +9,7 @@
   "cmcSlug": "fathom-protocol",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
   "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
@@ -344,8 +340,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Fathom Terms of Service (confirmed protocol payments are irreversible)",
@@ -364,9 +361,9 @@
         "url": "https://xdcscan.com/address/0xb82ad475fc113671840d510b60cbae5630a07f3b#code"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at XDC block 105873757. The FXD transparent proxy still resolves to implementation 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. The pinned current FathomStablecoin implementation is an ordinary ERC-20 surface with mint/burn authorization but no pause, blacklist, freeze, seize, transfer whitelist, or privileged arbitrary-holder burn. Fathom's current Terms additionally state that confirmed protocol payments are irreversible and that the operator has no ability to reverse them. ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b remains immediately controlled by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c, so future logic can add restrictions; that upgrade risk is recorded as restrictable in the transfer overlay and is not a live holder-seizure power. The direct blacklistability verdict is therefore No.",
-    "reviewer": "OpenAI Codex C09 control/access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-reviewed 2026-08-09 (prior review 2026-08-08 at XDC block 105873757). The FXD transparent proxy 0x49d3f7543335cf38fa10889ccff10207e22110b5 still resolves to implementation 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a, and the pinned FathomStablecoin implementation is an ordinary ERC-20 with AccessControl: mint is gated by MINTER_ROLE, burn only by the holder or an approved spender, and there is no pause, blacklist, freeze, seize, wipe, or transfer-whitelist function. Fathom's Terms additionally state that confirmed protocol payments are irreversible. No holder can be frozen today, but ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b remains owned by EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c (re-read on 2026-08-09: ProxyAdmin.owner() returned that address and eth_getCode on it returned 0x, so no timelock or multisig sits in the path), which can swap in freeze logic with zero delay. That live upgrade path resolves the verdict to possible rather than a clean false. Backing adds no tracked inherited exposure: reserves are psXDC 74.47%, WXDC 25.53%, and CGO 0.001%, none of which is a Pharos-tracked freezable asset, and the previous 'inherited' status named no upstream while its own evidence concluded the direct verdict was No.",
+    "reviewer": "Kimi ACCESS-FREEZE AF01 (verified FV-A)",
+    "reviewedAt": "2026-08-09"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

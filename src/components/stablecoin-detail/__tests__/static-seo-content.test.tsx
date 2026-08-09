@@ -53,6 +53,10 @@ const summary: StablecoinAiSummary = {
   reviewedBy: "@TokenBrice",
   reviewedAt: "2026-05-02",
   factsAsOf: "2026-05-02",
+  sources: [
+    { label: "Product documentation", url: "https://example.com/docs" },
+    { label: "Reserve API", url: "https://example.com/api/reserves" },
+  ],
 };
 
 describe("StablecoinDetailSeoContent", () => {
@@ -104,6 +108,12 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText("AI summary / Updated May 2, 2026")).toBeTruthy();
     expect(screen.getByText(/The profile summary uses MMFs and stays specific/)).toBeTruthy();
     expect(container.textContent).not.toContain("{{term:");
+    expect(screen.getByRole("link", { name: "Product documentation" }).getAttribute("href")).toBe(
+      "https://example.com/docs",
+    );
+    expect(screen.getByRole("link", { name: "Reserve API" }).getAttribute("href")).toBe(
+      "https://example.com/api/reserves",
+    );
     expect(
       screen.getByText(
         "AI summary · drafted by claude-opus-4-7 · reviewed by @TokenBrice on May 2, 2026 · facts as of May 2, 2026",

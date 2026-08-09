@@ -8,10 +8,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Brazilian-real fiat cash deposited in a Brazilian bank account, backing Ripio wBRL one-to-one against the Brazilian real per Ripio's wFIAT token certifications",
   "pegMechanism": "WBRL is issued and managed by Ripio against local fiat reserves, but ordinary holders do not have a documented direct redemption right with the issuer. Exits depend on secondary-market liquidity, Ripio on/off-ramp flows, or issuer-managed market operations.",

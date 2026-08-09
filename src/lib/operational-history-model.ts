@@ -1,4 +1,5 @@
 import type { ApiKeyAuditEntry } from "@shared/types";
+import { readRecord } from "@shared/lib/type-guards";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 
 export type OperationalActivitySource = "admin-action" | "credential-audit";
@@ -91,12 +92,6 @@ export function sanitizeOperationalDetail(value: unknown, depth = 0, parentKey =
     entries.push(["_truncated", "Additional fields omitted"]);
   }
   return Object.fromEntries(entries);
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value != null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function readPositiveInteger(value: unknown): number | null {

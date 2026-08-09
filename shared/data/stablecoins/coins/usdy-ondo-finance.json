@@ -5,7 +5,6 @@
   "oneLiner": "USDY is Ondo's yield-bearing dollar token, backed by short-term U.S. Treasuries and bank demand deposits; non-U.S. investor permissioned.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,

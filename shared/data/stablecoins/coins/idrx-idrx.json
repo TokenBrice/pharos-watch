@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "IDR",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig controls",
   "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",

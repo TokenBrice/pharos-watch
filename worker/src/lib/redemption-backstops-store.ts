@@ -37,7 +37,7 @@ import {
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   getRedemptionBackstopVersionAt,
-} from "@shared/lib/redemption-backstop-version";
+} from "@shared/lib/methodology-versions/redemption-backstop";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import {
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,

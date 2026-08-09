@@ -3,11 +3,6 @@ import { DETAIL_PROVIDER_VALUES } from "../../types/core";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
-import commodityAsset from "../../data/stablecoins/commodity.json";
-import nonUsdAsset from "../../data/stablecoins/non-usd.json";
-import preLaunchAsset from "../../data/stablecoins/pre-launch.json";
-import usdMajorAsset from "../../data/stablecoins/usd-major.json";
-import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
@@ -74,24 +69,12 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("loads all JSON registry assets through the shared schemas", () => {
-    const usdMajor = parseStablecoinMetaAssets(usdMajorAsset, "usd-major");
-    const usdMinor = parseStablecoinMetaAssets(usdMinorAsset, "usd-minor");
-    const nonUsd = parseStablecoinMetaAssets(nonUsdAsset, "non-usd");
-    const commodity = parseStablecoinMetaAssets(commodityAsset, "commodity");
-    const preLaunch = parseStablecoinMetaAssets(preLaunchAsset, "pre-launch");
     const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
-    expect(usdMajor).toHaveLength(0);
-    expect(usdMinor).toHaveLength(0);
-    expect(nonUsd).toHaveLength(0);
-    expect(commodity).toHaveLength(0);
-    expect(preLaunch).toHaveLength(0);
     expect(perCoinGenerated).toHaveLength(TRACKED_META_BY_ID.size);
     expect(canonicalOrder).toHaveLength(TRACKED_META_BY_ID.size);
-    expect(
-      usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
-    ).toBe(canonicalOrder.length);
+    expect(perCoinGenerated.length).toBe(canonicalOrder.length);
     // Raw JSON length vs. the production DEAD_STABLECOINS export: catches the schema
     // parser silently dropping or duplicating rows (DEAD_STABLECOINS.length alone would
     // be a tautology, since it's built from the same parse call on the same asset).
@@ -110,17 +93,9 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps pre-launch metadata in per-coin assets", () => {
-    const legacyShellCoins = [
-      ...parseStablecoinMetaAssets(usdMajorAsset, "usd-major"),
-      ...parseStablecoinMetaAssets(usdMinorAsset, "usd-minor"),
-      ...parseStablecoinMetaAssets(nonUsdAsset, "non-usd"),
-      ...parseStablecoinMetaAssets(commodityAsset, "commodity"),
-      ...parseStablecoinMetaAssets(preLaunchAsset, "pre-launch"),
-    ];
     const perCoinGenerated = parseStablecoinMetaAssets(perCoinGeneratedAsset, "coins.generated");
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
-    expect(legacyShellCoins).toEqual([]);
     expect(preLaunchCoins).toHaveLength(PRE_LAUNCH_STABLECOINS.length);
     expect(preLaunchCoins.map((coin) => coin.id).sort()).toEqual(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id).sort());
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
@@ -530,9 +505,9 @@ describe("tracked stablecoin metadata", () => {
             flags: {
               backing: "rwa-backed",
               pegCurrency: "USD",
-              governance: "centralized",
               yieldBearing: false,
               rwa: false,
+              navToken: false,
             },
           },
         ],

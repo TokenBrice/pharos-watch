@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Mexican peso cash, cash-equivalent assets, and short-term Mexican government securities held through segregated custodial accounts; beginning April 8, 2026, MXNB is issued by Nvio Pagos El Salvador, S.A. de C.V., an authorised digital-asset issuer in El Salvador",
   "pegMechanism": "1:1 MXN fiat-collateralized stablecoin; Juno/MXNB materials describe reserve parity, token burn/redemption through issuer rails, and quarterly third-party attestations confirming reserves exceed circulating supply",

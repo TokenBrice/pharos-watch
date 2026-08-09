@@ -68,18 +68,15 @@ describe("priority operator CLI parsers", () => {
 
   it("validates provenance backfill review inputs and real dates", () => {
     const env = {
-      AI_SUMMARY_REVIEWED_AT: "2026-07-09",
       AI_SUMMARY_REVIEWED_BY: "@reviewer",
     };
-    expect(parseAiSummaryBackfillArgs(["--model", "gpt-test", "--dry-run"], env)).toMatchObject({
+    expect(parseAiSummaryBackfillArgs(["--manifest", "agents/review.json", "--model", "gpt-test", "--dry-run"], env)).toMatchObject({
       dryRun: true,
+      manifest: "agents/review.json",
       model: "gpt-test",
-      reviewedAt: "2026-07-09",
     });
-    expect(() =>
-      parseAiSummaryBackfillArgs([], { ...env, AI_SUMMARY_REVIEWED_AT: "2026-02-30" }),
-    ).toThrow("real YYYY-MM-DD");
-    expect(() => parseAiSummaryBackfillArgs(["--model", "one", "--model", "two"], env)).toThrow(
+    expect(() => parseAiSummaryBackfillArgs([], env)).toThrow("--manifest is required");
+    expect(() => parseAiSummaryBackfillArgs(["--manifest", "x", "--model", "one", "--model", "two"], env)).toThrow(
       "may only be specified once",
     );
   });
@@ -178,16 +175,21 @@ describe("operator dry-run mutation boundaries", () => {
     };
     const result = backfillAiSummaryProvenance(input, {
       model: "gpt-test",
-      reviewedAt: "2026-07-09",
       reviewedBy: "@reviewer",
+    }, {
+      manifest: {
+        curated: { factsAsOf: "2026-07-01", reviewedAt: "2026-07-09" },
+        pending: { factsAsOf: "2026-07-01", reviewedAt: "2026-07-09" },
+      },
     });
 
     expect(result).toMatchObject({ skipped: 1, updated: 1 });
     expect(result.data.curated.authoredBy).toBe("human");
     expect(result.data.pending).toMatchObject({
       authoredBy: "ai",
-      factsAsOf: "2026-07-02",
+      factsAsOf: "2026-07-01",
       model: "gpt-test",
+      reviewedAt: "2026-07-09",
     });
   });
 });

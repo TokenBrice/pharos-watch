@@ -8,6 +8,7 @@
  */
 
 import type { DepegDirection } from "../../types/market";
+import { isFragileMintPosture, isNoPrivilegedMintChainPosture } from "../safety-score-v9/mint-posture";
 import type { DdrCoinStructural } from "./inputs";
 
 export type DdrDepthBucket = "minor" | "moderate" | "severe" | "catastrophic";
@@ -45,28 +46,25 @@ export function depthBucket(peakDeviationBps: number): DdrDepthBucket {
 // would have silently flipped every migrated gold and silver token from robust
 // to fragile on an archetype rename, with no methodology basis.
 const ROBUST_ARCHETYPES = new Set(["cdp", "fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
-// `unbounded-reconciled` is a supervisory refinement *within* the unbounded
-// class, not an exit from it: the claim can still be expanded at will, and
-// reconciliation is after-the-fact evidence rather than a bound. It stays
-// fragile so adopting the finer curated vocabulary moves no depeg verdict.
-const FRAGILE_POSTURES = new Set([
-  "concentrated-admin",
-  "unbounded-reconciled",
-  "unbounded-or-compromised",
-]);
 
 /**
  * Coarse 2-way structural class. Robust = a real-collateral mechanism with a
  * non-concentrated minter; everything algorithmic/synthetic/concentrated/exotic
  * is fragile. Defaults to fragile when unknown (conservative).
+ *
+ * Posture set membership comes from the shared predicates in
+ * `safety-score-v9/mint-posture` so a vocabulary addition is decided once. The
+ * robustness leg deliberately asks the *whole-of-chain* question: a mint-scoped
+ * `none-resolved-mint` says the wrapper itself cannot print, but its parent
+ * still can, so it carries no structural robustness of its own.
  */
 export function structuralClass(coin: DdrCoinStructural): DdrStructuralClass {
   const archetype = coin.mechanismArchetype ?? null;
   const posture = coin.authorityPosture ?? null;
-  if (posture && FRAGILE_POSTURES.has(posture)) return "fragile";
+  if (isFragileMintPosture(posture)) return "fragile";
   if (coin.collateralQuality === "exotic") return "fragile";
   if (archetype && ROBUST_ARCHETYPES.has(archetype)) return "robust";
-  if (coin.mintPath === "immutable-user-collateralized" || posture === "none-resolved") return "robust";
+  if (coin.mintPath === "immutable-user-collateralized" || isNoPrivilegedMintChainPosture(posture)) return "robust";
   return "fragile";
 }
 

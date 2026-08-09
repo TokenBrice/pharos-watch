@@ -7,7 +7,7 @@ import type { BadgeStyle } from "./classification";
  * MiCA status is a new regulatory dimension distinct from the existing
  * backing / governance / peg / mechanism taxonomy owned by
  * `shared/lib/classification/*`. It lives in its own runtime-neutral module —
- * mirroring how `infrastructure.ts`, `liquidity-score-version.ts`, etc. own a
+ * mirroring how `infrastructure.ts`, `methodology-versions/liquidity-score.ts`, etc. own a
  * single dimension — so the classification facade stays focused on the core
  * coin taxonomy. Tailwind classes are static strings per the repo gotcha.
  */

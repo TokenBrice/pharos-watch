@@ -5,11 +5,8 @@
   "oneLiner": "USDnr is Nerona's permissioned 1:1 wrapper of M0's M token backed by short-term U.S. T-bills; T-bill yield accrues to M0 and Nerona, not USDnr holders.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "infrastructures": [
     "m0"

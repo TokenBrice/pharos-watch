@@ -5,11 +5,8 @@
   "oneLiner": "AID is GAIB's centralized dollar stablecoin, minted 1:1 against USDC, USDT, and other approved stables, backed by a mix of T-Bills and accepted stablecoins.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "U.S. Treasury bills and accepted stablecoins (USDC, USDT, and other approved stable assets); staking into sAID is the separate route into GAIB's AI infrastructure financing portfolio",
   "pegMechanism": "1:1 mint and burn against accepted stablecoins through GAIB AID contracts; whitelisted partners can mint or redeem directly while other users trade through the app or DEX liquidity",

@@ -5,11 +5,7 @@
   "oneLiner": "Roughrider is the pre-launch Bank of North Dakota / Fiserv bank-to-bank pilot stablecoin, planned 1:1 USD-backed by deposits and short U.S. Treasury notes.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta",
   "pegMechanism": "Pre-launch bank-to-bank payment stablecoin pilot: BND and Fiserv plan a 1:1 USD-denominated token for North Dakota financial institutions, with public access and production contract details still unavailable",

@@ -5,10 +5,8 @@
   "oneLiner": "yvUSDC is a Yearn v3 ERC-4626 vault routing USDC through whitelisted strategies, currently concentrated in the Sky ecosystem (sUSDS and Spark Lend).",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

@@ -6,10 +6,7 @@
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "Aggregate CHF-value reserves held by VNX Commodities AG in bank accounts and/or securities custody accounts; the latest published AREVA report does not disclose the holdings or category split",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",

@@ -44,6 +44,17 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
     ],
   },
 
+  // ftUSD: stablecoin lending with native-asset borrow/stake carry on both chains
+  "ftusd-flying-tulip": {
+    syntheticStrategy: "borrow-stake",
+    steps: [
+      { label: "Stablecoin deposit", subtitle: "USDC / USDT / USSD collateral" },
+      { label: "Borrow native + stake", subtitle: "WETH / wS into wstETH / stS" },
+      { label: "ftUSD base token", subtitle: "carry to sftUSD + protocol" },
+    ],
+    stressFootnote: "stress: borrow-cost, oracle/liquidation, or withdrawal-buffer shock",
+  },
+
   // crvUSD (Curve): LLAMMA-based continuous rebalancing, no single liquidation threshold
   "crvusd-curve": {
     steps: [

@@ -5,11 +5,7 @@
   "oneLiner": "USDA is Anzens' U.S.-MSB-licensed dollar stablecoin on Cardano, redeemable 1:1 against USD cash and Treasuries custodied by BitGo Trust.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized"
   },
   "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
   "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",

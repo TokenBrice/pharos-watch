@@ -5,11 +5,7 @@
   "oneLiner": "NUSD is Neutrl's synthetic dollar backed by liquid stablecoins and delta-hedged OTC positions; 1:1 mint/redeem via USDC, USDT, or USDe.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
   "pegMechanism": "Permissionless 1:1 minting via router against USDC, USDT, or USDe; redemptions are restricted to KYC/KYB-approved counterparties and served from AssetReserve liquidity, while peg support also comes from arbitrage incentives, delta hedging, and a liquid stablecoin buffer.",

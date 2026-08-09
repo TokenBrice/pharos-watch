@@ -4,7 +4,7 @@ import { evaluateValidatedV9FactSet, type V9EvaluatedSet } from "@shared/lib/saf
 import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { compareText, deepFreeze, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import type { CompiledV9FactSetV3 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
@@ -326,14 +326,6 @@ function publicDisplayMetadata(
     ),
     exitRouteDetails,
   };
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function computeSafetyScoreV9CompilerFactSchemaDigest(

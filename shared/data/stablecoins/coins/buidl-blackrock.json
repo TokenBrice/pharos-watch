@@ -5,11 +5,9 @@
   "oneLiner": "BUIDL is BlackRock's tokenized institutional money-market fund, NAV-pegged to $1 and backed by U.S. Treasuries, repos, and cash custodied by BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
   "pegMechanism": "NAV-based pricing with institutional redemption through BlackRock/Securitize",

@@ -1009,7 +1009,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("ftusd-flying-tulip")).toMatchObject({
       outputAssetType: "stable-basket",
       outputAssets: ["usdc-circle", "usdt-tether"],
-      reviewedAt: "2026-07-15",
+      reviewedAt: "2026-08-09",
     });
     expect(getRedemptionBackstopConfig("hyusd-hylo")).toMatchObject({
       routeStatus: "unknown",

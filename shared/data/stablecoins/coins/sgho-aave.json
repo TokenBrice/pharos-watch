@@ -5,10 +5,8 @@
   "oneLiner": "sGHO is Aave's savings wrapper of GHO; deposit GHO to earn the Aave governance-set savings rate in GHO, with GHO-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "canBeBlacklisted": true,

@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { fnv1a32Hex } from "@shared/lib/fnv1a";
 import { nextIanaLocalHourDueAt } from "@shared/lib/iana-local-time";
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
@@ -238,12 +239,7 @@ function buildPortablePreview(current: WatchlistTokenV2State, desired: Watchlist
 
 function previewFingerprint(value: unknown): string {
   const input = JSON.stringify(value);
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `preview-v1-${input.length}-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+  return `preview-v1-${input.length}-${fnv1a32Hex(input)}`;
 }
 
 function importGenerationLease(): number {

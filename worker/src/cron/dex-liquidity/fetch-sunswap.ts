@@ -1,3 +1,4 @@
+import { isFiniteNumber } from "@shared/lib/type-guards";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
@@ -40,10 +41,6 @@ interface SunSwapPoolScanResponse {
     list?: unknown[];
     meta?: { hasMore?: boolean; returnSize?: number };
   };
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isStringArray(value: unknown, length: number): value is string[] {

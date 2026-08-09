@@ -38,7 +38,7 @@ describe("hasWorkerDeployImpact", () => {
 
   it("returns true for worker, shared, and workflow-infra changes", () => {
     expect(hasWorkerDeployImpact(["worker/src/api/health.ts"])).toBe(true);
-    expect(hasWorkerDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
+    expect(hasWorkerDeployImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
     expect(hasWorkerDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
   });
 
@@ -71,7 +71,7 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["src/lib/api.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["src/hooks/use-stablecoins.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
+    expect(hasPagesDeployImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/deploy-cloudflare.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
@@ -138,7 +138,7 @@ describe("hasWorkerReleaseImpact", () => {
     expect(hasWorkerReleaseImpact(["worker/src/api/health.ts"])).toBe(true);
     expect(hasWorkerReleaseImpact(["worker/wrangler.toml"])).toBe(true);
     expect(hasWorkerReleaseImpact(["worker/migrations/0107_example.sql"])).toBe(true);
-    expect(hasWorkerReleaseImpact(["shared/data/stablecoins/usd-major.json"])).toBe(true);
+    expect(hasWorkerReleaseImpact(["shared/data/stablecoins/coins/usdc-circle.json"])).toBe(true);
     expect(hasWorkerReleaseImpact(["shared/lib/classification.ts"])).toBe(true);
     expect(hasWorkerReleaseImpact(["package.json", "package-lock.json"])).toBe(true);
   });

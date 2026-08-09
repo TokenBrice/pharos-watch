@@ -2,7 +2,7 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDRR_REVIEWER_VERSION,
   DDRR_SNAPSHOT_CACHE_GENERATION as CURRENT_DDRR_SNAPSHOT_CACHE_GENERATION,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { DdrrResponseSchema, type DdrrResponse } from "@shared/types/depeg-resolver-review";
 import {
   loadVersionedSnapshotCache,

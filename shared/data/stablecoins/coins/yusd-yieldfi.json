@@ -5,10 +5,8 @@
   "oneLiner": "YieldFi yUSD is an ERC-4626 vault over USDC, allocating across Pendle PTs, Morpho and Silo vaults, and private-credit strategies for yield over the dollar.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "pegReferenceId": "usdc-circle",

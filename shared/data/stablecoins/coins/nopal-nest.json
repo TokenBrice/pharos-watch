@@ -5,7 +5,6 @@
   "oneLiner": "nOPAL is Nest's vault token wrapping BlackOpal LiquidStone II tokenized credit positions; references a dollar base but behaves like a credit vault share.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

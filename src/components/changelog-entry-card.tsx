@@ -196,9 +196,9 @@ export function ChangelogEntryCard({
             </li>
           ))}
         </ul>
-        {commits.length > COMMIT_PREVIEW_COUNT && (
+        {stats.totalCommits > commits.length && (
           <p className="mt-2 text-xs text-muted-foreground">
-            … and {commits.length - COMMIT_PREVIEW_COUNT} more
+            … and {stats.totalCommits - commits.length} more
           </p>
         )}
       </details>

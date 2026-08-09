@@ -5,10 +5,8 @@
   "oneLiner": "ZYS is Zephyr Protocol's yield-share wrapper over ZSD, with its NAV moving as protocol yield accrues into the underlying ZSD yield reserve.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "decentralized",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "variantOf": "zsd-zephyr-protocol",

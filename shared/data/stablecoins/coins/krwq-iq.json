@@ -7,9 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
   "pegMechanism": "Centralized issuance against a 100% reserve. Mint and redemption are gated to KYC-verified institutional counterparties (exchanges, market makers, OTC desks). Ethereum is the canonical mint chain; Base and other destinations share unified supply via LayerZero OFT v2. KRWQ is not offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly.",

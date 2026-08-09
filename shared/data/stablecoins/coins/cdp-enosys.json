@@ -5,11 +5,7 @@
   "oneLiner": "CDP is Enosys's overcollateralized dollar stablecoin on Flare, minted from Flare-ecosystem collateral via Enosys Loans CDP vaults.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "FXRP, wFLR, sFLR, and stXRP deposited into Enosys Loans CDP positions on Flare, with collateral priced by the Flare Time Series Oracle (FTSO)",
   "pegMechanism": "Liquity V2 friendly fork: an overcollateralized CDP with user-set borrow interest rates, a Stability Pool that absorbs liquidations, and automated redemptions against the lowest-rate positions when CDP trades below its $1 peg; collateral is priced by the Flare Time Series Oracle (FTSO)",

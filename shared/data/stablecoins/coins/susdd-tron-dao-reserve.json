@@ -5,10 +5,8 @@
   "oneLiner": "sUSDD is the TRON DAO Reserve's savings wrapper of USDD; share price accrues savings yield while final par exit inherits USDD's PSM and reserve mechanics.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

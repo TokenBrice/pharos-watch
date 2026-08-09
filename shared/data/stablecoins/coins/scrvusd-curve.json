@@ -5,10 +5,8 @@
   "oneLiner": "scrvUSD is Curve's savings-rate wrapper of crvUSD; the share price compounds with a slice of crvUSD borrower interest, with crvUSD-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

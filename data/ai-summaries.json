@@ -149,7 +149,7 @@
   },
   "ousd-origin-protocol": {
     "title": "The Passive Yield Play",
-    "text": "Yield-bearing rebasing USDC wrapper that deploys deposits into Morpho and Curve strategies; non-opted holders subsidize opted holders, with one of the stronger permissionless redemption backstops in the yield-bearing set. Origin Dollar is fully backed by USDC routed through Morpho/Yearn vault exposure and Curve {{term:amo}}AMO{{/term}} liquidity, {{term:yield-bearing}}rebasing daily{{/term}} so balances grow without staking or locking. The clever twist is that smart contracts must explicitly opt in to receive yield, so OUSD sitting in non-opted AMM pools effectively subsidizes everyone else's returns. Permissionless atomic stablecoin {{term:redemption}}redemption{{/term}} at a small fee provides a structural floor that many depeg blips have tested but not broken. The exotic collateral quality and wrapper governance classification reflect what OUSD actually is: a USDC yield strategy with a rebasing token wrapper, not an independent stablecoin with its own reserve management. It is a well-engineered product for the small cohort that wants DeFi yield without the DeFi homework, and the cohort remains tellingly small.",
+    "text": "Yield-bearing rebasing USDC wrapper that deploys deposits into Morpho and Curve strategies; yield attributable to non-opted balances is redirected to opted-in holders, with one of the stronger permissionless redemption backstops in the yield-bearing set. Origin Dollar is fully backed by USDC routed through Morpho/Yearn vault exposure and Curve {{term:amo}}AMO{{/term}} liquidity, {{term:yield-bearing}}rebasing daily{{/term}} so opted-in balances grow without staking or locking. Smart contracts must explicitly opt in to receive yield, so OUSD sitting in non-opted AMM pools transfers its attributable return to opted-in balances. Permissionless atomic stablecoin {{term:redemption}}redemption{{/term}} at a small fee provides a structural floor that many depeg blips have tested but not broken. The exotic collateral quality and wrapper governance classification reflect what OUSD actually is: a USDC yield strategy with a rebasing token wrapper, not an independent stablecoin with its own reserve management. It is a well-engineered product for the small cohort that wants DeFi yield without the DeFi homework, and the cohort remains tellingly small.",
     "updatedAt": "2026-06-12",
     "authoredBy": "ai",
     "model": "gpt-5-codex",
@@ -1746,14 +1746,36 @@
     "factsAsOf": "2026-06-03"
   },
   "ftusd-flying-tulip": {
-    "title": "Cronje's Carry Trade",
-    "text": "ftUSD is Flying Tulip's USDC/USDT-collateralized dollar with staking carry from borrowed native assets — a domesticated {{term:delta-neutral}}delta-neutral{{/term}} pitch with $225M raised and $730K used. Andre Cronje's Flying Tulip raised $225 million to build a DeFi super-app, and the stablecoin at its center has attracted roughly $730K in circulation from 20 holders — a ratio of venture capital to actual usage that would make a Web2 startup blush. The delta-neutral pitch echoes Ethena's playbook but runs a domesticated version: USDC and USDT lent into Aave with borrowed native assets staked to generate carry, no CEX perpetuals in sight. {{term:yield-bearing}}Yield{{/term}} flows exclusively to sftUSD stakers while unstaked ftUSD proceeds feed the protocol {{term:treasury}}treasury{{/term}}, a design that makes the base token a zero-yield stablecoin whose holders subsidize the protocol by default. Deployed on Ethereum and Sonic with single-entity governance, circuit breaker contracts, and full dependency on the two largest centralized stablecoins, ftUSD is less a standalone dollar and more an opt-in yield wrapper for USDC and USDT with extra steps.",
-    "updatedAt": "2026-05-15",
+    "title": "On-Chain Carry, Concentrated Control",
+    "text": "ftUSD is Flying Tulip's non-yielding base dollar, while sftUSD is the optional wrapper that receives strategy yield. The live reserve stack lends stablecoin collateral and runs borrow-and-stake carry on both Ethereum and Sonic: WETH into wstETH exposure on Ethereum and wS into stS on Sonic, not a short-perpetual hedge. Flying Tulip's token-sale capital is not conventional operating runway: primary FT allocations carry a perpetual put against reserved contributed assets, and the issuer says operations are funded from generated yield and revenue. Yield attributable to unstaked ftUSD accrues to the protocol, an opportunity-cost transfer distinct from a mandatory yield-bearing token. The risk sits in the layers added above the stablecoin collateral: issuer-run reserve reporting, lending and staking/liquidation exposure, upstream USDC/USDT/USSD dependencies, and the same no-timelock 3-of-5 Safe controlling token ownership, master-minter authority, and the upgradeable minter on both chains.",
+    "updatedAt": "2026-08-09",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
+    "model": "gpt-5-codex",
     "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedAt": "2026-08-09",
+    "factsAsOf": "2026-08-09",
+    "sources": [
+      {
+        "label": "ftUSD product documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+      },
+      {
+        "label": "Timestamped ftUSD dashboard API",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+      },
+      {
+        "label": "Capital allocation and perpetual PUT",
+        "url": "https://docs.flyingtulip.com/capital-allocation/"
+      },
+    {
+      "label": "Ethereum owner Safe evidence",
+      "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+    },
+    {
+      "label": "Sonic owner Safe evidence",
+      "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+    }
+    ]
   },
   "brla-brla-digital": {
     "title": "Brazil's Dollar Problem, Inverted",
@@ -1815,7 +1837,7 @@
   },
   "usdh-hermetica": {
     "title": "Bitcoin's Synthetic Dollar, On Stacks",
-    "text": "Hermetica's USDh is the Ethena playbook on Bitcoin-native infrastructure: a {{term:basis-trade}}basis-trade{{/term}} {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar deployed on Stacks L2 with a Runes variant on Bitcoin L1. Hermetica brings the Ethena playbook to Bitcoin-native infrastructure: BTC spot plus short {{term:perpetual}}perpetual{{/term}} futures creating a {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar, deployed exclusively on Stacks L2 with a Runes variant on Bitcoin L1. At $9 million in circulation from a protocol that raised $1.7 million in seed funding, USDh is the smallest delta-neutral stablecoin on the dashboard and the only one that touches neither Ethereum nor a single EVM chain. Yield flows to sUSDh stakers via {{term:funding-rate}}funding-rate{{/term}} payments from the short perpetual positions, with Hermetica advertising up to 25% APY — a figure that depends entirely on perpetual funding rates staying positive, which historically they do until they catastrophically don't. Minting requires KYC/AML verification through Hermetica's app, collateral sits on centralized exchanges with CEX-tier {{term:custody}}custody{{/term}}, and a DIA oracle prices the token on-chain — a trust stack that makes this less a trustless Bitcoin dollar and more a managed fund with a Clarity smart contract wrapper. The single-chain, single-entity design is refreshingly honest about what it is: a bet that Bitcoin's basis trade can sustain a stablecoin ecosystem outside the EVM monoculture.",
+    "text": "Hermetica's USDh is the Ethena playbook on Bitcoin-native infrastructure: a {{term:basis-trade}}basis-trade{{/term}} {{term:delta-neutral}}delta-neutral{{/term}} synthetic dollar deployed on Stacks L2 with a Runes variant on Bitcoin L1. BTC spot plus short {{term:perpetual}}perpetual{{/term}} futures create the offsetting exposure, and the product is unusual for touching neither Ethereum nor an EVM chain. Yield flows to sUSDh stakers via {{term:funding-rate}}funding-rate{{/term}} payments from the short perpetual positions, so returns depend on funding staying favorable rather than on the size of Hermetica's seed round. Minting requires KYC/AML verification through Hermetica's app, collateral sits on centralized exchanges with CEX-tier {{term:custody}}custody{{/term}}, and a DIA oracle prices the token on-chain — a trust stack that makes this less a trustless Bitcoin dollar and more a managed fund with a Clarity smart contract wrapper. The single-chain, single-entity design is refreshingly honest about what it is: a bet that Bitcoin's basis trade can sustain a stablecoin ecosystem outside the EVM monoculture.",
     "updatedAt": "2026-05-15",
     "authoredBy": "ai",
     "model": "claude-opus-4-7",

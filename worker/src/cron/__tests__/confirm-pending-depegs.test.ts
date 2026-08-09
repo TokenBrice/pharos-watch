@@ -1966,11 +1966,56 @@ describe("confirmPendingDepegs", () => {
         .find((record) => record.event === event);
     }
 
-    it("reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar", async () => {
+    // Same wiring in all three: one pending USDT row plus one dex_prices row; only
+    // the pool prices/TVL and the expected summary vary.
+    it.each([
+      {
+        label: "reports poolStatus='contradict' when at least one qualifying pool is opposite-direction above bar",
+        pendingId: 80,
+        // Pool 1: same-direction (below) but deviation 30 bps < 50 bps secondary bar => "recover"
+        // Pool 2: opposite-direction (above) deviation 120 bps > 50 bps bar          => "contradict"
+        dexPriceUsd: 1.0, // neutral DEX signal -> "recover"
+        sourcePoolCount: 4,
+        sourceTotalTvl: 4_000_000,
+        pools: [
+          { price: 0.997, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+          { price: 1.012, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+        ],
+        expectedStatus: "contradict",
+        expectedHighTvl: false,
+      },
+      {
+        label: "reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M",
+        pendingId: 82,
+        // Single pool, same-direction deviation 200bps > 50bps bar, TVL $6M > $5M high-TVL threshold.
+        // Below POOL_CHALLENGE_CONFIRM_MIN=2 count, but high-TVL short-circuits to confirm.
+        dexPriceUsd: 0.98,
+        sourcePoolCount: 1,
+        sourceTotalTvl: 6_000_000,
+        pools: [
+          { price: 0.98, tvl: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+        ],
+        expectedStatus: "confirm",
+        expectedHighTvl: true,
+      },
+      {
+        label: "reports poolStatus='recover' only when every qualifying pool is under the secondary bar",
+        pendingId: 81,
+        dexPriceUsd: 1.0,
+        sourcePoolCount: 4,
+        sourceTotalTvl: 4_000_000,
+        pools: [
+          { price: 0.998, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+          { price: 0.999, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+        ],
+        expectedStatus: "recover",
+        expectedHighTvl: false,
+      },
+    ])("$label", async (testCase) => {
       const nowSec = 1_700_000_000;
       vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
       const pendingRows: PendingRow[] = [makePendingRow({
-        id: 80,
+        id: testCase.pendingId,
         stablecoin_id: "usdt-tether",
         symbol: "USDT",
         direction: "below",
@@ -1979,19 +2024,14 @@ describe("confirmPendingDepegs", () => {
         first_price: 0.98,
         peg_reference: 1,
       })];
-      // Pool 1: same-direction (below) but deviation 30 bps < 50 bps secondary bar => "recover"
-      // Pool 2: opposite-direction (above) deviation 120 bps > 50 bps bar           => "contradict"
       const dexRows = [
         {
           stablecoin_id: "usdt-tether",
-          dex_price_usd: 1.0, // neutral DEX signal -> "recover"
+          dex_price_usd: testCase.dexPriceUsd,
           updated_at: nowSec - 30,
-          source_pool_count: 4,
-          source_total_tvl: 4_000_000,
-          price_sources_json: JSON.stringify([
-            { price: 0.997, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-            { price: 1.012, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
-          ]),
+          source_pool_count: testCase.sourcePoolCount,
+          source_total_tvl: testCase.sourceTotalTvl,
+          price_sources_json: JSON.stringify(testCase.pools),
         },
       ];
       const logs = captureLogs();
@@ -2005,93 +2045,8 @@ describe("confirmPendingDepegs", () => {
       );
 
       expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
-        status: "contradict",
-        metadata: { highTvlConfirmation: false },
-      });
-    });
-
-    it("reports poolStatus='confirm' with highTvl=true when a single qualifying pool has TVL >= $5M", async () => {
-      const nowSec = 1_700_000_000;
-      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-      const pendingRows: PendingRow[] = [makePendingRow({
-        id: 82,
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        direction: "below",
-        first_seen_bps: -200,
-        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
-        first_price: 0.98,
-        peg_reference: 1,
-      })];
-      // Single pool, same-direction deviation 200bps > 50bps bar, TVL $6M > $5M high-TVL threshold.
-      // Below POOL_CHALLENGE_CONFIRM_MIN=2 count, but high-TVL short-circuits to confirm.
-      const dexRows = [
-        {
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 0.98,
-          updated_at: nowSec - 30,
-          source_pool_count: 1,
-          source_total_tvl: 6_000_000,
-          price_sources_json: JSON.stringify([
-            { price: 0.98, tvl: 6_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-          ]),
-        },
-      ];
-      const logs = captureLogs();
-
-      await confirmPendingDepegs(
-        makeDb({ pendingRows, dexRows }),
-        [
-          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
-          ...makeNeutralUsdAssets(),
-        ],
-      );
-
-      expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
-        status: "confirm",
-        metadata: { highTvlConfirmation: true },
-      });
-    });
-
-    it("reports poolStatus='recover' only when every qualifying pool is under the secondary bar", async () => {
-      const nowSec = 1_700_000_000;
-      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
-      const pendingBelow: PendingRow = makePendingRow({
-        id: 81,
-        stablecoin_id: "usdt-tether",
-        symbol: "USDT",
-        direction: "below",
-        first_seen_bps: -200,
-        first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
-        first_price: 0.98,
-        peg_reference: 1,
-      });
-      const dexRows = [
-        {
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 1.0,
-          updated_at: nowSec - 30,
-          source_pool_count: 4,
-          source_total_tvl: 4_000_000,
-          price_sources_json: JSON.stringify([
-            { price: 0.998, tvl: 5_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-            { price: 0.999, tvl: 5_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
-          ]),
-        },
-      ];
-      const logs = captureLogs();
-
-      await confirmPendingDepegs(
-        makeDb({ pendingRows: [pendingBelow], dexRows }),
-        [
-          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: undefined, price: 0.98 }),
-          ...makeNeutralUsdAssets(),
-        ],
-      );
-
-      expect(findStructuredLog(logs, "pool-confirmation-summary")).toMatchObject({
-        status: "recover",
-        metadata: { highTvlConfirmation: false },
+        status: testCase.expectedStatus,
+        metadata: { highTvlConfirmation: testCase.expectedHighTvl },
       });
     });
   });

@@ -5,10 +5,8 @@
   "oneLiner": "bbqUSDC is Steakhouse's high-yield MetaMorpho USDC vault; share price accrues borrower interest across wider-risk Morpho markets.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
     "navToken": true
   },
   "blacklistabilityReview": {

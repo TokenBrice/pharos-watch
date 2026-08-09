@@ -5,7 +5,6 @@
   "oneLiner": "nWISDOM is a Nest vault share backed mainly by WisdomTree Connect tokenized fund exposure (xCRDYX), accruing yield through NAV rather than a hard $1 peg.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": true,

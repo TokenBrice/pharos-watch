@@ -5,11 +5,7 @@
   "oneLiner": "USDXL is Last's synthetic dollar minted as CDP-style debt against blue-chip collateral on HypurrFi (Aave-V3 fork on HyperEVM), with no public redemption rail.",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "USD",
-    "governance": "centralized-dependent",
-    "yieldBearing": false,
-    "rwa": false,
-    "navToken": false
+    "governance": "centralized-dependent"
   },
   "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
   "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations and protocol-owned liquidity defend the peg, but public docs do not describe an enabled direct 1:1 holder redemption against issuer reserves.",

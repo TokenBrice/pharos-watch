@@ -13,7 +13,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 - **Current methodology version:** `v4.1`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
-- **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
+- **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.
@@ -112,7 +112,7 @@ Each anchor is rated `weak` or `strong`.
 
 | # | Recovery anchor | Strong when |
 |---|---|---|
-| **R1** | Non-inflatable supply | `none-resolved` authority / immutable user-collateralized mint path — supply cannot be printed (LUSD / BOLD). Mint-scoped `none-resolved-mint` does **not** qualify: the wrapper cannot print, but its parent can |
+| **R1** | Non-inflatable supply | Whole-of-chain `none-resolved` authority / immutable user-collateralized mint path — supply cannot be printed (LUSD / BOLD). Two weak rungs sit below it: `user-collateralized-governed` mint path, and (DDR 4.2) mint-scoped `none-resolved-mint`, which states the token has no minter of its own while its wrapped parent still does. Weak rungs are published attribution and never satisfy the strong-anchor legs of the tier rule |
 | **R2** | Hard collateral + live redemption | Native or very-low-risk collateral, **and** a live redemption path: either `rcr ≥ 0.1` with a known route family **or** measured V9 executable exit above threshold (`completionRatio ≥ 0.1`, `executableUsd ≥ $100k`, functioning `primaryRoute`) when the V9 safety context is `v9-identified` |
 | **R3** | No supply / flow anomaly | Flat supply, no mint surge, calm supply and flow sub-signals — a pure market dislocation |
 | **R4** | No single freeze point | Decentralized governance, on-chain custody, not blacklistable — nobody can block recovery |
@@ -159,7 +159,7 @@ Stage 2 is an empirical **landmark survival** estimate over the clean corpus of 
 2. **Stratification, most-dependable-first.** A dependable wide band beats a precise band built on three incidents. The MVP strata, in order of how readily they are dropped:
    - **direction** (`above` vs `below`) — overpeg and underpeg resolve on different clocks and are never pooled.
    - **depth** — `minor` (≤250 bps) / `moderate` (250–1000) / `severe` (1000–2500) / `catastrophic` (>2500), validated by the monotonic depth→duration relationship in the corpus. Support-gated collapse can pool catastrophic with severe, then with the non-minor severe/moderate bucket when a bucket is thin; severe/catastrophic live events do not borrow the minor-flap clock.
-   - **structural class** — a coarse two-way split (`robust`: immutable CDP or fully-reserved fiat; `fragile`: algorithmic, synthetic, or impaired-collateral) from the same Stage-1 structural inputs.
+   - **structural class** — a coarse two-way split (`robust`: immutable CDP or fully-reserved fiat; `fragile`: algorithmic, synthetic, or impaired-collateral) from the same Stage-1 structural inputs. Posture set membership comes from the shared predicates in `shared/lib/safety-score-v9/mint-posture.ts` (`isFragileMintPosture` for the adverse leg, `isNoPrivilegedMintChainPosture` for the robustness leg), so the vocabulary is classified once for every engine. The robustness leg is deliberately whole-of-chain: mint-scoped `none-resolved-mint` does not by itself make a wrapper robust, because its parent can still print.
    - **peg currency** (USD vs non-USD) — applied as a refinement. **Currency guard:** USD subjects drop currency before structure; non-USD subjects preserve currency while dropping structure first so their clock cannot borrow USD history merely to retain a structural class (`candidateStrata` in `shared/lib/depeg-resolver/strata.ts`).
 
    The fallback order follows that candidate list through exact full stratum → currency/structure refinement → depth pooling → fully open structural/currency wildcards, reporting the actual stratum used. Finer splits (full 4-bucket depth at all times, 3-way structural class) are deferred until real-data counts justify the support.

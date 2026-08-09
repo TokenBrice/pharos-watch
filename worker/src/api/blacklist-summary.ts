@@ -9,7 +9,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/blacklist-tracker-version";
+} from "@shared/lib/methodology-versions/blacklist-tracker";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";

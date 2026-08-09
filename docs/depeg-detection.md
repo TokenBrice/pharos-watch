@@ -5,7 +5,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 ## Methodology Versioning
 
 - **Current methodology version:** `v6.1`
-- **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
+- **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
@@ -480,6 +480,8 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 | `limited` | `true` if < 7 days history |
 | `currentStreakDays` | Days since last event ended |
 | `depeggedNow` | Boolean (any ongoing event?) |
+
+**Window divergence (deliberate).** `computePegStability()` measures over the coin's *full* available chart/event history and does not call `coinTrackingStart()`, so it never applies PegScore's 4-year lookback clamp. Published PegScore, `/api/peg-summary`, and the detail-page hero (`trackingSpanDays`, `pegPct`) all use the clamped 4-year window. The two therefore disagree for coins with more than four years of history — display-side spans and time-at-peg can be longer than the scored ones, and neither number is wrong. Today only `currentStreakDays` and `depeggedNow` from this helper reach the UI (`src/components/depeg-history.tsx`), so the divergence is not currently visible side by side; keep it in mind before surfacing `pegPct` or `trackingSpan` next to a published PegScore.
 
 ## Peg Score (`peg-score.ts`)
 

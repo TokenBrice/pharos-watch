@@ -3,9 +3,9 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_V2_EFFECTIVE_AT,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   buildEmptyDdrrSummary,
   buildDepegResolverReviewSnapshot,
@@ -99,6 +99,14 @@ function coverageIncidents(count: number) {
     incidentState: "active" as const,
     supersededByIncidentKey: null,
   }));
+}
+
+/**
+ * mockD1 wired for the depeg_events read every review snapshot issues, so each
+ * case shows only its event rows plus whatever extra tables it needs.
+ */
+function reviewDb(eventRows: Record<string, unknown>[], extra: MockTableConfig[] = []) {
+  return mockD1([{ match: "FROM depeg_events", rows: eventRows }, ...extra]);
 }
 
 function incident(overrides: Record<string, unknown> = {}) {
@@ -393,7 +401,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       incidentState: "active" as const,
       supersededByIncidentKey: null,
     }));
-    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const db = reviewDb([]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
@@ -425,18 +433,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 3_600,
-            recovery_price: 1,
-          },
-        ],
+        id: 42,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 3_600,
+        recovery_price: 1,
       },
     ]);
     const stores = durableStores({
@@ -516,40 +519,36 @@ describe("buildDepegResolverReviewSnapshot", () => {
       startedAt: STARTED_AT + 3_600,
       eligibleAt: ELIGIBLE_AT + 3_600,
     });
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 3_600,
-            recovery_price: 1,
-          },
-          {
-            id: 43,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT + 3_600,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 42,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 3_600,
+        recovery_price: 1,
       },
       {
-        match: "FROM depeg_resolver_incident_event_links",
-        rows: [{
-          incident_key: autoRepairedIncident.incidentKey,
-          repair_sources: "ddr-worker:repair-task-runner-v1,ddr-worker:auto-sealed-tail",
-        }],
+        id: 43,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT + 3_600,
+        ended_at: null,
+        recovery_price: null,
       },
+    ], [
       {
-        match: "FROM depeg_resolver_incident_lineage",
-        rows: [{
-          incident_key: splitIncident.incidentKey,
-          parent_incident_key: "ddr2:split-parent-lineage",
-        }],
-      },
+      match: "FROM depeg_resolver_incident_event_links",
+      rows: [{
+        incident_key: autoRepairedIncident.incidentKey,
+        repair_sources: "ddr-worker:repair-task-runner-v1,ddr-worker:auto-sealed-tail",
+      }],
+    },
+      {
+      match: "FROM depeg_resolver_incident_lineage",
+      rows: [{
+        incident_key: splitIncident.incidentKey,
+        parent_incident_key: "ddr2:split-parent-lineage",
+      }],
+    },
     ]);
     const batch = vi.spyOn(db, "batch");
     const stores = durableStores({
@@ -626,22 +625,18 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("marks the reviewer snapshot degraded when lineage reads fail", async () => {
     const lineageIncident = incident({ incidentKey: "ddr2:lineage-read-failure" });
-    const db = mockD1([
+    const db = reviewDb([{
+      id: 42,
+      stablecoin_id: "lusd-liquity",
+      started_at: STARTED_AT,
+      ended_at: null,
+      recovery_price: null,
+    }], [
       {
-        match: "FROM depeg_events",
-        rows: [{
-          id: 42,
-          stablecoin_id: "lusd-liquity",
-          started_at: STARTED_AT,
-          ended_at: null,
-          recovery_price: null,
-        }],
-      },
-      {
-        match: "FROM depeg_resolver_incident_event_links",
-        rows: [],
-        throwError: new Error("D1_ERROR: lineage query unavailable"),
-      },
+      match: "FROM depeg_resolver_incident_event_links",
+      rows: [],
+      throwError: new Error("D1_ERROR: lineage query unavailable"),
+    },
     ]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [lineageIncident]),
@@ -672,25 +667,20 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: tailStartedAt + 86_400,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: originalStartedAt,
-            ended_at: lockedAt + 60,
-            recovery_price: 1,
-          },
-          {
-            id: 89,
-            stablecoin_id: "lusd-liquity",
-            started_at: tailStartedAt,
-            ended_at: recoveredAt,
-            recovery_price: 1,
-          },
-        ],
+        id: 42,
+        stablecoin_id: "lusd-liquity",
+        started_at: originalStartedAt,
+        ended_at: lockedAt + 60,
+        recovery_price: 1,
+      },
+      {
+        id: 89,
+        stablecoin_id: "lusd-liquity",
+        started_at: tailStartedAt,
+        ended_at: recoveredAt,
+        recovery_price: 1,
       },
     ]);
     const stores = durableStores({
@@ -781,25 +771,20 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: tailStartedAt + 86_400,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 43,
-            stablecoin_id: "lusd-liquity",
-            started_at: originalStartedAt,
-            ended_at: lockedAt + 60,
-            recovery_price: 1,
-          },
-          {
-            id: 90,
-            stablecoin_id: "lusd-liquity",
-            started_at: tailStartedAt,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 43,
+        stablecoin_id: "lusd-liquity",
+        started_at: originalStartedAt,
+        ended_at: lockedAt + 60,
+        recovery_price: 1,
+      },
+      {
+        id: 90,
+        stablecoin_id: "lusd-liquity",
+        started_at: tailStartedAt,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({
@@ -906,25 +891,20 @@ describe("buildDepegResolverReviewSnapshot", () => {
       incidentState: "superseded" as const,
       supersededByIncidentKey: canonical.incidentKey,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 43,
-            stablecoin_id: "lusd-liquity",
-            started_at: originalStartedAt,
-            ended_at: lockedAt + 60,
-            recovery_price: 1,
-          },
-          {
-            id: 90,
-            stablecoin_id: "lusd-liquity",
-            started_at: tailStartedAt,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 43,
+        stablecoin_id: "lusd-liquity",
+        started_at: originalStartedAt,
+        ended_at: lockedAt + 60,
+        recovery_price: 1,
+      },
+      {
+        id: 90,
+        stablecoin_id: "lusd-liquity",
+        started_at: tailStartedAt,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({
@@ -1040,21 +1020,16 @@ describe("buildDepegResolverReviewSnapshot", () => {
         policyUniverseIncluded: true,
       },
     ];
-    const db = mockD1([
+    const db = reviewDb([
+      { id: 1, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT, recovery_price: 1 },
       {
-        match: "FROM depeg_events",
-        rows: [
-          { id: 1, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: ELIGIBLE_AT, recovery_price: 1 },
-          {
-            id: 2,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 1,
-            recovery_price: 1,
-          },
-          { id: 3, stablecoin_id: "usr-resolv", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-        ],
+        id: 2,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 1,
+        recovery_price: 1,
       },
+      { id: 3, stablecoin_id: "usr-resolv", started_at: STARTED_AT, ended_at: null, recovery_price: null },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
@@ -1092,19 +1067,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: dynamicEligibleAt,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
+      { id: 11, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
       {
-        match: "FROM depeg_events",
-        rows: [
-          { id: 11, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-          {
-            id: 12,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: STARTED_AT + 48 * 3600,
-            recovery_price: 1,
-          },
-        ],
+        id: 12,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: STARTED_AT + 48 * 3600,
+        recovery_price: 1,
       },
     ]);
     const stores = durableStores({
@@ -1247,85 +1217,81 @@ describe("buildDepegResolverReviewSnapshot", () => {
         policyUniverseIncluded: true,
       },
     ];
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 202,
-            stablecoin_id: "matrix-pre-lock-recovered",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT - 60,
-            recovery_price: 1,
-          },
-          {
-            id: 203,
-            stablecoin_id: "matrix-terminal-before",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-          {
-            id: 204,
-            stablecoin_id: "matrix-pending",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-          {
-            id: 205,
-            stablecoin_id: "matrix-missed-recovered",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 60,
-            recovery_price: 1,
-          },
-          {
-            id: 206,
-            stablecoin_id: "matrix-orphan",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 60,
-            recovery_price: null,
-          },
-          {
-            id: 207,
-            stablecoin_id: "matrix-terminal-after",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-          {
-            id: 208,
-            stablecoin_id: "matrix-system-deferral",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-          {
-            id: 209,
-            stablecoin_id: "matrix-cron-gap",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 202,
+        stablecoin_id: "matrix-pre-lock-recovered",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT - 60,
+        recovery_price: 1,
       },
       {
-        match: "FROM tape_events",
-        rows: [
-          {
-            coin_id: "matrix-terminal-before",
-            type: "lifecycle.tracked.frozen",
-            ts: terminalBeforeAt * 1000,
-            payload_json: JSON.stringify({}),
-          },
-          {
-            coin_id: "matrix-terminal-after",
-            type: "lifecycle.tracked.frozen",
-            ts: terminalAfterAt * 1000,
-            payload_json: JSON.stringify({}),
-          },
-        ],
+        id: 203,
+        stablecoin_id: "matrix-terminal-before",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
+      {
+        id: 204,
+        stablecoin_id: "matrix-pending",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
+      },
+      {
+        id: 205,
+        stablecoin_id: "matrix-missed-recovered",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 60,
+        recovery_price: 1,
+      },
+      {
+        id: 206,
+        stablecoin_id: "matrix-orphan",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 60,
+        recovery_price: null,
+      },
+      {
+        id: 207,
+        stablecoin_id: "matrix-terminal-after",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
+      },
+      {
+        id: 208,
+        stablecoin_id: "matrix-system-deferral",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
+      },
+      {
+        id: 209,
+        stablecoin_id: "matrix-cron-gap",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
+      },
+    ], [
+      {
+      match: "FROM tape_events",
+      rows: [
+        {
+          coin_id: "matrix-terminal-before",
+          type: "lifecycle.tracked.frozen",
+          ts: terminalBeforeAt * 1000,
+          payload_json: JSON.stringify({}),
+        },
+        {
+          coin_id: "matrix-terminal-after",
+          type: "lifecycle.tracked.frozen",
+          ts: terminalAfterAt * 1000,
+          payload_json: JSON.stringify({}),
+        },
+      ],
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => incidents) });
 
@@ -1420,18 +1386,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: USR_FROZEN_ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 91,
-            stablecoin_id: "usr-resolv",
-            started_at: USR_FROZEN_EVENT_STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 91,
+        stablecoin_id: "usr-resolv",
+        started_at: USR_FROZEN_EVENT_STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
@@ -1473,18 +1434,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       policyUniverseIncluded: true,
       rolloutActiveAtEnablement: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 88045,
-            stablecoin_id: "usr-resolv",
-            started_at: rolloutStartedAt,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 88045,
+        stablecoin_id: "usr-resolv",
+        started_at: rolloutStartedAt,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
@@ -1523,30 +1479,26 @@ describe("buildDepegResolverReviewSnapshot", () => {
       policyUniverseIncluded: true,
     };
     const terminalTs = STARTED_AT + 3600;
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 92,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 92,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
+    ], [
       {
-        match: "FROM tape_events",
-        rows: [
-          {
-            coin_id: "lusd-liquity",
-            type: "lifecycle.tracked.frozen",
-            ts: terminalTs * 1000,
-            payload_json: JSON.stringify({}),
-          },
-        ],
-      },
+      match: "FROM tape_events",
+      rows: [
+        {
+          coin_id: "lusd-liquity",
+          type: "lifecycle.tracked.frozen",
+          ts: terminalTs * 1000,
+          payload_json: JSON.stringify({}),
+        },
+      ],
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1580,49 +1532,45 @@ describe("buildDepegResolverReviewSnapshot", () => {
     };
     const terminalTs = STARTED_AT + 3600;
     const token = { rowCount: 1, maxTs: terminalTs * 1000, maxId: 7 };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 96,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 96,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
+    ], [
       {
-        match: "COUNT(*) as row_count",
-        rows: [{ row_count: token.rowCount, max_ts: token.maxTs, max_id: token.maxId }],
-      },
+      match: "COUNT(*) as row_count",
+      rows: [{ row_count: token.rowCount, max_ts: token.maxTs, max_id: token.maxId }],
+    },
       {
-        match: "FROM cache WHERE key = ?",
-        rows: [
-          {
-            key: "depeg-resolver-review:terminal-evidence:v1",
-            value: JSON.stringify({
-              version: 1,
-              token,
-              checkedStablecoinIds: ["lusd-liquity"],
-              evidenceByStablecoinId: {
-                "lusd-liquity": {
-                  terminalEvidenceAt: terminalTs,
-                  terminalEvidenceInterval: null,
-                  terminalEvidencePrecision: "unknown",
-                  terminalEvidenceSourceDate: null,
-                },
+      match: "FROM cache WHERE key = ?",
+      rows: [
+        {
+          key: "depeg-resolver-review:terminal-evidence:v1",
+          value: JSON.stringify({
+            version: 1,
+            token,
+            checkedStablecoinIds: ["lusd-liquity"],
+            evidenceByStablecoinId: {
+              "lusd-liquity": {
+                terminalEvidenceAt: terminalTs,
+                terminalEvidenceInterval: null,
+                terminalEvidencePrecision: "unknown",
+                terminalEvidenceSourceDate: null,
               },
-            }),
-          },
-        ],
-      },
+            },
+          }),
+        },
+      ],
+    },
       {
-        match: "SELECT coin_id, type, ts, payload_json",
-        rows: [],
-        throwError: new Error("unexpected tape row query"),
-      },
+      match: "SELECT coin_id, type, ts, payload_json",
+      rows: [],
+      throwError: new Error("unexpected tape row query"),
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1653,32 +1601,28 @@ describe("buildDepegResolverReviewSnapshot", () => {
       policyUniverseIncluded: true,
     };
     const terminalTs = STARTED_AT + 3600;
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 93,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 93,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
+    ], [
       {
-        match: "FROM tape_events",
-        rows: [
-          {
-            coin_id: "lusd-liquity",
-            type: "lifecycle.tracked.frozen",
-            ts: terminalTs * 1000,
-            // "0000-01" previously produced epoch -2208988800 (year 1900);
-            // the year < 1 guard now rejects it and falls through to ts.
-            payload_json: JSON.stringify({ frozenAt: "0000-01" }),
-          },
-        ],
-      },
+      match: "FROM tape_events",
+      rows: [
+        {
+          coin_id: "lusd-liquity",
+          type: "lifecycle.tracked.frozen",
+          ts: terminalTs * 1000,
+          // "0000-01" previously produced epoch -2208988800 (year 1900);
+          // the year < 1 guard now rejects it and falls through to ts.
+          payload_json: JSON.stringify({ frozenAt: "0000-01" }),
+        },
+      ],
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1707,18 +1651,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
+      { id: 94, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+    ], [
       {
-        match: "FROM depeg_events",
-        rows: [
-          { id: 94, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-        ],
-      },
-      {
-        match: "FROM tape_events",
-        rows: [],
-        throwError: new Error("D1_ERROR: database is locked"),
-      },
+      match: "FROM tape_events",
+      rows: [],
+      throwError: new Error("D1_ERROR: database is locked"),
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1739,18 +1679,14 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
+      { id: 95, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
+    ], [
       {
-        match: "FROM depeg_events",
-        rows: [
-          { id: 95, stablecoin_id: "lusd-liquity", started_at: STARTED_AT, ended_at: null, recovery_price: null },
-        ],
-      },
-      {
-        match: "FROM tape_events",
-        rows: [],
-        throwError: new Error("D1_ERROR: no such table: tape_events"),
-      },
+      match: "FROM tape_events",
+      rows: [],
+      throwError: new Error("D1_ERROR: no such table: tape_events"),
+    },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
@@ -1774,12 +1710,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [{ id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null }],
-      },
-    ]);
+    const db = reviewDb([{ id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null }]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, eligibleAt + 3600, undefined, {
@@ -1819,12 +1750,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
-      {
-        match: "FROM depeg_events",
-        rows: [{ id: 95, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: endedAt, recovery_price: 1 }],
-      },
-    ]);
+    const db = reviewDb([{ id: 95, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: endedAt, recovery_price: 1 }]);
     const stores = durableStores({
       loadCanonicalIncidents: vi.fn(async () => [incident]),
       loadSealedPublicPredictions: vi.fn(async () => [
@@ -1877,18 +1803,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ELIGIBLE_AT + 10,
-            recovery_price: 1,
-          },
-        ],
+        id: 42,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: ELIGIBLE_AT + 10,
+        recovery_price: 1,
       },
     ]);
     const stores = durableStores({
@@ -1945,18 +1866,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
         deferralCount: 1,
       },
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 44,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 44,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
@@ -1988,18 +1904,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       eligibleAt: ELIGIBLE_AT,
       policyUniverseIncluded: true,
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 45,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 45,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({
@@ -2069,18 +1980,13 @@ describe("buildDepegResolverReviewSnapshot", () => {
       missingReasons: ["insufficient_signal"],
       relatedContext: {},
     };
-    const db = mockD1([
+    const db = reviewDb([
       {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 43,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: null,
-            recovery_price: null,
-          },
-        ],
+        id: 43,
+        stablecoin_id: "lusd-liquity",
+        started_at: STARTED_AT,
+        ended_at: null,
+        recovery_price: null,
       },
     ]);
     const stores = durableStores({
@@ -2160,7 +2066,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("caps public review rows at the published limit", async () => {
-    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const db = reviewDb([]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(401)) });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
@@ -2174,7 +2080,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   });
 
   it("serves more than 100 public review rows without truncation", async () => {
-    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const db = reviewDb([]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(101)) });
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
@@ -2190,8 +2096,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
   it("stores a cache snapshot with headline DDRR stats", async () => {
     vi.useFakeTimers();
     vi.setSystemTime((ELIGIBLE_AT + 3600) * 1000);
-    const db = mockD1([
-      { match: "FROM depeg_events", rows: [] },
+    const db = reviewDb([], [
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
     const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(1)) });

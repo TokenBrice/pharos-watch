@@ -16,11 +16,9 @@
   },
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
-    "rwa": true,
-    "navToken": false
+    "rwa": true
   },
   "collateral": "USDC liquidity reserve for redemptions plus Strategy Inc. perpetual preferred stock (STRC), a BTC-backed equity instrument; treasury reported at 1.79× reserve ratio (Mar 2026 attestation by The Network Firm)",
   "pegMechanism": "1:1 mint and redemption against USDC via the LiquidityWindow smart contract; AML-verified primary market participants only; yield distributed monthly as additional BUCK tokens (rebase)",

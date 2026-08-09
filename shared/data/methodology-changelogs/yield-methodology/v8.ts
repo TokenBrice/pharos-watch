@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.38",
+    title: "One safety-resolution ladder and one venue-risk derivation",
+    date: "2026-08-10",
+    effectiveAt: 1786665600,
+    summary:
+      "The hourly yield publisher and the API's live-safety hydration now resolve a row's published safety score, grade, provenance, and reason through one shared engine, and both yield engines price venue risk from the continuous weighted score with the coarse tier derived from it — closing four drifted guards without moving any live grade.",
+    impact: [
+      "Both write and read paths call `resolveYieldRowSafety(...)`; the stricter guard won at each prior divergence: opportunity scores substitute only over an observed AND rated Report Card (an NR grade keeps its own unrating), the reviewed-venue registry fallback applies on both paths, and every external opportunity row is assessed even when it already carries a published contract",
+      "Rows hydrated from legacy cached payloads gain an explicitly unrated opportunity contract plus the `opportunity-evidence-missing` warning instead of silently carrying no contract; Royco tranche rows no longer republish a stale opportunity contract beside a refreshed tranche score; a source whose entire history is same-day now stays NR",
+      "Venue risk is canonical on the weighted 1..5 score for both engines; a stored coarse tier that disagrees with (or lacks) its weighted score can no longer be priced — it derives, or prices as `unknown` (an evidence gap), never a guessed penalty",
+      "The shared penalty-term kit (access, withdrawal, utilization, TVL, venue) carries per-engine magnitude profiles; Royco-only terms remain bespoke and every magnitude is unchanged",
+      "Measured movement: none — 108,000 generic-engine differential cases and 4,000 production-shaped Royco cases are byte-identical, and all 61 reviewed venue registry entries already derive the tier they store",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.37",
     title: "Re Protocol Product Identity Correction",
     date: "2026-07-28",

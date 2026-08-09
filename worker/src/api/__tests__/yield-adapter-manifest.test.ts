@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { handleYieldAdapterManifest } from "../yield-adapter-manifest";
 import { getRouteMatch } from "../../routes/registry";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
+import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/yield-methodology";
 import {
   RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,

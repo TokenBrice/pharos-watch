@@ -1,5 +1,5 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { ContractDeployment } from "@shared/types/core";
 import {
