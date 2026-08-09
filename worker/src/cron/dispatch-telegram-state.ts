@@ -230,7 +230,6 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const safetySourceAssessment = assessActiveAlertSafetySource(
     sourceData.activeSafetySource ?? {
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "Canonical Safety Score V9 source was not loaded",

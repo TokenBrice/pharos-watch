@@ -18,7 +18,6 @@ describe("handleReportCardsV9", () => {
     const snapshot = makeReportCardsV9Response();
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot,
     });
 
@@ -50,7 +49,6 @@ describe("handleReportCardsV9", () => {
     });
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "v9",
-      expectedModel: "v9",
       snapshot,
     });
 
@@ -64,7 +62,6 @@ describe("handleReportCardsV9", () => {
   it("fails closed when the canonical V9 publication is unavailable", async () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "Canonical Safety Score V9 publication is unavailable",

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IdentifiedActiveSafetyScoreSource } from "../identified-active-safety-score-source";
+import type { ActiveSafetyScoreSource } from "../safety-score-active-source";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
-const mockLoadIdentifiedActiveSafetyScoreSource = vi.fn();
+const mockLoadActiveSafetyScoreSource = vi.fn();
 
-vi.mock("../identified-active-safety-score-source", () => ({
-  loadIdentifiedActiveSafetyScoreSource: mockLoadIdentifiedActiveSafetyScoreSource,
+vi.mock("../safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: mockLoadActiveSafetyScoreSource,
 }));
 
 const {
@@ -34,13 +34,10 @@ const authored = {
 
 function activeV9(
   overrides: Partial<typeof identity> = {},
-): Extract<IdentifiedActiveSafetyScoreSource, { kind: "v9" }> {
+): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
   const activeIdentity = { ...identity, ...overrides };
   return {
     kind: "v9",
-    expectedModel: "v9",
-    identity: activeIdentity,
-    publishedAtSec: 110,
     snapshot: makeWorkerReportCardsV9Response({
       safetyScoreIdentity: activeIdentity,
       updatedAt: 110,
@@ -50,7 +47,7 @@ function activeV9(
 
 describe("digest Safety Score delivery context", () => {
   beforeEach(() => {
-    mockLoadIdentifiedActiveSafetyScoreSource.mockReset().mockResolvedValue(activeV9());
+    mockLoadActiveSafetyScoreSource.mockReset().mockResolvedValue(activeV9());
   });
 
   it("allows only the exact authored publication generation", async () => {
@@ -58,7 +55,7 @@ describe("digest Safety Score delivery context", () => {
       checkDigestSafetyContextForDelivery({} as D1Database, authored),
     ).resolves.toEqual({ kind: "ok" });
 
-    mockLoadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce(
+    mockLoadActiveSafetyScoreSource.mockResolvedValueOnce(
       activeV9({ publicationGenerationId: "report-cards:v9:2" }),
     );
     await expect(
@@ -67,16 +64,16 @@ describe("digest Safety Score delivery context", () => {
   });
 
   it("defers delivery while the activated V9 identity is unavailable", async () => {
-    mockLoadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce({
+    mockLoadActiveSafetyScoreSource.mockResolvedValueOnce({
       kind: "error",
-      expectedModel: "v9",
-      reason: "v9-identity-mismatch",
+      reason: "v9-snapshot-unavailable",
       detail: "marker and snapshot disagree",
-    } satisfies IdentifiedActiveSafetyScoreSource);
+      snapshot: null,
+    } satisfies ActiveSafetyScoreSource);
 
     await expect(
       checkDigestSafetyContextForDelivery({} as D1Database, authored),
-    ).resolves.toEqual({ kind: "unavailable", reason: "v9-identity-mismatch" });
+    ).resolves.toEqual({ kind: "unavailable", reason: "v9-snapshot-unavailable" });
   });
 
   it("allows a safety-free degraded digest but rejects a legacy unbound edition", async () => {
@@ -98,7 +95,7 @@ describe("digest Safety Score delivery context", () => {
         reason: "legacy-unbound",
       }),
     ).resolves.toEqual({ kind: "stale", reason: "legacy-unbound" });
-    expect(mockLoadIdentifiedActiveSafetyScoreSource).not.toHaveBeenCalled();
+    expect(mockLoadActiveSafetyScoreSource).not.toHaveBeenCalled();
   });
 
   it("detects report-card claims only when copy has no identified publication", () => {

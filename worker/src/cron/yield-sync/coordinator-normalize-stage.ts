@@ -37,7 +37,6 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     onChainRates: fetched.onChainRates,
     safetyScores: fetched.safetyScores,
     safetySnapshotAvailable: fetched.safetySnapshotAvailable,
-    expectedModel: fetched.safetySnapshot.expectedModel,
     riskFreeRates: fetched.riskFreeRates,
     signal: params.signal,
     chainRpcs: params.chainRpcs,

@@ -403,7 +403,6 @@ describe("loadDdrContext", () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValue({
         kind: "v9",
-        expectedModel: "v9",
         snapshot,
       });
     const signalsJson = JSON.stringify({
@@ -652,7 +651,12 @@ describe("loadDdrContext", () => {
       },
     });
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
-      .mockResolvedValue({ kind: "v9", expectedModel: "v9", snapshot });
+      .mockResolvedValue({
+        kind: "held",
+        reason: "v9-publication-held",
+        detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+        snapshot,
+      });
     const db = mockD1([
       ...publishedDewsConfigs(),
       {

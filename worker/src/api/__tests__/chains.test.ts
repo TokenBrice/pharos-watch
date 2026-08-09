@@ -101,10 +101,15 @@ function activeV9(options: {
       attemptedAtSec: updatedAt + 60,
       reasons: [{ code: "assessment-failed", detail: "test hold" }],
     };
+    return {
+      kind: "held" as const,
+      reason: "v9-publication-held" as const,
+      detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+      snapshot,
+    };
   }
   return {
     kind: "v9" as const,
-    expectedModel: "v9" as const,
     snapshot,
   };
 }
@@ -143,7 +148,7 @@ describe("handleChains", () => {
     const body = await response.json() as {
       chains: Array<{ id: string; healthScore: number | null; totalUsd: number }>;
       safetyScoreIdentity: { model: string } | null;
-      _meta: { status: string; dependencies: { reportCards: { status: string; expectedModel: string } } };
+      _meta: { status: string; dependencies: { reportCards: { status: string } } };
     };
 
     expect(response.status).toBe(200);
@@ -152,14 +157,13 @@ describe("handleChains", () => {
     expect(body.safetyScoreIdentity).toMatchObject({ model: "v9" });
     expect(body._meta).toMatchObject({
       status: "fresh",
-      dependencies: { reportCards: { status: "fresh", expectedModel: "v9" } },
+      dependencies: { reportCards: { status: "fresh" } },
     });
   });
 
   it("fails closed when the canonical V9 publication is unavailable", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValue({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "missing",

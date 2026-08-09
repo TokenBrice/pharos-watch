@@ -136,7 +136,6 @@ beforeEach(() => {
     ageSeconds: 60,
     generation: getAlertSafetyV9SourceGeneration(),
     envelope: null,
-    expectedModel: "v9",
   });
 });
 
@@ -224,7 +223,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
         ageSeconds: 60,
         generation: getAlertSafetyV9SourceGeneration(),
         envelope: null,
-        expectedModel: "v9",
       },
     });
     const meta = JSON.parse(result.metadata ?? "{}");
@@ -340,7 +338,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       ageSeconds: null,
       generation: null,
       envelope: null,
-      expectedModel: "v9",
       failureReason: "v9-snapshot-unavailable",
     });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
@@ -365,7 +362,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       ageSeconds: null,
       generation: null,
       envelope: null,
-      expectedModel: "v9",
       failureReason: "v9-snapshot-unavailable",
     });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {

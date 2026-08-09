@@ -43,10 +43,15 @@ function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
       attemptedAtSec: updatedAt + 60,
       reasons: [{ code: "assessment-failed", detail: "test hold" }],
     };
+    return {
+      kind: "held" as const,
+      reason: "v9-publication-held" as const,
+      detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+      snapshot,
+    };
   }
   return {
     kind: "v9" as const,
-    expectedModel: "v9" as const,
     snapshot,
   };
 }
@@ -281,7 +286,6 @@ describe("worker data invariant canaries", () => {
     vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreSource)
       .mockResolvedValueOnce({
         kind: "error",
-        expectedModel: "v9",
         reason: "v9-snapshot-unavailable",
         snapshot: null,
         detail: "missing",
@@ -298,7 +302,6 @@ describe("worker data invariant canaries", () => {
       error: "active Safety Score source v9-snapshot-unavailable",
       metadata: {
         reason: "v9-snapshot-unavailable",
-        expectedModel: "v9",
       },
     });
   });

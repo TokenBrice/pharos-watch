@@ -399,54 +399,52 @@ export async function loadDdrContext(
   };
   try {
     const activeSafetySource = await loadActiveSafetyScoreSource(db);
-    if (activeSafetySource.kind === "v9") {
-      if (activeSafetySource.snapshot.publicationHealth.status === "held") {
-        safetyContext = {
-          status: "cache-unavailable",
-          reason: "v9-publication-held",
-          identity: activeSafetySource.snapshot.safetyScoreIdentity,
-        };
-      } else {
-        hydrateV9DependencyImpairment(activeSafetySource.snapshot.cards);
-        safetyContext = {
-          status: "v9-identified",
-          reason: null,
-          identity: activeSafetySource.snapshot.safetyScoreIdentity,
-        };
-        safetyByCoin = new Map(
-          activeSafetySource.snapshot.cards
-            .filter((card) => activeCoinIds.includes(card.id))
-            .map((card) => [
-              card.id,
-              {
-                stablecoin_id: card.id,
-                grade: card.grade,
-                score: card.score,
-                recorded_at: activeSafetySource.snapshot.updatedAt,
-              },
-            ]),
-        );
-        v9ExitByCoin = new Map(
-          activeSafetySource.snapshot.cards
-            .filter((card) => activeCoinIds.includes(card.id))
-            .map((card) => [
-              card.id,
-              {
-                pillarScore: card.pillars.exit.score,
-                reasonCodes: card.pillars.exit.reasons.map((reason) => reason.code),
-                stressRequest: card.breakdowns?.exit.stressRequest ?? null,
-                primaryRoute:
-                  card.breakdowns?.exit.primaryRoute == null
-                    ? null
-                    : {
-                        key: card.breakdowns.exit.primaryRoute.key,
-                        score: card.breakdowns.exit.primaryRoute.score,
-                        capacity: card.breakdowns.exit.primaryRoute.capacity ?? null,
-                      },
-              },
-            ]),
-        );
-      }
+    if (activeSafetySource.kind === "held") {
+      safetyContext = {
+        status: "cache-unavailable",
+        reason: activeSafetySource.reason,
+        identity: activeSafetySource.snapshot.safetyScoreIdentity,
+      };
+    } else if (activeSafetySource.kind === "v9") {
+      hydrateV9DependencyImpairment(activeSafetySource.snapshot.cards);
+      safetyContext = {
+        status: "v9-identified",
+        reason: null,
+        identity: activeSafetySource.snapshot.safetyScoreIdentity,
+      };
+      safetyByCoin = new Map(
+        activeSafetySource.snapshot.cards
+          .filter((card) => activeCoinIds.includes(card.id))
+          .map((card) => [
+            card.id,
+            {
+              stablecoin_id: card.id,
+              grade: card.grade,
+              score: card.score,
+              recorded_at: activeSafetySource.snapshot.updatedAt,
+            },
+          ]),
+      );
+      v9ExitByCoin = new Map(
+        activeSafetySource.snapshot.cards
+          .filter((card) => activeCoinIds.includes(card.id))
+          .map((card) => [
+            card.id,
+            {
+              pillarScore: card.pillars.exit.score,
+              reasonCodes: card.pillars.exit.reasons.map((reason) => reason.code),
+              stressRequest: card.breakdowns?.exit.stressRequest ?? null,
+              primaryRoute:
+                card.breakdowns?.exit.primaryRoute == null
+                  ? null
+                  : {
+                      key: card.breakdowns.exit.primaryRoute.key,
+                      score: card.breakdowns.exit.primaryRoute.score,
+                      capacity: card.breakdowns.exit.primaryRoute.capacity ?? null,
+                    },
+            },
+          ]),
+      );
     } else {
       safetyContext = {
         status: "cache-unavailable",

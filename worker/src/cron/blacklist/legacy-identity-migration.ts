@@ -13,6 +13,26 @@ type LegacyIdentity = {
   address: string;
 };
 
+/**
+ * The balance copy re-keys a row, so it reads the carried columns up front and
+ * re-inserts them by value. An `INSERT … SELECT` that reads the same table it
+ * writes leaves `blacklist_current_balances.<column>` ambiguous between the
+ * upsert target and the source row, and makes the copy depend on the legacy row
+ * still matching mid-batch.
+ */
+type LegacyBalanceRow = LegacyIdentity & {
+  amount_native: string | null;
+  amount_usd: number | null;
+  source: string;
+  status: string;
+  observed_at: number;
+  last_successful_observed_at: number | null;
+  attempt_count: number;
+  last_attempted_at: number | null;
+  last_error_class: string | null;
+  consecutive_failures: number;
+};
+
 export type BlacklistLegacyIdentityMigrationResult = {
   eventMigrated: number;
   balanceMigrated: number;
@@ -55,20 +75,22 @@ export async function migrateLegacyBlacklistIdentities(
     db
       .prepare(
         `/* blacklist-legacy-balance-identities */
-         SELECT id, stablecoin, chain_id, address
+         SELECT id, stablecoin, chain_id, address, amount_native, amount_usd,
+                source, status, observed_at, last_successful_observed_at,
+                attempt_count, last_attempted_at, last_error_class,
+                consecutive_failures
          FROM blacklist_current_balances
          WHERE config_key IS NULL AND contract_address IS NULL
          ORDER BY observed_at ASC, id ASC
          LIMIT ?`,
       )
       .bind(BALANCE_BATCH_SIZE)
-      .all<LegacyIdentity>(),
+      .all<LegacyBalanceRow>(),
   ]);
 
   const eventStatements: D1PreparedStatement[] = [];
   const balanceStatements: D1PreparedStatement[] = [];
-  let eventMigrated = 0;
-  let balanceMigrated = 0;
+  let balancePlanned = 0;
   let ambiguousSkipped = 0;
 
   for (const row of events.results ?? []) {
@@ -87,7 +109,6 @@ export async function migrateLegacyBlacklistIdentities(
         )
         .bind(config.configKey, config.contractAddress, row.id),
     );
-    eventMigrated++;
   }
 
   for (const row of balances.results ?? []) {
@@ -112,12 +133,7 @@ export async function migrateLegacyBlacklistIdentities(
               amount_native, amount_usd, source, status, observed_at,
               last_successful_observed_at, attempt_count, last_attempted_at,
               last_error_class, consecutive_failures)
-           SELECT ?, stablecoin, chain_id, address, ?, ?, amount_native, amount_usd,
-                  source, status, observed_at, last_successful_observed_at,
-                  attempt_count, last_attempted_at, last_error_class,
-                  consecutive_failures
-           FROM blacklist_current_balances
-           WHERE id = ? AND config_key IS NULL AND contract_address IS NULL
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              config_key = excluded.config_key,
              contract_address = excluded.contract_address,
@@ -162,7 +178,24 @@ export async function migrateLegacyBlacklistIdentities(
                ELSE blacklist_current_balances.consecutive_failures
              END`,
         )
-        .bind(scopedId, config.configKey, config.contractAddress, row.id),
+        .bind(
+          scopedId,
+          row.stablecoin,
+          row.chain_id,
+          row.address,
+          config.configKey,
+          config.contractAddress,
+          row.amount_native,
+          row.amount_usd,
+          row.source,
+          row.status,
+          row.observed_at,
+          row.last_successful_observed_at,
+          row.attempt_count,
+          row.last_attempted_at,
+          row.last_error_class,
+          row.consecutive_failures,
+        ),
       db
         .prepare(
           `/* blacklist-legacy-balance-identity-delete */
@@ -171,12 +204,27 @@ export async function migrateLegacyBlacklistIdentities(
         )
         .bind(row.id),
     );
-    balanceMigrated++;
+    balancePlanned++;
   }
 
-  await batchExecute(db, eventStatements, { signal });
+  const eventMigrated = await batchExecute(db, eventStatements, { signal });
   // Fifty pairs fit exactly in one D1 batch, keeping each copy/delete migration
   // in the same transactional D1 batch without a global reset.
-  await batchExecute(db, balanceStatements, { signal });
+  const balanceChanges = await batchExecute(db, balanceStatements, { signal });
+  // Every applied migration contributes exactly two row changes (the re-keyed
+  // insert and the legacy delete), so a batch that does not commit reports 0
+  // instead of the planned count. Reporting the planned count unconditionally
+  // is what let a balance backfill sit at 6,122 rows while every run claimed 50.
+  const balanceMigrated = Math.floor(balanceChanges / 2);
+  if (balanceMigrated < balancePlanned) {
+    console.warn(
+      JSON.stringify({
+        scope: "sync-blacklist",
+        message: "Legacy balance identity migration applied fewer rows than planned",
+        planned: balancePlanned,
+        applied: balanceMigrated,
+      }),
+    );
+  }
   return { eventMigrated, balanceMigrated, ambiguousSkipped };
 }

@@ -63,7 +63,6 @@ export interface AlertSafetySourceAssessment {
   ageSeconds: number | null;
   generation: string | null;
   envelope: AlertSafetySourceEnvelope | null;
-  expectedModel: "v9";
   failureReason?: string;
 }
 
@@ -260,7 +259,6 @@ export function assessActiveAlertSafetySource(
       ageSeconds: null,
       generation: null,
       envelope: null,
-      expectedModel: "v9",
       failureReason: activeSource.reason,
     };
   }
@@ -274,10 +272,9 @@ export function assessActiveAlertSafetySource(
       ageSeconds: null,
       generation: null,
       envelope: null,
-      expectedModel: "v9",
       failureReason:
-        activeSource.snapshot.publicationHealth.status === "held"
-          ? "v9-publication-held"
+        activeSource.kind === "held"
+          ? activeSource.reason
           : "v9-snapshot-invalid",
     };
   }
@@ -288,7 +285,6 @@ export function assessActiveAlertSafetySource(
       ageSeconds,
       generation: envelope.generation,
       envelope,
-      expectedModel: "v9",
       failureReason: "v9-snapshot-stale",
     };
   }
@@ -297,7 +293,6 @@ export function assessActiveAlertSafetySource(
     ageSeconds,
     generation: envelope.generation,
     envelope,
-    expectedModel: "v9",
   };
 }
 

@@ -88,10 +88,6 @@ describe("syncYieldData", () => {
 
     expect(stablecoinsReads).toHaveLength(1);
     expect(safetyCall?.[0]).toBe(db);
-    expect(safetyCall?.[1]).toMatchObject({
-      outputMode: "map",
-      sourceMode: "published-cache",
-    });
   });
 
   it("reports writer-pause progress metadata before returning", async () => {

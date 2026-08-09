@@ -66,8 +66,8 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
 }));
 
-vi.mock("../../lib/identified-active-safety-score-source", () => ({
-  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: vi.fn(),
 }));
 
 vi.mock("../../lib/flight-to-quality-classification", () => ({
@@ -123,9 +123,9 @@ import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
-  loadIdentifiedActiveSafetyScoreSource,
-  type IdentifiedActiveSafetyScoreSource,
-} from "../../lib/identified-active-safety-score-source";
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "../../lib/safety-score-active-source";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
@@ -141,7 +141,7 @@ const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
 function canonicalSafetySource(
   cards: unknown[],
-): Extract<IdentifiedActiveSafetyScoreSource, { kind: "v9" }> {
+): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
   const snapshot = makeWorkerReportCardsV9Response({
     cards: cards
       .map((value) => value as {
@@ -160,9 +160,6 @@ function canonicalSafetySource(
   });
   return {
     kind: "v9",
-    expectedModel: "v9",
-    identity: snapshot.safetyScoreIdentity,
-    publishedAtSec: snapshot.updatedAt,
     snapshot,
   };
 }
@@ -456,7 +453,7 @@ describe("generateDailyDigest", () => {
         updatedAt: Math.floor(Date.now() / 1000),
       });
 
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource)
+    vi.mocked(loadActiveSafetyScoreSource)
       .mockReset()
       .mockResolvedValue(
         canonicalSafetySource([
@@ -794,11 +791,11 @@ describe("generateDailyDigest", () => {
   });
 
   it("omits safety inputs and blocks unbound safety claims when the canonical identity is unavailable", async () => {
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce({
       kind: "error",
-      expectedModel: "v9",
-      reason: "v9-identity-mismatch",
+      reason: "v9-snapshot-unavailable",
       detail: "identity mismatch",
+      snapshot: null,
     });
 
     const db = mockD1(makeBaseTables());
@@ -815,7 +812,7 @@ describe("generateDailyDigest", () => {
     expect(storedInput.safetyContext).toMatchObject({
       status: "unavailable",
       expectedModel: "v9",
-      reason: "v9-identity-mismatch",
+      reason: "v9-snapshot-unavailable",
     });
     expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({ qualityGate: "blocked" });
     expect(storedInput.editorialAudit).toMatchObject({
@@ -828,11 +825,11 @@ describe("generateDailyDigest", () => {
   });
 
   it("repairs unbound daily copy during the standard corrective retry", async () => {
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce({
       kind: "error",
-      expectedModel: "v9",
-      reason: "v9-identity-mismatch",
+      reason: "v9-snapshot-unavailable",
       detail: "identity mismatch",
+      snapshot: null,
     });
     const cleanResponse = JSON.parse(ANTHROPIC_OK_TEXT) as {
       title: string;
@@ -896,11 +893,8 @@ describe("generateDailyDigest", () => {
       reasonCodes: ["bounded-mechanism-review"],
     });
     const snapshot = makeWorkerReportCardsV9Response({ cards: [card] });
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValueOnce({
       kind: "v9",
-      expectedModel: "v9",
-      identity: snapshot.safetyScoreIdentity,
-      publishedAtSec: snapshot.updatedAt,
       snapshot,
     });
 
@@ -1018,10 +1012,12 @@ describe("generateDailyDigest", () => {
     expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
     expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
-    expect(storedInput.mintBurnFlows.classificationSource).toBe("unavailable");
-    expect(storedInput.mintBurnFlows.classificationReason).toBe("v9-snapshot-unavailable");
-    expect(storedInput.mintBurnFlows.safetyScoreIdentity).toBeNull();
-    expect(storedInput.degradedSources).toContain("mint-burn-ftq:v9-snapshot-unavailable");
+    // One canonical loader serves both the digest collectors and the FTQ
+    // classifier, so the suite's healthy source classifies here. The
+    // fail-closed FTQ arms are covered by
+    // daily-digest/__tests__/mint-burn-ftq.test.ts.
+    expect(storedInput.mintBurnFlows.classificationSource).toBe("safety-score-v9-publication");
+    expect(storedInput.mintBurnFlows.classificationReason).toBeNull();
     expect(storedInput.mintBurnFlows.topChains).toBeDefined();
     expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
     expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
@@ -2134,7 +2130,7 @@ describe("totalMcapAth enrichment", () => {
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(loadStablecoinsCache).mockReset();
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockReset();
+    vi.mocked(loadActiveSafetyScoreSource).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
   afterEach(() => {
@@ -2160,7 +2156,7 @@ describe("totalMcapAth enrichment", () => {
       },
       updatedAt: nowSec,
     });
-    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValue(
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue(
       canonicalSafetySource([
         {
           id: "usdt-tether",

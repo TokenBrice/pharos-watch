@@ -11,7 +11,7 @@ import {
   BOUNDED_JOURNAL_RETENTION_SEC,
   appendBoundedJournal,
   loadBoundedJournal,
-  type BoundedJournalStoreConfig,
+  type AppendableBoundedJournalStoreConfig,
 } from "./bounded-journal-store";
 
 export const SUPPLY_ATTRIBUTION_JOURNAL_STORE_MAX_ROWS_PER_ASSET =
@@ -19,12 +19,13 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_STORE_MAX_ROWS_PER_ASSET =
 export const SUPPLY_ATTRIBUTION_JOURNAL_STORE_RETENTION_SEC =
   BOUNDED_JOURNAL_RETENTION_SEC;
 
-const config: BoundedJournalStoreConfig<
+const config: AppendableBoundedJournalStoreConfig<
   SupplyAttributionJournalV1,
   SupplyAttributionJournalByIdV1
 > = {
   table: "safety_score_v9_supply_attribution_journal",
   lane: "supply-attribution",
+  label: "Supply attribution journal",
   maxAssets: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
   maxEntriesPerAsset: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET,
   parseRecord: (value) => SupplyAttributionJournalV1Schema.parse(value),
@@ -58,23 +59,6 @@ const config: BoundedJournalStoreConfig<
       payloadBytes,
       nowSec,
     ),
-  messages: {
-    invalidStoreTimestamp: "Supply attribution journal store timestamp must be non-negative",
-    invalidReadTimestamp: "Supply attribution journal read timestamp must be non-negative",
-    batchRecords: (limit) => `Supply attribution journal batch exceeds ${limit} records`,
-    inactiveWrite: (assetId) => `Supply attribution journal rejects inactive asset ${assetId}`,
-    futureRecord: (journalId) => `Supply attribution journal rejects future record ${journalId}`,
-    recordBytes: (journalId, limit) =>
-      `Supply attribution journal record ${journalId} exceeds ${limit} bytes`,
-    duplicateJournal: (journalId) => `Supply attribution journal batch duplicates ${journalId}`,
-    duplicateAttempt: (key) => `Supply attribution journal batch duplicates attempt ${key}`,
-    batchBytes: (limit) => `Supply attribution journal batch exceeds ${limit} bytes`,
-    duplicateReadAssets: "Supply attribution journal read asset IDs contain duplicates",
-    readAssets: (limit) => `Supply attribution journal read exceeds ${limit} assets`,
-    inactiveRead: (assetId) => `Supply attribution journal read rejects inactive asset ${assetId}`,
-    malformedStoredJson: (message) =>
-      `Malformed stored supply attribution journal JSON: ${message}`,
-  },
 };
 
 export async function appendSupplyAttributionJournalV1(

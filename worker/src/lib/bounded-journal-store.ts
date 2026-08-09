@@ -24,29 +24,21 @@ interface StoredJournalRow {
   payload_json: string;
 }
 
-interface JournalStoreMessages {
-  invalidStoreTimestamp: string;
-  invalidReadTimestamp: string;
-  batchRecords: (limit: number) => string;
-  inactiveWrite: (assetId: string) => string;
-  futureRecord: (journalId: string) => string;
-  recordBytes: (journalId: string, limit: number) => string;
-  duplicateJournal: (journalId: string) => string;
-  duplicateAttempt: (attemptKey: string) => string;
-  batchBytes: (limit: number) => string;
-  duplicateReadAssets: string;
-  readAssets: (limit: number) => string;
-  inactiveRead: (assetId: string) => string;
-  malformedStoredJson: (message: string) => string;
-}
-
 export interface BoundedJournalStoreConfig<TRecord extends JournalRecord, TProjection> {
   table: string;
   lane: string;
+  /** Sentence-leading noun for this lane's guard messages, e.g. "Evidence journal". */
+  label: string;
   maxAssets: number;
   maxEntriesPerAsset: number;
   parseRecord: (value: unknown) => TRecord;
   parseProjection: (value: Record<string, TRecord[]>) => TProjection;
+  validateRecord?: (record: TRecord) => void;
+}
+
+/** Only lanes with a live producer carry an insert; read-only lanes do not. */
+export interface AppendableBoundedJournalStoreConfig<TRecord extends JournalRecord, TProjection>
+  extends BoundedJournalStoreConfig<TRecord, TProjection> {
   insert: (
     db: D1Database,
     record: TRecord,
@@ -54,8 +46,6 @@ export interface BoundedJournalStoreConfig<TRecord extends JournalRecord, TProje
     payloadBytes: number,
     nowSec: number,
   ) => D1PreparedStatement;
-  validateRecord?: (record: TRecord) => void;
-  messages: JournalStoreMessages;
 }
 
 function serializedBytes(value: string): number {
@@ -75,23 +65,31 @@ function chunks<T>(values: readonly T[], size: number): T[][] {
 }
 
 function canonicalRecords<TRecord extends JournalRecord, TProjection>(
-  config: BoundedJournalStoreConfig<TRecord, TProjection>,
+  config: AppendableBoundedJournalStoreConfig<TRecord, TProjection>,
   records: readonly TRecord[],
   nowSec: number,
 ): Array<{ record: TRecord; payloadJson: string; payloadBytes: number }> {
-  const { messages } = config;
-  if (!Number.isInteger(nowSec) || nowSec < 0) throw new Error(messages.invalidStoreTimestamp);
-  if (records.length > MAX_BATCH_RECORDS) throw new Error(messages.batchRecords(MAX_BATCH_RECORDS));
+  const { label } = config;
+  if (!Number.isInteger(nowSec) || nowSec < 0) {
+    throw new Error(`${label} store timestamp must be a non-negative integer`);
+  }
+  if (records.length > MAX_BATCH_RECORDS) {
+    throw new Error(`${label} batch exceeds ${MAX_BATCH_RECORDS} records`);
+  }
 
   const canonical = records.map((value) => {
     const record = config.parseRecord(value);
     config.validateRecord?.(record);
-    if (!ACTIVE_IDS.has(record.assetId)) throw new Error(messages.inactiveWrite(record.assetId));
-    if (record.completedAtSec > nowSec) throw new Error(messages.futureRecord(record.journalId));
+    if (!ACTIVE_IDS.has(record.assetId)) {
+      throw new Error(`${label} store rejects inactive asset ${record.assetId}`);
+    }
+    if (record.completedAtSec > nowSec) {
+      throw new Error(`${label} store rejects future record ${record.journalId}`);
+    }
     const payloadJson = stableJsonStringifyV1(record);
     const payloadBytes = serializedBytes(payloadJson);
     if (payloadBytes > MAX_RECORD_BYTES) {
-      throw new Error(messages.recordBytes(record.journalId, MAX_RECORD_BYTES));
+      throw new Error(`${label} record ${record.journalId} exceeds ${MAX_RECORD_BYTES} bytes`);
     }
     return { record, payloadJson, payloadBytes };
   }).sort((left, right) => left.record.journalId.localeCompare(right.record.journalId));
@@ -99,20 +97,24 @@ function canonicalRecords<TRecord extends JournalRecord, TProjection>(
   const journalIds = new Set<string>();
   const attemptKeys = new Set<string>();
   for (const { record } of canonical) {
-    if (journalIds.has(record.journalId)) throw new Error(messages.duplicateJournal(record.journalId));
+    if (journalIds.has(record.journalId)) {
+      throw new Error(`${label} batch duplicates record ${record.journalId}`);
+    }
     journalIds.add(record.journalId);
     const attemptKey = `${record.lane}:${record.assetId}:${record.attemptId}`;
-    if (attemptKeys.has(attemptKey)) throw new Error(messages.duplicateAttempt(attemptKey));
+    if (attemptKeys.has(attemptKey)) {
+      throw new Error(`${label} batch duplicates attempt ${attemptKey}`);
+    }
     attemptKeys.add(attemptKey);
   }
   if (canonical.reduce((sum, entry) => sum + entry.payloadBytes, 0) > MAX_BATCH_BYTES) {
-    throw new Error(messages.batchBytes(MAX_BATCH_BYTES));
+    throw new Error(`${label} batch exceeds ${MAX_BATCH_BYTES} bytes`);
   }
   return canonical;
 }
 
 export async function appendBoundedJournal<TRecord extends JournalRecord, TProjection>(
-  config: BoundedJournalStoreConfig<TRecord, TProjection>,
+  config: AppendableBoundedJournalStoreConfig<TRecord, TProjection>,
   db: D1Database,
   records: readonly TRecord[],
   nowSec: number,
@@ -159,15 +161,23 @@ export async function loadBoundedJournal<TRecord extends JournalRecord, TProject
   asOfSec: number,
   signal?: AbortSignal,
 ): Promise<TProjection> {
-  const { messages } = config;
+  const { label } = config;
   throwIfAborted(signal);
   assertJournalTable(config.table);
-  if (!Number.isInteger(asOfSec) || asOfSec < 0) throw new Error(messages.invalidReadTimestamp);
+  if (!Number.isInteger(asOfSec) || asOfSec < 0) {
+    throw new Error(`${label} read timestamp must be a non-negative integer`);
+  }
   const canonicalAssetIds = [...new Set(assetIds)].sort();
-  if (canonicalAssetIds.length !== assetIds.length) throw new Error(messages.duplicateReadAssets);
-  if (canonicalAssetIds.length > config.maxAssets) throw new Error(messages.readAssets(config.maxAssets));
+  if (canonicalAssetIds.length !== assetIds.length) {
+    throw new Error(`${label} read asset IDs contain duplicates`);
+  }
+  if (canonicalAssetIds.length > config.maxAssets) {
+    throw new Error(`${label} read exceeds ${config.maxAssets} assets`);
+  }
   for (const assetId of canonicalAssetIds) {
-    if (!ACTIVE_IDS.has(assetId)) throw new Error(messages.inactiveRead(assetId));
+    if (!ACTIVE_IDS.has(assetId)) {
+      throw new Error(`${label} read rejects inactive asset ${assetId}`);
+    }
   }
 
   const recordsById: Record<string, TRecord[]> = {};
@@ -200,7 +210,9 @@ export async function loadBoundedJournal<TRecord extends JournalRecord, TProject
     throwIfAborted(signal);
     for (const row of rows.results ?? []) {
       const parsed = parseJson(row.payload_json);
-      if (!parsed.ok) throw new Error(messages.malformedStoredJson(parsed.message));
+      if (!parsed.ok) {
+        throw new Error(`Malformed stored ${label.toLowerCase()} JSON: ${parsed.message}`);
+      }
       const record = config.parseRecord(parsed.value);
       (recordsById[record.assetId] ??= []).push(record);
     }

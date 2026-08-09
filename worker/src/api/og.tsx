@@ -114,7 +114,6 @@ type OgSafetyScoreSource =
     }
   | {
       kind: "error";
-      expectedModel: "v9";
       reason: string;
     };
 
@@ -123,7 +122,6 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
   if (active.kind === "error") {
     return {
       kind: "error",
-      expectedModel: active.expectedModel,
       reason: active.reason,
     };
   }
@@ -131,7 +129,6 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
   if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
     return {
       kind: "error",
-      expectedModel: "v9",
       reason: "stale-cache",
     };
   }
@@ -164,14 +161,14 @@ function safetyScoreOgPresentation(
   }
 
   return {
-    lastUpdated: `DEGRADED: ${safetySource.expectedModel.toUpperCase()} safety score unavailable`,
+    lastUpdated: "DEGRADED: V9 safety score unavailable",
     headers: {
       // Keep degraded OG renders edge-cacheable: /api/og/* is public and
       // unauthenticated, and rendering each miss runs the WASM PNG pipeline.
       // The explicit degraded headers keep consumers from treating the image as
       // current safety-score evidence while avoiding no-store render amplification.
       ...CACHE_HEADERS,
-      "X-Safety-Score-Model": safetySource.expectedModel,
+      "X-Safety-Score-Model": "v9",
       "X-Safety-Score-Status": "degraded",
       "X-Safety-Score-Reason": safetySource.reason,
     },

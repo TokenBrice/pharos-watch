@@ -590,7 +590,7 @@ async function loadSafetyScoreV9PublicationSurface(
   now: number,
 ): Promise<PublicationSurfaceHealth> {
   const active = await loadActiveSafetyScoreSource(db);
-  if (active.kind === "v9") {
+  if (active.kind !== "error") {
     const snapshot = active.snapshot;
     const publishedRow = publishedFallbackRow(
       snapshot.safetyScoreIdentity.publicationGenerationId,
@@ -600,7 +600,6 @@ async function loadSafetyScoreV9PublicationSurface(
         inputWatermarks: {
           reportCardCache: snapshot.updatedAt,
         },
-        expectedModel: active.expectedModel,
         methodologyVersion: snapshot.methodology.version,
         safetyScoreIdentity: snapshot.safetyScoreIdentity,
         completeness: snapshot.completeness,
@@ -614,9 +613,7 @@ async function loadSafetyScoreV9PublicationSurface(
     `safety-score-v9:${attemptedAt}:${active.reason}`,
     active.reason,
     attemptedAt,
-    {
-      expectedModel: active.expectedModel,
-    },
+    {},
   );
   return buildSurfaceHealth(SAFETY_SCORE_V9_SURFACE, now, failedRow, null, failedRow);
 }

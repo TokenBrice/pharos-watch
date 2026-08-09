@@ -10,13 +10,22 @@ import {
 import { toErrorMessage } from "./error-utils";
 import { parseJsonStringArray } from "./json-parse";
 
-export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-      .bind(key)
-      .first<{ value: string; updated_at: number }>(),
+export async function getCache(
+  db: D1Database,
+  key: string,
+  signal?: AbortSignal,
+): Promise<{ value: string; updatedAt: number } | null> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .bind(key)
+        .first<{ value: string; updated_at: number }>(),
+    3,
+    signal,
   );
+  throwIfAborted(signal);
   if (!row) return null;
   return { value: row.value, updatedAt: row.updated_at };
 }

@@ -17,7 +17,6 @@ const NOW = 1_775_900_000;
 function activeV9(): Extract<ActiveSafetyScoreSource, { kind: "v9" }> {
   return {
     kind: "v9",
-    expectedModel: "v9",
     snapshot: makeReportCardsV9Response({ updatedAt: NOW - 60 }),
   };
 }
@@ -39,7 +38,6 @@ describe("canonical V9 Safety Score consumers", () => {
       status: "ok",
       severity: "info",
       metadata: {
-        expectedModel: "v9",
         updatedAt: NOW - 60,
       },
     });
@@ -53,7 +51,6 @@ describe("canonical V9 Safety Score consumers", () => {
         "cache[report-cards:v9]+cache[report-cards:v9:publication-health]",
       lastPublishedGeneration: {
         state: "published",
-        metadata: { expectedModel: "v9" },
       },
     });
   });

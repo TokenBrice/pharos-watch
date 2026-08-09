@@ -129,13 +129,20 @@ function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
   return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
 }
 
+function okResult(metadata?: Record<string, unknown>) {
+  return { status: "ok" as const, severity: "info" as const, metadata };
+}
+
+function degradedResult(error: string, metadata?: Record<string, unknown>) {
+  return { status: "degraded" as const, severity: "warning" as const, error, metadata };
+}
+
+function errorResult(error: string, metadata?: Record<string, unknown>) {
+  return { status: "error" as const, severity: "error" as const, error, metadata };
+}
+
 function skippedResult(reason: string, metadata?: Record<string, unknown>) {
-  return {
-    status: "skipped" as const,
-    severity: "info" as const,
-    error: reason,
-    metadata,
-  };
+  return { status: "skipped" as const, severity: "info" as const, error: reason, metadata };
 }
 
 function unavailableResult(error: unknown) {
@@ -153,34 +160,28 @@ function isScoreInRange(value: unknown): value is number {
   return isFiniteScore(value) && value >= 0 && value <= 100;
 }
 
-function worstStatus(results: readonly Pick<CanaryCheckResult, "status">[]): CanaryRunStatus {
-  return results.reduce<CanaryRunStatus>(
-    (worst, result) => CANARY_STATUS_ORDER[result.status] > CANARY_STATUS_ORDER[worst] ? result.status : worst,
-    "ok",
-  );
-}
-
-function worstSeverity(results: readonly Pick<CanaryCheckResult, "severity">[]): CanaryRunSeverity {
-  return results.reduce<CanaryRunSeverity>(
-    (worst, result) => CANARY_SEVERITY_ORDER[result.severity] > CANARY_SEVERITY_ORDER[worst] ? result.severity : worst,
-    "info",
-  );
+/** Highest-ranked value under a severity-style order map, defaulting to `best`. */
+function worstOf<TValue extends string>(
+  values: Iterable<TValue>,
+  order: Record<TValue, number>,
+  best: TValue,
+): TValue {
+  let worst = best;
+  for (const value of values) {
+    if (order[value] > order[worst]) worst = value;
+  }
+  return worst;
 }
 
 async function checkStablecoinsCacheActiveCount(db: D1Database) {
   const cache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   const expectedActiveCount = ACTIVE_IDS.size;
   if (!hasUsableStablecoinsPayload(cache)) {
-    return {
-      status: "error" as const,
-      severity: "error" as const,
-      error: `stablecoins cache ${cache.reason}`,
-      metadata: {
-        expectedActiveCount,
-        updatedAt: cache.updatedAt,
-        reason: cache.reason,
-      },
-    };
+    return errorResult(`stablecoins cache ${cache.reason}`, {
+      expectedActiveCount,
+      updatedAt: cache.updatedAt,
+      reason: cache.reason,
+    });
   }
 
   const cachedIds = new Set(cache.payload.peggedAssets.map((asset) => asset.id));
@@ -197,16 +198,13 @@ async function checkStablecoinsCacheActiveCount(db: D1Database) {
     cacheKind: cache.kind,
   };
   if (!coverage.complete) {
-    return {
-      status: "degraded" as const,
-      severity: "warning" as const,
-      error:
-        `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}; ` +
+    return degradedResult(
+      `stablecoins cache active coverage ${activeCount}/${expectedActiveCount}; ` +
         `missing=${coverage.missingActiveIds.join(",")}`,
       metadata,
-    };
+    );
   }
-  return { status: "ok" as const, severity: "info" as const, metadata };
+  return okResult(metadata);
 }
 
 async function loadDexCurrentSummary(db: D1Database): Promise<DexCurrentSummaryRow> {
@@ -280,12 +278,7 @@ async function checkDexCurrentPublication(db: D1Database) {
       return skippedResult("dex_liquidity has no current rows", metadata);
     }
     if (unpublishedRows > 0) {
-      return {
-        status: "error" as const,
-        severity: "error" as const,
-        error: `${unpublishedRows} current DEX liquidity rows are not published`,
-        metadata,
-      };
+      return errorResult(`${unpublishedRows} current DEX liquidity rows are not published`, metadata);
     }
     if (!latestPublished) {
       return skippedResult("no DEX liquidity published generation found", metadata);
@@ -302,14 +295,12 @@ async function checkDexCurrentPublication(db: D1Database) {
       latestPublished.current_row_count != null &&
       latestGenerationPublishedRows !== latestPublished.current_row_count
     ) {
-      return {
-        status: "error" as const,
-        severity: "error" as const,
-        error: `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${latestPublished.current_row_count}`,
+      return errorResult(
+        `DEX latest-generation rows ${latestGenerationPublishedRows} differ from latest published generation ${latestPublished.current_row_count}`,
         metadata,
-      };
+      );
     }
-    return { status: "ok" as const, severity: "info" as const, metadata };
+    return okResult(metadata);
   } catch (error) {
     return unavailableResult(error);
   }
@@ -335,14 +326,9 @@ async function checkDexGlobalRow(db: D1Database) {
       return skippedResult("dex_liquidity has no published current rows", metadata);
     }
     if (globalRows !== 1) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: `expected one DEX __global__ row, found ${globalRows}`,
-        metadata,
-      };
+      return degradedResult(`expected one DEX __global__ row, found ${globalRows}`, metadata);
     }
-    return { status: "ok" as const, severity: "info" as const, metadata };
+    return okResult(metadata);
   } catch (error) {
     return unavailableResult(error);
   }
@@ -361,12 +347,7 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
         .first<PsiLatestRow>(),
     );
     if (!row) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: "no PSI stability_index_samples rows found",
-        metadata: { maxAgeSec: PSI_MAX_AGE_SEC },
-      };
+      return degradedResult("no PSI stability_index_samples rows found", { maxAgeSec: PSI_MAX_AGE_SEC });
     }
     const ageSec = Math.max(0, observedAt - row.stored_at);
     const metadata = {
@@ -378,22 +359,12 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
       methodologyVersion: row.methodology_version,
     };
     if (!isScoreInRange(row.score)) {
-      return {
-        status: "error" as const,
-        severity: "error" as const,
-        error: `latest PSI score is out of range: ${String(row.score)}`,
-        metadata,
-      };
+      return errorResult(`latest PSI score is out of range: ${String(row.score)}`, metadata);
     }
     if (ageSec > PSI_MAX_AGE_SEC) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: `latest PSI sample is ${ageSec}s old`,
-        metadata,
-      };
+      return degradedResult(`latest PSI sample is ${ageSec}s old`, metadata);
     }
-    return { status: "ok" as const, severity: "info" as const, metadata };
+    return okResult(metadata);
   } catch (error) {
     return unavailableResult(error);
   }
@@ -403,17 +374,12 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   try {
     const published = await loadPublishedStressSignalGeneration(db, observedAt);
     if (published.status !== "ok") {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: `DEWS published generation unavailable: ${published.reason}`,
-        metadata: {
-          sourceTable: "stress_signals",
-          publicationStatus: "unavailable",
-          publicationReason: published.reason,
-          maxAgeSec: DEWS_MAX_AGE_SEC,
-        },
-      };
+      return degradedResult(`DEWS published generation unavailable: ${published.reason}`, {
+        sourceTable: "stress_signals",
+        publicationStatus: "unavailable",
+        publicationReason: published.reason,
+        maxAgeSec: DEWS_MAX_AGE_SEC,
+      });
     }
     const rowCount = published.rows.length;
     const outOfRangeScores = published.rows.filter((row) => !isScoreInRange(row.score)).length;
@@ -429,30 +395,15 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
       exactCoverageVerified: published.exactCoverageVerified,
     };
     if (!published.exactCoverageVerified) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: "DEWS published generation uses legacy coverage evidence",
-        metadata,
-      };
+      return degradedResult("DEWS published generation uses legacy coverage evidence", metadata);
     }
     if (outOfRangeScores > 0) {
-      return {
-        status: "error" as const,
-        severity: "error" as const,
-        error: `${outOfRangeScores} DEWS stress signals have out-of-range scores`,
-        metadata,
-      };
+      return errorResult(`${outOfRangeScores} DEWS stress signals have out-of-range scores`, metadata);
     }
     if (ageSec != null && ageSec > DEWS_MAX_AGE_SEC) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: `latest DEWS signal is ${ageSec}s old`,
-        metadata,
-      };
+      return degradedResult(`latest DEWS signal is ${ageSec}s old`, metadata);
     }
-    return { status: "ok" as const, severity: "info" as const, metadata };
+    return okResult(metadata);
   } catch (error) {
     return unavailableResult(error);
   }
@@ -461,23 +412,16 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
 export async function checkReportCardCacheMethodology(db: D1Database) {
   const active = await loadActiveSafetyScoreSource(db);
   if (active.kind === "error") {
-    return {
-      status: "error" as const,
-      severity: "error" as const,
-      error: `active Safety Score source ${active.reason}`,
-      metadata: {
-        reason: active.reason,
-        expectedModel: active.expectedModel,
-        maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
-      },
-    };
+    return errorResult(`active Safety Score source ${active.reason}`, {
+      reason: active.reason,
+      maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+    });
   }
   const ageSec = Math.max(
     0,
     Math.floor(Date.now() / 1_000) - active.snapshot.updatedAt,
   );
   const metadata = {
-    expectedModel: active.expectedModel,
     updatedAt: active.snapshot.updatedAt,
     scoreCount: active.snapshot.cards.length,
     methodologyVersion: active.snapshot.methodology.version,
@@ -485,43 +429,25 @@ export async function checkReportCardCacheMethodology(db: D1Database) {
     publicationHealth: active.snapshot.publicationHealth,
     maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   };
-  if (active.snapshot.publicationHealth.status === "held") {
-    return {
-      status: "degraded" as const,
-      severity: "warning" as const,
-      error: "Safety Score V9 publication is held",
-      metadata,
-    };
+  if (active.kind === "held") {
+    return degradedResult("Safety Score V9 publication is held", metadata);
   }
   if (ageSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
-    return {
-      status: "degraded" as const,
-      severity: "warning" as const,
-      error: "Safety Score V9 publication is stale",
-      metadata: { ...metadata, ageSec },
-    };
+    return degradedResult("Safety Score V9 publication is stale", { ...metadata, ageSec });
   }
   if (active.snapshot.cards.length === 0) {
-    return {
-      status: "degraded" as const,
-      severity: "warning" as const,
-      error: "Safety Score V9 publication has no score entries",
-      metadata,
-    };
+    return degradedResult("Safety Score V9 publication has no score entries", metadata);
   }
-  return { status: "ok" as const, severity: "info" as const, metadata };
+  return okResult(metadata);
 }
 
 async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
   try {
     const ratesCache = await getCache(db, "risk_free_rates");
     if (!ratesCache) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: "risk-free benchmark registry cache is missing",
-        metadata: { requiredFreshPublications: 2 },
-      };
+      return degradedResult("risk-free benchmark registry cache is missing", {
+        requiredFreshPublications: 2,
+      });
     }
     const registry = parseRiskFreeRatesCache(ratesCache.value, ratesCache.updatedAt, observedAt);
     const gbp = registry?.GBP ?? null;
@@ -562,14 +488,9 @@ async function checkGbpBenchmarkCurrent(db: D1Database, observedAt: number) {
       problems.push(`GBP benchmark has ${consecutiveFreshRuns}/2 consecutive fresh publications`);
     }
     if (problems.length > 0) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: problems.join("; "),
-        metadata,
-      };
+      return degradedResult(problems.join("; "), metadata);
     }
-    return { status: "ok" as const, severity: "info" as const, metadata };
+    return okResult(metadata);
   } catch (error) {
     return unavailableResult(error);
   }
@@ -672,8 +593,8 @@ export async function runCanaryChecks(
     observedAt,
     totalChecks: results.length,
     ...counts,
-    worstStatus: worstStatus(results),
-    worstSeverity: worstSeverity(results),
+    worstStatus: worstOf(results.map((result) => result.status), CANARY_STATUS_ORDER, "ok"),
+    worstSeverity: worstOf(results.map((result) => result.severity), CANARY_SEVERITY_ORDER, "info"),
     results,
   };
 }

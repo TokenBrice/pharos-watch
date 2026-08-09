@@ -35,7 +35,6 @@ function activeV9() {
   });
   return {
     kind: "v9" as const,
-    expectedModel: "v9" as const,
     snapshot,
   };
 }
@@ -274,7 +273,6 @@ describe("buildTopMessage", () => {
   it("fails closed when the canonical V9 publication is unavailable", async () => {
     mocks.loadActiveSafetyScoreSource.mockResolvedValue({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "missing",
@@ -348,7 +346,6 @@ describe("buildTopMessage", () => {
   it("returns explicit unavailable safety text when the canonical identity cannot be read", async () => {
     mocks.loadActiveSafetyScoreSource.mockResolvedValue({
       kind: "error",
-      expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       snapshot: null,
       detail: "missing",

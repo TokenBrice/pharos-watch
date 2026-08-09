@@ -18,7 +18,7 @@ import {
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).
-vi.mock("../../lib/identified-active-safety-score-source", async () => {
+vi.mock("../../lib/safety-score-active-source", async () => {
   const { makeWorkerReportCardsV9Response, makeWorkerV9Card } = await import(
     "../../test-helpers/report-cards-v9"
   );
@@ -27,12 +27,9 @@ vi.mock("../../lib/identified-active-safety-score-source", async () => {
     cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
   });
   return {
-    loadIdentifiedActiveSafetyScoreSource: vi.fn(async () => ({
+    loadActiveSafetyScoreSource: vi.fn(async () => ({
       kind: "v9",
-      expectedModel: "v9",
       snapshot,
-      identity: snapshot.safetyScoreIdentity,
-      publishedAtSec: snapshot.updatedAt,
     })),
   };
 });
