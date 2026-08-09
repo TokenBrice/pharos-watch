@@ -63,11 +63,23 @@ export function bucketStartFor(nowSec: number, windowSec: number): number {
  * inflates the bucket. `allowed` is driven purely by `meta.changes`, which is
  * what keeps both callers fail-closed on a rejected write.
  */
+const BUCKETED_LIMIT_TABLE_NAMES = new Set<BucketedLimitTable["table"]>([
+  "api_key_request_rate_limit_v2",
+  "api_key_self_serve_issuance_limits",
+]);
+const BUCKETED_LIMIT_LAST_SEEN_COLUMNS = new Set<BucketedLimitTable["lastSeenColumn"]>([
+  "last_seen_at",
+  "updated_at",
+]);
+
 export async function acquireBucketedLimitSlot(
   db: RateLimitDb,
   target: BucketedLimitTable,
   request: BucketedLimitSlotRequest,
 ): Promise<BucketedLimitSlotResult> {
+  if (!BUCKETED_LIMIT_TABLE_NAMES.has(target.table) || !BUCKETED_LIMIT_LAST_SEEN_COLUMNS.has(target.lastSeenColumn)) {
+    throw new Error(`unknown bucketed limit target: ${target.table}.${target.lastSeenColumn}`);
+  }
   const bucketStart = bucketStartFor(request.nowSec, request.windowSec);
   const result = await db.prepare(
     `INSERT INTO ${target.table} (
