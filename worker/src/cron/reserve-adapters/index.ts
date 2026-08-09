@@ -20,6 +20,7 @@ import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
+import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
 import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
@@ -88,6 +89,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
+  "flying-tulip-ftusd": fetchFlyingTulipFtUsdReserves,
   "frax-balance-sheet": fetchFraxBalanceSheetReserves,
   "frax-fpi-collateral": fetchFraxFpiCollateralReserves,
   fx: fetchFxReserves,

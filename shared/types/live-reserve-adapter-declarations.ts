@@ -378,6 +378,21 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "flying-tulip-ftusd": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "none",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "weak-live-probe",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: 0,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   "frax-balance-sheet": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
