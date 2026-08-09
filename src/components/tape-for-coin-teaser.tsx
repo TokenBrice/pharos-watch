@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
-import { formatCompactUsd } from "@shared/lib/format";
+import { baseEventType, describeEventDelta, firstSentence } from "@/lib/tape-derive";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS, type TapeEvent } from "@shared/types/tape-event";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
@@ -56,14 +57,10 @@ const IMPROVING_TYPES = new Set([
   "freeze.unblocked",
 ]);
 
-function baseType(type: string): string {
-  return type.split(":")[0];
-}
-
 function newsTitle(event: TapeEvent): string {
-  const mapped = NEWS_TITLE_BY_TYPE[baseType(event.type)];
+  const mapped = NEWS_TITLE_BY_TYPE[baseEventType(event.type)];
   if (mapped) return mapped;
-  const humanized = baseType(event.type).replace(/[._]/g, " ");
+  const humanized = baseEventType(event.type).replace(/[._]/g, " ");
   return humanized.charAt(0).toUpperCase() + humanized.slice(1);
 }
 
@@ -78,66 +75,10 @@ function newsDateLabel(tsMs: number, nowMs: number): string {
   return `${date.getUTCDate()} ${month}`;
 }
 
-// Sentence-end punctuation only counts when followed by whitespace/EOL so
-// amounts like "$20.0M" don't truncate mid-number.
-function firstSentence(summary: string): string {
-  const trimmed = summary.trim();
-  if (trimmed.length === 0) return "";
-  const match = trimmed.match(/^[\s\S]*?[.!?](?=\s|$)/);
-  const sentence = match ? match[0] : trimmed;
-  return sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
-}
-
-function formatScore(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function formatSignedScore(value: number): string {
-  const formatted = formatScore(Math.abs(value));
-  return value >= 0 ? `+${formatted}` : `-${formatted}`;
-}
-
-// Compact mono delta line under the sentence body (Figma: "16 → 6 · -12").
-function newsDelta(event: TapeEvent): string | null {
-  const p = event.payload;
-  const cls = baseType(event.type).split(".")[0];
-  switch (cls) {
-    case "dews":
-    case "psi":
-    case "score":
-    case "yield": {
-      const prev = typeof p?.prevScore === "number" ? p.prevScore : null;
-      const next = typeof p?.newScore === "number" ? p.newScore : null;
-      if (prev == null || next == null) return null;
-      return `${formatScore(prev)} → ${formatScore(next)} · ${formatSignedScore(next - prev)}`;
-    }
-    case "mint_burn": {
-      const amount = p?.amountUsd;
-      if (typeof amount !== "number" || amount <= 0) return null;
-      const direction = p?.direction;
-      const verb = direction === "mint" ? "minted" : direction === "burn" ? "burned" : "moved";
-      return `${formatCompactUsd(amount)} ${verb}`;
-    }
-    case "freeze": {
-      const amount = p?.amountUsdAtEvent;
-      if (typeof amount !== "number" || amount <= 0) return null;
-      return formatCompactUsd(amount);
-    }
-    case "depeg": {
-      const abs = p?.absDeviationBps;
-      if (typeof abs !== "number") return null;
-      const sign = p?.direction === "below" ? "−" : "+";
-      return `${sign}${abs} bps`;
-    }
-    default:
-      return null;
-  }
-}
-
 function newsDeltaClass(event: TapeEvent): string {
-  if (WORSENING_TYPES.has(baseType(event.type))) return "text-red-600 dark:text-red-400";
-  if (IMPROVING_TYPES.has(baseType(event.type))) return "text-emerald-600 dark:text-emerald-400";
-  return "text-muted-foreground";
+  if (WORSENING_TYPES.has(baseEventType(event.type))) return SEVERITY_TONE_CLASS.alert.text;
+  if (IMPROVING_TYPES.has(baseEventType(event.type))) return SEVERITY_TONE_CLASS.ok.text;
+  return SEVERITY_TONE_CLASS.neutral.text;
 }
 
 function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
@@ -145,7 +86,7 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
   // Coin identity is implicit on the coin's own page; non-coin events (e.g.
   // methodology) carry their descriptive content in `title`, not `summary`.
   const body = event.summary ? firstSentence(event.summary) : !event.coinId ? event.title : "";
-  const delta = newsDelta(event);
+  const delta = describeEventDelta(event);
   return (
     <Link href={href} className="pharos-focus-ring block rounded-sm py-2.5 transition-colors hover:bg-muted/30">
       <div className="flex items-center justify-between gap-2">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { buildPrinterMachineModel, type FlowMachineSceneSize } from "./flow-machine-scene-model";
 import styles from "./flow-machine-scene-printer.module.css";
 
@@ -17,9 +18,11 @@ export function FlowMachinePrinter({
   stress: number;
   accentHex: string;
 }) {
-  const [reducedMotion] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false,
-  );
+  // Shared store (matches the shredder scene): honours the explicit
+  // system/reduced/full override, stays SSR-safe, and re-renders when the OS
+  // preference changes — the local `useState(matchMedia)` read did none of the
+  // three and froze at mount.
+  const reducedMotion = usePrefersReducedMotion();
 
   const model = useMemo(() => {
     return buildPrinterMachineModel(size, reducedMotion ? 0 : intensity, stress);

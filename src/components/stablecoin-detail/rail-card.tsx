@@ -59,10 +59,7 @@ export function RailStamp({ className, children }: { className?: string; childre
   return <span className={cn(RAIL_STAMP_CLASS, className)}>{children}</span>;
 }
 
-/**
- * `Reviewed 2026-07-15` in the header stamp chip. Pass `prefix={null}` for the
- * bare-date spelling the compact mechanism review uses.
- */
-export function ReviewedStamp({ date, prefix = "Reviewed" }: { date: string; prefix?: string | null }) {
-  return <RailStamp>{prefix == null ? date : `${prefix} ${date}`}</RailStamp>;
+/** `Reviewed 2026-07-15` in the header stamp chip — one spelling for every module. */
+export function ReviewedStamp({ date }: { date: string }) {
+  return <RailStamp>{`Reviewed ${date}`}</RailStamp>;
 }

@@ -171,7 +171,6 @@ export function useContagionGraphModel({
   const [focusMode, setFocusMode] = useState<FocusMode>("all");
   const [edgeTypeFilter, setEdgeTypeFilter] = useState<EdgeTypeFilter>("all");
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
-  const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -216,17 +215,10 @@ export function useContagionGraphModel({
   );
   const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge) ? hoveredEdge : null;
   const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId) ? hoveredId : null;
-  const effectiveInspectedId = useMemo(() => {
-    const fallbackId = effectiveSelectedNeighborhoodId ?? hubIdsByScore[0] ?? nodes[0]?.id ?? null;
-    const candidateId = activeHoveredId ?? inspectedId ?? fallbackId;
-    if (candidateId && visibleNodeIds.has(candidateId)) return candidateId;
-    return visibleNodeIds.values().next().value ?? null;
-  }, [activeHoveredId, effectiveSelectedNeighborhoodId, hubIdsByScore, inspectedId, nodes, visibleNodeIds]);
   const rippleState = useMemo(() => computeRippleState(activeHoveredId, visibleLinks), [activeHoveredId, visibleLinks]);
 
   const handleTraceNodeChange = useCallback((nodeId: string | null) => {
     setSelectedNeighborhoodId(nodeId);
-    setInspectedId(nodeId);
     if (nodeId) setFocusMode("neighborhood");
   }, []);
 
@@ -235,7 +227,6 @@ export function useContagionGraphModel({
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         setSelectedNeighborhoodId(nodeId);
-        setInspectedId(nodeId);
         setHoveredId((previous) => (previous === nodeId ? null : nodeId));
         return;
       }
@@ -257,13 +248,11 @@ export function useContagionGraphModel({
   );
 
   const handleNodeMouseEnter = useCallback((nodeId: string) => {
-    setInspectedId(nodeId);
     setHoveredId(nodeId);
     setHoveredEdge(null);
   }, []);
   const handleNodeMouseLeave = useCallback(() => setHoveredId(null), []);
   const handleNodeFocus = useCallback((nodeId: string) => {
-    setInspectedId(nodeId);
     setHoveredId(nodeId);
     setFocusedId(nodeId);
     setHoveredEdge(null);
@@ -276,7 +265,6 @@ export function useContagionGraphModel({
     (nodeId: string) => {
       if (drag.dragId) return;
       if (drag.consumeDragMovedSincePointerDown()) return;
-      setInspectedId(nodeId);
       setSelectedNeighborhoodId(nodeId);
     },
     [drag],
@@ -292,7 +280,6 @@ export function useContagionGraphModel({
 
   const handleClearSelection = useCallback(() => {
     setSelectedNeighborhoodId(null);
-    setInspectedId(null);
     setHoveredId(null);
     setHoveredEdge(null);
     setFocusedId(null);
@@ -323,10 +310,7 @@ export function useContagionGraphModel({
     nodeSelectOptions,
     effectiveSelectedNeighborhoodId,
     pinnedSelectionId: selectedNeighborhoodId,
-    setSelectedNeighborhoodId,
     handleTraceNodeChange,
-    effectiveInspectedId,
-    setInspectedId,
     nodeMap,
     resolvedLinkByIndex,
     visibleLinks,

@@ -3,29 +3,18 @@
 import type { ReactNode, Ref } from "react";
 import { ChartPie } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
-import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
-import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
-import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
-import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
-import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
-import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { OracleLiquidationSection } from "@/components/stablecoin-detail/oracle-liquidation-section";
-import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import { buildFailureDomainsView } from "@/lib/failure-domains";
-import type { MechanismBackingView } from "@/lib/mechanism-backing";
-import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
-import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
-import { buildControlPostureView } from "@/lib/control-posture";
 import type { TransferReviewView } from "@/lib/transfer-review";
+import type { DetailSharedModules } from "./detail-shared-modules";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
@@ -47,9 +36,8 @@ interface DetailRiskContextSectionsProps {
   collateralUsageEntries: readonly CollateralUsageEntry[];
   frozenNote: ReactNode;
   hasCollateralUsage: boolean;
-  mechanismBacking: MechanismBackingView | null;
-  mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
+  sharedModules: DetailSharedModules;
   transferReview: TransferReviewView | null;
   overviewGateRef: Ref<HTMLDivElement>;
   reservesPanel: ReactNode;
@@ -62,9 +50,8 @@ export function DetailRiskContextSections({
   collateralUsageEntries,
   frozenNote,
   hasCollateralUsage,
-  mechanismBacking,
-  mechanismCollateralization,
   mechanismReview,
+  sharedModules,
   transferReview,
   overviewGateRef,
   reservesPanel,
@@ -78,22 +65,12 @@ export function DetailRiskContextSections({
     ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
     : null;
   const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
-  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
-  const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
   const showPegChart =
     viewModel.coin.flags.pegCurrency === "USD"
     && !viewModel.isNavToken
     && viewModel.coin.flags.yieldBearing !== true
     && viewModel.supplyHistory.length > 0;
   const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
-  const failureDomainsView = buildFailureDomainsView(viewModel.reportCard);
-  const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
-  const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
-  const hasStructureCards =
-    mechanismCollateralization != null
-    || liveCollateralizationRatio != null
-    || liveLiquidationCapacityRatio != null
-    || failureDomainsView != null;
 
   return (
     <>
@@ -139,22 +116,13 @@ export function DetailRiskContextSections({
         {/* The xl summary rail owns these structure cards on desktop; below
             xl the rail is hidden, so in-flow copies keep collateralization
             and failure-domain facts on narrow viewports. */}
-        {hasStructureCards ? (
+        {sharedModules.hasStructureCards ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:hidden">
-            <CollateralizationCard
-              reviewed={mechanismCollateralization}
-              liveRatio={liveCollateralizationRatio}
-              liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
-              liveAtSec={viewModel.reserves?.liveAt ?? null}
-            />
-            <FailureDomainsCard view={failureDomainsView} />
+            {sharedModules.collateralization}
+            {sharedModules.failureDomains}
           </div>
         ) : null}
-        {viewModel.coin.custodyProfileSummary ? (
-          <div className="xl:hidden">
-            <CustodyCard summary={viewModel.coin.custodyProfileSummary} />
-          </div>
-        ) : null}
+        {sharedModules.custody ? <div className="xl:hidden">{sharedModules.custody}</div> : null}
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
@@ -179,26 +147,14 @@ export function DetailRiskContextSections({
           collateralUsageEntries={collateralUsageEntries}
         />
         <MechanismReviewPanel review={mechanismReview} />
-        {mechanismBacking ? (
-          <div className="xl:hidden">
-            <BackingMechanicsCard view={mechanismBacking} />
-          </div>
+        {sharedModules.backingMechanics ? (
+          <div className="xl:hidden">{sharedModules.backingMechanics}</div>
         ) : null}
-        {viewModel.coin.bridgeRouteRiskSummary ? (
-          <div className="xl:hidden">
-            <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
-          </div>
+        {sharedModules.bridging ? <div className="xl:hidden">{sharedModules.bridging}</div> : null}
+        {sharedModules.regulatoryStanding ? (
+          <div className="xl:hidden">{sharedModules.regulatoryStanding}</div>
         ) : null}
-        {regulatoryStanding ? (
-          <div className="xl:hidden">
-            <RegulatoryStandingCard view={regulatoryStanding} />
-          </div>
-        ) : null}
-        {controlPosture ? (
-          <div className="xl:hidden">
-            <ControlPostureCard view={controlPosture} />
-          </div>
-        ) : null}
+        {sharedModules.controlPosture ? <div className="xl:hidden">{sharedModules.controlPosture}</div> : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {viewModel.coin.oracleRiskSummary ? (
           <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />

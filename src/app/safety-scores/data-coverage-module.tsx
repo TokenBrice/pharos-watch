@@ -2,6 +2,7 @@
 
 import { ChevronDown, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDecimal } from "@shared/lib/format";
 import type { DataCoverageModel } from "./data-coverage-view-model";
 
 /** Static swatch per gap owner, in the canonical owner order of the view model. */
@@ -26,7 +27,7 @@ const OWNER_SHORT_LABELS: Record<string, string> = {
 };
 
 function formatCount(value: number): string {
-  return value.toLocaleString("en-US");
+  return formatDecimal(value, 0, 3);
 }
 
 function formatHeldSince(heldSinceSec: number): string {

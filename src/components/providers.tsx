@@ -23,7 +23,7 @@ export interface SortColumnEventDetail {
   columnNumber: number;
 }
 
-const CommandPalette = dynamic(() => import("./command-palette").then((mod) => mod.CommandPalette), {
+const CommandPalette = dynamic(() => import("./command-palette-root").then((mod) => mod.CommandPalette), {
   ssr: false,
 });
 

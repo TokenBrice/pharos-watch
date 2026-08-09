@@ -1,5 +1,6 @@
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
+import { formatDecimal } from "@shared/lib/format";
 
 export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.map((stablecoin) => ({
   id: stablecoin.id,
@@ -7,13 +8,8 @@ export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.map((stablecoin) => ({
   symbol: stablecoin.symbol,
 }));
 
-const usdFormatterDetailed = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 0,
-});
-
 export function formatUsd(value: number): string {
-  return `$${usdFormatterDetailed.format(value)}`;
+  return `$${formatDecimal(value, 0, 2)}`;
 }
 
 function isDigitString(value: string): boolean {

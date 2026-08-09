@@ -7,6 +7,7 @@ import type {
   ReserveSyncStateView,
   ReserveDisplayBadgeView,
 } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   buildReserveFetchNotice,
   buildReserveFootnoteModel,
@@ -15,9 +16,12 @@ import {
   buildReserveSyncNotice,
 } from "../reserve-presentation";
 
-const AMBER = "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-const NEUTRAL = "border-border/60 bg-muted/40 text-muted-foreground";
-const NEUTRAL_PROVENANCE = "border-border/60 bg-muted/30 text-muted-foreground";
+// Reserve notices carry the shared severity tones (WS8.4); the provenance
+// notice already used the house neutral spelling, and the fetch notices were
+// migrated onto it from a one-off `bg-muted/40`.
+const AMBER = SEVERITY_TONE_CLASS.watch.pill;
+const NEUTRAL = SEVERITY_TONE_CLASS.neutral.pill;
+const NEUTRAL_PROVENANCE = SEVERITY_TONE_CLASS.neutral.pill;
 const DESTRUCTIVE = "border-destructive/50 bg-destructive/10 text-destructive";
 
 function makeReserves(overrides: Partial<ReserveResult> & { mode: ReservePresentationMode }): ReserveResult {

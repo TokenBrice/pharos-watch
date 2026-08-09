@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
 import { RailCard, RailStamp, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
@@ -28,8 +29,10 @@ function coverageLabel(ratio: number): { label: string; tone: "over" | "par" | "
 }
 
 const TONE_BADGE_CLASSES: Record<"over" | "par" | "under", string> = {
-  over: "border-emerald-500/20 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
-  par: "border-emerald-500/20 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+  over: SEVERITY_TONE_CLASS.ok.pill,
+  par: SEVERITY_TONE_CLASS.ok.pill,
+  // Rose, not the token's red `alert` — the detail rail's undercollateralized
+  // treatment is a separate hue and is not re-coloured here.
   under: "border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-400",
 };
 

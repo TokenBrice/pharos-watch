@@ -29,7 +29,7 @@ interface ContagionSnapshotProps {
 const DETAIL_NODE_LIMIT = 500;
 const EMPTY_MCAP_MAP = new Map<string, number>();
 
-const ContagionGraph = dynamic(() => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph), {
+const ContagionGraph = dynamic(() => import("@/components/contagion-graph-root").then((mod) => mod.ContagionGraph), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">

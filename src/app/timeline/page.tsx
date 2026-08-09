@@ -37,19 +37,16 @@ const collectionJsonLd = {
   dateModified: TIMELINE_DATE_MODIFIED,
 };
 
-// Only advertise classes that currently have a projector. Reserved chip slots
-// return empty feeds today; including them would point crawlers at empty
-// search results.
-const SHIPPED_TAPE_CLASSES = TAPE_CLASSES.filter((cls) => cls.hasProjector);
-
+// `TAPE_CLASSES` only carries classes with a live projector, so every entry
+// advertised here resolves to a non-empty feed.
 const itemListJsonLd = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   "@id": `${TIMELINE_URL}#class-index`,
   name: "Event classes covered by the Timeline",
   itemListOrder: "https://schema.org/ItemListUnordered",
-  numberOfItems: SHIPPED_TAPE_CLASSES.length,
-  itemListElement: SHIPPED_TAPE_CLASSES.map((cls, index) => ({
+  numberOfItems: TAPE_CLASSES.length,
+  itemListElement: TAPE_CLASSES.map((cls, index) => ({
     "@type": "ListItem",
     position: index + 1,
     name: cls.label,

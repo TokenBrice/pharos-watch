@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
-import { KeyInfoCard } from "@/components/key-info-card";
+import { KeyInfoCard } from "@/components/key-info-card-root";
 import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
 import type { StablecoinMeta } from "@shared/types";
 

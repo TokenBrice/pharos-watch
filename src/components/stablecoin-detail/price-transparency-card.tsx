@@ -18,6 +18,7 @@ import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
@@ -200,111 +201,6 @@ function SourceChip({
   );
 }
 
-function CompactPriceTransparencyCard({
-  coinData,
-  dexPriceCheck,
-  sources,
-  usedSources,
-  availableSources,
-  includeProtocolRedeem,
-  sourceDepthCount,
-  hasNoPrice,
-}: PriceTransparencyCardProps & {
-  sources: SourceInfo[];
-  usedSources: Array<SourceInfo & { status: "used" }>;
-  availableSources: Array<SourceInfo & { status: "available" }>;
-  includeProtocolRedeem: boolean;
-  sourceDepthCount: number;
-  hasNoPrice: boolean;
-}) {
-  const updatedAtLabel = formatCompactUpdatedAt(coinData.priceUpdatedAt);
-  const displayedSources = [
-    ...(includeProtocolRedeem
-      ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
-      : []),
-    ...usedSources,
-    ...availableSources,
-  ];
-
-  return (
-    <RailCard
-      title="Price Transparency"
-      ariaLabel="Price transparency"
-      trailing={
-        updatedAtLabel ? (
-          <RailStamp className="gap-1.5">
-            <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            {updatedAtLabel}
-          </RailStamp>
-        ) : null
-      }
-    >
-      <div className="px-4 pb-4">
-        <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
-          {coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A"}
-        </p>
-        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-          {hasNoPrice ? "No Consensus" : (coinData.priceConfidence ?? "—").toUpperCase()}
-          <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-            ·
-          </span>
-          Sources {formatSourceDepthTargetLabel(sourceDepthCount)}
-        </p>
-      </div>
-
-      {dexPriceCheck ? (
-        <div className="border-t border-border/50 px-4 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-muted-foreground">DEX Check</p>
-            <Badge
-              variant="outline"
-              className={cn(
-                "h-5 gap-1 rounded-full px-2 text-[11px] font-medium",
-                dexPriceCheck.agrees
-                  ? "border-emerald-500/20 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
-                  : "border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-400",
-              )}
-            >
-              <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-              {dexPriceCheck.agrees ? "Agrees" : "Disagrees"}
-            </Badge>
-          </div>
-          <p className="mt-3 font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
-            ${dexPriceCheck.dexPrice.toFixed(4)}
-          </p>
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            {formatCurrency(dexPriceCheck.sourceTvl)} TVL
-            <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-              ·
-            </span>
-            {dexPriceCheck.sourcePools} pools
-            <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
-              ·
-            </span>
-            {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps dev
-          </p>
-        </div>
-      ) : null}
-
-      <div className="border-t border-border/50 px-4 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-medium text-muted-foreground">Sources</p>
-          <SourcesModal
-            sources={sources}
-            includeProtocolRedeem={includeProtocolRedeem}
-            updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
-          />
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
-          {displayedSources.map((source) => (
-            <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} compact />
-          ))}
-        </div>
-      </div>
-    </RailCard>
-  );
-}
-
 /**
  * Full source registry modal (Figma coin template `dark-modal`/`light-modal`
  * frames): "Sources" header with the freshness pill, a two-column list of
@@ -446,27 +342,108 @@ export function PriceTransparencyCard({
   const availableSources = sources.filter((s): s is SourceInfo & { status: "available" } => s.status === "available");
   const noDataSources = sources.filter((s): s is SourceInfo & { status: "no-data" } => s.status === "no-data");
   const sourceDepthCount = effectiveConsensusSources.length;
+
+  // --- Derived once; both shells read the same locals ----------------------
+  // The two trees used to spell these independently, which is exactly how the
+  // DEX-agreement pill drifted to two opacity pairs and the source-depth pill
+  // acquired a one-off `amber-500/32`.
   const sourceDepthTone =
     sourceDepthCount >= 3
-      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+      ? SEVERITY_TONE_CLASS.ok.pill
       : sourceDepthCount === 2
-        ? "border-amber-500/32 bg-amber-500/12 text-amber-700 dark:text-amber-300"
-        : "border-border/60 bg-muted/40 text-muted-foreground";
+        ? SEVERITY_TONE_CLASS.watch.pill
+        : SEVERITY_TONE_CLASS.neutral.pill;
+  const dexAgreementTone = dexPriceCheck?.agrees
+    ? SEVERITY_TONE_CLASS.ok.pill
+    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400";
+  const dexAgreementLabel = dexPriceCheck?.agrees ? "Agrees" : "Disagrees";
+  const priceLabel = coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
+  const confidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
+  const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
 
   if (compact) {
+    const updatedAtLabel = formatCompactUpdatedAt(coinData.priceUpdatedAt);
+    const displayedSources = [
+      ...(isProtocolRedeem
+        ? [{ key: "protocol-redemption", label: "Protocol Redemption", status: "used" as const }]
+        : []),
+      ...usedSources,
+      ...availableSources,
+    ];
+
     return (
-      <CompactPriceTransparencyCard
-        coinData={coinData}
-        consensusSources={consensusSources}
-        agreeSources={agreeSources}
-        dexPriceCheck={dexPriceCheck}
-        sources={sources}
-        usedSources={usedSources}
-        availableSources={availableSources}
-        includeProtocolRedeem={isProtocolRedeem}
-        sourceDepthCount={sourceDepthCount}
-        hasNoPrice={hasNoPrice}
-      />
+      <RailCard
+        title="Price Transparency"
+        ariaLabel="Price transparency"
+        trailing={
+          updatedAtLabel ? (
+            <RailStamp className="gap-1.5">
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              {updatedAtLabel}
+            </RailStamp>
+          ) : null
+        }
+      >
+        <div className="px-4 pb-4">
+          <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
+            {priceLabel}
+          </p>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {confidenceLabel.toUpperCase()}
+            <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
+              ·
+            </span>
+            {sourceDepthLabel}
+          </p>
+        </div>
+
+        {dexPriceCheck ? (
+          <div className="border-t border-border/50 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-muted-foreground">DEX Check</p>
+              <Badge
+                variant="outline"
+                className={cn("h-5 gap-1 rounded-full px-2 text-[11px] font-medium", dexAgreementTone)}
+              >
+                <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                {dexAgreementLabel}
+              </Badge>
+            </div>
+            <p className="mt-3 font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
+              ${dexPriceCheck.dexPrice.toFixed(4)}
+            </p>
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              {formatCurrency(dexPriceCheck.sourceTvl)} TVL
+              <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
+                ·
+              </span>
+              {dexPriceCheck.sourcePools} pools
+              <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
+                ·
+              </span>
+              {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps dev
+            </p>
+          </div>
+        ) : null}
+
+        <div className="border-t border-border/50 px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-muted-foreground">Sources</p>
+            {/* Compact-only slot: the full card reveals the no-data sources
+                inline behind "Show N more sources" instead. */}
+            <SourcesModal
+              sources={sources}
+              includeProtocolRedeem={isProtocolRedeem}
+              updatedAtLabel={coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
+            />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
+            {displayedSources.map((source) => (
+              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} compact />
+            ))}
+          </div>
+        </div>
+      </RailCard>
     );
   }
 
@@ -481,11 +458,9 @@ export function PriceTransparencyCard({
         {/* Summary Bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2">
-            {coinData.price != null ? (
-              <span className="text-2xl font-bold font-mono tabular-nums">${coinData.price.toFixed(4)}</span>
-            ) : (
-              <span className="text-2xl font-bold font-mono tabular-nums text-muted-foreground">N/A</span>
-            )}
+            <span className={cn("text-2xl font-bold font-mono tabular-nums", hasNoPrice && "text-muted-foreground")}>
+              {priceLabel}
+            </span>
             <Badge
               variant="outline"
               className={cn(
@@ -496,14 +471,14 @@ export function PriceTransparencyCard({
                       "text-muted-foreground"),
               )}
             >
-              {hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—")}
+              {confidenceLabel}
             </Badge>
             <Badge
               variant="outline"
               className={cn("text-[11px] uppercase tabular-nums", sourceDepthTone)}
               title="Candidate source-depth target"
             >
-              Sources {formatSourceDepthTargetLabel(sourceDepthCount)}
+              {sourceDepthLabel}
             </Badge>
           </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
@@ -530,17 +505,9 @@ export function PriceTransparencyCard({
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">DEX Check</span>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[11px]",
-                    dexPriceCheck.agrees
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
-                  )}
-                >
-                  {dexPriceCheck.agrees ? "Agrees" : "Disagrees"}
+                <span className={cn("text-xs font-medium", SEVERITY_TONE_CLASS.ok.text)}>DEX Check</span>
+                <Badge variant="outline" className={cn("text-[11px]", dexAgreementTone)}>
+                  {dexAgreementLabel}
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground">

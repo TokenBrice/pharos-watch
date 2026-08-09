@@ -9,12 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
+import { formatDecimal } from "@shared/lib/format";
 import { formatUsd, parseUsdInput, PORTFOLIO_COIN_OPTIONS } from "./model";
-
-const usdFormatterCompact = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-});
 
 /**
  * Compact "One Beam" hero strip for /portfolio (the beam-header-strip variant of
@@ -80,7 +76,7 @@ function HoldingRow({
   const [editing, setEditing] = useState(false);
   const [rawValue, setRawValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputValue = editing ? rawValue : amount > 0 ? usdFormatterCompact.format(amount) : "";
+  const inputValue = editing ? rawValue : amount > 0 ? formatDecimal(amount) : "";
 
   const handleFocus = useCallback(() => {
     setEditing(true);
@@ -91,7 +87,7 @@ function HoldingRow({
     setEditing(false);
     const parsed = parseUsdInput(rawValue);
     onSetAmount(coinId, parsed);
-    setRawValue(parsed > 0 ? usdFormatterCompact.format(parsed) : "");
+    setRawValue(parsed > 0 ? formatDecimal(parsed) : "");
   }, [rawValue, coinId, onSetAmount]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
