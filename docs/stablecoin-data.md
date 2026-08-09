@@ -70,7 +70,7 @@ Run ordinary catalog generation and focused validation while editing:
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
-npm run check:mechanism-archetype-coverage
+npm run audit:coverage -- --domain=mechanism-archetype
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
 ```
 

@@ -66,8 +66,8 @@ L2BEAT audit helpers also expose Interop-backed bridge-route review candidates f
 
 Maintenance commands:
 
-- `npm run check:l2beat-snapshot-coverage` validates that explicit Pharos aliases still point at checked-in snapshot projects.
-- `npm run audit:l2beat-snapshot-coverage -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
+- `npm run audit:coverage -- --domain=l2beat-snapshot -- --check` validates that explicit Pharos aliases still point at checked-in snapshot projects.
+- `npm run audit:coverage -- --domain=l2beat-snapshot -- --live --report agents/l2beat-snapshot-coverage.md` compares the checked-in snapshot against the current L2BEAT summary payload for manual review.
 - `npm run candidates:l2beat-bridge-routes` writes an advisory `agents/l2beat-bridge-route-candidates.md` queue for reviewed `bridgeRouteRisk` profiles. Safety Score V9 can consume a profile only after it is verified and curated into per-coin metadata.
 
 ## Update Contract

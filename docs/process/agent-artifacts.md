@@ -68,7 +68,6 @@ Tracked hooks are intentionally limited to deterministic Git policy under `.gith
 
 ```bash
 PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup
-npm run agent:doctor
 ```
 
-The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The doctor checks skill discovery, workflow portability, an installed optional Codex hook config for drift, and stale local overrides without mutating the checkout. It does not warn when the optional Codex hooks are absent.
+The setup command writes ignored `.codex/hooks.json`; it never changes global configuration. The former `agent:doctor` posture check was removed; agent-infrastructure drift is now reviewed by hand, and `AGENTS.md` cannot drift from `CLAUDE.md` because it is generated (`npm run check:generated-artifacts -- --only=agents-doc`).

@@ -40,7 +40,7 @@ Rollback by restoring the prior Worker version or reverting only the compatibili
 
 ## Read-Replication Experiment
 
-D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Restore it from git history (`worker/experiments/`, last present at `831d75a8f`) before repeating the experiment, keep it read-only, and keep it out of the production Worker's imports.
+D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Restore it from git history (`worker/experiments/`, last present at `831d75a8f`) before repeating the experiment, keep it read-only, and keep it out of the production Worker's imports. Its driver script (`scripts/maintenance/`, benchmark-d1-read-replication.mjs) and the `ops:benchmark-d1-read-replication` alias were removed with it; restore the script from git history (last present at `5eefc2cc2`) in the same step and run it directly rather than through an npm alias.
 
 Prerequisites:
 
@@ -65,12 +65,11 @@ curl -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_
   -d '{"read_replication":{"mode":"auto"}}'
 ```
 
-Run paired primary/session reads from the same experiment Worker:
-
-```bash
-D1_BENCHMARK_TOKEN=... npm run ops:benchmark-d1-read-replication -- \
-  --url https://pharos-d1-read-replication-benchmark.<account-subdomain>.workers.dev
-```
+Run paired primary/session reads from the same experiment Worker. The original
+benchmark harness (`benchmark-d1-read-replication.mjs`) was retired in `5eefc2cc2`
+with the 2026-08 cleanup; recover it from Git history for a rerun, or issue paired
+`curl` reads against the experiment Worker's primary/session endpoints and compare
+payload hashes and `servedByPrimary` manually.
 
 Promotion requires matching payload hashes, actual `servedByPrimary=false` samples, and a material p95 improvement across the representative cache, status, blacklist, depeg, and Tape reads. A faster response that never reaches a replica is not evidence of replication benefit. Do not move the Sessions API into the production request path as part of this experiment.
 

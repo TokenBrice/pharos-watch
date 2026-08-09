@@ -1,6 +1,6 @@
 # Redemption Backstops
 
-Modeled redemption-route coverage for tracked stablecoins. This subsystem estimates how credibly a holder can exit to par or near-par outside secondary-market DEX liquidity, then exposes both a standalone snapshot API and an effective-exit input for report-card liquidity scoring.
+Modeled redemption-route coverage for tracked stablecoins. This subsystem estimates how credibly a holder can exit to par or near-par outside secondary-market DEX liquidity, then exposes that estimate through a standalone snapshot API. Since redemption `v4.3` the legacy `effectiveExitScore` blend is retired: same-notional exit is published by the Safety Score V9 Exit pillar alone, which composes the same route-scoring primitives from `shared/lib/exit-route-scoring.ts`.
 
 ---
 
@@ -50,7 +50,7 @@ Configured coverage is defined statically behind the thin facade in `shared/lib/
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
 
-`npm run check:redemption-backstops -- --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. Reserve-sync rows use the tracked adapter's direct/proxy redemption-telemetry declaration when resolving that audit basis. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
+`npm run audit:coverage -- --domain=redemption-backstops -- --report <path>` writes per-config audit rows with both the literal configured `capacityBasis` and the resolved runtime-style `resolvedCapacityBasis`. Reserve-sync rows use the tracked adapter's direct/proxy redemption-telemetry declaration when resolving that audit basis. The report also includes `capacityFallbackSource` for reserve-sync fallback ratios/USD buffers and `dailyLimitUsd` when a static model caps same-day capacity, so review queues can distinguish route-family defaults from explicit fallback or daily-limit constraints.
 
 ---
 

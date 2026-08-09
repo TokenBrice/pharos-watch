@@ -79,7 +79,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
-Digest safety reads resolve through `worker/src/lib/identified-active-safety-score-source.ts`. The loader accepts only the complete current canonical V9 publication. Held, invalid, stale, or unavailable V9 is explicit and never triggers V8 computation or fallback.
+Digest safety reads resolve through `worker/src/lib/safety-score-active-source.ts` (bound into digest copy by `worker/src/lib/digest-safety-context.ts`). The loader accepts only the complete current canonical V9 publication. Held, invalid, stale, or unavailable V9 is explicit and never triggers V8 computation or fallback.
 
 The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 

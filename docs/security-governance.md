@@ -25,7 +25,6 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 | Check | When it runs | Catches |
 |---|---|---|
 | `check:phishing-signatures` | Pages validate after `npm run build` | inline scripts in built HTML matching `history.replaceState` near credentials, `URLSearchParams(location.hash)`, token-shaped window globals, or the full `try{location.hash…replaceState}` shape |
-| `check:classifier-sensitive-copy` | Pages validate after `npm run build` | wallet-drainer, token-claim, and browser-warning copy on classifier-sensitive public pages (`/api/`, `/funding/`, `/pharoswatchbot/`) |
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
 | `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 

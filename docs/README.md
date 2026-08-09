@@ -72,7 +72,7 @@ Use the checks relevant to the change:
 npm run check:verified-doc-links
 npm run check:doc-source-paths
 npm run check:doc-sync
-npm run check:agent-doc-sync
+npm run check:generated-artifacts -- --only=agents-doc
 ```
 
 Generated API and public artifacts have their own checks in `package.json` and `scripts/lib/automation-registry.mjs`.
