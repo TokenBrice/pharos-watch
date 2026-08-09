@@ -716,7 +716,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: undisclosedReviewedFee(
       "Flying Tulip shows the sell quote at the prevailing rate and any exit or cooldown parameters in-app; public docs do not publish one fixed redemption fee",
     ),
-    reviewedAt: "2026-07-15",
+    reviewedAt: "2026-08-09",
     docs: [
       sourceRef("Flying Tulip ftUSD", "https://docs.flyingtulip.com/product-suite/ft-usd/", [
         "route",
@@ -726,7 +726,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
     ],
     notes: [
-      "Flying Tulip's current Stage 0 wrapper names USDC and USDT, and the sell flow returns ftUSD to the selected input asset.",
+      "Flying Tulip's current buy flow names USDC and USDT inputs, and the sell flow returns ftUSD to the selected input asset; the small Sonic USSD reserve position is not documented as a direct holder redemption output.",
       "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol.",
     ],
   }),

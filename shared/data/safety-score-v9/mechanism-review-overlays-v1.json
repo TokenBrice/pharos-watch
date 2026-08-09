@@ -14120,28 +14120,48 @@
     {
       "assetId": "ftusd-flying-tulip",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
-          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers; snapshot lastUpdated 2026-07-28T06:27:54Z)",
+          "label": "Flying Tulip live ftUSD status API (issuer-operated per-chain TVL, supply, collateral, borrow/stake legs, leverage, and health factors; snapshot lastUpdated 2026-08-09T21:22:45Z)",
           "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
         },
         {
-          "label": "Flying Tulip ftUSD product documentation (mint/redeem 1:1 vs USDC/USDT, Aave carry, staged delta-neutral leg, circuit-breaker position caps and withdrawal rate limits)",
+          "label": "Flying Tulip ftUSD product documentation (mint/redeem rail, borrow/stake design, circuit-breaker position caps, and withdrawal rate limits)",
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
         }
       ],
-      "notes": "Re-measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-28T06:27:54Z. Aggregate reserve TVL was $4,512,957.53 against $4,511,854.15 of ftUSD supply across Ethereum ($4,143,891.52 TVL / $4,143,463.81 supply) and Sonic ($369,066.00 TVL / $368,390.34 supply), a reserve excess of $1,103.38 giving marginBufferPct 0.024455 and lossAbsorptionShare 0.000245. The excess is the only measured first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio remains 1.0 as a structural characterization, not a position-level reconciliation: the Ethereum strategy reported no current WETH borrow and 1.000x leverage, while the live Sonic stS/wS loop reported 1.112x leverage, health factor 17.34, and a $40,624.10 wS short. All curated components remain limited because the measurement comes from issuer-operated telemetry without an independent reserve or position attestation. NOT ESTABLISHED: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance sufficient to reconcile the Sonic hedge exactly; a separately funded insurance or first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted). Funding and basis stress is explicitly unavailable: the issuer publishes no historical series or adverse carry scenario from which to grade this distinct component.",
+      "notes": "Re-measured from Flying Tulip's issuer-operated dashboard API snapshot lastUpdated 2026-08-09T21:22:45Z. Aggregate reserve TVL was $4,686,811.9099 against $4,685,378.1711 of ftUSD supply across Ethereum ($4,365,346.2765 TVL / $4,364,617.4648 supply) and Sonic ($321,465.6334 TVL / $320,760.7063 supply). The API reports live borrow/stake legs on both chains: Ethereum WETH into wstETH at 1.042x leverage and health factor 31.53 with $182,382.74 borrowed; Sonic wS into stS at 1.568x leverage and health factor 4.33 with $178,112.49 borrowed. These are protocol facts, not independently attested positions. Reserve excess is not treated as contractual first-loss capital, total reserve excess is not venue margin headroom, and the design objective is not a position-level hedge reconciliation. All three numeric metrics are therefore unavailable. Curated component quality remains limited because the structured issuer telemetry is externally anchored only by public on-chain contracts and Safe control evidence, not by independent reserve or position assurance. NOT ESTABLISHED: position-by-position borrowed/staked reconciliation, venue maintenance-margin headroom, a contractual insurance or junior-loss waterfall, executable stressed withdrawal capacity, or adverse borrow-rate/staking-yield stress results.",
       "metrics": {
-        "hedgeCoverageRatio": 1,
-        "marginBufferPct": 0.024455,
-        "lossAbsorptionShare": 0.000245
+        "hedgeCoverageRatio": null,
+        "marginBufferPct": null,
+        "lossAbsorptionShare": null
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "The issuer dashboard identifies borrowed and staked asset legs but does not publish a reconciled position-level exposure ratio or net delta for both chains.",
+          "sourceUrl": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "Published aggregate TVL excess and health factors are not a common venue margin-headroom numerator and denominator, and the API does not publish maintenance-margin requirements.",
+          "sourceUrl": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "The reviewed disclosures do not establish a separately funded, contractually committed insurance pool, junior tranche, or binding treasury loss-absorption obligation.",
+          "sourceUrl": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        }
       },
       "analogousMetrics": {
-        "aggregateReserveTvlUsd": 4512957.5282,
-        "aggregateSupplyUsd": 4511854.1473,
-        "reserveExcessUsd": 1103.3809,
-        "sonicVolatileShortUsd": 40624.1
+        "aggregateReserveTvlUsd": 4686811.9099,
+        "aggregateSupplyUsd": 4685378.1711,
+        "reserveExcessUsd": 1433.7388,
+        "ethereumNativeBorrowUsd": 182382.74,
+        "sonicNativeBorrowUsd": 178112.49,
+        "ethereumHealthFactor": 31.53,
+        "sonicHealthFactor": 4.33
       },
       "components": {
         "venueAndCustody": {
@@ -14161,7 +14181,7 @@
         },
         "fundingBasisStress": {
           "applicability": "unavailable",
-          "rationale": "Flying Tulip's ftUSD documentation and live dashboard telemetry identify current strategy legs but do not publish a historical funding/basis series, adverse funding scenario, break-even horizon, or measured carry-stress result.",
+          "rationale": "Flying Tulip's ftUSD documentation and live dashboard telemetry identify live borrow/stake legs but do not publish a historical borrow-rate versus staking/lending-yield stress series, adverse carry scenario, or measured withdrawal-buffer exhaustion result.",
           "sourceUrl": "https://docs.flyingtulip.com/product-suite/ft-usd/"
         }
       }
