@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { SafetyScoresLoadingState } from "@/app/safety-scores/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -55,7 +55,7 @@ const FAQ_ITEMS = [
 
 export default createClientFeaturePage({
   loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
-  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  loading: <SafetyScoresLoadingState />,
   shell: {
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",

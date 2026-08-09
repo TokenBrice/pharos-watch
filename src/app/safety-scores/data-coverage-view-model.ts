@@ -5,6 +5,7 @@ import type {
 import type { V9ReasonCode } from "@shared/types";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { formatProseList } from "@shared/lib/format";
 
 /**
  * Plain-English labels for the public V9 reason codes. The enum values are
@@ -162,9 +163,8 @@ function assetLabel(assetId: string): string {
 }
 
 function assetListLabel(assetIds: readonly string[]): string {
-  const labels = assetIds.map(assetLabel);
-  if (labels.length <= 2) return labels.join(" and ");
-  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+  // Deliberately un-Oxford: this label reads inline inside a sentence.
+  return formatProseList(assetIds.map(assetLabel), { oxford: false });
 }
 
 /**

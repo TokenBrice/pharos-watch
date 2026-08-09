@@ -34,7 +34,7 @@ import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
 import { baseEventType, deriveTicker, firstSentence, formatAbsoluteDate } from "@/lib/tape-derive";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
-import { formatCompactUsd, getNetPrefix } from "@shared/lib/format";
+import { formatCompactUsd, formatUtcDayLabel, getNetPrefix } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
   SEVERITY_LABEL_INCLUSIVE,
@@ -389,7 +389,7 @@ function formatAbsoluteDay(value: string): string | null {
     return null;
   }
   const date = new Date(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)));
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return formatUtcDayLabel(date);
 }
 
 function LifecycleEnrichment({ event }: { event: TapeEvent }) {

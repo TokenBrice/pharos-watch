@@ -7,7 +7,6 @@ import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
-import { buildFaqJsonLd } from "@/lib/faq";
 import {
   ACTIVE_STABLECOIN_COUNT,
   PRE_LAUNCH_STABLECOIN_COUNT,
@@ -17,9 +16,6 @@ import {
 const coverageDescription =
   "See per-coin Pharos coverage for depeg tracking, DEX liquidity, reserves, redemption backstops, yield, mint/burn flows, blacklist events, and dependency maps.";
 
-import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
-
-const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd(COVERAGE_FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a })));
 const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
 const COVERAGE_STATIC_SECTION = (
@@ -95,13 +91,10 @@ export default createClientFeaturePage({
       </>,
     ],
     preface: (
-      <>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_DATASET_JSON_LD) }}
-        />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_FAQ_JSON_LD) }} />
-      </>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_DATASET_JSON_LD) }}
+      />
     ),
   },
   beforeClient: COVERAGE_STATIC_SECTION,

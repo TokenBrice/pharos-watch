@@ -22,7 +22,7 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "./content";
-import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "./principles/content";
+import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "./principles-content";
 import {
   ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
   ACTIVE_VARIANT_STABLECOIN_COUNT,

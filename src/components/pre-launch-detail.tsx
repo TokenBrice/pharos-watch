@@ -25,6 +25,7 @@ import {
   dateScore,
 } from "@/lib/pre-launch";
 import type { StablecoinMeta, LaunchPhase, LaunchMilestone, FeaturedContent } from "@shared/types";
+import { formatLongDate } from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
 // Link icon mapping
@@ -67,12 +68,7 @@ function extractTweetId(url: string): string | null {
 }
 
 function formatSummaryUpdatedAt(updatedAt: string): string {
-  return new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
 }
 
 // ---------------------------------------------------------------------------

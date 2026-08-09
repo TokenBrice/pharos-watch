@@ -4,6 +4,7 @@ import { DAY_MS } from "@/lib/constants";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
 import type { TapeEvent } from "@shared/types/tape-event";
+import { formatUtcDayLabel } from "@shared/lib/format";
 
 export const HIGHLIGHT_DURATION_MS = 2000;
 export const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;
@@ -15,12 +16,7 @@ export function formatDayLabel(dayKey: string, nowMs: number): { primary: string
   const todayKey = utcDayKey(nowMs);
   const yesterdayKey = utcDayKey(nowMs - DAY_MS);
   const date = new Date(`${dayKey}T00:00:00Z`);
-  const absoluteFull = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const absoluteFull = formatUtcDayLabel(date);
   if (dayKey === todayKey) return { primary: "Today", secondary: absoluteFull };
   if (dayKey === yesterdayKey) return { primary: "Yesterday", secondary: absoluteFull };
 

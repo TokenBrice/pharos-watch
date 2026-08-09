@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { safeJsonLd } from "@/lib/json-ld";
-import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
+import type { FaqItem } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import FlowsClient from "./client";
@@ -37,16 +36,8 @@ const FLOW_FAQ_ITEMS = [
 
 export default function FlowsPage() {
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: safeJsonLd(buildFaqJsonLd(FLOW_FAQ_ITEMS)),
-        }}
-      />
-      <Suspense fallback={<FlowsLoadingState />}>
-        <FlowsClient faqItems={FLOW_FAQ_ITEMS} />
-      </Suspense>
-    </>
+    <Suspense fallback={<FlowsLoadingState />}>
+      <FlowsClient faqItems={FLOW_FAQ_ITEMS} />
+    </Suspense>
   );
 }

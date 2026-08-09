@@ -11,9 +11,6 @@
 /portfolio/*
   X-Robots-Tag: noindex, follow
 
-/v9-preview/*
-  X-Robots-Tag: noindex, nofollow
-
 /__pharos_release.json
   X-Robots-Tag: noindex, nofollow
   ! Cache-Control

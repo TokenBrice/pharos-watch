@@ -3,6 +3,7 @@ import {
   type StablecoinClientMeta,
 } from "@shared/lib/stablecoins/client-registry";
 import { pegCurrencyToFilterTag } from "@shared/lib/filter-tags";
+import { formatProseList } from "@shared/lib/format";
 import type { PegCurrency } from "@shared/types";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import {
@@ -31,10 +32,7 @@ export interface PegTaxonomyPage {
 
 function formatCoinList(coins: readonly Pick<StablecoinClientMeta, "name" | "symbol">[]): string {
   if (coins.length === 0) return "tracked assets";
-  if (coins.length === 1) return `${coins[0].name} (${coins[0].symbol})`;
-  if (coins.length === 2) return `${coins[0].name} (${coins[0].symbol}) and ${coins[1].name} (${coins[1].symbol})`;
-
-  return `${coins[0].name} (${coins[0].symbol}), ${coins[1].name} (${coins[1].symbol}), and ${coins[2].name} (${coins[2].symbol})`;
+  return formatProseList(coins.slice(0, 3).map((coin) => `${coin.name} (${coin.symbol})`));
 }
 
 function formatCoinSymbolList(coins: readonly Pick<StablecoinClientMeta, "symbol">[]): string {

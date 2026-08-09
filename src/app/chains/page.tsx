@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildChainDirectoryJsonLd } from "@/lib/chain-json-ld";
-import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
+import type { FaqItem } from "@/lib/faq";
 import { FaqSection } from "@/components/faq-section";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { ChainsLeaderboardClient } from "./client";
@@ -35,8 +35,6 @@ const CHAINS_FAQ_ITEMS = [
       "The leaderboard ranks chains by the latest stablecoin supply snapshot, but supply alone doesn't tell the full story. Concentration risk and backing diversity also matter: a chain with slightly lower total supply but better distribution across high-quality, diverse stablecoins may have a higher Chain Health Score.",
   },
 ] satisfies readonly FaqItem[];
-
-const CHAINS_FAQ_JSON_LD = buildFaqJsonLd(CHAINS_FAQ_ITEMS);
 
 function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }) {
   return (
@@ -91,12 +89,12 @@ export default function ChainsPage() {
       preface={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd([...chainDirectoryJsonLd, CHAINS_FAQ_JSON_LD]) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(chainDirectoryJsonLd) }}
         />
       }
     >
       <ChainsLeaderboardClient />
-      <FaqSection items={CHAINS_FAQ_ITEMS} title="Chains FAQ" />
+      <FaqSection items={CHAINS_FAQ_ITEMS} title="Chains FAQ" includeJsonLd />
       <ChainDirectory entries={chainEntries} />
     </FeaturePageShell>
   );

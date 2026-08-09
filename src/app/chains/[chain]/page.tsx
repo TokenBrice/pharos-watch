@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
+import { formatProseList } from "@shared/lib/format";
 import { buildApiOgImageUrl, buildPageMetadata, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
@@ -42,11 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
 }
 
 function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol">[]): string {
-  const symbols = [...new Set(deployments.map((deployment) => deployment.symbol))].slice(0, 3);
-  if (symbols.length === 0) return "";
-  if (symbols.length === 1) return symbols[0];
-  if (symbols.length === 2) return `${symbols[0]} and ${symbols[1]}`;
-  return `${symbols[0]}, ${symbols[1]} and ${symbols[2]}`;
+  return formatProseList([...new Set(deployments.map((deployment) => deployment.symbol))].slice(0, 3));
 }
 
 function chainPageTitle(chainName: string, deployments: readonly ChainTrackedDeployment[] = []): string {
@@ -75,12 +72,9 @@ function buildChainMetaDescription(chainName: string, deployments: readonly Chai
 
 function formatDeploymentList(deployments: readonly Pick<ChainTrackedDeployment, "name" | "symbol">[]): string {
   if (deployments.length === 0) return "tracked stablecoins";
-  if (deployments.length === 1) return `${deployments[0].name} (${deployments[0].symbol})`;
-  if (deployments.length === 2) {
-    return `${deployments[0].name} (${deployments[0].symbol}) and ${deployments[1].name} (${deployments[1].symbol})`;
-  }
-
-  return `${deployments[0].name} (${deployments[0].symbol}), ${deployments[1].name} (${deployments[1].symbol}), and ${deployments[2].name} (${deployments[2].symbol})`;
+  return formatProseList(
+    deployments.slice(0, 3).map((deployment) => `${deployment.name} (${deployment.symbol})`),
+  );
 }
 
 function buildChainEditorialIntro({

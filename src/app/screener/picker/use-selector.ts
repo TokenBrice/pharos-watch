@@ -15,7 +15,7 @@ import {
 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isValidSelectorSnapshotId } from "./selector-state";
-import { buildSelectorRows } from "./selector-data-adapter";
+import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
 export type UseSelectorResult =

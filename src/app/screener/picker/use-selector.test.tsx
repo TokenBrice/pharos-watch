@@ -21,7 +21,7 @@ vi.mock("@shared/lib/selector", async () => {
   };
 });
 
-vi.mock("./selector-data-adapter", () => ({ buildSelectorRows: buildSelectorRowsMock }));
+vi.mock("@shared/lib/selector/data-adapter", () => ({ buildSelectorRows: buildSelectorRowsMock }));
 
 vi.mock("@/hooks/api-hooks", () => ({
   usePegSummary: () => ({ data: { coins: [] }, dataUpdatedAt: 1, error: null }),

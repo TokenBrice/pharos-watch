@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FaqSection } from "@/components/faq-section";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CompareLoadingState } from "@/app/compare/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
@@ -49,7 +49,7 @@ export const metadata = buildPageMetadata({
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.CompareClient })),
-  loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
+  loading: <CompareLoadingState />,
   shell: {
     breadcrumbName: "Compare",
     path: "/compare/",

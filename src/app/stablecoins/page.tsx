@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
@@ -68,25 +68,15 @@ export default function StablecoinsHubPage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: safeJsonLd([
-              {
-                "@context": "https://schema.org",
-                "@type": "CollectionPage",
-                name: "Stablecoin Taxonomies",
+              ...buildCollectionItemListJsonLd({
                 url: `${SITE_URL}/stablecoins/`,
-                isPartOf: { "@id": `${SITE_URL}#website` },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "ItemList",
-                name: "Stablecoin taxonomy hubs",
-                numberOfItems: taxonomyItems.length,
-                itemListElement: taxonomyItems.map((page, index) => ({
-                  "@type": "ListItem",
-                  position: index + 1,
+                name: "Stablecoin Taxonomies",
+                itemListName: "Stablecoin taxonomy hubs",
+                entries: taxonomyItems.map((page) => ({
                   name: page.title,
                   url: `${SITE_URL}${page.href}`,
                 })),
-              },
+              }),
               buildPublicDatasetMirrorJsonLd("top-stablecoins"),
             ]),
           }}

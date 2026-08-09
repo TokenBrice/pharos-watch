@@ -4,17 +4,18 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Metadata } from "next";
 import type React from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { safeJsonLd } from "@/lib/json-ld";
+import { markdownLinkComponent } from "@/components/markdown-link";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { BLOG_POST_BY_SLUG } from "@/data/blog";
 import sitemapDates from "@/generated/sitemap-dates.json";
+import { formatLongDate } from "@shared/lib/format";
 
 const POSTS_DIR = path.join(process.cwd(), "src/data/blog/posts");
 const OG_BLOG = "/og-blog.png";
@@ -24,21 +25,7 @@ const OG_BLOG = "/og-blog.png";
 // rule and matching the detail-page AI summary). Prose links resolve through
 // Next's Link; external links open in a new tab. No frost-blue in blog chrome.
 const mdxComponents = {
-  a: ({ href, children }: React.ComponentProps<"a">) => {
-    if (!href) return <span>{children}</span>;
-    if (href.startsWith("/")) {
-      return (
-        <Link href={href} className="pharos-prose-link">
-          {children}
-        </Link>
-      );
-    }
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="pharos-prose-link">
-        {children}
-      </a>
-    );
-  },
+  a: markdownLinkComponent(),
   // Inline article images: ![alt](/blog/x.png "optional caption"). Plain <img>
   // (static export = images.unoptimized, no-img-element off); a title becomes a
   // caption. react-markdown wraps a lone image in <p>, so use block <span>s
@@ -64,12 +51,7 @@ const mdxComponents = {
 };
 
 function formatPublishedDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatLongDate(new Date(`${iso}T00:00:00Z`), { utc: true });
 }
 
 export function generateStaticParams() {
@@ -105,7 +87,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       path={`/blog/${slug}/`}
       title={post.title}
       variant="longform"
-      containerClassName="mx-auto max-w-3xl"
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Blog", url: "/blog/" },
@@ -121,18 +102,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "BlogPosting",
-            headline: post.title,
-            description: post.description,
-            datePublished: `${post.datePublished}T00:00:00Z`,
-            dateModified: dateModified.length === 10 ? `${dateModified}T00:00:00Z` : dateModified,
-            author: { "@id": `${SITE_URL}#organization` },
-            publisher: { "@id": `${SITE_URL}#organization` },
-            image: `${SITE_URL}${socialImage}`,
-            mainEntityOfPage: canonical,
-          }),
+          __html: safeJsonLd(
+            buildArticleJsonLd({
+              type: "BlogPosting",
+              headline: post.title,
+              description: post.description,
+              datePublished: `${post.datePublished}T00:00:00Z`,
+              dateModified: dateModified.length === 10 ? `${dateModified}T00:00:00Z` : dateModified,
+              image: `${SITE_URL}${socialImage}`,
+              mainEntityOfPage: canonical,
+            }),
+          ),
         }}
       />
       {post.coverImage ? (

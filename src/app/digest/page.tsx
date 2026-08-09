@@ -5,7 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { DigestNameplate } from "@/components/digest-nameplate";
 import { DigestColophon } from "@/components/digest-colophon";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
@@ -35,26 +35,13 @@ export default function DigestArchivePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd([
-            {
-              "@context": "https://schema.org",
-              "@type": "CollectionPage",
-              "@id": `${SITE_URL}/digest/#collection`,
+          __html: safeJsonLd(
+            buildCollectionItemListJsonLd({
+              url: `${SITE_URL}/digest/`,
               name: "Daily Digest Archive",
               description: "Every Pharos stablecoin recap, newest first.",
-              url: `${SITE_URL}/digest/`,
-              mainEntity: { "@id": `${SITE_URL}/digest/#itemlist` },
-              isPartOf: { "@id": `${SITE_URL}#website` },
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "@id": `${SITE_URL}/digest/#itemlist`,
-              name: "Pharos Digest Archive",
-              numberOfItems: digestEntries.length,
-              itemListElement: digestEntries.map((entry, index) => ({
-                "@type": "ListItem",
-                position: index + 1,
+              itemListName: "Pharos Digest Archive",
+              entries: digestEntries.map((entry) => ({
                 item: {
                   "@type": "WebPage",
                   "@id": `${SITE_URL}/digest/${entry.date}/`,
@@ -63,8 +50,8 @@ export default function DigestArchivePage() {
                   description: entry.text,
                 },
               })),
-            },
-          ]),
+            }),
+          ),
         }}
       />
 

@@ -153,7 +153,7 @@ vi.mock("@shared/lib/selector", async () => {
   };
 });
 
-vi.mock("./selector-data-adapter", () => ({
+vi.mock("@shared/lib/selector/data-adapter", () => ({
   buildSelectorRows: vi.fn(() => ({
     rows: new Map(),
     timestamp: 1_700_000_000_000,

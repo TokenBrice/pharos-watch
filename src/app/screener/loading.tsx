@@ -10,7 +10,7 @@ import {
 // toolbar + sticky-header + 14 tight rows.
 const SCREENER_SKELETON_ROW_COUNT = 14;
 
-export default function Loading() {
+export function ScreenerLoadingState() {
   return (
     <PageLoadingShell>
       <PageLoadingHeader
@@ -47,4 +47,8 @@ export default function Loading() {
       />
     </PageLoadingShell>
   );
+}
+
+export default function Loading() {
+  return <ScreenerLoadingState />;
 }

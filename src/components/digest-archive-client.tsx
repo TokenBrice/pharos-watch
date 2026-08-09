@@ -9,7 +9,7 @@ import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, EDITORIAL_META_STYLE, parseDigestParagraph } from "@/lib/digest";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ function formatWireDate(ts: number): string {
 
 function formatWeeklyMasthead(ts: number): string {
   const d = new Date(ts * 1000);
-  const end = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const end = formatLongDate(d);
   const start = new Date(d.getTime() - 6 * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric" });
   return `${start} – ${end}`;
 }

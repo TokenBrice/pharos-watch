@@ -14,7 +14,7 @@ import digests from "../../../data/digests.json";
 import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
-  INDEXABLE_DEPEG_EVENT_ENTRIES,
+  DEPEG_EVENT_ENTRIES,
 } from "@/app/depeg/[event]/page-data";
 
 describe("sitemap", () => {
@@ -105,10 +105,10 @@ describe("sitemap", () => {
 
   it("marks only collision-differentiated depeg pages with the reviewed content revision", () => {
     const entriesByUrl = new Map(sitemap().map((entry) => [entry.url, entry]));
-    const collision = INDEXABLE_DEPEG_EVENT_ENTRIES.find((event) =>
+    const collision = DEPEG_EVENT_ENTRIES.find((event) =>
       COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug),
     );
-    const ordinary = INDEXABLE_DEPEG_EVENT_ENTRIES.find(
+    const ordinary = DEPEG_EVENT_ENTRIES.find(
       (event) => !COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug),
     );
 

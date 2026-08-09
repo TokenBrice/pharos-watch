@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
@@ -82,16 +82,12 @@ export function StablecoinTaxonomyShell({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd([
-              {
-                "@context": "https://schema.org",
-                "@type": "CollectionPage",
-                "@id": `${SITE_URL}${href}#collection`,
+            __html: safeJsonLd(
+              buildCollectionItemListJsonLd({
+                url: `${SITE_URL}${href}`,
                 name: title,
                 description,
-                url: `${SITE_URL}${href}`,
-                mainEntity: { "@id": `${SITE_URL}${href}#itemlist` },
-                isPartOf: { "@id": `${SITE_URL}#website` },
+                itemListDescription: description,
                 ...(definedTermCode && definedTermSetHref
                   ? {
                       about: {
@@ -102,20 +98,10 @@ export function StablecoinTaxonomyShell({
                       },
                     }
                   : {}),
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "ItemList",
-                "@id": `${SITE_URL}${href}#itemlist`,
-                name: title,
-                description,
-                numberOfItems: coins.length,
-                itemListElement: coins.map((coin, index) => {
+                entries: coins.map((coin) => {
                   const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
 
                   return {
-                    "@type": "ListItem",
-                    position: index + 1,
                     item: {
                       "@type": "WebPage",
                       "@id": url,
@@ -124,8 +110,8 @@ export function StablecoinTaxonomyShell({
                     },
                   };
                 }),
-              },
-            ]),
+              }),
+            ),
           }}
         />
       }

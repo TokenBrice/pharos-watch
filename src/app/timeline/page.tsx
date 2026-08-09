@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
@@ -25,35 +25,23 @@ const TIMELINE_URL = `${SITE_URL}/timeline/`;
 const TIMELINE_DATE_PUBLISHED = "2026-05-15T00:00:00Z";
 const TIMELINE_DATE_MODIFIED = (sitemapDates as Record<string, string>)["/timeline/"] ?? TIMELINE_DATE_PUBLISHED;
 
-const collectionJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "@id": `${TIMELINE_URL}#collection`,
+// `TAPE_CLASSES` only carries classes with a live projector, so every entry
+// advertised in the ItemList resolves to a non-empty feed.
+const [collectionJsonLd, itemListJsonLd] = buildCollectionItemListJsonLd({
+  url: TIMELINE_URL,
   name: "Timeline — Stablecoin Market Events",
   description: TIMELINE_DESCRIPTION,
-  url: TIMELINE_URL,
-  isPartOf: { "@id": `${SITE_URL}#website` },
   datePublished: TIMELINE_DATE_PUBLISHED,
   dateModified: TIMELINE_DATE_MODIFIED,
-};
-
-// `TAPE_CLASSES` only carries classes with a live projector, so every entry
-// advertised here resolves to a non-empty feed.
-const itemListJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "@id": `${TIMELINE_URL}#class-index`,
-  name: "Event classes covered by the Timeline",
+  itemListId: `${TIMELINE_URL}#class-index`,
+  itemListName: "Event classes covered by the Timeline",
   itemListOrder: "https://schema.org/ItemListUnordered",
-  numberOfItems: TAPE_CLASSES.length,
-  itemListElement: TAPE_CLASSES.map((cls, index) => ({
-    "@type": "ListItem",
-    position: index + 1,
+  entries: TAPE_CLASSES.map((cls) => ({
     name: cls.label,
     description: cls.description,
     url: `${TIMELINE_URL}?type=${encodeURIComponent(cls.slug)}.*`,
   })),
-};
+});
 
 export default function TimelinePage() {
   return (

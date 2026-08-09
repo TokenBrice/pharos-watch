@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import type { PharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
   formatMethodologyDisplayDate,
@@ -65,20 +65,19 @@ export function MethodologyChangelogPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd({
-              "@context": "https://schema.org",
-              "@type": "Article",
-              additionalType: "https://schema.org/TechArticle",
-              headline: `${title} - Version History`,
-              description: articleDescription,
-              datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
-              dateModified: `${entries[0].date}T00:00:00Z`,
-              author: { "@id": `${SITE_URL}#person-tokenbrice` },
-              publisher: { "@id": `${SITE_URL}#organization` },
-              image: `${SITE_URL}/og-editorial-methodology.png`,
-              mainEntityOfPage: `${SITE_URL}${path}`,
-              ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
-            }),
+            __html: safeJsonLd(
+              buildArticleJsonLd({
+                additionalType: "https://schema.org/TechArticle",
+                headline: `${title} - Version History`,
+                description: articleDescription,
+                datePublished: `${entries.at(-1)!.date}T00:00:00Z`,
+                dateModified: `${entries[0].date}T00:00:00Z`,
+                author: "person",
+                image: `${SITE_URL}/og-editorial-methodology.png`,
+                mainEntityOfPage: `${SITE_URL}${path}`,
+                ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
+              }),
+            ),
           }}
         />
       )}

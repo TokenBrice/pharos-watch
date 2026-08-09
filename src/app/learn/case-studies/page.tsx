@@ -15,7 +15,7 @@ import { content as ironTitan2021 } from "./content/iron-titan-2021";
 import { content as feiProtocol } from "./content/fei-protocol";
 import { CaseStudyListJsonLd } from "./case-study-json-ld";
 import { CaseStudyList, type CaseStudyListItem } from "./case-study-list";
-import { CaseStudyPageShell } from "./case-study-page-shell";
+import { LearnPageShell } from "../_shared/learn-page-shell";
 
 // Reference the priority content modules directly so a renamed/removed module is
 // a compile-time import error rather than a runtime throw via slug lookup.
@@ -71,13 +71,14 @@ export default function CaseStudiesHub() {
   );
 
   return (
-    <CaseStudyPageShell
+    <LearnPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Case Studies", url: "/learn/case-studies/" },
       ]}
       title="When the peg broke"
       subtitle="Practitioner retrospectives of the depegs and failures that reshaped the stablecoin market — what happened, why the design produced it, and what each one left behind. Built on Pharos data."
+      titleClassName="max-w-[24ch]"
     >
       <CaseStudyListJsonLd studies={CASE_STUDY_LIST} />
       <LearnHero
@@ -155,6 +156,6 @@ export default function CaseStudiesHub() {
         studies={caseStudyListItems}
         archetypeLabels={MECHANISM_ARCHETYPE_LABELS}
       />
-    </CaseStudyPageShell>
+    </LearnPageShell>
   );
 }

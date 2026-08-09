@@ -5,7 +5,7 @@ import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { CEMETERY_ENTRIES as DEAD_STABLECOINS } from "@shared/lib/cemetery-merged";
@@ -44,33 +44,20 @@ export default function CemeteryPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: safeJsonLd([
-            {
-              "@context": "https://schema.org",
-              "@type": "CollectionPage",
-              "@id": `${SITE_URL}/cemetery/#collection`,
+            ...buildCollectionItemListJsonLd({
+              url: `${SITE_URL}/cemetery/`,
               name: "Stablecoin Cemetery",
               description: `${DEAD_STABLECOINS.length} defunct stablecoins documented.`,
-              url: `${SITE_URL}/cemetery/`,
-              mainEntity: { "@id": `${SITE_URL}/cemetery/#itemlist` },
-              isPartOf: { "@id": `${SITE_URL}#website` },
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "@id": `${SITE_URL}/cemetery/#itemlist`,
-              name: "Stablecoin Cemetery",
-              description: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
+              itemListDescription: `${DEAD_STABLECOINS.length} defunct, depegged, and discontinued stablecoins documented with cause of death and obituaries.`,
               numberOfItems: DEAD_STABLECOINS.length,
-              itemListElement: schemaCoins.map((coin, i) => ({
-                "@type": "ListItem",
-                position: i + 1,
+              entries: schemaCoins.map((coin) => ({
                 item: {
                   "@type": "Thing",
                   name: `${coin.name} (${coin.symbol})`,
                   description: coin.obituary,
                 },
               })),
-            },
+            }),
             buildCemeteryDatasetJsonLd(),
           ]),
         }}

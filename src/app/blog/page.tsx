@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Rss } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { BLOG_POSTS } from "@/data/blog";
+import { formatLongDate } from "@shared/lib/format";
 
 const BLOG_DESCRIPTION =
   "Product updates and the story of Pharos — what shipped, what's next, and why we build stablecoin risk tooling in the open.";
@@ -18,27 +19,16 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 function formatPublishedDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return formatLongDate(new Date(`${iso}T00:00:00Z`), { utc: true });
 }
 
 export default function BlogHubPage() {
-  const blogJsonLd = safeJsonLd({
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "Pharos Blog",
-    description: BLOG_DESCRIPTION,
-    url: `${SITE_URL}/blog/`,
-    mainEntity: {
-      "@type": "ItemList",
-      numberOfItems: BLOG_POSTS.length,
-      itemListElement: BLOG_POSTS.map((post, i) => ({
-        "@type": "ListItem",
-        position: i + 1,
+  const blogJsonLd = safeJsonLd(
+    buildCollectionItemListJsonLd({
+      url: `${SITE_URL}/blog/`,
+      name: "Pharos Blog",
+      description: BLOG_DESCRIPTION,
+      entries: BLOG_POSTS.map((post) => ({
         item: {
           "@type": "BlogPosting",
           headline: post.title,
@@ -48,8 +38,8 @@ export default function BlogHubPage() {
           mainEntityOfPage: `${SITE_URL}/blog/${post.slug}/`,
         },
       })),
-    },
-  });
+    }),
+  );
 
   return (
     <FeaturePageShell
@@ -57,7 +47,6 @@ export default function BlogHubPage() {
       path="/blog/"
       title="Blog"
       variant="longform"
-      containerClassName="mx-auto max-w-3xl"
       leadParagraphs={[BLOG_DESCRIPTION]}
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: blogJsonLd }} />

@@ -53,6 +53,25 @@ export function ChangelogTable({
   );
 }
 
+/**
+ * Renders a changelog entry straight from its structured
+ * `shared/data/methodology-changelogs/` record. Every V9-era entry uses this;
+ * only pre-V9 versions still carry hand-authored prose (they predate the
+ * structured `summary`/`impact` fields carrying the whole story).
+ */
+export function StructuredChangelogDetail({ entry }: { entry: MethodologyChangelogEntry }) {
+  return (
+    <>
+      <p>{entry.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {entry.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function VersionCard({
   entry,
   children,

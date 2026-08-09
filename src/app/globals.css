@@ -12,6 +12,9 @@
 /* Score-track band fills: v4 scanning misses some of these /70 tones even as
    plain literals (bg-blue-500/70 was silently dropped) — force-emit them. */
 @source inline("bg-{red,orange,amber,blue,emerald}-500/70");
+/* pharos-confidence-high is referenced only through src/lib/confidence.ts's
+   map, which v4 scanning misses — it was silently absent from built CSS. */
+@source inline("pharos-confidence-high");
 @source not "../test";
 @source not "../test-utils";
 

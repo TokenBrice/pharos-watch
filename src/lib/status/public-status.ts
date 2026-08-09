@@ -2,6 +2,7 @@ import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } from "@shared/lib/public-health";
 import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
+import { formatProseList } from "@shared/lib/format";
 
 export interface PublicCacheSummary {
   ratio: number | null;
@@ -25,12 +26,7 @@ type ActivePriceCoverage = NonNullable<HealthResponse["activePriceCoverage"]>;
 
 const ACTIVE_PRICE_INCOMPLETE_PREFIX = "active-price-coverage-incomplete:";
 
-function formatList(items: readonly string[]): string {
-  if (items.length === 0) return "";
-  if (items.length === 1) return items[0]!;
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
-}
+
 
 function getActivePriceAssetLabels(
   coverage: ActivePriceCoverage | undefined,
@@ -57,7 +53,7 @@ function formatAffectedAssets(count: number, labels: readonly string[]): string 
     : effectiveCount > 1
       ? `${effectiveCount} active assets`
       : "active assets";
-  return displayLabels.length > 0 ? `${countLabel}: ${formatList(displayLabels)}` : countLabel;
+  return displayLabels.length > 0 ? `${countLabel}: ${formatProseList(displayLabels)}` : countLabel;
 }
 
 export function getActivePriceCoverageImpactDetail(coverage: ActivePriceCoverage): string {

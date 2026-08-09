@@ -1,5 +1,5 @@
 /**
- * Minimal RSS 2.0 renderer for the four pharos.watch feeds.
+ * Minimal RSS 2.0 renderer for the pharos.watch `/feed/*.xml` routes.
  *
  * Hand-rolled to avoid a new dependency. Inputs are typed; rich bodies are
  * CDATA-wrapped; titles/descriptions are XML-escaped for safety.

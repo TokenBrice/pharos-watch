@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
-import { safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage } from "@/lib/stablecoin-taxonomy";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { BackingType, GovernanceType } from "@shared/types";
@@ -36,27 +36,17 @@ export function StablecoinTaxonomyHub({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd([
-              {
-                "@context": "https://schema.org",
-                "@type": "CollectionPage",
-                name: title,
+            __html: safeJsonLd(
+              buildCollectionItemListJsonLd({
                 url: `${SITE_URL}${path}`,
-                isPartOf: { "@id": `${SITE_URL}#website` },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "ItemList",
-                name: itemListName,
-                numberOfItems: pages.length,
-                itemListElement: pages.map((page, index) => ({
-                  "@type": "ListItem",
-                  position: index + 1,
+                name: title,
+                itemListName,
+                entries: pages.map((page) => ({
                   name: page.title,
                   url: `${SITE_URL}${page.href}`,
                 })),
-              },
-            ]),
+              }),
+            ),
           }}
         />
       }

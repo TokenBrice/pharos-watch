@@ -51,7 +51,6 @@ export default function DocsIndexPage() {
       path="/docs/"
       title="Documentation"
       variant="longform"
-      containerClassName="mx-auto max-w-3xl"
       leadParagraphs={[
         "Architecture, methodology, and design references for Pharos. Every page is also served as plain markdown for agents.",
       ]}

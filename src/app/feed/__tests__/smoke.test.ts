@@ -40,7 +40,7 @@ async function importDepegRouteWithData(raw: string | null) {
   }
 
   const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(root);
-  const mod = await import("../depeg/route");
+  const mod = await import("../depeg.xml/route");
   cwdSpy.mockRestore();
   return mod;
 }
@@ -84,7 +84,7 @@ describe("feed routes smoke", () => {
   });
 
   it("blog route emits valid RSS XML", async () => {
-    const mod = await import("../blog/route");
+    const mod = await import("../blog.xml/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
@@ -95,7 +95,7 @@ describe("feed routes smoke", () => {
   });
 
   it("digest route emits valid RSS XML", async () => {
-    const mod = await import("../digest/route");
+    const mod = await import("../digest.xml/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
@@ -105,7 +105,7 @@ describe("feed routes smoke", () => {
   });
 
   it("depeg route emits the seeded events archive", async () => {
-    const mod = await import("../depeg/route");
+    const mod = await import("../depeg.xml/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Depeg Events</title>");
@@ -152,7 +152,7 @@ describe("feed routes smoke", () => {
   });
 
   it("methodology route emits items across the unified changelogs", async () => {
-    const mod = await import("../methodology/route");
+    const mod = await import("../methodology.xml/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Methodology Changelog</title>");
@@ -160,7 +160,7 @@ describe("feed routes smoke", () => {
   });
 
   it("cemetery route emits items", async () => {
-    const mod = await import("../cemetery/route");
+    const mod = await import("../cemetery.xml/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Cemetery</title>");
