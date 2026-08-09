@@ -1,5 +1,3 @@
-import { recordOutcome } from "../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
 import {
@@ -18,14 +16,12 @@ import {
 import type { buildDispatchSnapshotState } from "./dispatch-telegram-state";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
-  archiveAgedExecutionUnknownPendingAlerts,
-  cleanupExpiredPendingAlerts,
   drainPendingQueue,
   emptyDrainResult,
-  readPendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   type PendingCapacitySnapshot,
 } from "./telegram-pending";
+import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
 import {
   commitTelegramAlertSourceBaseline,
   completeTelegramAlertSourceEvent,
@@ -207,16 +203,23 @@ export async function executeAuthoritativeFanoutPath(
     },
   });
 
-  const drainResult = prePlanDrainResult ?? ((planner?.enqueued ?? 0) > 0
-    ? await timedPendingDrain()
-    : emptyDrainResult());
-  const archivedUnknown = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
-  const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
-  const pendingCapacityAfter =
-    drainResult.attempted > 0 || expiredCount > 0 || archivedUnknown > 0 || (planner?.enqueued ?? 0) > 0
-      ? await readPendingCapacitySnapshot(db, nowSec)
-      : context.pendingCapacityBefore;
-  if (context.sharedState) context.sharedState.pendingCapacitySnapshot = pendingCapacityAfter;
+  // Like the recovery sidecar (and unlike the circuit-open/eventless paths)
+  // this path expires TTL-dead rows on every run.
+  const lifecycle = await runPendingQueueLifecycle({
+    db,
+    nowSec,
+    pendingCapacityBefore: context.pendingCapacityBefore,
+    drainResult: prePlanDrainResult ?? ((planner?.enqueued ?? 0) > 0
+      ? await timedPendingDrain()
+      : emptyDrainResult()),
+    cleanupExpired: "always",
+    capacityRefreshBasis: "drain-attempted",
+    forceCapacityRefresh: (planner?.enqueued ?? 0) > 0,
+    pendingEnqueued: planner?.enqueued ?? 0,
+    outcomePolicy: "attempted-only",
+    sharedState: context.sharedState,
+  });
+  const { drainResult, expiredCount, pendingCapacityAfter } = lifecycle;
 
   if (planner?.state === "delivery_open" && planner.remainingTargets === 0) {
     await commitTelegramAlertSourceBaseline(db, sourceEvent, nowSec, context.signal);
@@ -295,10 +298,7 @@ export async function executeAuthoritativeFanoutPath(
     ),
     suppressedSafetyChangesAtSeed: context.suppressedSafetyChangesAtSeed,
   };
-  if (drainResult.attempted > 0) {
-    const successfulEffect = drainResult.sent > 0 || drainResult.blockedCleanedUp > 0;
-    await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, successfulEffect);
-  }
+  await lifecycle.recordDrainOutcome();
   await reportCronProgress(context.reportProgress, {
     stage: "complete",
     message: "Completed row-authoritative Telegram dispatch",

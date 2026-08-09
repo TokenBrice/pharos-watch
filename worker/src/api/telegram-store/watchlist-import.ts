@@ -3,6 +3,8 @@ import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
+import { TELEGRAM_ALERT_PERSISTENCE } from "@shared/lib/telegram-alert-families";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   packWatchlistDirectState,
@@ -109,12 +111,10 @@ export async function loadWatchlistPortableState(
     state: {
       registryVersion,
       direct: (directResult.results ?? [])
-        .filter((row) => Boolean(
-          row.alert_dews || row.alert_depeg || row.alert_safety || row.alert_launch || row.alert_reserve
-          || row.alert_dews_override || row.alert_depeg_override || row.alert_safety_override
-          || row.alert_launch_override || row.alert_reserve_override || row.alert_freeze || row.alert_freeze_override
-          || row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step,
-        ))
+        .filter((row) => TELEGRAM_ALERT_TYPES.some((alertType) => Boolean(
+          row[TELEGRAM_ALERT_PERSISTENCE[alertType].subscriptionColumn]
+          || row[TELEGRAM_ALERT_PERSISTENCE[alertType].overrideColumn],
+        )) || Boolean(row.dews_min_band || row.safety_mode || row.depeg_worsening_bps_step))
         .map(directFromRow),
       presets: presets.map(presetFromRow),
     },

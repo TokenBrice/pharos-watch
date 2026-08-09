@@ -3275,12 +3275,15 @@ describe("enqueuePendingAlerts", () => {
     expect(insert).toBeDefined();
     // The new CASE branch must come first so it takes precedence over the
     // existing MAX/COALESCE logic when the prior row is stale.
-    expect(insert!.sql).toMatch(
-      /not_before_at = CASE\s+WHEN COALESCE\(telegram_pending_alerts\.expires_at, telegram_pending_alerts\.created_at \+ \?\) <= excluded\.created_at\s+OR telegram_pending_alerts\.created_at < excluded\.created_at - \? THEN excluded\.not_before_at/,
+    expect(insert!.sql.replace(/\s+/g, " ")).toContain(
+      `not_before_at = CASE WHEN COALESCE( telegram_pending_alerts.expires_at,`
+      + ` telegram_pending_alerts.created_at + ${PENDING_TTL_SEC} ) <= excluded.created_at`
+      + ` OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}`
+      + ` THEN excluded.not_before_at`,
     );
-    // Fifteen refresh predicates, each binding the default TTL twice.
-    const ttlBindCount = insert!.binds.filter((bind) => bind === PENDING_TTL_SEC).length;
-    expect(ttlBindCount).toBe(30);
+    // The TTL constant is inlined into the generated predicate, so the
+    // statement binds only its eighteen insert values.
+    expect(insert!.binds).toHaveLength(18);
   });
 
   it("refreshes expired short-TTL rows on re-enqueue before the one-hour stale cutoff", async () => {

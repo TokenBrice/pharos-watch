@@ -8,31 +8,18 @@ import type { WebhookCommandHandler } from "./context";
 import {
   BULK_CONFIRM_REPLY_MARKUP,
   buildBulkConfirmMessage,
+  buildTelegramActionContext,
   dedupePresetIds,
   makeActionRunner,
   persistBulkConfirmPrompt,
   subscribableCoinCount,
-  type TelegramActionContext,
 } from "./action-runner";
 
 export const handleUnsubscribe: WebhookCommandHandler = async (ctx, args) => {
-  const { db, chatId, actorUserId } = ctx;
-  const actionContext: TelegramActionContext = {
-    db,
-    chatId,
-    username: null,
-    initiatorUserId: actorUserId,
-    beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
-    planIntent: ctx.planIntent,
-    prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
-    prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
-    preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
-    confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
-    markMutationApplied: ctx.markMutationApplied,
-    storedIntent: ctx.storedIntent,
-    wasMutationApplied: ctx.wasMutationApplied,
-    operationNowSec: ctx.operationNowSec,
-  };
+  const { db } = ctx;
+  // /unsubscribe deliberately drops the username: it never creates a
+  // subscriber row, so it must not refresh the stored handle.
+  const actionContext = buildTelegramActionContext(ctx, { username: null });
   const parsed = parseTargetArgs(args, { resolutionScope: "tracked" });
   if (args.trim().length === 0) {
     await ctx.replyToChat("Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all");

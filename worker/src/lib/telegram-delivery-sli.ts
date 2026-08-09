@@ -1,4 +1,4 @@
-import { TELEGRAM_PENDING_PRIORITY } from "@shared/lib/telegram-delivery-policy";
+import { pendingPrioritySql } from "../cron/telegram-pending/upsert-sql";
 import type {
   TelegramDeliverySliBacklogBucket,
   TelegramDeliverySliEvidenceQuality,
@@ -137,18 +137,6 @@ function reasons(
   };
 }
 
-function priorityCaseSql(): string {
-  return `CASE target.alert_type
-    WHEN 'depeg' THEN ${TELEGRAM_PENDING_PRIORITY.depeg}
-    WHEN 'dews' THEN ${TELEGRAM_PENDING_PRIORITY.dews}
-    WHEN 'safety' THEN ${TELEGRAM_PENDING_PRIORITY.safety}
-    WHEN 'launch' THEN ${TELEGRAM_PENDING_PRIORITY.launch}
-    WHEN 'reserve' THEN ${TELEGRAM_PENDING_PRIORITY.reserve}
-    WHEN 'freeze' THEN ${TELEGRAM_PENDING_PRIORITY.freeze}
-    ELSE ${TELEGRAM_PENDING_PRIORITY.riskAlert}
-  END`;
-}
-
 /**
  * Load a bounded delivery read model from the event/target audit ledger.
  * "Accepted" means Telegram's Bot API accepted the send, not that a person
@@ -259,7 +247,7 @@ export async function loadTelegramDeliverySliRollup(
 
   const backlogRows = await db
     .prepare(
-      `SELECT ${priorityCaseSql()} AS priority,
+      `SELECT ${pendingPrioritySql("target.alert_type")} AS priority,
             CASE
               WHEN target.created_at > ? - 300 THEN 'lt_5m'
               WHEN target.created_at > ? - 900 THEN '5m_15m'

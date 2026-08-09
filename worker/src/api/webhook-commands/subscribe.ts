@@ -12,30 +12,15 @@ import {
   BULK_CONFIRM_REPLY_MARKUP,
   buildBulkConfirmMessage,
   dedupePresetIds,
+  buildTelegramActionContext,
   makeActionRunner,
   persistBulkConfirmPrompt,
   subscribableCoinCount,
-  type TelegramActionContext,
 } from "./action-runner";
 
 export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
-  const { db, chatId, username, actorUserId } = ctx;
-  const actionContext: TelegramActionContext = {
-    db,
-    chatId,
-    username,
-    initiatorUserId: actorUserId,
-    beforeIrreversibleEffect: ctx.beforeIrreversibleEffect,
-    planIntent: ctx.planIntent,
-    prepareMutationAppliedStatement: ctx.prepareMutationAppliedStatement,
-    prepareMutationOperationStatements: ctx.prepareMutationOperationStatements,
-    preparePendingMutationAppliedStatement: ctx.preparePendingMutationAppliedStatement,
-    confirmAtomicMutationApplied: ctx.confirmAtomicMutationApplied,
-    markMutationApplied: ctx.markMutationApplied,
-    storedIntent: ctx.storedIntent,
-    wasMutationApplied: ctx.wasMutationApplied,
-    operationNowSec: ctx.operationNowSec,
-  };
+  const { db } = ctx;
+  const actionContext = buildTelegramActionContext(ctx);
   const parsed = parseSubscribeArgs(args);
   const validationError = validateSubscribeArgs(parsed);
   if (validationError) {

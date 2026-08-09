@@ -1,8 +1,12 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../lib/db";
-import { PENDING_TTL_SEC, TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram-constants";
+import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
 import { parseTelegramTargetPlan } from "../telegram-alert-target-plan-contract";
 import { reconcileTelegramAlertJobCounters } from "../telegram-alert-job-target-outcomes";
+import {
+  buildPendingAlertUpsertSql,
+  pendingPrioritySql,
+} from "../telegram-pending/upsert-sql";
 import { markTelegramTargetPlanDegraded } from "./source-state";
 import {
   TELEGRAM_TARGET_PLAN_CLAIM_TTL_SEC,
@@ -137,18 +141,8 @@ async function suppressPriorTerminalDedupeCollisions(
   return Number(result.meta?.changes ?? 0);
 }
 
-function pendingPrioritySql(): string {
-  return `CASE target.alert_type
-    WHEN 'depeg' THEN ${TELEGRAM_PENDING_PRIORITY.depeg}
-    WHEN 'dews' THEN ${TELEGRAM_PENDING_PRIORITY.dews}
-    WHEN 'safety' THEN ${TELEGRAM_PENDING_PRIORITY.safety}
-    WHEN 'launch' THEN ${TELEGRAM_PENDING_PRIORITY.launch}
-    WHEN 'reserve' THEN ${TELEGRAM_PENDING_PRIORITY.reserve}
-    ELSE ${TELEGRAM_PENDING_PRIORITY.riskAlert}
-  END`;
-}
-
-function buildSetBasedPendingHandoffStatements(
+/** @internal Exposed so the pending-upsert SQL pin test can read the emitted statements. */
+export function buildSetBasedPendingHandoffStatements(
   db: D1Database,
   sourceEventId: string,
   generation: number,
@@ -156,84 +150,21 @@ function buildSetBasedPendingHandoffStatements(
   targetKeys: readonly string[],
 ): D1PreparedStatement[] {
   const targetKeysJson = JSON.stringify(targetKeys);
-  const refreshPredicate = `COALESCE(
-      telegram_pending_alerts.expires_at,
-      telegram_pending_alerts.created_at + ${PENDING_TTL_SEC}
-    ) <= excluded.created_at
-    OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}`;
   return [
     db
       .prepare(
-        `INSERT INTO telegram_pending_alerts (
-           chat_id, message_html, disable_notification, created_at, not_before_at,
-           last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
-           priority, source_type, alert_type, expires_at, source_event_id,
-           alert_scope_json, preference_generation, markup_policy_json
-         )
-         SELECT target.chat_id, target.message_html, target.disable_notification,
+        buildPendingAlertUpsertSql(
+          `SELECT target.chat_id, target.message_html, target.disable_notification,
                 ?, NULL, NULL, NULL, ?, target.pending_dedupe_key,
-                target.chunk_index, ${pendingPrioritySql()}, 'risk_alert',
+                target.chunk_index, ${pendingPrioritySql("target.alert_type")}, 'risk_alert',
                 target.alert_type, target.target_expires_at, target.source_event_id,
                 target.alert_scope_json, target.preference_generation,
                 target.markup_policy_json
            FROM telegram_alert_job_targets target
           WHERE target.source_event_id = ? AND target.plan_generation = ?
             AND target.status = 'planned'
-            AND target.target_key IN (SELECT value FROM json_each(?))
-         ON CONFLICT(dedupe_key) DO UPDATE SET
-           message_html = excluded.message_html,
-           disable_notification = excluded.disable_notification,
-           created_at = CASE WHEN ${refreshPredicate}
-             THEN excluded.created_at ELSE telegram_pending_alerts.created_at END,
-           attempts = CASE WHEN ${refreshPredicate}
-             THEN 0 ELSE telegram_pending_alerts.attempts END,
-           not_before_at = CASE
-             WHEN ${refreshPredicate} THEN excluded.not_before_at
-             WHEN excluded.not_before_at IS NULL THEN telegram_pending_alerts.not_before_at
-             WHEN telegram_pending_alerts.not_before_at IS NULL THEN excluded.not_before_at
-             ELSE MAX(telegram_pending_alerts.not_before_at, excluded.not_before_at)
-           END,
-           last_error_class = COALESCE(excluded.last_error_class, telegram_pending_alerts.last_error_class),
-           retry_after_sec = COALESCE(excluded.retry_after_sec, telegram_pending_alerts.retry_after_sec),
-           updated_at = excluded.updated_at,
-           chunk_index = excluded.chunk_index,
-           priority = MIN(COALESCE(telegram_pending_alerts.priority, excluded.priority), excluded.priority),
-           source_type = CASE
-             WHEN excluded.priority < COALESCE(telegram_pending_alerts.priority, excluded.priority)
-             THEN excluded.source_type ELSE telegram_pending_alerts.source_type END,
-           alert_type = COALESCE(excluded.alert_type, telegram_pending_alerts.alert_type),
-           expires_at = CASE WHEN ${refreshPredicate}
-             THEN excluded.expires_at
-             ELSE COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at) END,
-           processing_owner = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.processing_owner END,
-           processing_started_at = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.processing_started_at END,
-           processing_expires_at = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.processing_expires_at END,
-           delivery_owner = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.delivery_owner END,
-           delivery_started_at = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.delivery_started_at END,
-           delivery_completed_at = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.delivery_completed_at END,
-           delivery_claim_expires_at = CASE WHEN ${refreshPredicate}
-             THEN NULL ELSE telegram_pending_alerts.delivery_claim_expires_at END,
-           source_event_id = CASE WHEN ${refreshPredicate}
-             THEN excluded.source_event_id ELSE telegram_pending_alerts.source_event_id END,
-           alert_scope_json = CASE WHEN ${refreshPredicate}
-             THEN excluded.alert_scope_json ELSE telegram_pending_alerts.alert_scope_json END,
-           preference_generation = CASE WHEN ${refreshPredicate}
-             THEN excluded.preference_generation ELSE telegram_pending_alerts.preference_generation END,
-           markup_policy_json = CASE WHEN ${refreshPredicate}
-             THEN excluded.markup_policy_json ELSE telegram_pending_alerts.markup_policy_json END
-         WHERE telegram_pending_alerts.delivery_state = 'pending'
-           AND (
-             telegram_pending_alerts.processing_owner IS NULL
-             OR telegram_pending_alerts.processing_expires_at IS NULL
-             OR telegram_pending_alerts.processing_expires_at <= excluded.created_at
-             OR ${refreshPredicate}
-           )`,
+            AND target.target_key IN (SELECT value FROM json_each(?))`,
+        ),
       )
       .bind(nowSec, nowSec, sourceEventId, generation, targetKeysJson),
     db
