@@ -19,6 +19,10 @@ export interface StablecoinAiSummary {
   reviewedBy?: string;
   reviewedAt?: string;
   factsAsOf?: string;
+  sources?: Array<{
+    label: string;
+    url: `http${string}`;
+  }>;
 }
 
 export type StablecoinAiSummariesById = Record<string, StablecoinAiSummary>;

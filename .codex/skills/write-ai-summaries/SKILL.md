@@ -39,6 +39,7 @@ Each summary is a `StablecoinAiSummary` — `shared/types/editorial.ts` is the a
 ```
 
 `reviewedBy`/`reviewedAt` exist too but are set only after the named reviewer approves — never pre-stamp them.
+Optional `sources` entries are labeled HTTP links rendered directly beneath the summary. Add them whenever a static adoption, funding, holder/address, TVL, supply, or market-cap fact is retained.
 
 - **title**: 2-5 word catchy label in title case (e.g., "Too Big to Depeg", "The Basis Trade, Tokenized", "Swiss Stubbornness, Tokenized"). Think newspaper column headers
 - **text**: 3-6 sentences. Tell the reader what the numbers _mean_. Cover: what it is, what makes it interesting/different, what the key tension or risk is. End with a punch
@@ -96,6 +97,9 @@ When choosing what to highlight, consider these angles (pick the most interestin
 - **Don't write marketing copy**: No "revolutionary", "game-changing", "cutting-edge"
 - **Don't repeat title patterns**: If three summaries start with "The [Adjective] [Noun]", vary it
 - **Don't hard-code volatile numbers**: Market caps, TVL, and APY change weekly. Frame them relatively ("one of the largest", "sub-$10M market cap", "modest circulation") unless the specific number is central to the editorial point and you've verified it today. If you do cite a number, accept it will go stale
+- **Scope adoption claims**: Any static adoption, funding, address/holder, TVL, supply, or market-cap figure requires a displayed source and fact date. State the chain scope and denominator. Never call an address count "users" or "holders" without a defined method that distinguishes contracts and EOAs and deduplicates cross-chain controllers.
+- **Keep quantities economically comparable**: Do not divide parent or project financing by one product's token supply, market cap, or circulation unless both quantities measure the same economic concept. Token supply is not capital "used."
+- **Do not inherit provenance**: `factsAsOf` is the date the body was actually researched. Formatting, disclosure, or model-field edits do not justify carrying forward or adding `reviewedBy`/`reviewedAt`; those fields require approval of the exact text by the named reviewer.
 - **Don't duplicate the dashboard**: The page already displays report card grades, peg scores, and liquidity metrics as data visualizations. The summary should _interpret_ what those numbers mean in context, not restate them as raw figures. "Pharos rates it B+" is useless — "the B+ overall grade hides a D in dependency risk, which tells you everything about who's really backing this dollar" is editorial
 - **Don't ignore our data**: When Pharos has scored, graded, or analyzed a stablecoin, the summary should reflect that analysis. The reader sees the scores alongside the summary — connect the dots. A summary that could appear on CoinGecko with zero modification is a wasted opportunity
 - **Don't write thin summaries**: Three short, vague sentences do not meet the bar. If you can't find enough material for 3-6 substantive sentences after reading the metadata and checking the live page, the coin may need more research, not less text

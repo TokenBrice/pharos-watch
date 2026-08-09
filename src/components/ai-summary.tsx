@@ -16,6 +16,7 @@ export function AiSummary({
   reviewedBy,
   reviewedAt,
   factsAsOf,
+  sources,
 }: StablecoinAiSummary) {
   const isoDate = updatedAt;
   const dateline = formatLongDate(new Date(`${updatedAt}T00:00:00Z`), { utc: true });
@@ -30,6 +31,25 @@ export function AiSummary({
         <AiSummaryProse textLength={text.length}>
           <TermText text={text} />
         </AiSummaryProse>
+        {sources?.length ? (
+          <div className="mt-4 border-t border-border/40 pt-3">
+            <p className="font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+              Sources
+            </p>
+            <ul className="mt-1.5 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs">
+              {sources.map((source) => (
+                <li key={source.url}>
+                  <Link
+                    href={source.url}
+                    className="pharos-focus-ring rounded-sm text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+                  >
+                    {source.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {/* Provenance footer (Figma coin template): mono uppercase dateline +
             disclosure with the policy link at the far edge. */}
         <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-border/40 pt-3">
