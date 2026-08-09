@@ -504,7 +504,6 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
     };
 
 type SupplyAttributionGenerationCompatibilityReason =
-  | "registry-fingerprint-mismatch"
   | "expected-asset-ids-mismatch"
   | "source-clock-after-fixed-input"
   | "capture-clock-after-consumer"
@@ -528,9 +527,14 @@ export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
   const expectedAssetIds = uniqueSorted(
     safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
   );
-  if (generation.registryFingerprint !== fixedInput.registryFingerprint) {
-    return "registry-fingerprint-mismatch";
-  }
+  // The generation's own registryFingerprint stays on the record as capture
+  // provenance, but it is deliberately not an admission gate. It is global, so
+  // any registry edit rotates it for every asset, including the ones the edit
+  // never touched; gating here discarded the whole generation for one
+  // publication cycle after each release. Admission is per asset instead:
+  // `applySafetyScoreV9SupplyAttributionGeneration` re-derives every stored
+  // observation against the live route inventory, identity pins, observation
+  // window, and aggregate supply, and drops only the assets that fail.
   if (!exactStrings(generation.expectedAssetIds, expectedAssetIds)) {
     return "expected-asset-ids-mismatch";
   }
