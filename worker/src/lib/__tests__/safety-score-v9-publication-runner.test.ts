@@ -235,6 +235,18 @@ describe("Safety Score V9 publication runner", () => {
   });
 
   it("holds when publication assessment loading fails", async () => {
+    mocks.build.mockReturnValue({
+      candidate: makeWorkerSafetyScoreV9Publication({
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publishedAtSec: fixedInput.clockSec,
+      }),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [
+        { assetId: "alpha", code: "fact-build-failed" },
+      ],
+      quarantineAffectedAssetIds: ["alpha"],
+    });
     mocks.loadPublication.mockRejectedValue(new Error("read failed"));
 
     const result = await runSafetyScoreV9Publication({
@@ -245,12 +257,17 @@ describe("Safety Score V9 publication runner", () => {
     expect(result).toMatchObject({
       status: "held",
       reasons: [expect.objectContaining({ code: "assessment-failed" })],
+      affectedAssetIds: ["alpha"],
     });
     expect(mocks.persist).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         publicationAttempt: expect.objectContaining({
           outcome: "held",
+          quarantines: [
+            { assetId: "alpha", code: "fact-build-failed" },
+          ],
+          affectedAssetIds: ["alpha"],
         }),
       }),
     );
