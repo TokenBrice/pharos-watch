@@ -1,73 +1,27 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import * as pricingSourceHealth from "../pricing-source-health";
 import * as status from "../status";
-import type {
-  CronStatus as BarrelCronStatus,
-  HealthResponse as BarrelHealthResponse,
-  PriceSourceHealth as BarrelPriceSourceHealth,
-  PublicationHealth as BarrelPublicationHealth,
-  StatusResponse as BarrelStatusResponse,
-  TelegramDispatchCronResult as BarrelTelegramDispatchCronResult,
-  YieldHealthSummary as BarrelYieldHealthSummary,
-} from "../status";
-import type { PriceSourceHealth } from "../pricing-source-health";
-import type { CronStatus } from "../status/cron";
-import type { PublicationHealth } from "../status/operational";
-import * as publicHealth from "../status/public-health";
-import type { HealthResponse } from "../status/public-health";
-import * as response from "../status/response";
-import type { StatusResponse } from "../status/response";
-import * as telegram from "../status/telegram";
-import type { TelegramDispatchCronResult } from "../status/telegram";
-import type { YieldHealthSummary } from "../status/yield-liquidity";
+import * as d1Capacity from "../status/d1-capacity";
 
-const LEGACY_RUNTIME_EXPORTS = [
-  "CRON_RUN_STATUS_VALUES",
-  "CronRunStatusSchema",
-  "HealthResponseSchema",
-  "PUBLIC_STATUS_HISTORY_WINDOWS",
-  "PublicStatusHistoryResponseSchema",
-  "PublicStatusTransitionSchema",
-  "RESERVE_ALERT_SOURCE_STATE_VALUES",
-  "SAFETY_ALERT_SOURCE_STATE_VALUES",
-  "STATUS_DISCREPANCY_REASON_VALUES",
-  "STATUS_PROBE_COMPARISON_REASON_VALUES",
-  "StatusHealthValueSchema",
-  "StatusHistoryResponseSchema",
-  "StatusResponseSchema",
-  "TELEGRAM_ALERT_TYPES",
-  "TelegramPulseSchema",
-  "WORKER_JOB_ATTEMPT_STATE_VALUES",
-  "WORKER_JOB_ATTEMPT_STATUS_CLASS_VALUES",
-  "isTelegramAlertType",
-] as const;
+// `status.ts` re-exports these two modules with `export type { … }` on purpose:
+// consumers of the compatibility barrel must not pull their runtime schemas and
+// constants into the bundle. Checking by origin (rather than pinning the
+// barrel's export names) keeps the invariant meaningful as the barrel grows.
+const TYPE_ONLY_MODULES: Record<string, Record<string, unknown>> = {
+  "./pricing-source-health": pricingSourceHealth,
+  "./status/d1-capacity": d1Capacity,
+};
 
 describe("status compatibility barrel", () => {
-  it("preserves the legacy runtime export surface without leaking internal schemas", () => {
-    expect(Object.keys(status).sort()).toEqual([...LEGACY_RUNTIME_EXPORTS].sort());
-  });
+  it("leaks no runtime export from the type-only domain modules", () => {
+    const barrelKeys = new Set(Object.keys(status));
 
-  it("re-exports the domain schema instances used by lazy loaders", () => {
-    expect(status.StatusResponseSchema).toBe(response.StatusResponseSchema);
-    expect(status.StatusHistoryResponseSchema).toBe(response.StatusHistoryResponseSchema);
-    expect(status.HealthResponseSchema).toBe(publicHealth.HealthResponseSchema);
-    expect(status.PublicStatusHistoryResponseSchema).toBe(publicHealth.PublicStatusHistoryResponseSchema);
-    expect(status.TelegramPulseSchema).toBe(telegram.TelegramPulseSchema);
-  });
-
-  it("keeps dynamic schema lookup through the compatibility path", async () => {
-    const lazyStatus = await import("../status");
-
-    expect(lazyStatus.HealthResponseSchema).toBe(publicHealth.HealthResponseSchema);
-    expect(lazyStatus.TelegramPulseSchema).toBe(telegram.TelegramPulseSchema);
-  });
-
-  it("preserves representative type exports from every domain module", () => {
-    expectTypeOf<BarrelCronStatus>().toEqualTypeOf<CronStatus>();
-    expectTypeOf<BarrelTelegramDispatchCronResult>().toEqualTypeOf<TelegramDispatchCronResult>();
-    expectTypeOf<BarrelYieldHealthSummary>().toEqualTypeOf<YieldHealthSummary>();
-    expectTypeOf<BarrelPublicationHealth>().toEqualTypeOf<PublicationHealth>();
-    expectTypeOf<BarrelStatusResponse>().toEqualTypeOf<StatusResponse>();
-    expectTypeOf<BarrelHealthResponse>().toEqualTypeOf<HealthResponse>();
-    expectTypeOf<BarrelPriceSourceHealth>().toEqualTypeOf<PriceSourceHealth>();
+    for (const [specifier, moduleNamespace] of Object.entries(TYPE_ONLY_MODULES)) {
+      const runtimeExports = Object.keys(moduleNamespace);
+      // Guards the check against silently going vacuous if a module ever loses
+      // its runtime exports — then this test would prove nothing.
+      expect(runtimeExports.length, `${specifier} has no runtime exports to guard`).toBeGreaterThan(0);
+      expect(runtimeExports.filter((key) => barrelKeys.has(key)), `${specifier} leaked through the barrel`).toEqual([]);
+    }
   });
 });

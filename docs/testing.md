@@ -258,7 +258,6 @@ Factory functions that return complete DB rows with sensible defaults. Pass `ove
 | Factory                        | Returns                                                                                                                |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating)                                            |
-| `makeReportCardsDb()`          | Pre-wired `MockD1Database` for report-card style tests (`cache`, `dex_liquidity`, `depeg_events`, `supply_history`, …) |
 | `makeBlacklistRow()`           | blacklist_events row                                                                                                   |
 | `makeDepegRow()`               | depeg_events row                                                                                                       |
 | `makeSupplyRow()`              | supply_history row                                                                                                     |
