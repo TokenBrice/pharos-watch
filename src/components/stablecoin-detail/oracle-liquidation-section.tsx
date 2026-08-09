@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -20,18 +21,6 @@ import { cn } from "@/lib/utils";
 
 /** Inline branches beyond this count move into the disclosure, sorted forward. */
 const INLINE_BRANCH_LIMIT = 6;
-
-// Same fold rule as MechanismReviewPanel and BridgingCard: cut in the string,
-// not with line-clamp, so the fold does not move with the viewport. 14 of 81
-// CDP oracle summaries run past 400 characters.
-const SUMMARY_LEAD_CHARS = 320;
-const SUMMARY_COLLAPSE_THRESHOLD = 420;
-
-function buildLead(summary: string) {
-  const cut = summary.slice(0, SUMMARY_LEAD_CHARS);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
 
 function branchHasDetail(branch: OracleBranchClientRow): boolean {
   return (
@@ -105,7 +94,8 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
   const [summaryOpen, setSummaryOpen] = useState(false);
   if (!summary) return null;
 
-  const collapsible = summary.summary.length > SUMMARY_COLLAPSE_THRESHOLD;
+  // 14 of 81 CDP oracle summaries run past 400 characters.
+  const collapsible = summary.summary.length > PROSE_COLLAPSE_THRESHOLD;
   const showLead = collapsible && !summaryOpen;
 
   const facts: FactGridItem[] = [
@@ -143,7 +133,7 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {showLead ? buildLead(summary.summary) : summary.summary}
+            {showLead ? buildProseLead(summary.summary) : summary.summary}
           </p>
           {collapsible ? (
             <button
@@ -176,7 +166,7 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
           <ModuleDisclosure label="Feeds, parameters & failure behavior">
             <div className="mt-3 space-y-4">
               {overflowBranches.length > 0 ? (
-                <ul className="space-y-3">
+                <ul aria-label="Additional oracle branches" className="space-y-3">
                   {overflowBranches.map((branch) => (
                     <BranchSummaryRow key={branch.id} branch={branch} tierLabel={summary.tierLabel} />
                   ))}

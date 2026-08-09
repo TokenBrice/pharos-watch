@@ -6,6 +6,7 @@ import { ChevronDown, FlaskConical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -90,30 +91,13 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
 }
 
 /**
- * Collapsed length of the in-flow lead, in characters. Cut in the string rather
- * than with `line-clamp` so the fold does not move with the viewport: at the
- * full card width one clamped line already carries ~150 characters, so a
- * line-based cut hides almost nothing on wide screens.
- */
-const NOTES_LEAD_CHARS = 320;
-
-/** Notes at or under this length would lose nothing to the fold. */
-const NOTES_COLLAPSE_THRESHOLD = 420;
-
-function buildLead(notes: string) {
-  const cut = notes.slice(0, NOTES_LEAD_CHARS);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
-
-/**
  * In-flow treatment below `xl`. The prose runs the full card width — a
  * `max-w-prose` column left most of the card empty — and long notes cut to a
  * lead behind one control the way the rail does.
  */
 function FullMechanismReview({ review }: { review: MechanismReviewView }) {
   const [open, setOpen] = useState(false);
-  const collapsible = review.notes.length > NOTES_COLLAPSE_THRESHOLD;
+  const collapsible = review.notes.length > PROSE_COLLAPSE_THRESHOLD;
   const showLead = collapsible && !open;
 
   return (
@@ -130,7 +114,7 @@ function FullMechanismReview({ review }: { review: MechanismReviewView }) {
       </CardHeader>
       <CardContent className={DETAIL_MODULE_BODY_CLASS}>
         <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-          {showLead ? buildLead(review.notes) : review.notes}
+          {showLead ? buildProseLead(review.notes) : review.notes}
         </p>
 
         {collapsible ? (

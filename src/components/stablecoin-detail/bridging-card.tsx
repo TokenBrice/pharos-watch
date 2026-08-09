@@ -6,20 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
 import type { BridgeRouteRiskClientSummary } from "@/lib/stablecoin-detail-bridge-client";
 import { cn } from "@/lib/utils";
-
-// Same fold rule as MechanismReviewPanel: cut in the string, not with
-// line-clamp, so the fold does not move with the viewport. 63 of 272 reviewed
-// bridge summaries run past 400 characters (DAI ~2,000).
-const SUMMARY_LEAD_CHARS = 320;
-const SUMMARY_COLLAPSE_THRESHOLD = 420;
-
-function buildLead(summary: string) {
-  const cut = summary.slice(0, SUMMARY_LEAD_CHARS);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
 
 /**
  * The bridging setup the Safety Score and AI summaries already reference,
@@ -31,7 +20,8 @@ export function BridgingCard({ summary }: { summary?: BridgeRouteRiskClientSumma
   const [open, setOpen] = useState(false);
   if (!summary) return null;
 
-  const collapsible = summary.summary.length > SUMMARY_COLLAPSE_THRESHOLD;
+  // 63 of 272 reviewed bridge summaries run past 400 characters (DAI ~2,000).
+  const collapsible = summary.summary.length > PROSE_COLLAPSE_THRESHOLD;
   const showLead = collapsible && !open;
 
   const facts = [
@@ -53,7 +43,7 @@ export function BridgingCard({ summary }: { summary?: BridgeRouteRiskClientSumma
       </div>
       <div className="space-y-3 px-4 pb-4">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          {showLead ? buildLead(summary.summary) : summary.summary}
+          {showLead ? buildProseLead(summary.summary) : summary.summary}
         </p>
         {collapsible ? (
           <button

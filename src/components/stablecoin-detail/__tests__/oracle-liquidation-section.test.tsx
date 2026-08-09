@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { OracleLiquidationSection } from "../oracle-liquidation-section";
+import { OracleLiquidationSection, sortOracleBranchesForDisplay } from "../oracle-liquidation-section";
+import type { OracleBranchClientRow } from "@/lib/stablecoin-detail-oracle-client";
 import type { OracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
 
 const SUMMARY: OracleRiskClientSummary = {
@@ -76,6 +77,19 @@ describe("OracleLiquidationSection", () => {
     const html = renderToStaticMarkup(<OracleLiquidationSection summary={{ ...SUMMARY, summary: longSummary }} />);
     expect(html).toContain("Read more");
     expect(html).not.toContain("TAIL-MARKER"); // collapsed lead only
+  });
+
+  it("sorts branches by debt share with unmeasured branches last, preserving curated order on ties", () => {
+    const branch = (id: string, debtSharePct: number | null) =>
+      ({ id, debtSharePct }) as unknown as OracleBranchClientRow;
+    const sorted = sortOracleBranchesForDisplay([
+      branch("a", null),
+      branch("b", 20),
+      branch("c", 50),
+      branch("d", 20),
+      branch("e", null),
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(["c", "b", "d", "a", "e"]);
   });
 
   it("renders nothing without an oracle summary", () => {

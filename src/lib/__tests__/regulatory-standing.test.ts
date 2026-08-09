@@ -91,7 +91,10 @@ describe("buildRegulatoryStandingView", () => {
     });
     const regulatorFact = view!.regimes[0]!.facts.find((fact) => fact.key === "regulator")!;
     expect(regulatorFact.value).toBe("OCC");
-    expect(regulatorFact.title).toBeUndefined();
+    // The enum wins the cell, but the researched prose survives as the hover title.
+    expect(regulatorFact.title).toBe(
+      "Office of the Comptroller of the Currency, acting as primary federal banking regulator under 12 U.S.C. Chapter 1, with concurrent examination authority delegated to regional staff",
+    );
   });
 
   it("slices free-form licensingRegulator prose at the first clause break and keeps the full string as title", () => {

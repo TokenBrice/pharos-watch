@@ -94,7 +94,12 @@ function isGeniusRelevant(genius: GeniusProfile): boolean {
  */
 function buildRegulatorFact(genius: GeniusProfile): RegulatoryFact | null {
   if (genius.primaryFederalRegulator) {
-    return { key: "regulator", label: "Regulator", value: genius.primaryFederalRegulator };
+    return {
+      key: "regulator",
+      label: "Regulator",
+      value: genius.primaryFederalRegulator,
+      ...(genius.licensingRegulator ? { title: genius.licensingRegulator } : {}),
+    };
   }
   const full = genius.licensingRegulator ?? genius.stateRegulator;
   if (!full) return null;
