@@ -1,0 +1,25 @@
+{
+  "id": "yvusdc-yearn",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: yvUSDC-1 resolves to Upstream because Yearn v3 strategies hold USDC across whitelisted protocols, inheriting Circle's blacklist surface.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "yvUSDC-1 is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked yvUSDC-1 vault is a single Ethereum Yearn vault; bridge-route risk is inherited from underlying USDC routes, not this vault contract.",
+    "sources": [
+      {
+        "label": "Yearn v3 vault",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+      }
+    ]
+  }
+}

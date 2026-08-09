@@ -1,0 +1,70 @@
+{
+  "id": "jupusd-jupiter",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "JupUSD is a USD-pegged reserve-backed token issued on Solana for payment/settlement use within Jupiter's DeFi ecosystem; it presents as a payment stablecoin under GENIUS Act definitions. Jupiter's Terms of Service restrict US-based users, but this is an access restriction, not a legal carve-out from GENIUS applicability."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Jupiter (Solana DEX aggregator, no disclosed US legal entity; Ethena Labs operates issuance backend)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://jupusd.money/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "JupUSD's primary reserve asset (USDtb) is now issued in the US by Anchorage Digital Bank N.A. under a GENIUS-compliant framework (announced July 24, 2025; Anchorage is the USDtb issuer, not JupUSD's issuer). JupUSD itself has no GENIUS authorization — it is a separate token issued by Jupiter on Solana with no disclosed US legal entity or regulatory registration. Jupiter restricts US users in its ToS but no formal foreign-exception determination has been made. No public GENIUS approval, application, or issuer pathway source for JupUSD itself was located.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "JupUSD user docs",
+        "url": "https://docs.jup.ag/user-docs/earn/jupusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "JupUSD developer docs",
+        "url": "https://developers.jup.ag/docs/jupusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anchorage Digital — Ethena USDtb GENIUS-compliant issuance announcement (July 24 2025)",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-partners-with-ethena-labs-to-launch-first-genius-compliant-federally-regulated-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-24",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "JupUSD launch — The Block (Jan 2026)",
+        "url": "https://www.theblock.co/post/384366/jupiter-rolls-out-native-jupusd-stablecoin-backed-90-by-blackrock-and-ethenas-usdtb",
+        "sourceKind": "news"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and public releases — no JupUSD or Jupiter issuer listing",
+        "Anchorage Digital / Ethena Labs USDtb GENIUS-compliant launch (July 24 2025) — confirms USDtb is GENIUS-compliant via Anchorage Digital Bank N.A.; JupUSD is a separate token not covered by this authorization",
+        "JupUSD issuer disclosures and developer documentation — no regulatory authorization disclosed",
+        "Web search across US permitted-issuer, state-qualified, official-application, and foreign-exception materials — no Jupiter or JupUSD-specific result found",
+        "Jupiter Terms of Service (US user access restriction noted) — no formal foreign-exception determination found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No GENIUS approval, application, or issuer pathway for JupUSD or its issuer (Jupiter) found across federal/state regulator sources and issuer disclosures. USDtb's Anchorage/GENIUS pathway applies to the reserve asset issuer (Anchorage Digital Bank N.A.), not JupUSD itself.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

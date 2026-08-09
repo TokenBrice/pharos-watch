@@ -1,0 +1,65 @@
+{
+  "id": "ussd-sonic-labs",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Sonic Labs markets USSD as a Treasury-backed, 1:1 mint/redeem dollar built on GENIUS-compatible frxUSD infrastructure; the issuer's public positioning treats it as a payment stablecoin subject to the GENIUS Act."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Sonic Labs / Sonic USA LLC (Delaware)",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://facts.frax.finance/frxusd/balance-sheet",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Sonic Labs publicly markets USSD as 'fully compatible with the GENIUS Act' and has established Sonic USA LLC (Delaware) for U.S. regulatory engagement. No PPSI application, OCC/FDIC/Federal Reserve filing, or state-qualified authorization has been found. The GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals granted to any issuer as of 2026-06-18. Foreign exception status updated to not-applicable as the issuer is U.S.-domiciled.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Sonic USSD product page — GENIUS compatibility claim",
+        "url": "https://www.soniclabs.com/ussd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Sonic USSD docs",
+        "url": "https://docs.soniclabs.com/sonic/ussd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Sonic Labs USSD launch — Crowdfund Insider",
+        "url": "https://www.crowdfundinsider.com/2026/03/266190-sonic-labs-launches-ussd-stablecoin/",
+        "sourceKind": "news"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3)",
+        "Sonic Labs USSD product page (soniclabs.com/ussd)",
+        "Sonic Labs USSD docs (docs.soniclabs.com/sonic/ussd)",
+        "Sonic Labs blog (blog.soniclabs.com — CLARITY Act post)",
+        "Web search: Sonic Labs USSD GENIUS Act compliance 2026",
+        "Web search: Sonic Labs USSD PPSI OCC federal regulator authorization 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific PPSI approval, state-qualified approval, official GENIUS Act application filing, or comparable foreign-issuer exception was located for USSD or Sonic Labs / Sonic USA LLC in any federal or state regulatory database. Sonic Labs' GENIUS compatibility claims are issuer marketing, not regulatory disclosures.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

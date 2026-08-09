@@ -1,0 +1,198 @@
+{
+  "id": "gldy-streamex",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "GLDY's sole Base deployment is a UUPS proxy with two active TREASURY_ROLE mint paths: legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951. DEFAULT_ADMIN_ROLE is independently held by legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130. Either admin can immediately grant minters, alter reserve-oracle configuration, or upgrade mint logic; no role revocations or timelock were found.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x632db1aaace73401a5dc8cde6e9062b8ec0fd819"
+      ],
+      "implementationAddresses": [
+        "0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5"
+      ],
+      "adminAddresses": [
+        "0x9625c15f7b305680c1690cd41103870e2050028d",
+        "0x05ed6826524ebe9f3df837b06803ff797f4e2130"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "GLDY DEFAULT_ADMIN_ROLE upgrade authority (independent EOA and 3/5 Safe)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 48592766,
+      "sources": [
+        {
+          "label": "GLDY Base proxy",
+          "url": "https://base.blockscout.com/address/0x632db1aaace73401a5dc8cde6e9062b8ec0fd819"
+        },
+        {
+          "label": "GLDY implementation",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5?fields=compilation,sources,abi"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0x889133442bf36e4291c0b2e23b35b260309cb0fe",
+        "label": "GLDY legacy TREASURY_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting is bounded by the implementation's reserve check, although DEFAULT_ADMIN controllers can alter that constraint.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "base:0x889133442bf36e4291c0b2e23b35b260309cb0fe"
+        ],
+        "sources": [
+          {
+            "label": "GLDY role-grant logs",
+            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=37702292&toBlock=48592766&address=0x632db1aaace73401a5dc8cde6e9062b8ec0fd819&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "TREASURY_ROLE was granted at deployment block 37702292. No RoleRevoked logs exist through block 48592766; hasRole returned true and eth_getCode returned 0x."
+      },
+      {
+        "chain": "base",
+        "address": "0x655f31f9136d54bc319c00dd43009104646b0951",
+        "label": "GLDY added TREASURY_ROLE 2/3 Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Minting is bounded by the implementation's reserve check, although DEFAULT_ADMIN controllers can alter that constraint.",
+        "safe": {
+          "owners": [
+            "0x53c54134420051b57736a06df7a7c8c2a6fb9725",
+            "0x4aadf18cd7c5b0627e7b94d08e1dfd30b9c6192c",
+            "0xc8e474f88451daef995fdec755040575cff9ab22"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 48592766,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "base:0x655f31f9136d54bc319c00dd43009104646b0951"
+        ],
+        "sources": [
+          {
+            "label": "GLDY Treasury Safe",
+            "url": "https://base.blockscout.com/address/0x655f31f9136d54bc319c00dd43009104646b0951"
+          }
+        ],
+        "evidence": "TREASURY_ROLE was granted at block 39295813 and never revoked. At the cutoff the Safe was 2-of-3, version 1.4.1, with no modules, guard, or module guard."
+      },
+      {
+        "chain": "base",
+        "address": "0x9625c15f7b305680c1690cd41103870e2050028d",
+        "label": "GLDY DEFAULT_ADMIN_ROLE upgrade authority (independent EOA and 3/5 Safe)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "base:0x9625c15f7b305680c1690cd41103870e2050028d",
+          "base:0x05ed6826524ebe9f3df837b06803ff797f4e2130"
+        ],
+        "bypassSurfaces": [
+          "Independent 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 holds the same DEFAULT_ADMIN_ROLE and can grant minters or upgrade without the legacy EOA."
+        ],
+        "sources": [
+          {
+            "label": "GLDY implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5?fields=compilation,sources,abi"
+          }
+        ],
+        "evidence": "DEFAULT_ADMIN_ROLE was granted to the EOA at deployment and to Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 at block 39295633; neither grant was revoked. The legacy EOA is the weakest independent path and remained active with no code. Either holder can directly authorize UUPS upgrades, administer TREASURY_ROLE, and change Chainlink or manual reserve configuration with no timelock."
+      },
+      {
+        "chain": "base",
+        "address": "0x05ed6826524ebe9f3df837b06803ff797f4e2130",
+        "label": "GLDY added DEFAULT_ADMIN_ROLE 3/5 Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x12ee68016e248307ad0a1da97f2c5c5635a0672a",
+            "0x53c54134420051b57736a06df7a7c8c2a6fb9725",
+            "0x4aadf18cd7c5b0627e7b94d08e1dfd30b9c6192c",
+            "0xc8e474f88451daef995fdec755040575cff9ab22",
+            "0x30f697550a0aa284c9135c68f8ac2ef7aa86bd1e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 48592766,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "base:0x05ed6826524ebe9f3df837b06803ff797f4e2130"
+        ],
+        "sources": [
+          {
+            "label": "GLDY added admin Safe",
+            "url": "https://base.blockscout.com/address/0x05ed6826524ebe9f3df837b06803ff797f4e2130"
+          }
+        ],
+        "evidence": "DEFAULT_ADMIN_ROLE was granted at block 39295633 and never revoked. The Safe directly administers TREASURY_ROLE and UUPS upgrades with no timelock. At the cutoff it was 3-of-5, version 1.4.1, with no modules, guard, or module guard."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At Base block 48592766, GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 used UUPS implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5 with zero admin and beacon slots. Role history contained six grants and no revocations. Legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951 both held TREASURY_ROLE. Legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 independently held DEFAULT_ADMIN_ROLE and could immediately grant minters, change reserve configuration, or upgrade mint logic. The source-verified mint path retained its reserve check. EisnerAmper's first independent AICPA examination reconciled GLDY supply to allocated gold reserves at 31 March 2026, but the 1 July 2026 announcement only promises monthly reports going forward. No second report or established recurring series was available at review, and no prudential reserve supervisor was established, so reconciliation remains unknown.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Streamex GLDY",
+          "url": "https://www.streamex.com/GLDY"
+        },
+        {
+          "label": "GLDYTokenERC20 implementation (Blockscout)",
+          "url": "https://base.blockscout.com/address/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5"
+        },
+        {
+          "label": "Streamex first independent GLDY reserve attestation",
+          "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve"
+        }
+      ]
+    }
+  }
+}

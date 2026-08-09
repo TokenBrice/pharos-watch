@@ -1,0 +1,72 @@
+{
+  "id": "mxne-real-mxn",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Brale Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators; NMLS ID #2376957",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://brale.xyz/stablecoins/MXNe",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MXNe is a Brale-issued peso stablecoin with U.S. money-transmitter context, but no GENIUS permitted-issuer approval or official application was located. Brale operates as a FinCEN-registered MSB and licensed money transmitter (NMLS #2376957). The June 2026 Visa/Brale SBC proof-of-concept on Canton Network does not change MXNe's GENIUS status. Brale has not announced a PPSI pathway election (state-qualified vs. federal nonbank) as of 2026-06-18.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Brale MXNe stablecoin page",
+        "url": "https://brale.xyz/stablecoins/MXNe",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-18"
+      },
+      {
+        "label": "Brale MXNe announcement",
+        "url": "https://brale.xyz/blog/introducing-mxne",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-18"
+      },
+      {
+        "label": "Brale terms",
+        "url": "https://brale.xyz/legal/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-18"
+      },
+      {
+        "label": "Brale Review 2026 — Stablecoin Infrastructure Platform",
+        "url": "https://stablecoininsider.org/brale-review-2026/",
+        "sourceKind": "news",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3, Feb 25 2026) and Federal Register",
+        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026)",
+        "FinCEN/OFAC joint AML NPRM (Apr 8 2026)",
+        "Brale issuer disclosure pages and blog (brale.xyz)",
+        "Brale Review 2026 (stablecoininsider.org)",
+        "No Brale PPSI application, state-qualified approval, or official-application announcement found in any federal or state regulatory source",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Brale operates as a FinCEN-registered MSB and state money transmitter; no PPSI application, state-qualified approval, or official GENIUS authorization source was found for Brale or MXNe specifically as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "id": "ybold-yearn",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "yBOLD is a Yearn vault share over BOLD; vault shares mint against deposited BOLD while base BOLD mint authority is inherited from the reviewed Liquity BOLD profile.",
+    "inheritedFrom": "bold-liquity",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
+        "label": "Yearn yBOLD vault share accounting",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Shares are minted only against deposited BOLD and the fixed clone implementation cannot be replaced; wrapper minting does not create base BOLD supply.",
+        "sources": [
+          {
+            "label": "Yearn yBOLD docs",
+            "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+          },
+          {
+            "label": "Yearn yBOLD GitHub",
+            "url": "https://github.com/yearn/yBOLD"
+          },
+          {
+            "label": "Yearn V3 Vault implementation",
+            "url": "https://eth.blockscout.com/address/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, asset() returned BOLD 0x6440f144b7e50D6a8439336510312d2F54beB01D and apiVersion() returned 3.0.4. The yBOLD runtime was the 45-byte EIP-1167 minimal-proxy form with fixed implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; that implementation had direct code and zero EIP-1967 implementation, admin, and beacon slots.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "proxyAddresses": [
+        "0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
+      ],
+      "implementationAddresses": [
+        "0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+      ],
+      "canChangeMintLogic": false,
+      "controlRef": "Yearn yBOLD vault share accounting",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Yearn yBOLD vault",
+          "url": "https://etherscan.io/address/0x9f4330700a36b29952869fac9b33f45eedd8a3d8#code"
+        },
+        {
+          "label": "Yearn V3 Vault implementation",
+          "url": "https://eth.blockscout.com/address/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+        }
+      ]
+    },
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Yearn yBOLD docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Existing BOLD mint authority review",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        }
+      ],
+      "evidence": "At Ethereum block 25573280, yBOLD asset() returned the reviewed BOLD token and apiVersion() returned 3.0.4. The token is a 45-byte EIP-1167 clone fixed to Yearn V3 Vault implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; the implementation's EIP-1967 implementation, admin, and beacon slots were zero. yBOLD shares are bounded by deposited BOLD and cannot create base BOLD supply. No named prudential supervisor applies to the wrapper.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    }
+  }
+}

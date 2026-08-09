@@ -1,0 +1,206 @@
+{
+  "id": "jpyc-jpyc",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "JPYC is a centralized FiatToken-style ERC-20. Minting requires being a configured minter with allowance; the sole ever-configured minter (0x11f14c2b…) currently has zero allowance on all three chains. Effective mint authority runs through the minterAdmin contract (owned by a 2/3 Safe) which calls configureMinter. The token owner (3/5 Safe) controls upgrades and minterAdmin replacement. Owner Safe and minterAdmin owner Safe confirmed unchanged on Ethereum, Polygon, and Avalanche.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+      ],
+      "implementationAddresses": [
+        "0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e"
+      ],
+      "adminAddresses": [
+        "0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "JPYC token owner Safe",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530706,
+      "sources": [
+        {
+          "label": "JPYC Ethereum implementation and proxy",
+          "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Polygon implementation and proxy",
+          "url": "https://polygonscan.com/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Avalanche implementation and proxy",
+          "url": "https://snowtrace.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "JPYC Kaia implementation and proxy",
+          "url": "https://kaiascan.io/account/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        },
+        {
+          "label": "Kaia Mainnet RPC",
+          "url": "https://public-en.node.kaia.io"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+        "label": "JPYC regulated token proxy (Ethereum, Polygon, Avalanche)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify JPYC implementation source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e/metadata.json"
+          },
+          {
+            "label": "Ethereum JPYC token",
+            "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25294712, MinterConfigured scan (Blockscout) returned one ever-configured minter: 0x11f14c2bfe398379b361019aa440f792c27f9384; isMinter() returns false and minterAllowance() returns 0 on all three chains (Ethereum, Polygon, Avalanche). The minterAdmin contract 0x029ba134… is the effective gating layer and can call configureMinter to re-activate minting."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694",
+        "label": "JPYC minterAdmin contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum JPYC token",
+            "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#readProxyContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25294712, minterAdmin() on Ethereum, Polygon, and Avalanche all returned 0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694. owner() on the minterAdmin returned 0x5BA1b9aAf56Af1B761519F924079681D8d061F94 (2/3 Safe, confirmed). Contract bytecode 7667 bytes (not an EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5BA1b9aAf56Af1B761519F924079681D8d061F94",
+        "label": "JPYC minterAdmin owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 2,
+          "owners": [
+            "0xd32E9481639290418EF5329BC843f5d69896A11f",
+            "0x1Ebe8C10353B8E45406Fe506Ada82e4c2F1Fe087",
+            "0x87C4a22D1dd8F52c09767CeE4439EA331b2D5fF1"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294712,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
+          }
+        ],
+        "evidence": "At Ethereum block 25294712, Safe API returned threshold 2, three owners, no enabled modules, zero guard, masterCopy 0x41675C…."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9",
+        "label": "JPYC token owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x11F14C2Bfe398379b361019aA440f792c27f9384",
+            "0xd32E9481639290418EF5329BC843f5d69896A11f",
+            "0x1Ebe8C10353B8E45406Fe506Ada82e4c2F1Fe087",
+            "0xEE9491B977B3e3C1357E85020baD6D9584022636",
+            "0x87C4a22D1dd8F52c09767CeE4439EA331b2D5fF1"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294712,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Ethereum JPYC token",
+            "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#readProxyContract"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9/"
+          }
+        ],
+        "evidence": "At Ethereum block 25294712, owner() returned this Safe; Safe API returned threshold 3, five owners, no enabled modules, zero guard, masterCopy 0x41675C…. owner() also confirmed matching Safe on Polygon and Avalanche."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum JPYC token",
+          "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29#code"
+        },
+        {
+          "label": "Sourcify JPYC implementation source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e/metadata.json"
+        },
+        {
+          "label": "Safe Transaction Service (token owner)",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9/"
+        },
+        {
+          "label": "Safe Transaction Service (minterAdmin owner)",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
+        },
+        {
+          "label": "JPYC funds-transfer registration announcement",
+          "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc"
+        },
+        {
+          "label": "FSA registered funds transfer service providers",
+          "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf"
+        }
+      ],
+      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard. Challenge searches of JPYC's corporate, legal, transparency, audit, and attestation materials found no recurring independent JPYC supply-to-reserve report, so no attestor, cadence, or latest qualifying report date is available and reconciliation is unknown. The FSA registry matches JPYC Co., Ltd. as Kanto Local Finance Bureau registration 00099, a Type II Funds Transfer Service Provider subject to statutory funds-preservation supervision, supporting prudential supervision of the issuer. Re-verified at Ethereum block 25575132 on 2026-07-20: token owner() still returns the 3/5 Safe 0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9, minterAdmin() still returns 0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694, and that minterAdmin's owner() still returns the 2/3 Safe 0x5BA1b9aAf56Af1B761519F924079681D8d061F94. Because the 2/3 minterAdmin Safe can call configureMinter with an arbitrary allowance and the 3/5 owner Safe can replace the minterAdmin or upgrade the implementation, with no timelock and no independent on-chain bound, the FiatToken minter allowance is economically unbounded even though JPYC's statutory funds-preservation duty constrains the issuer off-chain.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded"
+  }
+}

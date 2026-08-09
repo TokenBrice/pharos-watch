@@ -1,0 +1,212 @@
+{
+  "id": "eurs-stasis",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EURS resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Polygon, XDC, Algorand, and Stellar (STASIS's published issuance chains; Ethereum delegate/owner verified on-chain). Arbitrum EURS is a Multichain representation (AnyswapV4Router owner, mint simulation verified) and Gnosis EURS is the OmniBridge representation (mediator owner verified). DefiLlama additionally reports EURS supply under the raw chain label Everscale, which does not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data (verified 2026-07-30: Everscale is the only uncanonicalized label and its €1,587.58 equals the full unmatched-chain-label pool).",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Kimi T57 wave-2 label-pool verification",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "STASIS website",
+        "url": "https://stasis.net/"
+      },
+      {
+        "label": "STASIS EURS token repository",
+        "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
+      },
+      {
+        "label": "DefiLlama EURS chain balances (Everscale label pool)",
+        "url": "https://stablecoins.llama.fi/stablecoin/51"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xdb25f211ab05b1c97d595516f45794528a807ad8",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xdb25f211ab05b1c97d595516f45794528a807ad8",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment; on Ethereum the EURSToken delegate is the reviewed 3-of-7 STASIS Safe and the token owner is the reviewed issuer EOA; EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe111178a87a3bff0c8d18decba5798827539ae99",
+        "protocol": "Polygon PoS Portal",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Correction 2026-08-08: this is a Polygon PoS UChildERC20 bridge representation, not issuer-native minting. At Polygon block 91674456, implementation() returned 0xe5c9cfa10ebbfed68ba556ffbba5a89ae9e28483 and DEPOSITOR_ROLE had exactly one member, ChildChainManager 0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa. Deposit minting is tied to Polygon state sync and Ethereum escrow; implementation replacement routes through a 1-of-1 legacy multisig whose sole owner is a 5-of-9 Safe.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "Polygon UChildERC20 source",
+            "url": "https://github.com/maticnetwork/pos-portal/blob/master/contracts/child/ChildToken/UpgradeableChildERC20/UChildERC20.sol"
+          },
+          {
+            "label": "EURS Polygon proxy",
+            "url": "https://polygonscan.com/address/0xe111178a87a3bff0c8d18decba5798827539ae99#code"
+          }
+        ]
+      },
+      {
+        "id": "algorand:227855942",
+        "destinationChain": "algorand",
+        "contractAddress": "227855942",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xd22a58f79e9481d1a88e00c343885a588b34b68b",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd22a58f79e9481d1a88e00c343885a588b34b68b",
+        "protocol": "Multichain (AnyswapV4Router)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50",
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:arbitrum:0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Arbitrum EURS is a Multichain-bridged representation: owner() = AnyswapV4Router 0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50 (blockscout-verified) and an eth_call mint() simulation succeeds from that router and reverts from any other sender at 2026-07-20. Not a STASIS native issuance chain (STASIS lists only Ethereum, Polygon, XDC, XRPL, Algorand, and Stellar).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Arbitrum blockscout AnyswapV4Router",
+            "url": "https://arbitrum.blockscout.com/address/0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+          },
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/eurs"
+          }
+        ]
+      },
+      {
+        "id": "stellar:EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
+        "destinationChain": "stellar",
+        "contractAddress": "EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
+      },
+      {
+        "id": "xdc:0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
+        "destinationChain": "xdc",
+        "contractAddress": "0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "'STASIS EURS Token on xDai' is the OmniBridge-minted representation: owner() = Gnosis OmniBridge mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (contract) verified on Gnosis at 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "id": "usdn-smardex",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Sourcify Usdn.sol",
+        "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+      },
+      {
+        "label": "SMARDEX USDN protocol documentation",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol"
+      },
+      {
+        "label": "SMARDEX USDN governance documentation",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/governance"
+      },
+      {
+        "label": "Ethereum USDN verified contract",
+        "url": "https://eth.blockscout.com/address/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2"
+      },
+      {
+        "label": "Official SMARDEX USDN contract source",
+        "url": "https://github.com/SmarDex-Ecosystem/usdn-contracts/blob/main/src/Usdn/Usdn.sol"
+      },
+      {
+        "label": "SMARDEX USDN audit disclosures",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/audits"
+      },
+      {
+        "label": "Archived SMARDEX USDN protocol documentation",
+        "url": "https://web.archive.org/web/20250613170020/https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block RPC",
+        "url": "https://ethereum.publicnode.com"
+      }
+    ],
+    "evidence": "At Ethereum block 25534894 on 2026-07-15, USDN token 0xde17a000ba631c5d7c2bd9fb692efea52d90dee2 had zero EIP-1967 implementation, admin, and beacon slots. Its verified direct Usdn source/ABI contains standard transfer and transferFrom plus transferShares and transferSharesFrom share-accounting adapters; delegated transfer and burn paths are allowance-gated. It has no pause, freeze, blacklist, confiscation, or arbitrary-holder-burn function. MINTER_ROLE and REBASER_ROLE, and the separately upgradeable and pausable USDN protocol, control issuance, rebase, and redemption availability but do not alter this direct token transfer code. Direct holder blacklisting is therefore false; this does not inherit the unrelated Noble USDN review. Issuer documentation did not provide independently verifiable legal terms or proof-of-reserves/transparency attestations.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15",
+    "upstreamSuppressionRationale": "The inferred upstream signal is a same-symbol false positive from the unrelated Noble USDN; SMARDEX USDN is a distinct synthetic delta-neutral token and does not inherit the Noble USDN review, so the direct-token false status is retained."
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "USDN protocol actions and long-position liquidations use user-supplied Pyth prices with Chainlink fallback, but USDN itself is issued from a shared wstETH vault rather than borrower-specific debt positions.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDN is minted and redeemed against the protocol's shared wstETH vault while a separate long-only perpetual supplies matched trading exposure. The oracle liquidates leveraged long positions, not borrower-specific USDN collateralized debt positions, so there are no stablecoin collateral-market branches to inventory.",
+      "sources": [
+        {
+          "label": "USDN protocol balance",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance"
+        },
+        {
+          "label": "USDN price submission and validation",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol/1.-providing-a-price"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDN oracle design",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/oracles"
+      },
+      {
+        "label": "USDN protocol internal processing",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/inside-the-protocol"
+      },
+      {
+        "label": "USDN long-position liquidations",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/long-side/liquidations-and-minimum-position"
+      }
+    ]
+  }
+}

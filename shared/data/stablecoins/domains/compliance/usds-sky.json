@@ -1,0 +1,54 @@
+{
+  "id": "usds-sky",
+  "genius": {
+    "applicability": "unclear",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Sky Protocol governance",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Sky documents protocol conversion routes rather than a legal PPSI issuer or direct fiat redemption path. Sky Frontier Foundation explicitly disclaims issuing, custodying, redeeming, or managing reserves for USDS. No PPSI application, state-qualified pathway, or foreign-exception status has been announced as of 2026-06-18.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Sky USDS docs",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Sky protocol token routes",
+        "url": "https://developers.skyeco.com/quick-start/protocol-token-routes/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "Sky Frontier Foundation press releases (2026) — explicitly disclaim issuer role",
+        "Web search for Sky/USDS GENIUS Act application or PPSI compliance plan (2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Sky documents protocol conversion routes but no legal PPSI issuer entity has emerged; Sky Frontier Foundation explicitly disclaims issuing or managing USDS. No GENIUS authorization, state-qualified approval, official application, or foreign exception status was located for USDS as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

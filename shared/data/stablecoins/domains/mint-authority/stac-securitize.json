@@ -1,0 +1,133 @@
+{
+  "id": "stac-securitize",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "STAC uses issuer-administered native token issuance on Ethereum and Solana. On Ethereum, the token is a UUPS proxy whose DSToken implementation permits ISSUER-or-above accounts to mint; the current token-owner EOA is the trust service's unique MASTER and can both mint and authorize upgrades. The later Solana deployment remains within Securitize's regulated issuance platform.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+      ],
+      "implementationAddresses": [
+        "0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+      ],
+      "adminAddresses": [
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "STAC token owner",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531350,
+      "sources": [
+        {
+          "label": "STAC token proxy (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc?tab=contract"
+        },
+        {
+          "label": "DSToken verified implementation source (Blockscout API)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+        },
+        {
+          "label": "DSTrustService verified source (Blockscout API)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0f580a0fe6ea53654537d34788aebad70a6370"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "label": "STAC Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531350,
+        "sources": [
+          {
+            "label": "Securitize STAC",
+            "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+          },
+          {
+            "label": "STAC token proxy (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc?tab=contract"
+          },
+          {
+            "label": "DSToken verified implementation source (Blockscout API)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+          }
+        ],
+        "evidence": "At Ethereum block 25531350, the STAC proxy's EIP-1967 implementation slot resolved to 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and its admin slot was zero. The verified DSToken implementation gates its mint surface with onlyIssuerOrAbove rather than onlyOwner. owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and getRole(owner) returned 1 (MASTER), so the current owner can mint. This review does not claim that the owner is the only account satisfying the issuer-or-above gate."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "STAC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531350,
+        "sources": [
+          {
+            "label": "STAC token proxy (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc?tab=contract"
+          },
+          {
+            "label": "DSToken verified implementation source (Blockscout API)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+          },
+          {
+            "label": "DSTrustService verified source (Blockscout API)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0f580a0fe6ea53654537d34788aebad70a6370"
+          }
+        ],
+        "evidence": "At Ethereum block 25531350, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and eth_getCode returned 0x, confirming an EOA. getDSService(1) returned DSTrustService 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, where getRole(owner) returned 1 (MASTER). BaseDSContract gates _authorizeUpgrade with onlyMaster; ServiceConsumer accepts the token owner or a trust-service MASTER, and setServiceOwner removes the prior MASTER when assigning the next service owner. The current owner is therefore the terminal current UUPS upgrade authority and, as MASTER, also satisfies DSToken's onlyIssuerOrAbove mint gate."
+      }
+    ],
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Securitize STAC",
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+        },
+        {
+          "label": "STAC token proxy (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc?tab=contract"
+        },
+        {
+          "label": "DSToken verified implementation source (Blockscout API)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
+        },
+        {
+          "label": "DSTrustService verified source (Blockscout API)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xec0f580a0fe6ea53654537d34788aebad70a6370"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Securitize STAC Chronicle Proof of Asset announcement",
+          "url": "https://investors.securitize.io/news/news-details/2026/Chronicle-Provides-Proof-of-Asset-Verification-for-Securitizes-Tokenized-AAA-CLO-Fund-Bringing-Institutional-Structured-Credit-On-Chain-02-05-2026/default.aspx"
+        },
+        {
+          "label": "Securitize STAC launch",
+          "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+        }
+      ],
+      "evidence": "At Ethereum block 25531350, STAC was an ERC-1967 UUPS proxy with implementation 0x77684815f44b28726bc3efa4471b88ef3b93feb0 and a zero admin slot. The verified implementation exposes proxiableUUID and upgradeToAndCall; BaseDSContract authorizes upgrades through onlyMaster. The token's owner was code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, getDSService(1) returned 0xec0F580a0FE6eA53654537d34788AeBaD70A6370, and getRole(owner) returned MASTER. The trust service keeps its service owner as the unique MASTER, making that EOA the current terminal upgrade authority. DSToken minting is onlyIssuerOrAbove, so the MASTER owner can mint, but the evidence does not establish that no other issuer-level accounts exist. Economic-control evidence reviewed 2026-07-15: Chronicle continuously and independently verifies STAC holdings and NAV inputs from BNY custody and publishes the results through its public Proof of Asset dashboard. The BVI company and U.S. private-placement exemptions are not product-level prudential supervision.",
+      "reviewer": "owner-triage",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

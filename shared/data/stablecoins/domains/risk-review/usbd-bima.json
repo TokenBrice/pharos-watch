@@ -1,0 +1,461 @@
+{
+  "id": "usbd-bima",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Verified USBD Ethereum DebtToken source",
+        "url": "https://eth.blockscout.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c?tab=contract"
+      },
+      {
+        "label": "Bima documentation",
+        "url": "https://docs.bima.money/"
+      },
+      {
+        "label": "Bima DebtToken source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-22: DebtToken.burn(account, amount) is callable by enabled TroveManagers and the owner-configured lending-vault adapter without holder allowance. Those protocol-authorized paths can destroy an arbitrary holder balance, so true replaces the prior inherited-only posture. The same DebtToken address is tracked across deployments.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Bima's documented USBD collateral markets use listed external oracle contracts through a shared PriceFeed that rejects stale, invalid, or greater-than-50% round changes, retains the last valid price only within the configured heartbeat, and otherwise reverts price-dependent operations.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Bima deploys a distinct TroveManager for each collateral while sharing the same PriceFeed, LiquidationManager, and multi-collateral Stability Pool implementation. The official address registry maps the documented collateral markets to their external oracle contracts, so the markets are reviewed as one grouped common-engine branch with every listed active TroveManager collateral enumerated.",
+      "sources": [
+        {
+          "label": "Bima mainnet addresses",
+          "url": "https://docs.bima.money/security/mainnet-addresses"
+        },
+        {
+          "label": "Bima TroveManager source",
+          "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/TroveManager.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bima mainnet addresses",
+        "url": "https://docs.bima.money/security/mainnet-addresses"
+      },
+      {
+        "label": "Bima PriceFeed source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/PriceFeed.sol"
+      },
+      {
+        "label": "Bima LiquidationManager source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/LiquidationManager.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "documented-evm-trove-markets",
+        "label": "Documented Bima EVM TroveManager markets",
+        "tier": "standard-external",
+        "summary": "Nine collateral markets with published TroveManager and oracle addresses use Bima's common Liquity-derived liquidation engine and multi-collateral Stability Pool across Ethereum, Hemi, Plume, Sonic, GOAT, BSC, and Nibiru.",
+        "collateralAssets": [
+          "Ethereum WBTC",
+          "Ethereum tacBTC",
+          "Ethereum strBTC",
+          "Hemi iBTC",
+          "Plume enzoBTC",
+          "Sonic LBTC",
+          "GOAT esBTC",
+          "BSC bfBTC",
+          "Nibiru uBTC"
+        ],
+        "chains": [
+          "ethereum",
+          "hemi",
+          "plume",
+          "sonic",
+          "goat",
+          "bsc",
+          "nibiru"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "BTC/USD for Ethereum WBTC, tacBTC, and strBTC",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "failureDomainKeys": [
+              "oracle:chainlink:btc-usd"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "iBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "hemi",
+            "failureDomainKeys": [
+              "oracle:hemi:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "enzoBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "plume",
+            "failureDomainKeys": [
+              "oracle:plume:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "LBTC collateral oracle",
+            "address": "0x8Bcd59Cb7eEEea8e2Da3080C891609483dae53EF",
+            "chain": "sonic",
+            "failureDomainKeys": [
+              "oracle:sonic:0x8bcd59cb7eeeea8e2da3080c891609483dae53ef"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "esBTC collateral oracle",
+            "address": "0xDA44aa5C42C020147625cCe1f1878075D106f92a",
+            "chain": "goat",
+            "failureDomainKeys": [
+              "oracle:goat:0xda44aa5c42c020147625cce1f1878075d106f92a"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "bfBTC collateral oracle",
+            "address": "0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf",
+            "chain": "bsc",
+            "failureDomainKeys": [
+              "oracle:bsc:0x264990fbd0a4796a3e3d8e37c4d5f87a3aca5ebf"
+            ]
+          },
+          {
+            "provider": "Bima-listed external oracle",
+            "path": "uBTC collateral oracle",
+            "address": "0xc8FD30cA96B6D120Fc7646108E11c13E8bb128Eb",
+            "chain": "nibiru",
+            "failureDomainKeys": [
+              "oracle:nibiru:0xc8fd30ca96b6d120fc7646108e11c13e8bb128eb"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed accepts a new external-oracle round only when the current and previous responses are valid, the current response is within the configured per-token heartbeat, and the round-to-round change is at most 50%. Otherwise it returns the stored last valid price only while that record remains within the heartbeat; after that it reverts rather than switching providers.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Ethereum WBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Ethereum tacBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Ethereum strBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Hemi iBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Plume enzoBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Sonic LBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "GOAT esBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "BSC bfBTC",
+            "minimumCollateralRatioPct": 150
+          },
+          {
+            "asset": "Nibiru uBTC",
+            "minimumCollateralRatioPct": 150
+          }
+        ],
+        "liquidationMechanism": "Any external actor may immediately call the shared LiquidationManager for an eligible Trove. Below MCR, USBD in the Stability Pool offsets debt and depositors receive collateral; any debt and collateral not offset are redistributed to remaining active Troves, with Recovery Mode adding liquidations below system TCR.",
+        "liquidationDelaySec": 0,
+        "backstop": "The multi-collateral Stability Pool is the first liquidation backstop. It burns deposited USBD against eligible Trove debt and credits the seized collateral to depositors; any portion beyond pool capacity is redistributed across active Troves in the same collateral market.",
+        "shutdownOrBadDebtBehavior": "During collateral sunsetting, new loans are disabled and Stability Pool collateral handoff is disabled, so liquidations redistribute debt and collateral to remaining active Troves. The LiquidationManager preserves one final Trove per market by design, and the reviewed contracts do not define a separate global settlement or external bad-debt fund.",
+        "failureDomainKeys": [
+          "oracle:bima:price-feed",
+          "liquidation:bima:liquidation-manager",
+          "backstop:bima:stability-pool"
+        ],
+        "sources": [
+          {
+            "label": "Bima mainnet addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          },
+          {
+            "label": "Bima configuration details",
+            "url": "https://docs.bima.money/configuration-details"
+          },
+          {
+            "label": "Bima liquidation documentation",
+            "url": "https://docs.bima.money/risk-management-+-liquidations"
+          },
+          {
+            "label": "Bima PriceFeed source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/PriceFeed.sol"
+          },
+          {
+            "label": "Bima LiquidationManager source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/LiquidationManager.sol"
+          },
+          {
+            "label": "Bima StabilityPool source",
+            "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/StabilityPool.sol"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USBD is a native LayerZero Omnichain Fungible Token (OFT): its verified Ethereum DebtToken source imports @layerzerolabs/oft-evm/contracts/OFT.sol and is declared `contract DebtToken is OFT`, taking a LayerZero V2 endpoint in its constructor (send/quoteSend/lzReceive/setPeer present), so cross-chain supply moves via burn-on-source / mint-on-destination over LayerZero messaging — a regular OFT, not a lockbox adapter or a third-party liquidity bridge (the L2BEAT 'Across' reference is just a bridge that can route USBD, not its issuance path). Re-verified on-chain 2026-07-20: all six tracked deployments are a byte-identical 19,637-byte DebtToken OFT at the same CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c; endpoint() returns the LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c on ethereum/bsc and chain-specific LayerZero endpoints on hemi and sonic (0x6f475642a6e85809b1c36fa62763669b1b48dd5b, eid() 30329/30332), nibiru (0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd, eid 30369), and plume (0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, eid 30370); owner() is the same documented EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 on all six chains (eth_getCode = 0 on ethereum; the OFT owner/delegate reviewed under mintAuthority). OFT peer wiring is sparse: peers() on the ethereum token returns non-zero only for sonic (30332) and plume (30370). Native CDP minting via BorrowerOperations exists per chain (reviewed on ethereum 2026-07-14; Bima registry also lists markets on hemi/plume/sonic/bsc/nibiru). Per-application DVN security stack remains unreviewed, so cross-chain routes stay external-validated-network. DefiLlama additionally reports USBD supply under the raw chain labels GOAT and CORE, which do not canonicalize to any CHAIN_META entry — a policy-maintainer-routed label pool, not fixable from coin data.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "LayerZero OFT (verified contract source)",
+        "slug": "layerzero",
+        "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#code",
+        "bridgeTypes": [
+          "external-validated-network",
+          "oft-burn-mint"
+        ],
+        "note": "DebtToken imports @layerzerolabs/oft-evm/contracts/OFT.sol and inherits OFT; constructor takes _layerZeroEndpoint + _delegate; send/quoteSend/lzReceive/setPeer present; mint/burn (regular OFT, not Adapter)."
+      }
+    ],
+    "sources": [
+      {
+        "label": "USBD DebtToken verified source on Etherscan (LayerZero OFT import + OFT constructor)",
+        "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#code"
+      },
+      {
+        "label": "Bima docs - Mainnet Addresses (USBD = DebtToken, identical address across 9 chains)",
+        "url": "https://docs.bima.money/security/mainnet-addresses"
+      },
+      {
+        "label": "LayerZero OFT standard (burn-on-source / mint-on-destination, unified global supply)",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+      },
+      {
+        "label": "RootData - BIMA described as omni-chain stablecoin protocol",
+        "url": "https://www.rootdata.com/Projects/detail/BIMA"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD native issuance (Liquity-v1-fork CDP)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical USBD home deployment (27.4% of supply). Verified on-chain 2026-07-20: 19,637-byte DebtToken OFT; endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (eth_getCode = 0). Native minting via BorrowerOperations 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc (reviewed in mintAuthority, 2026-07-14); no bridge contract holds mint rights on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on Ethereum (endpoint/owner reads, 2026-07-20)",
+            "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#readContract"
+          },
+          {
+            "label": "Bima docs - Mainnet Addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          }
+        ]
+      },
+      {
+        "id": "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
+        "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30329 = Hemi). Largest satellite: 72.6% of supply. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "hemi",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on hemi (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.hemi.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (LayerZero endpoint on Plume, eid() = 30370). owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plume",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on plume (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.plumenetwork.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30332 = Sonic). peers(30332) on the ethereum token returns this address — the mesh link is wired. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on sonic (endpoint/owner reads, 2026-07-20)",
+            "url": "https://sonicscan.org/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on bsc (endpoint/owner reads, 2026-07-20)",
+            "url": "https://bscscan.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
+        "destinationChain": "nibiru",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (24,005-byte LayerZero endpoint, eid() = 30369 = Nibiru). owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "nibiru",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on nibiru (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.nibiru.fi/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      }
+    ]
+  }
+}

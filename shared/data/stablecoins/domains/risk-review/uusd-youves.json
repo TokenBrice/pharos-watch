@@ -1,0 +1,704 @@
+{
+  "id": "uusd-youves",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "TzKT uUSD FA2 entrypoints (balance_of/transfer/mint/burn/execute)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW/entrypoints?json=true"
+      },
+      {
+        "label": "TzKT uUSD FA2 active administrators bigmap 7705",
+        "url": "https://api.tzkt.io/v1/bigmaps/7705/keys?active=true&limit=100"
+      },
+      {
+        "label": "Youves smart-contract registry (uUSD FA2 KT1XRPE…)",
+        "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      },
+      {
+        "label": "TzKT finalized head (observation level)",
+        "url": "https://api.tzkt.io/v1/head"
+      },
+      {
+        "label": "Pinned Youves AdministrableFA2 source",
+        "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/utils/fa2.py#L438-L530"
+      },
+      {
+        "label": "Recent applied uUSD burn calls",
+        "url": "https://api.tzkt.io/v1/operations/transactions?target=KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW&entrypoint=burn&status=applied&limit=20&sort.desc=id"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. The official AdministrableFA2 implementation permits any token administrator to call burn(owner, token_id, token_amount) against the named owner's balance rather than only the administrator's own balance. Live token_id 0 administrator entries include Youves engine contracts, and recent applied burn operations show an engine caller differing from the holder whose uUSD was burned. This is a current allowance-free arbitrary-holder burn primitive, so uUSD resolves direct Yes. Material USDt collateral supplies additional upstream Tether freeze exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Youves uUSD has six active V3 engines and three legacy but debt-bearing engines. Eight branches accept millisecond Ubinetic report timestamps in a seconds-based nominal 900-second check, making freshness effectively unbounded; the legacy SIRS branch was fail-closed because its required BTC/USD epoch was 301 epochs stale. Liquidation is branch-local and permissionless, with no funded deficit backstop.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "The official registry and SDK enumerate collateral-specific uUSD engines with distinct oracle contracts and liquidation ratios. Finalized Tezos state shows all three registry-labelled legacy engines still carry positive debt, so active and legacy debt-bearing engines require separate branches.",
+      "sources": [
+        {
+          "label": "Youves contract registry",
+          "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+        },
+        {
+          "label": "Pinned Youves mainnet engine registry",
+          "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L850-L1070"
+        },
+        {
+          "label": "Youves collateral details",
+          "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Youves contract registry",
+        "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      },
+      {
+        "label": "Pinned Youves V3 engine source",
+        "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/tracker/base_tracker_engine_v3.py"
+      },
+      {
+        "label": "Pinned Youves mainnet engine registry",
+        "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L850-L1070"
+      },
+      {
+        "label": "Finalized Tezos head",
+        "url": "https://api.tzkt.io/v1/blocks/14059094"
+      },
+      {
+        "label": "Finalized Ubinetic report state",
+        "url": "https://api.tzkt.io/v1/bigmaps/597699/keys?limit=100&level=14059094"
+      },
+      {
+        "label": "Pinned Youves composite timestamp validation",
+        "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/oracle/engine_oracle.py#L83-L101"
+      }
+    ],
+    "branches": [
+      {
+        "id": "uusd-xtz-v1-legacy",
+        "label": "uUSD / XTZ V1 legacy debt",
+        "tier": "single-source-or-laggy",
+        "summary": "The legacy XTZ V1 engine remains debt-bearing and reads a single composite XTZ/USD path whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "XTZ"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Youves composite / Ubinetic",
+            "path": "Ubinetic USDT/USD and XTZ/USDT reports -> Youves XTZ/USD composite -> V1 vault health and liquidation",
+            "address": "KT1E9PDmSyMFQAuwxvSYEADV8KDGUcGciyeX",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-xtz-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The engine has one configured target-price oracle and no automatic secondary. Every composite component must return or the transaction fails closed, but millisecond report timestamps are compared with Tezos seconds and therefore make the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "XTZ",
+            "maximumLtvPct": 33.333333,
+            "minimumCollateralRatioPct": 200,
+            "note": "Official legacy collateral documentation and the pinned SDK record a 300% target ratio and 200% emergency/liquidation ratio. Finalized engine debt was 2,277.641100920260 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Any caller may burn uUSD against a vault below the 200% emergency ratio and receive XTZ at the legacy liquidation payout; execution is atomic.",
+        "liquidationDelaySec": 0,
+        "backstop": "No funded liquidation backstop is active. The legacy bailout/minter-conversion feature was a holder conversion right, not bad-debt insurance, and Youves now labels it inactive.",
+        "shutdownOrBadDebtBehavior": "No active shutdown or deficit-redistribution module is documented. Liquidation depends on a caller supplying uUSD; debt that cannot be economically liquidated remains with its vault rather than moving to a Stability Pool.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-xtz-usd",
+          "youves-v1-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized XTZ V1 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH/storage?level=14059094"
+          },
+          {
+            "label": "Youves collateral details",
+            "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+          },
+          {
+            "label": "Pinned Youves engine registry",
+            "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L920-L945"
+          }
+        ]
+      },
+      {
+        "id": "uusd-tzbtc-v2-legacy",
+        "label": "uUSD / tzBTC V2 legacy debt",
+        "tier": "single-source-or-laggy",
+        "summary": "The legacy tzBTC V2 engine remains debt-bearing and points to a single Ubinetic composite whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "tzBTC"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Youves composite / Ubinetic",
+            "path": "Ubinetic USDT/USD and BTC/USDT reports -> Youves tzBTC/USD composite -> V2 vault health and liquidation",
+            "address": "KT1VaLKt6gt7p5BrM58k2Faunjp2sYyFhBcE",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-btc-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The finalized engine storage names one target-price oracle and no automatic secondary. Every composite leg must return or the transaction fails closed, but millisecond report timestamps are compared with Tezos seconds and therefore make the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "tzBTC",
+            "maximumLtvPct": 33.333333,
+            "minimumCollateralRatioPct": 200,
+            "note": "Legacy docs and SDK record a 300% target and 200% emergency ratio. Finalized engine debt was 77.881302640981 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Any caller may burn uUSD against a vault below the 200% emergency ratio and receive tzBTC at the legacy liquidation payout; execution is atomic.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction is connected to this engine; the legacy tzBTC branch is excluded from the now-inactive bailout conversion feature.",
+        "shutdownOrBadDebtBehavior": "No active shutdown or deficit redistribution is documented. Liquidation requires caller-supplied uUSD, and unrecovered debt remains vault-local rather than being socialized.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-btc-usd",
+          "youves-v2-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized tzBTC V2 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1HxgqnVjGy7KsSUTEsQ6LgpD5iKSGu7QpA/storage?level=14059094"
+          },
+          {
+            "label": "Youves collateral details",
+            "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+          },
+          {
+            "label": "Youves bailout status",
+            "url": "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/Minter-Conversion-Right"
+          }
+        ]
+      },
+      {
+        "id": "uusd-sirs-v2-legacy",
+        "label": "uUSD / SIRS V2 legacy debt",
+        "tier": "single-source-or-laggy",
+        "summary": "The legacy SIRS V2 engine remains debt-bearing, but its required generic BTC/USD component was 301 epochs stale and made price-dependent engine actions fail closed at the fixed level.",
+        "collateralAssets": [
+          "SIRS (XTZ/tzBTC LP)"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Youves custom SIRS oracle",
+            "path": "SIRS/tzBTC LP oracle KT1GqQ... plus generic BTC/USD oracle KT1Kzd... -> callback-composed SIRS/USD scratch value at KT1VCF... -> V2 vault health and liquidation",
+            "address": "KT1VCFYwXiFhmzjd6VRpkPJBF6DvRSf3sF2X",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-sirs-lp-oracle",
+              "youves-legacy-generic-btcusd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The engine has one custom target-price oracle and no alternate route; the LP callback value is transaction scratch, not a durable cached fallback. At the fixed level, generic BTC/USD last_epoch 1981969 was 301 epochs behind current epoch 1982270 and exceeded the four-epoch window, so PRICE_TOO_OLD made price-dependent mint, withdrawal, and liquidation actions unavailable.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "SIRS (XTZ/tzBTC LP)",
+            "maximumLtvPct": 33.333333,
+            "minimumCollateralRatioPct": 200,
+            "note": "Legacy docs and SDK record a 300% target and 200% emergency ratio. Finalized engine debt was 9,235.129323262868 uUSD."
+          }
+        ],
+        "liquidationMechanism": "The branch is designed for permissionless atomic liquidation below the 200% emergency ratio, but liquidation was unavailable at level 14059094 because the mandatory BTC/USD leg reverted PRICE_TOO_OLD after 301 stale epochs.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction is connected to this engine; Youves explicitly excludes SIRS from the obsolete bailout conversion feature.",
+        "shutdownOrBadDebtBehavior": "No active shutdown or deficit redistribution is documented. Liquidation requires caller-supplied uUSD, and unrecovered debt remains vault-local rather than being socialized.",
+        "failureDomainKeys": [
+          "youves-sirs-lp-oracle",
+          "youves-legacy-generic-btcusd",
+          "youves-v2-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized SIRS V2 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1FzcHaNhmpdYPNTgfb8frYXx7B5pvVyowu/storage?level=14059094"
+          },
+          {
+            "label": "Finalized custom SIRS oracle storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1VCFYwXiFhmzjd6VRpkPJBF6DvRSf3sF2X/storage?level=14059094"
+          },
+          {
+            "label": "Finalized legacy BTC/USD oracle storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1KzdDAVkEwLUhemZBp8asMJ9nvfbp6eV9C/storage?level=14059094"
+          },
+          {
+            "label": "Finalized legacy BTC/USD epoch",
+            "url": "https://api.tzkt.io/v1/bigmaps/238466/keys/BTCUSD?level=14059094"
+          },
+          {
+            "label": "Youves bailout status",
+            "url": "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/Minter-Conversion-Right"
+          }
+        ]
+      },
+      {
+        "id": "uusd-usdt-v3",
+        "label": "uUSD / USDt V3",
+        "tier": "single-source-or-laggy",
+        "summary": "The active USDt V3 engine uses one threshold-signed Ubinetic path whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "USDt (Tezos)"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Ubinetic threshold-signed oracle",
+            "path": "Ubinetic USDT/USD report at KT1Exb... -> composite inverse at KT1USE... -> V3 vault health and liquidation",
+            "address": "KT1USEJPFn2EtsYFJd4AzghVWNYWahtdgHGU",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-usdt-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The composite has no alternate feed and all required calls must return or INVALID_VIEW fails closed. Its nominal 900-second check compares millisecond report timestamps with Tezos seconds, making freshness effectively unbounded rather than contract-enforced.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "USDt (Tezos)",
+            "maximumLtvPct": 90.909091,
+            "minimumCollateralRatioPct": 110,
+            "note": "Finalized storage records collateral_ratio 110%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 90.909091% maximum LTV; settlement_ratio is the 115% holder-conversion term, not a liquidation threshold. Debt was 11,172,864.355705194083 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers USDt; payout is capped by the lower of the vault ratio and the configured 110% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No funded liquidation backstop is connected to V3. Youves states V3 savings pools no longer support the bailout/minter-conversion feature.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault can be liquidated at its actual collateral ratio only when a caller supplies uUSD; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-usdt-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized USDt V3 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+          },
+          {
+            "label": "Finalized USDt composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1USEJPFn2EtsYFJd4AzghVWNYWahtdgHGU/storage?level=14059094"
+          },
+          {
+            "label": "Pinned V3 liquidation source",
+            "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/tracker/base_tracker_engine_v3.py#L329-L695"
+          }
+        ]
+      },
+      {
+        "id": "uusd-tzbtc-v3",
+        "label": "uUSD / tzBTC V3",
+        "tier": "single-source-or-laggy",
+        "summary": "The active tzBTC V3 engine uses one Ubinetic composite whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "tzBTC"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Ubinetic threshold-signed oracle",
+            "path": "Ubinetic BTC/USDT and USDT/USD reports -> tzBTC/USD composite at KT1Cwu... -> V3 vault health and liquidation",
+            "address": "KT1CwuJ1TNkerkfn5KtMha5oq3KNWiiNa1iK",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-btc-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both legs must return and no alternate feed is selected; unavailable calls fail closed. Millisecond report timestamps are compared with Tezos seconds, making the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "tzBTC",
+            "maximumLtvPct": 74.074074,
+            "minimumCollateralRatioPct": 135,
+            "note": "Finalized storage records collateral_ratio 135%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 74.074074% maximum LTV; settlement_ratio is the 200% holder-conversion term, not a liquidation threshold. Debt was 34,382.971921254689 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers tzBTC; payout is capped by actual vault collateralization or the configured 112.5% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction funds V3 liquidation; the V3 bailout conversion feature is inactive.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault is resolved only through caller-funded uUSD burning at its actual collateral ratio; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-btc-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized tzBTC V3 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1V9Rsc4ES3eeQTr4gEfJmNhVbeHrAZmMgC/storage?level=14059094"
+          },
+          {
+            "label": "Finalized tzBTC composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1CwuJ1TNkerkfn5KtMha5oq3KNWiiNa1iK/storage?level=14059094"
+          },
+          {
+            "label": "Pinned V3 liquidation source",
+            "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/tracker/base_tracker_engine_v3.py#L329-L695"
+          }
+        ]
+      },
+      {
+        "id": "uusd-xtz-v3",
+        "label": "uUSD / XTZ V3",
+        "tier": "single-source-or-laggy",
+        "summary": "The active XTZ V3 engine uses one Ubinetic composite whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "XTZ"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Ubinetic threshold-signed oracle",
+            "path": "Ubinetic XTZ/USDT and USDT/USD reports -> XTZ/USD composite at KT1NLW... -> V3 vault health and liquidation",
+            "address": "KT1NLW9G8Z44DYW92KXQ433aKsdTsmMJKrkH",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-xtz-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both composite legs must return and no alternate feed is selected; unavailable calls fail closed. Millisecond report timestamps are compared with Tezos seconds, making the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "XTZ",
+            "maximumLtvPct": 62.5,
+            "minimumCollateralRatioPct": 160,
+            "note": "Finalized storage records collateral_ratio 160%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 62.5% maximum LTV; settlement_ratio is the 200% holder-conversion term, not a liquidation threshold. Debt was 65,504.051172352248 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers XTZ; payout is capped by actual vault collateralization or the configured 112.5% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction funds V3 liquidation; Youves states the V3 bailout conversion feature is inactive.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault is resolved only through caller-funded uUSD burning at its actual collateral ratio; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-xtz-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized XTZ V3 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1DHndgk8ah1MLfciDnCV2zPJrVbnnAH9fd/storage?level=14059094"
+          },
+          {
+            "label": "Finalized XTZ composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1NLW9G8Z44DYW92KXQ433aKsdTsmMJKrkH/storage?level=14059094"
+          },
+          {
+            "label": "Pinned V3 liquidation source",
+            "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/tracker/base_tracker_engine_v3.py#L329-L695"
+          }
+        ]
+      },
+      {
+        "id": "uusd-sirs-v3",
+        "label": "uUSD / SIRS V3",
+        "tier": "single-source-or-laggy",
+        "summary": "The active SIRS V3 engine combines an LP ratio with one Ubinetic composite whose nominal 900-second check cannot reject millisecond report timestamps.",
+        "collateralAssets": [
+          "SIRS (XTZ/tzBTC LP)"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Youves LP oracle / Ubinetic",
+            "path": "SIRS LP ratio KT1KpF... plus Ubinetic BTC/USDT and USDT/USD -> SIRS/USD composite KT1Wgjs... -> V3 vault health and liquidation",
+            "address": "KT1Wgjs4VtkvTrdCyf3TVumCY59KS8ydqZX9",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-sirs-lp-oracle",
+              "youves-ubinetic",
+              "youves-btc-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Every LP and Ubinetic leg must return and no alternate route is selected; failed calls fail closed. Millisecond Ubinetic timestamps are compared with Tezos seconds, making the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "SIRS (XTZ/tzBTC LP)",
+            "maximumLtvPct": 74.074074,
+            "minimumCollateralRatioPct": 135,
+            "note": "Finalized storage records collateral_ratio 135%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 74.074074% maximum LTV; settlement_ratio is the 200% holder-conversion term, not a liquidation threshold. Debt was 617,525.245184065496 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers SIRS; payout is capped by actual vault collateralization or the configured 112.5% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction funds V3 liquidation; Youves states the V3 bailout conversion feature is inactive.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault is resolved only through caller-funded uUSD burning at its actual collateral ratio; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-sirs-lp-oracle",
+          "youves-ubinetic",
+          "youves-btc-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized SIRS V3 engine storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1F1JMgh6SfqBCK6T6o7ggRTdeTLw91KKks/storage?level=14059094"
+          },
+          {
+            "label": "Finalized SIRS composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1Wgjs4VtkvTrdCyf3TVumCY59KS8ydqZX9/storage?level=14059094"
+          },
+          {
+            "label": "Pinned V3 liquidation source",
+            "url": "https://github.com/youves-com/youves-smart-contract/blob/954110480be1ac1d9be9bbdaecc04da48f5bc1e8/contracts/tracker/base_tracker_engine_v3.py#L329-L695"
+          }
+        ]
+      },
+      {
+        "id": "uusd-xtz-v3-zero-fee",
+        "label": "uUSD / XTZ V3 zero-fee",
+        "tier": "single-source-or-laggy",
+        "summary": "The zero-mint-fee XTZ V3 engine is a distinct debt-bearing branch sharing the Ubinetic composite with an ineffective nominal freshness check.",
+        "collateralAssets": [
+          "XTZ"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Ubinetic threshold-signed oracle",
+            "path": "Ubinetic XTZ/USDT and USDT/USD reports -> shared XTZ/USD composite KT1NLW... -> zero-fee V3 health and liquidation",
+            "address": "KT1NLW9G8Z44DYW92KXQ433aKsdTsmMJKrkH",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-ubinetic",
+              "youves-xtz-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Both composite legs must return and no alternate feed is selected; unavailable calls fail closed. Millisecond report timestamps are compared with Tezos seconds, making the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "XTZ",
+            "maximumLtvPct": 62.5,
+            "minimumCollateralRatioPct": 160,
+            "note": "Finalized storage records collateral_ratio 160%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 62.5% maximum LTV; settlement_ratio is the 200% holder-conversion term, not a liquidation threshold, and the mint fee is zero. Debt was 83,308.030391935286 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers XTZ; payout is capped by actual vault collateralization or the configured 112.5% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction funds V3 liquidation; the V3 bailout conversion feature is inactive.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault is resolved only through caller-funded uUSD burning at its actual collateral ratio; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-ubinetic",
+          "youves-xtz-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized zero-fee XTZ V3 storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1TcCSR24TmDvwTfHkyWbwMB111gtNYxEcA/storage?level=14059094"
+          },
+          {
+            "label": "Finalized shared XTZ composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1NLW9G8Z44DYW92KXQ433aKsdTsmMJKrkH/storage?level=14059094"
+          },
+          {
+            "label": "Pinned zero-fee engine registry",
+            "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L885-L915"
+          }
+        ]
+      },
+      {
+        "id": "uusd-sirs-v3-zero-fee",
+        "label": "uUSD / SIRS V3 zero-fee",
+        "tier": "single-source-or-laggy",
+        "summary": "The zero-mint-fee SIRS V3 engine is a distinct debt-bearing branch sharing the Ubinetic composite with an ineffective nominal freshness check.",
+        "collateralAssets": [
+          "SIRS (XTZ/tzBTC LP)"
+        ],
+        "chains": [
+          "tezos"
+        ],
+        "feeds": [
+          {
+            "provider": "Youves LP oracle / Ubinetic",
+            "path": "SIRS LP ratio KT1KpF... plus Ubinetic BTC/USDT and USDT/USD -> shared SIRS/USD composite KT1Wgjs... -> zero-fee V3 health and liquidation",
+            "address": "KT1Wgjs4VtkvTrdCyf3TVumCY59KS8ydqZX9",
+            "chain": "tezos",
+            "observedAt": "2026-07-14",
+            "observedBlock": 14059094,
+            "failureDomainKeys": [
+              "youves-sirs-lp-oracle",
+              "youves-ubinetic",
+              "youves-btc-usd",
+              "tezos"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Every LP and Ubinetic leg must return and no alternate path is selected; failed calls fail closed. Millisecond Ubinetic timestamps are compared with Tezos seconds, making the nominal 900-second freshness check effectively unbounded.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 14059094,
+        "collateralParameters": [
+          {
+            "asset": "SIRS (XTZ/tzBTC LP)",
+            "maximumLtvPct": 74.074074,
+            "minimumCollateralRatioPct": 135,
+            "note": "Finalized storage records collateral_ratio 135%, which base_tracker_engine_v3 enforces on mint and withdrawal and implies 74.074074% maximum LTV; settlement_ratio is the 200% holder-conversion term, not a liquidation threshold, and the mint fee is zero. Debt was 26,216.591760957407 uUSD."
+          }
+        ],
+        "liquidationMechanism": "Permissionless atomic liquidation burns caller-supplied uUSD and transfers SIRS; payout is capped by actual vault collateralization or the configured 112.5% payout.",
+        "liquidationDelaySec": 0,
+        "backstop": "No Stability Pool, insurance reserve, or debt auction funds V3 liquidation; the V3 bailout conversion feature is inactive.",
+        "shutdownOrBadDebtBehavior": "There is no active Stability Mechanism or shutdown redistribution. An insolvent vault is resolved only through caller-funded uUSD burning at its actual collateral ratio; otherwise debt remains vault-local.",
+        "failureDomainKeys": [
+          "youves-sirs-lp-oracle",
+          "youves-ubinetic",
+          "youves-btc-usd",
+          "youves-v3-liquidator-liquidity",
+          "tezos"
+        ],
+        "sources": [
+          {
+            "label": "Finalized zero-fee SIRS V3 storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1H2514Wb6G38fmgU3vpAwkWEpFC9sq7HPH/storage?level=14059094"
+          },
+          {
+            "label": "Finalized shared SIRS composite storage",
+            "url": "https://api.tzkt.io/v1/contracts/KT1Wgjs4VtkvTrdCyf3TVumCY59KS8ydqZX9/storage?level=14059094"
+          },
+          {
+            "label": "Pinned zero-fee engine registry",
+            "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L1010-L1045"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "UUSD is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked UUSD contract is on Tezos and reviewed Youves docs describe local synthetic-asset contracts rather than a cross-chain route.",
+    "sources": [
+      {
+        "label": "Youves smart contracts",
+        "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tezos:KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+        "destinationChain": "tezos",
+        "canonicalChain": "tezos",
+        "contractAddress": "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+        "protocol": "Youves native vault issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "2026-07-20 TzKT reads: the tracked uUSD FA2 token (youves uUSD, 12 decimals) is minted natively on Tezos by the Youves Vault Creator engine KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH (listed in the token's administrators bigmap) against vault collateral; no bridge representation carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "uUSD token on TzKT",
+            "url": "https://tzkt.io/KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW/operations"
+          },
+          {
+            "label": "Youves smart contracts",
+            "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+          }
+        ]
+      }
+    ]
+  }
+}

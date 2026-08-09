@@ -1,0 +1,103 @@
+{
+  "id": "usx-dforce",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USX is minted via dForce/Unitus overcollateralized borrow routes; all on-chain controls (token owner, proxy admin, minter) trace to a 3-of-5 Gnosis Safe through a nominal executor contract (no enforced time delay).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+        "label": "USX MSD token minter registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Sourcify MSD source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
+          },
+          {
+            "label": "dForce USX docs",
+            "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+          }
+        ],
+        "evidence": "At Ethereum block 25,294,715: implementation = 0xe3ec7de9375bfc22f4481c4605431d67ed5bd260, owner() = 0x17e66B1e0260C930bfA567ff3ab5c71794279b94 (executor contract), proxy admin = 0x4ff0455bcfbb5886607c078e0f43efb5de34def4, getMinters() = [0x45677a101D70E9910C418D9426bC6c5874CE2Fd7] (EIP-1967 proxy, also owned by executor)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x17e66B1e0260C930bfA567ff3ab5c71794279b94",
+        "label": "USX token owner / executor contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "dForce executor on Etherscan",
+            "url": "https://etherscan.io/address/0x17e66B1e0260C930bfA567ff3ab5c71794279b94"
+          }
+        ],
+        "evidence": "Custom executor contract (labelled 'Timelock' in errors but bytecode has NO timestamp/ETA enforcement — calls execute immediately). owner() (slot 0) = 0x145c79A1F0e1Ad5ad7fC8d99548a02A07B24F8FD (3-of-5 Gnosis Safe). Also owns proxy admin 0x4ff0455… and minter 0x45677a…"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x145c79A1F0e1Ad5ad7fC8d99548a02A07B24F8FD",
+        "label": "dForce governance multisig (3-of-5 Gnosis Safe)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xaeEDC8979dF43645b238C40EBD8aF03e6d9e47d9",
+            "0xE2918A6fb9d1Abe005e7380AdCf11202A3E69586",
+            "0xfa001954D5aFC71C6bBE8a8dFd406C1B5C599781",
+            "0x5eDd0C6037f6F30974E53f5C829073fF8b356fB9",
+            "0xae5b5d00CE2e7848e6c4d6461D5263708F213d10"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25294715,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "dForce governance Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x145c79A1F0e1Ad5ad7fC8d99548a02A07B24F8FD"
+          }
+        ],
+        "evidence": "On-chain getOwners()/getThreshold() at block 25,294,715: Gnosis Safe v1.3.0, 3-of-5, nonce 136, no modules, no guard. Controls executor 0x17e66… which owns token, proxy admin, and minter. No enforced time delay."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "dForce USX docs",
+          "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+        },
+        {
+          "label": "Sourcify MSD source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe3ec7de9375bfc22f4481c4605431d67ed5bd260/sources/contracts/msd/MSD.sol"
+        },
+        {
+          "label": "dForce governance Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x145c79A1F0e1Ad5ad7fC8d99548a02A07B24F8FD"
+        }
+      ],
+      "evidence": "At Ethereum block 25,294,715: full governance chain confirmed — token/proxy admin/minter all owned by executor 0x17e66… → owned by 3-of-5 Gnosis Safe 0x145c79… (no modules, nonce 136). Executor has no timestamp/ETA enforcement; actions execute immediately upon 3-of-5 approval.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "id": "usdc-circle",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "Circle Internet Financial Europe SAS",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register – Issuers of EMTs (EMTWP.csv)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Circle – First Global Stablecoin Issuer to Comply with MiCA (Business Wire, 1 Jul 2024)",
+        "url": "https://www.businesswire.com/news/home/20240701820713/en/Circle-is-First-Global-Stablecoin-Issuer-to-Comply-with-MiCA-EU%E2%80%99s-Landmark-Crypto-Law"
+      },
+      {
+        "label": "Circle USDC MiCA white paper",
+        "url": "https://www.circle.com/fr/legal/mica-usdc-whitepaper"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDC is publicly issued as a U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Circle Internet Financial, LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC (conditional national trust bank charter for First National Digital Currency Bank, N.A.; current issuer licensed as state MTL/NYDFS BitLicense)",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.circle.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "Circle received conditional OCC approval on Dec 12 2025 for First National Digital Currency Bank, N.A. — a federal-qualified-nonbank trust charter pathway consistent with the GENIUS Act framework. This is a conditional charter under existing OCC authority, not a PPSI approval; GENIUS Act rulemaking remains in proposed-rules phase with no approvals granted. Pharos found no token-specific public GENIUS PPSI approval as of review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Circle – OCC Conditional Approval for National Trust Charter (Business Wire, 12 Dec 2025)",
+        "url": "https://www.businesswire.com/news/home/20251210456415/en/Circle-Receives-Conditional-Approval-from-OCC-for-National-Trust-Charter",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Circle GENIUS Act hub",
+        "url": "https://www.circle.com/genius-act",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Circle USDC transparency",
+        "url": "https://www.circle.com/transparency",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin 2026-3 and public releases",
+        "Federal Register GENIUS notices (OCC Feb 2026, FDIC Dec 2025 / Apr 2026 / May 2026, FinCEN+OFAC Apr 2026, Treasury Apr 2026, NCUA Feb / May 2026)",
+        "Circle GENIUS Act, transparency, legal, and licensing pages",
+        "Circle OCC national trust bank charter announcement Dec 2025",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No GENIUS PPSI approval or state-qualified approval has been granted to any issuer; OCC conditional trust charter (Dec 2025) is pre-GENIUS-application-framework and not a PPSI status; no public application filed under GENIUS Act rulemaking.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

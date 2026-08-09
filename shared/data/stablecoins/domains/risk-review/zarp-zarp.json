@@ -1,0 +1,141 @@
+{
+  "id": "zarp-zarp",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: ZARP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "ZARP issues its token natively on Ethereum, Base, Polygon, and Solana; per-chain mint/admin roles resolve to ZARP-controlled EOAs (mint-authority review 2026-07-15). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "ZARP docs",
+        "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "ZARP stablecoin",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ZARP ethereum token",
+            "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+          },
+          {
+            "label": "ZARP website",
+            "url": "https://zarp.io/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "base",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "ZARP stablecoin",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ZARP base token",
+            "url": "https://basescan.org/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+          },
+          {
+            "label": "ZARP website",
+            "url": "https://zarp.io/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "destinationChain": "polygon",
+        "contractAddress": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "protocol": "ZARP stablecoin",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the polygon ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ZARP polygon token",
+            "url": "https://polygonscan.com/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+          },
+          {
+            "label": "ZARP website",
+            "url": "https://zarp.io/"
+          }
+        ]
+      },
+      {
+        "id": "solana:dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+        "destinationChain": "solana",
+        "contractAddress": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+        "protocol": "ZARP stablecoin",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the verified mint-authority review (2026-07-15) read the Solana mint's mintAuthority as the ZARP-controlled wallet 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j (System-Program-owned EOA, not a bridge program).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ZARP Solana mint (mintAuthority = 797qLH2Z...C7J4j, read 2026-07-15)",
+            "url": "https://solscan.io/token/dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk"
+          },
+          {
+            "label": "ZARP website",
+            "url": "https://zarp.io/"
+          }
+        ]
+      }
+    ]
+  }
+}

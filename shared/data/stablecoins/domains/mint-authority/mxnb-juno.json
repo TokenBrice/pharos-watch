@@ -1,0 +1,98 @@
+{
+  "id": "mxnb-juno",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "MXNB is a FiatToken-fork proxy. On Ethereum and Arbitrum, masterMinter() = owner() = EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Proxy admin is also EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. All three are issuer-controlled EOAs with no multisig.",
+    "controls": [
+      {
+        "label": "MXNB masterMinter / owner (Ethereum, Arbitrum — EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xcf3783abaf4a11da1382f0c49748fa87a1b6b739",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
+            "url": "https://mxnb.mx/whitepaper.pdf"
+          }
+        ],
+        "evidence": "At Ethereum block 25295171, masterMinter() = 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739; owner() = same address. eth_getCode = 0x (EOA confirmed on both Ethereum and Arbitrum). At Arbitrum block 472412264, masterMinter() and owner() also return 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739."
+      },
+      {
+        "label": "MXNB proxy admin (Ethereum and Arbitrum — EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "MXNB Ethereum proxy",
+            "url": "https://etherscan.io/address/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          }
+        ],
+        "evidence": "At Ethereum block 25295171, custom proxy admin slot (0x10d6a5...) = 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca; eth_getCode = 0x (EOA confirmed). Same address in Arbitrum block 472412264 proxy admin slot."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "MXNB on Ethereum and Arbitrum is an upgradeable FiatToken-fork proxy. masterMinter() and owner() both resolve to EOA 0xcf3783...b739 on both chains. The proxy admin slot also resolves to an EOA 0x4d64a2...05ca. All confirmed via eth_call and eth_getCode at blocks 25295171 (ETH) and 472412264 (ARB). The same contract address 0xf197ffc... is used on all five listed chains. Mint-tier review (2026-07-15): BDO Mexico, through Castillo Miranda y Compania, performs quarterly independent reserve reconciliation; the latest report covers 2026-03-31 and was published 2026-06-23. El Salvador CNAD's issuer registry exactly matches Nvio Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005, providing prudential issuer supervision. Re-verified at Ethereum block 25575167 on 2026-07-20: MXNB 0xf197ffc28c23e0309b5559e7a166f2c6164c80aa still returns owner() = masterMinter() = 0xCf3783ABaF4A11da1382F0c49748Fa87a1b6b739. This is a FiatTokenProxy using the legacy zeppelinos storage slots rather than EIP-1967: the implementation slot 0x7050c9e0…f8c3 resolves to 0x72beddf7032eec58f199857b79a8e37020c14e42 and the admin slot 0x10d6a54a…390b resolves to the EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca, while both EIP-1967 slots read zero. Economic-control adjudication: because the masterMinter EOA can configure any minter with an arbitrary allowance and the separate proxy-admin EOA can swap the implementation outright, with no multisig, timelock, or independent on-chain bound, the mint cap is economically unbounded even though CNAD registration and the quarterly BDO Mexico attestation constrain the issuer off-chain.",
+      "reviewer": "Codex SOL-V mint-tier research; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
+          "url": "https://mxnb.mx/whitepaper.pdf"
+        },
+        {
+          "label": "Bitso/Juno docs",
+          "url": "https://docs.bitso.com/juno"
+        },
+        {
+          "label": "BDO Mexico MXNB Q1 2026 report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        },
+        {
+          "label": "MXNB transparency archive",
+          "url": "https://mxnb.mx/en-US/transparency"
+        },
+        {
+          "label": "El Salvador CNAD stablecoin issuers",
+          "url": "https://cnad.gob.sv/es/issuers/"
+        }
+      ],
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+      ],
+      "implementationAddresses": [
+        "0x72beddf7032eec58f199857b79a8e37020c14e42"
+      ],
+      "adminAddresses": [
+        "0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "MXNB proxy admin (Ethereum and Arbitrum — EOA)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25575167,
+      "sources": [
+        {
+          "label": "MXNB token on Etherscan",
+          "url": "https://etherscan.io/address/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+        }
+      ]
+    }
+  }
+}

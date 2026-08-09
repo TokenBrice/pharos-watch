@@ -1,0 +1,251 @@
+{
+  "id": "usdf-falcon",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Falcon Finance smart-contract addresses",
+        "url": "https://docs.falcon.finance/resources/smart-contracts"
+      },
+      {
+        "label": "Etherscan USDf proxy",
+        "url": "https://etherscan.io/token/0xfa2b947eec368f42195f24f36d2af29f7c24cec2"
+      },
+      {
+        "label": "Etherscan USDf implementation",
+        "url": "https://etherscan.io/address/0x3adf34c09dac24e4baefb1b1df4c2992edc2b789"
+      }
+    ],
+    "evidence": "Falcon's official contract directory identifies the reviewed USDf Ethereum proxy. Its verified USDf implementation exposes an AddressRestrictionSet event, isRestricted(address) view, and setRestriction(address,bool) function; transfer and transferFrom reject restricted accounts. This is a direct holder transfer restriction controlled through the implementation's role system, so USDf has known blacklist/restriction capability even though its reserve dependencies add separate upstream exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Falcon determines collateral spot prices through its internal offchain system using major-exchange market data and retains discretion over innovative-mint liquidation decisions.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDf is issued through a whitelisted, issuer-operated collateral account and hedging system rather than permissionless onchain CDP markets. Falcon applies dynamic overcollateralization and may liquidate innovative-mint collateral against an agreed threshold, but its terms define spot pricing as an internal determination and do not expose onchain per-market oracle, auction, bad-debt, or shutdown branches for V9 to inventory.",
+      "sources": [
+        {
+          "label": "Falcon Finance terms of use",
+          "url": "https://docs.falcon.finance/resources/terms-of-use"
+        },
+        {
+          "label": "Falcon overcollateralization ratio",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/overcollateralization-ratio"
+        },
+        {
+          "label": "Falcon USDf peg stability",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-peg-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon Finance terms of use",
+        "url": "https://docs.falcon.finance/resources/terms-of-use"
+      },
+      {
+        "label": "Falcon classic mint documentation",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-minting-mechanisms/classic-mint"
+      },
+      {
+        "label": "Falcon overcollateralization ratio",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/overcollateralization-ratio"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDf uses Chainlink CCIP BurnMintTokenPools on BSC, Base, and XDC. Each verified pool directly holds the local MINTER_ROLE and is owned by a chain-local instance of the same reviewed 4/6 Safe; supply movement remains dependent on CCIP validation.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 bridge review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Falcon Finance CCIP announcement",
+        "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+      },
+      {
+        "label": "Falcon Finance smart contracts",
+        "url": "https://docs.falcon.finance/resources/smart-contracts"
+      },
+      {
+        "label": "BSC USDf BurnMintTokenPool",
+        "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
+      },
+      {
+        "label": "Base USDf BurnMintTokenPool",
+        "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+      },
+      {
+        "label": "XDC USDf BurnMintTokenPool",
+        "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+        "protocol": "Falcon Finance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4b66431f9e5f5cd026ae48e617902207b43048d4",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x4b66431f9e5f5cd026ae48e617902207b43048d4"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109823336,
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          },
+          {
+            "label": "BSC USDf BurnMintERC20",
+            "url": "https://bscscan.com/address/0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2#code"
+          },
+          {
+            "label": "BSC USDf BurnMintTokenPool",
+            "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
+          }
+        ]
+      },
+      {
+        "id": "base:0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x33570299e0d73f07c82d005de75de54cf4582fcc"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48595298,
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          },
+          {
+            "label": "Base USDf BurnMintERC20",
+            "url": "https://basescan.org/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+          },
+          {
+            "label": "Base USDf BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+          }
+        ]
+      },
+      {
+        "id": "xdc:0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "sourceChain": "ethereum",
+        "destinationChain": "xdc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8210c0634ab8f273806e4b7866e9db353773c44b",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "xdc",
+        "controllerAddress": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:xdc:0x33570299e0d73f07c82d005de75de54cf4582fcc"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 104892489,
+        "sources": [
+          {
+            "label": "Falcon Finance CCIP announcement",
+            "url": "https://falcon.finance/news/falcon-finance-adopts-the-chainlink-standard-to-power-cross-chain-token-transfers-of-usdf"
+          },
+          {
+            "label": "Falcon Finance smart contracts",
+            "url": "https://docs.falcon.finance/resources/smart-contracts"
+          },
+          {
+            "label": "XDC USDf BurnMintERC20",
+            "url": "https://xdcscan.com/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+          },
+          {
+            "label": "XDC USDf BurnMintTokenPool",
+            "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+          }
+        ]
+      }
+    ]
+  }
+}

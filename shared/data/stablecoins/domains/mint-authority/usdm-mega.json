@@ -1,0 +1,120 @@
+{
+  "id": "usdm-mega",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "inheritedFrom": "usdtb-ethena",
+    "summary": "USDM is MegaETH's dollar issued on Ethena's USDtb rails and backed ~90% by USDtb, so it inherits the backing and issuance dependency on USDtb. Each USDM deployment is also a UUPS-upgradeable OFT whose 4-of-9 owner Safe can add or remove direct minters and replace mint-critical logic without a timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926",
+        "0xfafddbb3fc7688494971a79cc65dca3ef82079e7"
+      ],
+      "implementationAddresses": [
+        "0x61e6eb7f9e36d27db1da7df55b898122b9145de2",
+        "0xac37677261885fdb372a37ac8d5d47044196073c"
+      ],
+      "adminAddresses": [
+        "0x141c03abc062a9d5d4238e1666b849c929e53cb2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDM logic owner (Gnosis Safe 9/4)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530956,
+      "sources": [
+        {
+          "label": "USDM Ethereum implementation verified source",
+          "url": "https://eth.blockscout.com/address/0x61e6eb7f9e36d27db1da7df55b898122b9145de2"
+        },
+        {
+          "label": "USDM MegaETH implementation verified source",
+          "url": "https://megaeth.blockscout.com/address/0xac37677261885fdb372a37ac8d5d47044196073c"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "USDM USDtb-rails representation (share accounting)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "USDM MegaETH contract (Blockscout)",
+            "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+          },
+          {
+            "label": "USDM Ethereum contract (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+          }
+        ],
+        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, the ERC-1967 implementation slots resolve to verified xUSDOFTUpgradeable implementations 0x61e6... and 0xac376... respectively, while the transparent-proxy admin slots are zero as expected for UUPS proxies. The verified implementation exposes mint(address,uint256), addMinter(address), and removeMinter(address); mint is restricted to the contract's owner-managed minter set.",
+        "chain": "ethereum",
+        "address": "0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x141C03AbC062a9d5d4238e1666B849C929e53cB2",
+        "label": "USDM logic owner (Gnosis Safe 9/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 4,
+        "signerCount": 9,
+        "safe": {
+          "owners": [
+            "0xe3731a0ad5e59c3083fd899e234b7b2361d25b33",
+            "0x73a2063e47a6e20420b40a4655327de631ca70e0",
+            "0xe313794f9a827956d939c0df12732cfdeb5cf27e",
+            "0xd1e25f0e9193d7d69acf0348ab6b7936801090ec",
+            "0xd2668a22ecbe34cf651a7522312e4563d96a5aed",
+            "0x83408cc6157b2bb3a47acc912f7c30520ce4782b",
+            "0xbdc5974832b41c829b62eb3f713809910bef0237",
+            "0xa516af633efc0e856e4357514462e6195b1b2154",
+            "0x67fc0e9f75806ff0039ca8dc8bb398434db078c6"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25294742,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "USDM Ethereum contract (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+          }
+        ],
+        "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, owner() on both USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain Safe review returned 9 owners, threshold 4, no enabled modules, a zero guard, and a zero fallback handler. Verified xUSDOFTUpgradeable source makes addMinter() and removeMinter() onlyOwner and authorizes UUPS upgradeToAndCall() through _authorizeUpgrade(...), also onlyOwner; the zero ERC-1967 admin slot does not renounce these UUPS powers."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "USDM MegaETH contract (Blockscout)",
+          "url": "https://megaeth.blockscout.com/address/0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"
+        },
+        {
+          "label": "USDM Ethereum contract (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xec2af1c8b110a61fd9c3fa6a554a031ca9943926"
+        },
+        {
+          "label": "MegaETH docs",
+          "url": "https://docs.megaeth.com"
+        }
+      ],
+      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately.",
+      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20"
+    }
+  }
+}

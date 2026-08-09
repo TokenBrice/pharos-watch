@@ -1,0 +1,293 @@
+{
+  "id": "vchf-vnx",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: VCHF resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "VCHF is a VNX-issued multichain fiat token. Reviewed issuer docs show VNX multichain token issuance, with no independent bridge protocol resolved, so route risk is issuer-native multichain issuance.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "VNX docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/"
+      },
+      {
+        "label": "VNX website",
+        "url": "https://vnx.li/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on ethereum: the VNX Franc proxy resolves to implementation 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc with owner() = 0x45a149f42ff0b77d148d05904dd7577df36a545a (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on ethereum explorer (probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x79d4f0232a66c4c91b89c76362016a1707cfbf4f"
+          }
+        ]
+      },
+      {
+        "id": "base:0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on base: the VNX Franc proxy resolves to implementation 0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1 with owner() = 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6 (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on base explorer (probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on arbitrum: the VNX Franc proxy resolves to implementation 0xd3bfc79d720bc625d02dc46d822040ac7cb5045a with owner() = 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on arbitrum explorer (probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0x228a48df6819ccc2eca01e2192ebafffdad56c19",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on avalanche: the VNX Franc proxy resolves to implementation 0x832cba8c924b4e3128ab509a803d66738bc51708 with owner() = 0xe13eb54fc8bcd06aed4c1ea13692ba85dc94fd8c (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on avalanche explorer (probed 2026-07-20)",
+            "url": "https://snowtrace.io/address/0x228a48df6819ccc2eca01e2192ebafffdad56c19"
+          }
+        ]
+      },
+      {
+        "id": "solana:AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on solana: the SPL mint's authority is the issuer keypair 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY (a plain funded signer account, not a bridge program) (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on solana explorer (probed 2026-07-20)",
+            "url": "https://solscan.io/token/AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch"
+          }
+        ]
+      },
+      {
+        "id": "celo:0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on celo: the VNX Franc proxy resolves to implementation 0xf3e535d35b662015765a2d73e81db5735562b569 with owner() = 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6 (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on celo explorer (probed 2026-07-20)",
+            "url": "https://celoscan.io/address/0xc5ebea9984c485ec5d58ca5a2d376620d93af871"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on polygon: the VNX Franc proxy resolves to implementation 0x5cb0365674da4d167755bd3fb99a09916258ef32 with owner() = 0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403 (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on polygon explorer (probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xcdb3867935247049e87c38ea270edd305d84c9ae"
+          }
+        ]
+      },
+      {
+        "id": "tezos:KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+        "destinationChain": "tezos",
+        "canonicalChain": "tezos",
+        "contractAddress": "KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on tezos: the FA2 asset contract KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq was originated by VNX's tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3 (TzKT-verified) (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on tezos explorer (probed 2026-07-20)",
+            "url": "https://tzkt.io/KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq"
+          }
+        ]
+      },
+      {
+        "id": "xrpl:VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "destinationChain": "xrpl",
+        "canonicalChain": "xrpl",
+        "contractAddress": "VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on xrpl: the VCHF issued currency's account rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3 exists and is VNX's issuer account (xrpl.org account_info-verified) (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on xrpl explorer (probed 2026-07-20)",
+            "url": "https://livenet.xrpl.org/accounts/VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x418126bb59457afdba1ecf376f97400b4157425d",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x418126bb59457afdba1ecf376f97400b4157425d",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on fraxtal: the VNX Franc proxy resolves to implementation 0x1891291474fe677cb63e47cc347e6b8bc0c43b4a with owner() = 0xd5086f514af5d820ee58a73e9628b5d21f3ba54a (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on fraxtal explorer (probed 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x418126bb59457afdba1ecf376f97400b4157425d"
+          }
+        ]
+      },
+      {
+        "id": "icp:ly36x-wiaaa-aaaai-aqj7q-cai",
+        "destinationChain": "icp",
+        "canonicalChain": "icp",
+        "contractAddress": "ly36x-wiaaa-aaaai-aqj7q-cai",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on icp: the ICRC ledger canister ly36x-wiaaa-aaaai-aqj7q-cai ('VCHF Ledger', three controllers) is VNX's own canister per the Internet Computer dashboard API (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on icp explorer (probed 2026-07-20)",
+            "url": "https://dashboard.internetcomputer.org/canister/ly36x-wiaaa-aaaai-aqj7q-cai"
+          }
+        ]
+      },
+      {
+        "id": "stellar:VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "destinationChain": "stellar",
+        "canonicalChain": "stellar",
+        "contractAddress": "VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "protocol": "VNX issuer-native VCHF",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VCHF issuance on stellar: the classic VCHF asset's issuer account GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN carries two weight-1 signers with zero thresholds (Horizon-verified) (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VCHF on stellar explorer (probed 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/asset/VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN"
+          }
+        ]
+      }
+    ]
+  }
+}

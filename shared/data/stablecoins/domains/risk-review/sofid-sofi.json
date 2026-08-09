@@ -1,0 +1,115 @@
+{
+  "id": "sofid-sofi",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "SoFiUSD product page",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "SoFi Crypto Account Agreement",
+        "url": "https://www.sofi.com/crypto/legal/crypto-account-agreement"
+      },
+      {
+        "label": "SOFID Terms of Use",
+        "url": "https://www.sofi.com/crypto/legal/sofid-terms/"
+      },
+      {
+        "label": "SOFID Risk Disclosure",
+        "url": "https://www.sofi.com/crypto/legal/sofid-risk-disclosure/"
+      },
+      {
+        "label": "BitGo SOFID infrastructure announcement",
+        "url": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+      },
+      {
+        "label": "SoFi Bank April 2026 stablecoin attestation",
+        "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm"
+      },
+      {
+        "label": "SOFID Ethereum ERC-1967 proxy",
+        "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9F3ec4678092E"
+      },
+      {
+        "label": "SOFID Ethereum Stablecoin implementation",
+        "url": "https://eth.blockscout.com/address/0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Solana PublicNode RPC",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "SOFID Solana Token-2022 metadata",
+        "url": "https://stablecoins.bitgo.com/sofid-solana/metadata.json"
+      }
+    ],
+    "evidence": "At Ethereum block 25535319 on 2026-07-15, the ERC-1967 proxy delegates to verified Stablecoin implementation 0x69edf9fa820df057e493635ed1db6b9e5f8124a0; its admin and beacon slots were zero. FREEZER_ROLE was held by EOA 0x77149912943A7b3bD743e1820666314349b9Cf25 and BLACKLISTER_ROLE by EOA 0xfbe09e1AC164565ea20B974Bca4B3C0fb79cd13a, while paused() was false. Verified code makes pause() block ERC20 updates and makes transfer/transferFrom reject blacklisted senders and recipients; eth_call simulations from those role holders succeeded. MASTER_MINTER_ROLE EOA 0x06720DEc0fA18BB540EEA24C7f196c0BD0C26B7A can also destroy a blacklisted holder's funds. At finalized Solana slot 432983437, the Token-2022 mint exposed freeze authority AJ7yvciE9bn1m1hrFBtKB1fS3K5eYfJwUoNk3nZDp1XS, pausableConfig authority BB67z1U8YfHFPwrDzzTiAYPNUiU86oiATYAyYnE5Xqkq, and permanentDelegate BB67z1U8YfHFPwrDzzTiAYPNUiU86oiATYAyYnE5Xqkq; it was not paused. These are direct on-chain holder-control paths, so SOFID is Yes. Issuer product, legal, infrastructure, and attestation materials were checked for context; account-level restrictions are not the basis for this classification.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "SoFi Bank issues SOFID for direct withdrawal to Ethereum or Solana wallets. The issuer's current materials describe native bank-managed availability on both supported networks, not a holder-operated third-party bridge.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Pharos P7 bridge review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "SoFi Bank and BitGo stablecoin infrastructure",
+        "url": "https://www.sofi.com/crypto/sofiusd/",
+        "bridgeTypes": [
+          "nativeIssuance"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "SoFiUSD product page",
+        "url": "https://www.sofi.com/crypto/sofiusd/"
+      },
+      {
+        "label": "SoFiUSD multi-chain launch announcement",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13"
+      },
+      {
+        "id": "solana:APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
+        "destinationChain": "solana",
+        "contractAddress": "APhcqtzE73es3KAGiVksZFMLGwJDiAey5qZKUrQHEHfS",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13"
+      }
+    ]
+  }
+}

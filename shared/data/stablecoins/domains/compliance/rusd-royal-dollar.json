@@ -1,0 +1,69 @@
+{
+  "id": "rusd-royal-dollar",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "RUSD is described as a USD-referenced stable-value token for settlement and treasury use with authorized-participant issuance and redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "RIB Digital Holdings Limited",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "RUSD has issuer-style stablecoin disclosures, but no public GENIUS approval or foreign-issuer exception source was found. RIB Group Holdings Ltd / RIB Digital operates from Hong Kong/UK; no OCC, FDIC, Federal Reserve, or state regulatory filing identified. The foreign-issuer exception framework itself remains in proposed-rules phase as of 2026-06-18 with no registered exceptions granted to any issuer.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Royal RUSD page",
+        "url": "https://www.rcoins.digital/RUSD.html",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Royal RCoins website",
+        "url": "https://www.rcoins.digital/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "RUSD whitepaper",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "RIBG Digital stablecoins website",
+        "url": "https://ribg.digital/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (OCC Bulletin 2026-3)",
+        "Royal RUSD page and whitepaper (rcoins.digital, book.royalcc.world)",
+        "RIBG Digital stablecoins website (ribg.digital)",
+        "Web search: RIB Digital Holdings GENIUS Act foreign payment stablecoin issuer registration 2026",
+        "Web search: Royal Coins RUSD US regulatory status 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for RUSD. The foreign-issuer exception registration framework remains in proposed rulemaking with no exceptions granted to any issuer as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

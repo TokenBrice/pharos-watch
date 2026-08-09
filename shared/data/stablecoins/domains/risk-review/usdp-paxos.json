@@ -1,0 +1,164 @@
+{
+  "id": "usdp-paxos",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDP is Paxos-issued and Paxos documentation describes the asset as available on multiple blockchains, with Paxos expansion to Solana separately announced. The multichain route is reviewed as issuer-native issuance/redemption.",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paxos USDP overview",
+        "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+      },
+      {
+        "label": "Paxos assets and blockchains",
+        "url": "https://docs.paxos.com/guides/developer/blockchains"
+      },
+      {
+        "label": "Paxos Solana expansion",
+        "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "protocol": "Paxos",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Paxos USDP overview",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+          },
+          {
+            "label": "Paxos assets and blockchains",
+            "url": "https://docs.paxos.com/guides/developer/blockchains"
+          },
+          {
+            "label": "Paxos Solana expansion",
+            "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
+          }
+        ]
+      },
+      {
+        "id": "solana:HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+        "destinationChain": "solana",
+        "contractAddress": "HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM",
+        "protocol": "Paxos",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Paxos USDP overview",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdp"
+          },
+          {
+            "label": "Paxos assets and blockchains",
+            "url": "https://docs.paxos.com/guides/developer/blockchains"
+          },
+          {
+            "label": "Paxos Solana expansion",
+            "url": "https://www.prnewswire.com/news-releases/paxos-expands-to-the-solana-blockchain-302021494.html"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "protocol": "Binance-Peg Paxos Standard (Binance bridge)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent BSC RPCs (bsc-dataseed.binance.org and bsc-dataseed1.defibit.io): BEP20 getOwner() = 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d with empty bytecode; token name 'Paxos Standard', symbol PAX, 18 decimals. Same Binance-Peg mint/burn EOA as reviewed Binance-Peg USDT/USDC/DAI rows. A separate Binance-Peg 'Pax Dollar' USDP contract exists on BSC; this row is specifically the profile route 0xb7f8… (Paxos Standard).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-28",
+        "sources": [
+          {
+            "label": "BscScan Binance-Peg Paxos Standard",
+            "url": "https://bscscan.com/token/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094"
+          },
+          {
+            "label": "BSC public RPC getOwner() re-read (bsc-dataseed)",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "BSC independent RPC getOwner() corroboration (defibit)",
+            "url": "https://bsc-dataseed1.defibit.io"
+          },
+          {
+            "label": "Binance pegged tokens documentation",
+            "url": "https://www.binance.com/en/collateral-btokens"
+          }
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "failureDomainKeys": [
+          "protocol:binance-peg",
+          "contract:bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+        ],
+        "observedBlock": 112455885
+      },
+      {
+        "id": "linea:0xd2bc272ea0154a93bf00191c8a1db23e67643ec5",
+        "sourceChain": "ethereum",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5",
+        "protocol": "Linea canonical TokenBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDP on Linea is the canonical-bridged representation: bridge() on the token reads 0x353012dc4a9a6cf55c941badc267f82004a8ceb9 — the Linea L2 TokenBridge (2,227-byte code, read 2026-07-20) — which is the mint authority for the representation. totalSupply $2.0 dust. DefiLlama lists this address in its paxos-standard linea entry.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "linea",
+        "controllerAddress": "0x353012dc4a9a6cf55c941badc267f82004a8ceb9",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-messaging",
+          "contract:linea:0x353012dc4a9a6cf55c941badc267f82004a8ceb9"
+        ],
+        "sources": [
+          {
+            "label": "Lineascan USDP token",
+            "url": "https://lineascan.build/token/0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5"
+          },
+          {
+            "label": "DefiLlama paxos-standard adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paxos-standard/index.ts"
+          }
+        ]
+      }
+    ]
+  }
+}

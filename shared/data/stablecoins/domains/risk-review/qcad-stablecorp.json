@@ -1,0 +1,111 @@
+{
+  "id": "qcad-stablecorp",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: QCAD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Stablecorp describes QCAD as a compliant CAD token and has issuer/public-regulatory evidence for multichain availability. No separate bridge protocol was resolved, so the reviewed route is issuer-native issuance on supported chains.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD",
+        "url": "https://stablecorp.ca/"
+      },
+      {
+        "label": "QCAD Digital Trust order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      },
+      {
+        "label": "Stablecorp Base announcement",
+        "url": "https://stablecorp.medium.com/stablecorp-base-bringing-canada-onchain-1eb6a763470a"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3fa142dd3f384414e05e71ad0939274edc82ec0a",
+        "protocol": "Stablecorp issuer-native QCAD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native QCAD issuance on ethereum: FiatToken-fork proxy with owner() = 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 (same issuer authority on both chains, verified on-chain 2026-07-20; no bridge endpoint surface).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "QCAD on Etherscan (owner() probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+          },
+          {
+            "label": "QCAD (Stablecorp)",
+            "url": "https://www.qcad.ca/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xa15705e6fc8b3e08e7253f3758de1a754baa0761",
+        "protocol": "Stablecorp issuer-native QCAD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native QCAD issuance on base: FiatToken-fork proxy with owner() = 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 (same issuer authority on both chains, verified on-chain 2026-07-20; no bridge endpoint surface).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "QCAD on Etherscan (owner() probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x3fa142dd3f384414e05e71ad0939274edc82ec0a"
+          },
+          {
+            "label": "QCAD (Stablecorp)",
+            "url": "https://www.qcad.ca/"
+          }
+        ]
+      },
+      {
+        "id": "solana:EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci",
+        "protocol": "Stablecorp issuer-native QCAD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native QCAD issuance on Solana: SPL mint EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci (supply 2,025.83 QCAD, 2 decimals, matching the exact captured supply) has mint authority 8386AjvCDAtuAWujQJt8RUkcGaMdDUEoTNL53dAhESeJ, a plain funded keypair account (not a bridge program PDA), i.e. the issuer mints directly (verified on-chain 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "QCAD mint on Solana explorer (mint authority probed 2026-07-20)",
+            "url": "https://solscan.io/token/EeBX9JLdvsp4HnBbMgC1HnAjBkBQxgxtWxspcCLtT6ci"
+          },
+          {
+            "label": "DefiLlama stablecorp-qcad adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/stablecorp-qcad/index.ts"
+          }
+        ]
+      }
+    ]
+  }
+}

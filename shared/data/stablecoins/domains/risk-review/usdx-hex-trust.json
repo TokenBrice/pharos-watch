@@ -1,0 +1,101 @@
+{
+  "id": "usdx-hex-trust",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDX resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDX is issuer-minted natively by Hex Trust on Ethereum, Flare, and Songbird (per-chain MINTER_ROLE holders reviewed in the mint-authority profile); no bridge carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "USDX issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Hex Trust Flare",
+        "url": "https://www.hextrust.com/solutions/flare"
+      },
+      {
+        "label": "Flare USDX launch",
+        "url": "https://flare.network/news/defi-on-flare-boosted-by-hex-trusts-usdx-stablecoin-and-clearpool-yield-vault"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on ethereum by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
+      },
+      {
+        "id": "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+        "destinationChain": "flare",
+        "contractAddress": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on flare by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
+      },
+      {
+        "id": "songbird:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+        "destinationChain": "songbird",
+        "contractAddress": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on songbird by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

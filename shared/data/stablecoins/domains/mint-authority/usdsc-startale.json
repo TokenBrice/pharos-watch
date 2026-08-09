@@ -1,0 +1,122 @@
+{
+  "id": "usdsc-startale",
+  "mintAuthority": {
+    "mintPath": "m0-permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDSC is an M0-backed extension on Soneium; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+      ],
+      "implementationAddresses": [
+        "0xc435b33c017da7ef313bf2d3132c99c7673a194b"
+      ],
+      "adminAddresses": [
+        "0x0f38d8a5583f9316084e9c40737244870c565924"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "M0 SwapFacility extension router",
+      "observedAt": "2026-06-11",
+      "observedBlock": 24028800,
+      "sources": [
+        {
+          "label": "M0 deployments",
+          "url": "https://docs.m0.org/get-started/resources/addresses/"
+        },
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "controllerAssetId": "m-m0",
+        "label": "M0 MinterGateway backing rail",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Base M issuance backing USDSC depends on approved minters, validator attestations, mint-delay review, and M0 collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+          }
+        ],
+        "evidence": "At Ethereum block 25295161: Blockscout confirms ContractName=MinterGateway, IsProxy=false (immutable, non-upgradeable). EIP-1967 admin and impl slots both zero. No external admin or module surface; cap governance rests with M0 TTG (POWER token holders)."
+      },
+      {
+        "chain": "soneium",
+        "address": "0xB6807116b3B1B321a390594e31ECD6e0076f6278",
+        "label": "M0 SwapFacility extension router",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "SwapFacility routes approved M0 extensions 1:1 against M; it can mint extension balances through wrap flows but does not create base M supply.",
+        "routeChecks": {
+          "lockboxOrEscrow": "SwapFacility wraps approved M0 extensions 1:1 against M and does not create base M supply.",
+          "onchainAmountBounds": "Extension minting is bounded by available M-backed wrapper flow and base M supply.",
+          "caps": "SwapFacility cap follows M supply and can be changed through the M0 governance/admin path rather than an immutable cap.",
+          "pausersAdminsUpgraders": "Soneium SwapFacility proxy owner is reviewed as a 2-of-3 EOA multisig; MinterGateway base supply remains under M0 governance."
+        },
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 SwapFacility docs",
+            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          }
+        ],
+        "evidence": "At Soneium block 24028800: SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 confirmed TransparentUpgradeableProxy (code=3060 bytes, impl=0xc435b33c017da7ef313bf2d3132c99c7673a194b). EIP-1967 admin slot=0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin). ProxyAdmin owner=0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1, a 2/3 EOA multisig with 3 EOA owners (verified eth_getCode=0x for all three), no modules (getModules() empty), guard=0x0. ProxyAdmin code confirmed present (2724 bytes). No upgrade path accessible without 2/3 Safe signers."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "MinterGateway on Blockscout",
+          "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+        }
+      ],
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). At Soneium block 24028800: SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5...; ProxyAdmin owner=2/3 EOA multisig 0xdcf79c... (3 EOA owners, no modules, no guard). All controls fully characterized.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

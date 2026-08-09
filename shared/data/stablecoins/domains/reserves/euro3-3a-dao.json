@@ -1,0 +1,368 @@
+{
+  "id": "euro3-3a-dao",
+  "reserves": [
+    {
+      "name": "Mendi meUSDC collateral (Linea)",
+      "pct": 70.13806014,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Mendi Finance meUSDC lending market and its borrowers",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Mendi meUSDT collateral (Linea)",
+      "pct": 3.77463048,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Mendi Finance meUSDT lending market and its borrowers",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WETH collateral (Linea)",
+      "pct": 11.80763566,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum WETH and 3A Linea vaults",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WBTC collateral (Linea)",
+      "pct": 8.46828752,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo WBTC and 3A Linea vaults",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "mewETH collateral (Linea)",
+      "pct": 2.0133668,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Mendi Finance mewETH market and its borrowers",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WETH collateral (Polygon)",
+      "pct": 2.00383561,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum WETH and 3A Polygon vaults",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "wstETH collateral (Linea)",
+      "pct": 0.43531081,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido wstETH and 3A Linea vaults",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WMATIC collateral (Polygon)",
+      "pct": 0.18282301,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Polygon WMATIC and 3A Polygon vaults",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC.e collateral (Linea)",
+      "pct": 0.94689764,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc. via Linea USDC.e",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDC.e collateral (Polygon)",
+      "pct": 0.04490127,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc. via Polygon USDC.e",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDT collateral (Linea)",
+      "pct": 0.11034176,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Limited via Linea USDT",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "DAI collateral (Linea)",
+      "pct": 0.01640555,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky/MakerDAO via Linea DAI",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "DAI collateral (Polygon)",
+      "pct": 0.0048036,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky/MakerDAO via Polygon DAI",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "mewstETH collateral (Linea)",
+      "pct": 0.05270014,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Mendi Finance mewstETH market and its borrowers",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Whitelisted collateral residual below registry capture precision",
+      "pct": 1e-8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "3A Lending Protocol vaults",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T46 live reserve re-derivation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "3A Polygon collateral registry",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts"
+      },
+      {
+        "label": "3A Linea collateral registry",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts"
+      },
+      {
+        "label": "Polygon public RPC (VaultFactory.collateral/tokenPrice reads at block 91165709)",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Linea public RPC (VaultFactory.collateral/tokenPrice reads at block 31573732)",
+        "url": "https://rpc.linea.build"
+      },
+      {
+        "label": "Verified Polygon VaultFactory ABI",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x4760847023fa0833221ae76E01Db1E483A5D20e0?fields=abi"
+      },
+      {
+        "label": "Verified Polygon TokenToPriceFeed ABI",
+        "url": "https://sourcify.dev/server/v2/contract/137/0xfBC5cfEb809c6352Bc4ef2FFe842f72a8769E45e?fields=abi"
+      }
+    ],
+    "rationale": "Re-derived 2026-07-31 from the documented supported-collateral registries and live VaultFactory.collateral(token) plus TokenToPriceFeed.tokenPrice(token) reads: Polygon block 91165709 and Linea block 31573732 (both around 2026-07-30T23:19Z). Positive balances were normalized to EUR value across both current factories; the largest exposures are Linea meUSDC 70.1381%, Linea WETH 11.8076%, Linea WBTC 8.4683%, and Linea meUSDT 3.7746%. The tiny residual row preserves rounding/registry precision rather than forcing unsupported zero exposure.",
+    "compositionBasis": "3A supported-collateral registries plus live VaultFactory collateral balances valued by TokenToPriceFeed",
+    "compositionAsOf": "2026-07-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The source registries expose the complete supported token set used in the current factories; the residual row is only rounding/precision remainder and no material positive balance was omitted.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Mendi meUSDC collateral (Linea)",
+        "pct": 70.13806014,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Mendi receipt-token exposure is a protocol position, not a tracked Pharos stablecoin ID."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Mendi meUSDT collateral (Linea)",
+        "pct": 3.77463048,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Mendi receipt-token exposure is a protocol position; its borrower mix is not an exact upstream USDT dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "WETH collateral (Linea)",
+        "pct": 11.80763566,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WBTC collateral (Linea)",
+        "pct": 8.46828752,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "mewETH collateral (Linea)",
+        "pct": 2.0133668,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Mendi receipt-token exposure is a protocol position, not a tracked Pharos stablecoin ID."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "WETH collateral (Polygon)",
+        "pct": 2.00383561,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "wstETH collateral (Linea)",
+        "pct": 0.43531081,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "WMATIC collateral (Polygon)",
+        "pct": 0.18282301,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WMATIC is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "mewstETH collateral (Linea)",
+        "pct": 0.05270014,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Mendi receipt-token exposure is a protocol position, not a tracked Pharos stablecoin ID."
+      },
+      {
+        "reserveIndex": 14,
+        "reserveName": "Whitelisted collateral residual below registry capture precision",
+        "pct": 1e-8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Rounding remainder from the normalized live reads."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "3A Vault contracts on Polygon and Linea (non-custodial)",
+        "role": "other",
+        "jurisdiction": "Polygon, Linea"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex T46 live reserve re-derivation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "3A Polygon collateral registry",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts"
+      },
+      {
+        "label": "3A Linea collateral registry",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts"
+      },
+      {
+        "label": "Verified Polygon VaultFactory ABI",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x4760847023fa0833221ae76E01Db1E483A5D20e0?fields=abi"
+      },
+      {
+        "label": "Verified Linea VaultFactory address",
+        "url": "https://lineascan.build/address/0x65c6fd9b3a2a892096881e28f07c732ed128893e"
+      }
+    ],
+    "uncertainty": "The live balances are held in 3A VaultFactory-linked smart contracts on Polygon and Linea rather than with a conventional custodian. The reviewed contract/documentation surfaces do not establish legal segregation, bankruptcy remoteness, or rehypothecation terms; contract integrity and governance are the operative custody failure domains.",
+    "knownUnknownExposurePct": 100
+  }
+}

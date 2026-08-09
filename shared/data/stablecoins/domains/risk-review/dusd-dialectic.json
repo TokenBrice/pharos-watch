@@ -1,0 +1,127 @@
+{
+  "id": "dusd-dialectic",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Makina deposits and whitelisting",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
+      },
+      {
+        "label": "Makina redemptions and whitelisting",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
+      },
+      {
+        "label": "DUSD Machine Terms",
+        "url": "https://makina.finance/MeccanicoToS.pdf"
+      },
+      {
+        "label": "DUSD AsyncRedeemer verified source",
+        "url": "https://eth.blockscout.com/address/0xd53dc14e0f268494c7540153126d78e4f54cc01c?tab=contract"
+      },
+      {
+        "label": "Makina Recovery Mode",
+        "url": "https://docs.makina.finance/concepts/security/recovery-mode"
+      }
+    ],
+    "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
+    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle Machine USDC, finalized-but-unclaimed AsyncRedeemer USDC, Caliber-held USDC, and downstream venues. The Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk and issuer-discretionary eligibility, not as a DUSD transfer blacklist. If USDC is frozen at the Machine, a Caliber, the AsyncRedeemer, or a downstream venue, Recovery Mode can contain additional exposure and unwind supported positions toward USDC, but it cannot move Circle-frozen USDC, replace the settlement asset, or create a migration, in-kind distribution, or holder-recovery right. If a holder cannot receive USDC, Machine Terms Section 2.f permits transferring DUSD before a request to a newly verified wallet, which may then request a buyback. For an existing request, ERC-721 request-NFT transferability and post-transfer claim behavior are separately established by the deployed contract and events: the active NFT owner may claim only while satisfying the current whitelist. The request has no observed contract-level expiry and persists through NFT transfer, but verification, finalization, and fill remain discretionary; there is no guaranteed remediation or alternate settlement asset.",
+    "reviewer": "OpenAI Codex DUSD redemption backstop implementation",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "DUSD is issued only on Ethereum by the Dialectic USD Machine. A Wormhole NTT route mirrors a small slice onto Ink: the Ethereum NTT manager runs in LOCKING mode, so bridged units are collateralized by DUSD locked on Ethereum and Ethereum totalSupply already reflects the full share supply.",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "Claude stablecoin addition (issue #705)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Wormhole Native Token Transfers (lock-mint)",
+        "url": "https://api.makina.finance/v1/strategies"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Makina strategy deployments",
+        "url": "https://docs.makina.finance/strategies/deployments"
+      },
+      {
+        "label": "Makina machine token cross-chain transfer",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/machine-token"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+        "protocol": "Makina MachineShare native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25636769 the share token reads name \"Dialectic USD\", symbol DUSD, 18 decimals, totalSupply 5,618,599.537452822458574240, and minter()/owner() = the Dialectic USD Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721. The Machine's accountingToken() is USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and shareToken() returns this token. Shares mint only through the Machine's deposit and fee paths.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636769,
+        "sources": [
+          {
+            "label": "DUSD share token on Etherscan",
+            "url": "https://etherscan.io/address/0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+          },
+          {
+            "label": "Makina strategy deployments",
+            "url": "https://docs.makina.finance/strategies/deployments"
+          }
+        ]
+      },
+      {
+        "id": "ink:0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+        "protocol": "Wormhole NTT (lock on Ethereum, mint on Ink)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ink block 51809006 the Ink token reads name \"Dialectic USD\", symbol DUSD, 18 decimals, totalSupply 6,236.4968, and minter() = the NTT manager 0xaba79e9b4238e85b75a5812ced64b4f6527e9adb. At Ethereum block 25636769 the same manager address returns mode() = 0 (LOCKING), token() = the Ethereum DUSD share, getThreshold() = 1, and holds exactly 6,236.4968 DUSD, matching the Ink supply. The single transceiver is Wormhole 0x5bbe375969712252a75c5762af85455b79fcbf08. Because the hub locks rather than burns, Ethereum totalSupply is the complete share supply and the Ink units must not be added to it.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 51809006,
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xaba79e9b4238e85b75a5812ced64b4f6527e9adb",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0xaba79e9b4238e85b75a5812ced64b4f6527e9adb"
+        ],
+        "sources": [
+          {
+            "label": "DUSD on Ink explorer",
+            "url": "https://explorer.inkonchain.com/address/0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc"
+          },
+          {
+            "label": "Makina strategies API (NTT route)",
+            "url": "https://api.makina.finance/v1/strategies"
+          },
+          {
+            "label": "Ink public RPC",
+            "url": "https://rpc-gel.inkonchain.com"
+          }
+        ]
+      }
+    ]
+  }
+}

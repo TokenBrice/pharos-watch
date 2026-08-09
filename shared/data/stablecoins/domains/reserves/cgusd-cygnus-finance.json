@@ -1,0 +1,92 @@
+{
+  "id": "cgusd-cygnus-finance",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury bills and on-chain stablecoin portfolio",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury and undisclosed stablecoin issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      },
+      {
+        "label": "Cygnus cgUSD how-it-works (NAV formula)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
+      },
+      {
+        "label": "Cygnus cgUSD withdrawals FAQ (custodian T-bill sales)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "DefiLlama cgUSD stablecoin profile",
+        "url": "https://stablecoins.llama.fi/stablecoin/166"
+      }
+    ],
+    "rationale": "Re-opened primary Cygnus docs on 2026-07-28. Overview still states that on each New York banking day cgUSD total supply is synchronized to portfolio NAV including off-chain U.S. Treasuries, on-chain stablecoins, and asset interest, with 1:1 USDC redemption support. How-it-works still defines the rebase NAV as on-chain stablecoins (C, labeled USDC in the US Treasury Asset Pool) plus market value of U.S. Treasury bills (T) and interest. Withdrawals FAQ independently states redemptions are fulfilled by selling U.S. Treasury bills held in a custodian account, converting USD proceeds to USDC for the asset pool (5–7 day settlement under normal conditions). DefiLlama's third-party cgUSD profile restates the same portfolio envelope (on-chain stablecoins, U.S. Treasury bill market value, accrued interest) without itemized weights. No attestation, reserve report, or itemized composition dashboard was found. At Base block 49201799, vault 0xca72827a3d211cfd8f6b00ac98824872b72cab49 totalSupply ≈ 76.17M cgUSD while its USDC balance was only ≈ 698.89 USDC — confirming that almost all backing is not held as USDC on the vault contract, but not establishing the off-chain T-bill vs stablecoin weights. Structural 100% multi-category basket with known-unknown disposition is therefore retained; no weight split was fabricated.",
+    "compositionBasis": "Cygnus issuer NAV portfolio description and redemption mechanics, re-opened 2026-07-28; DefiLlama catalog corroboration",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current Treasury and stablecoin weights, holdings, reserve balances, named custodians, and independent assurance are not disclosed in the reviewed issuer or third-party sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasury bills and on-chain stablecoin portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer materials identify portfolio categories (off-chain short-term U.S. Treasuries and on-chain stablecoins) but publish no current constituent or weight-level allocation, balances, or independent reconciliation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed custodian account holding off-chain U.S. Treasury bills",
+        "role": "custodian"
+      },
+      {
+        "name": "Cygnus cgUSD vault and accounting/NAV oracle contracts on Base",
+        "role": "other",
+        "jurisdiction": "Base"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD withdrawals FAQ (custodian-account T-bill sales)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      }
+    ],
+    "uncertainty": "Cygnus documents that redemptions are fulfilled by selling U.S. Treasury bills held in a custodian account, but the custodian is never named and no segregation, bankruptcy-remoteness, or reuse terms are published; there is no reserve attestation from any accountant. On-chain, the cgUSD supply tracks an issuer-administered NAV oracle (vault and oracle governed by a 10-second timelock per the 2026-07-16 on-chain control review), so the reported off-chain portfolio value is issuer-asserted rather than independently fed.",
+    "knownUnknownExposurePct": 100
+  }
+}

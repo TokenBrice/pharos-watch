@@ -1,0 +1,152 @@
+{
+  "id": "iauon-ondo",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Important Notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "evidence": "IAUon resolves to Yes because it is a centrally issued Ondo GM tokenized ETF product with eligibility restrictions and issuer-controlled subscription, redemption, and transfer infrastructure.",
+    "reviewer": "Codex data addition",
+    "reviewedAt": "2026-05-24"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "Ondo Global Markets assets use the Ondo Bridge, which documents LayerZero OFT architecture for GM assets in addition to USDY. Because IAUon is an Ondo GM asset and route accounting depends on that external OFT stack, it is scored as external-lock-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ondo Token Bridge docs",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge"
+      },
+      {
+        "label": "IAUon docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
+      },
+      {
+        "id": "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
+        "protocol": "OndoOFT on Solana (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IAUon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address — a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana IAUon supply to Ondo's cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "solana",
+        "controllerAddress": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f",
+        "sourceChain": "ethereum",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f",
+        "protocol": "OndoOFT (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IAUon on HyperEVM is minted solely by the OndoOFT contract 0xce61f9246755cc399fd7f37d6b3478590b75aace (sole MINTER_ROLE member, read 2026-07-20): a 6,152-byte LayerZero OApp with endpoint() = HyperEVM LZ V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and token() = this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xce61f9246755cc399fd7f37d6b3478590b75aace",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "id": "ftusd-flying-tulip",
+  "reserves": [
+    {
+      "name": "USDC strategy wrappers (Ethereum and Sonic)",
+      "pct": 68.7296,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDT strategy wrapper (Ethereum)",
+      "pct": 31.1012,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Tether USDT",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USSD strategy wrapper (Sonic)",
+      "pct": 0.1692,
+      "risk": "medium",
+      "coinId": "ussd-sonic-labs",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Sonic USSD",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Codex ftUSD correction review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD dashboard API",
+        "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+      },
+      {
+        "label": "Flying Tulip ftUSD documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/#how-ftusd-works"
+      }
+    ],
+    "rationale": "The issuer dashboard API snapshot lastUpdated 2026-08-09T21:22:45Z reported $3,221,228.5173 of USDC collateral across Ethereum and Sonic, $1,457,656.8216 of Ethereum USDT collateral, and $7,926.5709 of Sonic USSD collateral. Normalizing the complete $4,686,811.9099 collateral set produces the authored 68.7296%, 31.1012%, and 0.1692% shares. Each API address matches the reviewed deployment.",
+    "compositionBasis": "Cross-chain collateral wrapper TVL in the official ftUSD dashboard API, aggregated by collateral token",
+    "compositionAsOf": "2026-08-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The dashboard API identifies every current Ethereum and Sonic collateral wrapper and its underlying token address.",
+    "knownUnknownExposurePct": 0
+  }
+}

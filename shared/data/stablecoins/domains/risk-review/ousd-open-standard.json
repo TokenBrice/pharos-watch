@@ -1,0 +1,10 @@
+{
+  "id": "ousd-open-standard",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "OUSD resolves to Yes: it is announced as a centralized, issuer-controlled fully-reserved dollar operated by Open Standard, so an issuer freeze/blacklist surface is expected once contracts deploy. No mainnet contract is public yet to point at a specific freeze function.",
+    "reviewer": "Claude pre-launch addition",
+    "reviewedAt": "2026-07-01"
+  }
+}

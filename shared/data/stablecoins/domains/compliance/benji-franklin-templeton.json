@@ -1,0 +1,32 @@
+{
+  "id": "benji-franklin-templeton",
+  "genius": {
+    "applicability": "excluded-security",
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Franklin Templeton",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC registered investment company context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "BENJI is treated as outside GENIUS payment-stablecoin tracking because it represents shares of a registered money market fund rather than a payment stablecoin.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Franklin OnChain U.S. Government Money Fund",
+        "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  }
+}

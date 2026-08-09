@@ -1,0 +1,57 @@
+{
+  "id": "u-united-stables",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "United Stables Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.u.tech/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "United Stables states $U has not obtained registration, authorization, or licensing under the GENIUS Act.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "United Stables website — regulatory disclosure",
+        "url": "https://www.u.tech/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "United Stables terms — regulatory disclosure",
+        "url": "https://u.tech/terms/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "United Stables website (u.tech) regulatory disclosure — issuer explicitly states no GENIUS Act authorization obtained",
+        "United Stables terms page regulatory disclosure",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "United Stables' own site carries an explicit disclosure that $U has not obtained registration, authorization, or licensing under the GENIUS Act of 2025; no public GENIUS approval, application, or foreign registration source was located on re-verification 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "id": "usdai-usd-ai",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Arbitrum USDai verified implementation (Blockscout)",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x0ab74df531c0d8f1c46643e404b3d14723bbc212"
+      },
+      {
+        "label": "USDai Arbitrum proxy",
+        "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
+      },
+      {
+        "label": "Arbitrum PublicNode JSON-RPC",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Plasma RPC",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "USD.AI documentation",
+        "url": "https://docs.usd.ai/"
+      }
+    ],
+    "evidence": "Re-derived 2026-07-30. Material Arbitrum hub (proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef): at Arbitrum block 489423393 EIP-1967 implementation is 0x0ab74df531c0d8f1c46643e404b3d14723bbc212. Verified USDai source exposes BLACKLIST_ADMIN_ROLE, setBlacklist(account,bool), isBlacklisted(account) (local list plus Circle USDC 0xaf88… and Tether USDT 0xFd08… lists on Arbitrum), and _update gated by notBlacklisted(msg.sender/from/to); pause modifiers also present. isBlacklisted(address(0)) returned false (function live). Ethereum block 25648410 and Base/Plasma implementations at the same proxy address lack isBlacklisted selectors (bridge mint/burn only on those spokes), so holder-level blacklist reach is Arbitrum-hub primary; spokes remain bridge/mint surfaces. Controlling authority: BLACKLIST_ADMIN_ROLE on the Arbitrum implementation. Failure domain: contract:arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef (blacklist admin) with inherited USDC/USDT list coupling on Arbitrum.",
+    "reviewer": "Grok T49 Safety Score V9 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDai documentation shows an Arbitrum hub and public ecosystem references to LayerZero. The reviewed route is therefore an external interoperability-network path rather than purely issuer-native or canonical rollup bridging.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USD.AI contract addresses",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "USD.AI ecosystem",
+        "url": "https://usd.ai/ecosystem"
+      },
+      {
+        "label": "LayerZero on L2BEAT",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "sourceChain": "arbitrum",
+        "destinationChain": "ethereum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "USDai OBridge (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) returns endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and token() = this OToken, and holds BRIDGE_ADMIN_ROLE mint authority over it. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "failureDomainKeys": [
+          "protocol:usdai-obridge",
+          "contract:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDai token on Etherscan",
+            "url": "https://etherscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+          },
+          {
+            "label": "USDai documentation",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "USDai collateralized hub (native issuance)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed mintAuthority documents this Arbitrum deployment as the collateralized USDai hub (transparent proxy, implementation 0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4, admin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c owned by the DVNTimelock). Native collateral-backed issuance; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDai token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+          },
+          {
+            "label": "USDai documentation",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "sourceChain": "arbitrum",
+        "destinationChain": "base",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "USDai OBridge (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the same-address USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) holds BRIDGE_ADMIN_ROLE mint authority over this OToken per the reviewed mintAuthority role reads. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "failureDomainKeys": [
+          "protocol:usdai-obridge",
+          "contract:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDai token on Basescan",
+            "url": "https://basescan.org/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+          },
+          {
+            "label": "USDai documentation",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "sourceChain": "arbitrum",
+        "destinationChain": "plasma",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+        "protocol": "USDai OBridge (LayerZero V2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the same-address USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) holds BRIDGE_ADMIN_ROLE mint authority over this OToken per the reviewed mintAuthority role reads. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+        "failureDomainKeys": [
+          "protocol:usdai-obridge",
+          "contract:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDai token on Plasmascan",
+            "url": "https://plasmascan.to/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+          },
+          {
+            "label": "USDai documentation",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
+      }
+    ]
+  }
+}

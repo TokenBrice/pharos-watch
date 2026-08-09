@@ -1,0 +1,181 @@
+{
+  "id": "ausd-agora",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "AUSD uses rate-limited EVM minter and bridge-minter roles plus a Solana Token-2022 mint authority. Agora EOAs separately hold EVM role-administration, rate-limit management, and custom transparent-proxy upgrade authority; no multisig was found on these reviewed paths.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+      ],
+      "implementationAddresses": [
+        "0xc1e3c7d486d6a92fbe920232e439eec2ceb112da"
+      ],
+      "adminAddresses": [
+        "0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AUSD EVM role administrator and proxy-admin owner",
+      "observedBlock": 25712131,
+      "observedAt": "2026-08-08",
+      "sources": [
+        {
+          "label": "AUSD proxy and implementation",
+          "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
+        },
+        {
+          "label": "AUSD AgoraProxyAdmin",
+          "url": "https://etherscan.io/address/0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x65e28662b0dcd6d89d4652a61fb0896d4f58d7ff",
+        "label": "AUSD EVM MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The rolling mint-rate-limit getter reported zero currently available AUSD at the fresh observation block; the minter cannot change its own rate limit, while the separate rate-limit manager can restore or raise capacity.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712131,
+        "sources": [
+          {
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ],
+        "evidence": "At Ethereum block 25712131, getMinterRoleMembers() returned only this code-empty EOA and getAmountCanBeMinted() returned zero currently available capacity. Verified implementation source applies MintRateLimit logic to MINTER_ROLE and BRIDGE_MINTER_ROLE calls; the minter cannot raise its own limit."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9cab7ede13dc56652e44d2404e969c212f22689b",
+        "label": "AUSD EVM BRIDGE_MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The rolling mint-rate-limit getter reported zero currently available AUSD at the fresh observation block; the bridge adapter cannot change its own rate limit, while the separate rate-limit manager can restore or raise capacity.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712131,
+        "sources": [
+          {
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ],
+        "evidence": "At Ethereum block 25712131, getBridgeMinterRoleMembers() returned only this contract and getAmountCanBeMinted() returned zero currently available capacity. The adapter cannot raise its own limit; its separately reviewed owner and Agora rate-limit manager remain external control surfaces."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x72744c530b1b993bcbe779411bcab4e02091d6dc",
+        "label": "AUSD EVM RATE_LIMIT_MANAGER_ROLE holder",
+        "role": "cap-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712131,
+        "sources": [
+          {
+            "label": "AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25712131, getRateLimitManagerRoleMembers() still returned only this code-empty EOA. Verified implementation source permits RATE_LIMIT_MANAGER_ROLE to replace minter rate limits, so it can authorize greater mint capacity but cannot mint directly."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68898b77ebf7b55dca8a2e62d6fd74959a2930e2",
+        "label": "AUSD EVM role administrator and proxy-admin owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712131,
+        "sources": [
+          {
+            "label": "Etherscan — AUSD proxy",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ],
+        "evidence": "At Ethereum block 25712131, getAccessControlManagerRoleMembers() still returned only this EOA. AUSD.proxyAdminAddress() returned AgoraProxyAdmin 0xb8fcc66d613e5f54ee6a425ddbf4a2fdbe4dedee, whose owner() also returned this EOA. It can grant minter and rate-limit-manager roles and replace mint-critical implementation logic."
+      },
+      {
+        "chain": "solana",
+        "address": "EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP",
+        "label": "AUSD Solana Token-2022 mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 438046518,
+        "sources": [
+          {
+            "label": "Solscan AUSD token",
+            "url": "https://solscan.io/token/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
+          }
+        ],
+        "evidence": "At finalized Solana slot 438046518, getAccountInfo for the AUSD Token-2022 mint returned mintAuthority EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP, freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH, and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Agora docs",
+          "url": "https://docs.agora.finance/"
+        },
+        {
+          "label": "Agora monthly reserve attestations",
+          "url": "https://docs.agora.finance/developer/transparency"
+        },
+        {
+          "label": "OCC digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
+        },
+        {
+          "label": "Etherscan — AUSD proxy",
+          "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+        },
+        {
+          "label": "Agora GitHub",
+          "url": "https://github.com/agora-finance"
+        },
+        {
+          "label": "Agora Bermuda Limited Terms of Use (as of 2026-05-27)",
+          "url": "https://static.agora.finance/termsofuse.pdf"
+        },
+        {
+          "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        },
+        {
+          "label": "Bermuda Monetary Authority — Digital Asset Business Single Currency Pegged Stablecoins (SCPS) Guidance (issued for consultation 2024-05-10)",
+          "url": "https://cdn.bma.bm/documents/2024-12-06-16-16-15-DAB-Single-Currency-Pegged-Stablecoins-Consultation-Guidance.pdf"
+        },
+        {
+          "label": "Mondaq — Bermuda Monetary Authority Consultation Guidance on Digital Asset Business Single Currency Pegged Stablecoins (SCPS)",
+          "url": "https://www.mondaq.com/fin-tech/1498718/bermuda-monetary-authority-consultation-guidance-on-digital-asset-business-single-currency-pegged-stablecoins-scps"
+        }
+      ],
+      "evidence": "Fresh Ethereum RPC at block 25712131 still enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder; both mint routes reported zero currently available rolling capacity, while the manager can restore or raise limits. The custom proxy getter and AgoraProxyAdmin owner resolve to the same access-control EOA. At finalized Solana slot 438046518, the Token-2022 mint authority remained EARe2..., with the recorded freeze authority and permanent delegate. Agora's transparency index lists Grant Thornton monthly reserve attestations. The OCC registry lists Agora National Trust Bank only as a pending application, while Agora Bermuda Limited's terms state that it holds a BMA Digital Asset Business Act Class F license. The Grant Thornton May 2026 report examines reserve value against AUSD in circulation at two month-end observation dates, supporting periodic reconciliation. Under the existing Pharos evidence-scoped ruling, BMA stablecoin-specific guidance plus the Class F license supports prudential supervision. Issuer-controlled rate limits and mint roles remain economically unbounded because the manager and role administrator can restore, raise, or replace capacity.",
+      "reviewer": "Kimi FIAT-CTRL shard-01 (V9 anchor-coherence swarm); Pharos owner ruling D4",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

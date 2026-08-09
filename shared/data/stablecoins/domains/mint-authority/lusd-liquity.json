@@ -1,0 +1,77 @@
+{
+  "id": "lusd-liquity",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity v1 contracts; no privileged durable mint path is resolved.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Liquity v1 resources",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+        },
+        {
+          "label": "LUSD token contract",
+          "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x24179CD81c9e782A4096035f7eC97fB8B783e007",
+        "label": "Liquity v1 BorrowerOperations",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BorrowerOperations opens and adjusts Troves; LUSD issuance is bounded by user collateralization and Liquity protocol rules.",
+        "sources": [
+          {
+            "label": "Liquity v1 resources",
+            "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+          },
+          {
+            "label": "LUSD token contract",
+            "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
+          }
+        ],
+        "evidence": "Liquity v1 resources list BorrowerOperations at this address; minting occurs through Trove borrowing rather than privileged issuer operations."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xA39739EF8b0231dBFA0DcdA07d7e29FAabcf4bb2",
+        "label": "Liquity v1 TroveManager",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "TroveManager enforces Trove state, liquidations, redemptions, and debt accounting for the immutable LUSD system.",
+        "sources": [
+          {
+            "label": "Liquity v1 resources",
+            "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+          }
+        ],
+        "evidence": "Liquity v1 resources list TroveManager at this address as the core Trove accounting contract."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Liquity v1 resources",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+        }
+      ],
+      "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and immutable protocol contracts rather than an issuer minter.",
+      "reviewer": "SONG-1 mint-authority evidence review",
+      "reviewedAt": "2026-07-14"
+    }
+  }
+}

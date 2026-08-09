@@ -1,0 +1,695 @@
+{
+  "id": "usdp-parallel",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum TokenP verified implementation (current proxy target)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x83de446e5076877263828e9120b0ea8b0bc0d0e4"
+      },
+      {
+        "label": "Base TokenP verified implementation (current proxy target)",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0003f636a8d50d15ccb7ff243cafb0026f82ad9f"
+      },
+      {
+        "label": "Avalanche TokenP verified implementation (current proxy target)",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd561e7d133c78f8e28072a5a4b5fd7704331fb3b"
+      },
+      {
+        "label": "Parallelizer source repository and deployment inventory",
+        "url": "https://github.com/parallel-protocol/parallel-parallelizer"
+      },
+      {
+        "label": "Parallel USDp transparency inventory",
+        "url": "https://app.parallel.best/transparency"
+      }
+    ],
+    "evidence": "Write-time review 2026-07-31: the verified TokenP implementation used by the material Ethereum proxy 0x9b3a8f7cec208e247d97dee13313690977e24459 (implementation slot 0x83de446e5076877263828e9120b0ea8b0bc0d0e4, block 25648895) and Base proxy 0x76a9a0062ec6712b99b4f63bd2b4270185759dd5 (implementation 0x0003f636a8d50d15ccb7ff243cafb0026f82ad9f, block 49332031) exposes ordinary ERC-20 transfers but restricted burnSelf(uint256,address), which calls _burn on the supplied burner without an allowance check, plus restricted _authorizeUpgrade. The Avalanche proxy 0x9ee1963f05553ef838604dd39403be21cef26aa4 resolves to the verified TokenP implementation 0xd561e7d133c78f8e28072a5a4b5fd7704331fb3b at block 91634232; authority() reads return ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a (Ethereum), 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (Base), and 0xfd28f108e95f4d41daae9dbfff707d677985998e (Avalanche and HyperEVM at block 41884121). An authorized manager role can therefore destroy an arbitrary holder balance, establishing direct individual-holder seizure/blacklistability on the material deployments; the same manager-controlled upgrade path can change that logic. Parallel's own source inventory confirms the HyperEVM USDp deployment, while the current transparency inventory identifies the upstream frxUSD, sfrxUSD, USDe, sUSDe, sUSDS, USDS, USDC, and ygamiUSDC reserve dependencies whose issuer/custody controls remain an inherited backing exposure.",
+    "upstreamSuppressionRationale": "Upstream reserve issuers can freeze or restrict reserve assets and thereby impair USDp backing or redemption, but the direct TokenP seizure path is independently sufficient for the asset-level true verdict.",
+    "reviewer": "Codex T07 safety-v9 unknown-reduction w2 access review",
+    "reviewedAt": "2026-07-31"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Parallel USDp prices backing assets with Chainlink, RedStone, DIA fundamental feeds, exchange-rate feeds, and per-asset stale periods, without documented failover.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Parallel USDp is minted, burned, and redeemed through the Parallelizer Module against a DAO-whitelisted basket priced at oracle value. The reviewed implementation exposes no borrower-specific debt positions, collateral health checks, or liquidation engine for USDp holders; asset depeg handling uses adaptive mint/burn fees and proportional redemption instead of CDP liquidation branches.",
+      "sources": [
+        {
+          "label": "Parallel USDp implementation",
+          "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+        },
+        {
+          "label": "Parallelizer Module",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Parallel USDp implementation",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation.md"
+      },
+      {
+        "label": "Parallelizer module",
+        "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module.md"
+      },
+      {
+        "label": "Parallel RedStone fundamental oracle",
+        "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/redstone/fundamental.md"
+      },
+      {
+        "label": "Parallel DIA fundamental oracle",
+        "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/dia/fundamental.md"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Parallel USDp is issuer-native on every observed chain: each deployment's authority() returns a chain-local ParallelAccessManager mint-authority module operated by the Parallel DAO/team, so Pharos scores the reviewed routes as issuer-native burn/mint with no external bridge protocol carrying the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Parallel docs",
+        "url": "https://docs.parallel.best/"
+      },
+      {
+        "label": "Parallel transparency",
+        "url": "https://app.parallel.best/transparency"
+      },
+      {
+        "label": "Parallel app",
+        "url": "https://app.parallel.best/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9b3a8f7cec208e247d97dee13313690977e24459",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on ethereum: authority() of the USDp token returns the chain-local ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "base:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on base: authority() of the USDp token returns the chain-local ParallelAccessManager 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x76a9a0062ec6712b99b4f63bd2b4270185759dd5",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on arbitrum: authority() of the USDp token returns the chain-local ParallelAccessManager 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x90337e484b1cb02132fc150d3afa262147348545",
+        "destinationChain": "optimism",
+        "canonicalChain": "optimism",
+        "contractAddress": "0x90337e484b1cb02132fc150d3afa262147348545",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on optimism: authority() of the USDp token returns the chain-local ParallelAccessManager 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on avalanche: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182",
+        "destinationChain": "sonic",
+        "canonicalChain": "sonic",
+        "contractAddress": "0x08417cdb7f52a5021bb4eb6e0deaf3f295c3f182",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on sonic: authority() of the USDp token returns the chain-local ParallelAccessManager 0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78 (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "destinationChain": "sei",
+        "canonicalChain": "sei",
+        "contractAddress": "0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on sei: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "scroll",
+        "canonicalChain": "scroll",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on scroll: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "ink",
+        "canonicalChain": "ink",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on ink: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "worldchain",
+        "canonicalChain": "worldchain",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on worldchain: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x048c4e07d170eedee8772ca76aee1c4e2d133d5c",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on bsc: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "xlayer",
+        "canonicalChain": "xlayer",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on xlayer: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x1250304f66404cd153fa39388ddcdaec7e0f1707",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x1250304f66404cd153fa39388ddcdaec7e0f1707",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on polygon: authority() of the USDp token returns the chain-local ParallelAccessManager 0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811 (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "berachain",
+        "canonicalChain": "berachain",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on berachain: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "gnosis",
+        "canonicalChain": "gnosis",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on gnosis: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "destinationChain": "unichain",
+        "canonicalChain": "unichain",
+        "contractAddress": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on unichain: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "linea:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "linea",
+        "canonicalChain": "linea",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on linea: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "plume",
+        "canonicalChain": "plume",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on plume: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+        "destinationChain": "plasma",
+        "canonicalChain": "plasma",
+        "contractAddress": "0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on plasma: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "katana",
+        "canonicalChain": "katana",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on katana: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on fraxtal: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "hemi:0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "destinationChain": "hemi",
+        "canonicalChain": "hemi",
+        "contractAddress": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on hemi: authority() of the USDp token returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (verified on-chain 2026-07-20), the issuer's per-chain mint authority module; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "parallel-parallelizer deploy configs (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer/tree/main/deploy/config"
+          },
+          {
+            "label": "Parallel V3 docs",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0xbe65f0f410a72bec163dc65d46c83699e957d588",
+        "destinationChain": "hyperliquid",
+        "canonicalChain": "hyperliquid",
+        "protocol": "Parallel (chain-local ParallelAccessManager)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native USDp issuance on HyperEVM, measured by DefiLlama under the \"Hyperliquid L1\" supply label: authority() of the HyperEVM ERC20 0xBE65F0F410A72BeC163dC65d46c83699e957D588 (totalSupply 964,987 USDp on 2026-07-20, matching the captured label value) returns the chain-local ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e; no USDp token exists in the HyperCore spotMeta list, so the L1-labeled supply is this HyperEVM deployment.",
+        "sources": [
+          {
+            "label": "DefiLlama parallel-usdp adapter (hyperliquid chain key)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/parallel-usdp/index.ts"
+          },
+          {
+            "label": "USDp on HyperEVM (supply/authority probed 2026-07-20)",
+            "url": "https://purrsec.com/address/0xbe65f0f410a72bec163dc65d46c83699e957d588"
+          }
+        ],
+        "contractAddress": "0xbe65f0f410a72bec163dc65d46c83699e957d588",
+        "observedAt": "2026-07-20"
+      }
+    ]
+  }
+}

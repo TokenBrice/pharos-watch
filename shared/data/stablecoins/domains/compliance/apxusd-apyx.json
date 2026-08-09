@@ -1,0 +1,64 @@
+{
+  "id": "apxusd-apyx",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "apxUSD has stablecoin-like mint/redeem mechanics, but collateral consists of preferred equity in Digital Asset Treasury companies rather than cash or government securities, the Terms of Service explicitly disclaim that financial terminology carries its customary legal meaning, and US persons are blocked from the platform — all of which cloud GENIUS payment-stablecoin applicability."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Preference Capital (BVI) Ltd. / Apyx",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "apxUSD is stablecoin-adjacent but its preferred-share collateral (primarily STRC, Strategy preferred equity) and BVI domicile make GENIUS payment-stablecoin classification unresolved. The Terms of Service explicitly state the protocol is facilitated by Preference Capital (BVI) Ltd. under BVI law, describe apxUSD as a protocol-generated asset rather than a claim against any legal entity, and block US, EU, UK, and Canadian persons from accessing the platform. A depeg event occurred on 2026-06-04 with apxUSD trading at $0.90–$0.93 due to STRC preferred-share volatility.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Apyx apxUSD overview",
+        "url": "https://docs.apyx.fi/product-overview/apxusd-overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Apyx terms of service",
+        "url": "https://docs.apyx.fi/resources/terms-of-service",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Apyx transparency",
+        "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Apyx product, terms, and transparency pages",
+        "Apyx Terms of Service (confirmed BVI jurisdiction, US persons blocked, no regulatory licensing disclosed)",
+        "ValueTheMarkets article on apxUSD challenges (June 2026) — no regulatory filings or GENIUS Act references",
+        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases — no results",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception found. Apyx ToS confirms BVI domicile and blocks US persons; no GENIUS Act reference in any issuer document.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

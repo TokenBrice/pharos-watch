@@ -1,0 +1,27 @@
+{
+  "id": "usdh-native-markets",
+  "reserves": [
+    {
+      "name": "Tokenized treasuries (Superstate USTB)",
+      "pct": 64.68,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "Government money market funds (CUSIP 09248U551)",
+      "pct": 21.7,
+      "risk": "very-low"
+    },
+    {
+      "name": "USDC (asset-backed token)",
+      "pct": 12.56,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "Cash and cash equivalents (US regulated banks)",
+      "pct": 1.06,
+      "risk": "very-low"
+    }
+  ]
+}

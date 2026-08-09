@@ -1,0 +1,196 @@
+{
+  "id": "usp-pikudao",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "USP is an upgradeable issuance token with owner-managed allowedMinters. The token owner is a confirmed EOA (0x3D7DBEC2…). The only active minter is the Piku Funding Manager contract and cap = max uint256. The token ProxyAdmin is controlled by a 2/3 Safe; the Funding Manager and Oracle workflow modules resolve through a separate root InverterBeacon controlled by a 1/1 Safe.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
+        "0x7e0305B212dF3FB56366251C054c07748Bf9a797",
+        "0x2F76563DD0D491EB6C128f846cFF2a98047c2FB3",
+        "0x5A2d08b194E1764b0Ff271C691B6a46fA10F6Fd2",
+        "0x433471901bA1A8BDE764E8421790C7D9bAB33552",
+        "0x0B7c73e778d04533286752BEb7d4BA42AEa2f57D"
+      ],
+      "implementationAddresses": [
+        "0x9e40b6be5affc984f36cf118c778f0a83be20370",
+        "0xD0C84C4F944e946124031b573A36BFce81D60cf1",
+        "0x04Fe7f1cEd562bD49CEEF586a34da912a07aB8E4",
+        "0x8CbEEfE71Cf901056E3d3a2dc625535a069Fd11b",
+        "0x62c49b6138D9926FCf86Bb15B66193FCc9004470",
+        "0xED73393c7D20438735865E9e21352c5A21f5233b"
+      ],
+      "adminAddresses": [
+        "0x45540a475a66674566fa9a3c5d4d7e6214b739de",
+        "0x0B7c73e778d04533286752BEb7d4BA42AEa2f57D",
+        "0x945349AE62630bFDa197a4601883F4F7CBB07Fb5"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USP workflow root-beacon owner Safe (1/1)",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25534495,
+      "sources": [
+        {
+          "label": "Piku USP workflow contracts",
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+        },
+        {
+          "label": "USP token implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+        },
+        {
+          "label": "InverterBeacon implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcbe9560f6584f859330275d49014624fe5341bfd?fields=abi,metadata"
+        },
+        {
+          "label": "Ethereum PublicNode JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x7e0305B212dF3FB56366251C054c07748Bf9a797",
+        "label": "Piku Funding Manager",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Piku mint/redeem docs",
+            "url": "https://docs.piku.co/piku/piku/minting-and-redemption/mint-and-redeem-usp-at-the-contract-level"
+          },
+          {
+            "label": "USP implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+          }
+        ],
+        "evidence": "At Ethereum block 25294782: allowedMinters(0x7e0305B212dF3FB56366251C054c07748Bf9a797) = true. Checked owner EOA and ProxyAdmin Safe — neither is in allowedMinters. Zero token logs found (no additional SetMinter events). Only active direct minter confirmed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a",
+        "label": "USP token owner EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USP implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+          }
+        ],
+        "evidence": "At Ethereum block 25294782: USP.owner() = 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a (confirmed EOA in prior reads). cap() = max uint256 (effectively uncapped). ProxyAdmin 0x45540a475a66674566fa9a3c5d4d7e6214b739de owner = Safe 0xc9996a03d7979003b65ae76c1154792bc24bce43 (3 owners, threshold 2, GnosisSafe v1.4.1, no modules)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc9996a03d7979003B65aE76c1154792bc24bcE43",
+        "label": "USP token ProxyAdmin Safe (2/3)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x5Baff01540B88d3215BB4D2f54c0A5A7eff6a53f",
+            "0xEc7eA917C8aE8a29Ff980256575b4Ccf17D66B5D",
+            "0x7294fF299a3edc31AE2C71100f72b9965f75bc56"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "observedBlock": 25534495,
+          "observedAt": "2026-07-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 25534495,
+        "sources": [
+          {
+            "label": "USP token implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25534495, the USP token EIP-1967 implementation is 0x9e40b6be5affc984f36cf118c778f0a83be20370 and its admin is ProxyAdmin 0x45540a475a66674566fa9a3c5d4d7e6214b739de. ProxyAdmin.owner() is Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43; getThreshold() = 2, getOwners() returns three signers, VERSION() = 1.4.1, and getModulesPaginated() returns an empty list. A ProxyAdmin upgrade can replace the token implementation and alter mint logic."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x945349AE62630bFDa197a4601883F4F7CBB07Fb5",
+        "label": "USP workflow root-beacon owner Safe (1/1)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x922079212CeF86E19eb710C963336628eCD2EB6e"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "observedBlock": 25534495,
+          "observedAt": "2026-07-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 25534495,
+        "sources": [
+          {
+            "label": "InverterBeacon implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xcbe9560f6584f859330275d49014624fe5341bfd?fields=abi,metadata"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25534495, the Funding Manager, Authorizer, Payment Processor, and Oracle Module proxy bytecode each resolves through a distinct module beacon whose owner() is 0x0B7c73e778d04533286752BEb7d4BA42AEa2f57D. That owner proxy delegates through root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, whose owner() is this Safe and whose verified implementation exposes upgradeTo. The Safe has one signer and threshold one; replacing the root implementation can change the owner behavior that governs the mint and oracle workflow beacons."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Piku docs",
+          "url": "https://docs.piku.co/piku"
+        },
+        {
+          "label": "USP implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x9e40b6be5affc984f36cf118c778f0a83be20370?fields=abi,metadata"
+        },
+        {
+          "label": "Piku USP workflow contracts",
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+        },
+        {
+          "label": "InverterBeacon implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xcbe9560f6584f859330275d49014624fe5341bfd?fields=abi,metadata"
+        },
+        {
+          "label": "Ethereum PublicNode JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "At Ethereum block 25534495: USP.owner() remains EOA 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a, Funding Manager 0x7e0305B212dF3FB56366251C054c07748Bf9a797 remains an allowed minter, and cap() remains max uint256. The token proxy is controlled through ProxyAdmin Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43 (2/3). The mint and manual-price workflow module beacons are governed through an owner proxy that resolves via root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, owned by Safe 0x945349AE62630bFDa197a4601883F4F7CBB07Fb5 (1/1). All currently observed mint-critical upgrade paths are recorded.",
+      "reviewer": "TERRA-ULTRA control review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

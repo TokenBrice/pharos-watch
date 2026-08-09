@@ -1,0 +1,110 @@
+{
+  "id": "usds-sky",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDS ERC-20 supply is minted through USDS_JOIN against Vat.dai balances, while Sky governance/Pause Proxy remains authorized to change system modules, parameters, and USDS permissions.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
+      ],
+      "implementationAddresses": [
+        "0x1923DfeE706A8E78157416C29cBCCFDe7cdF4102"
+      ],
+      "adminAddresses": [
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Sky Pause Proxy governance executor",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530195,
+      "sources": [
+        {
+          "label": "Sky USDS UUPS implementation source",
+          "url": "https://github.com/sky-ecosystem/usds/blob/d65551dbc11cfe1afcc4718ab790663b99d766af/src/Usds.sol"
+        },
+        {
+          "label": "USDS Ethereum verified proxy",
+          "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+        "label": "USDS_JOIN token adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mints ERC-20 USDS only against existing Vat.dai balance; not an unrestricted off-protocol minter.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Sky USDS contracts",
+            "url": "https://github.com/sky-ecosystem/usds"
+          }
+        ],
+        "evidence": "Sky Chainlog lists USDS_JOIN at this address. USDS.wards(USDS_JOIN) returned 1 at Ethereum block 25294731. eth_getCode confirms contract bytecode present."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "label": "Sky Pause Proxy governance executor",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Sky docs",
+            "url": "https://docs.sky.money/"
+          }
+        ],
+        "evidence": "USDS.wards(MCD_PAUSE_PROXY) returned 1 at Ethereum block 25294731. MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed). eth_getCode confirms contract bytecode on both addresses."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
+          "label": "Sky USDS contracts",
+          "url": "https://github.com/sky-ecosystem/usds"
+        },
+        {
+          "label": "Sky docs",
+          "url": "https://docs.sky.money/"
+        },
+        {
+          "label": "USDS token Etherscan",
+          "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f#readContract"
+        }
+      ],
+      "evidence": "At Ethereum block 25294731: USDS.wards(USDS_JOIN=0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB)=1; USDS.wards(MCD_PAUSE_PROXY=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1; MCD_PAUSE.delay()=172800 (storage slot 4). Both controls are contracts with bytecode present. USDS_JOIN mints only against Vat.dai balance (cap-limited by Vat debt ceilings); Pause Proxy can authorize new modules with 2-day delay.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

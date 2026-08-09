@@ -1,0 +1,157 @@
+{
+  "id": "eusd-telcoin",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "eUSD is issued by Telcoin Digital Asset Bank under a Nebraska Digital Asset Depository charter. The token is a BeaconProxy (Stablecoin contract); MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a Gnosis Safe 1.4.1 (6/3 multisig, no modules/guard); beacon upgrades controlled by a separate Safe 1.4.1 (7/2).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9c745cdf09cd2627290ae2db6421da451d1c8c1b",
+        "label": "Telcoin eUSD MINTER_ROLE + DEFAULT_ADMIN Safe (6/3)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25295081,
+        "safe": {
+          "owners": [
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538",
+            "0xb315918fbe976e5493e65f3c64451311784b1193"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 25295081,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295081: hasRole(MINTER_ROLE, 0x9c745cdf09cd2627290ae2db6421da451d1c8c1b) = true; hasRole(DEFAULT_ADMIN_ROLE, same) = true. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe 1.4.1 L2); threshold() = 3; 6 owners; no modules; no guard. RoleGranted events scanned via Blockscout (block 24035377 initial grants); prior EOA minter 0x6bc27021 revoked at block 25197170.",
+        "sources": [
+          {
+            "label": "eUSD contract on Etherscan",
+            "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x238fb46093128f4d8d6d21cbfd448455478d9b87",
+        "label": "Beacon upgrade admin Safe (7/2)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25295003,
+        "safe": {
+          "owners": [
+            "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
+            "0xcecc70bd817e651465d8a99586e99da78e0a68fe",
+            "0xb35ad51ef0469fc030f64a6fba24398304d2ec9b",
+            "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
+            "0x7423d570ab3782ae7a7ec1900dbdc74600e76c39",
+            "0xfecee4ab07127fff4ee4a3ba61df5fd7b906f84c",
+            "0xf5b3944629f9303fa94670b2a6611ee1b11cd538"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 25295003,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295003: eUSD at 0x14913815 is a BeaconProxy pointing to beacon 0xe7a6d045ddd40087e027139351fdd9abc557f236; beacon.implementation() = 0x7b28d7ba50280cc3b7649866843e49d554af3580 (Stablecoin impl); beacon.owner() = 0x238fb46093128f4d8d6d21cbfd448455478d9b87. masterCopy(0x238fb46) = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe 1.4.1); threshold() = 2; 7 owners; no modules (getModules = 0); guard slot = 0x0.",
+        "sources": [
+          {
+            "label": "eUSD contract on Etherscan",
+            "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          }
+        ]
+      },
+      {
+        "chain": "solana",
+        "address": "DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG",
+        "label": "Solana SPL mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-16",
+        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana — no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
+        "sources": [
+          {
+            "label": "Solana Explorer eUSD mint",
+            "url": "https://explorer.solana.com/address/HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L"
+          }
+        ]
+      }
+    ],
+    "upgradeability": {
+      "model": "beacon",
+      "proxyAddresses": [
+        "0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "implementationAddresses": [
+        "0x7b28d7ba50280cc3b7649866843e49d554af3580"
+      ],
+      "adminAddresses": [
+        "0xe7a6d045ddd40087e027139351fdd9abc557f236",
+        "0x238fb46093128f4d8d6d21cbfd448455478d9b87"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Beacon upgrade admin Safe (7/2)",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25295003,
+      "sources": [
+        {
+          "label": "eUSD Ethereum BeaconProxy",
+          "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949#code"
+        },
+        {
+          "label": "eUSD UpgradeableBeacon",
+          "url": "https://etherscan.io/address/0xe7a6d045ddd40087e027139351fdd9abc557f236#code"
+        }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "Verified at Ethereum block 25295081. eUSD on Ethereum/Base is a BeaconProxy (Stablecoin contract impl); beacon 0xe7a6d045 owned by Safe 1.4.1 (7/2, no modules/guard). MINTER_ROLE + DEFAULT_ADMIN held by Safe 1.4.1 (6/3, no modules/guard); previous EOA minter revoked block 25197170. Solana mintAuthority DyJseFw… is a System Program account (non-multisig EOA-equivalent). EVM controls fully confirmed on-chain; Solana remains issuer-backend with non-multisig authority. Telcoin Digital Asset Bank holds Nebraska Digital Asset Depository Institution Charter No. 001 granted by the Nebraska Department of Banking and Finance on 2025-11-12 (a granted state bank charter, not a pending application), so the issuer is prudentially supervised. But no dated independent third-party reserve attestation for eUSD was found: Telcoin states monthly reports will be published, and the eUSD bank page names no auditor and notes deposits are not FDIC-insured, so reconciliation is unknown, which caps eUSD at critical despite the charter.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
+      "sources": [
+        {
+          "label": "Telcoin Digital Asset Bank",
+          "url": "https://bank.telco.in/"
+        },
+        {
+          "label": "eUSD contract on Etherscan",
+          "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank charter approval (Nebraska DBF, 2025-11-12)",
+          "url": "https://www.businesswire.com/news/home/20251112119122/en/Telcoin-Makes-U.S.-Banking-History-with-Approval-to-Launch-the-First-Regulated-Digital-Asset-Bank"
+        },
+        {
+          "label": "Telcoin eUSD bank page (no named auditor, not FDIC-insured)",
+          "url": "https://bank.telco.in/eUSD"
+        }
+      ]
+    }
+  }
+}

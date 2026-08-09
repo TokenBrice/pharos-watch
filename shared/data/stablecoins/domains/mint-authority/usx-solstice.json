@@ -1,0 +1,114 @@
+{
+  "id": "usx-solstice",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USX is an institutional/KYC Solana token with live SPL mint and freeze authority held by a Solstice program-owned account (Ze3CQhTMi6...), and the program upgrade authority is a Solstice-operated EOA (BzMuMbtah9...). All mint-capable controls confirmed on-chain.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4",
+        "label": "USX SPL mint and freeze authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "USX Solscan token",
+            "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+          },
+          {
+            "label": "Solstice USX program",
+            "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          }
+        ],
+        "evidence": "The USX Solana mint had this address as both mintAuthority and freezeAuthority at finalized slot 421873034; the account is owned by the Solstice USX program and is not executable."
+      },
+      {
+        "chain": "solana",
+        "address": "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb",
+        "label": "Solstice USX program upgrade authority (EOA)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Solstice USX program",
+            "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 425778559, getAccountInfo for BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 8097020. This is a funded EOA (Solstice backend/dev wallet, not a multisig or program). It holds the BPF upgrade authority for program USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Accountable USX reserve-attestation dashboard",
+          "url": "https://attestation.solstice.finance/"
+        },
+        {
+          "label": "Accountable USX reserve-versus-supply feed",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        },
+        {
+          "label": "Solstice USX",
+          "url": "https://solstice.finance/usx"
+        },
+        {
+          "label": "USX Solscan token",
+          "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+        },
+        {
+          "label": "Solstice USX program",
+          "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ],
+      "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned — consistent with centralized-dependent permissioned-minter model.",
+      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable"
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Solstice USX program upgrade authority (EOA)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 425778559,
+      "sources": [
+        {
+          "label": "Solstice USX program",
+          "url": "https://solscan.io/account/USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solstice USX",
+          "url": "https://solstice.finance/usx"
+        },
+        {
+          "label": "USX Solscan token",
+          "url": "https://solscan.io/token/6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG"
+        }
+      ]
+    }
+  }
+}

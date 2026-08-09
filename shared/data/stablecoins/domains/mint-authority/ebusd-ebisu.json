@@ -1,0 +1,127 @@
+{
+  "id": "ebusd-ebisu",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "ebUSD is minted from Liquity-v2-style CDP branches when users open troves. The BoldToken is an OZ ERC1967Proxy; after setCollateralRegistry() the BoldToken owner was renounced (owner()=0x0). Upgrades are governed by a Gnosis Safe 2/3 (3 EOA owners) via EbisuUpgradeableV2 with a mandatory 7-day on-chain timelock. No pending upgrade exists. CCIP token pools are locked. CDP branches (BorrowerOperations) are the only mint path and their addresses are immutable in the CollateralRegistry.",
+    "controls": [
+      {
+        "label": "Ebisu CDP BorrowerOperations contracts (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Mint bounded per branch by collateral ratio and Liquity-v2-style redemption/liquidation; users set their own interest rate. Mint is gated to registered BorrowerOperations addresses set at initialization.",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295272: BoldToken proxy (0x09fd37d9...) at EIP-1967 impl 0xa5ae6f43... Source confirms: mint() restricted to BorrowerOperations, ActivePool, or CCIP pools via _requireCallerIsBOorAPorCCIP(). BorrowerOperations addresses are set via CollateralRegistry (0x5e159fac...) at initialization; owner renounced in setCollateralRegistry() call. Follow-up 2026-07-20: Ebisu branch BorrowerOperations contracts verified with live bytecode — Ethereum branches 0x026cf854..., 0x116d3842..., 0x66283665... and Plasma branches 0x061010c0..., 0x2291cbed..., 0x3b338fe0..., 0x3f97c24a..., 0x458d3c3b... (deployment addresses from the Ebisu app configuration; CollateralRegistry 0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7 shared).",
+        "sources": [
+          {
+            "label": "ebUSD BoldToken impl on Etherscan",
+            "url": "https://etherscan.io/address/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x026cf854f1e0adc9fe96f1433436e7bbd0a95af0",
+        "failureDomainKeys": [
+          "contract:ethereum:0x026cf854f1e0adc9fe96f1433436e7bbd0a95af0",
+          "contract:ethereum:0x116d3842a60e9a08883c713749ad0129c8d78862",
+          "contract:ethereum:0x662836655a7af921cd65e39a84c5bc2da431f0e5",
+          "contract:plasma:0x061010c075dd813663a7c1f9e3f7f6dcaa7c8ed1",
+          "contract:plasma:0x2291cbed2606635691b1deef4fd0e7d788b5b461",
+          "contract:plasma:0x3b338fe07f8f550468da4722cbca6a30905287c6",
+          "contract:plasma:0x3f97c24ab20917548d7adde7daef9a4cfa235de7",
+          "contract:plasma:0x458d3c3bffbdb5ee343f71a9cc64ec144b14e36e"
+        ]
+      },
+      {
+        "label": "Ebisu Gnosis Safe (EbisuUpgradeable admin, 7-day timelock)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "safe": {
+          "owners": [
+            "0x016ea729ca9a50d29d1058aaa6d975f7c905e82e",
+            "0xb18c27b28bca47eb4492e02630c52654c71cd76b",
+            "0x9a89f2595e6c8a63f1870861f8a5113523b4bf99"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295272,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295272: CollateralRegistry (0x5e159fac..., ERC1967Proxy) ebisuAdmin()=0x25b85831da750c912ab7f0cf53b9d82f7894ed07, a Gnosis Safe 1.3.0. getOwners()=3 EOAs, threshold=2, getModulesPaginated() returns empty array, guard slot=0x0, masterCopy slot0=0xd9db270c... (Safe 1.3.0), fallbackHandler=0xf48f2b2d.... EbisuUpgradeableV2 enforces 7-day UPGRADE_TIMELOCK on-chain. BoldToken slot 354-355=0x0 (pendingImplementation=0x0, upgradeProposalTime=0 — no pending upgrade). BoldToken slot 359=0x1 (ccipTokenPoolsLocked=true). BoldToken owner (slot 101)=0x0 (renounced).",
+        "sources": [
+          {
+            "label": "Ebisu CollateralRegistry on Etherscan",
+            "url": "https://etherscan.io/address/0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7"
+          },
+          {
+            "label": "Ebisu ebisuAdmin Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x25b85831da750c912ab7f0cf53b9d82f7894ed07",
+        "failureDomainKeys": [
+          "safe:ethereum:0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295272: BoldToken (ebUSD) is an ERC1967Proxy (0x09fd37d9...) with impl BoldToken (0xa5ae6f43...). Source-confirmed: setCollateralRegistry() renounces ownership (owner()=0x0 at slot 101). Upgrade admin is Gnosis Safe 2/3 (0x25b85831..., 3 EOA owners, no modules, Safe 1.3.0) gated by 7-day on-chain UPGRADE_TIMELOCK in EbisuUpgradeableV2. No pending upgrade (pendingImplementation=0x0). ccipTokenPoolsLocked=true. Mint is CDP-only via BorrowerOperations addresses set at init and unreachable without an upgrade through the 7-day timelock.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Liquity Friendly Fork Program",
+          "url": "https://docs.liquity.org/v2-documentation/friendly-fork-program"
+        },
+        {
+          "label": "Ebisu website",
+          "url": "https://ebisu.money/"
+        },
+        {
+          "label": "ebUSD BoldToken impl on Etherscan",
+          "url": "https://etherscan.io/address/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "delaySec": 604800,
+      "controlRef": "Ebisu Gnosis Safe (EbisuUpgradeable admin, 7-day timelock)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295272,
+      "sources": [
+        {
+          "label": "Ebisu CollateralRegistry on Etherscan",
+          "url": "https://etherscan.io/address/0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7"
+        },
+        {
+          "label": "Ebisu ebisuAdmin Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x25b85831da750c912ab7f0cf53b9d82f7894ed07"
+        },
+        {
+          "label": "Liquity Friendly Fork Program",
+          "url": "https://docs.liquity.org/v2-documentation/friendly-fork-program"
+        },
+        {
+          "label": "Ebisu website",
+          "url": "https://ebisu.money/"
+        },
+        {
+          "label": "ebUSD BoldToken impl on Etherscan",
+          "url": "https://etherscan.io/address/0xa5ae6f430e89b2c571ebf091a20a3d74a28cb726"
+        }
+      ]
+    }
+  }
+}

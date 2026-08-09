@@ -1,0 +1,264 @@
+{
+  "id": "axcnh-anchorx",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x2925ac3be7d585874b88ea51ed50add376ad8239",
+        "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+      ],
+      "implementationAddresses": [
+        "0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835",
+        "0x47a18acde0dacfea8fddb776d2b1dd3567ce2138"
+      ],
+      "adminAddresses": [
+        "0xe1c2b27082e89d889f3c5cf55ce91a7933001a54",
+        "0xea4ab98ba1f1885b87592e38bf868a2a952ff1f0"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AxCNH Ethereum proxy-admin multisig",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25539995,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AxCNH proxy",
+          "url": "https://eth.blockscout.com/address/0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        },
+        {
+          "label": "Ethereum Blockscout AxCNH FiatTokenV2 implementation",
+          "url": "https://eth.blockscout.com/address/0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835"
+        },
+        {
+          "label": "Conflux AxCNH proxy",
+          "url": "https://evm.confluxscan.org/address/0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Conflux eSpace RPC",
+          "url": "https://evm.confluxrpc.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x5246b59a9e9473e680ea52ecda4a8dcff3fbfc97",
+        "label": "AxCNH Ethereum masterMinter multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539995,
+        "evidence": "At Ethereum block 25539995, masterMinter() returned this 3-of-4 MultiSigWallet, getOwners() returned four owners, required() returned 3, isMinter(masterMinter) was false, and minterAllowance(masterMinter) was zero. The verified FiatTokenV2 implementation gates configureMinter(minter, allowance) only to masterMinter; an exact-block eth_call from this multisig to configure a test minter returned true. It can therefore create or raise bounded minter capacity.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AxCNH masterMinter",
+            "url": "https://eth.blockscout.com/address/0x5246b59a9e9473e680ea52ecda4a8dcff3fbfc97"
+          },
+          {
+            "label": "Ethereum Blockscout AxCNH FiatTokenV2 implementation",
+            "url": "https://eth.blockscout.com/address/0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf9f304225756edfe9a05d7ea235b0b181380edd5",
+        "label": "AxCNH Ethereum token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539995,
+        "evidence": "At Ethereum block 25539995, owner() returned this EOA and eth_getCode returned no bytecode. The verified FiatTokenV2 implementation gates updateMasterMinter() only to owner; an exact-block eth_call from this EOA to set a test masterMinter succeeded. The EOA was technically a minter but had zero allowance, so its material authority is masterMinter replacement rather than immediate direct minting.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AxCNH FiatTokenV2 implementation",
+            "url": "https://eth.blockscout.com/address/0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x674241ca030bf7487d46d4fbf595c64a256e2c85",
+        "label": "AxCNH Ethereum operational minter (exhausted allowance)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The historical 1,000,000 AxCNH configured allowance was fully consumed; the active allowance was zero at the observed later snapshot.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539995,
+        "evidence": "The AxCNH MinterConfigured event ledger records a 1,000,000 AxCNH allowance for this EOA. At Ethereum block 25539995, minterAllowance() was zero, so it had no remaining direct mint capacity; the masterMinter multisig can configure a new allowance.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AxCNH FiatTokenV2 implementation",
+            "url": "https://eth.blockscout.com/address/0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum Blockscout AxCNH MinterConfigured event ledger",
+            "url": "https://eth.blockscout.com/address/0x2925ac3be7d585874b88ea51ed50add376ad8239/logs"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe1c2b27082e89d889f3c5cf55ce91a7933001a54",
+        "label": "AxCNH Ethereum proxy-admin multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539995,
+        "evidence": "At Ethereum block 25539995, admin() returned this 3-of-4 MultiSigWallet and implementation() returned 0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835. getOwners() returned four owners and required() returned 3. An eth_call from the multisig to upgradeTo(currentImplementation) succeeded, confirming its mint-logic replacement path.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AxCNH proxy",
+            "url": "https://eth.blockscout.com/address/0x2925ac3be7d585874b88ea51ed50add376ad8239"
+          },
+          {
+            "label": "Ethereum Blockscout AxCNH proxy-admin multisig",
+            "url": "https://eth.blockscout.com/address/0xe1c2b27082e89d889f3c5cf55ce91a7933001a54"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "conflux",
+        "address": "0x8b26530b369f7eb499597bbde00ed8a4a77d74d0",
+        "label": "AxCNH Conflux masterMinter multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 152153398,
+        "evidence": "At Conflux eSpace block 152153398, masterMinter() returned this 3-of-4 MultiSigWallet, getOwners() returned four owners, required() returned 3, and it was not itself an active minter. An exact-block eth_call from this multisig to configure a test minter returned true, confirming it can establish or raise minter capacity.",
+        "sources": [
+          {
+            "label": "Conflux AxCNH proxy",
+            "url": "https://evm.confluxscan.org/address/0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+          },
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
+      },
+      {
+        "chain": "conflux",
+        "address": "0xf80b9c06a601351612b3324d8cd0f57cf7952e1b",
+        "label": "AxCNH Conflux token owner multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 152153398,
+        "evidence": "At Conflux eSpace block 152153398, owner() returned this 3-of-4 MultiSigWallet, getOwners() returned four owners, and required() returned 3. An exact-block eth_call from this multisig to updateMasterMinter(testAddress) succeeded, confirming it can replace the controller that configures minters.",
+        "sources": [
+          {
+            "label": "Conflux AxCNH proxy",
+            "url": "https://evm.confluxscan.org/address/0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+          },
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
+      },
+      {
+        "chain": "conflux",
+        "address": "0xea4ab98ba1f1885b87592e38bf868a2a952ff1f0",
+        "label": "AxCNH Conflux proxy-admin multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "not-applicable",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 152153398,
+        "evidence": "At Conflux eSpace block 152153398, admin() returned this 3-of-4 MultiSigWallet and implementation() returned 0x47a18acde0dacfea8fddb776d2b1dd3567ce2138. getOwners() returned four owners and required() returned 3. An eth_call from the multisig to upgradeTo(currentImplementation) succeeded, confirming the on-chain mint-logic replacement path.",
+        "sources": [
+          {
+            "label": "Conflux AxCNH proxy",
+            "url": "https://evm.confluxscan.org/address/0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+          },
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "AnchorX describes issuer-operated 1:1 AxCNH issuance and redemption against CNH reserves. At Ethereum block 25539995 and Conflux eSpace block 152153398, each FiatTokenV2 deployment had a 3-of-4 masterMinter that could configure minters, an owner that could replace the masterMinter, and a separate 3-of-4 proxy admin that could replace the implementation. Ethereum's MinterConfigured event ledger records operational-minter EOA 0x674241ca030bf7487d46d4fbf595c64a256e2c85 with a 1,000,000 AxCNH allowance, but it was fully consumed and had zero remaining allowance at the observed snapshot. The controlling multisigs are therefore the active mint and upgrade surfaces.",
+      "reviewer": "Codex Safety Score V9 deployment-control review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AxCNH contract",
+          "url": "https://eth.blockscout.com/address/0x2925ac3be7d585874b88ea51ed50add376ad8239"
+        },
+        {
+          "label": "Conflux EVM Scan AxCNH contract",
+          "url": "https://evm.confluxscan.org/address/0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+        },
+        {
+          "label": "Ethereum Blockscout AxCNH FiatTokenV2 implementation",
+          "url": "https://eth.blockscout.com/address/0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Conflux eSpace RPC",
+          "url": "https://evm.confluxrpc.com"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "id": "usdm-moneta",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves; the mint is enforced on-chain by a PlutusV2 policy gated on a one-shot state-thread token whose counter datum reconciles cumulative supply, but the validator that guards the controlling token has not been decompiled, so the terminal signer set remains unattributed.",
+    "controls": [
+      {
+        "label": "Moneta / NBX issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "Moneta (USA) and NBX (EEA) operate the centralized 1:1 mint/redeem for USDM against segregated reserves; a Charli3 oracle attests reserve backing on-chain before each mint, but issuance remains issuer-controlled with no permissionless route.",
+        "sources": [
+          {
+            "label": "Charli3 USDM reserves feed",
+            "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
+          }
+        ]
+      },
+      {
+        "chain": "cardano",
+        "address": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad",
+        "label": "USDM Cardano minting policy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting is validated by an on-chain PlutusV2 policy script parameterized by a one-shot state-thread token, so it is not an unconditional key-signed mint; the numeric bound enforced inside the compiled validator was not decompiled and no ceiling is claimed.",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Koios script_info for USDM minting policy c48cbb3d…47ad",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          },
+          {
+            "label": "Koios policy_asset_info for USDM minting policy",
+            "url": "https://api.koios.rest/api/v1/policy_asset_info?_asset_policy=c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad"
+          },
+          {
+            "label": "moneta.global",
+            "url": "https://moneta.global/"
+          }
+        ],
+        "evidence": "Correction to the 2026-07-20 first-pass finding: the earlier review queried Koios with the 72-character Cardano asset unit as if it were a script hash, which cannot match. Querying the 56-character policy id c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad on 2026-07-20 returns a PlutusV2 script of 392 bytes created in tx c6b0831fa16e101ae18de65c2a0c8825cebffe17ccfe38385e711c900f62d261, and policy_asset_info returns the CIP-68 pair 000643b05553444d (reference NFT, supply 1) and 0014df105553444d (fungible USDM, supply 9,552,424,930,000 at 6 decimals). The compiled policy carries the appended parameter constr0(bytes e319d8e6629ff7991c8ae4f8aec2e0f10463ebdf29b57d26d34914f6, \"USDM_COUNT\"), so minting is gated on a one-shot state-thread token rather than on a bare signing key. The mint authority is therefore a script, not an EOA or multisig; which party may satisfy that script is recorded on the separate control-token validator entry."
+      },
+      {
+        "chain": "cardano",
+        "address": "35dbed959db9e534c326d86695a000b71ff89b0e0437f27304e35af4",
+        "label": "USDM_COUNT state-thread validator",
+        "role": "unknown",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Holds the single USDM_COUNT token whose inline datum carries the cumulative minted supply; the validator is parameterized by a USDM_CONTROL token and a USDM_ORACLE token, but its spending conditions were not decompiled.",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Koios address_utxos for addr1wy6ahmv…344aq9tmcsd (USDM_COUNT UTxO)",
+            "url": "https://api.koios.rest/api/v1/address_utxos"
+          },
+          {
+            "label": "Koios script_info for validator 35dbed95…5af4",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          }
+        ],
+        "evidence": "Read 2026-07-20. The USDM_COUNT one-shot token (policy e319d8e6629ff7991c8ae4f8aec2e0f10463ebdf29b57d26d34914f6, supply 1) sits at script address addr1wy6ahmv4nku72dxrymvxd9dqqzm3l7ympczr0unnqn344aq9tmcsd, which bech32-decodes to header 0x71 and script hash 35dbed959db9e534c326d86695a000b71ff89b0e0437f27304e35af4 (PlutusV2, 5,148 bytes). Its inline datum d879821b000008b018e50ad0d87980 decodes to constr0(int 9552424930000, constr0()), exactly matching the on-chain USDM fungible supply — the counter is reconciled on-chain per mint. The validator's appended parameters name the USDM_CONTROL token under the same one-shot policy and a USDM_ORACLE token under policy 59607e564f796b426e13e2add2b1ceca5274509fabef6a10d2367fe9, corroborating that the Charli3 reserve feed is enforced as a mint precondition on-chain rather than only by issuer policy. The single USDM_CONTROL token is itself locked at script address addr1w94newr03thfkht4fwn6luava2vx99lgx02j4u9spmlr03c266alt (script hash 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7, PlutusV2, 3,649 bytes) with no inline datum, so no signer set, threshold, or recovery path is attributable without decompiling that validator."
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-28",
+      "observedBlock": 13733605,
+      "sources": [
+        {
+          "label": "Koios script_info — USDM minting policy PlutusV2 c48cbb3d…47ad",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Aiken glossary — PolicyId is the minting-policy script hash",
+          "url": "https://aiken-lang.org/glossary"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "Re-reviewed 2026-07-20. Moneta's materials describe centrally operated, KYC-gated 1:1 USDM issuance by Moneta/NBX against stated segregated reserves; the live Charli3 feed is described as a reserve check before mint, supporting continuous reserve gating. CoinGecko identifies the Cardano policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10. Koios script_info, native_script_list, asset_info, and asset_summary yielded no policy or asset record, while no Blockfrost or Maestro credential is present and public explorers were blocked or unreachable. NBX has named Finanstilsynet registry material, but the reviewed evidence does not establish a complete prudential supervisor for the combined Moneta/NBX USDM issuance path, so supervision is not promoted. Re-reviewed 2026-07-27 (Kimi data review): no new issuer admin-control inventory has been published since the 2026-07-20 structural read. Moneta's launch-delay statement (carried by Cardano Feed) describes integrated multi-signature controls and time-delay mechanisms for significant protocol modifications, consistent with the script-gated mint structure already recorded. Upgradeability resolved 2026-07-28 (Grok wave-8 controls): write-time re-open of Koios script_info at Cardano tip block 13733605 returns policy id c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad as PlutusV2 size 392 created in tx c6b0831fa16e101ae18de65c2a0c8825cebffe17ccfe38385e711c900f62d261, and Koios asset_info confirms fungible USDM under that exact policy. On Cardano the policy ID is the minting-policy script hash (Aiken glossary PolicyId / Minting policy entries; Intersect Plutus script-hash docs), so any change to the minting-script bytes yields a different policy ID and a non-fungible successor asset — there is no proxy/admin path to replace mint logic while retaining the same USDM asset identity. Upgradeability is therefore model immutable with canChangeMintLogic false. Operational mint path remains issuer-controlled via the USDM_COUNT/USDM_CONTROL script gates already recorded; those control who may satisfy the fixed policy, they do not upgrade it. Confidence stays manual-review because two operational unknowns remain without decompiling validators or issuer disclosure: (1) the signer set, threshold, and recovery path of the USDM_CONTROL validator 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7; (2) whether the USDM_COUNT validator's third appended parameter (CBOR uint 1209008128) is an enforced supply ceiling, so economicCapSemantics stays unknown; and (3) who may rotate the USDM_ORACLE token under policy 59607e564f796b426e13e2add2b1ceca5274509fabef6a10d2367fe9.",
+      "reviewer": "Grok wave-8 controls research",
+      "reviewedAt": "2026-07-28",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Koios script_info — USDM minting policy PlutusV2 c48cbb3d…47ad",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Koios asset_info — USDM fungible under policy c48cbb3d…47ad",
+          "url": "https://api.koios.rest/api/v1/asset_info"
+        },
+        {
+          "label": "Aiken glossary — PolicyId is the minting-policy script hash",
+          "url": "https://aiken-lang.org/glossary"
+        },
+        {
+          "label": "Charli3 USDM reserves feed",
+          "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
+        },
+        {
+          "label": "moneta.global",
+          "url": "https://moneta.global/"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "id": "avusd-avant",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Avalanche avUSD has one active token minter, the immutable AvantMintingV2 gateway. A single current MINTER_ROLE EOA may invoke its collateral-backed, per-block-capped mint flow; the token owner and gateway default admin are the same documented MPC-custodied EOA, which can replace minters and raise the cap.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedBlock": 90283689,
+      "sources": [
+        {
+          "label": "AvantMintingV2 verified source",
+          "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
+        },
+        {
+          "label": "avUSD token verified source",
+          "url": "https://snowtrace.io/address/0x24de8771bc5ddb3362db529fc3358f2df3a0e346#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "avalanche",
+        "address": "0xcb43139E90f019624e3B76C56FB05394B162A49c",
+        "label": "Avant avUSD AvantMintingV2 contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source enforces supported collateral transfer, exact stable-value ratio at the current zero-delta setting, authorized MINTER_ROLE caller, and maxMintPerBlock. The current cap is 25,000,000 avUSD per Avalanche block.",
+        "observedBlock": 90283689,
+        "evidence": "Complete MinterUpdated event history plus minters(address) confirms this is the sole active minter on the Avalanche avUSD token at block 90283689. Verified AvantMintingV2 source calls avantcoin.mint() only after collateral, route, signature, and per-block-cap checks. Both token and gateway EIP-1967 slots are zero and their verified constructors establish non-proxy deployments.",
+        "sources": [
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          },
+          {
+            "label": "AvantMintingV2 verified source",
+            "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
+          }
+        ]
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd5456b9ab991768601bedf1159c51009d43c698d",
+        "label": "AvantMintingV2 MINTER_ROLE caller",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This EOA can call the immutable gateway, but each call remains bounded by collateral transfer, signature and route validation, and the 25,000,000 avUSD per-block gateway cap.",
+        "observedBlock": 90283689,
+        "evidence": "A complete RoleGranted/RoleRevoked replay and hasRole() at Avalanche block 90283689 confirm this is the sole current MINTER_ROLE caller on AvantMintingV2; eth_getCode returned empty bytecode. It is not itself an avUSD token minter and cannot change the gateway cap.",
+        "sources": [
+          {
+            "label": "AvantMintingV2 verified source",
+            "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c#code"
+          }
+        ]
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd4d23209aae8630bf386b7393763a5b7865e57cb",
+        "label": "Avant avUSD token owner and gateway admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "mpc",
+          "sources": [
+            {
+              "label": "Avant secure asset management",
+              "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+            }
+          ]
+        },
+        "observedBlock": 90283689,
+        "evidence": "At Avalanche block 90283689, avUSD.owner() returned this EOA and hasRole(DEFAULT_ADMIN_ROLE) on AvantMintingV2 returned true; eth_getCode returned empty bytecode. The owner can set token minters, while the gateway admin can grant caller roles and raise maxMintPerBlock. Avant documents Fireblocks/Fordefi MPC custody and policy controls for privileged operations.",
+        "sources": [
+          {
+            "label": "Avant secure asset management",
+            "url": "https://docs.avantprotocol.com/security/secure-asset-management"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Avant Protocol docs",
+          "url": "https://docs.avantprotocol.com/"
+        },
+        {
+          "label": "Avant contract addresses",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses"
+        },
+        {
+          "label": "AvantMintingV2 on Avalanche (Snowtrace)",
+          "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c"
+        }
+      ],
+      "evidence": "Complete Avalanche role and MinterUpdated event replays through block 90283689, followed by direct hasRole() and minters(address) checks, establish one gateway caller and one active token minter. maxMintPerBlock() returned 25,000,000 avUSD, stablesDeltaLimit() returned zero, and the common admin/owner EOA can raise the cap or replace minters. Verified constructors and zero EIP-1967 slots establish immutable token and gateway code.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable"
+    }
+  }
+}

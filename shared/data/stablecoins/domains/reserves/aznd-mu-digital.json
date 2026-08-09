@@ -1,0 +1,89 @@
+{
+  "id": "aznd-mu-digital",
+  "reserves": [
+    {
+      "name": "GHAM-managed Asia credit Asset Pool",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Asia-Pacific sovereign, bank, corporate, high-yield, and private-credit obligors selected by Golden Hill Asset Management",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MU Digital Asia Dollar AZND overview",
+        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd"
+      },
+      {
+        "label": "MU Digital yield mechanics",
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
+      },
+      {
+        "label": "MU Digital transparency and reporting",
+        "url": "https://docs.mudigital.net/mechanics/transparency-and-reporting"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: AZND overview still describes collateral as a portfolio of Asia credit assets including public bonds and private credit managed as the shared Asset Pool. Yield-mechanics still enumerates government bonds (min BBB), corporate IG (min BBB-), bank senior/subordinated (avg min BBB), high-yield (min BB), and private credit under GHAM. Transparency still commits to Pennyworks NAV accounting and segregated on-chain treasury wallets but does not publish a current category or constituent allocation. Modeled as one full-envelope GHAM Asia-credit Asset Pool basket with basket-needs-split; no invented weights.",
+    "compositionBasis": "Issuer-documented Asia-credit strategy envelope; current allocation unavailable",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No current weights are published for cash, public bonds, private credit, or any underlying obligor; fund constituents, ratings mix, custody allocation, valuation reconciliation, and loss-recovery execution terms are also unavailable.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "GHAM-managed Asia credit Asset Pool",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer publishes strategy eligibility and risk limits but no current category or constituent weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Regulated Singapore fund vehicle (custodian bank/prime broker unnamed in Mu Digital disclosures)",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Golden Hill Asset Management (GHAM), MAS CMS Licence CMS-101035 (portfolio manager, not custodian)",
+        "role": "other",
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex V9 curation",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MU Digital yield mechanics (GHAM partnership)",
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
+      },
+      {
+        "label": "MU Digital transparency and reporting",
+        "url": "https://docs.mudigital.net/mechanics/transparency-and-reporting"
+      },
+      {
+        "label": "MU Digital risk management framework",
+        "url": "https://docs.mudigital.net/mechanics/risk-management-framework"
+      }
+    ],
+    "uncertainty": "Mu Digital's litepaper (fetched 2026-07-21) states the Asset Pool is managed by GHAM under a MAS Capital Markets Services licence and held in a regulated fund vehicle, but it does not name the fund's custodian bank, sub-custodians, or the prime broker that provides the documented liquidity credit lines. The transparency page commits to Pennyworks NAV accounting and to onchain Treasury Wallets 'segregated from the Company's operational funds', but it documents no trust, SPV, or holder-claim structure for the fund assets themselves, so segregation and bankruptcy-remoteness terms are unpublished. No rehypothecation or collateral-reuse terms are disclosed for either the bond portfolio or the prime-broker credit lines, and no current provider shares are published."
+  }
+}

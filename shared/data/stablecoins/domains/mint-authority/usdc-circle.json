@@ -1,0 +1,154 @@
+{
+  "id": "usdc-circle",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USDC is issuer-minted by Circle; Ethereum USDC uses a MinterAdmin contract for minter management, an EOA token owner, and a separate EOA proxy admin. All addressable controls were rechecked at block 25711753.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      ],
+      "implementationAddresses": [
+        "0x43506849d7c04f9138d1a2050bbf3a0c054402dd"
+      ],
+      "adminAddresses": [
+        "0x807a96288a1a408dbc13de2b1d087d10356395d2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Ethereum USDC proxy admin",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711753,
+      "sources": [
+        {
+          "label": "Circle stablecoin-evm contracts",
+          "url": "https://github.com/circlefin/stablecoin-evm"
+        },
+        {
+          "label": "FiatTokenProxy org.zeppelinos.proxy.admin slot == 0x807a...95d2 at block 25711753",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#readContract"
+        },
+        {
+          "label": "FiatTokenProxy org.zeppelinos.proxy.implementation slot == 0x4350...02dd (FiatTokenV2_2)",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
+        "label": "Ethereum USDC MasterMinter (MinterAdmin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Circle USDC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          },
+          {
+            "label": "Centre USDC contract docs",
+            "url": "https://github.com/centrehq/centre-tokens"
+          },
+          {
+            "label": "Circle stablecoin-evm contracts",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          },
+          {
+            "label": "Ethereum USDC MasterMinter on Etherscan",
+            "url": "https://etherscan.io/address/0xE982615d461DD5cD06575BbeA87624fda4e3de17"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, USDC masterMinter() returned this MinterAdmin contract, getMinterManager() returned the USDC token, and MinterAdmin owner() returned EOA 0xc1d9fe41d19dd52cb3ae5d1d3b0030b5d498c704. Circle's verified design lets the master minter configure minters and their allowances, so this path can authorize minting and alter effective issuance capacity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfcb19e6a322b27c06842a71e8c725399f049ae3a",
+        "label": "Ethereum USDC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Ethereum USDC contract",
+            "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#readProxyContract"
+          },
+          {
+            "label": "USDC token owner account on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xfcb19e6a322b27c06842a71e8c725399f049ae3a"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, owner() on the USDC token returned this address and eth_getCode returned no bytecode. FiatToken owner authority can replace masterMinter and therefore authorize a different issuance controller."
+      },
+      {
+        "label": "Ethereum USDC proxy admin",
+        "chain": "ethereum",
+        "address": "0x807a96288a1a408dbc13de2b1d087d10356395d2",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "FiatTokenProxy admin slot read at block 25711753",
+            "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#readContract"
+          },
+          {
+            "label": "USDC proxy-admin account on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x807a96288a1a408dbc13de2b1d087d10356395d2"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, the Zeppelinos proxy-admin storage slot resolved to this address and eth_getCode returned no bytecode. This EOA can replace the token implementation, including mint logic, with no observed timelock; it has no ordinary direct mint entrypoint."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Circle May 2026 Deloitte USDC examination",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "ESMA MiCA electronic-money-token issuer register",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "NYDFS virtual-currency businesses and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Centre USDC contract docs",
+          "url": "https://github.com/centrehq/centre-tokens"
+        },
+        {
+          "label": "Ethereum USDC on Etherscan",
+          "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        }
+      ],
+      "evidence": "At Ethereum block 25711753, masterMinter() returned MinterAdmin 0xe982615d, whose manager target was USDC and whose owner was EOA 0xc1d9fe41; token owner() returned EOA 0xfcb19e6a; and the Zeppelinos proxy-admin slot resolved to EOA 0x807a9628. The owner and master-minter paths can replace or expand configured issuance permissions, so economic cap semantics remain unbounded. The prior storage-slot claim naming 0x4914f61d as proxy admin was removed as incorrect. Circle's May 2026 Deloitte examination compares USDC in circulation with reserve assets on a monthly cadence, supporting periodic reconciliation. The ESMA electronic-money-token issuer register and NYDFS virtual-currency business and greenlist records are the named primary prudential sources supporting the supervision classification for Circle's regulated issuance channels.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "id": "mtbill-midas",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: mTBILL resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Midas issues mTBILL natively on Ethereum, Base, Rootstock, Plume, and Etherlink; per-chain minting runs through Midas deposit-vault minters under Midas admin Safes (mint-authority review 2026-07-15, proxy admins re-read 2026-07-20). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "mTBILL issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Midas mTBILL docs",
+        "url": "https://docs.midas.app/tokens/mtbill"
+      },
+      {
+        "label": "Midas contracts repository",
+        "url": "https://github.com/midas-apps/contracts"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "protocol": "Midas mTBILL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms ethereum minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "mTBILL ethereum token",
+            "url": "https://etherscan.io/address/0xdd629e5241cbc5919847783e6c96b2de4754e438"
+          },
+          {
+            "label": "Midas docs",
+            "url": "https://docs.midas.app/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "destinationChain": "base",
+        "contractAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "protocol": "Midas mTBILL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms base minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "mTBILL base token",
+            "url": "https://basescan.org/address/0xdd629e5241cbc5919847783e6c96b2de4754e438"
+          },
+          {
+            "label": "Midas docs",
+            "url": "https://docs.midas.app/"
+          }
+        ]
+      },
+      {
+        "id": "rootstock:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "destinationChain": "rootstock",
+        "contractAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "protocol": "Midas mTBILL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the rootstock mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms rootstock minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "mTBILL rootstock token",
+            "url": "https://explorer.rootstock.io/address/0xdd629e5241cbc5919847783e6c96b2de4754e438"
+          },
+          {
+            "label": "Midas docs",
+            "url": "https://docs.midas.app/"
+          }
+        ]
+      },
+      {
+        "id": "plume:0xe85f2b707ec5ae8e07238f99562264f304e30109",
+        "destinationChain": "plume",
+        "contractAddress": "0xe85f2b707ec5ae8e07238f99562264f304e30109",
+        "protocol": "Midas mTBILL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the plume mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms plume minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "mTBILL plume token",
+            "url": "https://explorer.plume.org/address/0xe85f2b707ec5ae8e07238f99562264f304e30109"
+          },
+          {
+            "label": "Midas docs",
+            "url": "https://docs.midas.app/"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "destinationChain": "etherlink",
+        "contractAddress": "0xdd629e5241cbc5919847783e6c96b2de4754e438",
+        "protocol": "Midas mTBILL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the etherlink mTBILL token is a Midas-administered transparent proxy (EIP-1967 admin read 2026-07-20), and the verified mint-authority review (2026-07-15) confirms etherlink minting runs through Midas's own deposit-vault minter contracts and Midas admin Safes — no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "mTBILL etherlink token",
+            "url": "https://explorer.etherlink.com/address/0xdd629e5241cbc5919847783e6c96b2de4754e438"
+          },
+          {
+            "label": "Midas docs",
+            "url": "https://docs.midas.app/"
+          }
+        ]
+      }
+    ]
+  }
+}

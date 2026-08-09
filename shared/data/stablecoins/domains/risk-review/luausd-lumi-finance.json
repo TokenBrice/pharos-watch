@@ -1,0 +1,90 @@
+{
+  "id": "luausd-lumi-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sourcify UtilityToken.sol",
+        "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+      },
+      {
+        "label": "Lumi Finance LUAUSD documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
+      },
+      {
+        "label": "Arbiscan LUAUSD contract",
+        "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c#code"
+      },
+      {
+        "label": "Arbitrum observation block 492494540",
+        "url": "https://arbiscan.io/block/492494540"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-09 against the Sourcify exact-match UtilityToken source and Lumi's official protocol documentation. The sole tracked LUAUSD deployment 0x1dd6b5f9281c6b4f043c02a83a46c2772024636c is direct, non-proxy code: the EIP-1967 implementation and admin slots both read zero again on 2026-08-09, and owner() returned 0xb422502156118aa49eff0d4da26fdedccb186049 (the UUPS minter proxy owned by the 3-of-5 Safe 0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498 documented in the mintAuthority review). UtilityToken is OpenZeppelin ERC20 + ERC20Burnable + Ownable; onlyOwner applies to mint and ownership transfer, burnFrom requires holder allowance, transfer and transferFrom are unmodified ERC-20 paths, and there is no pause, freeze, blacklist, seize, arbitrary burn, allowlist, or transfer hook. As non-proxy code the owner cannot swap in an implementation that adds one, so the token-local freeze surface is provably clean. The verdict stays inherited rather than clean-false because the backing carries freezable third-party stablecoins: the reserves slice documents protocol-owned USDT/USDC liquidity with blacklistable=true, Lumi's docs state all circulating LUAUSD can be exchanged for USDT 1:1 and that LUA is minted through stablecoins (USDT/LUAUSD), and at Arbitrum block 492847823 the Lumi-labelled TokenBridge 0x0b2402144Bb366A632D14B83F244D2e0e21bD39c held 215,358.78 USDC and 51,031.45 USDT, the LUA token contract held 2,149.48 USDT, and the mint Safe held 484.68 USDT (about $269k identifiable, roughly 80% USDC). The USDT/USDC split of protocol liquidity remains unpublished (reserveReview basket-needs-split, knownUnknownExposurePct 100), so the largest identifiable freezable upstream is usdc-circle with usdt-tether the documented redemption asset; no reserve slice carries an explicit coinId, so the pipeline cannot resolve that upstream automatically.",
+    "reviewer": "Kimi ACCESS-FREEZE AF02 (verified FV-A)",
+    "reviewedAt": "2026-08-09"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-30",
+      "reviewer": "Kimi T20 wave-2 unknown reduction",
+      "rationale": "Re-opened Lumi docs 2026-07-30: LUAUSD is minted by staking LUA against the protocol's internal floor price, which is defined by Lumi's own segmented LUA bonding-curve minting function rather than an external price feed. The staking flow has vesting and an early-redemption penalty (0-30%) instead of borrower collateral ratios, health factors, or liquidation auctions, and the reviewed LUAUSD UtilityToken source contains no oracle, price-feed, or liquidation dependency. Stabilization runs through Lumi's AMO rebalancing its own Curve pool, again an internal AMM path. The oracle/liquidation branch is therefore reviewed as genuinely not applicable to this oracleless internal-pricing design; residual opacity about the AMO's exact trigger conditions is retained in the summary rather than scored as an external-oracle exposure.",
+      "sources": [
+        {
+          "label": "Lumi staking and stablecoin documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+        },
+        {
+          "label": "Lumi LUA minting documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+        },
+        {
+          "label": "Lumi Finance LUAUSD token docs",
+          "url": "https://lumi-finance.gitbook.io/docs/tokens/luausd"
+        },
+        {
+          "label": "Sourcify verified LUAUSD UtilityToken source (Arbitrum)",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T20 wave-2 unknown reduction",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Lumi staking and stablecoin documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+      },
+      {
+        "label": "Lumi reserve-backed AMM documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/lua-minting-secondary-market/reserve-back-amm-mechanism"
+      },
+      {
+        "label": "Lumi LUA minting documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "LUAUSD has one tracked Arbitrum contract and no token-specific bridge controls in reviewed issuer docs. The Arbitrum signal is canonical chain infrastructure, not a separate stablecoin route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lumi docs",
+        "url": "https://lumi-finance.gitbook.io/docs/"
+      },
+      {
+        "label": "L2BEAT Arbitrum Canonical",
+        "url": "https://l2beat.com/interop/protocols/arbitrum"
+      }
+    ]
+  }
+}

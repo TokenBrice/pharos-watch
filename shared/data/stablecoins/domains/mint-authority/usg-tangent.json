@@ -1,0 +1,259 @@
+{
+  "id": "usg-tangent",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "USG has three mint routes, all resolved on-chain. mintDebt is callable by isMinter addresses, which are exactly the 13 Tangent markets registered through MarketCreator.initializeMarket (setIsMinter has never been called); each market mints only against user collateral. mintIR is callable by the single isIRProducer, the IRCalculator, which mints accrued interest to the ControlTower fee treasury. mintPegKeeper is onlyOwner and mints uncapped USG into either of the two registered peg keepers. The owner of USG, the ControlTower and the MarketCreator is one 3/4 Tangent Safe (v1.4.1, no modules, no guard); it can also setIsMinter on any address, so it is an unbounded mint authority.",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "Tangent owner Safe (3/4)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25531083,
+      "sources": [
+        {
+          "label": "Sourcify USG source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        },
+        {
+          "label": "Blockscout USG verified source",
+          "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "label": "USG token role-gated mint functions",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "The token itself imposes no supply cap on any of mintDebt, mintIR or mintPegKeeper; the only gate is the caller's role mapping. Bounds exist per market (user collateral), not in the token.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Sourcify USG source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+          },
+          {
+            "label": "Blockscout USG verified source",
+            "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: USG is not a proxy (EIP-1967 implementation slot = 0x0; verified non-proxy source with no upgrade entrypoint). owner() = 0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca, controlTower() = 0xF3f7669dcEED2f985815011C19eD68F667267215, totalSupply = 42993004273104510957389060 (~42.99M USG). Verified source: mintDebt requires isMinter[msg.sender], mintIR requires isIRProducer[msg.sender] and mints to controlTower.feeTreasury(), mintPegKeeper is onlyOwner and requires isPegKeeper[pegKeeper]. No amount cap appears in any of the three."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+        "label": "Tangent owner Safe (3/4)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 4,
+        "capDescription": "Can mint uncapped USG to a registered peg keeper via mintPegKeeper (onlyOwner), and can setIsMinter/setIsIRProducer/setIsPegKeeper on any address. No timelock.",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "onchain",
+          "observedBlock": 25531083
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca/"
+          },
+          {
+            "label": "Blockscout USG verified source",
+            "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: getThreshold() = 3, getOwners() = [0xd7EF914ecd9Adb3dFB27A165bb66E75b4D45CC10, 0x505FB4560914eA9c3af22b75ca55c3881472ae45, 0x7B79eDD278742816D8C395bf9B564c62a6AF98AC, 0xE253D64619F13f1c0bdccCFD6F2CAa4cc4838836], VERSION() = 1.4.1, getModulesPaginated = [] (no modules), guard storage slot = 0x0. It is owner() of USG, of the ControlTower and of the MarketCreator. isMinter(safe) = false today, but setIsMinter is onlyOwner, so the bound is procedural, not technical."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6",
+        "label": "Tangent markets with isMinter (13)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "Each market mints USG only against user collateral at its configured LTV; the Safe-owned market contracts and MarketCreator set those parameters.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:tangent-market:0x7b1b38cad63b0715a0adfeeb75e46431b48e73b6",
+          "ethereum:tangent-market:0x849cf82e0ebcfeab8270cc5a3ea3b26cd481b754",
+          "ethereum:tangent-market:0xa63ded87df22ee573567ad1dd87d0a71c8fcd380",
+          "ethereum:tangent-market:0x56dbc69208044748af4d33392e25fc9336f11931",
+          "ethereum:tangent-market:0x161d6fa48b0e0152763c3929a3813bd177fc099f",
+          "ethereum:tangent-market:0xa6069a4a53b564eb0a312e08f5af19ae2ba5d67e",
+          "ethereum:tangent-market:0x5c996574270f439bfff5b7647ee92c1879d35a4b",
+          "ethereum:tangent-market:0xaed9bcae0831caf4a45739ec7910cedf2ac5d9a1",
+          "ethereum:tangent-market:0xd3d29a8752fc40d64a20bbc043147077570c1785",
+          "ethereum:tangent-market:0xc9c80e8481c2b6f979afc155bc3f979cfad19c56",
+          "ethereum:tangent-market:0xd2c7257efe28a1b1446904a371e3d51e1c2f7e0e",
+          "ethereum:tangent-market:0xbffbd9c9ac1645285d017a69885304831e8b9b71",
+          "ethereum:tangent-market:0x4742a56668fbacbc11087f516c4b01ebc48f716f"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Blockscout Tangent MarketCreator (market factory)",
+            "url": "https://eth.blockscout.com/address/0x214c8a1023b30032a2eded109146658c6d6f2781"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: isMinter(x) = true for exactly the 13 markets emitted by MarketCreator 0x214c8a10 (BasicERC20/ConvexCrv/ConvexFxn/CurveGauge/StakeDaoVaultV2 MarketCreated events, blocks 25036864-25522730); isBurner is true for the same 13. The set is complete because the only two writers of isMinter are setIsMinter (onlyOwner, which has emitted zero SetIsMinter logs over the full chain history) and initializeMarket, which is gated on controlTower.isMarketCreator(msg.sender)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x214c8a1023b30032a2eded109146658c6d6f2781",
+        "label": "Tangent MarketCreator (sole market creator)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "capDescription": "USG.initializeMarket sets isMinter[market] = true for any address a market creator passes, with no event and no cap.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Blockscout Tangent MarketCreator (market factory)",
+            "url": "https://eth.blockscout.com/address/0x214c8a1023b30032a2eded109146658c6d6f2781"
+          },
+          {
+            "label": "Blockscout Tangent ControlTower verified source",
+            "url": "https://eth.blockscout.com/address/0xF3f7669dcEED2f985815011C19eD68F667267215?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: ControlTower.isMarketCreator(0x214c8a10...) = true; the previous MarketCreator 0x51c88d50... was revoked at block 24748515 and had created zero markets. Complete SetIsMarketCreator log history on the ControlTower contains exactly three entries (grant 0x51c88d50 at 24570211, revoke 0x51c88d50 and grant 0x214c8a10 at 24748515). MarketCreator owner() = the 3/4 Tangent Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb4e1d3bbd2843263d58b4d648c599512cea6e88b",
+        "label": "Tangent IRCalculator (sole isIRProducer)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "mintIR mints accrued interest only, and only to controlTower.feeTreasury() (0x536d4e9C0944dE2aC6657d610Aa99fA5e97Ce493). The rate parameters are owner-set (SetIRParams).",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Blockscout Tangent IRCalculator",
+            "url": "https://eth.blockscout.com/address/0xb4e1d3bbd2843263d58b4d648c599512cea6e88b"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: isIRProducer(0xb4e1d3bb...) = true; the complete SetIsIRProducer log history is a single grant at block 24570211 and no revocation. The address is a verified contract named IRCalculator. isIRProducer is false for every other address ever seen in the token's logs."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf89615f75c8161dc185c03020240905f6b66bad9",
+        "label": "Tangent peg keepers with isPegKeeper (2)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "capDescription": "Peg keepers cannot mint. They are the only addresses the owner Safe may mint into via mintPegKeeper, and the only addresses burnPegKeeper may burn from.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:tangent-pegkeeper:0xf89615f75c8161dc185c03020240905f6b66bad9",
+          "ethereum:tangent-pegkeeper:0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531083,
+        "sources": [
+          {
+            "label": "Blockscout USG verified source",
+            "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Ethereum block 25531083: isPegKeeper(x) = true for 0xf89615f75c8161dc185c03020240905f6b66bad9 (verified contract PegKeeperV2) and 0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e (verified contract Peg_Keeper_V2); the complete SetIsPegKeeper log history is those two grants at block 24570211 and no revocations. isMinter and isIRProducer are false for both."
+      }
+    ],
+    "review": {
+      "disposition": "scoreable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Claude V9 CTRL sweep",
+      "evidence": "Ethereum block 25531083. The previous reviewer's premise was wrong: USG does emit SetIsMinter/SetIsBurner/SetIsIRProducer/SetIsPegKeeper (non-indexed, so filterable by topic0), so the role mappings are enumerable. Full-history topic0 scans (Blockscout etherscan-compatible logs API): SetIsMinter = zero logs, SetIsBurner = zero logs, SetIsIRProducer = one grant (IRCalculator 0xb4e1d3bb..., block 24570211), SetIsPegKeeper = two grants (PegKeeperV2 0xf89615f7... and Peg_Keeper_V2 0x8a7f1650..., block 24570211), all still true on-chain. Because setIsMinter has never fired, every isMinter address must come from initializeMarket, which is gated on ControlTower.isMarketCreator; that list is likewise complete (three SetIsMarketCreator logs; only 0x214c8a10... is active). Its MarketCreated events yield 13 markets, and isMinter/isBurner return true for all 13 and false for the Safe, the MarketCreator, the IRCalculator, the peg keepers and the fee treasury. Owner of USG, ControlTower and MarketCreator is the same 3/4 Safe 0x461B62CB... (v1.4.1, four owners, no modules, zero guard, read on-chain). USG is not a proxy (implementation slot = 0x0) but the owner can setIsMinter, so mint logic remains owner-changeable. The open question about isIRProducer and isPegKeeper enumeration is resolved and removed. Upgradeability model recorded as `custom` rather than `immutable`: the USG token is not a proxy, but the Tangent owner Safe can set isMinter/isIRProducer, so mint-critical logic is mutable without a token upgrade.",
+      "sources": [
+        {
+          "label": "Tangent USG docs",
+          "url": "https://docs.tangent.finance/docs/usg/overview_usg"
+        },
+        {
+          "label": "Sourcify USG source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1/sources/src/USG/Tokens/USG.sol"
+        },
+        {
+          "label": "Blockscout USG verified source",
+          "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
+        },
+        {
+          "label": "Blockscout Tangent ControlTower verified source",
+          "url": "https://eth.blockscout.com/address/0xF3f7669dcEED2f985815011C19eD68F667267215?tab=contract"
+        },
+        {
+          "label": "Blockscout Tangent MarketCreator (market factory)",
+          "url": "https://eth.blockscout.com/address/0x214c8a1023b30032a2eded109146658c6d6f2781"
+        },
+        {
+          "label": "Blockscout Tangent IRCalculator",
+          "url": "https://eth.blockscout.com/address/0xb4e1d3bbd2843263d58b4d648c599512cea6e88b"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "unresolvedQuestions": []
+    }
+  }
+}

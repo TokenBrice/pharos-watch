@@ -1,0 +1,76 @@
+{
+  "id": "dusd-dtrinity",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "dUSD is a DeFi-native, crypto-collateralized stablecoin issued by a Singapore-domiciled non-profit foundation (Trinity Foundation Ltd.) that explicitly restricts US persons from accessing the protocol; GENIUS Act scope over foreign DeFi issuers with a US geo-block is legally uncertain, so applicability remains unclear rather than definitively in or out of scope."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Trinity Foundation Ltd.",
+    "issuerDomicile": "Singapore",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.dtrinity.org/protocol-components/dusd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Issuer is Trinity Foundation Ltd., a Singapore non-profit public company limited by guarantee (ACRA UEN 202414739E, registered 2024-04-15); it states it does not control or operate dTRINITY on any blockchain. US persons are explicitly excluded from the protocol (Restricted Regions page lists United States). Note: Singapore is also listed as a restricted jurisdiction, though the foundation is domiciled there — this reflects the protocol's legal distancing from the foundation entity. Terms of Use are governed by Cayman Islands law. GENIUS Act applicability to a foreign non-profit foundation operating a permissionless DeFi protocol with a US geo-block is legally unresolved; no PPSI approval or issuer pathway was identified.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "dTRINITY dUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "dTRINITY Restricted Regions",
+        "url": "https://docs.dtrinity.org/informational/restricted-regions",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "dTRINITY website – Trinity Foundation Ltd. legal entity",
+        "url": "https://www.dtrinity.org",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "dTRINITY dUSD documentation",
+        "dTRINITY Restricted Regions page (docs.dtrinity.org)",
+        "dTRINITY website legal entity disclosure (dtrinity.org)",
+        "Singapore ACRA company registry (sg.ltddir.com) — Trinity Foundation Ltd. UEN 202414739E confirmed live",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for dUSD; Trinity Foundation Ltd. (Singapore, ACRA UEN 202414739E) is the legal entity and has no identified US regulatory pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18",
+      "references": [
+        {
+          "label": "dTRINITY Restricted Regions",
+          "url": "https://docs.dtrinity.org/informational/restricted-regions",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "dTRINITY website – Trinity Foundation Ltd. entity",
+          "url": "https://www.dtrinity.org",
+          "sourceKind": "issuer-disclosure"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

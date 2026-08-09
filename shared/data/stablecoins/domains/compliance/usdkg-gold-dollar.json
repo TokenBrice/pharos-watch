@@ -1,0 +1,75 @@
+{
+  "id": "usdkg-gold-dollar",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDKG is a USD-pegged, issuer-redeemable stablecoin backed by physical LBMA gold under Kyrgyz Republic oversight; it circulates on Ethereum and TRON and is available to retail and institutional investors globally."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "OJSC Virtual Asset Issuer (state-owned, Ministry of Finance of the Kyrgyz Republic); Gold Dollar operates the issuance; LLC Virelint Group previously cited as operator",
+    "issuerDomicile": "Kyrgyz Republic",
+    "licensingRegulator": "Ministry of Finance of the Kyrgyz Republic",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.usdkg.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDKG is commodity-backed (physical LBMA gold) but USD-referenced and issuer-redeemable; the gold backing raises a question whether it qualifies as a payment stablecoin under GENIUS (which targets fiat-referenced instruments), but no definitive exclusion exists and the USD peg makes apparent-payment-stablecoin the more conservative classification. No public GENIUS approval, PPSI application, or foreign-issuer exception was found. The issuer is a Kyrgyz state-owned entity (OJSC Virtual Asset Issuer) with no known U.S. regulatory presence. Listed on Hong Kong's OSL HK exchange (May 2026) — no U.S. regulatory event. No OFAC, FinCEN, or enforcement action found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "USDKG website",
+        "url": "https://www.usdkg.com/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USDKG transparency page",
+        "url": "https://www.usdkg.com/transparency",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USDKG blog: Building for regulated markets in 2026",
+        "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OSL HK USDKG listing announcement (May 2026) — no US regulatory event",
+        "url": "https://chainwire.org/2026/05/21/osl-strengthens-asias-digital-asset-ecosystem-with-listing-of-state-supervised-gold-backed-stablecoin-usdkg/",
+        "sourceKind": "news",
+        "sourceDate": "2026-05-21",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
+        "USDKG website and transparency page",
+        "USDKG blog post on regulated markets 2026",
+        "Federal Register GENIUS Act NPRMs (OCC 2026-04089, FinCEN/OFAC 2026-06963)",
+        "OFAC sanctions list and FinCEN enforcement search for USDKG/Gold Dollar/OJSC Virtual Asset Issuer",
+        "OSL HK listing announcement and press coverage (May 2026)",
+        "Web search for USDKG + GENIUS Act / foreign exception / US regulatory action",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, registered foreign-issuer exception, or enforcement action was located for USDKG, Gold Dollar, or OJSC Virtual Asset Issuer. The issuer operates entirely under Kyrgyz Republic licensing with no known U.S. regulatory presence.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

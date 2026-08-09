@@ -1,0 +1,10 @@
+{
+  "id": "hkdr-rd-technologies",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: HKDR resolves to Yes because existing metadata classifies the proposed issuer as centralized and an HKMA-regulated launch would require issuer-level compliance controls.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  }
+}

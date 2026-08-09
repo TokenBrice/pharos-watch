@@ -1,0 +1,140 @@
+{
+  "id": "myrc-blox",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.blox.my"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.blox.my"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "MYRC is presented by BLOX as a ringgit-backed stablecoin available on multiple chains, with no source-resolved external bridge or lockbox route. Pharos treats the current bridge-route profile as native issuance on the listed deployments.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BLOX MYRC",
+        "url": "https://www.blox.my/"
+      },
+      {
+        "label": "BLOX docs",
+        "url": "https://docs.blox.my"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbed7d999f1d71ac70c263f64c7c7e009d691be2e",
+        "protocol": "Blox issuer-native MYRC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed mintAuthority documents this deployment with MINTER_ROLE and DEFAULT_ADMIN_ROLE held by the issuer 2-of-3 Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 via RoleGranted event scan. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MYRC token on Etherscan",
+            "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
+          },
+          {
+            "label": "Blox MYRC documentation",
+            "url": "https://www.blox.my/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "protocol": "Blox issuer-native MYRC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: hasRole reads confirm the same issuer 2-of-3 Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 holds MINTER_ROLE and DEFAULT_ADMIN_ROLE here; same token implementation as Ethereum. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MYRC token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x3ed03e95dd894235090b3d4a49e0c3239edce59e"
+          },
+          {
+            "label": "Blox MYRC documentation",
+            "url": "https://www.blox.my/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "destinationChain": "base",
+        "contractAddress": "0x3ed03e95dd894235090b3d4a49e0c3239edce59e",
+        "protocol": "Blox issuer-native MYRC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: hasRole reads confirm the same issuer 2-of-3 Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 holds MINTER_ROLE and DEFAULT_ADMIN_ROLE here. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MYRC token on Basescan",
+            "url": "https://basescan.org/address/0x3ed03e95dd894235090b3d4a49e0c3239edce59e"
+          },
+          {
+            "label": "Blox MYRC documentation",
+            "url": "https://www.blox.my/"
+          }
+        ]
+      },
+      {
+        "id": "solana:myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv",
+        "destinationChain": "solana",
+        "contractAddress": "myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv",
+        "protocol": "Blox issuer-native MYRC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed mintAuthority documents the Solana mint and freeze authority as the issuer keypair Df8T8pvEx7WmC4RjBmzcDqLfuKDL (read at slot 425797741). Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MYRC token on Solscan",
+            "url": "https://solscan.io/token/myrcAs6bpP2g5oGHZ3qpgrfZQAFkbo9KUHdqYDXMjGv"
+          },
+          {
+            "label": "Blox MYRC documentation",
+            "url": "https://www.blox.my/"
+          }
+        ]
+      }
+    ]
+  }
+}

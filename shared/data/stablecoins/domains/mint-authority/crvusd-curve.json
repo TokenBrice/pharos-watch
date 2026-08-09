@@ -1,0 +1,117 @@
+{
+  "id": "crvusd-curve",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "crvUSD's immutable ControllerFactory is the token minter and pre-mints inventory to each lending controller up to its debt ceiling. Curve DAO can raise those ceilings through an immutable Vyper intermediary; a 5-of-9 emergency multisig can only reduce ceilings and adjust controller parameters.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedBlock": 25530324,
+      "sources": [
+        {
+          "label": "crvUSD token verified contract",
+          "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory verified contract",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+        "label": "crvUSD ControllerFactory",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The factory mints crvUSD inventory to each controller only when an admin-set market debt ceiling is created or raised; user borrowing remains bounded by that inventory and the controller's collateral checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712135,
+        "sources": [
+          {
+            "label": "crvUSD ControllerFactory",
+            "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned this ControllerFactory and factory.admin() returned immutable intermediary 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79. Verified source mints inventory only when a market debt ceiling is created or raised; the factory cannot raise its own ceilings. Token and factory EIP-1967 implementation slots remained zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+        "label": "Curve DAO Agent for crvUSD factory",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712135,
+        "sources": [
+          {
+            "label": "crvUSD ControllerFactory admin Etherscan",
+            "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          },
+          {
+            "label": "Curve DAO Agent",
+            "url": "https://etherscan.io/address/0x40907540d8a6C65c637785e8f8B742ae6b0b9968#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25712135, the immutable factory-admin intermediary's dao() still returned this Curve DAO Aragon Agent. Verified intermediary source allows DAO governance to call factory set_debt_ceiling(), authorizing higher market inventory, while the Agent's own governance execution path remains separately governed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
+        "label": "crvUSD emergency multisig",
+        "role": "cap-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 5,
+        "signerCount": 9,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530324,
+        "sources": [
+          {
+            "label": "crvUSD emergency multisig",
+            "url": "https://etherscan.io/address/0x467947EE34aF926cF1DCac093870f613C96B1E0C#code"
+          },
+          {
+            "label": "crvUSD factory-admin intermediary",
+            "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530324, getThreshold() returned 5, getOwners() returned nine owners, and getModulesPaginated() returned no enabled modules. The intermediary's verified reduce_debt_ceiling() function accepts the emergency address but asserts the new ceiling cannot exceed the current ceiling; arbitrary execute() remains DAO-only."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Curve crvUSD resources",
+          "url": "https://resources.curve.finance/crvusd/"
+        },
+        {
+          "label": "crvUSD ControllerFactory",
+          "url": "https://etherscan.io/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC#code"
+        },
+        {
+          "label": "crvUSD ControllerFactory admin Etherscan",
+          "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
+        }
+      ],
+      "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned the immutable ControllerFactory, whose admin intermediary still resolved dao() to the Curve DAO Agent. Verified Vyper source establishes the path from token minter to per-market debt-ceiling inventory: DAO governance can raise ceilings, while the separately anchored 5-of-9 emergency multisig can only reduce them or adjust bounded controller parameters. The DAO Agent is an upstream governance executor and cannot change the immutable token or factory mint logic.",
+      "reviewer": "Codex Safety Score V9 CTRL curation",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

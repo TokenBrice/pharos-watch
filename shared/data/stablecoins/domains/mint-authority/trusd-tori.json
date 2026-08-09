@@ -1,0 +1,236 @@
+{
+  "id": "trusd-tori",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "trUSD's token minter is the verified ToriMinting contract. Three operator EOAs can execute signed, whitelisted, collateral-transfer-backed orders within per-block caps; a 3-of-5 Safe can raise those caps or authorize operators, while a one-day timelock can replace the token minter or UUPS implementation.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+      ],
+      "implementationAddresses": [
+        "0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+      ],
+      "adminAddresses": [
+        "0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "trUSD UUPS and minter-replacement timelock",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712112,
+      "sources": [
+        {
+          "label": "Blockscout trUSD UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        },
+        {
+          "label": "Blockscout verified trUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+        },
+        {
+          "label": "Blockscout verified ToriTimelock",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e",
+        "label": "ToriMinting token minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting is bounded to 5,000,000 trUSD per block globally and per active collateral asset at observation; orders also require a live operator, whitelisted participant, valid signature and custody route, active supported asset, collateral-ratio check, and actual collateral transfer.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          },
+          {
+            "label": "Blockscout verified trUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, trUSD minter() returned this verified contract, which was unpaused. Verified source permits mint only through MINTER_ROLE operators and enforces a signed order, participant whitelist, custody route, active collateral, per-asset and global block caps, and transfer of USDC or USDT before calling token mint. The global and each active-asset mint cap were 5000000000000000000000000, or 5,000,000 trUSD per block."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2ba9857e5b1099f3809e0304a8f789659e7a8f70",
+        "label": "ToriMinting operator 1",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7713ba984fdfd4053ace737761de903b10c351ab",
+        "label": "ToriMinting operator 2",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xca4317c842b5d52fd0cb3a5b11d9f8fe8281fbce",
+        "label": "ToriMinting operator 3",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "This operator can submit only ToriMinting orders that pass the shared signed-order, whitelist, collateral-transfer, and per-block cap checks.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "A complete MINTER_ROLE RoleGranted/RoleRevoked replay followed by hasRole() at Ethereum block 25712112 confirmed this EOA as a live operator. It cannot call trUSD mint directly and cannot alter ToriMinting caps or gates."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
+        "label": "Tori administration Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x84e1091066fbcd48f2f2d8a2b7f1726812d167b3",
+            "0xfafe7fe2d5b7ffc92159df1d07ca4d27a6b99693",
+            "0xb5afef3ae424336de90ec1127ff7fec239b02b72",
+            "0x9a450e8787dd4c0d77f630d79469bbea64eb5506",
+            "0x53789955237a39024fc740a4344102d0d5117e53"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712112,
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Tori administration Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0C6Bbfd2d5666d44bf28580eDEec0263692C8316/"
+          },
+          {
+            "label": "Blockscout verified ToriMinting",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, this Safe held ToriMinting DEFAULT_ADMIN_ROLE and the trUSD token's default-admin role. Safe state was 3-of-5, version 1.4.1, with no modules and zero guard. It can grant or revoke ToriMinting operators and change global, per-asset, custody, and participant controls, including raising the 5,000,000-per-block mint caps."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7af35ab3e5373da511c5f1331f44335a36da1a55",
+        "label": "trUSD UUPS and minter-replacement timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712112,
+        "sources": [
+          {
+            "label": "Blockscout verified trUSD implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+          },
+          {
+            "label": "Blockscout verified ToriTimelock",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+          }
+        ],
+        "evidence": "At Ethereum block 25712112, this verified ToriTimelock held token TIMELOCK_ADMIN_ROLE and getMinDelay() returned 86400 seconds. Verified TrUSD source gates both setMinter and UUPS _authorizeUpgrade through TIMELOCK_ADMIN_ROLE, so the timelock can replace the current ToriMinting contract or the entire mint implementation after the delay. The Tori administration Safe held the timelock's proposer and executor roles."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Blockscout trUSD UUPS proxy",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd0580192e98ea6ceb9c7b6191ed2e27560911697"
+        },
+        {
+          "label": "Blockscout verified trUSD implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631"
+        },
+        {
+          "label": "Blockscout verified ToriMinting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
+        },
+        {
+          "label": "Blockscout verified ToriTimelock",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7af35ab3e5373da511c5f1331f44335a36da1a55"
+        },
+        {
+          "label": "Tori administration Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0C6Bbfd2d5666d44bf28580eDEec0263692C8316/"
+        },
+        {
+          "label": "Accountable Tori proof-of-solvency",
+          "url": "https://tori.accountable.capital"
+        },
+        {
+          "label": "Ethereum observation block 25712112",
+          "url": "https://eth.blockscout.com/block/25712112"
+        }
+      ],
+      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision.",
+      "reviewer": "OpenAI Codex C03 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

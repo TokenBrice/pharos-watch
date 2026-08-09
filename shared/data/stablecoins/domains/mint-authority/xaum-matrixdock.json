@@ -1,0 +1,107 @@
+{
+  "id": "xaum-matrixdock",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+      ],
+      "implementationAddresses": [
+        "0x3194e478b6d3ebee969470295f271727b62adf7b"
+      ],
+      "adminAddresses": [
+        "0xb573c94260582f0715FC477928B04A2708dd36D7"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Matrixdock token owner",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295020,
+      "sources": [
+        {
+          "label": "Matrixdock MToken implementation source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x3194e478b6d3ebee969470295f271727b62adf7b?tab=contract"
+        },
+        {
+          "label": "XAUm Ethereum token",
+          "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x2103e845c5e135493bb6c2a4f0b8651956ea8682",
+        "label": "XAUm MToken operator mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source allows operator mintTo only within mintBudget (read as 0 during the prior pass). The token owner EOA 0xb573c94260582f0715fc477928b04a2708dd36d7 (separate reviewed control) administers the operator and can raise mintBudget.",
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock MToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+          },
+          {
+            "label": "Matrixdock XAUm",
+            "url": "https://www.matrixdock.com/xaum"
+          }
+        ],
+        "evidence": "At Ethereum block 25295020: implementation slot confirmed 0x3194e478b6d3ebee969470295f271727b62adf7b, operator() = 0x89Bb23E4a82E04a253d9f11767feDf321C127799, owner() = 0xb573c94260582f0715FC477928B04A2708dd36D7 (all unchanged). eth_getCode on owner = 0x (EOA). Sui State object 0x9429033f56b8a4b9601b62386075a87e1c943bd45e4c09e0db863e3fae0d96c4 shows identical structure: owner 0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8, operator 0xdb0769b530e4425b9872de332a9e17104128cafde3dd5fdf80ea881b4134aee2, mint_budget 0."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x67dcC9C33363Cc0e650738528Fe4Fef1d658C7EE",
+        "label": "XAUm receipt NFT mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified source allows mintTo by the operator or the configured receipt NFT contract only within mintBudget. The token owner EOA 0xb573c94260582f0715fc477928b04a2708dd36d7 (separate reviewed control) can raise mintBudget.",
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock MToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+          }
+        ],
+        "evidence": "The verified MToken mintTo path permits calls from the configured NFT contract as well as the operator, subject to the same mintBudget accounting."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "label": "Matrixdock token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25295020: eth_getCode on 0xb573c94260582f0715FC477928B04A2708dd36D7 returned 0x (EOA confirmed). This EOA controls setOperator() and reserve accounting. Same address owns both XAGm and XAUm MToken contracts."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Matrixdock XAUm",
+          "url": "https://www.matrixdock.com/xaum"
+        },
+        {
+          "label": "Sourcify Matrixdock MToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x3194e478b6d3ebee969470295f271727b62adf7b/sources/contracts/MToken.sol"
+        },
+        {
+          "label": "XAUm Ethereum token",
+          "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        }
+      ],
+      "evidence": "At Ethereum block 25295020: proxy impl 0x3194e478... confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... eth_getCode on owner = 0x (EOA). Sui State 0x9429033f... confirmed same owner/operator/mint_budget=0 via Sui fullnode.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20"
+    }
+  }
+}

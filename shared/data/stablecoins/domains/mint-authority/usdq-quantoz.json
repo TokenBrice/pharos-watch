@@ -1,0 +1,156 @@
+{
+  "id": "usdq-quantoz",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USDQ is issuer-minted on both Ethereum (3/5 multisig owner, no modules) and Polygon (2/5 multisig owner, no modules) via the same HadronToken onlyOwner mint function. Polygon can independently mint. Both chain proxy admins are 3/5 multisigs, no modules.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "label": "USDQ Ethereum HadronToken mint surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify USDQ Ethereum HadronToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25294990, owner() = 0x284Df7B9d9F471554E9257bD9b116189f7997d45 (confirmed). HadronToken exposes mint(destination,amount) onlyOwner. Implementation = 0xbae166f5e8b4b6735341446b1405fa779a92d7c7."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x284Df7B9d9F471554E9257bD9b116189f7997d45",
+        "label": "USDQ Ethereum owner",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Etherscan USDQ Ethereum owner",
+            "url": "https://etherscan.io/address/0x284Df7B9d9F471554E9257bD9b116189f7997d45"
+          }
+        ],
+        "evidence": "At Ethereum block 25294990, owner() confirmed 0x284Df7B9d9F471554E9257bD9b116189f7997d45. required()=3, getOwners() returned 5 addresses (0x58e1d8a4c9a737f017acb8f139146cbc21b6bbf7, 0xe21878fc9b562991edd46723babf0a0dae084c71, 0x212bffa08a20f69f3a8b88defcb16954c1898b3e, 0x06b37cbc0979c2202d1df6be13c687cc933def44, 0x8c6dd21ec066742cb502d8a3354ea43c3e94508d). getModules()=0x (no modules)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa6724f792002d5677a7bc370986e1b580b8773e7",
+        "label": "USDQ Ethereum proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25294990, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules)."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "label": "USDQ Polygon HadronToken mint surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan USDQ Polygon contract",
+            "url": "https://polygonscan.com/address/0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+          }
+        ],
+        "evidence": "At Polygon block 88323726, owner() = 0x84e8d731fCBe186B803DB51e9E58142083417929 (confirmed). Implementation = 0x43f2f77664c29626f4756f6b22fa73dbd59306b0 (same HadronToken mint(destination,amount) onlyOwner). Polygon can independently mint."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x84e8d731fCBe186B803DB51e9E58142083417929",
+        "label": "USDQ Polygon owner",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Polygon block 88323726, owner() confirmed. required()=2, getOwners() returned 5 addresses (0x58e1d8a4c9a737f017acb8f139146cbc21b6bbf7, 0x212bffa08a20f69f3a8b88defcb16954c1898b3e, 0x06b37cbc0979c2202d1df6be13c687cc933def44, 0x8c6dd21ec066742cb502d8a3354ea43c3e94508d, 0xe21878fc9b562991edd46723babf0a0dae084c71). getModules()=0x (no modules)."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8",
+        "label": "USDQ Polygon proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Polygon block 88323726, EIP-1967 proxy-admin slot confirmed. required()=3, getOwners() returned 5 addresses (0xb924ba8f0b6ef038eb95546464370caf0c5319db, 0x083aa04c8106c42986261cf4ffed3067898009b6, 0x0674cd4cc43764dfce39cd08dd30ddab128e649a, 0x52126765ff90fa2d1ff341c25ce7a3285606b525, 0x3f5af3c2ea1cfad9c34e5189fe5246ff4939079b). getModules()=0x (no modules). Same 5 signers as ETH proxy admin."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify USDQ Ethereum HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Quantoz USDQ product page",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Etherscan USDQ contract",
+          "url": "https://etherscan.io/address/0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        },
+        {
+          "label": "Quantoz transparency dashboard",
+          "url": "https://www.quantoz.com/transparency"
+        },
+        {
+          "label": "DNB register - Quantoz Payments B.V.",
+          "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+        }
+      ],
+      "evidence": "At ETH block 25294990: owner()=0x284Df (3/5 multisig, no modules), proxy admin=0xa6724f (3/5 multisig, no modules). At Polygon block 88323726: owner()=0x84e8d (2/5 multisig, no modules), proxy admin=0x2f875 (3/5 multisig, no modules). Polygon deployment uses same HadronToken implementation and can independently mint. XRPL and Algorand contracts not in mint-authority scope (separate ledger rails); Ethereum and Polygon are the material EVM mint surfaces. Quantoz publishes a real-time issuer-operated transparency dashboard, but challenge searches of its transparency, audit, assurance, and product materials found no recurring independent USDQ assets-and-liabilities report. No independent attestor, cadence, or latest qualifying report date is available, so reconciliation is unknown. The DNB register matches Quantoz Payments B.V. under relation R186418 as an authorized Electronic Money Institution, supporting prudential supervision of the same issuer entity.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xa6724f792002d5677a7bc370986e1b580b8773e7",
+        "0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USDQ Ethereum proxy admin",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Sourcify USDQ Ethereum HadronToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Quantoz USDQ product page",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Etherscan USDQ contract",
+          "url": "https://etherscan.io/address/0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+        }
+      ]
+    }
+  }
+}

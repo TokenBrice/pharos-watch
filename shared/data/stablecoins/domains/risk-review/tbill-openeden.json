@@ -1,0 +1,89 @@
+{
+  "id": "tbill-openeden",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: TBILL resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "OpenEden TBILL is issued on multiple chains for eligible investors; reviewed sources show issuer-controlled tokenization and mint/redeem access rather than a public third-party bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "OpenEden TBILL page",
+        "url": "https://openeden.com/tbill"
+      },
+      {
+        "label": "OpenEden app TBILL vault",
+        "url": "https://app.openeden.com/tbill?chain=xrpl"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xf84d28a8d28292842dd73d1c5f99476a80b6666a",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
+        "destinationChain": "solana",
+        "contractAddress": "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "xrpl:TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+        "destinationChain": "xrpl",
+        "contractAddress": "TBL.rJNE2NNz83GJYtWVLwMvchDWEon3huWnFn",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

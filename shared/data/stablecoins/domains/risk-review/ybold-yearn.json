@@ -1,0 +1,88 @@
+{
+  "id": "ybold-yearn",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Yearn yBOLD documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "Etherscan yBOLD EIP-1167 vault share",
+        "url": "https://etherscan.io/address/0x9f4330700a36b29952869fac9b33f45eedd8a3d8#code"
+      },
+      {
+        "label": "Blockscout verified Yearn V3 Vault implementation",
+        "url": "https://eth.blockscout.com/address/0xd8063123bba3b480569244ae66bfe72b6c84b00d?tab=contract"
+      },
+      {
+        "label": "Liquity BOLD parent freeze review (no holder blacklist)",
+        "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+      }
+    ],
+    "evidence": "2026-08-08 re-review of yBOLD holder freeze/blacklist posture. Sole tracked deployment is Ethereum 0x9f4330700a36b29952869fac9b33f45eedd8a3d8. At Ethereum block 25712273 the runtime remained the 45-byte EIP-1167 minimal-proxy form hard-coded to Yearn V3 Vault implementation 0xd8063123bba3b480569244ae66bfe72b6c84b00d; EIP-1967 implementation and admin slots on both the clone and implementation were zero. Verified VaultV3 transfer paths contain no blacklist, freeze, pause, seize, or allowlist; strategy roles and shutdown_vault affect deposits and strategy debt, not holder transfers. isShutdown() was false, asset() returned BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d, and apiVersion() returned 3.0.4. Yearn documentation states yBOLD has no transfer restrictions, and the reviewed upstream BOLD token has no holder freeze surface. Conclusion: canBeBlacklisted=false.",
+    "reviewer": "OpenAI Codex C06 access review",
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "yBOLD is a Yearn V3 vault share over BOLD Stability Pool deposits. Role-manager strategy allocation, shutdown, and Stability Pool execution risk can impair vault NAV or withdrawal liquidity, and the parent BOLD claim can be impaired by Liquity branch risk, but neither Yearn vault roles nor the reviewed BOLD token exposes a direct holder freeze, blacklist, pause, or selective transfer-restriction path on yBOLD shares. Those exposures remain strategy and reserve/dependency risks, not yBOLD token blacklistability."
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "yBOLD is a tokenized Liquity V2 Stability Pool position with no borrower-owned collateral branches of its own; its underlying BOLD exposure inherits Liquity V2 collateral-feed validation, fallback, and branch shutdown behavior.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Yearn documents yBOLD as a 1:1 tokenized BOLD deposit routed into Liquity V2 Stability Pools. yBOLD holders do not open borrower positions, so the wrapper has no collateral-market or liquidation branches to inventory; the underlying BOLD parent carries the separately reviewed Liquity V2 branches.",
+      "sources": [
+        {
+          "label": "Yearn yBOLD documentation",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        },
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        },
+        {
+          "label": "Liquity BOLD contracts",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yearn yBOLD documentation",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      },
+      {
+        "label": "Liquity BOLD contracts",
+        "url": "https://github.com/liquity/bold/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "yBOLD is tracked only as an Ethereum Yearn vault wrapper for BOLD. The reviewed Yearn docs do not expose a separate bridge route for the vault share, so the row is single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yearn yBOLD docs",
+        "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+      },
+      {
+        "label": "Yearn yBOLD repository",
+        "url": "https://github.com/yearn/yBOLD"
+      }
+    ]
+  }
+}

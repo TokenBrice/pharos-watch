@@ -1,0 +1,39 @@
+{
+  "id": "pc0000089-tradable",
+  "reserves": [
+    {
+      "name": "LatAm residential credit collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tradable product website",
+        "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "Tradable product documentation",
+        "url": "https://doc.tradable.xyz/product-docs"
+      }
+    ],
+    "rationale": "Tradable's public materials identify the product as LatAm residential-credit exposure, matching the exact aggregate reserve label in the fixed metadata. They do not expose a dated current portfolio, borrower concentration, collateral valuation, maturity schedule, or independent reserve reconciliation.",
+    "compositionBasis": "Tradable product materials and the fixed LatAm residential-credit reserve description",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current loan-level allocation, borrower and country concentration, collateral valuation, maturity, custody, and independent reserve assurance are not available in the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "LatAm residential credit collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The broad collateral class is identified, but current composition and failure-domain evidence are not published."
+      }
+    ]
+  }
+}

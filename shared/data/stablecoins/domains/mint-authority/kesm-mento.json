@@ -1,0 +1,154 @@
+{
+  "id": "kesm-mento",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Operational KESm issuance runs through the Mento Broker, which burns the incoming Mento stable token and mints the outgoing token during USDm/KESm swaps. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled KESm mint surface. exchange() is zero, and the two-day Mento Timelock can change token authorization slots and upgrade the KESm token and Broker.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+        "0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+      ],
+      "implementationAddresses": [
+        "0x434563b0604be100f04b7ae485bcafe3c9d8850e",
+        "0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+      ],
+      "adminAddresses": [
+        "0x890db8a597940165901372dd7db61c9f246e2147"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Mento Timelock - KESm token and Broker administrator",
+      "observedAt": "2026-07-22",
+      "observedBlock": 72780426,
+      "sources": [
+        {
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
+        },
+        {
+          "label": "KESm token proxy and verified StableTokenV2 implementation",
+          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
+        },
+        {
+          "label": "Mento Broker proxy and verified implementation",
+          "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad?tab=contract"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker - operational KESm swap minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Pinned Mento Broker source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+          },
+          {
+            "label": "Pinned Mento BiPoolManager source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, broker() on KESm returned this Broker. Broker swaps call transferIn to burn the incoming Mento stable and transferOut to mint the outgoing stable only through registered exchanges subject to exchange and trading-limit checks."
+      },
+      {
+        "chain": "celo",
+        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+        "label": "Mento Timelock - KESm token and Broker administrator",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Finalized Celo block 72780426",
+            "url": "https://celo.blockscout.com/block/72780426"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, KESm owner(), token proxy owner, and Broker proxy owner returned this Timelock; getMinDelay() returned 172800 seconds. StableTokenV2 ownership can change broker, validators, and exchange authorization slots, while the proxy role can replace token and Broker mint-critical logic."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58",
+        "label": "Celo ValidatorsProxy - authorized KESm minter slot",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, validators() on KESm returned this proxy and StableTokenV2 admitted it through onlyMinter. The current Validators implementation can mint only Registry USDm to EpochManager and has no generic or KESm-targeting call, so the slot is authorized but cannot currently issue KESm."
+      },
+      {
+        "chain": "celo",
+        "address": "0xD533Ca259b330c7A88f74E000a3FaEa2d63B7972",
+        "label": "Celo GovernanceProxy - Validators proxy upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent KESm mint path, but has no current direct KESm call."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "review": {
+      "sources": [
+        {
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
+        },
+        {
+          "label": "Pinned StableTokenV2 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+        },
+        {
+          "label": "Pinned Mento Broker source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+        }
+      ],
+      "evidence": "At finalized Celo block 72780426, KESm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "reviewedAt": "2026-07-22",
+      "disposition": "scoreable"
+    }
+  }
+}

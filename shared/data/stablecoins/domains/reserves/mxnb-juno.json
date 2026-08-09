@@ -1,0 +1,94 @@
+{
+  "id": "mxnb-juno",
+  "reserves": [
+    {
+      "name": "MXN reserves in Nvio and Hey Banco bank accounts",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Nvio and Hey Banco; individual reserve-account balances are undisclosed",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BDO Mexico MXNB Q2 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q2_2026_en.pdf"
+      },
+      {
+        "label": "MXNB attestation index",
+        "url": "https://mxnb.mx/en-US/transparency"
+      }
+    ],
+    "rationale": "BDO Mexico (Castillo Miranda y Compania) Q2 2026 financial valuation as of 30 June 2026 (published 2026-07-16, PDF read this pass): a single aggregate line 'Reserves on bank accounts' MXN 35,333,251.88 against MXN 34,828,276.31 of MXNB in circulation (surplus 504,975.57). The engagement is consultancy under IVSC standards, expressly does not confirm balances with banks, and restricts use to management; its scope paragraph still says 'as of March 31, 2026' (stale copy-paste). No bank names or instrument split are disclosed - composition stays one bank-deposit category at probable confidence.",
+    "compositionBasis": "BDO Mexico Q2 2026 valuation of MXNB reserve bank-account balances",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The report identifies Nvio and Hey Banco but does not disclose the balance at each institution, account terms, deposit protection, or direct bank confirmation. The issuer's current transparency page provides only aggregate reserves and circulation.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "MXN reserves in Nvio and Hey Banco bank accounts",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The attested bank-account reserve is an off-chain fiat claim, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Nvio",
+        "role": "other",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "Hey Banco",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      },
+      {
+        "name": "MXNB issuer and reserve-management entities",
+        "role": "custodian",
+        "jurisdiction": "El Salvador"
+      },
+      {
+        "name": "MXNB token contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MXNB transparency",
+        "url": "https://mxnb.mx/transparency"
+      },
+      {
+        "label": "MXNB whitepaper",
+        "url": "https://mxnb.mx/whitepaper.pdf"
+      },
+      {
+        "label": "BDO Mexico MXNB Q1 2026 valuation report",
+        "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+      }
+    ],
+    "uncertainty": "The whitepaper states that reserves are legally and operationally segregated from issuer and affiliate operating funds and held through a single-purpose entity. It does not establish statutory bankruptcy remoteness, current provider shares, account-level allocations, or rehypothecation treatment."
+  }
+}

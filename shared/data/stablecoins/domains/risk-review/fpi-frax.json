@@ -1,0 +1,182 @@
+{
+  "id": "fpi-frax",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "FPI Ethereum token verified source (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+      },
+      {
+        "label": "FPI Ethereum token verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?fields=all"
+      },
+      {
+        "label": "Frax FPI overview",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
+        "url": "https://explorer.zksync.io/address/0xd405617db7473b0a3158356be7bc9ebec6d88b85"
+      },
+      {
+        "label": "FPI Fraxtal token address",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000003?tab=contract"
+      },
+      {
+        "label": "Fraxtal verified ProxyAdmin implementation",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000009?tab=contract"
+      },
+      {
+        "label": "Fraxtal public RPC",
+        "url": "https://rpc.frax.com"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712273, canonical FPI 0x5ca135cb8527d76e932f34b5145575f9d8cbe08e remained a direct, immutable token whose verified transfer and minter paths contain no blacklist, freeze, pause, seize, allowlist, or arbitrary-holder burn. At Fraxtal block 39703046, proxy 0xfc00000000000000000000000000000000000003 used implementation 0xfcc0d30000000000000000000000000000000003 and ProxyAdmin 0xfc0000000000000000000000000000000000000a; current implementation selector and source review likewise found no active holder restriction. The verified ZKsync CrossChainCanonicalV2 deployment has the same restriction-free transfer model. Frax's FPI documentation describes protocol mint/redemption and does not establish a separate issuer legal account-freeze power. Current blacklistability is therefore false; the Fraxtal 3/5 Safe's immediate ability to introduce restrictions by upgrading code is represented separately as a restrictable deployment in the transfer overlay.",
+    "reviewer": "OpenAI Codex C06 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "FPI's redemption target uses a specialized Chainlink oracle that commits the monthly CPI-U rate, but FPI is minted and redeemed through the FRAX-backed Controller Pool and stabilized through AMOs rather than borrower positions subject to collateral-price liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Frax documents FPI as a 100%-collateral-ratio protocol balance sheet: users mint or redeem FPI for Legacy Frax Dollar through the Controller Pool, AMOs deploy the collateral, and FPIS sales replenish backing when yield trails CPI. It does not document borrower-specific debt positions, collateral health ratios, or oracle-triggered collateral liquidations, so liquidation branches are not applicable.",
+      "sources": [
+        {
+          "label": "Frax FPI overview",
+          "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+        },
+        {
+          "label": "Frax FPI Controller Pool",
+          "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax FPI overview",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "Frax FPI Controller Pool",
+        "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "FPI is deployed on Ethereum, Fraxtal, and zkSync Era. Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement, and Pharos treats the Ethereum/Fraxtal rows as canonical rollup-bridge exposure. 2026-07-30 cohort T11 pass: the previously unmatched zkSync Era supply row is now matched to the verified issuer-canonical CrossChainCanonicalV2 deployment 0xd405617db7473b0a3158356be7bc9ebec6d88b85 (sole-minter deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651, the same Frax zkSync deployer pattern as the reviewed FRAX zkSync route), leaving no unmatched material deployment.",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi T11 safety-v9 unknown-reduction w2",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Fraxtal Bridge",
+        "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Frax FPI docs",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "Fraxtal bridge docs",
+        "url": "https://docs.frax.finance/cross-chain/fraxtal-bridge"
+      },
+      {
+        "label": "Fraxtal FPI token address",
+        "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+        "protocol": "FPI (Frax native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals; owner() = 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502 (Frax Safe per the mint-authority evidence) — native issuance on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FPI on Etherscan",
+            "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e"
+          },
+          {
+            "label": "Frax FPI docs",
+            "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000003",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000003",
+        "protocol": "FPI (Frax native issuance on Fraxtal)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals on Fraxtal; system-space deployment 0xFC00...0003 with owner() 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 and EIP-1967 admin 0xfc0000000000000000000000000000000000000a — Frax's own-chain native issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Fraxtal FPI",
+            "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd405617db7473b0a3158356be7bc9ebec6d88b85",
+        "protocol": "Frax CrossChainCanonicalV2 (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-30 at zkSync Era block 71379489: name 'Frax Price Index', symbol FPI, 18 decimals, totalSupply 250,000 FPI (about 2% of cross-chain supply). Verified CrossChainCanonicalV2 source with zero EIP-1967 implementation and admin slots (immutable); owner(), timelock_address(), and sole minter all resolve to the codeless deployer EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 — the same Frax zkSync deployer EOA pattern flagged in the reviewed FRAX zkSync route. L2Beat independently attributes zkSync Era FPI value to the Frax Ferry path. Issuer-canonical deployment, not a third-party bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-30",
+        "sources": [
+          {
+            "label": "FPI ZKsync Era verified source (CrossChainCanonicalV2)",
+            "url": "https://explorer.zksync.io/address/0xD405617DB7473b0A3158356Be7bC9EbEc6D88b85"
+          },
+          {
+            "label": "Frax CrossChainCanonicalV2 source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalV2.sol"
+          },
+          {
+            "label": "L2Beat zkSync Era TVS breakdown (FPI via Frax Ferry)",
+            "url": "https://l2beat.com/scaling/projects/zksync-era/tvs-breakdown"
+          }
+        ]
+      }
+    ]
+  }
+}

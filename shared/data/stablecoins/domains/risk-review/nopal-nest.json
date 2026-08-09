@@ -1,0 +1,101 @@
+{
+  "id": "nopal-nest",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "nOPAL is listed across issuer-controlled deployments and Nest docs do not expose a separate public bridge topology. The reviewed route is issuer-native multichain issuance with probable confidence pending more explicit chain-route documentation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest website",
+        "url": "https://www.nest.credit/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a — a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
+      }
+    ]
+  }
+}

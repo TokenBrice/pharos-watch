@@ -1,0 +1,599 @@
+{
+  "id": "usdy-ondo-finance",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USDY issuance is Ondo-operated and remains economically unbounded overall. At Ethereum block 25711921, AccessControl enumeration identified four live MINTER_ROLE holders: the uncapped legacy USDYManager, a LayerZero adapter with replaceable per-EID inbound rate limits, a rate-limited USDY InstantManager, and a 4-of-7 Safe that can mint directly. The same Safe was the sole token DEFAULT_ADMIN_ROLE holder, owned the token's ProxyAdmin, and could replace the adapter's peers and limits.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x96f6ef951840721adbf46ac996b59e0235cb985c"
+      ],
+      "implementationAddresses": [
+        "0xea0f7eebdc2ae40edfe33bf03d332f8a7f617528"
+      ],
+      "adminAddresses": [
+        "0x3ed61633057da0bc58f84b2b9002845e56f94c19"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDY ProxyAdmin owner Safe",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711753,
+      "sources": [
+        {
+          "label": "Ondo USDY upgradeable-token architecture",
+          "url": "https://github.com/ondoprotocol/usdy"
+        },
+        {
+          "label": "USDY Ethereum verified proxy",
+          "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+        },
+        {
+          "label": "USDY ProxyAdmin verified contract",
+          "url": "https://eth.blockscout.com/address/0x3ed61633057da0bc58f84b2b9002845e56f94c19?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x25a103a1d6aec5967c1a4fe2039cdc514886b97e",
+        "label": "Legacy USDYManager minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "signingModel": "Subscriptions are administered through the 3-of-6 manager-admin Safe, while the separate 2-of-6 relayer/pricer Safe co-controls price-ID assignment and claim timing.",
+          "caps": "No aggregate or immutable numeric issuance ceiling was identified in the verified USDYManager mint path.",
+          "onchainAmountBounds": "A claim requires a recorded subscription, an assigned price ID, and a claimable timestamp before USDYManager calls the token's mint function; those workflow checks do not impose an aggregate supply cap.",
+          "pausersAdminsUpgraders": "The 4-of-7 token-admin Safe and 3-of-6 manager-admin Safe hold manager administration roles; the 4-of-7 Safe can also revoke or replace this token MINTER_ROLE."
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711921,
+        "sources": [
+          {
+            "label": "Ondo deployed-address registry",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Legacy USDYManager verified contract",
+            "url": "https://eth.blockscout.com/address/0x25a103a1d6aec5967c1a4fe2039cdc514886b97e?tab=contract"
+          },
+          {
+            "label": "Legacy USDYManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x25a103a1d6aec5967c1a4fe2039cdc514886b97e"
+          },
+          {
+            "label": "USDY Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711921, token MINTER_ROLE enumeration still included this verified legacy USDYManager contract. Its verified claim path requires a deposited subscription, assigned price ID, and claimable timestamp before calling USDY mint, but applies no aggregate numeric ceiling. Ondo's address registry marks the manager deprecated; the live role and uncapped route are therefore preserved as direct authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa6275720b3fb1efe3e6ef2b5bf2293148852307d",
+        "label": "USDY LayerZero mint-burn adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Inbound bridge minting is limited per trusted LayerZero endpoint ID over rolling 24-hour windows: 500,000 USDY for EIDs 30110, 30181, and 30280; 300,000 USDY for EID 30168; and disabled for EIDs 30102 and 30370 at the observation block.",
+        "routeChecks": {
+          "trustedPeerOrRemote": "LayerZero OApp peer checks bind inbound messages to owner-configured peers for EIDs 30102, 30110, 30168, 30181, 30280, and 30370 before crediting USDY.",
+          "attestorQuorum": "Message acceptance inherits the configured LayerZero EndpointV2 messaging and DVN verification path; this review does not restate a fixed DVN quorum because it is endpoint/path configuration.",
+          "rateLimits": "The adapter checks and updates a per-EID inbound rate limiter before minting. Active 24-hour inbound limits were 500,000 USDY for EIDs 30110, 30181, and 30280 and 300,000 USDY for EID 30168; inbound mint was disabled for EIDs 30102 and 30370.",
+          "pausersAdminsUpgraders": "The 4-of-7 Ondo Safe owns the adapter and can change trusted peers and rate-limit parameters, so the observed limits are replaceable even though the adapter itself cannot raise them."
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711915,
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:ethereum:0xa6275720b3fb1efe3e6ef2b5bf2293148852307d"
+        ],
+        "sources": [
+          {
+            "label": "Ondo deployed-address registry",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "OndoMintBurnAdapter verified contract",
+            "url": "https://eth.blockscout.com/address/0xa6275720b3fb1efe3e6ef2b5bf2293148852307d?tab=contract"
+          },
+          {
+            "label": "OndoMintBurnAdapter verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6275720b3fb1efe3e6ef2b5bf2293148852307d"
+          },
+          {
+            "label": "USDY Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711915, the verified adapter was an active USDY MINTER_ROLE holder, owned by the 4-of-7 Ondo Safe, and configured with six LayerZero peers. Its inbound credit path authenticates the peer and applies the per-EID rate limiter before minting. The adapter is therefore cap-limited; its owner, not the adapter, can replace peers or raise limits."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x505ff4462ba5e62ed529fa836d768ecd7b85439c",
+        "label": "USDY manager-admin / admin-subscription Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816db",
+            "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0x61eac1f1c50c501af35a48d6ab7c42c24b399536",
+            "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
+            "0xe2cbb2fd440133946cd5171f675e1075570c5cae"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711921,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711921,
+        "failureDomainKeys": [
+          "safe:ethereum:0x505ff4462ba5e62ed529fa836d768ecd7b85439c",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Legacy USDYManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x25a103a1d6aec5967c1a4fe2039cdc514886b97e"
+          },
+          {
+            "label": "USDY InstantManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa42613c243b67bf6194ac327795b926b4b491f15"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x505ff4462ba5e62ed529fa836d768ecd7b85439c/"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At blocks 25711917-25711921, this 3-of-6 Safe held USDYManager MANAGER_ADMIN and TIMESTAMP_SETTER_ROLE plus InstantManager ADMIN_SUBSCRIPTION_ROLE. It can authorize and time legacy-manager claims and use the separately capped admin-subscription path. Safe API reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8d52a385d19f13ef5a544e0514c62f0a44ff31bf",
+        "label": "USDY relayer / pricer co-control Safe",
+        "role": "backend-signer",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 2,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816db",
+            "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0x61eac1f1c50c501af35a48d6ab7c42c24b399536",
+            "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
+            "0xe2cbb2fd440133946cd5171f675e1075570c5cae"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711921,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711921,
+        "failureDomainKeys": [
+          "safe:ethereum:0x8d52a385d19f13ef5a544e0514c62f0a44ff31bf",
+          "issuer-backend:ondo-pricer-relayer"
+        ],
+        "sources": [
+          {
+            "label": "Legacy USDYManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x25a103a1d6aec5967c1a4fe2039cdc514886b97e"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x8d52a385d19f13ef5a544e0514c62f0a44ff31bf/"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711921, this 2-of-6 Safe held both RELAYER_ROLE and PRICE_ID_SETTER_ROLE on legacy USDYManager, co-controlling price-ID assignment and claim authorization without holding token MINTER_ROLE. Safe API reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5ae21c99fc5f1584d8cb09a298cffd92b5d178ef",
+        "label": "USDY InstantManager default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x6264422fd4c54292d71f6d3be7cbf8900573172b",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0x40482b9538a418cb62b92f14cc13d20092b3dbb4",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25711923,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711923,
+        "failureDomainKeys": [
+          "safe:ethereum:0x5ae21c99fc5f1584d8cb09a298cffd92b5d178ef",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "USDY InstantManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa42613c243b67bf6194ac327795b926b4b491f15"
+          },
+          {
+            "label": "AdminSubscriptionChecker verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1cb2dcc325615d02ae384941149d1da6521fa018"
+          },
+          {
+            "label": "OndoRateLimiter verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x98db502215da1ad9f626d4a0090a8a2f4971003c"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x5ae21c99fc5f1584d8cb09a298cffd92b5d178ef/"
+          }
+        ],
+        "evidence": "At blocks 25711917-25711923, this 3-of-5 Safe was the sole DEFAULT_ADMIN_ROLE holder for InstantManager, AdminSubscriptionChecker, and OndoRateLimiter and also held their configuration roles. It can grant mint-route roles and directly raise or replace checker and limiter caps. Safe API reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5e7cda85a3ce07ff3be580b585e95bba7cfde336",
+        "label": "USDY rate-limit cap-admin Safe",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x40482b9538a418cb62b92f14cc13d20092b3dbb4"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25711923,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711923,
+        "failureDomainKeys": [
+          "safe:ethereum:0x5e7cda85a3ce07ff3be580b585e95bba7cfde336",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "OndoRateLimiter verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x98db502215da1ad9f626d4a0090a8a2f4971003c"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x5e7cda85a3ce07ff3be580b585e95bba7cfde336/"
+          }
+        ],
+        "evidence": "At Ethereum block 25711923, this 3-of-5 Safe held OndoRateLimiter CONFIGURER_ROLE and could raise the global or user subscription limits governing InstantManager minting. Safe API reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x682d3d7cb33a9089c19b9b135a5db3d2c5cf20c4",
+        "label": "USDY rate-limit operations Safe",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0xe2cbb2fd440133946cd5171f675e1075570c5cae",
+            "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b",
+            "0xdb8441d6adb9f69af1c339a685e1e26c3c3816db",
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711923,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711923,
+        "failureDomainKeys": [
+          "safe:ethereum:0x682d3d7cb33a9089c19b9b135a5db3d2c5cf20c4",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "OndoRateLimiter verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x98db502215da1ad9f626d4a0090a8a2f4971003c"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x682d3d7cb33a9089c19b9b135a5db3d2c5cf20c4/"
+          }
+        ],
+        "evidence": "At Ethereum block 25711923, this 3-of-6 Safe held OndoRateLimiter CONFIGURER_ROLE and could raise the global or user subscription limits governing InstantManager minting. Safe API reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1a694a09494e214a3be3652e4b343b7b81a73ad7",
+        "label": "USDY default admin / direct-minter Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x40482b9538a418cb62b92f14cc13d20092b3dbb4",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711921,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "As adapter owner, this Safe can replace the LayerZero peer accepted for each endpoint ID.",
+          "caps": "As adapter owner, this Safe can raise or replace the per-EID bridge rate limits; as token DEFAULT_ADMIN_ROLE holder, it can also replace MINTER_ROLE membership.",
+          "pausersAdminsUpgraders": "This Safe is simultaneously a direct USDY minter, sole token default admin, adapter owner, and ProxyAdmin owner, so its direct token mint is an uncapped bypass of downstream route limits."
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711921,
+        "failureDomainKeys": [
+          "safe:ethereum:0x1a694a09494e214a3be3652e4b343b7b81a73ad7",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694a09494e214a3be3652e4b343b7b81a73ad7/"
+          },
+          {
+            "label": "USDY Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711921, this 4-of-7 Safe was one of four MINTER_ROLE holders and the sole token DEFAULT_ADMIN_ROLE holder. It can mint directly, grant or revoke token roles, and as adapter owner raise bridge limits or replace peers. The Safe Transaction Service reported no enabled modules and a zero guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa42613c243b67bf6194ac327795b926b4b491f15",
+        "label": "USDY InstantManager minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "InstantManager issuance is bounded by the OndoRateLimiter's 100,000,000 USDY global subscription limit per 24 hours and 50,000,000 USDY default per-user subscription limit per 24 hours; the reviewed admin subscriber Safe additionally had about 9,081,309 USD of remaining configured allowance.",
+        "routeChecks": {
+          "lockboxOrEscrow": "Public subscriptions require supported collateral transfer and the InstantManager's pricing, fee, and compliance checks before minting USDY.",
+          "rateLimits": "OndoRateLimiter enforced a 100,000,000 USDY global subscription limit per 86,400 seconds and a 50,000,000 USDY default per-user subscription limit per 86,400 seconds.",
+          "caps": "AdminSubscriptionChecker reported 9,081,308.999999999822580517 USD of remaining allowance for the 3-of-6 admin-subscription Safe at the observation block.",
+          "pausersAdminsUpgraders": "The 3-of-5 default-admin Safe can grant InstantManager and checker roles and configure their limits; separate 3-of-5 and 3-of-6 rate-limit configurer Safes can raise limiter caps."
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711917,
+        "failureDomainKeys": [
+          "contract:ethereum:0xa42613c243b67bf6194ac327795b926b4b491f15",
+          "issuer:ondo"
+        ],
+        "sources": [
+          {
+            "label": "Ondo deployed-address registry",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "USDY InstantManager verified contract",
+            "url": "https://eth.blockscout.com/address/0xa42613c243b67bf6194ac327795b926b4b491f15?tab=contract"
+          },
+          {
+            "label": "USDY InstantManager verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa42613c243b67bf6194ac327795b926b4b491f15"
+          },
+          {
+            "label": "AdminSubscriptionChecker verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1cb2dcc325615d02ae384941149d1da6521fa018"
+          },
+          {
+            "label": "OndoRateLimiter verified source API",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x98db502215da1ad9f626d4a0090a8a2f4971003c"
+          },
+          {
+            "label": "USDY Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711917, token MINTER_ROLE enumeration included this verified USDY InstantManager, whose public and admin subscription paths call the external limiter/checker before minting. At blocks 25711917-25711923, the active constraints were about $9.081 million of admin allowance, $100 million per 24 hours globally, and $50 million per 24 hours by default per user. The contract cannot raise those limits itself."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1a694a09494e214a3be3652e4b343b7b81a73ad7",
+        "label": "USDY ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x40482b9538a418cb62b92f14cc13d20092b3dbb4",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25711753,
+          "observedAt": "2026-08-08",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694a09494e214a3be3652e4b343b7b81a73ad7/"
+          },
+          {
+            "label": "USDY ProxyAdmin verified contract",
+            "url": "https://eth.blockscout.com/address/0x3ed61633057da0bc58f84b2b9002845e56f94c19?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, ProxyAdmin owner() was this 4-of-7 Safe. The Safe can direct ProxyAdmin to replace USDY's implementation; no separate timelock, enabled Safe module, or nonzero guard was observed."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Ondo USDY important notes and issuer",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/important-notes"
+        },
+        {
+          "label": "Ondo USDY verification-agent comparison",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
+        },
+        {
+          "label": "Ondo USDY daily proof of reserves and attestation reports",
+          "url": "https://ondo.finance/usdy"
+        },
+        {
+          "label": "Ondo USDY trust and security",
+          "url": "https://docs.ondo.finance/trust-and-security"
+        },
+        {
+          "label": "Ondo Global Markets trust and transparency (Ankura daily verification and liability reconciliation)",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        },
+        {
+          "label": "Ondo docs",
+          "url": "https://docs.ondo.finance/"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694a09494e214a3be3652e4b343b7b81a73ad7/"
+        },
+        {
+          "label": "USDY Ethereum verified proxy",
+          "url": "https://eth.blockscout.com/address/0x96f6ef951840721adbf46ac996b59e0235cb985c?tab=contract"
+        },
+        {
+          "label": "USDY ProxyAdmin verified contract",
+          "url": "https://eth.blockscout.com/address/0x3ed61633057da0bc58f84b2b9002845e56f94c19?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "At Ethereum blocks 25711915-25711923, four live token MINTER_ROLE holders remained. Legacy USDYManager was an uncapped workflow-gated route; the LayerZero adapter was bounded by trusted peers and replaceable per-EID 24-hour limits; InstantManager was bounded by a roughly $9.081 million admin allowance plus $100 million global and $50 million default-user 24-hour limits; and the 4-of-7 Safe could mint directly. The reviewed Safes expose manager-admin, relayer/pricer, default-admin, cap-admin, direct-mint, and upgrade authorities, with no enabled modules or nonzero guards reported by Safe API. Overall semantics remain unbounded because the Safe direct-mint route and uncapped legacy path bypass downstream limits, while cap owners can replace limits. No public mint-authority incident was identified. Supervision remains attestation-only; reconciliation remains periodic based on Ondo's documented daily asset and investor-liability verification.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

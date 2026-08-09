@@ -1,0 +1,53 @@
+{
+  "id": "stcusd-cap",
+  "reserves": [
+    {
+      "name": "cUSD ERC-4626 vault shares and operator-lending receivable",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "cusd-cap",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Cap stcUSD vault, operators, and cUSD",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap stcUSD mechanics",
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+      },
+      {
+        "label": "Cap deployed-address registry",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
+      {
+        "label": "stcUSD Ethereum vault",
+        "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#code"
+      },
+      {
+        "label": "Pinned Cap contracts repository",
+        "url": "https://github.com/cap-labs-dev/cap-contracts"
+      }
+    ],
+    "rationale": "stcUSD is an ERC-4626 claim on cUSD deployed through Cap's operator-lending system. The exact direct reserve is one protocol position whose operator credit, custody, concentration, liquidity, and smart-contract failure domains remain explicit.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row, deployed stcUSD vault, and Cap mechanics",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct stcUSD reserve slice is identified; operator allocations inside the position remain upstream portfolio detail.",
+    "knownUnknownExposurePct": 0
+  }
+}

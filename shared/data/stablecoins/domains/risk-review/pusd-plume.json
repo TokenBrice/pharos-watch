@@ -1,0 +1,77 @@
+{
+  "id": "pusd-plume",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: pUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Plume pUSD",
+        "url": "https://plume.org/pusd"
+      },
+      {
+        "label": "Plume USD docs",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+        "protocol": "unresolved route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570987: pUSD token 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f (symbol pUSD) owner() = BoringVault Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (getThreshold/getOwners = 3-of-6, the Plume/Nucleus vault owner Safe per the verified mint-authority review); no bridge endpoint surface. Plume's native stablecoin deployment administered by the issuer vault Safe on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "plume",
+        "canonicalChain": "plume",
+        "observedBlock": 25570987,
+        "sources": [
+          {
+            "label": "PUSD on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+          }
+        ]
+      },
+      {
+        "id": "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+        "destinationChain": "plume",
+        "contractAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
+        "protocol": "unresolved route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plume at block 82174949: pUSD token 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f (symbol pUSD) owner() = BoringVault Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (getThreshold/getOwners = 3-of-6, the Plume/Nucleus vault owner Safe per the verified mint-authority review); no bridge endpoint surface. Plume's native stablecoin deployment administered by the issuer vault Safe on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "plume",
+        "canonicalChain": "plume",
+        "observedBlock": 82174949,
+        "sources": [
+          {
+            "label": "PUSD on plume explorer (verified 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+          }
+        ]
+      }
+    ]
+  }
+}

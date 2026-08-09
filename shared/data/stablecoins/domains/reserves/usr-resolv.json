@@ -1,0 +1,32 @@
+{
+  "id": "usr-resolv",
+  "reserves": [
+    {
+      "name": "ETH + wstETH (delta-neutral via short perps)",
+      "pct": 55,
+      "risk": "medium"
+    },
+    {
+      "name": "BTC (delta-neutral via short perps)",
+      "pct": 20,
+      "risk": "medium"
+    },
+    {
+      "name": "RLP insurance layer (surplus ETH + BTC)",
+      "pct": 15,
+      "risk": "medium"
+    },
+    {
+      "name": "USD stablecoins (USDC)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "USD stablecoins (USDT)",
+      "pct": 5,
+      "risk": "low",
+      "coinId": "usdt-tether"
+    }
+  ]
+}

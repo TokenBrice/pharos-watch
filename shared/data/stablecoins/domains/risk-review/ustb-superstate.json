@@ -1,0 +1,101 @@
+{
+  "id": "ustb-superstate",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USTB resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USTB shares are issued as tokens on Ethereum, Solana, and Plume or held in book-entry form. Superstate documentation does not identify a bridge route controlling durable supply, so Pharos treats route risk as native issuance on the supported ledgers.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Superstate USTB",
+        "url": "https://superstate.com/assets/ustb"
+      },
+      {
+        "label": "Superstate USTB docs",
+        "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e",
+        "protocol": "Superstate",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Superstate USTB",
+            "url": "https://superstate.com/assets/ustb"
+          },
+          {
+            "label": "Superstate USTB docs",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
+          }
+        ]
+      },
+      {
+        "id": "plume:0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+        "destinationChain": "plume",
+        "contractAddress": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+        "protocol": "Superstate",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Superstate USTB",
+            "url": "https://superstate.com/assets/ustb"
+          },
+          {
+            "label": "Superstate USTB docs",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
+          }
+        ]
+      },
+      {
+        "id": "solana:CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
+        "destinationChain": "solana",
+        "contractAddress": "CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
+        "protocol": "Superstate",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Superstate USTB",
+            "url": "https://superstate.com/assets/ustb"
+          },
+          {
+            "label": "Superstate USTB docs",
+            "url": "https://docs.superstate.com/investors/tokenized-funds/invesco-ustb"
+          }
+        ]
+      }
+    ]
+  }
+}

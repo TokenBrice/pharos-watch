@@ -1,0 +1,61 @@
+{
+  "id": "ctusd-citrea",
+  "reserves": [
+    {
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
+      "risk": "low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed M0 reserve institutions",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve curation batch R09",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Citrea USD documentation",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "M0 Extensions documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 protocol API",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    ],
+    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The live M0 reserve adapter compiles slices named Tokenized treasury collateral and Cash; the curated rows classify those adapter slices verbatim. The direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge. ctUSD-specific underlying positions, custodians, and provider weights are not published by M0, but those details sit below the adapter-level classification that V9 consumes.",
+    "compositionBasis": "M0 protocol category snapshot matching the live adapter slice names and the documented 1:1 M0 extension relationship",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "None at the adapter-level composition; ctUSD-specific underlying positions, custodians, and provider weights remain undisclosed by M0.",
+    "knownUnknownExposurePct": 0
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "id": "money-defi-money",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "MONEY is an authorized crvUSD fork on Arbitrum/Optimism: users deposit approved collateral (WBTC, ETH, etc.) and mint MONEY against per-market debt ceilings using crvUSD's controller/LLAMMA design; defi.money governance/admin controls market onboarding and risk parameters.",
+    "controls": [
+      {
+        "chain": "arbitrum",
+        "label": "defi.money market controllers (crvUSD-style minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
+        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics.",
+        "failureDomainKeys": [
+          "protocol:defi-money-controllers"
+        ]
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x222d2B30EcD382a058618d9F1ee01F147666E48b",
+        "label": "defi.money admin Safe (MONEY token owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 7,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "defi.money 3-of-7 Safe owns MONEY token and controls market onboarding, debt ceilings, and risk parameters.",
+        "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API (arb1) confirmed Gnosis Safe v1.3.0+L2, threshold 3, 7 owners (0x3e254c20, 0x334deb1b, 0xCA88C5D4, 0x31dADb64, 0x86cf559f, 0xDeF1c4aD, 0xbADbABEF), no modules, no guard, nonce 6. EIP-1967 admin slot returned zero — not an upgradeable proxy. Direct Arbitrum RPC reads at block 472427523: getOwners() returned 7 owners, getThreshold()=3, getModulesPaginated empty, guard slot zero, masterCopy GnosisSafeL2 v1.3.0.",
+        "sources": [
+          {
+            "label": "Arbitrum MONEY token (Arbiscan)",
+            "url": "https://arbiscan.io/token/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+          }
+        ],
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x3E254c201c2fF0097F87fa02f415c82a244450cA",
+            "0x334dEb1bC3bEdb88f20b77dCC5F1C624a8b8eDd5",
+            "0xcA88c5D43BB11edBcbc1436FEFa9d578D8d64489",
+            "0x31DAdB64d665d66665Bc026A18758663e88711FB",
+            "0x86Cf559F9bf1Bc9A9eFB9c77694D310f356Cf856",
+            "0xDef1c4Ad4A9C6BCD718c91E6Ab79958217FA27Da",
+            "0xBaDbabeFa66bfA6e01C4918229EA65e20Bbc79E2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 472427523,
+          "source": "onchain"
+        }
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x69420f9e38a4e60a62224c489be4bf7a94402496"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 472419864,
+      "sources": [
+        {
+          "label": "Arbitrum MONEY token",
+          "url": "https://arbiscan.io/address/0x69420f9e38a4e60a62224c489be4bf7a94402496#code"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile).",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "defi.money docs",
+          "url": "https://docs.defi.money/"
+        },
+        {
+          "label": "Arbitrum MONEY token (Arbiscan)",
+          "url": "https://arbiscan.io/token/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        }
+      ],
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "raiseable"
+  }
+}

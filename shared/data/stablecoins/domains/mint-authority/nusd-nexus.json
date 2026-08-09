@@ -1,0 +1,145 @@
+{
+  "id": "nusd-nexus",
+  "mintAuthority": {
+    "mintPath": "bridge-or-oft-synthetic",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "NUSD is the Synapse nexus-pool LPToken: mint is restricted to its SwapFlashLoan pool owner, and supply expands when LPs add liquidity. Both token and pool are fixed EIP-1167 clones. The pool is owned by a 2-of-3 Safe with an enabled transfer-only Allowance Module and no guard.",
+    "upgradeability": {
+      "model": "immutable",
+      "proxyAddresses": [
+        "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
+        "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+      ],
+      "implementationAddresses": [
+        "0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3",
+        "0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25527046,
+      "sources": [
+        {
+          "label": "NUSD LPToken fixed EIP-1167 clone",
+          "url": "https://eth.blockscout.com/address/0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+        },
+        {
+          "label": "NUSD LPToken implementation",
+          "url": "https://eth.blockscout.com/address/0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3"
+        },
+        {
+          "label": "Synapse SwapFlashLoan fixed EIP-1167 clone",
+          "url": "https://eth.blockscout.com/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+        },
+        {
+          "label": "Synapse SwapFlashLoan implementation",
+          "url": "https://eth.blockscout.com/address/0x5a5fff6f753d7c11a56a52fe47a177a87e431655"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Synapse SwapFlashLoan pool (sole NUSD minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "chain": "ethereum",
+        "address": "0x1116898dda4015ed8ddefb84b6e8bc24528af2d8",
+        "capDescription": "Only onlyOwner can call mint() on the LPToken; the sole owner is the SwapFlashLoan pool; minting occurs on LP deposit.",
+        "routeChecks": {
+          "lockboxOrEscrow": "NUSD supply expands only when LPs add liquidity to the Synapse nexus SwapFlashLoan pool.",
+          "onchainAmountBounds": "LPToken mint() is onlyOwner and the owner is the SwapFlashLoan pool contract.",
+          "caps": "No independent fixed supply cap; minting is bounded by pool deposit/accounting logic.",
+          "pausersAdminsUpgraders": "Pool ownership is held by the separately reviewed 2-of-3 Safe."
+        },
+        "evidence": "At Ethereum block 25295203: NUSD token Blockscout shows ContractName 'LPToken'; owner() returned 0x1116898…; Blockscout confirms that address as ContractName 'SwapFlashLoan' (Solidity 0.6.12, AGPL-3.0). Pool's own owner() = 0x67f60b0891…",
+        "sources": [
+          {
+            "label": "NUSD LPToken (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F"
+          },
+          {
+            "label": "Synapse SwapFlashLoan pool (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+          }
+        ]
+      },
+      {
+        "label": "Synapse nexus-pool admin Safe (pool owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "chain": "ethereum",
+        "address": "0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55",
+        "signerCount": 3,
+        "threshold": 2,
+        "modulesOrGuardsStatus": "present",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Safe owns the SwapFlashLoan pool that owns the LPToken mint path. Safe v1.3 has an enabled transfer-only Allowance Module and no guard.",
+          "caps": "Safe can administer the pool route, but the reviewed LPToken mint path remains pool-deposit/accounting driven."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527046,
+        "evidence": "At Ethereum block 25527046, SwapFlashLoan pool owner() remained Safe 0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55. The Safe was 2-of-3 with zero guard and module guard, standard fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, and enabled Allowance Module 0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134. Six delegates were configured in the module; verified module code limits them to allowance transfers and cannot replace either fixed clone target.",
+        "safe": {
+          "owners": [
+            "0xb3dad3c24a861b84fdf380b212662620627d4e15",
+            "0x9ce9dc8b12e264f00e80f35326040c75201c38f3",
+            "0x0d745ad687f2b1e1941569f09f612f60ad4ad5bc"
+          ],
+          "threshold": 2,
+          "enabledModules": [
+            "0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
+          ],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25527046,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Synapse nexus-pool admin Safe (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x67f60b0891ebd842ebe55e4ccca1098d7aac1a55"
+          },
+          {
+            "label": "Allowance Module (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "review": {
+      "evidence": "At Ethereum block 25527046, NUSD LPToken 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4 and SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 were 45-byte EIP-1167 runtimes embedding fixed implementations 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3 and 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. All EIP-1967 implementation, admin, and beacon slots were zero on both clones and implementations. Pool ownership remained with the 2-of-3 Safe; its enabled Allowance Module can transfer Safe-held allowances but cannot change either clone target. NUSD is the fixed pool's LP receipt: new shares require liquidity deposited into the immutable SwapFlashLoan clone, and neither the pool owner nor its Safe can replace the LPToken or pool implementation. The direct-mint encoding is therefore economically bounded by deposited pool assets.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "NUSD LPToken (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x1B84765dE8B7566e4cEAF4D0fD3c5aF52D3DdE4F"
+        },
+        {
+          "label": "Synapse SwapFlashLoan pool (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8"
+        },
+        {
+          "label": "Synapse on L2BEAT",
+          "url": "https://l2beat.com/bridges/projects/synapse"
+        },
+        {
+          "label": "Allowance Module (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xcfbfac74c26f8647cbdb8c5caf80bb5b32e43134"
+        }
+      ]
+    }
+  }
+}

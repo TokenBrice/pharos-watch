@@ -1,0 +1,132 @@
+{
+  "id": "rusd-royal-dollar",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.rcoins.digital/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "RUSD deploys the same non-upgradeable Circle-style FiatToken (RoyalDollar) on Ethereum, BNB Chain, and Tron, with no cross-chain functions of any kind in the contract — no LayerZero OFT/CCIP/Wormhole/Axelar hooks, only mint/burn governed by MASTERMINTER/MINTER roles (independently confirmed by reading the verified Ethereum and BSC contracts). The identical Eth/BSC address is a deterministic vanity deploy, not an omnichain token standard. Each chain's supply is minted independently by the issuer's per-chain mint authority (Eth/BSC MASTERMINTER 0xc50ebe57; Tron 0x9a0c5f3a), so there is no durable cross-chain token bridge; the \"R-Bridge / RxBridge\" is a hybrid Bank–OTC–Exchange business settlement network, not an on-chain supply route.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "RoyalDollar FiatToken (Ethereum) — Circle-style MASTERMINTER, non-upgradeable, no cross-chain functions",
+        "slug": "royaldollar-fiattoken",
+        "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "bridgeTypes": [
+          "per-chain-native-mint"
+        ],
+        "note": "ERC-20 Burnable/Pausable/AccessControl; roles MASTERMINTER/MINTER/BLACKLISTER/PAUSER; no OFT/CCIP/Wormhole/Axelar/bridge functions"
+      },
+      {
+        "source": "explorer",
+        "name": "RoyalDollar FiatToken (BNB Chain) — same bytecode, non-upgradeable, no cross-chain functions",
+        "slug": "royaldollar-fiattoken-bsc",
+        "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "bridgeTypes": [
+          "per-chain-native-mint"
+        ],
+        "note": "Identical RoyalDollar contract on BSC; no LayerZero/CCIP/Wormhole/Axelar/bridge functions detected"
+      },
+      {
+        "source": "issuer",
+        "name": "R-Bridge / RxBridge settlement ecosystem (business settlement network, not an on-chain token bridge)",
+        "slug": "rxbridge",
+        "url": "https://www.rcoins.digital/",
+        "bridgeTypes": [
+          "off-chain-settlement"
+        ],
+        "note": "Marketing-described hybrid bank–OTC–exchange settlement layer; no on-chain burn/mint or lock/mint token bridge documented"
+      }
+    ],
+    "sources": [
+      {
+        "label": "RUSD Ethereum contract (Etherscan) — RoyalDollar FiatToken, no bridge functions",
+        "url": "https://etherscan.io/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+      },
+      {
+        "label": "RUSD BSC contract (BscScan) — same FiatToken, no bridge functions",
+        "url": "https://bscscan.com/address/0x44bb433d29fe966992a9c812da7f252c9c53f285"
+      },
+      {
+        "label": "RUSD Tron contract (Tronscan) — separate MASTERMINTER EOA",
+        "url": "https://tronscan.org/#/contract/TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
+      },
+      {
+        "label": "Issuer RUSD page — describes only per-chain deployment, no bridge protocol",
+        "url": "https://www.rcoins.digital/RUSD.html"
+      },
+      {
+        "label": "Royal Stablecoins / RxBridge ecosystem overview",
+        "url": "https://www.rcoins.digital/"
+      },
+      {
+        "label": "RUSD whitepaper",
+        "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "bsc:0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "destinationChain": "bsc",
+        "contractAddress": "0x44bb433d29fe966992a9c812da7f252c9c53f285",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "tron:TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+        "destinationChain": "tron",
+        "contractAddress": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21"
+      }
+    ]
+  }
+}

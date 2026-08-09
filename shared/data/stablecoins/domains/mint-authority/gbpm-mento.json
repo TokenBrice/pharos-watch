@@ -1,0 +1,125 @@
+{
+  "id": "gbpm-mento",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "GBPm is a legacy StableTokenV3 (cGBP) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+        "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+      ],
+      "adminAddresses": [
+        "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mento Safe — GBPm token owner and proxy admin",
+      "observedAt": "2026-07-20",
+      "observedBlock": 69287341,
+      "sources": [
+        {
+          "label": "GBPm Celo token deployment",
+          "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746?tab=contract"
+        },
+        {
+          "label": "GBPm Monad token deployment",
+          "url": "https://monad.blockscout.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1?tab=contract"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker — authorized minter for GBPm via Celo Registry",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GBPm deprecated_broker_storage_slot__ on-chain read",
+            "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746"
+          }
+        ],
+        "evidence": "At Celo block 69287341, deprecated_broker_storage_slot__() on GBPm (StableTokenV3, 0xccf663b1ff11028f0b19058d0f7b674004a40746) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. Celo Registry getAddressFor(keccak256('Broker')) also returns 0x777A..., confirming it is the live authorized minter. isMinter(Broker) = false (StableTokenV3 uses registry-based auth, not isMinter mapping)."
+      },
+      {
+        "chain": "celo",
+        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "label": "Mento Safe — GBPm token owner and proxy admin",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1+L2",
+          "observedBlock": 69287341,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Mento docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "At Celo block 69287341, owner() on GBPm returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; EIP-1967 proxy admin slot returned the same Safe address. Safe API (celo chain) confirmed threshold 4, 6 owners (drift from prior 7-owner data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99."
+      },
+      {
+        "chain": "monad",
+        "address": "0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea",
+        "label": "Monad GBPm ProxyAdmin (owned by the same Mento Safe)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GBPm Monad token deployment",
+            "url": "https://monadexplorer.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+          }
+        ],
+        "evidence": "The reviewed bridgeRouteRisk on-chain check (2026-07-20) established that GBPm on Monad is a transparent proxy (implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e) fronted by ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, whose owner() is the same 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 already resolved for Celo — an issuer-operated deployment, not a third-party bridge admin."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        }
+      ],
+      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved. Follow-up 2026-07-21: the upgrade posture is formalized as a transparent-proxy `upgradeability` record — Celo's EIP-1967 admin slot is the Mento Safe directly, while Monad fronts the same token behind ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, itself owned by the identical Safe (per the reviewed bridgeRouteRisk on-chain check). Both deployments' code-upgrade authority resolve to the one 4-of-6 Mento Safe.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 evidence-gap curation",
+      "reviewedAt": "2026-07-21"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "reserves": [
+    {
+      "name": "WBTC",
+      "pct": 85.8,
+      "risk": "medium",
+      "blacklistable": true,
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo/Coinbase WBTC custodians",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 14.2,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido wstETH protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "basis"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "f(x) collateral and liquidation documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/processing-the-rebalances-and-liquidations"
+      },
+      {
+        "label": "f(x) Protocol contracts",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+      }
+    ],
+    "rationale": "The current live reserve capture observed on 2026-07-14 contains WBTC and wstETH collateral only, at 85.8% and 14.2% respectively. f(x) documentation identifies separate WBTC and wstETH long pools and their liquidation paths; the weights are a point-in-time live capture rather than a permanent allocation.",
+    "compositionBasis": "Current f(x) live collateral capture with official pool documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live capture identifies collateral categories and weights but does not establish the current custody split among WBTC custodians or the operational liquidity available for each pool.",
+    "knownUnknownExposurePct": 0
+  }
+}

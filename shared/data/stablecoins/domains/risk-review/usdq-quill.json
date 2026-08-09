@@ -1,0 +1,336 @@
+{
+  "id": "usdq-quill",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Quill USDQ documentation",
+        "url": "https://docs.quill.finance/faq/usdusdq"
+      },
+      {
+        "label": "Quill active contract inventory",
+        "url": "https://docs.quill.finance/documentation/contract-addresses"
+      },
+      {
+        "label": "Scroll USDQ proxy verified contract",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xdb9e8f82d6d45fff803161f2a5f75543972b229a"
+      },
+      {
+        "label": "Scroll USDQ BoldToken current implementation source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x4103155fb2dcf8b6138c8eb4be0542facc9a7523"
+      },
+      {
+        "label": "Scroll QuillAccessManager verified source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x3e5462da8e6c3971d445d717c389a8bec036b719"
+      },
+      {
+        "label": "Quill audit and security disclosures",
+        "url": "https://docs.quill.finance/faq/audits-and-security"
+      },
+      {
+        "label": "Quill documentation sitemap",
+        "url": "https://docs.quill.finance/sitemap-pages.xml"
+      },
+      {
+        "label": "Archived Quill USDQ documentation",
+        "url": "https://web.archive.org/web/20250908155133/https://docs.quill.finance/faq/usdusdq"
+      },
+      {
+        "label": "Scroll public RPC fixed-block reads",
+        "url": "https://rpc.scroll.io"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at Scroll block 34599130. USDQ proxy 0xdb9e8f82d6d45fff803161f2a5f75543972b229a still used verified BoldToken implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 and authority 0xbe589551397d0f28255e429ddb478620b1c2f08a. Current transfer/transferFrom logic rejects only the zero address and USDQ itself and has no blacklist or pause branch. However, burn(address,uint256) lets the configured CollateralRegistry or any registered BorrowerOperations, TroveManager, or StabilityPool destroy an arbitrary account balance without allowance. That live privileged holder-burn primitive resolves direct access to true. AccessManager additionally maps upgradeToAndCall to role 2, held by Safe 0x32fd58b8c4d454ab585dea736b7d2b5929b6676c with a 300-second delay, so implementation replacement is a second restrictable path.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Quill's four Scroll branches use Chainlink collateral feeds with 48-hour staleness bounds; a feed failure permanently shuts down the affected branch and retains its last good price rather than switching providers.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "SOL-8",
+      "rationale": "Quill publishes separate active-contract sets for WETH, wstETH, weETH, and SCR. Each has its own price feed, MCR, Stability Pool, Trove Manager, shutdown state, and debt-redistribution path, so all four require separate branch records.",
+      "sources": [
+        {
+          "label": "Quill active contract addresses",
+          "url": "https://docs.quill.finance/documentation/contract-addresses"
+        },
+        {
+          "label": "Quill oracle and liquidation documentation",
+          "url": "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-8",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Quill active contract addresses",
+        "url": "https://docs.quill.finance/documentation/contract-addresses"
+      },
+      {
+        "label": "Quill WETH PriceFeed verified source",
+        "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xb3b7b3764a445bea9a50321e5df024f4daa9f5c9"
+      }
+    ],
+    "branches": [
+      {
+        "id": "quill-weth",
+        "label": "Quill WETH branch",
+        "tier": "standard-external",
+        "summary": "The live WETH branch uses Chainlink ETH/USD, liquidates Troves below 110% MCR, and offsets debt through its Stability Pool before redistributing any remainder.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "scroll"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "Chainlink ETH/USD -> QuillSimplePriceFeed -> WETH Trove collateral ratio",
+            "address": "0x6bF14CB0A831078629D993FDeBcB182b21A8774C",
+            "chain": "scroll",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 34360866,
+            "failureDomainKeys": [
+              "chainlink-eth-usd-scroll",
+              "scroll"
+            ]
+          }
+        ],
+        "fallbackBehavior": "A malformed, non-positive, unavailable, future-dated, or more than 48-hour-old Chainlink response permanently shuts down the WETH branch and makes its PriceFeed return the stored lastGoodPrice; no alternate provider is configured.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 34360866,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "Live TroveManager values at Scroll block 34360866; shutdownTime was zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can batch-liquidate eligible WETH Troves below the branch MCR. The Stability Pool offsets available debt and receives collateral; uncovered debt and collateral are redistributed to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch Stability Pool is the first loss-absorption path. Debt beyond available Stability Pool USDQ is redistributed with collateral across active Troves.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a branch TCR at the 110% shutdown ratio permanently disables new borrowing and switches valuation to lastGoodPrice. Shutdown enables urgent redemptions; liquidation debt not offset by the Stability Pool is redistributed.",
+        "failureDomainKeys": [
+          "chainlink-eth-usd-scroll",
+          "quill-weth-stability-pool",
+          "quill-weth-active-troves",
+          "scroll"
+        ],
+        "sources": [
+          {
+            "label": "Quill active WETH contracts",
+            "url": "https://docs.quill.finance/documentation/contract-addresses"
+          },
+          {
+            "label": "WETH PriceFeed verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xb3b7b3764a445bea9a50321e5df024f4daa9f5c9"
+          },
+          {
+            "label": "WETH TroveManager verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x9d2ad9712f3905f3e7803c92d027a197b4c8da90"
+          }
+        ]
+      },
+      {
+        "id": "quill-wsteth",
+        "label": "Quill wstETH branch",
+        "tier": "standard-external",
+        "summary": "The live wstETH branch composes Chainlink wstETH/stETH exchange-rate and ETH/USD feeds, liquidates Troves below 120% MCR, and uses Stability Pool offset plus redistribution.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "scroll"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "Chainlink wstETH/stETH exchange rate multiplied by Chainlink ETH/USD -> QuillCompositePriceFeed -> wstETH Trove collateral ratio",
+            "address": "0x1f07651182559bf23240632484669bc01c5b9afb",
+            "chain": "scroll",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 34360866,
+            "failureDomainKeys": [
+              "chainlink-wsteth-steth-scroll",
+              "chainlink-eth-usd-scroll",
+              "scroll"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Failure or more than 48 hours of staleness in either Chainlink component permanently shuts down the wstETH branch and makes its PriceFeed return lastGoodPrice; no alternate provider is configured.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 34360866,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120,
+            "note": "Live TroveManager values at Scroll block 34360866; shutdownTime was zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can batch-liquidate eligible wstETH Troves below the branch MCR. The Stability Pool offsets available debt and receives collateral; uncovered debt and collateral are redistributed to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch Stability Pool is the first loss-absorption path. Debt beyond available Stability Pool USDQ is redistributed with collateral across active Troves.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a branch TCR at the 120% shutdown ratio permanently disables new borrowing and switches valuation to lastGoodPrice. Shutdown enables urgent redemptions; liquidation debt not offset by the Stability Pool is redistributed.",
+        "failureDomainKeys": [
+          "chainlink-wsteth-steth-scroll",
+          "chainlink-eth-usd-scroll",
+          "quill-wsteth-stability-pool",
+          "quill-wsteth-active-troves",
+          "scroll"
+        ],
+        "sources": [
+          {
+            "label": "Quill active wstETH contracts",
+            "url": "https://docs.quill.finance/documentation/contract-addresses"
+          },
+          {
+            "label": "wstETH PriceFeed verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x1f07651182559bf23240632484669bc01c5b9afb"
+          },
+          {
+            "label": "wstETH TroveManager verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xa57aae77fbb22f9c1fb55d516e44b856614e143e"
+          }
+        ]
+      },
+      {
+        "id": "quill-weeth",
+        "label": "Quill weETH branch",
+        "tier": "standard-external",
+        "summary": "The live weETH branch composes Chainlink weETH/eETH exchange-rate and ETH/USD feeds, liquidates Troves below 120% MCR, and uses Stability Pool offset plus redistribution.",
+        "collateralAssets": [
+          "weETH"
+        ],
+        "chains": [
+          "scroll"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "Chainlink weETH/eETH exchange rate multiplied by Chainlink ETH/USD -> QuillCompositePriceFeed -> weETH Trove collateral ratio",
+            "address": "0x4f2be395032c67396f5d1e10c8abfb1df7267eef",
+            "chain": "scroll",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 34360866,
+            "failureDomainKeys": [
+              "chainlink-weeth-eeth-scroll",
+              "chainlink-eth-usd-scroll",
+              "scroll"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Failure or more than 48 hours of staleness in either Chainlink component permanently shuts down the weETH branch and makes its PriceFeed return lastGoodPrice; no alternate provider is configured.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 34360866,
+        "collateralParameters": [
+          {
+            "asset": "weETH",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120,
+            "note": "Live TroveManager values at Scroll block 34360866; shutdownTime was zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can batch-liquidate eligible weETH Troves below the branch MCR. The Stability Pool offsets available debt and receives collateral; uncovered debt and collateral are redistributed to active Troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch Stability Pool is the first loss-absorption path. Debt beyond available Stability Pool USDQ is redistributed with collateral across active Troves.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a branch TCR at the 120% shutdown ratio permanently disables new borrowing and switches valuation to lastGoodPrice. Shutdown enables urgent redemptions; liquidation debt not offset by the Stability Pool is redistributed.",
+        "failureDomainKeys": [
+          "chainlink-weeth-eeth-scroll",
+          "chainlink-eth-usd-scroll",
+          "quill-weeth-stability-pool",
+          "quill-weeth-active-troves",
+          "scroll"
+        ],
+        "sources": [
+          {
+            "label": "Quill active weETH contracts",
+            "url": "https://docs.quill.finance/documentation/contract-addresses"
+          },
+          {
+            "label": "weETH PriceFeed verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x4f2be395032c67396f5d1e10c8abfb1df7267eef"
+          },
+          {
+            "label": "weETH TroveManager verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xf645d67733b76e9d69908108d2eef6bec53dd7c8"
+          }
+        ]
+      },
+      {
+        "id": "quill-scr",
+        "label": "Quill SCR branch",
+        "tier": "standard-external",
+        "summary": "The SCR branch uses Chainlink SCR/USD and a 120% MCR, but its TroveManager has recorded a permanent shutdown since 2026-04-06 and therefore no longer permits new borrowing.",
+        "collateralAssets": [
+          "SCR"
+        ],
+        "chains": [
+          "scroll"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "Chainlink SCR/USD -> QuillSimplePriceFeed -> SCR Trove collateral ratio",
+            "address": "0x26f6F7C468EE309115d19Aa2055db5A74F8cE7A5",
+            "chain": "scroll",
+            "stalenessBoundSec": 172800,
+            "observedAt": "2026-07-14",
+            "observedBlock": 34360866,
+            "failureDomainKeys": [
+              "chainlink-scr-usd-scroll",
+              "scroll"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The SCR PriceFeed has no alternate provider and is designed to retain lastGoodPrice after oracle failure. Its TroveManager was already permanently shut down at the observation block, with shutdownTime 1775494874.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 34360866,
+        "collateralParameters": [
+          {
+            "asset": "SCR",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120,
+            "note": "Live TroveManager values at Scroll block 34360866; shutdownTime 1775494874 corresponds to 2026-04-06T17:01:14Z."
+          }
+        ],
+        "liquidationMechanism": "The branch's public batch-liquidation path offsets eligible SCR Trove debt against its Stability Pool and redistributes uncovered debt and collateral. New borrowing is disabled because the branch is shut down.",
+        "liquidationDelaySec": 0,
+        "backstop": "The branch Stability Pool offsets available liquidation debt; uncovered debt and collateral are redistributed across remaining active Troves. After shutdown, USDQ holders can use urgent redemption against branch Troves.",
+        "shutdownOrBadDebtBehavior": "The SCR branch has been permanently shut down since 2026-04-06, disabling new borrowing and ordinary redemption routing while enabling urgent redemptions. Stability Pool offset and active-Trove redistribution remain the recorded liquidation waterfall.",
+        "failureDomainKeys": [
+          "chainlink-scr-usd-scroll",
+          "quill-scr-stability-pool",
+          "quill-scr-active-troves",
+          "scroll"
+        ],
+        "sources": [
+          {
+            "label": "Quill active SCR contracts",
+            "url": "https://docs.quill.finance/documentation/contract-addresses"
+          },
+          {
+            "label": "SCR PriceFeed verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xeee530331ebb3dd1067859dc712905386e5c0661"
+          },
+          {
+            "label": "SCR TroveManager verified source",
+            "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x862ec870184a66fd3ed6bd7e122bc18355002076"
+          }
+        ]
+      }
+    ]
+  }
+}

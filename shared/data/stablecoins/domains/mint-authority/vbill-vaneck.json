@@ -1,0 +1,126 @@
+{
+  "id": "vbill-vaneck",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "VBILL is a Securitize-administered fund token; its Ethereum implementation exposes issueTokens surfaces gated by owner(). Owner confirmed as EOA 0x59c1eA...76Ee at block 25295081; eth_getCode returns empty (EOA). Issuer-context EOA is expected for enterprise MPC/HSM custody.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "0x14d72634328c4d03bba184a48081df65f1911279"
+      ],
+      "implementationAddresses": [
+        "0xaf88485377cca5e690e7dcb1ba81370f0b575156",
+        "0xc7579a9a4801a805b66742e5bd56a1581705fe0d",
+        "0xcd01d1c5c78ad428cd01913d4664c20ed1e61923"
+      ],
+      "adminAddresses": [
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "VBILL token owner EOA",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "VBILL UUPS implementation source",
+          "url": "https://eth.blockscout.com/address/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
+        },
+        {
+          "label": "Ethereum VBILL token",
+          "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01#readProxyContract"
+        },
+        {
+          "label": "Avalanche VBILL token",
+          "url": "https://snowscan.xyz/address/0x7f4546ef315efc65336187fe3765ea779ac90183"
+        },
+        {
+          "label": "BNB Chain VBILL token",
+          "url": "https://bscscan.com/address/0x14d72634328c4d03bba184a48081df65f1911279"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "label": "VBILL Securitize DSToken issuance surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify DSToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+          },
+          {
+            "label": "Securitize VBILL",
+            "url": "https://securitize.io/primary-market/vaneck-vbill"
+          },
+          {
+            "label": "Etherscan VBILL token",
+            "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01"
+          }
+        ],
+        "evidence": "At Ethereum block 25295081, owner() returned 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee (unchanged from block 25166611). Implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 confirmed. Source identifies issueTokens and issueTokensWithNoCompliance as mint entry points gated by the owner."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee",
+        "label": "VBILL token owner EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan VBILL owner address",
+            "url": "https://etherscan.io/address/0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+          }
+        ],
+        "evidence": "At Ethereum block 25295081, eth_getCode for 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee returned empty bytecode (confirmed EOA). On-chain model is issuer-operated EOA; off-chain MPC/HSM custody is indistinguishable and does not block verified."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Securitize VBILL",
+          "url": "https://securitize.io/primary-market/vaneck-vbill"
+        },
+        {
+          "label": "Sourcify DSToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xaf88485377cca5e690e7dcb1ba81370f0b575156/sources/contracts/token/DSToken.sol"
+        },
+        {
+          "label": "Etherscan VBILL token",
+          "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01"
+        },
+        {
+          "label": "VanEck and Securitize VBILL launch",
+          "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+        },
+        {
+          "label": "RedStone Securitize NAV feed methodology",
+          "url": "https://blog.redstone.finance/2026/07/06/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
+        },
+        {
+          "label": "BVI FSC professional-fund registry page containing VanEck Treasury Fund",
+          "url": "https://www.bvifsc.vg/regulated-entities/hatstone-fund-services-limited?page=741"
+        }
+      ],
+      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

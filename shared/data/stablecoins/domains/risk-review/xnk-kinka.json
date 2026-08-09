@@ -1,0 +1,106 @@
+{
+  "id": "xnk-kinka",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Kinka terms",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      }
+    ],
+    "evidence": "Kinka terms reserve issuer discretion over transfers and exchange and allow restrictions on Ethereum addresses; the centralized issuer and physical-gold redemption process create a direct blacklistability surface.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "XNK is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. The catalog's Cardano policy has no live asset record in Koios, so that individual route remains unresolved.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "XNK issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Kinka whitepaper",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka site",
+        "url": "https://kinka-gold.com/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "protocol": "Kinka native XNK (legacy mintable ERC-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "XNK on Ethereum (owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044, mintingFinished() = false per the mint-authority review, re-confirmed 2026-07-20): Kinka's legacy owner-controlled mintable token. The owner contract chain (0x2691 → 0x50ea) remains unresolvable (see mint-authority review), but no third-party bridge mints this deployment — minting is owner-only on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "XNK on Etherscan",
+            "url": "https://etherscan.io/address/0x722a89f1b925fe41883978219c2176aecc7d6699"
+          },
+          {
+            "label": "Kinka",
+            "url": "https://kinka-gold.com/"
+          }
+        ],
+        "observedBlock": 25571214
+      },
+      {
+        "id": "cardano:2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+        "destinationChain": "cardano",
+        "canonicalChain": "ethereum",
+        "contractAddress": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+        "protocol": "Kinka native XNK on Cardano (PlutusV3 minting policy)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Resolved 2026-07-20. The earlier pass queried Koios with the whole 63-character catalog string as the policy id, which returns nothing; that string is actually the full Cardano asset unit, i.e. the 56-character policy id 2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac followed by asset name 584e4b, which decodes to ASCII 'XNK'. Queried correctly, Koios policy_asset_info returns fingerprint asset1rvj40wqtucwlw6tzz4gs7080g02pm370z899m7, total_supply 167000000 raw units (167.0 XNK at 6 decimals), mint_cnt 1, burn_cnt 0, minting tx fdda5a1033250b95fa90051212be7273fc4729bde128e6639863868d181111ae, creation_time 1745226497, and Cardano token-registry metadata pointing to the issuer site kinka-gold.com. Koios script_info shows the policy id is itself a PlutusV3 script (creation tx bca0d497b8938bdfcd8fc2c82be36ffc478ba78bf7b74899f0f742b6f13abd60) whose decompiled text references a cold reference datum and NFT-gated policy checks, so minting is authorised by holding a specific policy NFT rather than by a plain key. This is therefore an issuer-native Cardano mint, not a third-party bridge representation: no lock-and-mint or burn-and-mint linkage to the Ethereum deployment exists, and the two supplies are independent (Ethereum totalSupply was 315.0 XNK at block 25575184 on the same day). The holder of the authorising policy NFT could not be enumerated from public indexer reads, so no controllerAddress is asserted.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "chain:cardano",
+          "policy:cardano:2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 13703132,
+        "sources": [
+          {
+            "label": "Koios policy_asset_info for the XNK policy",
+            "url": "https://api.koios.rest/api/v1/policy_asset_info?_asset_policy=2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac"
+          },
+          {
+            "label": "Koios script_info for the XNK minting policy",
+            "url": "https://api.koios.rest/api/v1/script_info"
+          },
+          {
+            "label": "Kinka",
+            "url": "https://kinka-gold.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

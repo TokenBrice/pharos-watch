@@ -1,0 +1,70 @@
+{
+  "id": "zsd-zephyr-protocol",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Zephyr native-asset documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr v2.3.0 transaction-type source",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+      },
+      {
+        "label": "Zephyr v2.3.0 native transfer routing",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+      },
+      {
+        "label": "Zephyr v2.3.0 wallet and daemon control source",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/wallet/wallet2.cpp#L1975-L2059"
+      },
+      {
+        "label": "Zephyr Explorer current HF11 block 837231",
+        "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
+      },
+      {
+        "label": "Zephyr reserve snapshot",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    ],
+    "evidence": "Write-time re-open 2026-08-08 against official Zephyr documentation, the still-current v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, and native-chain HF11 block 837231 (2026-08-08 19:36:16 UTC; hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d). ZSD is one of four native Zephyr asset types; the official docs list the EVM bridge as testnet-only, so no production wrapper exposure is identified. Same-asset ZSD sends map to STABLE_TRANSFER in cryptonote_tx_utils.cpp; the reviewed consensus and wallet paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer/admin transfer-pause path. wallet2.cpp freeze() only marks a locally held transfer/key image, while daemon bans are host/subnet controls. The failure domain is Zephyr chain consensus and its oracle inputs, not a token-level issuer. No direct blacklistability established.",
+    "reviewer": "Codex C10 wave1 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Zephyr documents ZSD as a Djed-style stablecoin backed by one protocol-wide ZEPH reserve with a 400% minimum reserve ratio; current public materials do not identify the production oracle provider set or failure handling.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Zephyr describes ZSD as a protocol reserve liability backed by ZEPH, with minting gated by a system-wide reserve ratio. Users do not open borrower-specific collateral positions, so the reviewed design exposes no market-specific collateral or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Zephyr official documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Zephyr documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr repository",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ]
+  }
+}

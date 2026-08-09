@@ -1,0 +1,72 @@
+{
+  "id": "usdcx-movement",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      },
+      {
+        "label": "Movement: Introducing USDCx",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      },
+      {
+        "label": "Movement USDCx package module at reviewed ledger version",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+      },
+      {
+        "label": "Movement USDCx package resources (owner, upgrade policy) re-read 2026-08-09",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/resources"
+      },
+      {
+        "label": "Movement USDCx admin multisig resources (4-of-6) re-read 2026-08-09",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1/resources"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-09 at Movement ledger_version 192151559 (block_height 83362507); the 2026-07-14 inherited verdict stands with a stronger token-local record. The deployed usdcx module exposes no holder-selective freeze, blacklist, denylist, or seizure entry point, and its paused asserts gate only mint and burn_internal, so the module never sits on holder-to-holder fungible-asset transfers; a TransferRef is generated and stored in usdcx::Management but no function uses it. The local surface is not immutable: the circle_remote package (module usdcx) carries upgrade_policy 1 (compatible) at upgrade_number 0 and its ObjectCore owner is Movement-native multisig 0x98ebb7985c84a89972022edf391bdaa7d95f061d9742efb3703de368413431e1, re-read as 0x1::multisig_account::MultisigAccount with 4 required signatures over 6 owners and no timelock, so holder controls could be added by upgrade. The dominant, named exposure is still upstream: USDCx is issued 1:1 against USDC locked in Circle's xReserve, the sole reserve slice is usdc-circle at 100%, and usdc-circle's own review is reviewedStatus true (Circle holder blacklist). The honest end-state therefore remains inherited over usdc-circle rather than a token-local possible verdict, which would drop the named upstream failure domain without adding any live control.",
+    "reviewer": "Kimi ACCESS-FREEZE AF03; verified and adjusted by Claude FV-B access/freeze verification",
+    "reviewedAt": "2026-08-09"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDCx is issued through Circle's xReserve architecture and transfers to USDC through Circle-controlled CCTP/Gateway rails. The route is reviewed as issuer-native burn/mint evidence; the penalty-only Safety Score blend can only drag weak routes and cannot lift USDCx's Decentralization score.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex L2BEAT route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "CCTP v2",
+        "slug": "cctpv2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Circle Gateway",
+        "slug": "circlegateway",
+        "url": "https://l2beat.com/interop/protocols/circlegateway",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Movement: Introducing USDCx",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      },
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      },
+      {
+        "label": "L2BEAT CCTP v2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2"
+      }
+    ]
+  }
+}

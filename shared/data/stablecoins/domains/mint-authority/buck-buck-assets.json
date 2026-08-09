@@ -1,0 +1,57 @@
+{
+  "id": "buck-buck-assets",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BUCK was issued by Buck Labs as an RWA-backed savings coin; access-gated stewards minted and refunded BUCK through the issuer-controlled LiquidityWindow contract, pricing against an off-chain STRC collateral attestation with USDC settling into the LiquidityReserve. No permissionless or user-collateralized mint route existed.",
+    "controls": [
+      {
+        "label": "Buck Labs LiquidityWindow mint/refund desk",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Per the buck-v1 contract docs, access-gated stewards mint/refund BUCK through the LiquidityWindow against a collateral-aware peg with per-account caps and oracle freshness; primary-market access is AML-gated and operator-controlled."
+      },
+      {
+        "label": "PolicyManager / CollateralAttestation (off-chain STRC valuation)",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "evidence": "CollateralAttestation is the on-chain copy of off-chain STRC valuation; PolicyManager gates fees, spreads and mint/refund allowances via Green/Yellow/Red/Emergency bands, so issuer-controlled off-chain attestation governs whether mints are permitted."
+      },
+      {
+        "label": "BUCK token contract owner EOA (Ethereum)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "evidence": "At Ethereum block 25294984, owner() on 0xdb13997f4d83ef343845d0baeb27d1173df8c224 returned 0x376269214bb78b3d4f31d17600499b439c1acb4b; eth_getCode on that address returned 2 bytes (EOA confirmed). The BUCK token is a UUPS upgradeable proxy (EIP-1967 implementation slot = 0x223de9a74547edee200772248ee4b703d8a774a6; no EIP-1967 proxy admin slot set). The EOA owner controls upgrade and administrative rights, but mint authority is exercised through the LiquidityWindow backend."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25294984: owner() on BUCK token (0xdb13997f...) = EOA 0x376269214bb78b3d4f31d17600499b439c1acb4b (eth_getCode confirms no bytecode). EIP-1967 implementation slot = 0x223de9a74547edee200772248ee4b703d8a774a6 (contract); EIP-1967 proxy admin slot = 0x0 (UUPS proxy pattern). The LiquidityWindow is a separate contract not independently enumerated here. Project is wound down as of April 2026.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "buck-v1 contracts (GitHub)",
+          "url": "https://github.com/buck-labs/buck-v1"
+        },
+        {
+          "label": "BUCK Stablecoin docs",
+          "url": "https://0xbuck.gitbook.io/buck-stablecoin/"
+        },
+        {
+          "label": "BUCK token contract (Etherscan)",
+          "url": "https://etherscan.io/address/0xdb13997f4d83ef343845d0baeb27d1173df8c224"
+        }
+      ],
+      "unresolvedQuestions": [
+        "LiquidityWindow contract address not independently confirmed on-chain; the minting mechanism runs through it but its address was not resolved from the token contract. Project wound down April 2026 — further verification has limited value."
+      ]
+    }
+  }
+}

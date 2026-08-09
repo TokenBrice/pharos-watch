@@ -1,0 +1,122 @@
+{
+  "id": "usdaf-asymmetry",
+  "reserves": [
+    {
+      "name": "ysyBOLD",
+      "pct": 79.4,
+      "risk": "medium",
+      "coinId": "bold-liquity",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn and Liquity BOLD protocol",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "scrvUSD",
+      "pct": 10,
+      "risk": "medium",
+      "coinId": "scrvusd-curve",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Curve Finance",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "sUSDS",
+      "pct": 7.4,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "tBTC",
+      "pct": 1.3,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Threshold Network and tBTC custodians",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "sfrxUSD",
+      "pct": 1.5,
+      "risk": "medium",
+      "coinId": "sfrxusd-frax",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frax Finance",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "wBTC",
+      "pct": 0.4,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "WBTC custodians and merchant network",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Asymmetry Finance collateral stats API",
+        "url": "https://app.asymmetry.finance/api/stats"
+      },
+      {
+        "label": "Pinned USDaf V2 deployment registry",
+        "url": "https://github.com/asymmetryfinance/api.usdafv2/blob/394afe37705c011326ff84299c6d3b2966b18a6f/src/v2MainnetDeployment.json"
+      },
+      {
+        "label": "USDaf V2 contracts",
+        "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
+      }
+    ],
+    "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. Slices are mirrored verbatim from the live adapter branch names so curated classification overlays the live feed. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
+    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-08-08",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
+    "knownUnknownExposurePct": 0
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "id": "usdaf-asymmetry",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526129,
+      "sources": [
+        {
+          "label": "USDaf BoldToken exact verified source",
+          "url": "https://eth.blockscout.com/address/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?tab=contract"
+        },
+        {
+          "label": "USDaf BorrowerOperations verified source",
+          "url": "https://eth.blockscout.com/address/0x57bd20ae68f845b35b76fe6e0239c9929eb48469?tab=contract"
+        },
+        {
+          "label": "USDaf ActivePool verified source",
+          "url": "https://eth.blockscout.com/address/0xb87e1e1c4cc2decada13025a8dc8a94bdb77fb63?tab=contract"
+        }
+      ]
+    },
+    "summary": "USDaf is minted only through six fixed BorrowerOperations and six fixed ActivePools in Asymmetry's immutable Liquity-v2 fork. BoldToken ownership is renounced, every minting branch is a direct non-proxy deployment, and no new branch or minter can be registered.",
+    "controls": [
+      {
+        "label": "USDaf fixed protocol mint branches (6 BorrowerOperations + 6 ActivePools)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "These are fixed mechanical protocol branches rather than privileged mint authorities. Six immutable BorrowerOperations mint borrower-requested debt only after collateral and debt checks; six immutable ActivePools mint formula-derived interest, Stability Pool yield, and batch-management fees. BoldToken ownership is renounced, so no new branch can be registered.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "USDaf BoldToken exact verified source",
+            "url": "https://eth.blockscout.com/address/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?tab=contract"
+          },
+          {
+            "label": "USDaf BorrowerOperations verified source",
+            "url": "https://eth.blockscout.com/address/0x57bd20ae68f845b35b76fe6e0239c9929eb48469?tab=contract"
+          },
+          {
+            "label": "USDaf ActivePool verified source",
+            "url": "https://eth.blockscout.com/address/0xb87e1e1c4cc2decada13025a8dc8a94bdb77fb63?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, BoldToken owner() was zero. Exact verified source and live branch getters enumerated six BorrowerOperations and six ActivePools as the only contracts able to reach mint(); StabilityPools do not call BoldToken.mint. BoldToken plus all twelve minters had zero EIP-1967 implementation, admin, and beacon slots."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25526129, exact verified source and live branch reads confirmed six fixed BorrowerOperations and six fixed ActivePools as the complete mint surface. StabilityPools are not direct minters. BoldToken ownership was renounced, and the token plus all twelve minting contracts were direct deployments with zero EIP-1967 implementation, admin, and beacon slots.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "What is USDaf?",
+          "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
+        },
+        {
+          "label": "Electisec USDaf v2 review",
+          "url": "https://reports.electisec.com/2025-05-Asymmetry-USDaf-V2"
+        },
+        {
+          "label": "Sourcify exact-match source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8/"
+        }
+      ]
+    }
+  }
+}

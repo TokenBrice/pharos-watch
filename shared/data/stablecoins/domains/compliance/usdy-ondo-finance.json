@@ -1,0 +1,30 @@
+{
+  "id": "usdy-ondo-finance",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "USDY is a tokenized note issued under U.S. Securities Act Regulation S exemption, restricted to non-U.S. investors, and accrues yield via NAV appreciation rather than functioning as a fixed-value payment instrument. As of December 15, 2025, it is issued by Ondo Global Markets (BVI) Limited, a BVI SPV. These characteristics place it outside the GENIUS Act's definition of a payment stablecoin."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Ondo Global Markets (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "USDY is structured as a tokenized note under Reg S, accessible only to qualifying non-U.S. investors, and accrues yield through NAV appreciation rather than functioning as a fixed-value payment stablecoin. As of December 15, 2025, Ondo USDY LLC was folded into the Ondo Global Markets (BVI) Limited umbrella as issuer. These structural and legal characteristics place it outside the GENIUS Act's payment stablecoin definition.",
+    "references": [
+      {
+        "label": "Ondo USDY basics",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/basics",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Ondo Global Markets legal and regulatory",
+        "url": "https://docs.ondo.finance/ondo-global-markets/legal-and-regulatory",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  }
+}

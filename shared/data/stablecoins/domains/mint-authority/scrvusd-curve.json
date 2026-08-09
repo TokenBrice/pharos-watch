@@ -1,0 +1,63 @@
+{
+  "id": "scrvusd-curve",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
+    "inheritedFrom": "crvusd-curve",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "label": "scrvUSD ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
+        "sources": [
+          {
+            "label": "scrvUSD token",
+            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+          },
+          {
+            "label": "Curve crvUSD resources",
+            "url": "https://resources.curve.finance/crvusd/"
+          }
+        ],
+        "evidence": "At Ethereum block 25573289, asset() returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E. EIP-1967 implementation, admin, and beacon slots were all zero and owner() reverted, leaving no local upgrade-admin or privileged share-mint surface. Wrapper accounting cannot mint crvUSD; durable base authority remains inherited from the reviewed parent."
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "scrvUSD ERC-4626 wrapper",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573289,
+      "sources": [
+        {
+          "label": "scrvUSD token",
+          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "scrvUSD token",
+          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+        }
+      ],
+      "evidence": "Re-reviewed at Ethereum block 25573289: asset() is crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; standard EIP-1967 implementation, admin, and beacon slots are zero; and owner() reverts. The fixed deposit/share wrapper has no local privileged mint or upgrade path, so its economic cap is deposit-backed and no external supply-versus-reserve reconciliation or named prudential supervisor applies to the wrapper itself. Durable crvUSD authority remains inherited from the reviewed parent profile.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    }
+  }
+}

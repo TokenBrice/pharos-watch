@@ -1,0 +1,104 @@
+{
+  "id": "doc-money-on-chain",
+  "reserves": [
+    {
+      "name": "Rootstock BTC (rBTC) collateral",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Money on Chain protocol contract on Rootstock (rBTC two-way-peg BTC)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Money On Chain DOC documentation",
+        "url": "https://moneyonchain.com/doc-stablecoin/"
+      },
+      {
+        "label": "Money On Chain platform concepts",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "MoC protocol contract on Rootstock (Blockscout)",
+        "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
+      },
+      {
+        "label": "DOC token on Rootstock (Blockscout)",
+        "url": "https://rootstock.blockscout.com/token/0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB"
+      },
+      {
+        "label": "Rootstock Blockscout - pinned block 9,080,700",
+        "url": "https://rootstock.blockscout.com/block/9080700"
+      },
+      {
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
+      }
+    ],
+    "rationale": "DOC is backed solely by rBTC locked in the Money on Chain protocol contract, with BPRO absorbing BTC/USD volatility by design; there is no fiat, T-bill, or stablecoin component. At Rootstock block 9,080,700 (hash 0x724d88376c86934387d39f8b7f65c7cec3f4030807765ef514111847115fdeed; 2026-07-22 19:16:34 UTC), eth_getBalance for MoC proxy 0xf773B590aF754D597770937Fa8ea7AbDf2668370 returned 292.636933857635580544 rBTC, while an eth_call of totalSupply() on DOC 0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB returned 3,203,057.992378573495716782 DOC. These pinned reads confirm the single fully on-chain-verifiable reserve asset class without relying on the degraded statistics API.",
+    "compositionBasis": "Money on Chain protocol design (single-asset rBTC collateral) confirmed against Rootstock contract and token state",
+    "compositionAsOf": "2026-07-22",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the only collateral is rBTC in the MoC contract. The legacy MoC statistics API is degraded (catalog responds, measurement endpoints return not-found), so ongoing balances are read directly from chain state.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Rootstock BTC (rBTC) collateral",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "rBTC is Rootstock's two-way-peg bitcoin, an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Money on Chain protocol contract 0xf773B590aF754D597770937Fa8ea7AbDf2668370 (AdminUpgradeabilityProxy on Rootstock)",
+        "role": "other",
+        "jurisdiction": "Rootstock"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MoC protocol contract on Rootstock (Blockscout)",
+        "url": "https://rootstock.blockscout.com/address/0xf773B590aF754D597770937Fa8ea7AbDf2668370"
+      },
+      {
+        "label": "Rootstock Blockscout - pinned block 9,080,700",
+        "url": "https://rootstock.blockscout.com/block/9080700"
+      },
+      {
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Money On Chain platform concepts",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "Money on Chain main-RBTC contract repository",
+        "url": "https://github.com/money-on-chain/main-RBTC-contract"
+      }
+    ],
+    "uncertainty": "All collateral sits in the single MoC system contract, an upgradeable proxy, so contract-admin action is the operative custody risk rather than a custodian. The protocol does not lend out collateral by design, but no legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody. Public code audits in the official repository date to 2019.",
+    "knownUnknownExposurePct": 0
+  }
+}

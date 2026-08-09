@@ -1,0 +1,297 @@
+{
+  "id": "spkcc-spiko",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "SPKCC mints are gated by Spiko's PermissionManager on every EVM deployment: mint() requires ADMIN group 0 or daily-operator group 2, and group 0 alone can grant group 2 and replace both the token and the PermissionManager implementation. The group-0 holder is a 3-of-6 Safe on Ethereum, Arbitrum, Polygon and Base. Starknet is owned by a 3-of-5 multisig account; the Soroban deployment's owner and WASM-upgrade authority is a single ed25519 key. No deployment encodes a supply cap and no path carries a timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "0xa925c217e4c1c82ee721ebd496d3863d5c2d829a",
+        "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+      ],
+      "implementationAddresses": [
+        "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko ADMIN group Safe (Ethereum and Base)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25575165,
+      "sources": [
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Sourcify Spiko PermissionManager source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "label": "SPKCC token (UUPS proxy, mint restricted to PermissionManager groups 0 and 2)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575165,
+        "failureDomainKeys": [
+          "contract:spiko-token-permissionmanager"
+        ],
+        "sources": [
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          },
+          {
+            "label": "Spiko docs",
+            "url": "https://docs.spiko.io/"
+          }
+        ],
+        "evidence": "Ethereum EIP-1967 impl slot = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 (Token.sol); authority() = PermissionManager proxy 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token, mint(address,uint256) 0x40c10f19) = 0x05 = groups {0, 2}. The same shape was re-read on 2026-07-20 on Arbitrum (token 0x99f70a0e1786402a6796c6b0aa997ef340a5c6da, impl 0xa0769f7a8fc65e47de93797b4e21c073c117fc80, authority 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, block 485916291), Polygon (token 0x903d5990119bc799423e9c25c56518ba7dd19474, impl 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74, authority 0x344278aff344d6fb960705dc18a4912221608472, block 90573534) and Base (token 0xf695df6c0f3bb45918a7a82e83348fc59517734e, same impl and authority, block 48887968). Every EVM deployment returns getRequirements(mint) = {0,2}. The token itself carries no supply cap; issuance is gated only by group membership."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "label": "Spiko PermissionManager (ERC1967 proxy) - shared authority policy",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575165,
+        "failureDomainKeys": [
+          "contract:spiko-token-permissionmanager"
+        ],
+        "sources": [
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "ERC1967 impl = 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e. ADMIN() = 0 and PUBLIC() = 255. getGroupAdmins(0) = 0x01 (group 0 administers itself) and getGroupAdmins(2) = 0x01, so the ADMIN group alone can add or remove the daily-operator minter group. getRequirements(token, upgradeToAndCall 0x4f1ef286) = 0x01 and getRequirements(permissionManager, upgradeToAndCall) = 0x01: the ADMIN group alone can replace both the token and the PermissionManager implementation. On Arbitrum the deployment uses proxy 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a with the same implementation bytecode; Polygon and Base reuse the 0x3442...8472 address."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "label": "Spiko ADMIN group Safe (Ethereum and Base)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x75e0092e7D2c8D854Fcf5334f95554852d62746a",
+            "0xd01046472371168721e45DC357296683F026d6B8",
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0x4896F23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25575165,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575165,
+        "sources": [
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "Ethereum getGroups(0x4eaa52b6280593a8820c45ce38f974290ae52cea) = 0x8000...0001, i.e. ADMIN group 0 plus the PUBLIC group. Read at block 25575165: Safe v1.4.1 proxy (171-byte), getThreshold() = 3, getOwners() = 6 signers, singleton slot 0 = 0x41675C099F32341bf84BFc5382aF534df5C7461a, guard slot zero and getModulesPaginated returns an empty module list. The same address is the sole group-0 holder on Base (block 48888063, singleton 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762, threshold 3, 6 owners, no guard or modules). This supersedes a 2026-07-20 record of 8 signers: two of the addresses in that record were malformed and the live Safe returns 6 owners."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "label": "Spiko ADMIN group Safe (Arbitrum)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
+            "0x4896F23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedBlock": 485897632,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 485897632,
+        "sources": [
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "Full GroupAdded/GroupRemoved replay from block 0 on the Arbitrum PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a resolves group 0 to exactly one address, 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e, confirmed by getGroups() = 0x8000...0001. Read at block 485897632: Safe v1.4.1, getThreshold() = 3, getOwners() = 6 signers, singleton 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762, no guard, no enabled modules. Group 2 (daily-operator minters) holds 6 addresses on Arbitrum."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "label": "Spiko ADMIN group Safe (Polygon)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
+            "0x4896F23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedBlock": 90573650,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 90573650,
+        "sources": [
+          {
+            "label": "Sourcify Spiko PermissionManager source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+          }
+        ],
+        "evidence": "Full GroupAdded/GroupRemoved replay from block 0 on the Polygon PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (2182 additions, 213 removals) resolves group 0 to exactly one address, 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9, confirmed by getGroups() = 0x8000...0001. Read at block 90573650: Safe v1.4.1, getThreshold() = 3, getOwners() = 6 signers, singleton 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762, no guard, no enabled modules. Group 2 (minters) holds 6 addresses."
+      },
+      {
+        "chain": "starknet",
+        "address": "0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "label": "Spiko SPKCC Starknet owner multisig",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "starknet:0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d"
+        ],
+        "sources": [
+          {
+            "label": "Starknet SPKCC contract on Voyager",
+            "url": "https://voyager.online/contract/0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d"
+          }
+        ],
+        "evidence": "Read 2026-07-20 at Starknet block ~12085372: SPKCC contract 0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d (class 0x5973b1bed1f0a20a9125fac8ec5499f29f44bb70d9c465658c0da20ca9b75f3) returns decimals 5, total_supply 494,745.84706 and owner() = 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. That owner is a multisig account contract (class 0x6e150953b26271a740bf2b6e9bca17cc52c68d765f761295de51ceb8526ee72) with get_threshold() = 3 and get_signers() returning 5 signers. It holds the Starknet mint and class-replacement authority; there is no timelock on the owner path."
+      },
+      {
+        "chain": "stellar",
+        "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "label": "Spiko SPKCC Soroban owner key (single ed25519 signer)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "stellar:GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
+        ],
+        "sources": [
+          {
+            "label": "Soroban SPKCC contract on Stellar Expert",
+            "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+          }
+        ],
+        "evidence": "The Soroban SPKCC contract CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT (WASM hash f48f10d9c7d35fc7783b5e27578bf0e764e3a30ff26a3bd7d8e57758c17a9ea8, unverified source on Stellar Expert) exposes its instance storage directly. Decoded 2026-07-20 it holds METADATA {decimals 5, name 'Spiko Digital Assets Cash and Carry Fund', symbol SPKCC}, TotalSupply 516,408.8251, PERM = CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M, REDEEM = CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS and Owner = the ed25519 account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, which is also the contract's deployer. Horizon shows that account has a single ed25519 signer at weight 1 with low/med/high thresholds all 0, so the Stellar deployment's owner and WASM-upgrade authority is a single key with no multisig quorum."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Spiko docs",
+          "url": "https://docs.spiko.io/"
+        },
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Sourcify Spiko PermissionManager source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+        },
+        {
+          "label": "Starknet SPKCC contract on Voyager",
+          "url": "https://voyager.online/contract/0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d"
+        },
+        {
+          "label": "Soroban SPKCC contract on Stellar Expert",
+          "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+        },
+        {
+          "label": "SPIKO Digital Assets Cash and Carry Fund prospectus, 1 Feb 2026: daily D+1 NAV by CACEIS, ACPR-licensed depositary, PwC statutory auditor, AMF GP-11000029 manager",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+        },
+        {
+          "label": "AMF register of authorised portfolio management companies: TWENTY FIRST CAPITAL, GP-11000029, statut Vivant",
+          "url": "https://object-api.infra.data.gouv.fr/amf/LISTESSGP/export_od_listesgp_20260807094500_20260807101000.csv"
+        }
+      ],
+      "evidence": "2026-07-20 cross-chain enumeration closed the three questions the 2026-07-20 P2 pass left open. Arbitrum: full GroupAdded/GroupRemoved replay on PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a resolves ADMIN group 0 to the single Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e (3-of-6, v1.4.1, no guard, no modules) and getRequirements(token, upgradeToAndCall) = group {0}. Polygon: the same replay on 0x344278aff344d6fb960705dc18a4912221608472 resolves group 0 to the Safe 0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9 (3-of-6); Base resolves to the Ethereum Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea. Starknet: owner() = 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, a multisig account with get_threshold() = 3 over 5 signers. Stellar: the Soroban instance-storage Owner is the ed25519 account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, a single-key account per Horizon. The complete mint and upgrade surface is therefore enumerated on all six deployments. Reconciliation cadence and prudential supervision were not established by these chain reads and remain unknown. Reconciliation review (2026-08-08): the fund prospectus supersedes the product-page claims the 2026-07-15 pass could not qualify. The prospectus (1 Feb 2026) appoints CACEIS Fund Administration as fund accountant striking the NAV daily on a D+1 basis, with CACEIS Bank (ACPR banking licence 18129) as independent depositary safeguarding assets and monitoring cash flows, and PricewaterhouseCoopers Audit as statutory auditor - a recurring independent reconciliation with a named administrator. Supervision is prudential through the manager rather than the vehicle: Twenty First Capital SAS holds AMF portfolio-management authorisation GP-11000029, confirmed live in the AMF's own published SGP register export. The prospectus states the FPS itself is not AMF-authorised, so the prudential hook is the AIFM, depositary and distributor.",
+      "reviewer": "Phase 3 cur-2 cross-chain mint-authority enumeration",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

@@ -1,0 +1,461 @@
+{
+  "id": "btcusd-btcfi",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "BtcUSD Base proxy deployment",
+        "url": "https://basescan.org/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4#code"
+      },
+      {
+        "label": "BtcUSD Base verified ERC20_Bridged implementation",
+        "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+      },
+      {
+        "label": "BtcUSD Base Sourcify source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?fields=abi,metadata"
+      },
+      {
+        "label": "BtcUSD Bifrost native deployment",
+        "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+      },
+      {
+        "label": "Bifrost public RPC documentation",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/add-network/metamask"
+      },
+      {
+        "label": "BTCFi BtcUSD documentation",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "Bifrost terms of use",
+        "url": "https://bifrostnetwork.com/terms-of-use"
+      }
+    ],
+    "evidence": "At Base block 48644528, the BtcUSD proxy points to verified ERC20_Bridged implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9 and is unpaused. Its source gives every owner or admin authority to call set_blacklists(address[], bool), and transfer hooks reject both blacklisted senders and recipients; set_pause(bool) stops all token transfers. Current owners are 0x26FcE52a077b4f1dbD7C920b6f23a1D9d18DdDbE and 0xf98e8601A1eEF3BCE943f9B002e83Db8a0951Aa5, and current admin is 0x4F7aB59b5AC112970F5dD66D8a7ac505c8E5e08B; the latter owner successfully simulated both control calls through the proxy without broadcasting state. At Bifrost block 36763950, native BtcUSD reports paused=false, owner/defaultAdmin 0xa4247099c1462f9D9121a1809D001c1a6cC70dD5 has DEFAULT_ADMIN_ROLE, and the runtime exposes pause/unpause; an unprivileged pause call reverts for the missing default-admin role. The Bifrost explorer did not expose verified source or ABI, so this does not assert native blacklist semantics, but both deployments have direct holder-transfer restriction surfaces.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "BtcUSD is a BiFi-style multi-handler CDP on Bifrost: market manager 0xd7b21280 prices each collateral handler through oracle proxy 0x6853f777, which maps handlers to Bifrost native Chainlink-compatible USD feeds (WBTC/USD, BTCB/USD, BTC/USD). Borrow limit is 50% LTV and margin-call limits are 95% (99.9% for BTCB); liquidations are third-party partial liquidations with an owner circuit breaker, no liquidation delay or auction window on any handler, and no secondary-feed failover.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "Grok wave-8 controls oracle research",
+      "rationale": "BTCFi's getAvailableBtcfiHandlers API and identical-bytecode Bifrost handlers enumerate four collateral markets (WBTC, BTCB, BTC, cbBTC) plus the BtcUSD debt handler. On-chain at Bifrost block 37135464, oracle proxy getOracleFeed(handlerId) returns distinct feed addresses for WBTC and BTCB and a shared BTC/USD feed for native BTC and cbBTC, while getTokenHandlerBorrowLimit/MarginCallLimit differ by handler (BTCB margin-call 99.9% vs 95% elsewhere). Market-specific feed and liquidation-parameter branches are therefore required.",
+      "sources": [
+        {
+          "label": "BTCFi supported-handler API",
+          "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+        },
+        {
+          "label": "Bifrost public EVM RPC",
+          "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+        },
+        {
+          "label": "BiFi oracleProxy source (getOracleFeed/getTokenPrice)",
+          "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 controls oracle research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Bifrost public EVM RPC",
+        "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+      },
+      {
+        "label": "Bifrost native price-oracle API (WBTC/USD and BTCB/USD addresses)",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
+      },
+      {
+        "label": "BTCFi supported-handler API",
+        "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+      },
+      {
+        "label": "BTCFi mint guide (50% max LTV)",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "BiFi oracleProxy source",
+        "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+      },
+      {
+        "label": "BiFi liquidationManager source",
+        "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/liquidationManager.sol"
+      },
+      {
+        "label": "BiFi tokenManager source (partialLiquidationUser onlyLiquidationManager gate; no timestamp term in the liquidation path)",
+        "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/tokenManager.sol"
+      }
+    ],
+    "branches": [
+      {
+        "id": "wbtc",
+        "label": "WBTC collateral handler",
+        "tier": "standard-external",
+        "summary": "Handler 0 (WBTC) is priced by Bifrost native WBTC/USD feed 0xc1596ece via oracle proxy 0x6853f777; 50% borrow limit and 95% margin-call limit; proxy uses latestAnswer only with zero-price revert and no secondary feed.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "bifrost"
+        ],
+        "feeds": [
+          {
+            "provider": "Bifrost native price oracle (Chainlink-compatible)",
+            "path": "WBTC/USD",
+            "address": "0xc1596ece7e801125d507f0815e7070aa97d3645e",
+            "chain": "bifrost",
+            "heartbeatSec": 600,
+            "observedAt": "2026-07-28",
+            "observedBlock": 37135464,
+            "failureDomainKeys": [
+              "oracle:bifrost:wbtc-usd",
+              "contract:bifrost:0xc1596ece7e801125d507f0815e7070aa97d3645e"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Oracle proxy getTokenPrice calls feed.latestAnswer only (BiFi oracleProxy.sol); reverts on zero price; no last-good-price cache and no secondary feed. Owner 0xf357a08c can setOracleFeed/setOracleProxy.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 37135464,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 50,
+            "minimumCollateralRatioPct": 200,
+            "note": "On-chain getTokenHandlerBorrowLimit(0)=0.5e18 (50% LTV); mint docs state maximum 50% of collateral. Margin-call/liquidation threshold getTokenHandlerMarginCallLimit(0)=0.95e18 (liquidatable when borrow >= 95% of deposit value)."
+          }
+        ],
+        "liquidationMechanism": "BiFi-style third-party partialLiquidation when aggregate borrow >= sum(deposit*marginCallLimit); liquidator repays BtcUSD and receives collateral reward via market manager. No delay, grace period, auction window, or bidding queue exists on that path: liquidationManager.partialLiquidation carries only the circuitBreaker modifier, and its eligibility test _checkLiquidation is an instantaneous comparison of current oracle-priced deposit and borrow balances with no timestamp or block-height term. Proved callable at Bifrost block 37501309 (2026-08-09): market manager 0xd7b2128083ffc91a05d77cc90c7a34f8dac59de5 getCircuitBreaker() is false, getTokenHandlerSupport(0) is 1, and partialLiquidationUser reverts Error(\"LM\") for an unauthorized caller while an authorized caller passes every authority check and reaches the collateral arithmetic (Error(\"unified div by zero\") against an empty test position) — no timer stands between the two.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol-owned backstop identified; recovery depends on external liquidators.",
+        "shutdownOrBadDebtBehavior": "Market manager getCircuitBreaker() was false at observation; owner can freeze handlers via circuit breaker. Zero feed answer reverts pricing. No automatic bad-debt socialization or branch isolation beyond the shared circuit breaker was identified.",
+        "failureDomainKeys": [
+          "protocol:btcfi",
+          "oracle:bifrost:wbtc-usd",
+          "contract:bifrost:0x6853f7774d0558ff3d9a8dba8036305a095c6750",
+          "contract:bifrost:0xa84f9f42df222da491571fb70ccc11ac84b7f29d"
+        ],
+        "sources": [
+          {
+            "label": "Bifrost public EVM RPC (handler, oracle-proxy, and margin-call reads at block 37135464, 2026-07-28; feeds, borrow/margin-call limits, circuit breaker, and liquidation-path callability re-read at block 37501309, 2026-08-09)",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          },
+          {
+            "label": "Bifrost WBTC/USD oracle docs address",
+            "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
+          },
+          {
+            "label": "BTCFi supported-handler API",
+            "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+          },
+          {
+            "label": "BiFi oracleProxy source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+          },
+          {
+            "label": "BiFi liquidationManager source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/liquidationManager.sol"
+          }
+        ]
+      },
+      {
+        "id": "btcb",
+        "label": "BTCB collateral handler",
+        "tier": "standard-external",
+        "summary": "Handler 1 (BTCB) is priced by Bifrost native BTCB/USD feed 0x40c8bb80 via the same oracle proxy; 50% borrow limit but a looser 99.9% margin-call limit versus other BTC variants.",
+        "collateralAssets": [
+          "BTCB"
+        ],
+        "chains": [
+          "bifrost"
+        ],
+        "feeds": [
+          {
+            "provider": "Bifrost native price oracle (Chainlink-compatible)",
+            "path": "BTCB/USD",
+            "address": "0x40c8bb8036351ef29b41ea8afeba76ac2d8a96bf",
+            "chain": "bifrost",
+            "heartbeatSec": 600,
+            "observedAt": "2026-07-28",
+            "observedBlock": 37135464,
+            "failureDomainKeys": [
+              "oracle:bifrost:btcb-usd",
+              "contract:bifrost:0x40c8bb8036351ef29b41ea8afeba76ac2d8a96bf"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Same BiFi oracle proxy path: latestAnswer only, zero-price revert, owner-replaceable feed mapping; no secondary feed.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 37135464,
+        "collateralParameters": [
+          {
+            "asset": "BTCB",
+            "maximumLtvPct": 50,
+            "minimumCollateralRatioPct": 200,
+            "note": "getTokenHandlerBorrowLimit(1)=0.5e18; getTokenHandlerMarginCallLimit(1)=0.999e18 (liquidatable only when borrow >= 99.9% of deposit value)."
+          }
+        ],
+        "liquidationMechanism": "Shared BiFi partialLiquidation path using this handler's margin-call limit and BTCB/USD price; the same delay-free path as the WBTC handler, with the looser 99.9% margin-call limit re-read on-chain at block 37501309 (2026-08-09) as getTokenHandlerMarginCallLimit(1)=0.999e18. liquidationDelaySec 0 is the absence of any waiting period, not an unset field: a BTCB borrower is liquidatable the moment aggregate borrow reaches 99.9% of deposit value.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol-owned backstop identified; recovery depends on external liquidators.",
+        "shutdownOrBadDebtBehavior": "Shared market-manager circuit breaker and zero-price revert; no BTCB-specific isolation beyond distinct feed and margin-call parameter.",
+        "failureDomainKeys": [
+          "protocol:btcfi",
+          "oracle:bifrost:btcb-usd",
+          "contract:bifrost:0x6853f7774d0558ff3d9a8dba8036305a095c6750",
+          "contract:bifrost:0xee66d8c40282439f2ee855d8a3666fb73257d349"
+        ],
+        "sources": [
+          {
+            "label": "Bifrost public EVM RPC (handler, oracle-proxy, and margin-call reads at block 37135464, 2026-07-28; feeds, borrow/margin-call limits, circuit breaker, and liquidation-path callability re-read at block 37501309, 2026-08-09)",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          },
+          {
+            "label": "Bifrost BTCB/USD oracle docs address",
+            "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
+          },
+          {
+            "label": "BTCFi supported-handler API",
+            "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+          },
+          {
+            "label": "BiFi oracleProxy source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+          },
+          {
+            "label": "BiFi liquidationManager source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/liquidationManager.sol"
+          }
+        ]
+      },
+      {
+        "id": "btc",
+        "label": "Native BTC collateral handler",
+        "tier": "standard-external",
+        "summary": "Handler 3 (BTC) is priced by Bifrost feed 0x1b4b4a43, which returns description BTC/USD; 50% borrow limit and 95% margin-call limit through the shared oracle proxy.",
+        "collateralAssets": [
+          "BTC"
+        ],
+        "chains": [
+          "bifrost"
+        ],
+        "feeds": [
+          {
+            "provider": "Bifrost native price oracle (Chainlink-compatible)",
+            "path": "BTC/USD",
+            "address": "0x1b4b4a439edb741f161b01634cf47bc4896e5cfb",
+            "chain": "bifrost",
+            "heartbeatSec": 600,
+            "observedAt": "2026-07-28",
+            "observedBlock": 37135464,
+            "failureDomainKeys": [
+              "oracle:bifrost:btc-usd",
+              "contract:bifrost:0x1b4b4a439edb741f161b01634cf47bc4896e5cfb"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Same BiFi oracle proxy path: latestAnswer only, zero-price revert, owner-replaceable feed mapping; no secondary feed.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 37135464,
+        "collateralParameters": [
+          {
+            "asset": "BTC",
+            "maximumLtvPct": 50,
+            "minimumCollateralRatioPct": 200,
+            "note": "getTokenHandlerBorrowLimit(3)=0.5e18; getTokenHandlerMarginCallLimit(3)=0.95e18."
+          }
+        ],
+        "liquidationMechanism": "Shared BiFi partialLiquidation path using this handler's margin-call limit and BTC/USD price; the same delay-free path as the WBTC handler, with getTokenHandlerBorrowLimit(3)=0.5e18 and getTokenHandlerMarginCallLimit(3)=0.95e18 re-read on-chain at block 37501309 (2026-08-09). liquidationDelaySec 0 is the absence of any waiting period, not an unset field: liquidation is callable in the same transaction in which the position crosses 95%.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol-owned backstop identified; recovery depends on external liquidators.",
+        "shutdownOrBadDebtBehavior": "Shared market-manager circuit breaker and zero-price revert; no BTC-handler isolation beyond the shared circuit breaker.",
+        "failureDomainKeys": [
+          "protocol:btcfi",
+          "oracle:bifrost:btc-usd",
+          "contract:bifrost:0x6853f7774d0558ff3d9a8dba8036305a095c6750",
+          "contract:bifrost:0x59d36e5c61b1c4b55e250be9bc2dc5efa75603c6"
+        ],
+        "sources": [
+          {
+            "label": "Bifrost public EVM RPC (handler, oracle-proxy, and margin-call reads at block 37135464, 2026-07-28; feeds, borrow/margin-call limits, circuit breaker, and liquidation-path callability re-read at block 37501309, 2026-08-09)",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          },
+          {
+            "label": "BTCFi supported-handler API",
+            "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+          },
+          {
+            "label": "BiFi oracleProxy source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+          },
+          {
+            "label": "BiFi liquidationManager source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/liquidationManager.sol"
+          }
+        ]
+      },
+      {
+        "id": "cbbtc",
+        "label": "cbBTC collateral handler",
+        "tier": "standard-external",
+        "summary": "Handler 4 (cbBTC) shares the same Bifrost BTC/USD feed 0x1b4b4a43 as native BTC, with 50% borrow limit and 95% margin-call limit; wrapper custody risk sits outside the oracle path.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "bifrost"
+        ],
+        "feeds": [
+          {
+            "provider": "Bifrost native price oracle (Chainlink-compatible)",
+            "path": "BTC/USD (shared with native BTC handler)",
+            "address": "0x1b4b4a439edb741f161b01634cf47bc4896e5cfb",
+            "chain": "bifrost",
+            "heartbeatSec": 600,
+            "observedAt": "2026-07-28",
+            "observedBlock": 37135464,
+            "failureDomainKeys": [
+              "oracle:bifrost:btc-usd",
+              "contract:bifrost:0x1b4b4a439edb741f161b01634cf47bc4896e5cfb"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Same BiFi oracle proxy path: latestAnswer only, zero-price revert, owner-replaceable feed mapping; no secondary feed.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 37135464,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 50,
+            "minimumCollateralRatioPct": 200,
+            "note": "getTokenHandlerBorrowLimit(4)=0.5e18; getTokenHandlerMarginCallLimit(4)=0.95e18; getOracleFeed(4) equals getOracleFeed(3)."
+          }
+        ],
+        "liquidationMechanism": "Shared BiFi partialLiquidation path using this handler's margin-call limit and the shared BTC/USD price; the same delay-free path as the WBTC handler, with getTokenHandlerBorrowLimit(4)=0.5e18, getTokenHandlerMarginCallLimit(4)=0.95e18, and getOracleFeed(4)=getOracleFeed(3)=0x1b4b4a439edb741f161b01634cf47bc4896e5cfb re-read on-chain at block 37501309 (2026-08-09). liquidationDelaySec 0 is the absence of any waiting period, not an unset field.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol-owned backstop identified; recovery depends on external liquidators.",
+        "shutdownOrBadDebtBehavior": "Shared market-manager circuit breaker and zero-price revert; shares the BTC/USD feed failure domain with the native BTC handler.",
+        "failureDomainKeys": [
+          "protocol:btcfi",
+          "oracle:bifrost:btc-usd",
+          "contract:bifrost:0x6853f7774d0558ff3d9a8dba8036305a095c6750",
+          "contract:bifrost:0xed00a5201607aa26cddcdcf1583845e7435a2f39"
+        ],
+        "sources": [
+          {
+            "label": "Bifrost public EVM RPC (handler, oracle-proxy, and margin-call reads at block 37135464, 2026-07-28; feeds, borrow/margin-call limits, circuit breaker, and liquidation-path callability re-read at block 37501309, 2026-08-09)",
+            "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
+          },
+          {
+            "label": "BTCFi supported-handler API",
+            "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+          },
+          {
+            "label": "BiFi oracleProxy source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/oracle/oracleProxy.sol"
+          },
+          {
+            "label": "BiFi liquidationManager source",
+            "url": "https://github.com/bifrost-platform/BIFI/blob/master/contracts/marketManager/liquidationManager.sol"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "BtcUSD/BTCFi relies on Bifrost cross-chain technology for collateral movement across networks. Bifrost bridge documentation describes a cross-chain bridge service rather than a native issuer-only route, so Pharos scores this as external validated-network exposure.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Bifrost Bridge",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide",
+        "bridgeTypes": [
+          "messagePassing",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "BTCFi",
+        "url": "https://www.btcfi.one/"
+      },
+      {
+        "label": "Bifrost bridge guide",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+        "sourceChain": "bifrost",
+        "destinationChain": "base",
+        "canonicalChain": "bifrost",
+        "contractAddress": "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+        "protocol": "Bifrost bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this Base ERC20_Bridged proxy is the Bifrost bridge representation of native Bifrost BtcUSD; get_owners() returns bridge mint owners 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (contract) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA). The bridge controller for the representation is the owner contract; the proxy admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 is owned by EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "contract:base:0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BtcUSD Base token on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Bifrost bridge guide",
+            "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
+          }
+        ]
+      },
+      {
+        "id": "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555",
+        "destinationChain": "bifrost",
+        "canonicalChain": "bifrost",
+        "contractAddress": "0x6906ccda405926fc3f04240187dd4fad5df6d555",
+        "protocol": "BTCfi native CDP issuance (Bifrost)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20 via the Bifrost public EVM RPC: this is the native BTCfi BtcUSD token (non-proxy, mint/burn selectors present, owner() = EOA 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5) on the canonical CDP issuance chain; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BtcUSD Bifrost token on Bifrost explorer",
+            "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+          },
+          {
+            "label": "BTCFi website",
+            "url": "https://www.btcfi.one/"
+          }
+        ]
+      }
+    ]
+  }
+}

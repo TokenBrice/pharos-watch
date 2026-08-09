@@ -1,0 +1,93 @@
+{
+  "id": "usyc-hashnote",
+  "reserves": [
+    {
+      "name": "U.S. Treasury Bills and reverse repos",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and institutional reverse-repo counterparties",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle USYC product disclosure",
+        "url": "https://www.circle.com/usyc"
+      },
+      {
+        "label": "Circle USYC developer overview",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ],
+    "rationale": "Current Circle disclosures identify the fund strategy as short-term U.S. Treasury bills and reverse repurchase agreements backed by U.S. government securities, but do not publish a durable current allocation between those categories. The reviewed row therefore preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
+    "compositionBasis": "Circle USYC fund and developer disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The allocation between Treasury bills and reverse-repo positions and the repo counterparties are not disclosed in the reviewed public materials. Circle's reviewed product and developer disclosures also do not state a USYC fund loss-recovery or loss-allocation design; that evidence boundary was rechecked on 2026-07-14 by SONG Safety Score V9 mechanism review.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. Treasury Bills and reverse repos",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The public fund description identifies both categories but does not provide current category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Marex",
+        "role": "prime-broker",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Customers Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-19 evidence pass",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "USYC introduction — segregated custodial accounts at prime broker",
+        "url": "https://usyc.docs.hashnote.com/"
+      },
+      {
+        "label": "USYC service providers — Marex, Customers Bank, Cohen and Company, NAV Consulting",
+        "url": "https://usyc.docs.hashnote.com/overview/service-providers"
+      },
+      {
+        "label": "Circle USYC product disclosure",
+        "url": "https://www.circle.com/usyc"
+      },
+      {
+        "label": "Hashnote USYC Arbitrum STEP application (2024-05-02)",
+        "url": "https://forum.arbitrum.foundation/t/hashnote-usyc-step-application/23587"
+      }
+    ],
+    "uncertainty": "Current issuer documentation (accessed 2026-07-17) states fund assets are protected through segregated custodial accounts at the prime broker and names Marex as prime broker and Customers Bank as bank. BNY Mellon's custodian role is documented in the 2024-05-02 STEP application — which also states substantially all fund assets sit in the Marex prime-brokerage account, a single-prime-broker concentration — and is not restated in current Circle docs. Provider shares and rehypothecation terms remain undisclosed."
+  }
+}

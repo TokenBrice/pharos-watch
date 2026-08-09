@@ -1,0 +1,92 @@
+{
+  "id": "xnk-kinka",
+  "reserves": [
+    {
+      "name": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "Kinka (BVI) Ltd.; Gold Management LLC and Loomis International",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Grok wave-8 GROK-RESEARCH reserve re-verify; Codex T61 re-review 2026-07-31",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Kinka whitepaper ver2 (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka terms of use ver1 (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      },
+      {
+        "label": "Kinka website product claims (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-31: the 2023 whitepaper still states each XNK equals one troy fine ounce of 99.99% Japanese-brand LBMA Good Delivery gold, stored in Loomis International warehouses, with 321.5 XNK minimum physical redemption; it also describes Gold Management (GM) custody and bankruptcy isolation. The 2022 Terms of Use independently restate the one-ounce gold backing, GM/storage-company redemption path, and transfer of bullion ownership to GM LLC. The live Kinka site continues to describe vaulted gold. No published bar-level inventory, dated independent XNK-specific reserve attestation, or redemption settlement SLA was found, so composition stays a single physical-gold slice at medium risk with liquidityHorizon unknown.",
+    "compositionBasis": "Kinka whitepaper and Terms of Use physical-gold backing and redemption disclosures, re-opened 2026-07-31",
+    "compositionAsOf": "2026-07-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed sources identify 100% physical-gold reserve and the Loomis/Gold Management custody route but do not disclose bar-level inventory, current ounces vs circulating supply, account segregation, provider shares, or a redemption settlement time. The whitepaper states that Kinka undergoes regular audits by an independent Japanese auditing firm and that the audit scope includes Kinka and verification of its issuance, custody, and storage compliance, but the auditor is not named and no dated report or XNK-specific reserve attestation URL was located on re-open.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Allocated physical gold bullion is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Gold Management LLC",
+        "role": "other"
+      },
+      {
+        "name": "Loomis International",
+        "role": "custodian"
+      },
+      {
+        "name": "Kinka (BVI) Ltd.",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Grok wave-8 GROK-RESEARCH reserve re-verify; Codex T61 re-review 2026-07-31",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Kinka whitepaper ver2 (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka terms of use ver1 (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      },
+      {
+        "label": "Kinka website product claims (re-opened 2026-07-31)",
+        "url": "https://kinka-gold.com/"
+      }
+    ],
+    "uncertainty": "Re-opened 2026-07-31: whitepaper describes GM as legally independent from Kinka/parent with warehouse gold not seizable in their bankruptcy, states that GM separately manages the gold bullion held by XNK holders, and applies Japan's corporate bankruptcy-isolation structure to protect client assets at every stage of custody; terms transfer gold ownership to GM LLC and storage to a storage service company (Loomis named in whitepaper). Rehypothecation safeguards, current custody shares, insurance, per-holder allocation records, and physical-redemption settlement time remain undisclosed."
+  }
+}

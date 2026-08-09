@@ -1,0 +1,231 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "Ethereum fxUSD is minted CDP-style against protocol collateral and its proxy upgrades flow through a 3-day timelock to a 6-of-9 Safe. The immutable Base LayerZero OFT mints only from authenticated bridge messages; a separate 3-of-4 Safe controls its peer and messaging configuration.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+      ],
+      "implementationAddresses": [
+        "0xf729422d68c2cf00574fb5712972454cf402a9b1",
+        "0x55380fe7a1910dff29a47b622057ab4139da42c5"
+      ],
+      "adminAddresses": [
+        "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "fxUSD deployment-wide upgrade and configuration authorities",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "AladdinDAO deployment registry",
+          "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+        },
+        {
+          "label": "fxUSD Base OFT",
+          "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+        },
+        {
+          "label": "LayerZero OFT technical reference",
+          "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "label": "fxUSD deployment-wide upgrade and configuration authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "failureDomainKeys": [
+          "contract:ethereum:0x68863fb8855b04509a835082478d6e3d0be4e61a",
+          "safe:base:0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2"
+        ],
+        "bypassSurfaces": [
+          "Ethereum proxy replacement requires the 3-day TimelockController path; Base OFT bytecode is immutable.",
+          "The Base 3-of-4 Safe can immediately change OFT peers and LayerZero messaging configuration, which can change the authenticated cross-chain mint path without replacing token bytecode."
+        ],
+        "sources": [
+          {
+            "label": "AladdinDAO deployment registry",
+            "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+          },
+          {
+            "label": "fxUSD Base OFT",
+            "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+          },
+          {
+            "label": "fxUSD Base owner Safe",
+            "url": "https://basescan.org/address/0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2#code"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "Ethereum remains upgradeable through ProxyAdmin 0x9b54... and TimelockController 0x6886... with a 259,200-second delay. At Base block 48,621,538, fxUSD OFT 0x55380... had a zero EIP-1967 implementation slot and owner() = Safe 0x44e415.... The Safe is v1.3.0 with threshold 3, four owners, no enabled modules, and singleton 0xfb1bffc9.... The aggregate delay is zero because the Base Safe can immediately reconfigure peers and messaging security even though it cannot replace the OFT bytecode."
+      },
+      {
+        "chain": "base",
+        "address": "0x44E4158d93ACCf19F7B97a28B88A26DfF3c3D6d2",
+        "label": "fxUSD Base OFT owner (3-of-4 Safe)",
+        "role": "bridge-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "safe": {
+          "owners": [
+            "0x38a93e70b0D8343657f802C1c3Fdb06aC8F8fe99",
+            "0xF483De0f306952FA56ef56c1dbBDd2A70737bDd5",
+            "0xe3522d85d37F55735e9327CD7a5cDe3abaf28E03",
+            "0x74390470F4001Ca85D93bD546A4Ab1724359654B"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "unknown",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 48621538,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "fxUSD Base OFT",
+            "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+          },
+          {
+            "label": "fxUSD Base owner Safe",
+            "url": "https://basescan.org/address/0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2#code"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ],
+        "evidence": "At Base block 48,621,538, owner() on the immutable fxUSD OFT returned this Safe. On-chain calls returned VERSION 1.3.0, threshold 3, four owners, no enabled modules, and singleton 0xfb1bffc9.... LayerZero's OFT model gives the owner control of peers and enforced options, so this Safe can authorize which authenticated bridge messages reach the Base mint path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+        "label": "fxUSD token proxy (EIP-1967, OZ TransparentUpgradeableProxy)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; supply expands and contracts with collateral and redemptions, not by an off-protocol issuer minter.",
+        "sources": [
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          }
+        ],
+        "evidence": "At Ethereum block 25,294,712, EIP-1967 slots confirmed: implementation = 0xf729422d68c2cf00574fb5712972454cf402a9b1, proxy admin = 0x9b54b7703551d9d0ced177a78367560a8b2edda4 (OZ ProxyAdmin)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "label": "f(x) Protocol OZ TimelockController (3-day delay)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "TimelockController on Etherscan",
+            "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+          }
+        ],
+        "evidence": "ProxyAdmin owner = 0x68863fb8855b04509a835082478d6e3d0be4e61a (OZ TimelockController, minDelay = 259200s / 3 days). PROPOSER/EXECUTOR/CANCELLER/TIMELOCK_ADMIN = 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF (6-of-9 Safe). Additional TIMELOCK_ADMIN = 0xa1d0027Ca4C0CB79f9403d06A29470abC7b0a468 (EOA, no code)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF",
+        "label": "f(x) Protocol governance multisig (6-of-9 Gnosis Safe)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 6,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x38a93e70b0D8343657f802C1c3Fdb06aC8F8fe99",
+            "0x85DB62FdFA9Ee6050f8b422F74D75D2069dA102B",
+            "0xe3522d85d37F55735e9327CD7a5cDe3abaf28E03",
+            "0x74390470F4001Ca85D93bD546A4Ab1724359654B",
+            "0xeF0Ca09fbf9a5f61E657Fb208b46b8685c1d4766",
+            "0x8EcAB7B8ed8215cA52500cbf1548B9239173ef82",
+            "0x4088421cBDBa1501d8Fd09fD241717097Afb42Cb",
+            "0xcdF067F306E7a511Ef701588AFCdcff292B19282",
+            "0xC8Be49a9b1ca1A1cc654491a7cBbD27aBfA06A81"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25294712,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "f(x) Protocol multisig on Etherscan",
+            "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
+          }
+        ],
+        "evidence": "Safe API confirmed 6-of-9 Gnosis Safe v1.3.0 at block 25,294,712; no modules, no guard. Holds all timelock roles (PROPOSER, EXECUTOR, CANCELLER, TIMELOCK_ADMIN). A bare EOA (0xa1d0027…) also holds TIMELOCK_ADMIN_ROLE but not PROPOSER/EXECUTOR."
+      }
+    ],
+    "review": {
+      "evidence": "Ethereum fxUSD proxy admin 0x9b54... is owned by TimelockController 0x6886... with a 3-day delay and a 6-of-9 proposer/executor Safe. The AladdinDAO deployment registry and Base RPC identify the second tracked deployment as an immutable LayerZero OFT. At Base block 48,621,538, owner() returned a 3-of-4 Safe with no enabled modules; that Safe controls the OFT peer and messaging configuration. Both tracked deployments and their distinct code/configuration authorities are now reviewed.",
+      "reviewer": "SOL-7 blocker challenge batch 01",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "AladdinDAO deployment registry",
+          "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+        },
+        {
+          "label": "fxUSD Base OFT",
+          "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5#code"
+        },
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        },
+        {
+          "label": "fxUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        },
+        {
+          "label": "f(x) Protocol TimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+        },
+        {
+          "label": "f(x) Protocol governance multisig on Etherscan",
+          "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
+        }
+      ]
+    }
+  }
+}

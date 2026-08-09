@@ -1,0 +1,11 @@
+{
+  "id": "wemix-dollar-wemix",
+  "reserves": [
+    {
+      "name": "USDC held in the WEMIX3.0 Treasury",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ]
+}

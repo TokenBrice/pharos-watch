@@ -1,0 +1,95 @@
+{
+  "id": "hyusd-hylo",
+  "reserves": [
+    {
+      "name": "SOL LST pool collateral at pinned Hylo program state",
+      "pct": 94.6801280224,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Hylo SOL LST pool and underlying Solana LST protocols",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "cbBTC pool collateral at pinned Hylo program state",
+      "pct": 0.0000076707,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase cbBTC held by the Hylo cbBTC pool",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC pool collateral at pinned Hylo program state",
+      "pct": 5.3198643069,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex SOL-III Safety Score V9 curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned Hylo SDK deployment and account layouts",
+        "url": "https://github.com/hylo-so/hylo-sdk/tree/104f216773d7f7e2139ee8d5751de0d10205d984"
+      },
+      {
+        "label": "Hylo V2 multi-asset architecture",
+        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+      },
+      {
+        "label": "Hylo invariant equations",
+        "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+      },
+      {
+        "label": "Solana mainnet RPC used for account reads at finalized slot 433130492",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "rationale": "At finalized Solana slot 433130492, the pinned SDK's three deployed pools reported 11,164,504.952198 HYUSD of SOL-LST-pool liabilities, 0.827193 HYUSD of cbBTC-pool liabilities, and 900,595.668355 HYUSD of USDC-pool liabilities. Their 12,065,101.447746 total reconciled exactly to HYUSD supply. Using the deployed price paths at slot 433130620, collateral was valued at $16,030,031.7531 for the SOL-LST pool, $1.2987 for cbBTC, and $900,691.5764 for USDC, yielding the exact normalized weights recorded here.",
+    "compositionBasis": "Pinned Hylo SDK account graph, finalized Solana pool balances, exact HYUSD liability reconciliation, and deployed Pyth price paths",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified reserve exposure remains in the measured three-pool deployment. The SOL-LST pool is represented at its exact program-accounted SOL-equivalent asset-class boundary rather than as stablecoin dependencies.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "SOL LST pool collateral at pinned Hylo program state",
+        "pct": 94.6801280224,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The measured SOL-equivalent LST collateral is an exogenous cryptoasset pool rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "cbBTC pool collateral at pinned Hylo program state",
+        "pct": 0.0000076707,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC is an exogenous cryptoasset and has no canonical tracked stablecoin ID."
+      }
+    ]
+  }
+}

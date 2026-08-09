@@ -1,0 +1,79 @@
+{
+  "id": "usat-tether",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USAT is publicly described as a U.S. dollar-backed token with 1:1 redemption through Tether and Anchorage Digital Bank, marketed explicitly as a GENIUS Act-compliant payment stablecoin."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Anchorage Digital Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.anchorage.com/platform/usat-reserve-attestations",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "Anchorage Digital Bank is an uninsured OCC-chartered national trust bank (the first federally chartered crypto bank, chartered January 2021). Under the GENIUS Act, this corresponds to the federal qualified payment stablecoin issuer (FQPSI) pathway supervised by the OCC. Anchorage has submitted a comment letter on the OCC NPRM and publicly states it expects to become a PPSI once the GENIUS Act framework takes effect (rules still in proposed-rulemaking stage as of 2026-06-18). No PPSI approval has been granted to any issuer. The OCC's proposed rule raises a potential 'one issuer, one brand' restriction that could affect Anchorage's white-label model (it currently issues USAT, USDtb/Ethena, USDGO/OSL, and a forthcoming USDPT/Western Union).",
+    "references": [
+      {
+        "label": "OCC: Anchorage national trust bank charter (January 2021)",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Tether USAT launch announcement (January 27, 2026)",
+        "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anchorage Digital Bank: First federally chartered stablecoin issuer following GENIUS Act",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-bank-first-federally-chartered-stablecoin-issuer-following-genius-act",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anchorage Digital comment letter on OCC GENIUS Act NPRM",
+        "url": "https://www.anchorage.com/insights/anchorage-digitals-comment-letter-on-occs-nprm-for-genius-act",
+        "sourceKind": "issuer-filing"
+      },
+      {
+        "label": "OCC GENIUS Act NPRM Bulletin 2026-3 (February 25, 2026)",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Anchorage USAT reserve attestations",
+        "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC public releases and GENIUS Act NPRM Bulletin 2026-3",
+        "OCC Anchorage Digital Bank national trust bank charter materials (2021)",
+        "Anchorage Digital public insights page on GENIUS Act positioning",
+        "Anchorage Digital comment letter on OCC NPRM",
+        "Tether USAT launch announcement and usat.io website",
+        "USAT reserve attestations page (Anchorage)",
+        "Federal Register search for any Anchorage PPSI approval",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No PPSI approval, state-qualified status, or official GENIUS Act application has been publicly filed or granted for Anchorage Digital Bank or USAT as of 2026-06-18. Anchorage explicitly uses forward-looking language ('expects to become a PPSI') confirming intent, not approval. The GENIUS Act rulemaking remains at the NPRM stage with no final rules issued.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

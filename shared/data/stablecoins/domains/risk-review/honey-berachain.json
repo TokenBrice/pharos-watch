@@ -1,0 +1,19 @@
+{
+  "id": "honey-berachain",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Berachain HONEY proxy",
+        "url": "https://routescan.io/address/0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce"
+      },
+      {
+        "label": "Berachain HONEY verified implementation",
+        "url": "https://routescan.io/address/0x96b1a552a97da5503343d0f9ff2766c616e62905"
+      }
+    ],
+    "evidence": "The verified current HONEY implementation exposes setBlacklisted(wallet, status) and setPaused(bool) to DEFAULT_ADMIN_ROLE. Its transfer hook rejects transfers involving blacklisted wallets and rejects all transfers while paused, so an authorized administrator can directly freeze individual holders or halt token transfers globally.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  }
+}

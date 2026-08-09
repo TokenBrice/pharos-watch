@@ -1,0 +1,57 @@
+{
+  "id": "reusd-re-protocol",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "reUSD is a senior, NAV-based yield token issued exclusively to eligible non-U.S. persons. Its backing combines onchain stablecoin liquidity with offchain reinsurance collateral in Regulation 114 trust accounts; redemptions become queued when instant capacity is unavailable. These investment and yield features place it outside GENIUS payment-stablecoin scope.",
+      "references": [
+        {
+          "label": "Re Protocol disclosure page",
+          "url": "https://re.xyz/disclosure",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "Re Protocol About reUSD",
+          "url": "https://docs.re.xyz/products/about-reusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-07-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Resilience Foundation",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.re.xyz/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "reUSD is a yield-bearing, NAV-based insurance capital token restricted to non-U.S. persons under Regulation S. The issuer is Resilience Foundation (full legal name: Resilience Foundation Company), an Exempted Limited Guarantee Foundation Company incorporated in the Cayman Islands (IC-414560), not a BVI entity. A related entity Resilience (BVI) Ltd exists in BVI but is not the token issuer. Prior entry listed issuerDomicile as British Virgin Islands — corrected to Cayman Islands. No GENIUS payment-stablecoin applicability; not-applicable status is appropriate.",
+    "references": [
+      {
+        "label": "Re Protocol disclosure page",
+        "url": "https://re.xyz/disclosure",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-07-14"
+      },
+      {
+        "label": "Re Protocol disclaimers",
+        "url": "https://docs.re.xyz/disclaimers",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-14"
+  }
+}

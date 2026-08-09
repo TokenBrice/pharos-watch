@@ -1,0 +1,115 @@
+{
+  "id": "cadm-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "CADm Celo proxy and verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325?tab=contract"
+      },
+      {
+        "label": "Mento Celo stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "StableTokenV2 implementation source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento stablecoin backing configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      }
+    ],
+    "sourceFreeRationale": "The current holder-facing CADm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. CADm 0xff4ab19391af240c311c54200a492233052b6325 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict CADm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "CADm's live Celo USDm/CADm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates the swap but no second feed or failover path is configured.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "At Celo block 72127154, CADm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/CADm exchange using rate feed 0x20869cF54Ead821C45DFb2aB0C23d2e10Fbb65A4, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The current Mento reserve API lists active CDP troves only for GBPm, JPYm, and CHFm, not CADm, so CADm has no live borrower-specific oracle/liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
+        },
+        {
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+      },
+      {
+        "label": "CADm on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+      },
+      {
+        "label": "CAD/USD rate feed on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0x20869cF54Ead821C45DFb2aB0C23d2e10Fbb65A4"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. The sole Celo deployment was verified on-chain as native Mento Broker issuance; the separate ValidatorsProxy authorization is latent under its current implementation, and no bridge representation carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento on Celo docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xff4ab19391af240c311c54200a492233052b6325",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0xff4ab19391af240c311c54200a492233052b6325",
+        "protocol": "Mento CADm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento stablecoins on Celo docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "CADm on Celo Blockscout (probed 2026-07-20)",
+            "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at Celo block 72616317: name 'Mento Canadian Dollar', symbol CADm, totalSupply 2667.02 CADm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento Timelock, 48h delay); broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad (the operational mint/burn path). The 2026-07-22 mint-authority review separately records the latent ValidatorsProxy authorization. Native Mento protocol issuance on Celo, the asset's only chain; no bridge representation."
+      }
+    ]
+  }
+}

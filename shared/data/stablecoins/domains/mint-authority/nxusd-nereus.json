@@ -1,0 +1,105 @@
+{
+  "id": "nxusd-nereus",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "NXUSD is a BoringOwnable CDP stablecoin; mint() is onlyOwner. The owner is a Gnosis Safe 1.3.0 with 2-of-3 threshold on Avalanche — no modules, no guard — that administers the NXUSD token and Nereus CDP parameters.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 90243848,
+      "sources": [
+        {
+          "label": "NXUSD verified source",
+          "url": "https://routescan.io/address/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/contract/43114/code"
+        },
+        {
+          "label": "Nereus NXUSD owner Safe",
+          "url": "https://routescan.io/address/0xdd3de3b819edd3a014fda93868d7dfc873341467/contract/43114/code"
+        },
+        {
+          "label": "Avalanche C-Chain RPC",
+          "url": "https://api.avax.network/ext/bc/C/rpc"
+        }
+      ]
+    },
+    "mintIncidents": [
+      {
+        "date": "2022-09-06",
+        "status": "resolved",
+        "summary": "A flash-loan manipulation of the AVAX/USDC JLP collateral price let an attacker borrow far more NXUSD than justified by collateral, creating about $500K of NXUSD bad debt.",
+        "sources": [
+          {
+            "label": "Nereus Finance flash-loan analysis",
+            "url": "https://faraz.faith/2022-11-19-nereus-finance-flashloan-attack-analysis/"
+          },
+          {
+            "label": "Financial Express - Nereus NXUSD bad debt",
+            "url": "https://www.financialexpress.com/business/blockchain-avalanche-flash-loan-exploit-sees-371000-in-usdc-stolen-2659238/"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "label": "Nereus NXUSD owner multisig (2/3 Gnosis Safe)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "avalanche",
+        "address": "0xdd3de3b819edd3a014fda93868d7dfc873341467",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x90bd1ecd6cf2cf87552c870e403f71cafde0cd90",
+            "0xa91c2397677b726e727befdd6bf047d03ee35db8",
+            "0x8c355e95b533a508e309efa4af4b26e000ab76a6"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 90243848,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 90243848,
+        "capDescription": "NXUSD uses BoringOwnable; mint() rate-limits to 15% of total supply per 24h window.",
+        "evidence": "At Avalanche block 90243848, NXUSD owner() remained Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467. The Safe was 2-of-3 with no modules, zero guard and module guard, fixed singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea, and standard CompatibilityFallbackHandler 0x017062a1de2fe6b99be3d9d37841fed19f573804. NXUSD is a direct 5007-byte deployment whose EIP-1967 implementation, admin, and beacon slots were all zero. Verified source shows mint() is onlyOwner with a 15% per-24h rate limiter.",
+        "sources": [
+          {
+            "label": "NXUSD source on Sourcify",
+            "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Avalanche block 90243848, NXUSD was a direct 5007-byte deployment with zero EIP-1967 implementation, admin, and beacon slots. Its onlyOwner mint path remained controlled by Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, still 2-of-3 with no modules or guard. The Safe can operate minting and CDP parameters but cannot replace the deployed NXUSD bytecode.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "NXUSD source on Sourcify",
+          "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+        },
+        {
+          "label": "Nereus governance docs",
+          "url": "https://docs.nereus.finance/nereus-vision/governance"
+        },
+        {
+          "label": "Nereus NXUSD owner Safe",
+          "url": "https://routescan.io/address/0xdd3de3b819edd3a014fda93868d7dfc873341467/contract/43114/code"
+        }
+      ]
+    }
+  }
+}

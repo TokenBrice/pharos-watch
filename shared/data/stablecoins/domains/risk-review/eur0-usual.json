@@ -1,0 +1,20 @@
+{
+  "id": "eur0-usual",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "EUR0 contract docs",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
+      },
+      {
+        "label": "Contract deployments",
+        "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+      }
+    ],
+    "evidence": "Usual's EUR0 token docs describe blacklist checks on transfers and admin-managed blacklist/unblacklist functions, so EUR0 has a direct holder-restriction surface.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  }
+}

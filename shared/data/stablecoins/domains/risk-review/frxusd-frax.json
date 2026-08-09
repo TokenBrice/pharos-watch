@@ -1,0 +1,929 @@
+{
+  "id": "frxusd-frax",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://frax.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "frxUSD uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Frax cross-chain overview",
+        "url": "https://docs.frax.com/protocol/crosschain/overview"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "protocol": "Frax (FraxNet)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical frxUSD on Ethereum: TransparentUpgradeableProxy (EIP-1967 impl 0x0000000048d2c8baf31742f6765383278bada4d5, no LayerZero endpoint surface) natively minted/redeemed by Frax against permitted cash-equivalent reserves per Frax docs.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "frxUSD on Etherscan",
+            "url": "https://etherscan.io/address/0xcacd6fd266af91b8aed52accc382b4e165586e29"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "base:0xe5020a6d073a794b6e7f05678707de47986fb0b6",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe5020a6d073a794b6e7f05678707de47986fb0b6",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xe5020a6d073a794b6e7f05678707de47986fb0b6",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0xe5020a6d073a794b6e7f05678707de47986fb0b6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:optimism:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:polygon:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:bsc:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "solana:GzX1ireZDU865FiMaKrdVB1H6AE8LAqWYCg6chrMrfBw",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "GzX1ireZDU865FiMaKrdVB1H6AE8LAqWYCg6chrMrfBw",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: the frxUSD SPL mint GzX1ire... (supply 358,173.919, 9 decimals, matching the exact captured supply) has mint authority 52e8UiVqx28VEqyiEqMbMVehFC3LheNGqnA9m82XF6GK, the LayerZero OFT mint-authority PDA on Solana.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "52e8UiVqx28VEqyiEqMbMVehFC3LheNGqnA9m82XF6GK",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:solana:52e8UiVqx28VEqyiEqMbMVehFC3LheNGqnA9m82XF6GK"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "frxUSD mint on Solana explorer (mint authority probed 2026-07-20)",
+            "url": "https://solscan.io/token/GzX1ireZDU865FiMaKrdVB1H6AE8LAqWYCg6chrMrfBw"
+          }
+        ]
+      },
+      {
+        "id": "aptos:0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "sourceChain": "ethereum",
+        "destinationChain": "aptos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: the Aptos account hosts oft_fa::OftImpl, oft_store::OftStore and oapp_store::OAppStore resources, so this address is the LayerZero OFT and the mint authority for the frxUSD representation on Aptos.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "aptos",
+        "controllerAddress": "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:aptos:0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "frxUSD OFT account on Aptos explorer (resources probed 2026-07-20)",
+            "url": "https://explorer.aptoslabs.com/account/0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b?network=mainnet"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "linea:0xc7346783f5e645aa998b106ef9e7f499528673d8",
+        "sourceChain": "ethereum",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc7346783f5e645aa998b106ef9e7f499528673d8",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "linea",
+        "controllerAddress": "0xc7346783f5e645aa998b106ef9e7f499528673d8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:linea:0xc7346783f5e645aa998b106ef9e7f499528673d8"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0x397f939c3b91a74c321ea7129396492ba9cdce82",
+        "sourceChain": "ethereum",
+        "destinationChain": "scroll",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x397f939c3b91a74c321ea7129396492ba9cdce82",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "scroll",
+        "controllerAddress": "0x397f939c3b91a74c321ea7129396492ba9cdce82",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:scroll:0x397f939c3b91a74c321ea7129396492ba9cdce82"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "blast:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "blast",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "blast",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:blast:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "mode:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "mode",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "mode",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:mode:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+        "sourceChain": "ethereum",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "zksync",
+        "controllerAddress": "0xea77c590bb36c43ef7139ce649cfbcfd6163170d",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:zksync:0xea77c590bb36c43ef7139ce649cfbcfd6163170d"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plume",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:plume:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "unichain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "unichain",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:unichain:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ink",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ink:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sei",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sei:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:berachain:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "katana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "katana",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000001",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000001",
+        "protocol": "Frax (Fraxtal home chain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Fraxtal-native frxUSD at the Frax-published system address 0xFC00000000000000000000000000000000000001 (no LayerZero endpoint surface); Fraxtal is the Frax home chain whose lockbox backs the FraxZero OFT representations on other chains.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "Transfer frxUSD with Fraxtal (lockbox hub)",
+            "url": "https://docs.frax.com/frxusd/cross-chain-transfers-quickstarts/transfer-with-fraxtal"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "aurora",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "aurora",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:aurora:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "polygon-zkevm:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon-zkevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon-zkevm",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:polygon-zkevm:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x80eede496655fb9047dd39d9f418d5483ed600df",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:xlayer:0x80eede496655fb9047dd39d9f418d5483ed600df"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "movement:0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "sourceChain": "ethereum",
+        "destinationChain": "movement",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Frax USD token returns the LayerZero EndpointV2, so this deployment is the FraxZero OFT and the OFT contract itself is the mint/burn authority for the representation on this chain. Account resources oft_fa::OftImpl + oft_store::OftStore confirm the OFT on Movement.",
+        "controllerChain": "movement",
+        "controllerAddress": "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:movement:0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b"
+        ],
+        "sources": [
+          {
+            "label": "Frax frxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "frxUSD OFT account on Movement explorer (resources probed 2026-07-20)",
+            "url": "https://explorer.movementnetwork.xyz/account/0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b?network=mainnet"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "observedAt": "2026-07-20"
+      },
+      {
+        "id": "tempo:0x20c0000000000000000000003554d28269e0f3c2",
+        "destinationChain": "tempo",
+        "canonicalChain": "tempo",
+        "contractAddress": "0x20c0000000000000000000003554d28269e0f3c2",
+        "protocol": "Frax (Tempo TIP-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Tempo TIP-20 frxUSD (Frax USD, 6 decimals, supply 33.362833 matching the exact captured supply): listed on the Tempo explorer token registry and documented by Frax as a Tempo (TIP-20) deployment; DefiLlama attributes the Tempo supply as natively minted and the token exposes no LayerZero/bridge controller surface.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Frax frxUSD documentation (Tempo TIP-20)",
+            "url": "https://docs.frax.com/frxusd/stake-and-unstake-overview"
+          },
+          {
+            "label": "frxUSD on the Tempo explorer (supply probed 2026-07-20)",
+            "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000003554d28269e0f3c2"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "id": "m-m0",
+  "mintAuthority": {
+    "mintPath": "m0-permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "M minting is routed through the immutable Ethereum MinterGateway under validator/collateral checks and raiseable M0 TTG parameters. Solana M is a portal-minted spoke whose 1-of-2 program-derived mint multisig is route-limited, while one EOA can upgrade the portal program and replace those constraints.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+      ],
+      "implementationAddresses": [
+        "GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n"
+      ],
+      "adminAddresses": [
+        "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "M0 Solana program upgrade authority",
+      "observedAt": "2026-08-08",
+      "observedBlock": 438047853,
+      "sources": [
+        {
+          "label": "M0 Solana Portal program",
+          "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e",
+        "controllerAssetId": "m-m0",
+        "label": "M0 MinterGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "MToken.mint is callable only by the MinterGateway; MinterGateway issuance depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
+        "routeChecks": {
+          "attestorQuorum": "M0 docs describe validator attestations before minting; this review did not enumerate the live validator threshold.",
+          "onchainAmountBounds": "MinterGateway minting is bounded by approved-Minter status, collateral/debt checks, and mint-delay review before MToken mint.",
+          "caps": "Per-Minter capacity can be changed by M0 TTG governance, so the cap is protocol-governed rather than immutable.",
+          "pausersAdminsUpgraders": "MinterGateway is confirmed immutable/non-proxy; cap governance remains with M0 TTG and Registrar governance."
+        },
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712124,
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "M0 protocol docs",
+            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          },
+          {
+            "label": "M0 minter gateway docs",
+            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "MToken technical specification",
+            "url": "https://docs.m0.org/home/technical-specifications/m-token"
+          },
+          {
+            "label": "MinterGateway on Blockscout",
+            "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
+          }
+        ],
+        "evidence": "Re-verified at Ethereum block 25712124: MToken.minterGateway() returned this immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. The gateway enforces approved-minter, validator-attestation, delay, and collateral-ratio constraints but does not itself govern their values, so canRaiseCap is false for this contract. TTG governance is modeled separately as the cap raiser."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x119fbeedd4f4f4298fb59b720d5654442b81ae2c",
+        "controllerAssetId": "m-m0",
+        "label": "M0 TTG Registrar governance",
+        "role": "cap-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "M0 Two Token Governance controls Registrar configuration used by MinterGateway, including approved minter/validator parameters, collateral update intervals, mint delay, and mint ratio.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712124,
+        "failureDomainKeys": [
+          "governance:m0-ttg"
+        ],
+        "sources": [
+          {
+            "label": "M0 Two Token Governance specification",
+            "url": "https://docs.m0.org/home/technical-specifications/two-token-governance"
+          },
+          {
+            "label": "M0 protocol roles",
+            "url": "https://docs.m0.org/protocol/roles"
+          },
+          {
+            "label": "MinterGateway verified contract",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25712124, MinterGateway.ttgRegistrar() returned this Registrar. M0's primary governance and role specifications assign approved-minter, validator, and issuance-parameter changes to Two Token Governance. This control can authorize new issuance participants and raise replaceable mint constraints but cannot bypass MinterGateway's transaction checks directly."
+      },
+      {
+        "chain": "solana",
+        "address": "ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th",
+        "label": "M Solana SPL mint authority",
+        "role": "bridge-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "cap-limited",
+        "threshold": 1,
+        "signerCount": 2,
+        "capDescription": "Solana M is a spoke deployment bridged from Ethereum M through the M0 portal/transceiver design; base supply remains governed by the Ethereum MinterGateway. The SPL Token-2022 mintAuthority is a 1-of-2 SPL multisig (ms2SCrTYioPuumF6oBvReXoVRizEW5qYkiVuUEak7Th) whose two signers are off-curve PDAs controlled by M0 Portal and allied programs; all programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW.",
+        "routeChecks": {
+          "lockboxOrEscrow": "Solana M is a spoke deployment bridged from Ethereum M; base supply remains governed by the Ethereum MinterGateway.",
+          "trustedPeerOrRemote": "The SPL mint authority is a 1-of-2 SPL multisig whose signers are off-curve PDAs controlled by M0 portal/allied programs.",
+          "caps": "Effective Solana mint capacity is bounded by the portal route and base M supply, not by an immutable Solana token cap.",
+          "pausersAdminsUpgraders": "M0 Solana programs share upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW; extension authorities point to the same EOA where checked."
+        },
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 438047792,
+        "sources": [
+          {
+            "label": "M0 deployments",
+            "url": "https://docs.m0.org/get-started/resources/addresses/"
+          },
+          {
+            "label": "Solana M mint on Solscan",
+            "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+          }
+        ],
+        "evidence": "At finalized Solana slot 438047792, the M Token-2022 mint still reported this 1-of-2 SPL multisig as mintAuthority and a null freeze authority. Its signers are program-derived authorities in the portal route, so this multisig is cap-limited by current bridge execution and cannot itself raise that route limit; the shared program upgrade authority is modeled separately."
+      },
+      {
+        "chain": "solana",
+        "address": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "controllerAssetId": "m-m0",
+        "label": "M0 Solana program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 438047853,
+        "sources": [
+          {
+            "label": "M0 Solana Portal program",
+            "url": "https://solscan.io/account/mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 438047853, the Portal program still resolved to programData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n, whose upgradeable-loader state named this EOA as upgrade authority. It can replace the portal logic and thereby change or bypass current Solana route constraints, so canRaiseCap is true."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "M0 protocol docs",
+          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+        },
+        {
+          "label": "M0 minter gateway docs",
+          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+        },
+        {
+          "label": "M0 minting and collateral verification",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "Solana M mint on Solscan",
+          "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+        },
+        {
+          "label": "M0 protocol roles (Minters, Validators, Earners)",
+          "url": "https://docs.m0.org/protocol/roles"
+        },
+        {
+          "label": "M0 Adopted Guidance — Validators",
+          "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
+        },
+        {
+          "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
+          "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
+        }
+      ],
+      "evidence": "At Ethereum block 25712124, MToken.minterGateway() still resolved to the immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. Existing pinned reads establish mint ratio 9950, mint delay 300 seconds, validator threshold 1, and a 108000-second collateral update interval; expired collateral counts as zero. M0's primary specifications assign replaceable issuance parameters and approved minter/validator sets to TTG governance, so the gateway is cap-limited while aggregate cap semantics remain raiseable. At finalized Solana slots 438047792 and 438047853, the mint authority remained a 1-of-2 portal-derived multisig with null freeze authority, and the portal ProgramData retained EOA upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Validator attestations support periodic reconciliation; no unified prudential supervisor or public mint-authority incident was identified in the reviewed primary sources.",
+      "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06)",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

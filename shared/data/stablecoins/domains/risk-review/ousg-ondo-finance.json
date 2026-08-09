@@ -1,0 +1,145 @@
+{
+  "id": "ousg-ondo-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: OUSG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Ondo issues OUSG natively on Ethereum, Polygon, Solana, and the XRP Ledger; per-chain administration resolves to Ondo-controlled Safes and keypairs (Ethereum/Polygon proxy admins re-read 2026-07-20), and Ondo's documented token bridge covers USDY/GM only — no OUSG bridge route carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ondo OUSG docs",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg"
+      },
+      {
+        "label": "Ondo token bridge docs",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+        "protocol": "Ondo OUSG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: OUSG token proxy administered by Ondo's own Safes (EIP-1967 admin 0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5 owned by the 4-of-7 Ondo Safe 0xAEd4caF2E535D964165B4392342F71bac77e8367, read 2026-07-20; mint via OUSG_InstantManager per the verified 2026-07-15 mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo docs — contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "OUSG Ethereum token",
+            "url": "https://etherscan.io/address/0x1b19c19393e2d034d8ff31ff34c81252fcbbee92"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xba11c5effa33c4d6f8f593cfa394241cfe925811",
+        "destinationChain": "polygon",
+        "contractAddress": "0xba11c5effa33c4d6f8f593cfa394241cfe925811",
+        "protocol": "Ondo OUSG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the Polygon OUSG proxy's EIP-1967 admin chain resolves to a 3-of-6 Safe 0x4413073440A568790c1b2b06B47F7D0a443574d0 whose signers overlap Ondo's Ethereum OUSG admin Safes (read 2026-07-20), and the token has no active MINTER_ROLE member — no bridge minter remains on this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo docs — OUSG technical (available on Ethereum, Polygon, Solana, XRPL)",
+            "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
+          },
+          {
+            "label": "OUSG Polygon token",
+            "url": "https://polygonscan.com/address/0xba11c5effa33c4d6f8f593cfa394241cfe925811"
+          }
+        ]
+      },
+      {
+        "id": "solana:i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc",
+        "destinationChain": "solana",
+        "contractAddress": "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc",
+        "protocol": "Ondo OUSG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native SPL deployment (announced 2023-12-20): plain spl-token mint with mintAuthority = freezeAuthority = Ondo keypair 6ViaRWzv7p56RfP1A9Hxy2ctu9kfE3XL43SxWuq3E4cE (read 2026-07-19). Note: the mint currently carries zero reported supply (dormant deployment).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OUSG Solana mint",
+            "url": "https://solscan.io/token/i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc"
+          },
+          {
+            "label": "Ondo docs — OUSG technical",
+            "url": "https://docs.ondo.finance/qualified-access-products/ousg/technical"
+          }
+        ]
+      },
+      {
+        "id": "xrpl:4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
+        "destinationChain": "xrpl",
+        "contractAddress": "4F55534700000000000000000000000000000000.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p",
+        "protocol": "Ondo OUSG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native XRPL issued currency (launched 2025-06-11 with RLUSD mint/redemption): the issuer account's Domain field reads 'ondo.finance', requireAuth and allowTrustLineClawback are set, and control rests with Ondo's account keys (read 2026-07-19). No bridge in the route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OUSG XRPL issuer account",
+            "url": "https://livenet.xrpl.org/accounts/rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p"
+          },
+          {
+            "label": "Ripple blog — tokenized treasuries on XRPL",
+            "url": "https://ripple.com/insights/tokenized-treasuries-go-live-on-the-xrpl/"
+          }
+        ]
+      }
+    ]
+  }
+}

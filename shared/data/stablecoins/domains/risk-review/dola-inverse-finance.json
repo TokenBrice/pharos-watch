@@ -1,0 +1,431 @@
+{
+  "id": "dola-inverse-finance",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Fantom DOLA contract",
+        "url": "https://ftmscan.com/address/0x3129662808bec728a27ab6a6b9afd3cbaca8a43c#code"
+      },
+      {
+        "label": "BSC DOLA contract",
+        "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840#code"
+      },
+      {
+        "label": "Fantom public RPC",
+        "url": "https://rpcapi.fantom.network"
+      },
+      {
+        "label": "BSC public RPC",
+        "url": "https://bsc-dataseed.binance.org"
+      }
+    ],
+    "evidence": "At Fantom block 122527611 on 2026-07-15, tracked DOLA 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c returned owner() and getAllMinters() = 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE with delayMinter() = 0; eth_call of burn(0x0000000000000000000000000000000000000001, 0) from that address succeeded. At BSC block 110192504, tracked DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 returned owner() = 0xF7Da4bC9B7A6bB3653221aE333a9d2a2C2d5BdA7, getAllMinters() = 0x58892974758A4013377A45fad698D2FF1F08d98E, and delayMinter() = 0; burn of an unrelated holder from that minter and setMinter of an unrelated address from the owner both succeeded in eth_call. These material tracked deployments have direct arbitrary holder-burn control with no observed minter delay.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Inverse FiRM values isolated collateral markets through Pessimistic Price Oracles that choose the conservative value across a primary and fallback path before applying market-specific collateral and liquidation parameters.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "DOLA is borrowed from isolated FiRM markets whose collateral types have separately governed collateral factors, liquidation factors, incentives, borrow caps, and oracle configurations. The markets share the documented Pessimistic Price Oracle and FiRM liquidation architecture, so they are represented as one common mechanism branch rather than unsupported per-market parameter estimates.",
+      "sources": [
+        {
+          "label": "Inverse FiRM documentation",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+        },
+        {
+          "label": "Inverse core concepts",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+        },
+        {
+          "label": "Inverse risk parameter frameworks",
+          "url": "https://docs.inverse.finance/risk-working-group-digest/security/frameworks"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse FiRM docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
+      },
+      {
+        "label": "Inverse core concepts",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+      },
+      {
+        "label": "Inverse jrDOLA first-loss documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+      }
+    ],
+    "branches": [
+      {
+        "id": "firm-isolated-markets",
+        "label": "FiRM isolated collateral markets",
+        "tier": "redundant-with-failover",
+        "summary": "Governance-approved FiRM markets share conservative dual-path price selection, isolated collateral escrows, and third-party liquidation against market-specific risk parameters.",
+        "collateralAssets": [
+          "Governance-approved FiRM collateral markets"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Inverse Pessimistic Price Oracle",
+            "path": "Primary price source and fallback/TWAP path -> conservative lower collateral price -> FiRM market",
+            "chain": "ethereum",
+            "failureDomainKeys": [
+              "inverse-oracle-configuration",
+              "chainlink",
+              "inverse-fallback-price-source",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "FiRM's Pessimistic Price Oracle compares independent price paths and uses the lower collateral value; current documentation describes Chainlink plus a fallback or time-weighted path, with governance able to update oracle configuration.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved FiRM collateral markets",
+            "note": "Each isolated market has governance-set collateral factor, liquidation factor, liquidation incentive, supply ceiling, and daily borrow limits; values differ by collateral and are not collapsed into one estimate."
+          }
+        ],
+        "liquidationMechanism": "When a loan breaches its market collateral factor, third-party liquidators repay DOLA debt and receive collateral plus the market liquidation incentive; depleted DBR can first trigger repeated permissionless replenishment that adds DOLA debt until liquidation eligibility is reached.",
+        "liquidationDelaySec": 0,
+        "backstop": "For governance-approved FiRM markets, jrDOLA is a voluntary first-loss DOLA vault whose assets can be slashed to repay liquidation shortfalls; uncovered losses outside that coverage remain a claim on protocol reserves.",
+        "shutdownOrBadDebtBehavior": "FiRM isolates collateral markets so a market shortfall does not directly pool collateral risk across borrowers. Selected bad debt can slash jrDOLA before protocol reserves; reviewed documentation does not describe a global DOLA shutdown or holder settlement path.",
+        "failureDomainKeys": [
+          "inverse-governance",
+          "inverse-oracle-configuration",
+          "inverse-liquidators",
+          "inverse-jrdola",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Inverse core concepts",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/getting-started/core-concepts"
+          },
+          {
+            "label": "Inverse DBR liquidation documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dbr"
+          },
+          {
+            "label": "Inverse risk parameter frameworks",
+            "url": "https://docs.inverse.finance/risk-working-group-digest/security/frameworks"
+          },
+          {
+            "label": "Inverse jrDOLA first-loss documentation",
+            "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "DOLA cross-chain deployments are reviewed through Inverse Finance documentation that identifies Chainlink CCIP bridges and chain-specific Fed contracts. CCIP is an external validation and messaging route, so the bridge-route tier is external validated network rather than issuer-native settlement.",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/resources/bridge-risks",
+        "bridgeTypes": [
+          "external-messaging",
+          "validated-network"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse Finance smart contracts",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/technical/smart-contracts"
+      },
+      {
+        "label": "Chainlink bridge-risk docs",
+        "url": "https://docs.chain.link/resources/bridge-risks"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x865377367054516e17014ccded1e7d814edc9ce4",
+        "protocol": "Inverse Finance native DOLA",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native DOLA on Ethereum: minting is controlled by the token operator, a Compound Timelock (48h delay) administered by INV-token GovernorBravo, per the verified mint-authority review (2026-07-16). No bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          },
+          {
+            "label": "DOLA on Etherscan",
+            "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4"
+          }
+        ],
+        "observedBlock": 25570879
+      },
+      {
+        "id": "arbitrum:0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
+        "protocol": "Arbitrum canonical bridge (StandardArbERC20)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Arbitrum 2026-07-20 (block 485690756): DOLA 0x6a7661795c374c0bfc635934efaddff3a7ee23b6 is a BeaconProxy to the shared StandardArbERC20 implementation 0x3f770Ac673856F105b586bb393d122721265aD46; l1Address() = 0x865377367054516e17014ccded1e7d814edc9ce4 (Ethereum DOLA) and l2Gateway() = 0x09e9222e96e7b4ae2a407b98d48e330053351eee (Arbitrum L2 ERC20 Gateway), which is the mint/burn authority for this canonical bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Arbiscan (l2Gateway verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x6a7661795c374c0bfc635934efaddff3a7ee23b6"
+          },
+          {
+            "label": "Arbitrum canonical bridge docs",
+            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+          }
+        ],
+        "observedBlock": 485690756
+      },
+      {
+        "id": "base:0x4621b7a9c75199271f773ebd9a499dbd165c3191",
+        "destinationChain": "base",
+        "contractAddress": "0x4621b7a9c75199271f773ebd9a499dbd165c3191",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Base 2026-07-20 (block 48862205): DOLA 0x4621b7a9c75199271f773ebd9a499dbd165c3191 reports bridge() and l2Bridge() = 0x4200000000000000000000000000000000000010 (Base L2StandardBridge predeploy), the mint/burn authority for this canonical bridge representation of Ethereum DOLA.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Basescan (l2Bridge verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x4621b7a9c75199271f773ebd9a499dbd165c3191"
+          },
+          {
+            "label": "Base bridge docs",
+            "url": "https://docs.base.org/docs/bridges/bridge-tokens"
+          }
+        ],
+        "observedBlock": 48862205
+      },
+      {
+        "id": "optimism:0x8ae125e8653821e851f12a49f7765db9a9ce7384",
+        "destinationChain": "optimism",
+        "contractAddress": "0x8ae125e8653821e851f12a49f7765db9a9ce7384",
+        "protocol": "Optimism Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Optimism 2026-07-20 (block 154457492): DOLA 0x8ae125e8653821e851f12a49f7765db9a9ce7384 reports l2Bridge() = 0x4200000000000000000000000000000000000010 (Optimism L2StandardBridge predeploy), the mint/burn authority for this canonical bridge representation of Ethereum DOLA.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Optimistic Etherscan (l2Bridge verified 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0x8ae125e8653821e851f12a49f7765db9a9ce7384"
+          },
+          {
+            "label": "Optimism Standard Bridge docs",
+            "url": "https://docs.optimism.io/builders/app-developers/bridging/standard-bridge"
+          }
+        ],
+        "observedBlock": 154457492
+      },
+      {
+        "id": "fantom:0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
+        "destinationChain": "fantom",
+        "contractAddress": "0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
+        "protocol": "Multichain (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Fantom RPCs (rpcapi.fantom.network and fantom.drpc.org): token name 'Dola USD Stablecoin', symbol DOLA, 18 decimals; owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with empty bytecode. Same Multichain DepositAddress/DcrmAddress as reviewed Multichain USDC/fUSDT Fantom rows. Multichain ceased 2023 — frozen-legacy representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-28",
+        "observedBlock": 122537978,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "sources": [
+          {
+            "label": "FTMScan DOLA token",
+            "url": "https://ftmscan.com/token/0x3129662808bec728a27ab6a6b9afd3cbaca8a43c"
+          },
+          {
+            "label": "Fantom RPC owner() re-read (rpcapi.fantom.network)",
+            "url": "https://rpcapi.fantom.network"
+          },
+          {
+            "label": "Fantom independent RPC owner() corroboration (drpc)",
+            "url": "https://fantom.drpc.org"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
+        "destinationChain": "bsc",
+        "contractAddress": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
+        "protocol": "BSC DOLA (Safe-owned representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on BSC 2026-07-20 (block 111009503): DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 (name 'Dola USD Stablecoin', 18 decimals) owner() = 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7, a Safe multisig with getThreshold/getOwners = 3-of-6. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7",
+        "failureDomainKeys": [
+          "contract:bsc:0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on BscScan (owner verified 2026-07-20)",
+            "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "observedBlock": 111009503
+      },
+      {
+        "id": "polygon:0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
+        "protocol": "Polygon FxPortal (fxDOLA)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Polygon 2026-07-20 (block 90544401): token 0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c reports name 'Dola USD Stablecoin (FXERC20)', symbol fxDOLA, and is a 45-byte minimal-proxy clone of the FXERC20 template 0xad87e3b217c66b0d45deafbc540330d300811b94 — the Polygon FxPortal child-token pattern, whose mint/burn authority is structurally the FxChild contract 0x8397259c983751daf40400790063935a11afa28a (the canonical Polygon FxChild predeploy); admin getters on the template revert, consistent with the FxPortal design.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x8397259c983751daf40400790063935a11afa28a",
+        "failureDomainKeys": [
+          "protocol:polygon-fxportal",
+          "contract:polygon:0x8397259c983751daf40400790063935a11afa28a"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 90544401,
+        "sources": [
+          {
+            "label": "fxDOLA on Polygonscan (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c"
+          },
+          {
+            "label": "Polygon FxPortal docs",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/fxportal/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x221743dc9e954be4f86844649bf19b43d6f8366d",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x221743dc9e954be4f86844649bf19b43d6f8366d",
+        "protocol": "Avalanche DOLA (Safe-owned representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Avalanche 2026-07-20 (block 90761741): DOLA 0x221743dc9e954be4f86844649bf19b43d6f8366d (name 'Dola USD Stablecoin', 18 decimals) owner() = 0x1a927b237a57421c414eb511a33c4b82c2718677, a Safe multisig with getThreshold/getOwners = 3-of-4. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x1a927b237a57421c414eb511a33c4b82c2718677",
+        "failureDomainKeys": [
+          "contract:avalanche:0x1a927b237a57421c414eb511a33c4b82c2718677"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 90761741,
+        "sources": [
+          {
+            "label": "DOLA on Snowscan (owner verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0x221743dc9e954be4f86844649bf19b43d6f8366d"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ]
+      }
+    ]
+  }
+}

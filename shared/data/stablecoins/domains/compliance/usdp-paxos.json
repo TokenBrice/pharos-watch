@@ -1,0 +1,95 @@
+{
+  "id": "usdp-paxos",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions (PAX/USDP)",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Paxos confirms Paxos Standard (PAX) was renamed Pax Dollar (USDP)",
+        "url": "https://insights.paxos.com/hubfs/USDP-White-Paper.pdf"
+      },
+      {
+        "label": "ESMA interim MiCA register (issuers of EMTs) - no USDP row found",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDP is a Paxos-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Paxos Trust Company, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
+    "references": [
+      {
+        "label": "OCC Conditional Approval — Paxos Trust Company Charter Conversion (December 2025)",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC National Trust Charter Announcement — Five Digital Asset Firms (December 12, 2025)",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Paxos newsroom — OCC national trust charter approval",
+        "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Paxos USDP page",
+        "url": "https://www.paxos.com/usdp",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Paxos USDP transparency",
+        "url": "https://www.paxos.com/usdp-transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC conditional approval documents for Paxos national trust charter",
+        "Paxos OCC and national trust charter materials",
+        "Paxos USDP transparency and terms",
+        "Federal Register OCC GENIUS Act NPRM (2026-04089)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official PPSI application source was located for USDP. OCC conditional trust charter approval (December 2025) is a charter action, not a PPSI authorization under GENIUS.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "id": "mxnb-juno",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.bitso.com/juno"
+      },
+      {
+        "label": "Website",
+        "url": "https://mxnb.mx/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Juno/Bitso documents MXNB issuance and redemption through issuer APIs and lists MXNB on Arbitrum as an issuer stablecoin rather than a wrapped bridge asset. No separate bridge protocol was verified, so the route is reviewed as issuer-native mint/redeem across supported chains.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "MXNB on Arbitrum",
+        "url": "https://docs.bitso.com/juno/docs/mxnb-on-arbitrum"
+      },
+      {
+        "label": "Juno issuance docs",
+        "url": "https://docs.bitso.com/juno/docs/trigger-an-issuance"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native MXNB issuance on ethereum: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MXNB token on ethereum explorer (owner() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Juno MXNB",
+            "url": "https://juno.finance/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native MXNB issuance on polygon: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MXNB token on polygon explorer (owner() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Juno MXNB",
+            "url": "https://juno.finance/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native MXNB issuance on arbitrum: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MXNB token on arbitrum explorer (owner() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Juno MXNB",
+            "url": "https://juno.finance/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native MXNB issuance on avalanche: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MXNB token on avalanche explorer (owner() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Juno MXNB",
+            "url": "https://juno.finance/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native MXNB issuance on base: owner() of the FiatToken-fork proxy returns the issuer EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 (verified on-chain 2026-07-20; no contract code at the owner address, no bridge endpoint surface), matching the reviewed mintAuthority (masterMinter = owner on every chain).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MXNB token on base explorer (owner() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Juno MXNB",
+            "url": "https://juno.finance/"
+          }
+        ]
+      }
+    ]
+  }
+}

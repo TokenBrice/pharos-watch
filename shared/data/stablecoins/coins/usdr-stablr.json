@@ -40,90 +40,6 @@
     "regulator": "MFSA",
     "license": "EMI (MiCA)"
   },
-  "genius": {
-    "applicability": "apparent-payment-stablecoin",
-    "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "unknown",
-    "issuerEntity": "StablR Ltd",
-    "issuerDomicile": "Malta",
-    "licensingRegulator": "MFSA; MiCA electronic money institution",
-    "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
-    "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit triggered public EFRI concerns and a StablR DORA/MiCA incident disclosure; Pharos removed a previously misattributed MFSA Ref. 2026-19 citation because that notice concerned an unrelated entity. No PPSI approval, state-qualified status, official application, or foreign exception found.",
-    "references": [
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
-      },
-      {
-        "label": "StablR USDR",
-        "url": "https://www.stablr.com/usdr",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "StablR proof of reserve",
-        "url": "https://www.stablr.com/proof-of-reserve",
-        "sourceKind": "auditor-report"
-      },
-      {
-        "label": "StablR USDR whitepaper",
-        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf",
-        "sourceKind": "issuer-disclosure"
-      },
-      {
-        "label": "CoinDesk: StablR freezes USDR and EURR (May 2026)",
-        "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
-        "sourceKind": "news"
-      }
-    ],
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "OCC GENIUS Act proposed rule and public releases",
-        "Issuer disclosures and token documentation",
-        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
-        "EFRI public concerns and StablR cybersecurity incident disclosure for the May 2026 USDR/EURR exploit",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
-      ],
-      "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit is tracked through StablR incident disclosures and public EFRI concerns; the previously cited MFSA Ref. 2026-19 item was removed as unrelated.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
-  },
-  "mica": {
-    "status": "authorized",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
-    "competentAuthority": "MFSA",
-    "authorizedEntity": "StablR Ltd",
-    "references": [
-      {
-        "label": "ESMA MiCA register (issuers of EMTs)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "StablR EMI license (MiCAR-compliant EMTs)",
-        "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
-      },
-      {
-        "label": "StablR USDR whitepaper",
-        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
-      }
-    ]
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -131,22 +47,8 @@
       "decimals": 6
     }
   ],
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDR resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Cash and short-term government bonds (EU financial institutions)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -166,102 +68,6 @@
     "params": {
       "label": "Cash & short-term government bonds",
       "risk": "very-low"
-    }
-  },
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "USDR is a single-chain Ethereum MiCA EMT; token owner is a 2/2 legacy multisig (no modules), proxy admin is a separate 2/2 multisig (no modules), both confirmed at current block. Prior record had proxy admin as 1/1 — corrected.",
-    "mintIncidents": [
-      {
-        "date": "2026-05-24",
-        "status": "active",
-        "summary": "A compromised StablR mint/governance key let the attacker mint 8.35M unbacked USDR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
-        "sources": [
-          {
-            "label": "StablR official incident notice",
-            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
-          },
-          {
-            "label": "CoinDesk - StablR unbacked-token mint",
-            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
-          },
-          {
-            "label": "Webacy - StablR exploit monitoring",
-            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
-          }
-        ]
-      }
-    ],
-    "controls": [
-      {
-        "label": "USDR token owner",
-        "role": "minter-admin",
-        "authorityType": "multisig",
-        "directMintAbility": "can-authorize",
-        "chain": "ethereum",
-        "address": "0xC7Dcd41682C7Fd246e48b30ad39BcEe82968A0E4",
-        "threshold": 2,
-        "signerCount": 2,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25294990, owner() = 0xC7Dcd41682C7Fd246e48b30ad39BcEe82968A0E4. required()=2, getOwners() returned 2 addresses (0xd8e150c51552ec8e0e82756c7e11ff76751b8afe, 0xea9965a9ab26aa1c31f9612dd16fc52d319ff0c5). getModules() returned 0x (no modules). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958.",
-        "sources": [
-          {
-            "label": "Etherscan USDR contract",
-            "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
-          }
-        ]
-      },
-      {
-        "label": "USDR EIP-1967 proxy admin",
-        "role": "proxy-admin",
-        "authorityType": "multisig",
-        "directMintAbility": "upgrade-only",
-        "chain": "ethereum",
-        "address": "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c",
-        "threshold": 2,
-        "signerCount": 2,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25294990, EIP-1967 proxy-admin slot returned 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c. required()=2, getOwners() returned 2 addresses (0x881ba97132a35fd885f9091a68ffb3e94f29b90c, 0xac6db6e68252c5c7770245eafb55779cc1629a04). getModules() returned 0x (no modules). Note: prior record had threshold 1/1 — corrected to confirmed 2/2."
-      }
-    ],
-    "review": {
-      "evidence": "At block 25294990: token owner = 0xC7Dcd...0E4 (2/2 multisig, no modules confirmed). Proxy admin = 0xbfFF...953c (2/2 multisig, no modules confirmed; prior 1/1 record was incorrect — corrected from live reads). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958. USDR is a single-chain MiCAR EMT; the May 2026 exploit compromised the mint key; post-incident multisig state confirmed above.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Etherscan USDR contract",
-          "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
-        },
-        {
-          "label": "StablR USDR page",
-          "url": "https://www.stablr.com/usdr"
-        }
-      ]
-    },
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "adminAddresses": [
-        "0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "USDR EIP-1967 proxy admin",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25294990,
-      "sources": [
-        {
-          "label": "Etherscan USDR contract",
-          "url": "https://etherscan.io/address/0x7b43e3875440b44613dc3bc08e7763e6da63c8f8"
-        },
-        {
-          "label": "StablR USDR page",
-          "url": "https://www.stablr.com/usdr"
-        }
-      ]
     }
   },
   "launchDate": "2024-12-06",

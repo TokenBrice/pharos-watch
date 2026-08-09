@@ -1,0 +1,78 @@
+{
+  "id": "ausd-agora",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AUSD is a fiat-backed U.S. dollar stablecoin with 1:1 redemption, reserve attestations, and institutional payment and settlement use cases."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Agora Bermuda Limited",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "BMA (current); OCC national trust bank application for Agora National Trust Bank (filed 2026-04-20, under review)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.agora.finance/developer/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-05-31",
+    "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted — GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved).",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC digital asset licensing applications — Agora National Trust Bank application received 2026-04-20",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Agora blog — national trust bank charter filing",
+        "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-24",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "ChainCatcher — Agora CEO on OCC charter and GENIUS Act federal pathway intent",
+        "url": "https://www.chaincatcher.com/en/article/2262780",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Agora transparency",
+        "url": "https://docs.agora.finance/developer/transparency",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC digital asset licensing applications page (confirmed Agora National Trust Bank application received 2026-04-20, status: under review)",
+        "Agora AUSD transparency and OCC charter application disclosures",
+        "Bermuda BMA digital asset licensing context",
+        "PYMNTS and American Banker coverage of Agora OCC application",
+        "ChainCatcher Agora CEO interview on GENIUS Act pathway",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Agora's OCC national trust bank charter application (received 2026-04-20) is under review with no approval granted. No GENIUS Act PPSI approval, state-qualified approval, or registered foreign-issuer exception was found for AUSD. GENIUS Act rulemaking remains in proposed-rules phase with no PPSI approvals issued to any issuer as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

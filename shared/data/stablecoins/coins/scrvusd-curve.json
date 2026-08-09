@@ -9,86 +9,6 @@
     "yieldBearing": true,
     "navToken": true
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sources": [
-      {
-        "label": "scrvUSD Ethereum contract",
-        "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
-      },
-      {
-      "label": "Curve crvUSD source repository",
-      "url": "https://github.com/curvefi/curve-stablecoin"
-      },
-      {
-        "label": "scrvUSD exact-match YearnV3Vault clone",
-        "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
-      }
-    ],
-    "evidence": "Re-reviewed 2026-07-22: scrvUSD is an immutable ERC-4626 wrapper whose asset() is crvUSD. The exact-match wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
-    "reviewer": "GPT SOL-CORP-C wave6",
-    "reviewedAt": "2026-07-22"
-  },
-  "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "none-resolved-mint",
-    "confidence": "verified",
-    "summary": "scrvUSD is an ERC-4626 savings wrapper over crvUSD; wrapper minting is deposit/share accounting while durable crvUSD mint authority is inherited from the reviewed Curve parent.",
-    "inheritedFrom": "crvusd-curve",
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
-        "label": "scrvUSD ERC-4626 wrapper",
-        "role": "wrapper",
-        "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573289,
-        "sources": [
-          {
-            "label": "scrvUSD token",
-            "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
-          },
-          {
-            "label": "Curve crvUSD resources",
-            "url": "https://resources.curve.finance/crvusd/"
-          }
-        ],
-        "evidence": "At Ethereum block 25573289, asset() returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E. EIP-1967 implementation, admin, and beacon slots were all zero and owner() reverted, leaving no local upgrade-admin or privileged share-mint surface. Wrapper accounting cannot mint crvUSD; durable base authority remains inherited from the reviewed parent."
-      }
-    ],
-    "economicCapSemantics": "bounded",
-    "reconciliation": "not-applicable",
-    "supervision": "none",
-    "upgradeability": {
-      "model": "immutable",
-      "canChangeMintLogic": false,
-      "controlRef": "scrvUSD ERC-4626 wrapper",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573289,
-      "sources": [
-        {
-          "label": "scrvUSD token",
-          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
-        }
-      ]
-    },
-    "review": {
-      "sources": [
-        {
-          "label": "scrvUSD token",
-          "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
-        }
-      ],
-      "evidence": "Re-reviewed at Ethereum block 25573289: asset() is crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; standard EIP-1967 implementation, admin, and beacon slots are zero; and owner() reverts. The fixed deposit/share wrapper has no local privileged mint or upgrade path, so its economic cap is deposit-backed and no external supply-versus-reserve reconciliation or named prudential supervisor applies to the wrapper itself. Durable crvUSD authority remains inherited from the reviewed parent profile.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "scoreable"
-    }
-  },
   "variantOf": "crvusd-curve",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "crvusd-curve",
@@ -97,40 +17,6 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-crvusd",
-  "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "scrvUSD is a passive Yearn V3 vault that accepts crvUSD and runs no strategies, borrower-owned debt positions, or local liquidation engine. Its required crvUSD parent retains the separately tracked unresolved LLAMMA branch inventory.",
-    "branchModel": "single-path",
-    "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "ORCL-MAX data review",
-      "rationale": "Curve's repository describes scrvUSD as an unmodified Yearn V3 vault accepting crvUSD, with deposited funds left in the vault and no strategies. Minting and redemption are share accounting rather than borrower debt creation, so scrvUSD has no local collateral-oracle or liquidation branches. The variantOf relationship keeps the unresolved crvUSD parent branch review visible rather than treating it as cleared.",
-      "sources": [
-        {
-          "label": "Savings crvUSD repository",
-          "url": "https://github.com/curvefi/scrvusd"
-        },
-        {
-          "label": "Curve crvUSD risk documentation",
-          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
-        }
-      ]
-    },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "ORCL-MAX data review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Curve crvUSD risk docs",
-        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
-      },
-      {
-        "label": "Savings crvUSD repository",
-        "url": "https://github.com/curvefi/scrvusd"
-      }
-    ]
-  },
   "links": [
     {
       "label": "Website",
@@ -158,49 +44,6 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "crvUSD savings vault shares",
-      "pct": 100,
-      "risk": "medium",
-      "coinId": "crvusd-curve",
-      "depType": "wrapper",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Curve Savings crvUSD vault and crvUSD",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "market",
-        "counterparty"
-      ],
-      "liquidityHorizon": "unknown"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Curve Savings crvUSD repository",
-        "url": "https://github.com/curvefi/scrvusd"
-      },
-      {
-        "label": "Savings crvUSD Ethereum vault",
-        "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
-      },
-      {
-        "label": "Curve crvUSD documentation",
-        "url": "https://resources.curve.finance/crvusd/"
-      }
-    ],
-    "rationale": "scrvUSD is a vault-share claim on crvUSD managed by Curve's savings vault. The exact direct reserve is one protocol position; the parent crvUSD collateral and controller risks remain inherited through the tracked wrapper dependency.",
-    "compositionBasis": "Exact live ERC-4626 single-asset row and Curve's pinned savings-vault implementation",
-    "compositionAsOf": "2026-07-15",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct scrvUSD reserve slice is identified; liquidity and upstream crvUSD backing remain structured risks of the classified position.",
-    "knownUnknownExposurePct": 0
-  },
   "yieldConfig": {
     "yieldSource": "Curve savings (scrvUSD)",
     "yieldType": "nav-appreciation"

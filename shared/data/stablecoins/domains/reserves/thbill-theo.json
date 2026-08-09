@@ -1,0 +1,91 @@
+{
+  "id": "thbill-theo",
+  "reserves": [
+    {
+      "name": "tULTRA tokenized U.S. Treasury bills",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Theo Network / tULTRA (Standard Chartered Libeara tokenized U.S. Treasury bills)",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Theo thBILL documentation",
+        "url": "https://docs.theo.xyz/platform/thbill"
+      },
+      {
+        "label": "Theo tULTRA documentation",
+        "url": "https://docs.theo.xyz/platform/thbill/tultra"
+      },
+      {
+        "label": "Theo thBILL product page",
+        "url": "https://theo.xyz/thbill"
+      }
+    ],
+    "rationale": "Re-verified on 2026-08-08. The thBILL live reserve adapter exposes a single 100% slice labeled 'tULTRA tokenized U.S. Treasury bills'. This review classifies that compiled slice as a fund-share exposure to Theo's tULTRA instrument. Issuer materials also reference a FILQ allocation, but the live adapter does not itemize it separately; scoring follows the adapter's exact normalized name.",
+    "compositionBasis": "Theo thBILL single-asset live adapter label and issuer documentation",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live adapter's single compiled slice is fully classified. Any allocation between tULTRA and FILQ within the issuer's underlying basket is not separately itemized by the adapter.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "tULTRA tokenized U.S. Treasury bills",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "tULTRA is a tokenized fund share, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Standard Chartered Bank",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Sygnum",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Theo tULTRA documentation (Standard Chartered custodian)",
+        "url": "https://docs.theo.xyz/platform/thbill/tultra"
+      },
+      {
+        "label": "Theo FILQ addition announcement (Sygnum rails)",
+        "url": "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration"
+      },
+      {
+        "label": "Theo thBILL product page",
+        "url": "https://theo.xyz/thbill"
+      }
+    ],
+    "uncertainty": "ULTRA is custodied by Standard Chartered per tULTRA docs; FILQ is accessed through Sygnum per Theo's FILQ announcement. Provider share percentages, segregation, rehypothecation, and thBILL holders' direct legal claim against underlying fund assets are not published in the reviewed sources. Prior 100% Standard Chartered share is removed because the dual-underlying structure makes a single-provider share unsupported.",
+    "knownUnknownExposurePct": 100
+  }
+}

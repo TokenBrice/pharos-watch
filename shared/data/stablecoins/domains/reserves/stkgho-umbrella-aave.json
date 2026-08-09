@@ -1,0 +1,12 @@
+{
+  "id": "stkgho-umbrella-aave",
+  "reserves": [
+    {
+      "name": "GHO staked in Aave Umbrella safety module",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "gho-aave",
+      "depType": "wrapper"
+    }
+  ]
+}

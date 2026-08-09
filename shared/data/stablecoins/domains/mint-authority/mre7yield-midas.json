@@ -1,0 +1,273 @@
+{
+  "id": "mre7yield-midas",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "mRe7YIELD is independently mintable on Ethereum and Etherlink: Ethereum authorizes two EOAs and a deposit-vault proxy, while Etherlink authorizes one shared EOA and its chain-local vault. Both EVM proxy paths use two-day timelocks, but the Starknet deployment is self-replaceable with zero delay through a single-key governance account, making the effective deployment-wide upgrade delay zero.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
+        "0x733d504435a49fc8c4e9759e756c2846c92f0160",
+        "0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b",
+        "0xce0a2953a5d46400af601a9857235312d1924ac7",
+        "0xbef85e71ecd0517d0c1446751667891b04860753",
+        "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+      ],
+      "implementationAddresses": [
+        "0xe084623e02beaca3e8d1e7f356003a9e04417893",
+        "0xa57d2b40ed3feb4a63eae5ff4cf2ebf4851aca15",
+        "0xdd5a54ba2ab379a5e642c58f98ad793a183960e2",
+        "0xefb2e28b69a29a39067b20af633d04a2857a4d9d",
+        "0xf80332996beb13c0693d79741d483d856a8a7327",
+        "0x0543efdb873b769aaf6443271e89859fe7e356e3",
+        "0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed"
+      ],
+      "adminAddresses": [
+        "0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac",
+        "0xe3eee3e0d2398799c884a47fc40c029c8e241852",
+        "0x852c4f1beb54acb5360dbdba7ebbe9940a698f76",
+        "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "0xdc208d4a8583663575fa548bf6de224bb5ffc26d",
+        "0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Midas mRe7YIELD deployment-wide upgrade authority",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum mRe7YIELD token",
+          "url": "https://etherscan.io/address/0x87c9053c819bb28e0d73d33059e1b3da80afb0cf"
+        },
+        {
+          "label": "Etherlink mRe7YIELD token",
+          "url": "https://explorer.etherlink.com/address/0x733d504435a49fc8c4e9759e756c2846c92f0160"
+        },
+        {
+          "label": "Starknet mRe7YIELD token",
+          "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "label": "mRe7YIELD Ethereum-only mint operator EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; this role can call the token mint path directly.",
+        "address": "0x11e58b044b04eca3230c67217c482f24bdb90a72",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0x11e58b044b04eca3230c67217c482f24bdb90a72"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, M_RE7_MINT_OPERATOR_ROLE history and pinned state retained EOA 0x11e58b044b04eca3230c67217c482f24bdb90a72. Exact-block eth_getCode returned no bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "label": "mRe7YIELD Ethereum and Etherlink mint operator EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; this role can call the token mint path directly on both chains.",
+        "address": "0xb755ff07fd80b38265ae35639568cfcdc874f21d",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0xb755ff07fd80b38265ae35639568cfcdc874f21d",
+          "etherlink:0xb755ff07fd80b38265ae35639568cfcdc874f21d"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+          },
+          {
+            "label": "Etherlink MidasAccessControl",
+            "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+          }
+        ],
+        "evidence": "M_RE7_MINT_OPERATOR_ROLE history and pinned state retained EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d at Ethereum block 25527148 and Etherlink block 48212139. Exact-block eth_getCode returned no bytecode on both chains."
+      },
+      {
+        "chain": "ethereum",
+        "label": "mRe7YIELD Ethereum and Etherlink deposit-vault minters",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "No on-chain supply cap was identified; each vault holds the chain-local M_RE7_MINT_OPERATOR_ROLE.",
+        "address": "0xce0a2953a5d46400af601a9857235312d1924ac7",
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0xce0a2953a5d46400af601a9857235312d1924ac7",
+          "etherlink:0xbef85e71ecd0517d0c1446751667891b04860753"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Ethereum MRe7DepositVault proxy",
+            "url": "https://etherscan.io/address/0xce0a2953a5d46400af601a9857235312d1924ac7"
+          },
+          {
+            "label": "Etherlink MRe7DepositVault proxy",
+            "url": "https://explorer.etherlink.com/address/0xbef85e71ecd0517d0c1446751667891b04860753"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148, vault proxy 0xce0a2953a5d46400af601a9857235312d1924ac7 held M_RE7_MINT_OPERATOR_ROLE and resolved to implementation 0xf80332996beb13c0693d79741d483d856a8a7327. At Etherlink block 48212139, vault proxy 0xbef85e71ecd0517d0c1446751667891b04860753 held the same role and resolved to implementation 0x0543efdb873b769aaf6443271e89859fe7e356e3."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas mRe7YIELD EVM DEFAULT_ADMIN_ROLE Safes",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+        "threshold": 1,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+        ],
+        "routeChecks": {
+          "signingModel": "The Ethereum and Etherlink DEFAULT_ADMIN_ROLE holders are distinct chain-local 1-of-3 Safes with no enabled modules and zero guards.",
+          "pausersAdminsUpgraders": "These Safes can immediately grant or revoke M_RE7_MINT_OPERATOR_ROLE. Their separate ProxyAdmin upgrade calls traverse two-day chain-local timelocks."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Ethereum Midas admin Safe",
+            "url": "https://etherscan.io/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+          },
+          {
+            "label": "Etherlink Midas admin Safe",
+            "url": "https://explorer.etherlink.com/address/0xdc208d4a8583663575fa548bf6de224bb5ffc26d"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148 and Etherlink block 48212139, chain-local MidasAccessControl deployments granted DEFAULT_ADMIN_ROLE to Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and Safe 0xdc208d4a8583663575fa548bf6de224bb5ffc26d. Both were 1-of-3, had no enabled modules, and had zero guards; the signer sets are chain-local and not represented as one shared Safe state."
+      },
+      {
+        "chain": "ethereum",
+        "label": "Midas mRe7YIELD EVM DEFAULT_ADMIN_ROLE EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "address": "0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227",
+          "etherlink:0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527148,
+        "sources": [
+          {
+            "label": "Ethereum MidasAccessControl",
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+          }
+        ],
+        "evidence": "DEFAULT_ADMIN_ROLE histories and pinned state retained EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on Ethereum and Etherlink. This authority can immediately grant or revoke M_RE7_MINT_OPERATOR_ROLE on both EVM deployments."
+      },
+      {
+        "chain": "starknet",
+        "label": "Midas mRe7YIELD deployment-wide upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "address": "0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0xb60842e9dabcd1c52e354ac30e82a97661cb7e89",
+          "etherlink:0xdc208d4a8583663575fa548bf6de224bb5ffc26d",
+          "starknet:0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c"
+        ],
+        "routeChecks": {
+          "signingModel": "Ethereum upgrades traverse a 1-of-3 Safe at 0xb60842e9; Etherlink upgrades traverse a distinct 1-of-3 Safe at 0xdc208d4a. Starknet governance account 0x04758595 is a single-public-key OpenZeppelin account.",
+          "rateLimits": "Ethereum and Etherlink ProxyAdmin upgrades each require a 172800-second timelock. The Starknet replaceable class reports get_upgrade_delay() = 0, so deployment-wide effective delay is zero.",
+          "pausersAdminsUpgraders": "The Starknet governance account currently has governance-admin authority and can register itself or another upgrade governor, then replace the token class without a waiting period."
+        },
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Ethereum MidasTimelockController",
+            "url": "https://etherscan.io/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+          },
+          {
+            "label": "Etherlink MidasTimelockController",
+            "url": "https://explorer.etherlink.com/address/0x852c4f1beb54acb5360dbdba7ebbe9940a698f76"
+          },
+          {
+            "label": "Starknet mRe7YIELD token",
+            "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+          },
+          {
+            "label": "Starknet mRe7YIELD governance account",
+            "url": "https://starkscan.co/contract/0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c"
+          }
+        ],
+        "evidence": "At Ethereum block 25527148 and Etherlink block 48212139, all listed EVM proxies resolved through ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac to chain-local timelocks with getMinDelay() = 172800; their sole proposer/executor/canceller authorities were the chain-local 1-of-3 Safes. At Starknet block 11819111, mRe7YIELD used class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed, exposed replace_to(), and returned get_upgrade_delay() = 0. Governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c had governance-admin authority and was a single-key OpenZeppelin account."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "evidence": "Deployment-complete audit at Ethereum block 25527148, Etherlink block 48212139, and Starknet block 11819111. Ethereum M_RE7_MINT_OPERATOR_ROLE holders are EOAs 0x11e58b044b04eca3230c67217c482f24bdb90a72 and 0xb755ff07fd80b38265ae35639568cfcdc874f21d plus vault proxy 0xce0a2953a5d46400af601a9857235312d1924ac7. Etherlink holders are shared EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d and vault proxy 0xbef85e71ecd0517d0c1446751667891b04860753. Both EVM access-control deployments retain EOA 0xd4195cf4 plus a chain-local 1-of-3 Safe as DEFAULT_ADMIN_ROLE. EVM proxy upgrades require two days, while the Starknet token class is immediately replaceable by its single-key governance domain, setting the effective upgrade delay to zero. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring NAV and reserve checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; this product retains its documented weekly reporting cadence. FMA prospectus approval is not issuer prudential licensing.",
+      "reviewer": "Codex Safety Score V9 Midas multichain audit",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Midas mRe7YIELD docs",
+          "url": "https://docs.midas.app/tokens/mre7yield"
+        },
+        {
+          "label": "Sherlock Midas audit (vault/access-control architecture)",
+          "url": "https://github.com/sherlock-audit/2024-05-midas"
+        },
+        {
+          "label": "Ethereum MidasAccessControl",
+          "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Etherlink MidasAccessControl",
+          "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+        },
+        {
+          "label": "Starknet mRe7YIELD token",
+          "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        },
+        {
+          "label": "Midas Attestation Engine",
+          "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+        },
+        {
+          "label": "Midas transparency dashboard",
+          "url": "https://midas.app/transparency"
+        }
+      ]
+    }
+  }
+}

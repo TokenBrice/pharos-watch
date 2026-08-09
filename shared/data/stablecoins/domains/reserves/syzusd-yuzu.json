@@ -1,0 +1,47 @@
+{
+  "id": "syzusd-yuzu",
+  "reserves": [
+    {
+      "name": "Yuzu USD staking vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "yzusd-yuzu",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yuzu syzUSD staking vault and yzUSD",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yuzu staked yzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "Yuzu yzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+      },
+      {
+        "label": "syzUSD Plasma vault",
+        "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
+      }
+    ],
+    "rationale": "syzUSD is a staking-vault share over yzUSD. The exact direct reserve is one protocol position; yzUSD portfolio, controller, custody, and redemption risks remain inherited through the tracked wrapper dependency.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row, syzUSD vault, and Yuzu product documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct syzUSD reserve slice is identified; upstream yzUSD strategy allocations are tracked on the parent asset.",
+    "knownUnknownExposurePct": 0
+  }
+}

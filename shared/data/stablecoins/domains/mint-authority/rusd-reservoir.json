@@ -1,0 +1,111 @@
+{
+  "id": "rusd-reservoir",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "rUSD issuance runs through Reservoir PSMs and the Credit Enforcer. Both the PSM and Credit Enforcer share the same DEFAULT_ADMIN_ROLE holder: Reservoir EOA 0xb7570e32.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Reservoir USDC Peg Stability Module",
+          "url": "https://eth.blockscout.com/address/0x4809010926aec940b550d34a46a52739f996d75d"
+        },
+        {
+          "label": "Reservoir Credit Enforcer",
+          "url": "https://eth.blockscout.com/address/0x04716db62c085d9e08050fcf6f7d775a03d07720"
+        },
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4809010926aec940b550D34a46A52739f996D75D",
+        "label": "Reservoir USDC Peg Stability Module",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Reservoir docs list the USDC PSM as a core mint/redeem entry point for rUSD.",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "At Ethereum block 25295029, Blockscout RoleGranted events confirmed DEFAULT_ADMIN_ROLE on PSM is held by 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (deployer revoked after handover). PSM is a non-proxy AccessControl contract."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "label": "Reservoir Credit Enforcer",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Credit Enforcer enforces solvency, debt limits, and operational constraints on PSM minting.",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "Reservoir GitHub",
+            "url": "https://github.com/reservoir-protocol/reservoir"
+          }
+        ],
+        "evidence": "At Ethereum block 25295029, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32) on the Credit Enforcer returned True. RoleGranted logs confirm deployer (0x6ed13690) revoked and 0xb7570e32 is current admin."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb7570e32ded63b25163369d5eb4d8e89e70e5602",
+        "label": "Reservoir PSM and Credit Enforcer DEFAULT_ADMIN (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Reservoir Credit Enforcer RoleGranted events at Ethereum block 25295029",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x04716DB62C085D9e08050fcF6F7D775A03d07720/logs"
+          }
+        ],
+        "evidence": "At Ethereum block 25295029, eth_getCode returned 0x (EOA). hasRole(DEFAULT_ADMIN_ROLE, this) = True on both PSM and Credit Enforcer. Deployer EOA 0x6ed13690 revoked at blocks 20564175/20564179."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "Reservoir GitHub",
+          "url": "https://github.com/reservoir-protocol/reservoir"
+        }
+      ],
+      "evidence": "At Ethereum block 25295029: PSM and Credit Enforcer DEFAULT_ADMIN_ROLE confirmed as EOA 0xb7570e32 via hasRole() and RoleGranted/RoleRevoked log scan on Blockscout. Both contracts are non-proxy AccessControl deployments. All mint-capable surfaces confirmed. Re-verified at Ethereum block 25575157 on 2026-07-20: the Reservoir USDC Peg Stability Module 0x4809010926aec940b550D34a46A52739f996D75D and the Credit Enforcer 0x04716DB62C085D9e08050fcF6F7D775A03d07720 both still return hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) = true, both still read a zero EIP-1967 implementation slot confirming they are non-proxy deployments, and eth_getCode on the admin is still empty, confirming a codeless externally owned account. Economic-control adjudication: a single unprotected EOA administers both the PSM and the Credit Enforcer that sets the issuance ceiling, with no multisig, timelock, or independent bound, so the mint cap is economically unbounded. Reservoir publishes a real-time reserves view rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Reservoir.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none"
+  }
+}

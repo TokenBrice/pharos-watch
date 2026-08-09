@@ -3,13 +3,6 @@
   "name": "Nerite USND",
   "symbol": "USND",
   "oneLiner": "USND was Nerite's Liquity-v2 fork CDP dollar on Arbitrum; supply collapsed after the rsETH hack impaired an approved collateral branch.",
-  "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USND resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "status": "frozen",
   "frozenAt": "2026-05-10",
   "obituary": {
@@ -61,64 +54,5 @@
   "governanceQuality": "immutable-code",
   "infrastructures": [
     "liquity-v2"
-  ],
-  "reserves": [
-    {
-      "name": "tBTC",
-      "pct": 86.5,
-      "risk": "medium"
-    },
-    {
-      "name": "rETH (Rocket Pool)",
-      "pct": 10.2,
-      "risk": "low"
-    },
-    {
-      "name": "WETH",
-      "pct": 2.1,
-      "risk": "very-low"
-    },
-    {
-      "name": "wstETH (Lido)",
-      "pct": 1,
-      "risk": "low"
-    },
-    {
-      "name": "Other collateral (ARB, rsETH, weETH, COMP)",
-      "pct": 0.2,
-      "risk": "high"
-    }
-  ],
-  "mintAuthority": {
-    "mintPath": "immutable-user-collateralized",
-    "authorityPosture": "none-resolved",
-    "confidence": "verified",
-    "summary": "USND was a Liquity-v2 Superfluid custom super token on Arbitrum. owner() returns the zero address (renounced); collateralRegistryAddress is set and non-zero; setBranchAddresses reverts 'Ownable: caller is not the owner' from any real sender; mint() requires BO/AP caller matching registered branch contracts. No individual can mint or alter branch assignments.",
-    "controls": [
-      {
-        "label": "Nerite BorrowerOperations / CollateralRegistry (immutable Liquity-v2 fork)",
-        "role": "other",
-        "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Arbitrum block 471900751: owner() via UUPS proxy (0x4ecf61a6c2fab8a047ceb3b3b263b401763e9d49) returned 0x000...000 (zero address, renounced). collateralRegistryAddress() returned 0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68 (set). setBranchAddresses called from a non-zero sender reverts 'Ownable: caller is not the owner'. EIP-1967 proxy admin slot is zero. UUPS upgrade path goes through Superfluid Protocol governance (not an individual owner). mint() restricted to registered BO/AP addresses."
-      }
-    ],
-    "review": {
-      "evidence": "At Arbitrum block 471900751: owner() via proxy = 0x000...000 (renounced); collateralRegistryAddress = 0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68 (non-zero, set); setBranchAddresses reverts 'Ownable: caller is not the owner' from any non-zero sender; EIP-1967 proxy admin slot zero; UUPS upgrade authority is Superfluid Protocol governance contract (0xcf8Acb4eF033efF16E8080aed4c7D5B9285D2192). Source confirmed as BoldToken (Superfluid custom super token). No individual admin can mint or alter branch addresses.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Nerite USND token on Arbitrum (Blockscout)",
-          "url": "https://arbitrum.blockscout.com/address/0x4ecf61a6c2fab8a047ceb3b3b263b401763e9d49"
-        },
-        {
-          "label": "NeriteOrg/nerite (Liquity-v2 fork, GitHub)",
-          "url": "https://github.com/NeriteOrg/nerite"
-        }
-      ]
-    }
-  }
+  ]
 }

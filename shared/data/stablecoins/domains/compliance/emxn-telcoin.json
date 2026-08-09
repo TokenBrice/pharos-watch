@@ -1,0 +1,84 @@
+{
+  "id": "emxn-telcoin",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Telcoin lists eMXN as a live Digital Cash stablecoin issued under a Nebraska-chartered Digital Asset Depository Bank, positioning it as a 1:1 MXN-backed payment instrument."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Telcoin, Inc. / Telcoin Digital Asset Bank",
+    "issuerDomicile": "United States",
+    "stateRegulator": "Nebraska Department of Banking and Finance",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Telcoin Digital Asset Bank holds a Nebraska Digital Asset Depository charter (final approval Nov 2025) and has publicly positioned itself as GENIUS Act-aligned through that framework. No GENIUS PPSI approval or filed application exists; the GENIUS Act is still in proposed-rules rulemaking and no state has been certified as substantially similar. The telco.in/digital-cash page states Telcoin will publish monthly attestations -- future tense as of June 2026; none have been located in public sources. No eMXN-specific reserve disclosure URL was found. The stored issuerPathway remains unknown; Telcoin frames Nebraska as its intended GENIUS-aligned route, but no achieved state-qualified approval was found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Telcoin and the GENIUS Act (Telcoin Magazine)",
+        "url": "https://telcoinmagazine.substack.com/p/genius-act",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Nebraska Governor: First-in-nation Digital Asset Bank Charter",
+        "url": "https://governor.nebraska.gov/gov-pillen-signs-first-nation-digital-asset-bank-charter",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
+        "Federal Register proposed rules (OCC, FDIC, FinCEN/OFAC, Treasury)",
+        "Telcoin Digital Cash page (telco.in/en/digital-cash)",
+        "Telcoin Digital Asset Bank page (bank.telco.in)",
+        "Telcoin Magazine substack article on GENIUS Act alignment",
+        "Nebraska Governor press release on Digital Asset Bank charter",
+        "Nebraska Department of Banking and Finance public records via search",
+        "No Telcoin PPSI filing, OCC application, or state-qualified GENIUS approval found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for eMXN or Telcoin. The Nebraska charter is a state-law instrument and no state has been certified as substantially similar under GENIUS as of June 2026. Telcoin publicly frames its Nebraska charter as GENIUS-aligned but has not filed a formal GENIUS PPSI application; the application framework itself remains in proposed rulemaking.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

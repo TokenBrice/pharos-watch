@@ -1,0 +1,102 @@
+{
+  "id": "xo-exodus",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.exodus.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "XO is a Solana M extension, not native unbridged issuance. Its mint-authority PDA wraps Portal-delivered M in an extension vault; M0 documents that Solana M is minted by the M0 Portal against M locked in the Ethereum HubPortal through Wormhole NTT.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex bridge route curation",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "M0 Solana Portal / Wormhole NTT",
+        "slug": "m0-solana-portal-wormhole-ntt",
+        "url": "https://docs.m0.org/build/cross-chain",
+        "bridgeTypes": [
+          "lockAndMint",
+          "hubAndSpoke"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "M0 cross-chain architecture",
+        "url": "https://docs.m0.org/build/cross-chain"
+      },
+      {
+        "label": "M0 Solana architecture",
+        "url": "https://docs.m0.org/protocol/solana"
+      },
+      {
+        "label": "M0 Solana extension source",
+        "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/services/cli/main.ts"
+      },
+      {
+        "label": "Exodus XO launch announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/112/exodus-launches-xo-cash-as-the-first-stablecoin-built-for-ai-agents"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "contractAddress": "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y",
+        "protocol": "M0 Solana Portal / Wormhole NTT / M extension",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Composite route: Wormhole NTT carries M from the Ethereum HubPortal to the Solana Portal, then the XO extension locks Solana M and mints the exact XO token through its mint-authority PDA.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "contract:ethereum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+          "program:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+          "program:solana:mexteGyWXgUR65XepNKtLJ2H66MmyLWrDSeA1bqzZ4C",
+          "upgrade-authority:solana:9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 432836017,
+        "sources": [
+          {
+            "label": "M0 cross-chain architecture",
+            "url": "https://docs.m0.org/build/cross-chain"
+          },
+          {
+            "label": "M0 Solana architecture",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 XO extension registry source",
+            "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/services/cli/main.ts"
+          },
+          {
+            "label": "M0 extension wrap instruction",
+            "url": "https://github.com/m0-foundation/solana-m-extensions/blob/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
+          },
+          {
+            "label": "XO Solana token",
+            "url": "https://explorer.solana.com/address/xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "kusd-kerne",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "kUSD is backed 1:1 by USDC held in the on-chain Peg Stability Module, so its redemption value inherits Circle USDC freeze and seizure exposure through the reserve asset. The kUSD token's own admin freeze surface was not independently re-read on-chain in this submission.",
+    "evidence": "Per the live /api/stats endpoint kUSD reserves are 100% USDC in the PSM, so freeze exposure is inherited from the USDC reserve asset; kUSD's own token freeze surface is unreviewed in this submission.",
+    "reviewer": "Kerne Protocol submitter; Pharos pre-launch intake",
+    "reviewedAt": "2026-07-03"
+  }
+}

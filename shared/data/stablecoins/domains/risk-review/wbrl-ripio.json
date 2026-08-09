@@ -1,0 +1,215 @@
+{
+  "id": "wbrl-ripio",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Blockscout verified LatamStable implementation",
+        "url": "https://eth.blockscout.com/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?tab=contract"
+      },
+      {
+        "label": "Sourcify-verified Polygon LatamStable implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d?fields=sources"
+      },
+      {
+        "label": "Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 across all six deterministic-address ERC-1967 deployments. Ethereum block 25712393, Base 49714331, Worldchain 33441185, BSC 114794465, Polygon 91675323, and Gnosis 47624683 all resolve implementation slot 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d and paused() false; Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b holds PAUSER_ROLE on every deployment. Both verified LatamStable revisions route _update through ERC20PausableUpgradeable, so this EOA can halt every holder transfer. The Polygon/BSC/Gnosis revision additionally exposes COMPLIANCE_ROLE-gated blockUser/unblockUser and checks blocked senders and recipients when enforcement is enabled. A live global pause alone is a direct holder restriction and resolves the access verdict to Yes; the compliance-bearing deployments add holder-selective reach.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Ripio issues wBRL natively on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis: every deployment is an EIP-1167 clone of one Ripio master implementation, and per-chain MINTER_ROLE is held only by Ripio-administered accounts (mint-authority review 2026-06-11, role reads re-verified for this review). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "liquidity",
+          "intent"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "World Chain",
+        "slug": "world",
+        "url": "https://l2beat.com/scaling/projects/worldchain"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "L2BEAT World Chain",
+        "url": "https://l2beat.com/scaling/projects/worldchain"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on ethereum is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL ethereum token",
+            "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "base:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "base",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on base is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL base token",
+            "url": "https://basescan.org/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "worldchain",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the worldchain wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on worldchain is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL worldchain token",
+            "url": "https://worldscan.org/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "bsc",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the bsc wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on bsc is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL bsc token",
+            "url": "https://bscscan.com/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the polygon wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on polygon is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL polygon token",
+            "url": "https://polygonscan.com/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "destinationChain": "gnosis",
+        "contractAddress": "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0",
+        "protocol": "Ripio wBRL",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the gnosis wBRL token is an EIP-1167 clone of Ripio's single master implementation 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on gnosis is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wBRL gnosis token",
+            "url": "https://gnosisscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
+      }
+    ]
+  }
+}

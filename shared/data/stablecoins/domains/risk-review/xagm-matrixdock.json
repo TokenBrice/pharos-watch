@@ -1,0 +1,73 @@
+{
+  "id": "xagm-matrixdock",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: XAGm resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "XAGm is tracked on Ethereum and Sui, and Matrixdock says the Sui deployment is natively issued rather than a wrapped bridge asset. The deployment model is corrected to native-multichain and the route is scored as issuer-native mint/redeem exposure.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Matrixdock XAGm on Sui announcement",
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-expands-tokenized-silver-xagm-to-sui-enabling-institutional-grade"
+      },
+      {
+        "label": "Matrixdock XAGm",
+        "url": "https://www.matrixdock.com/xagm"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
+        "protocol": "Matrixdock issuer-native XAGM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native XAGM issuance on ethereum: the Matrixdock Silver proxy resolves to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744 with owner() = Matrixdock's 0xb573c94260582f0715fc477928b04a2708dd36d7 (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "XAGM on ethereum explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+          }
+        ]
+      },
+      {
+        "id": "sui:0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM",
+        "destinationChain": "sui",
+        "canonicalChain": "sui",
+        "contractAddress": "0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c::xagm::XAGM",
+        "protocol": "Matrixdock issuer-native XAGM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native XAGM issuance on sui: the Sui coin package 0x64bddec0...::xagm::XAGM serves Matrixdock's own CoinMetadata 'Matrixdock Silver' (id 0xd50657ed786b220c4bcf558cdd0ef94be77b3cf2e097642e544a58e4fb5f85cf, total supply 32,994.33 XAGM, verified via Sui RPC 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "XAGM on sui explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x64bddec0f898ccaa022b8a6e0a5f75d80f53177b87a9795dd15aefe9ac12ee6c"
+          }
+        ]
+      }
+    ]
+  }
+}

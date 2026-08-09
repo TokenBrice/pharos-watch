@@ -1,0 +1,86 @@
+{
+  "id": "ausdt-tether-alloy",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "aUSDT is minted by KYC-verified, whitelisted users depositing XAUT into Tether's CMPVault at up to 75% MTV, but Tether centrally controls the whitelist (PermissionControl), can blacklist/freeze, and administers the upgradeable vault contracts. The EIP-1967 ProxyAdmin for the aUSDT token (0xd32645695868555918c5c0c8339c71b84c9240de) is owned by a 3-of-6 Gnosis Safe (0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828) with no modules and no guard.",
+    "controls": [
+      {
+        "label": "Alloy CMPVault (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "capDescription": "Mint capped at 75% maximum mint-to-value of deposited XAUT collateral per CMP.",
+        "canRaiseCap": "unknown",
+        "evidence": "Verified, whitelisted addresses mint aUSDT by depositing XAUT into the CMPVault up to a 75% MTV liquidation point; minting is permissionless only for KYC-passed addresses.",
+        "sources": [
+          {
+            "label": "Alloy Vaults docs",
+            "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults"
+          }
+        ]
+      },
+      {
+        "label": "Tether PermissionControl whitelist + token admin",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": "unknown",
+        "safe": {
+          "owners": [
+            "0xac3b242e2e561da9f4ce34746e67d004e6341fa0",
+            "0xee5207d3c88562fc814496af0845b34cfd4afc8c",
+            "0x61d5a4d5bd270e59e9320243e574288e2a199fed",
+            "0x25bb61643e4881147e6aabb65e6dd45cf2904155",
+            "0x04096a34e582664f969753b34da6e72d55b3c85c",
+            "0x04d915dd2c56814bd3db51a1da35b302bcc9c897"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.x",
+          "observedBlock": 25295200,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295200, aUSDT token EIP-1967 proxy admin slot returns 0xd32645695868555918c5c0c8339c71b84c9240de (ProxyAdmin contract). ProxyAdmin owner() returns 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828. getOwners() on that address returns 6 addresses; threshold (dc8452cd) = 3; getModulesPaginated returns empty array; guard slot = 0x0; fallbackHandler slot = 0x0. Confirmed as 3-of-6 Gnosis Safe with no modules.",
+        "sources": [
+          {
+            "label": "aUSDT token on Etherscan",
+            "url": "https://etherscan.io/address/0x9eead9ce15383caeed975427340b3a369410cfbf"
+          },
+          {
+            "label": "Alloy Ethereum Mainnet deployment",
+            "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295200: aUSDT token EIP-1967 proxy admin slot = 0xd32645695868555918c5c0c8339c71b84c9240de (ProxyAdmin); ProxyAdmin.owner() = 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828 (Safe); Safe.getOwners() = 6 addresses; Safe threshold = 3; getModulesPaginated = empty; guard = 0x0; fallbackHandler = 0x0. The aUSDT token owner() also returns the same Safe address. KYC-gated CMPVault mint with centralized Safe admin confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Alloy Vaults docs",
+          "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults"
+        },
+        {
+          "label": "Alloy Ethereum Mainnet deployment",
+          "url": "https://dev.alloy.tether.to/deployments/ethereum-mainnet"
+        },
+        {
+          "label": "aUSDT token on Etherscan",
+          "url": "https://etherscan.io/address/0x9eead9ce15383caeed975427340b3a369410cfbf"
+        }
+      ]
+    }
+  }
+}

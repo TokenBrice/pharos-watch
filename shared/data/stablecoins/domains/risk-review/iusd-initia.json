@@ -1,0 +1,96 @@
+{
+  "id": "iusd-initia",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Initia documentation",
+        "url": "https://docs.initia.xyz"
+      },
+      {
+        "label": "Initia explorer",
+        "url": "https://scan.initia.xyz"
+      }
+    ],
+    "evidence": "BLOCKED: the tracked Initia iUSD Move asset and issuer documentation establish its Agora AUSD bridge-backed design, but the reviewed public materials do not provide a current module-level inventory of holder freeze, denylist, or transfer-control authority. The inherited classification is retained for the bridged AUSD exposure; no direct holder-control posture is asserted without verified Move-module authority evidence.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "All iUSD is minted on Initia by the iusd-vault against AUSD0 deposited into its sticky vault object. AUSD0 is the LayerZero OFT representation of Agora AUSD, so the exact iUSD deployment inherits the local vault, AUSD0 OFT administration, and LayerZero messaging failure domains.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex bridge route curation",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT",
+        "slug": "layerzero-v2-oft",
+        "url": "https://docs.layerzero.network/v2/developers/aptos-move/overview",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Initia iusd-vault resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+      },
+      {
+        "label": "Initia AUSD0 OFT resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+      },
+      {
+        "label": "LayerZero AUSD deployment announcement",
+        "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+      }
+    ],
+    "routes": [
+      {
+        "id": "initia:0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+        "destinationChain": "initia",
+        "contractAddress": "0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
+        "protocol": "Initia iusd-vault / LayerZero AUSD0 OFT",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "global",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Composite route: LayerZero delivers AUSD0 to Initia, then the iusd-vault locks the local AUSD0 representation and mints the exact iUSD contract 1:1.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "initia",
+        "controllerAddress": "0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
+        "failureDomainKeys": [
+          "contract:initia:0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6",
+          "contract:initia:0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2",
+          "multisig:initia:0x486bc26c1ed1c199ca550cf8953e00421b4ca2cb4ad9967f7dc8db384782a02d",
+          "protocol:layerzero-v2"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 19467576,
+        "sources": [
+          {
+            "label": "Initia iusd-vault resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+          },
+          {
+            "label": "Initia iusd-vault modules",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules"
+          },
+          {
+            "label": "Initia AUSD0 OFT resources",
+            "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+          },
+          {
+            "label": "LayerZero AUSD deployment announcement",
+            "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+          }
+        ]
+      }
+    ]
+  }
+}

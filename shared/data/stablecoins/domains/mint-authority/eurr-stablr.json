@@ -1,0 +1,127 @@
+{
+  "id": "eurr-stablr",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "EURR issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
+    "mintIncidents": [
+      {
+        "date": "2026-05-24",
+        "status": "active",
+        "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
+        "sources": [
+          {
+            "label": "StablR official incident notice",
+            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
+          },
+          {
+            "label": "CoinDesk - StablR unbacked-token mint",
+            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
+          },
+          {
+            "label": "Webacy - StablR exploit monitoring",
+            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD",
+        "label": "EURR Ethereum owner mint authority",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 3,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "StablR EURR docs",
+            "url": "https://docs.stablr.com/docs/what-is-eurr"
+          },
+          {
+            "label": "StablR smart-contract docs",
+            "url": "https://docs.stablr.com/docs/smart-contract"
+          }
+        ],
+        "evidence": "Contract owner is the StablR 1-of-3 safe at 0xbC0bD4dDe5BFc9C490C025caCaDA7b14e529F0D0, with owners 0xC42DAE8545022ba73Ec22c4634C42226B64BcE4B, 0xD30d1C5f02D37AA6161E3aBF14eF96EBb6327040, and 0x324F403916ab80a56B3A61D7d71553262ef56759."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0",
+        "label": "EURR EIP-1967 proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 1,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURR token",
+            "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+          }
+        ],
+        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 1 owner."
+      },
+      {
+        "label": "EURR Solana mint/freeze authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "StablR EURR docs",
+            "url": "https://docs.stablr.com/docs/what-is-eurr"
+          }
+        ],
+        "evidence": "Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ: mintAuthority = aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij (system-program owned, non-executable wallet); freezeAuthority = AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV (system-program owned, non-executable wallet). Both are issuer-operated keypair accounts; supply = 0 at time of check."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "StablR smart-contract docs",
+          "url": "https://docs.stablr.com/docs/smart-contract"
+        },
+        {
+          "label": "StablR EURR docs",
+          "url": "https://docs.stablr.com/docs/what-is-eurr"
+        }
+      ],
+      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURR EIP-1967 proxy admin",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25166592,
+      "sources": [
+        {
+          "label": "Ethereum EURR token",
+          "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
+        },
+        {
+          "label": "StablR smart-contract docs",
+          "url": "https://docs.stablr.com/docs/smart-contract"
+        },
+        {
+          "label": "StablR EURR docs",
+          "url": "https://docs.stablr.com/docs/what-is-eurr"
+        }
+      ]
+    }
+  }
+}

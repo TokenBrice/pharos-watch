@@ -1,0 +1,80 @@
+{
+  "id": "euri-banking-circle",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EURI resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EURI is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. 2026-07-20 cohort dc-1 pass: Ethereum and BSC rows both confirmed issuer-native EURI deployments (matches the verified mint-authority review: same EOA owner and same proxy-admin on both chains).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "EURI issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Banking Circle EURI whitepaper",
+        "url": "https://www.bankingcircle.com/insights/euro-stablecoin-whitepaper/"
+      },
+      {
+        "label": "Banking Circle EURI launch",
+        "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "protocol": "EURI (Banking Circle issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on ethereum; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EURI on Etherscan",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "destinationChain": "bsc",
+        "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
+        "protocol": "EURI (Banking Circle issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on bsc; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EURI on Etherscan",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "brl1-brl1",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "BRL1 Polygon proxy",
+        "url": "https://polygon.blockscout.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
+      },
+      {
+        "label": "BRL1 ERC20F verified implementation",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xf7c3aceabab5b505effeab0603e11f2ed54020ac"
+      },
+      {
+        "label": "BRL1 DenyList verified implementation",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xae6c65b08de05c75ee7c9c19ac11ba2da6fb6a42"
+      },
+      {
+        "label": "Polygon current-state RPC",
+        "url": "https://polygon.drpc.org"
+      }
+    ],
+    "evidence": "At Polygon block 90292623 on 2026-07-15, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 resolved to verified ERC20F implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac and reported accessRegistry 0x3EbcB1ACcf595579DD89FA57176C5803947Edb31. ERC20F checks that registry for both transfer sender and receiver, exposes a PAUSER_ROLE system-wide pause, and permits RECOVERY_ROLE to transfer tokens from a denied account. The live registry resolves to verified DenyList implementation 0xae6c65b08de05c75ee7c9c19ac11ba2da6fb6A42, whose hasAccess returns false for addresses in its access list; it exposes access-list-admin controls. These individually targeted denylist controls, plus the token pause, make BRL1 transfers directly restrictable even though the list was empty and the token unpaused at the review block. The failure domains are the BRL1 token role authority and its configured DenyList authority; UUPS upgrader authority can replace either implementation.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  }
+}

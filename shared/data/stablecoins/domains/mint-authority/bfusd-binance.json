@@ -1,0 +1,34 @@
+{
+  "id": "bfusd-binance",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BFUSD is a Binance account product, not a withdrawable on-chain token; Binance creates and redeems BFUSD on its internal exchange ledger 1:1 against supported USD stablecoins, controlling fees, limits, delays, and suspension rights, with no public on-chain mint contract.",
+    "controls": [
+      {
+        "label": "Binance BFUSD product ledger",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Binance creates/redeems BFUSD inside its centralized exchange against an opaque collateral pool and hedging portfolio; supply, fees, limits, and suspension are fully Binance-controlled. No public on-chain mint contract is exposed in Pharos metadata."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Binance BFUSD FAQ",
+          "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
+        }
+      ],
+      "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",
+      "unresolvedQuestions": [
+        "BFUSD has no on-chain contract in Pharos metadata; the entire mint path is Binance's internal exchange ledger. If Binance later exposes an on-chain token contract, resolve its owner/minter admin at that time."
+      ]
+    }
+  }
+}

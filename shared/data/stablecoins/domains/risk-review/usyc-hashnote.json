@@ -1,0 +1,135 @@
+{
+  "id": "usyc-hashnote",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "USYC docs list the Ethereum, BSC, and Solana tokens with issuer-operated teller contracts. Subscription mints USYC against USDC and redemption burns USYC for USDC; BSC uses the Cross Chain Teller from Ethereum. The reviewed routes are issuer-native teller paths rather than permissionless bridges.",
+    "reviewedAt": "2026-07-16",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "USYC Cross Chain Teller",
+        "url": "https://usyc.docs.hashnote.com/overview/smart-contracts",
+        "bridgeTypes": [
+          "subscribeRedeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USYC smart contracts",
+        "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+      },
+      {
+        "label": "USYC introduction",
+        "url": "https://usyc.docs.hashnote.com/"
+      },
+      {
+        "label": "USYC subscription and redemption",
+        "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
+        "protocol": "USYC Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xeE35F963BFC71b51eC95147f26c030D674ea30e6",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:ethereum:0xee35f963bfc71b51ec95147f26c030d674ea30e6"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "protocol": "USYC Cross Chain Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf38979E05650be7926EA07BB59C48Fb9b1DB3D08",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:bsc:0xf38979e05650be7926ea07bb59c48fb9b1db3d08"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
+      },
+      {
+        "id": "solana:7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
+        "destinationChain": "solana",
+        "contractAddress": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
+        "protocol": "USYC Solana Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:solana:EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
+      }
+    ]
+  }
+}

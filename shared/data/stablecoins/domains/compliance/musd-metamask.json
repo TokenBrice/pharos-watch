@@ -1,0 +1,69 @@
+{
+  "id": "musd-metamask",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MUSD is a Bridge-issued U.S. dollar payment stablecoin for MetaMask using M0 infrastructure and 1:1 redemption."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators (NMLS #2450917); OCC conditionally approved a new entity 'Bridge National Trust Bank' (CD-1365, Feb 2026) — not yet a final federal charter for Bridge Building Inc.",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge and MetaMask materials describe MUSD issuance and redemption, but no token-specific public GENIUS PPSI approval exists as of 2026-06-18. In February 2026 the OCC issued conditional approval CD-1365 for a new entity 'Bridge National Trust Bank' (a subsidiary to be organized by Bridge Ventures LLC) to organize a federally chartered national trust bank for stablecoin issuance, custody, and reserve management. This is a conditional pre-approval for an as-yet-unopened entity — not a final charter for Bridge Building Inc. (the current MUSD issuer). issuerPathway remains unknown until Bridge National Trust Bank receives final OCC approval and begins issuing MUSD. Monthly reserve attestations: the MetaMask reserve explainer explicitly states mUSD's attestation history 'is still being built' with no confirmed monthly cadence; monthlyAttestationPresent remains false.",
+    "references": [
+      {
+        "label": "MetaMask USD announcement",
+        "url": "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 Dashboard",
+        "url": "https://dashboard.m0.org",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-12",
+        "accessedAt": "2026-06-18"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC Conditional Approval CD-1365 (February 2026) — for Bridge National Trust Bank, not Bridge Building Inc.",
+        "MetaMask USD launch materials",
+        "MetaMask stablecoin reserves explainer (attestation frequency for MUSD)",
+        "Bridge Open Issuance documentation",
+        "M0 reserve dashboard",
+        "Bridge.xyz legal / NMLS licensing pages",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act PPSI application has been publicly filed or granted for MUSD or Bridge Building Inc. The OCC conditional trust bank charter CD-1365 (Feb 2026) is for a new entity 'Bridge National Trust Bank' — a conditional pre-approval for an entity not yet operational, not a final charter for the current issuer Bridge Building Inc. No monthly attestation reports for MUSD were found; MetaMask's own reserve explainer notes mUSD's attestation history is still being built.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

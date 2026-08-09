@@ -1,0 +1,157 @@
+{
+  "id": "chfm-mento",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "CHFm is minted by Mento's immutable BorrowerOperations and ActivePool contracts for borrower debt and accrued interest. The token owner and proxy admin, plus the SystemParams ProxyAdmin owner, resolve to the same immediate 4/6 Mento Safe.",
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be",
+        "label": "CHFm BorrowerOperations debt minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Pinned Mento deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+          },
+          {
+            "label": "BorrowerOperations source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/BorrowerOperations.sol"
+          }
+        ],
+        "evidence": "At finalized Celo block 72082708, CHFm isMinter(0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be) returned true. The contract had zero EIP-1967 implementation, admin, and beacon slots and owner() reverted. Pinned Mento source shows BorrowerOperations mints the borrower's CHFm debt through this immutable deployment."
+      },
+      {
+        "chain": "celo",
+        "address": "0x9947CEe121586fC31b0b0a162A40D6516979E7cB",
+        "label": "CHFm ActivePool interest minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Pinned Mento deployment registry",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+          },
+          {
+            "label": "ActivePool source",
+            "url": "https://github.com/mento-protocol/bold/blob/858ef07a497d748cdf65c602a56b4de901d4080e/contracts/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At finalized Celo block 72082708, CHFm isMinter(0x9947CEe121586fC31b0b0a162A40D6516979E7cB) returned true. The contract had zero EIP-1967 implementation, admin, and beacon slots and owner() reverted. Pinned Mento source shows ActivePool mints accrued CHFm interest through this immutable deployment."
+      },
+      {
+        "chain": "celo",
+        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "label": "Mento Safe - CHFm token, minter, and SystemParams admin",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb1074D0F9E54763e073C7Fdb25B622B4326327Cb",
+            "0x95be2b73D313768D3B2DfEeca3213Ed0a6434060",
+            "0x66B94446F5fF3f0d8673C1f502A298B50ba2f0ce",
+            "0x6Dec25D7bE9BF6C6Fc302977629f2E801e98611c",
+            "0x7A678c8F9E8a7ac08c8c6f34d38126F3219958f2",
+            "0x628FFA32ab958c5b9Ce74D8b81D73F335c3776B0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "version": "1.4.1",
+          "observedBlock": 72082708,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "CHFm minter migration transaction",
+            "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "At finalized Celo block 72082708, CHFm owner() and its custom EIP-1967 owner/admin slot both returned this Safe. SystemParams ProxyAdmin 0x68932b8fDd82dA5B0fCe2AcA20A82ea0e11D894A also returned this Safe as owner. The Safe can immediately set token minters and replace token or SystemParams logic. Current state was 4-of-6 with no enabled modules or guard."
+      }
+    ],
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+        "0xe604507642469be4699febdf4a701d9a104dd173"
+      ],
+      "implementationAddresses": [
+        "0x815795c30d0758a297b08cd4e0643620c974c318",
+        "0x66cf2aa9fc91ffbf2cc8e8057e54e5ea670029c1"
+      ],
+      "adminAddresses": [
+        "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+        "0x68932b8fdd82da5b0fce2aca20a82ea0e11d894a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Mento Safe - CHFm token, minter, and SystemParams admin",
+      "observedAt": "2026-07-13",
+      "observedBlock": 72082708,
+      "sources": [
+        {
+          "label": "StableTokenV3 implementation",
+          "url": "https://celo.blockscout.com/address/0x815795C30D0758A297B08cD4e0643620c974c318"
+        },
+        {
+          "label": "CHFm SystemParams proxy",
+          "url": "https://celo.blockscout.com/address/0xe604507642469bE4699FeBDf4A701D9A104dd173"
+        },
+        {
+          "label": "CHFm minter migration transaction",
+          "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
+        },
+        {
+          "label": "Celo Forno RPC",
+          "url": "https://forno.celo.org"
+        }
+      ]
+    },
+    "supervision": "none",
+    "reconciliation": "not-applicable",
+    "review": {
+      "sources": [
+        {
+          "label": "Pinned Mento deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/62fedbe0a97984339a5c3c00d05a15f9ea780b4b/.treb/deployments.json"
+        },
+        {
+          "label": "CHFm minter migration transaction",
+          "url": "https://celo.blockscout.com/tx/0x8a40283e17d6ab0512a525e8e0c63f42c8ec77014bece5c1cf7fc5c6c60dd7b5"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Mento V3 docs: CDP mechanism - USDm collateral locked per FX currency, no off-chain reserve leg",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        }
+      ],
+      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock. Reconciliation review (2026-08-08): CHFm is issued only as CDP debt - borrowers lock USDm in per-currency TroveManager/StabilityPool contracts and mint the FX stable - so the mint path creates no off-chain reserve claim to reconcile, and reconciliation is not-applicable rather than unresolved. No named financial regulator and no third-party attestor appears in the Mento reserve documentation.",
+      "reviewer": "Codex Safety Score V9 review",
+      "reviewedAt": "2026-08-08"
+    }
+  }
+}

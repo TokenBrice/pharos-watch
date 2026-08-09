@@ -1,0 +1,364 @@
+{
+  "id": "cdp-enosys",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Enosys Loans official documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+      },
+      {
+        "label": "Enosys Loans technical documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans/technical-docs"
+      },
+      {
+        "label": "CDP Flare proxy verified source and ABI",
+        "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"
+      },
+      {
+        "label": "CDP Flare BoldToken verified implementation source and ABI",
+        "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x03dc7269d65018516133987de01104cf2607c884"
+      },
+      {
+        "label": "CoinGecko CDP Flare deployment inventory",
+        "url": "https://api.coingecko.com/api/v3/coins/enosys-loans-cdp"
+      },
+      {
+        "label": "Flare public RPC fixed-block reads",
+        "url": "https://flare-api.flare.network/ext/C/rpc"
+      },
+      {
+        "label": "Official flrfinance Bold fork reviewed as non-exact source",
+        "url": "https://github.com/flrfinance/bold/blob/9069b371ba53d24664e3660594f0f779eb10a52f/contracts/src/BoldToken.sol"
+      },
+      {
+        "label": "Enosys official documentation index",
+        "url": "https://help.enosys.global/enosys/llms.txt"
+      },
+      {
+        "label": "Official footer Terms of Service target, unavailable at review",
+        "url": "https://flrfinance.notion.site/FLR-Finance-Terms-of-Service-2667f46b02794f35bea6a9d6b22c9da8"
+      },
+      {
+        "label": "Archive.org availability check for Enosys Loans docs",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fhelp.enosys.global%2Fenosys%2Fenosys-ecosystem%2Fenosys-loans&timestamp=20260715"
+      }
+    ],
+    "evidence": "CoinGecko and the tracked catalog list one CDP route: Flare proxy 0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f. At historical block 65060608 and fixed 2026-07-15 block 65092269, its EIP-1967 implementation was 0x03dc7269d65018516133987de01104cf2607c884 and admin was 0xd6363e03cf93d35103592f11ae7160179e0be3ff. The verified BoldToken ABI/source has no pause, unpause, holder blacklist, freeze, or dynamic recipient-list function; paused() reverts. However, the token owner was the unchanged 2-of-6 Safe 0xdedda08961216adb9ca09b88986d110127b24270 and its onlyOwner setBranchAddresses can register arbitrary addresses as StabilityPool, TroveManager, BorrowerOperations, and ActivePool. A registered StabilityPool can call sendToPool(sender,pool,amount), and registered StabilityPool, TroveManager, or BorrowerOperations addresses can call burn(account,amount), both without holder approval. setCollateralRegistry supplies another owner-configurable burn caller. The owner can therefore establish direct holder-level forced-transfer or burn authority; this is a resolved Yes even without an active named blacklist or global pause. The ProxyAdmin owner EOA can also replace token logic. Enosys documentation and archive limitations do not alter the on-chain control finding.",
+    "reviewer": "TERRA-III Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Four debt-bearing Flare branches use a common Enosys PriceFeedFtsoV2Connector path through the hard-coded FlareContractRegistry into FTSOv2. The connector discards the returned feed timestamp, enforces no maximum age, caches no price, and has no alternate provider; successful reads return the oracle-failure-detected flag as false, while registry or FTSO reverts propagate instead of activating branch shutdown.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "At finalized Flare block 65066600 the official deployment's FXRP, wFLR, stXRP, and sFLR TroveManagers were callable, had active troves and nonzero debt, and had shutdownTime zero. No additional branch was exposed by the deployed collateral registry, so all four debt-bearing liquidation paths are retained.",
+      "sources": [
+        {
+          "label": "Enosys Loans product",
+          "url": "https://www.enosys.global/products/loans"
+        },
+        {
+          "label": "Enosys Loans documentation",
+          "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        },
+        {
+          "label": "Finalized Flare block 65066600",
+          "url": "https://flare-explorer.flare.network/block/65066600"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Enosys Loans documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+      },
+      {
+        "label": "Flare FTSOv2 feed registry",
+        "url": "https://dev.flare.network/ftso/feeds"
+      },
+      {
+        "label": "Flare FTSOv2 Solidity reference",
+        "url": "https://dev.flare.network/ftso/solidity-reference/FtsoV2Interface"
+      },
+      {
+        "label": "Verified PriceFeedFtsoV2Connector implementation",
+        "url": "https://flare-explorer.flare.network/address/0x68aa9aa27cfa5f4fa71b22e614efe408281e1295?tab=contract"
+      },
+      {
+        "label": "Verified Enosys liquidation implementation",
+        "url": "https://flare-explorer.flare.network/address/0xbe42fe93f52987bcadffeac6d20c87021f6a2837?tab=contract"
+      }
+    ],
+    "branches": [
+      {
+        "id": "fxrp",
+        "label": "FXRP Trove branch",
+        "tier": "standard-external",
+        "summary": "The branch PriceFeed calls the FTSOv2 XRP/USD feed through the shared connector without preserving or checking the upstream timestamp.",
+        "collateralAssets": [
+          "FXRP"
+        ],
+        "chains": [
+          "flare"
+        ],
+        "feeds": [
+          {
+            "provider": "Flare FTSOv2",
+            "path": "PriceFeed 0xFc35d431Ce1445B9c79ff38594EF454618D2Ec49 -> PriceFeedFtsoV2Connector implementation 0x68aa9aa27cfa5f4fa71b22e614efe408281e1295 -> hard-coded FlareContractRegistry 0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019 -> resolved FTSOv2 0x7BDE3Df0624114eDB3A67dFe6753e62f4e7c1d20 -> XRP/USD feed 0x015852502f55534400000000000000000000000000",
+            "address": "0xFc35d431Ce1445B9c79ff38594EF454618D2Ec49",
+            "chain": "flare",
+            "observedAt": "2026-07-14",
+            "observedBlock": 65066600,
+            "failureDomainKeys": [
+              "flare:ftsov2",
+              "flare:contract-registry",
+              "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+              "flare:ftsov2:xrp-usd",
+              "enosys:price-feed-connector",
+              "flare"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeedFtsoV2Connector resolves FTSOv2 through the hard-coded FlareContractRegistry, calls the single configured feed, discards its timestamp, and enforces no maximum age. Successful reads return oracleFailureDetected=false. Registry or FTSO failure reverts before a boolean is returned, so branch shutdown is not activated; there is no cache or alternate source. The Safe owner can replace the feed ID immediately, but this is admin reconfiguration rather than automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65066600,
+        "collateralParameters": [
+          {
+            "asset": "FXRP",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 105,
+            "note": "AddressesRegistry 0x65C378Bf4A68491436C84d8Da020b14FEfE03D17; TroveManager 0xc46e7d0538494FEb82b460b9723dAba0508C8Fb1; BorrowerOperations 0x18139E09Fb9a683Dd2c2df5D0edAD942c19CE912; CCR 150%; Stability Pool penalty 5%; redistribution penalty 10%; fixed-block reads showed active troves, nonzero debt, and shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate under-MCR troves; no auction or keeper allowlist applies. The branch Stability Pool offsets at most its deposits minus MIN_BOLD_IN_SP (1e18), preserving that minimum, and any remaining debt and collateral are redistributed to active troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x2c817F7159c08d94f09764086330c96Bb3265A2f offsets debt only from deposits above MIN_BOLD_IN_SP (1e18), which is preserved; uncovered debt and collateral are redistributed across surviving FXRP troves. No committed external insurance or auction capital exists.",
+        "shutdownOrBadDebtBehavior": "Anyone can shut the branch when TCR falls below the 105% SCR; shutdown blocks new borrowing while urgent redemption and debt resolution continue. Successful connector calls return oracleFailureDetected=false; registry or FTSO failures revert before that flag can trigger shutdown. Unoffset liquidation debt is redistributed and no separate residual-debt cure is committed.",
+        "failureDomainKeys": [
+          "flare:ftsov2",
+          "flare:contract-registry",
+          "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+          "flare:ftsov2:xrp-usd",
+          "enosys:fxrp-stability-pool",
+          "enosys:branch-redistribution",
+          "flare"
+        ],
+        "sources": [
+          {
+            "label": "Verified FXRP PriceFeed",
+            "url": "https://flare-explorer.flare.network/address/0xFc35d431Ce1445B9c79ff38594EF454618D2Ec49?tab=contract"
+          },
+          {
+            "label": "Verified FXRP TroveManager",
+            "url": "https://flare-explorer.flare.network/address/0xc46e7d0538494FEb82b460b9723dAba0508C8Fb1?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "wflr",
+        "label": "wFLR Trove branch",
+        "tier": "standard-external",
+        "summary": "The branch PriceFeed calls the FTSOv2 FLR/USD feed through the shared connector without preserving or checking the upstream timestamp.",
+        "collateralAssets": [
+          "wFLR"
+        ],
+        "chains": [
+          "flare"
+        ],
+        "feeds": [
+          {
+            "provider": "Flare FTSOv2",
+            "path": "PriceFeed 0xBCB5420d7F6346DB739a7C49FC90AB37553B68dc -> PriceFeedFtsoV2Connector implementation 0x68aa9aa27cfa5f4fa71b22e614efe408281e1295 -> hard-coded FlareContractRegistry 0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019 -> resolved FTSOv2 0x7BDE3Df0624114eDB3A67dFe6753e62f4e7c1d20 -> FLR/USD feed 0x01464c522f55534400000000000000000000000000",
+            "address": "0xBCB5420d7F6346DB739a7C49FC90AB37553B68dc",
+            "chain": "flare",
+            "observedAt": "2026-07-14",
+            "observedBlock": 65066600,
+            "failureDomainKeys": [
+              "flare:ftsov2",
+              "flare:contract-registry",
+              "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+              "flare:ftsov2:flr-usd",
+              "enosys:price-feed-connector",
+              "flare"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeedFtsoV2Connector resolves FTSOv2 through the hard-coded FlareContractRegistry, calls the single configured feed, discards its timestamp, and enforces no maximum age. Successful reads return oracleFailureDetected=false. Registry or FTSO failure reverts before a boolean is returned, so branch shutdown is not activated; there is no cache or alternate source. The Safe owner can replace the feed ID immediately, but this is admin reconfiguration rather than automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65066600,
+        "collateralParameters": [
+          {
+            "asset": "wFLR",
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 110,
+            "note": "AddressesRegistry 0xE4Fc0543990128612d8112c90cdECc252165D255; TroveManager 0xB6cB0c5301D4E6e227Ba490cee7b92EB954ac06D; BorrowerOperations 0x19b154D5d20126a77309ae01931645a135E4E252; CCR 160%; Stability Pool penalty 5%; redistribution penalty 20%; fixed-block reads showed active troves, nonzero debt, and shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate under-MCR troves; no auction or keeper allowlist applies. The branch Stability Pool offsets at most its deposits minus MIN_BOLD_IN_SP (1e18), preserving that minimum, and any remaining debt and collateral are redistributed to active troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x0Dd6daab4cB9A0ba6707Cf59DBfbc28cc33CA24A offsets debt only from deposits above MIN_BOLD_IN_SP (1e18), which is preserved; uncovered debt and collateral are redistributed across surviving wFLR troves. No committed external insurance or auction capital exists.",
+        "shutdownOrBadDebtBehavior": "Anyone can shut the branch when TCR falls below the 110% SCR; shutdown blocks new borrowing while urgent redemption and debt resolution continue. Successful connector calls return oracleFailureDetected=false; registry or FTSO failures revert before that flag can trigger shutdown. Unoffset liquidation debt is redistributed and no separate residual-debt cure is committed.",
+        "failureDomainKeys": [
+          "flare:ftsov2",
+          "flare:contract-registry",
+          "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+          "flare:ftsov2:flr-usd",
+          "enosys:wflr-stability-pool",
+          "enosys:branch-redistribution",
+          "flare"
+        ],
+        "sources": [
+          {
+            "label": "Verified wFLR PriceFeed",
+            "url": "https://flare-explorer.flare.network/address/0xBCB5420d7F6346DB739a7C49FC90AB37553B68dc?tab=contract"
+          },
+          {
+            "label": "Verified wFLR TroveManager",
+            "url": "https://flare-explorer.flare.network/address/0xB6cB0c5301D4E6e227Ba490cee7b92EB954ac06D?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "stxrp",
+        "label": "stXRP Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "At finalized Flare block 65612597 the live branch had 67 troves, 161,945.545914390263203096 CDP of debt, and shutdownTime zero; it used one custom stXRP/USD FTSOv2 feed through the shared connector with no enforced heartbeat, second provider, or cached fallback.",
+        "collateralAssets": [
+          "stXRP"
+        ],
+        "chains": [
+          "flare"
+        ],
+        "feeds": [
+          {
+            "provider": "Flare FTSOv2 custom feed",
+            "path": "PriceFeed 0x030Cfe7bed11e0CBa106b4c5ffF8edAe793653A7 -> PriceFeedFtsoV2Connector implementation 0x68aa9aa27cfa5f4fa71b22e614efe408281e1295 -> hard-coded FlareContractRegistry 0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019 -> resolved FTSOv2 0x7BDE3Df0624114eDB3A67dFe6753e62f4e7c1d20 -> custom stXRP/USD feed 0x2173745852502f5553440000000000000000000000",
+            "address": "0x030Cfe7bed11e0CBa106b4c5ffF8edAe793653A7",
+            "chain": "flare",
+            "observedAt": "2026-07-14",
+            "observedBlock": 65066600,
+            "failureDomainKeys": [
+              "flare:ftsov2",
+              "flare:contract-registry",
+              "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+              "flare:ftsov2:custom-stxrp-usd",
+              "enosys:price-feed-connector",
+              "flare"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeedFtsoV2Connector resolves FTSOv2 through the hard-coded FlareContractRegistry, calls the single configured custom feed, discards its timestamp, and enforces no maximum age. Successful reads return oracleFailureDetected=false. Registry or FTSO failure reverts before a boolean is returned, so branch shutdown is not activated; there is no cache or alternate source. The EOA owner can replace the feed ID immediately, but this is admin reconfiguration rather than automatic failover.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 65612597,
+        "collateralParameters": [
+          {
+            "asset": "stXRP",
+            "minimumCollateralRatioPct": 160,
+            "shutdownCollateralRatioPct": 110,
+            "note": "AddressesRegistry 0x6988515B4e69Ab8AfA56E6079A1787F5A0a71Be7; TroveManager 0x3866D5EA3c04a1371D8c6F75529064455EB43220; BorrowerOperations 0x46a17394A4CA1d8134278F4397DF9E942B55acE9; CCR 175%; Stability Pool penalty 5%; redistribution penalty 10%; fixed-block reads showed active troves, nonzero debt, and shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate under-MCR troves; no auction or keeper allowlist applies. The branch Stability Pool offsets at most its deposits minus MIN_BOLD_IN_SP (1e18), preserving that minimum, and any remaining debt and collateral are redistributed to active troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0x3FAEC256DCFDB9eBa882b5F71e020FA128081f56 offsets debt only from deposits above MIN_BOLD_IN_SP (1e18), which is preserved; uncovered debt and collateral are redistributed across surviving stXRP troves. No committed external insurance or auction capital exists.",
+        "shutdownOrBadDebtBehavior": "Anyone can shut the branch when TCR falls below the 110% SCR; shutdown blocks new borrowing while urgent redemption and debt resolution continue. Successful connector calls return oracleFailureDetected=false; registry or FTSO failures revert before that flag can trigger shutdown. Unoffset liquidation debt is redistributed and no separate residual-debt cure is committed.",
+        "failureDomainKeys": [
+          "flare:ftsov2",
+          "flare:contract-registry",
+          "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+          "flare:ftsov2:custom-stxrp-usd",
+          "enosys:stxrp-stability-pool",
+          "enosys:branch-redistribution",
+          "flare"
+        ],
+        "sources": [
+          {
+            "label": "Finalized Flare block 65612597",
+            "url": "https://flare-explorer.flare.network/block/65612597"
+          },
+          {
+            "label": "Verified stXRP PriceFeed",
+            "url": "https://flare-explorer.flare.network/address/0x030Cfe7bed11e0CBa106b4c5ffF8edAe793653A7?tab=contract"
+          },
+          {
+            "label": "Verified stXRP TroveManager",
+            "url": "https://flare-explorer.flare.network/address/0x3866D5EA3c04a1371D8c6F75529064455EB43220?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "sflr",
+        "label": "sFLR Trove branch",
+        "tier": "single-source-or-laggy",
+        "summary": "The branch uses a custom sFLR/USD FTSOv2 feed through the shared connector, with no enforced heartbeat, second provider, or cached fallback.",
+        "collateralAssets": [
+          "sFLR"
+        ],
+        "chains": [
+          "flare"
+        ],
+        "feeds": [
+          {
+            "provider": "Flare FTSOv2 custom feed",
+            "path": "PriceFeed 0x051699d88Ab204C4C848E89a1B439d4D9887460E -> PriceFeedFtsoV2Connector implementation 0x68aa9aa27cfa5f4fa71b22e614efe408281e1295 -> hard-coded FlareContractRegistry 0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019 -> resolved FTSOv2 0x7BDE3Df0624114eDB3A67dFe6753e62f4e7c1d20 -> custom sFLR/USD feed 0x2173464c522f555344000000000000000000000000",
+            "address": "0x051699d88Ab204C4C848E89a1B439d4D9887460E",
+            "chain": "flare",
+            "observedAt": "2026-07-14",
+            "observedBlock": 65066600,
+            "failureDomainKeys": [
+              "flare:ftsov2",
+              "flare:contract-registry",
+              "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+              "flare:ftsov2:custom-sflr-usd",
+              "enosys:price-feed-connector",
+              "flare"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeedFtsoV2Connector resolves FTSOv2 through the hard-coded FlareContractRegistry, calls the single configured custom feed, discards its timestamp, and enforces no maximum age. Successful reads return oracleFailureDetected=false. Registry or FTSO failure reverts before a boolean is returned, so branch shutdown is not activated; there is no cache or alternate source. The EOA owner can replace the feed ID immediately, but this is admin reconfiguration rather than automatic failover.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65066600,
+        "collateralParameters": [
+          {
+            "asset": "sFLR",
+            "minimumCollateralRatioPct": 125,
+            "shutdownCollateralRatioPct": 110,
+            "note": "AddressesRegistry 0x8fc9996d9B7c88F84e21fCCf46397cE534A2B17b; TroveManager 0xB7997eCdcE5dB9036c54e128d9eFbcDCdC7c9303; BorrowerOperations 0xa7EfE34FF583dd52d9d6e24e5Eb2aD38d63d0A8f; CCR 160%; Stability Pool penalty 5%; redistribution penalty 10%; fixed-block reads showed active troves, nonzero debt, and shutdownTime zero."
+          }
+        ],
+        "liquidationMechanism": "Any caller can immediately liquidate under-MCR troves; no auction or keeper allowlist applies. The branch Stability Pool offsets at most its deposits minus MIN_BOLD_IN_SP (1e18), preserving that minimum, and any remaining debt and collateral are redistributed to active troves.",
+        "liquidationDelaySec": 0,
+        "backstop": "Branch Stability Pool 0xE6B23B97A9058B88e6d068d57d8a69Fb07ab2A61 offsets debt only from deposits above MIN_BOLD_IN_SP (1e18), which is preserved; uncovered debt and collateral are redistributed across surviving sFLR troves. No committed external insurance or auction capital exists.",
+        "shutdownOrBadDebtBehavior": "Anyone can shut the branch when TCR falls below the 110% SCR; shutdown blocks new borrowing while urgent redemption and debt resolution continue. Successful connector calls return oracleFailureDetected=false; registry or FTSO failures revert before that flag can trigger shutdown. Unoffset liquidation debt is redistributed and no separate residual-debt cure is committed.",
+        "failureDomainKeys": [
+          "flare:ftsov2",
+          "flare:contract-registry",
+          "flare:0xad67fe66660fb8dfe9d6b1b4240d8650e30f6019",
+          "flare:ftsov2:custom-sflr-usd",
+          "enosys:sflr-stability-pool",
+          "enosys:branch-redistribution",
+          "flare"
+        ],
+        "sources": [
+          {
+            "label": "Verified sFLR PriceFeed",
+            "url": "https://flare-explorer.flare.network/address/0x051699d88Ab204C4C848E89a1B439d4D9887460E?tab=contract"
+          },
+          {
+            "label": "Verified sFLR TroveManager",
+            "url": "https://flare-explorer.flare.network/address/0xB7997eCdcE5dB9036c54e128d9eFbcDCdC7c9303?tab=contract"
+          }
+        ]
+      }
+    ]
+  }
+}

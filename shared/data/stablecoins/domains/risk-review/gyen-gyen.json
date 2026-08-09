@@ -1,0 +1,27 @@
+{
+  "id": "gyen-gyen",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: GYEN resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "GYEN is issued by GMO-Z.com Trust and tracked across Ethereum, Arbitrum, Solana, and Stellar-style issuer rails. No third-party bridge route was verified; the reviewed posture is issuer-native mint/redeem across supported networks.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GYEN and ZUSD docs",
+        "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/"
+      },
+      {
+        "label": "GMO-Z.com Trust",
+        "url": "https://stablecoin.z.com/"
+      }
+    ]
+  }
+}

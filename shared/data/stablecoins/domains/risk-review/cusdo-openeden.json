@@ -1,0 +1,174 @@
+{
+  "id": "cusdo-openeden",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum cUSDO verified implementation",
+        "url": "https://eth.blockscout.com/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Solana cUSDO Token-2022 mint",
+        "url": "https://solscan.io/token/BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs"
+      },
+      {
+        "label": "Solana mainnet JSON-RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "The verified cUSDO implementation blocks a sender when underlying USDO.isBanned(from) is true and blocks transfers while either USDO or cUSDO is paused. At finalized Solana slot 433002244, the Token-2022 mint assigns the same system-account signer as both mintAuthority and freezeAuthority, so that signer can freeze individual Solana token accounts.",
+    "reviewer": "OpenAI Codex control verification",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "cUSDO is a wrapped form of USDO and inherits USDO's Chainlink CCIP cross-chain route. The route uses CCIP token-transfer infrastructure and external oracle-network validation rather than a canonical rollup bridge or issuer-only burn/mint rail. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; BSC/Base rows confirmed as the uniform OpenEden cUSDO deployment; Solana is a natively supported OpenEden Token-2022 deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "OpenEden announced USDO interoperability through Chainlink CCIP; cUSDO is the wrapper of USDO."
+      }
+    ],
+    "sources": [
+      {
+        "label": "OpenEden cUSDO docs",
+        "url": "https://docs.openeden.com/usdo/cusdo-token"
+      },
+      {
+        "label": "OpenEden Chainlink CCIP announcement",
+        "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
+      },
+      {
+        "label": "Chainlink USDO CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "protocol": "cUSDO (OpenEden native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Compounding Open Dollar', symbol cUSDO, 18 decimals — OpenEden issuer-native deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OpenEden",
+            "url": "https://openeden.com/"
+          },
+          {
+            "label": "cUSDO on Etherscan",
+            "url": "https://etherscan.io/address/0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0"
+          }
+        ]
+      },
+      {
+        "id": "base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "destinationChain": "base",
+        "contractAddress": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "protocol": "OpenEden cUSDO multichain deployment",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Compounding Open Dollar', symbol cUSDO, 18 decimals on base. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "failureDomainKeys": [
+          "protocol:openeden-multichain",
+          "contract:base:0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65"
+        ],
+        "sources": [
+          {
+            "label": "OpenEden",
+            "url": "https://openeden.com/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "destinationChain": "bsc",
+        "contractAddress": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "protocol": "OpenEden cUSDO multichain deployment",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Compounding Open Dollar', symbol cUSDO, 18 decimals on bsc. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "failureDomainKeys": [
+          "protocol:openeden-multichain",
+          "contract:bsc:0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+        ],
+        "sources": [
+          {
+            "label": "OpenEden",
+            "url": "https://openeden.com/"
+          }
+        ]
+      },
+      {
+        "id": "solana:BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+        "destinationChain": "solana",
+        "contractAddress": "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs",
+        "protocol": "cUSDO (OpenEden native Solana issuance)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "OpenEden's FAQ calls cUSDO natively supported on Solana, and its supported-network registry identifies this exact Token-2022 mint. Finalized Solana RPC at slot 434087588 returns name 'Compounding Open Dollar', symbol 'cUSDO', decimals 6, and the direct mint/freeze/metadata authority FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 434087588,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO supported networks",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "OpenEden FAQ: cUSDO native Solana support",
+            "url": "https://docs.openeden.com/usdo/faq"
+          },
+          {
+            "label": "cUSDO on Solscan",
+            "url": "https://solscan.io/token/BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs"
+          }
+        ]
+      }
+    ]
+  }
+}

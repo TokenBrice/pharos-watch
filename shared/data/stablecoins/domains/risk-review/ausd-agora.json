@@ -1,0 +1,472 @@
+{
+  "id": "ausd-agora",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: AUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "AUSD is natively issued by Agora on every tracked deployment (same deterministic contract family; per-network supply reconciled in the monthly Grant Thornton reserve attestations). In late 2025 Agora adopted LayerZero's OFT standard (AUSD0) to connect deployments by burn/mint; on EVM chains an Agora-owned adapter (0x9CaB7Ede13dc56652E44D2404E969C212f22689b, the on-chain BRIDGE_MINTER_ROLE holder) is deployed at the same address on 10 chains and relays through LayerZero Endpoint V2, so material cross-chain routes are externally validated rather than issuer-attested. Ethereum is the canonical home chain. Immutable zkEVM, Solana, and Sui are verified native deployments with no separately confirmed live bridge route at review time. Plasma and Plume carry the AUSD0 OFT token at the same deterministic address (Plasma runs a distinct OFT-era implementation). The 2024 Wormhole NTT integration was superseded by LayerZero OFT.",
+    "reviewedAt": "2026-07-19",
+    "reviewer": "Kimi rescue lane 1e (2026-07-19)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero OFT (AUSD0)",
+        "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "Agora adopted LayerZero's OFT standard to connect all AUSD deployments into one unified supply (AUSD0); the Agora-owned adapter 0x9CaB7Ede13dc56652E44D2404E969C212f22689b relays through LayerZero Endpoint V2."
+      },
+      {
+        "source": "docs",
+        "name": "Wormhole NTT (historical)",
+        "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "Agora's 2024 interoperability selection for AUSD, superseded by the 2025 LayerZero OFT adoption."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Agora AUSD contract deployments",
+        "url": "https://docs.agora.finance/developer/contract-deployments"
+      },
+      {
+        "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+        "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+      },
+      {
+        "label": "LayerZero — Agora and LayerZero bring AUSD to 5 blockchains",
+        "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+      },
+      {
+        "label": "Etherscan — AUSD OFT bridge adapter",
+        "url": "https://etherscan.io/address/0x9CaB7Ede13dc56652E44D2404E969C212f22689b"
+      },
+      {
+        "label": "Wormhole — Agora selects Wormhole for AUSD interoperability (2024, historical)",
+        "url": "https://wormhole.com/blog/agora-selects-wormhole-as-core-interoperability-solution-for-ausd-stablecoin"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Etherscan — AUSD token",
+            "url": "https://etherscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Arbiscan — AUSD token",
+            "url": "https://arbiscan.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "base:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Basescan — AUSD token",
+            "url": "https://basescan.org/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Snowtrace — AUSD token",
+            "url": "https://snowtrace.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a/contract/43114/code"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "BscScan — AUSD token",
+            "url": "https://bscscan.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Polygonscan — AUSD token",
+            "url": "https://polygonscan.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a#code"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Monvision — AUSD token",
+            "url": "https://mainnet-beta.monvision.io/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "solana:AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9",
+        "protocol": "Agora native AUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Token-2022 issuance verified (Agora-controlled mint authority reviewed under mintAuthority). A live cross-chain route was not verified at review time; Agora's announced interoperability path is LayerZero OFT, superseding the 2024 Wormhole NTT plan.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Solana Explorer — AUSD token",
+            "url": "https://explorer.solana.com/address/AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "sui:0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD",
+        "destinationChain": "sui",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD",
+        "protocol": "Agora native AUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Move deployment (agora-finance/ausd-move) listed in issuer docs. A live cross-chain route was not verified at review time; Agora's announced interoperability path is LayerZero OFT, superseding the 2024 Wormhole NTT plan.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "SuiVision — AUSD coin",
+            "url": "https://suivision.xyz/coin/0x2053d08c1e2bd02791056171aab0fd12bd7cd7efad2ab8f6b9c8902f14df2ff2::ausd::AUSD"
+          },
+          {
+            "label": "Agora GitHub — ausd-move",
+            "url": "https://github.com/agora-finance/ausd-move"
+          }
+        ]
+      },
+      {
+        "id": "mantle:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Mantle Explorer — AUSD token",
+            "url": "https://explorer.mantle.xyz/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "katana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Katana Explorer — AUSD token",
+            "url": "https://explorer.katanarpc.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a?tab=contract"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "immutable-zkevm:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "immutable-zkevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora native AUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Agora deployment verified on-chain (symbol AUSD at the deterministic address, same implementation as Ethereum). No LayerZero OFT adapter observed at the standard 0x9CaB7Ede address on this chain at review time, so no live bridge route is claimed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Immutable Explorer — AUSD token",
+            "url": "https://explorer.immutable.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora AUSD0 / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "AUSD0 OFT deployment verified on-chain at Agora's deterministic address (symbol AUSD0, 6 decimals, distinct OFT-era implementation 0xce8d6e32789fb340267523113280a9ec156a6a62); burn/mint connectivity via LayerZero per Agora and LayerZero announcements.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "LayerZero — Agora and LayerZero bring AUSD to 5 blockchains",
+            "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+          },
+          {
+            "label": "Plasma Explorer — AUSD0 token",
+            "url": "https://plasma-explorer.com/address/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          },
+          {
+            "label": "Agora — AUSD borderless onchain, powered by LayerZero",
+            "url": "https://www.agora.finance/blog/ausd-now-borderless-onchain"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+        "protocol": "Agora AUSD0 / LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Officially listed Agora deployment; on-chain symbol reads AUSD0 at the deterministic address with the standard OFT adapter 0x9CaB7Ede13dc56652E44D2404E969C212f22689b present.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Agora AUSD contract deployments",
+            "url": "https://docs.agora.finance/developer/contract-deployments"
+          },
+          {
+            "label": "Plume — Plume integrates AUSD",
+            "url": "https://plume.org/blog/agora"
+          },
+          {
+            "label": "Plume Explorer — AUSD0 token",
+            "url": "https://explorer.plume.org/token/0x00000000efe302beaa2b3e6e1b18d08d69a9012a"
+          }
+        ]
+      }
+    ]
+  }
+}

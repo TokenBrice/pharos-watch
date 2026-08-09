@@ -1,0 +1,36 @@
+{
+  "id": "eurcv-societe-generale-forge",
+  "reserves": [
+    {
+      "name": "Euro cash deposits at Societe Generale",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Societe Generale S.A.",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "SG-FORGE CoinVertible reserves",
+        "url": "https://www.sgforge.com/product/coinvertible/"
+      }
+    ],
+    "rationale": "SG-FORGE's daily disclosure reports EUR CoinVertible reserves as 100% cash at Societe Generale, equal to EURCV in circulation. The issuer also states that CoinVertible is fully cash-backed with immediate liquidity, segregated collateral, and bankruptcy-remoteness protections.",
+    "compositionBasis": "SG-FORGE daily EUR CoinVertible reserve disclosure",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class or banking obligor remains unidentified in the current daily disclosure.",
+    "knownUnknownExposurePct": 0
+  }
+}

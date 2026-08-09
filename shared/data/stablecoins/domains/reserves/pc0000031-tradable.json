@@ -1,0 +1,34 @@
+{
+  "id": "pc0000031-tradable",
+  "reserves": [
+    {
+      "name": "Private-credit receivables / senior secured notes",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tradable product documentation",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable smart-contract addresses",
+        "url": "https://doc.tradable.xyz/product-docs/smart-contract-addresses"
+      },
+      {
+        "label": "Tradable platform",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "rationale": "Tradable describes the product as institutional-grade yield-generating assets and identifies PC0000031 as a senior secured rent-financing note. The static reserve classification is therefore the disclosed private-credit receivables/senior secured note envelope at 100%; deal-level asset allocation is not publicly disclosed in the reviewed docs.",
+    "compositionBasis": "Tradable product and PC0000031 metadata",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Deal-level receivable and note allocation is undisclosed beyond the 100% private-credit envelope.",
+    "knownUnknownExposurePct": 0
+  }
+}

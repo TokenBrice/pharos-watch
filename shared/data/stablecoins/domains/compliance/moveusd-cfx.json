@@ -1,0 +1,63 @@
+{
+  "id": "moveusd-cfx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MOVEUSD is a CFX-issued dollar token for payment and settlement flows, redeemable through designated channels for approved customers."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "CFX Labs Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators; Metropolitan Capital Bank & Trust banking partner context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MOVEUSD public materials describe CFX issuance and designated redemption channels, but Pharos found no public GENIUS issuer intent, PPSI approval, state-qualified approval, or official application source. CFX's July 30 2025 press release describes MOVEUSD as 'GENIUS-ready' (first on Ethereum and Base), framing this as architectural alignment with reserve and redemption requirements — this is marketing language, not a formal PPSI pathway announcement, and does not meet the bar for issuer-announced-intent. The original reserveDisclosureUrl (docs.moveusd.com/docs/disclosures-disclaimers) now redirects to docs.cfx.to with no dedicated reserve disclosure page found; reserveDisclosurePresent updated to false accordingly.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CFX platform overview (docs.cfx.to)",
+        "url": "https://docs.cfx.to/docs/key-features",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CFX launches GENIUS-ready MOVEUSD on Ethereum and Base (July 30 2025)",
+        "url": "https://www.bitwire.com/feed/cfx-launches-genius-ready-stablecoin-moveusd-on-ethereum-and-base-with-wormhole",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-30",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
+        "CFX Labs homepage (cfx.to) — NMLS and MSB registrations confirmed, no PPSI application or GENIUS pathway mentioned",
+        "CFX documentation (docs.cfx.to, formerly docs.moveusd.com) — no reserve disclosure page or GENIUS Act filing found",
+        "CFX July 2025 'GENIUS-ready' press release — marketing language only, no formal authorization intent",
+        "FDIC and FinCEN GENIUS Act NPRM public releases — no CFX Labs application listed",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for MOVEUSD. CFX's 'GENIUS-ready' marketing claim describes architectural alignment, not a regulatory pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

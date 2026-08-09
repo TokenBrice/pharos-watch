@@ -1,0 +1,82 @@
+{
+  "id": "susd1plus-lorenzo",
+  "reserves": [
+    {
+      "name": "Lorenzo USD1+ OTF strategy shares settled in WLFI USD1 (RWA, CeFi quant, and DeFi yield strategies)",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usd1-world-liberty-financial",
+      "depType": "wrapper",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Lorenzo Protocol USD1+ OTF vault and its undisclosed strategy execution team; settlement asset USD1 issued by BitGo for World Liberty Financial",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "market",
+        "basis",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave-8 reserve susd1plus-lorenzo",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Lorenzo USD1+ OTF mainnet launch (issuer publication)",
+        "url": "https://lorenzo-protocol.ghost.io/usd1-mainnet-launch/"
+      },
+      {
+        "label": "Lorenzo USD1+ OTF guide (issuer publication)",
+        "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+      },
+      {
+        "label": "sUSD1+ BSC proxy underlying() = WLFI USD1 (on-chain)",
+        "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#readProxyContract"
+      },
+      {
+        "label": "Phemex Academy Lorenzo overview (independent secondary)",
+        "url": "https://phemex.com/academy/what-is-lorenzo-protocol"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: Lorenzo's mainnet launch post states sUSD1+ is the non-rebasing NAV fund share of USD1+ OTF, a triple-yield strategy (tokenized RWA / primarily Treasuries sleeve, CeFi delta-neutral basis trading on CEX, and DeFi returns), with deposits of USD1/USDT/USDC, redemptions settled exclusively in WLFI USD1, 7–14 day settlement cycles, and off-chain execution under custody mirrored onto a CEX quant desk; Lorenzo does not manage user funds and publishes no strategy-level weights. The companion OTF guide re-states RWA+CeFi quant+DeFi aggregation, USD1 settlement, 7-day minimum hold, biweekly settlement, and FAL on-chain-fundraising / off-chain-execution / on-chain-settlement. Independent corroboration: public BSC eth_call of sUSD1+ underlying() at block 0x6b4e24e returns 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d and that token's symbol() is USD1; Phemex Academy (updated 2026-07-20) independently describes sUSD1+ as Lorenzo's stablecoin OTF packaging DeFi, quantitative trading, and tokenized RWA with off-chain managers/custodians and settlement cycles. Wrapper dependency on tracked USD1 (usd1-world-liberty-financial, depType wrapper, 100% fund-share) is dual-sourced; no portfolio breakdown exists, so scope remains dependency-relationships. Risk stays high: delta-neutral alone would tier medium, but undisclosed off-chain CeFi/RWA sleeve weights, CEX/custody counterparties, and basis/liquidity/legal exposure keep the riskier tier.",
+    "compositionBasis": "Lorenzo USD1+ OTF mainnet + OTF guide issuer publications re-opened 2026-07-28; BSC underlying() call at block 0x6b4e24e; Phemex Academy independent overview",
+    "compositionAsOf": "2026-07-28",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The linked USD1 wrapper relationship is disclosed and on-chain confirmed; the internal allocation across RWA, CeFi quant, and DeFi strategies, named execution counterparties, and strategy-level custody are not published.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Lorenzo USD1+ OTF vault contracts on BNB Chain (on-chain fundraising and settlement)",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed strategy execution and trading-team infrastructure running off-chain CeFi quant, RWA, and DeFi strategies",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Lorenzo USD1+ OTF guide (issuer publication)",
+        "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+      },
+      {
+        "label": "Lorenzo documentation",
+        "url": "https://lorenzo-protocol.gitbook.io/docs"
+      }
+    ],
+    "uncertainty": "The OTF model is on-chain fundraising, off-chain execution, on-chain settlement: deposited funds leave the BNB Chain vault into strategy execution, and Lorenzo's own disclaimer states it 'does not manage user funds and is not responsible for the performance of any underlying strategy'. Who holds strategy assets off-chain (custodians, prime brokers, exchanges), whether accounts are segregated, and what insolvency treatment applies are all undisclosed, so segregation is unknown and no bankruptcy-remoteness structure is documented (recorded as none). Active deployment of vault assets into off-chain strategies is the disclosed design, recorded as permitted rehypothecation of the reserve. Separately, the sUSD1+ BSC proxy implementation is unverified and its upgrade authority unresolved (mintAuthority review, 2026-06-11). Withdrawals follow a 7-day minimum hold plus a biweekly settlement cycle, so exit liquidity depends on strategy settlement rather than instant on-chain redemption."
+  }
+}

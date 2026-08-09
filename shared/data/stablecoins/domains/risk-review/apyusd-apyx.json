@@ -1,0 +1,94 @@
+{
+  "id": "apyusd-apyx",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: apyUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "apyUSD is the ERC-4626 wrapper of apxUSD. Row-level on-chain verification on 2026-07-20: the Ethereum wrapper is a native UUPS deployment (asset() = apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; no getCCIPPool or LayerZero endpoint() surface). The Base deployment is a Chainlink CCIP burn/mint representation: its getCCIPPool() returns BurnMintTokenPool 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d, whose getToken() returns the Base wrapper and whose owner() is the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2; pool bytecode matches the apxUSD CCIP pools byte-for-byte in size.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "APYX docs",
+        "url": "https://docs.apyx.fi"
+      },
+      {
+        "label": "APYX dashboard",
+        "url": "https://accountable.apyx.fi/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "protocol": "Apyx apyUSD (native ERC-4626 wrapper deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): asset() returned apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; getCCIPPool() and LayerZero endpoint() both revert — no bridge-minter surface. The wrapper is a UUPS proxy (EIP-1967 impl 0xfd616567ecc1607f61073951a1e822f7315bb112) whose shares mint natively on deposit of apxUSD under the reviewed Apyx AccessManager/3-of-6 Safe upgrade path (mint-authority review 2026-07-16, scoreable). Native issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570877,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "apyUSD Ethereum wrapper on Etherscan",
+            "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a"
+          },
+          {
+            "label": "Apyx docs",
+            "url": "https://docs.apyx.fi"
+          }
+        ]
+      },
+      {
+        "id": "base:0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "destinationChain": "base",
+        "contractAddress": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Base block 48862198): the Base apyUSD wrapper's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d; the pool's getToken() returns this wrapper and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes, matching the apxUSD CCIP pools). The wrapper has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48862198,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xed23fc184a3fe5d12ca92ca4f5cefa640decf21d"
+        ],
+        "sources": [
+          {
+            "label": "apyUSD Base wrapper on BaseScan",
+            "url": "https://basescan.org/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+          },
+          {
+            "label": "apyUSD Base BurnMintTokenPool",
+            "url": "https://basescan.org/address/0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d"
+          },
+          {
+            "label": "Apyx bridged-token source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "reur-royal-euro",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.rcoins.digital/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Royal Euro is presented as an issuer-backed euro stable-value token, and the reviewed public material does not document a separate third-party bridge route. Pharos treats the multichain supply as issuer-native issuance/redemption at probable confidence.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RCOINS Royal Euro",
+        "url": "https://www.rcoins.digital/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "destinationChain": "bsc",
+        "contractAddress": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "tron:TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+        "destinationChain": "tron",
+        "contractAddress": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "eusd-electronic-usd",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Electronic USD is a Reserve Protocol RToken with on-chain basket collateral and governance rather than a legal fiat issuer."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Electronic Dollar governance / Reserve Protocol RToken governors",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.reserve.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "eUSD is stablecoin-adjacent but protocol-governed; no public GENIUS approval or issuer pathway source was found. The payment use case via RPay (Latin America) makes applicability genuinely unclear rather than a clean non-payment-token exclusion.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Reserve app",
+        "url": "https://app.reserve.org/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Reserve docs",
+        "url": "https://docs.reserve.org/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Reserve Protocol documentation and app disclosures",
+        "Web search for Reserve Protocol / eUSD GENIUS Act compliance 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for eUSD. No GENIUS approvals have been granted to any issuer as of 2026-06-18; rulemaking remains at NPRM stage.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

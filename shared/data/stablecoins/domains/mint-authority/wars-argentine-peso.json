@@ -1,0 +1,155 @@
+{
+  "id": "wars-argentine-peso",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "WARS is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+      ],
+      "implementationAddresses": [
+        "0xba0030bba7112171a8a5bcc417ee1994051321b9"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WARS admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530827,
+      "sources": [
+        {
+          "label": "Ethereum WARS proxy (ERC-1967 slots)",
+          "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d#code"
+        },
+        {
+          "label": "WARS implementation contract",
+          "url": "https://etherscan.io/address/0xba0030bba7112171a8a5bcc417ee1994051321b9#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor.publicnode.com"
+        },
+        {
+          "label": "Gnosis PublicNode RPC",
+          "url": "https://gnosis.publicnode.com"
+        },
+        {
+          "label": "Worldchain RPC",
+          "url": "https://worldchain-mainnet.gateway.tenderly.co"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "multichain",
+        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "label": "Ripio shared WARS admin and MINTER_ROLE holder (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25530827, hasRole(DEFAULT_ADMIN_ROLE), hasRole(MINTER_ROLE) and hasRole(UPGRADER_ROLE) all returned true for 0x466c02e2; eth_getCode returned 0x (EOA). Same three roles returned true on Base 48621041, BSC 109938002, Polygon 90217624, Gnosis 47198266 and Worldchain 32347913. The WARS token exposes no supply cap: cap(), maxSupply(), mintCap() and maxTotalSupply() all revert on the Ethereum proxy at block 25530890, so mint by this MINTER_ROLE holder is unbounded and no cap constrains it."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "label": "Ripio WARS Safe multisig (DEFAULT_ADMIN_ROLE)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25530827, hasRole(DEFAULT_ADMIN_ROLE) returned true for the Safe (MINTER_ROLE and UPGRADER_ROLE returned false), so the Safe can grant itself or any address MINTER_ROLE and UPGRADER_ROLE. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint authorised by this Safe is unbounded."
+      },
+      {
+        "chain": "multichain",
+        "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "label": "Ripio WARS Ethereum minter-router contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25530893, hasRole(MINTER_ROLE) returned true for 0xd168cfbb and eth_getCode returned 10.9kB of bytecode. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint through this router is unbounded."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "label": "Ripio WARS cross-chain minter-router contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25530893, hasRole(MINTER_ROLE) returned true for 0x46167cb0, also true on Base 48621435, BSC 109939751, Polygon 90218149, Gnosis 47198418 and Worldchain 32348290. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint through this router is unbounded."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WARS contract",
+          "url": "https://etherscan.io/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+        },
+        {
+          "label": "Ripio Safe multisig",
+          "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        },
+        {
+          "label": "Ripio wFIAT attestation archive",
+          "url": "https://www.ripio.com/pt/wfiat"
+        },
+        {
+          "label": "Independent accountant wARS certification at 31 March 2026",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+        }
+      ],
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Ripio's public archive contains two successive independent-public-accountant certifications for wARS; the 22 April 2026 report reconciles 31 March 2026 multichain token liabilities to Argentine-peso bank reserves. Ripio's registrations are VASP, MSB, and payment-service regimes rather than prudential reserve supervision.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

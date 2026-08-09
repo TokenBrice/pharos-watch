@@ -1,0 +1,86 @@
+{
+  "id": "usdd-tron-dao-reserve",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDD is presented as the TRON DAO Reserve's dollar-pegged stablecoin for payments, with over-collateralized reserves and PSM swap/redemption mechanics."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "TRON DAO Reserve",
+    "issuerDomicile": "Dominica",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://usdd.io/data",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDD has self-reported reserve and PSM/redemption disclosures (usdd.io/data), but no formal third-party attestation. No GENIUS PPSI approval, application, or comparability determination for a foreign issuer exception was found. TRON DAO Reserve is Dominica-domiciled; Treasury has not yet finalized criteria for \"comparable foreign regulation\" under GENIUS. The April 2026 OFAC-coordinated Tether USDT freeze on TRON wallets and May 2026 UK sanctions on HTX are not GENIUS Act enforcement actions against USDD or its issuer.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act NPRM (Bulletin 2026-3)",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "FinCEN/OFAC Joint GENIUS Act AML/CFT NPRM (FR 2026-06963)",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Treasury GENIUS Act state-regime comparability NPRM",
+        "url": "https://www.consumerfinancemonitor.com/2026/04/14/treasury-issues-nprm-on-state-oversight-of-stablecoin-issuers-under-the-genius-act/",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-03",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USDD live reserve data",
+        "url": "https://usdd.io/data",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USDD over-collateralization and transparency (legacy docs)",
+        "url": "https://legacy-docs.usdd.io/usdd-issuance/over-collateralization-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USDD PSM documentation",
+        "url": "https://legacy-docs.usdd.io/psm/the-psm",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act NPRM Bulletin 2026-3 (Feb 25, 2026)",
+        "FinCEN/OFAC Joint GENIUS Act AML/CFT NPRM (Apr 8, 2026)",
+        "Treasury GENIUS Act state-regime comparability NPRM (Apr 3, 2026)",
+        "FDIC GENIUS Act prudential NPRM (Apr 7-10, 2026)",
+        "Chapman & Cutler GENIUS Act Rulemaking Tracker (accessed Jun 7, 2026)",
+        "USDD issuer pages (usdd.io, docs.usdd.io, legacy-docs.usdd.io)",
+        "Federal Register GENIUS Act implementation documents",
+        "OCC conditional trust-charter approvals list (does not include USDD issuer)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No GENIUS PPSI approval, official application, state-qualified approval, or registered/comparability-determined foreign-issuer exception was found for USDD or its issuer TRON DAO Reserve. No Treasury determination of comparable foreign regulation has been made for any jurisdiction as of this review date. The GENIUS Act approval framework itself remains in proposed-rulemaking phase.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

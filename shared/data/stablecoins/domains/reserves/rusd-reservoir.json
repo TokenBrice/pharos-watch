@@ -1,0 +1,161 @@
+{
+  "id": "rusd-reservoir",
+  "reserves": [
+    {
+      "name": "Hastra / Sentora PRIME credit allocations",
+      "pct": 33.9,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hastra PRIME (Figure / Democratized Prime HELOC collateral) via the Morpho Sentora PRIME market",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Pendle PT USDat tokenized-treasury principal token",
+      "pct": 17.3,
+      "risk": "high",
+      "coinId": "usdat-saturn",
+      "depType": "collateral",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Saturn (USDat issuer) via the Pendle PT-USDat-27AUG2026 market",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "basis",
+        "counterparty"
+      ],
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 31
+    },
+    {
+      "name": "GHO lending markets",
+      "pct": 14.2,
+      "risk": "medium",
+      "coinId": "gho-aave",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave (GHO supply markets on Plasma and Monad)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDC positions",
+      "pct": 31.2,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC), incl. the Morpho Steakhouse Prime Instant V2 USDC vault",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Agua Global Carry Vault (USDC-denominated ERC-4626)",
+      "pct": 3.4,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Agua Global Carry Vault (multi-strategy ERC-4626 vault manager); USDC-denominated share claim on Circle USDC",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R14 reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir raw reserves API",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      },
+      {
+        "label": "Reservoir proof-of-reserves documentation",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
+      },
+      {
+        "label": "Reservoir reserves dashboard",
+        "url": "https://app.reservoir.xyz/reserves"
+      },
+      {
+        "label": "Agua Global Carry Vault on Etherscan (ERC-4626 asset() read)",
+        "url": "https://etherscan.io/address/0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f"
+      },
+      {
+        "label": "Sentora PRIME vault launch note (curator-primary: PRIME is Figure-originated HELOC credit)",
+        "url": "https://sentora.com/research/articles/sentora-launches-prime-vault-on-morpho"
+      }
+    ],
+    "rationale": "The Reservoir raw reserves API fetched on 2026-08-08 reported $38,868,120.50 of total assets across 14 rows (totalLiabilities $38,580,274.13, equity $287,846.37). Bucketing rows through the reviewed Reservoir adapter mapping yields: Hastra/Sentora PRIME 33.9% ($419,570.95 Hastra PRIME token + $12,748,082.34 Morpho Sentora PRIME), USDC positions 31.2% ($51,202.42 direct/PSM USDC + $249,139.57 adapter USDC + $41,441.25 USDC on Pharos + $2,003,724.08 and $2,000,349.63 Curvance USDC on Monad + $3,985,201.53 Morpho Steakhouse Prime Instant V2 + $3,807,979.81 Morpho Rockaway USDC on Pharos), Pendle PT-USDat-27AUG2026 17.3% ($6,725,724.28), Aave GHO on Plasma/Monad 14.2% ($4,044,456.35 Plasma + $1,486,579.20 Monad), and the Agua Global Carry Vault 3.4% ($1,303,736.27); rounded slices sum to 100.0%. The PYUSD row ($923.84) rounds to 0.0% and is omitted from the curated scaffold. Since the 2026-07-27 review the USD1 bucket remained at zero, PRIME exposure fell as USDC direct/Morpho positions grew, and the live-reserve adapter was extended with an explicit Agua bucket so the vault is no longer treated as unmapped. The Agua slice maps to its on-chain-verified USDC underlying claim (ERC-4626 asset() = USDC at 0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f) while the vault's undisclosed multi-strategy internals stay captured in its high risk tier and risk factors. Risk-tier judgment calls retained: PRIME stays high because it is Figure-originated HELOC private credit (per curator Sentora's own description) whose exit path is an unpublished Morpho market redemption; PT USDat stays high despite tokenized-treasury collateral because the position is a fixed-maturity Pendle principal token (matures 2026-08-27) carrying AMM-exit basis risk.",
+    "compositionBasis": "Reservoir raw reserves API (app.reservoir.xyz/api/reserves/raw) fetched 2026-08-08; totalBalanceValue rows bucketed through the reviewed Reservoir live-reserve adapter mapping and normalized against totalAssets $38,868,120.50; Agua vault underlying verified on-chain via ERC-4626 asset() = USDC",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve buckets are attributed to named exposures. The Agua Global Carry Vault does not publish its internal multi-strategy allocation; the slice is mapped to its on-chain-verified USDC underlying claim and retains high risk for the undisclosed strategy layer.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hastra / Sentora PRIME credit allocations",
+        "pct": 33.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "PRIME is a Figure-originated HELOC private-credit token issued via Hastra/Democratized Prime and lent through the Morpho Sentora PRIME market, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reservoir Protocol on-chain Asset Adapter / PSM contracts (self-custodied balance sheet; no third-party custodian)",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Cayman Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir Terms of Service (last revised 2024-08-23)",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
+      },
+      {
+        "label": "Reservoir balance sheet / proof-of-reserves documentation",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
+      },
+      {
+        "label": "Reservoir raw reserves API (fetched 2026-07-20)",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    ],
+    "uncertainty": "Reservoir's balance sheet sits in protocol-controlled Asset Adapter and PSM contracts (the 2026-07-20 API rows resolve to adapter addresses 0x4809010926aec940b550d34a46a52739f996d75d, 0x3063C5907FAa10c01B242181Aa689bEb23D2BD65, 0x289C204B35859bFb924B9C0759A4FE80f610671c, and 0x8Cc5a546408C6cE3C9eeB99788F9EC3b8FA6b9F3), and neither the Terms of Service (2024-08-23) nor any docs.reservoir.xyz page reviewed today names a third-party custodian, trust, SPV, or holder claim on reserve assets, so no bankruptcy-remoteness structure is documented. Reserve re-use is the protocol's core yield model: docs state the balance sheet is allocated into RWA, lending markets, and DeFi strategies, and the ToS itself warns redemptions can lag when reserve assets must be sold or redeemed. Protocol admins (the PSM and Credit Enforcer DEFAULT_ADMIN is EOA 0xb7570e32 per the mint-authority review) can reallocate the balance sheet without holder consent. For the 44.8% PRIME sleeve, custody of the underlying Figure HELOC collateral sits upstream with Hastra/Democratized Prime and is not documented by Reservoir. No named legal issuer entity is disclosed (Cayman Islands governing law only), so holder recourse in an insolvency is untested; wallet-level segregation inside the adapter contracts is not disclosed."
+  }
+}

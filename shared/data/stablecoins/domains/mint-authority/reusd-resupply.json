@@ -1,0 +1,96 @@
+{
+  "id": "reusd-resupply",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "REUSD mint() requires operators[msg.sender] || msg.sender == owner(). No direct REUSD operators have been set, and owner() returns the Core contract (0xc07e…), Resupply's on-chain governance hub. Core.execute() is callable by the Voter contract (0x1111…), a token-weighted on-chain governance contract requiring quorum, a voting period, and execution delay; bounded Guardian operator permissions remain active for emergency actions but do not grant direct stablecoin mint access.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x57ab1e0003f623289cd798b1824be09a793e4bec"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-16",
+      "observedBlock": 25321527,
+      "sources": [
+        {
+          "label": "REUSD exact verified direct-deployment source",
+          "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec?tab=contract"
+        },
+        {
+          "label": "Ethereum DRPC EIP-1967 slot check",
+          "url": "https://eth.drpc.org"
+        }
+      ]
+    },
+    "mintIncidents": [
+      {
+        "date": "2025-06-26",
+        "status": "resolved",
+        "summary": "Resupply's crvUSD/wstUSR market exploit manipulated exchange-rate and solvency logic so negligible collateral could borrow up to the reUSD debt limit, leaving bad debt through the stablecoin borrow route.",
+        "sources": [
+          {
+            "label": "Halborn — Resupply hack explained",
+            "url": "https://www.halborn.com/blog/post/explained-the-resupply-hack-june-2025"
+          },
+          {
+            "label": "BlockSec — Resupply attack analysis",
+            "url": "https://blocksecteam.medium.com/blocksec-in-depth-analysis-and-reflections-on-the-resupply-protocol-attack-incident-932be23e1433"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xc07e000044f95655c11fda4cd37f70a94d7e0a7d",
+        "label": "REUSD owner — Resupply Core governance contract",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Blockscout — REUSD contract",
+            "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+          },
+          {
+            "label": "Blockscout — Core contract",
+            "url": "https://eth.blockscout.com/address/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+          }
+        ],
+        "evidence": "At Ethereum block 25321527: owner() on REUSD returned 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. eth_getCode returned contract code. REUSD source: mint() requires operators[msg.sender] || msg.sender == owner(); no direct REUSD operator was found in the reviewed state. Core source: execute() is callable by voter 0x11111111063874ce8dc6232cb5c1c849359476e6 (token-weighted on-chain governance) or operators with explicit per-selector permissions. Active GuardianUpgradeable permissions are bounded emergency/operator functions rather than direct stablecoin mint authority."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "review": {
+      "sources": [
+        {
+          "label": "Blockscout — REUSD contract source",
+          "url": "https://eth.blockscout.com/address/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+        },
+        {
+          "label": "Blockscout — Core contract source",
+          "url": "https://eth.blockscout.com/address/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+        },
+        {
+          "label": "Blockscout — Voter contract source",
+          "url": "https://eth.blockscout.com/address/0x11111111063874ce8dc6232cb5c1c849359476e6"
+        },
+        {
+          "label": "Resupply governance voting docs",
+          "url": "https://docs.resupply.fi/resupply-governance/governance-voting"
+        },
+        {
+          "label": "Resupply multisig and admin permissions",
+          "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
+        }
+      ],
+      "evidence": "At Ethereum block 25321527: REUSD mint() is gated by owner (Core 0xc07e…) or direct stablecoin operators; Core.voter() returns 0x11111111063874ce8dc6232cb5c1c849359476e6. The Voter contract enforces token-weighted proposal execution with 30% quorum, a 7-day voting period, and a 1-day execution delay. Resupply's docs state contracts are owned by Core and governed through on-chain voting. The current GuardianUpgradeable proxy is controlled by a 3-of-5 Safe and has bounded emergency/operator permissions, but the active implementation does not expose the older revertVoter path and does not hold direct REUSD mint authority. Mint authority is therefore DAO-governed with emergency multisig controls. reUSD minting is over-collateralised issuance gated by owner (the Resupply Core governance contract) or explicitly set operators; at block 25321527 Core execution is controlled by the token-weighted Voter contract enforcing a 30% quorum, a 7-day voting period and a 1-day execution delay, so authorising new mint capacity requires on-chain governance behind an independently enforced delay. The encoding-derived direct-mint cap is therefore economically raiseable rather than unbounded, placing reUSD outside the fiat-custodial centralized-mint scope.",
+      "reviewer": "Codex governance review; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "susd-solayer",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority PDA. The Solayer program remains upgradeable by a plain keypair (EOA-equivalent) upgrade authority.",
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG",
+        "label": "Solayer sUSD Token-2022 mint/freeze/rate authority",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solayer sUSD docs",
+            "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana finalized slot 425792161, getAccountInfo on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X (jsonParsed) confirmed mintAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG and freezeAuthority=FhVcYNEe58SMtxpZGnTu2kpYJrTu2vwCZDGpPLqbd2yG. The authority account is owned by executable program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA (Solayer sUSD program)."
+      },
+      {
+        "chain": "solana",
+        "address": "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru",
+        "label": "Solayer sUSD program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty — confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Solayer sUSD FAQ",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ],
+      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Solayer sUSD program upgrade authority",
+      "observedAt": "2026-06-11",
+      "observedBlock": 425792161,
+      "sources": [
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solayer sUSD FAQ",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+        }
+      ]
+    }
+  }
+}

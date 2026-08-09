@@ -1,0 +1,134 @@
+{
+  "id": "lisusd-lista",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sourcify LisUSD implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xf5bd9b192092517d60e90c9af17b69b134c4d7f8?fields=sources"
+      },
+      {
+        "label": "Lista lisUSD CDP documentation",
+        "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd"
+      },
+      {
+        "label": "Lista lisUSD contract deployment",
+        "url": "https://bscscan.com/token/0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5"
+      },
+      {
+        "label": "Sourcify verified wBETH implementation",
+        "url": "https://sourcify.dev/server/v2/contract/56/0xfe928A7D8Be9c8cEce7e97F0Ed5704f4fA2cb42A?fields=abi,sources"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. The lisUSD implementation exposes ordinary transfers, allowance-gated burns, and ward-gated mint/cap administration without a native blacklist or holder-selective transfer control. Current collateral nevertheless includes wBETH, whose live BSC implementation exposes blacklist/isBlacklisted and pause/unpause controls, in addition to the documented USDT/USDC/FDUSD PSM exposure. Those positive reserve-side issuer controls resolve lisUSD as Upstream rather than No.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Lista's Resilient Price Oracle cross-validates multiple configured providers for lisUSD collateral markets before Maker-style collateral ratios and Dutch-auction liquidation use the selected price.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "lisUSD borrowing spans governance-approved collateral markets with distinct oracle combinations, minimum collateral ratios, liquidation penalties, and auction parameters. The markets share the Resilient Oracle validation and Maker-style liquidation architecture reviewed here, while stablecoin PSM conversion is a fixed-price rail rather than a collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "Lista Multi-Oracle documentation",
+          "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/multi-oracle"
+        },
+        {
+          "label": "Lista loan liquidation documentation",
+          "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation"
+        },
+        {
+          "label": "Lista collateral FAQ",
+          "url": "https://docs.bsc.lista.org/introduction/faq"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Lista Multi-Oracle docs",
+        "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/multi-oracle"
+      },
+      {
+        "label": "Lista loan liquidation documentation",
+        "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation"
+      },
+      {
+        "label": "Lista revenue and risk buffer",
+        "url": "https://docs.bsc.lista.org/governance/velista/revenue-cost"
+      }
+    ],
+    "branches": [
+      {
+        "id": "lista-cdp-collateral-markets",
+        "label": "Lista lisUSD collateral markets",
+        "tier": "redundant-with-failover",
+        "summary": "Governance-approved lisUSD markets share Resilient Oracle cross-validation and Maker-style collateral accounting and Dutch-auction liquidation with market-specific parameters.",
+        "collateralAssets": [
+          "Governance-approved lisUSD CDP collateral types"
+        ],
+        "chains": [
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Lista Resilient Price Oracle",
+            "path": "Configured Binance Oracle, Chainlink, RedStone, or API3 sources -> cross-validation -> Lista Spot collateral price",
+            "address": "0xf3afD82A4071f272F403dC176916141f44E6c750",
+            "chain": "bsc",
+            "failureDomainKeys": [
+              "lista-oracle-governance",
+              "lista-resilient-oracle",
+              "lista-configured-price-providers",
+              "bsc"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Lista's Resilient Oracle can compare multiple provider prices and activate or deactivate token-specific sources; assets still migrating may retain their documented provider-specific feed until configured in the resilient layer.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved lisUSD CDP collateral types",
+            "note": "Each collateral type has its own governance-set minimum collateral ratio, liquidation penalty, auction decay, reset threshold, and debt limits; published ratios vary by market and are not represented as one estimate."
+          }
+        ],
+        "liquidationMechanism": "When safety-adjusted collateral value falls below lisUSD debt, Lista absorbs the debt and sells collateral through a descending-price Dutch auction; any user may trigger or restart auctions for gas compensation, and a manually enabled Liquidation Zone can admit community liquidators when official bots fail on large or complex positions.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds repay lisUSD debt, while Lista discloses a live lisUSD Risk Buffer Fund funded from protocol revenue to cover potential shortfalls during black-swan events.",
+        "shutdownOrBadDebtBehavior": "Collateral-auction shortfalls are protocol debt exposures that may draw on the lisUSD Risk Buffer Fund. The reviewed documentation does not identify a global lisUSD shutdown or holder settlement mechanism.",
+        "failureDomainKeys": [
+          "lista-oracle-governance",
+          "lista-auction-bots",
+          "lista-community-liquidators",
+          "lista-risk-buffer",
+          "bsc"
+        ],
+        "sources": [
+          {
+            "label": "Lista Multi-Oracle documentation",
+            "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/multi-oracle"
+          },
+          {
+            "label": "Lista loan liquidation documentation",
+            "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation"
+          },
+          {
+            "label": "Lista Liquidation Zone",
+            "url": "https://docs.bsc.lista.org/introduction/lista-lending/liquidation/liquidation-zone"
+          },
+          {
+            "label": "Lista revenue and risk buffer",
+            "url": "https://docs.bsc.lista.org/governance/velista/revenue-cost"
+          }
+        ]
+      }
+    ]
+  }
+}

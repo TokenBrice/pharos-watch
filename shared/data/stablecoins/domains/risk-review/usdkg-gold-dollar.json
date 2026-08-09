@@ -1,0 +1,98 @@
+{
+  "id": "usdkg-gold-dollar",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.usdkg.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDKG has no cross-chain bridge: it is a standalone Tether-style token issued and burned natively on each chain by the issuer (Gold Dollar / OJSC Virtual Asset Issuer) via issue()/redeem() functions, with separate, non-identical contract addresses on Ethereum (0xe820...45e3) and Tron (TXZo12...nwEG). Supply on each chain is independently issuer-minted against gold reserves with no cross-chain dependency, so the route is single-chain-or-native rather than opaque.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ConsenSys Diligence — USDKG smart contract audit (Jan 2025): standalone Tether-style token, issue()/redeem() mint/burn by owners, blacklist + destroyBlackFunds, no bridge in scope",
+        "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+      },
+      {
+        "label": "USDKG official site — lists separate Ethereum and Tron addresses, no bridge/cross-chain mechanism documented; direct mint/redeem for institutional clients only",
+        "url": "https://www.usdkg.com/"
+      },
+      {
+        "label": "USDKG transparency page — Kreston Global reserve audit confirming issuer controls mint/burn wallets with test transactions on Ethereum and Tron",
+        "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Ethereum token on Etherscan — non-upgradeable ERC-20, owner is 3-of-7 multisig, issue()/redeem() mint/burn",
+        "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+      },
+      {
+        "label": "CryptoBriefing — Kyrgyzstan launches USDKG, Tron-first deployment with Ethereum next phase, supply growth via additional gold + minting",
+        "url": "https://cryptobriefing.com/kyrgyzstan-usdkg-gold-backed-stablecoin-tron/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tron:TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+        "destinationChain": "tron",
+        "contractAddress": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
+        "protocol": "USDKG issuer-native (Gold Dollar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TronGrid constant call on 2026-07-20 confirms name() = USDKG and owner() = TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd, the verified 3-of-7 issuer multisig; USDKG is issued natively per chain via owner-gated issue()/redeem() with no bridge in scope (ConsenSys Diligence audit). No bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDKG Tron token on TronScan",
+            "url": "https://tronscan.org/#/token20/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG"
+          },
+          {
+            "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xe820c06321e60d36257c666643fa5436643445e3",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe820c06321e60d36257c666643fa5436643445e3",
+        "protocol": "USDKG issuer-native (Gold Dollar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the 3-of-7 issuer Safe 0xcf355ad32abf378f067fa93a28d96a767feb7377 (getOwners() = 7, getThreshold() = 3); USDKG is issued natively per chain via owner-gated issue()/redeem() with no bridge in scope (ConsenSys Diligence audit). No bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDKG Ethereum token on Etherscan",
+            "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+          },
+          {
+            "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+          }
+        ]
+      }
+    ]
+  }
+}

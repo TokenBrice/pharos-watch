@@ -1,0 +1,37 @@
+{
+  "id": "msusd-main-street",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: MSUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "MSUSD is deployed on Ethereum and Sonic. Sonic documentation describes Sonic Gateway as the native Ethereum/Sonic bridge, so Pharos treats this as canonical/native gateway route exposure rather than a third-party liquidity bridge.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Sonic Gateway",
+        "url": "https://docs.soniclabs.com/sonic/sonic-gateway",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Main Street Finance",
+        "url": "https://mainstreet.finance/"
+      },
+      {
+        "label": "Sonic Gateway docs",
+        "url": "https://docs.soniclabs.com/sonic/sonic-gateway"
+      }
+    ]
+  }
+}

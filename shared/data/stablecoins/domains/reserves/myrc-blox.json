@@ -1,0 +1,99 @@
+{
+  "id": "myrc-blox",
+  "reserves": [
+    {
+      "name": "MYR cash at Malaysian banks",
+      "pct": 81.964029,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed Malaysian banks (trustee accounts)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Halogen Shariah MYR Liquid Fund",
+      "pct": 18.035971,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Halogen Capital (Securities Commission Malaysia-licensed asset manager)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08; R13 reserve pass",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2026-06-30)",
+        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf"
+      },
+      {
+        "label": "BLOX MYRC transparency",
+        "url": "https://www.blox.my/myrc/transparency"
+      }
+    ],
+    "rationale": "Tommy Ung & Partners PLT ISAE 3000 (Revised) reasonable-assurance examination as of 30 June 2026 (report dated 2026-07-21, PDF read this pass): MYR 1,817,790.25 cash (81.96%) and MYR 400,000.00 in the Halogen Shariah MYR Liquid Fund (18.04%), totalling MYR 2,217,790.25 exactly equal to 2,217,790.25 MYRC in circulation (zero surplus). Circulation = 6,365,298.65 total supply less 4,147,508.40 authorized-but-not-issued. The report restricts distribution to the Company and discloses BLOX is in Open Beta and not in any Malaysian regulatory sandbox. The prior 100%-cash composition (from the 2025-07-31 report) no longer holds. R13 re-open 2026-08-08: no July 2026 attestation was publicly accessible; the June 2026 composition remains the freshest available.",
+    "compositionBasis": "Tommy Ung & Partners PLT examination as of 30 June 2026",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The latest independent report identifies 81.96% MYR cash/bank deposits and 18.04% Halogen Shariah MYR Liquid Fund, but the specific Malaysian financial institutions, provider shares, account segregation, and legal terms are not disclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "MYR cash at Malaysian banks",
+        "pct": 81.964029,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The June 2026 examination identifies MYR cash at banks; fiat cash is an exogenous reserve rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Halogen Shariah MYR Liquid Fund",
+        "pct": 18.035971,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Halogen Shariah MYR Liquid Fund is a Securities Commission Malaysia-licensed money-market fund, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Malaysian financial institutions",
+        "role": "bank",
+        "jurisdiction": "Malaysia"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve batch 7; Codex T61 re-review 2026-07-31",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BLOX MYRC transparency",
+        "url": "https://www.blox.my/myrc/transparency"
+      },
+      {
+        "label": "MYRC whitepaper",
+        "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+      },
+      {
+        "label": "Tommy Ung & Partners PLT MYRC reserve attestation (2025-07-31)",
+        "url": "https://cdn.blox.my/attestations/2025/Blox%20Attestation%20Report-2025-07-July.pdf"
+      }
+    ],
+    "uncertainty": "BLOX and the latest attestation identify MYR cash deposits held for MYRC redemption but do not identify the institutions or establish current provider shares, account segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "knownUnknownExposurePct": 0
+  }
+}

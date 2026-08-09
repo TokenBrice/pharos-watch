@@ -1,0 +1,87 @@
+{
+  "id": "msusd-metronome",
+  "reserves": [
+    {
+      "name": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Metronome Synth user-deposited collateral",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve research; Kimi R05 underbacking disclosure re-verify",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Metronome Synth deposit and mintage caps",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/metronome-synth-mintage-and-deposit-caps"
+      },
+      {
+        "label": "Metronome Synth liquidation design",
+        "url": "https://docs.metronome.io/metronome-synth/risks/liquidation"
+      },
+      {
+        "label": "Metronome Synth supported assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
+      },
+      {
+        "label": "Metronome post-mortem: msETH/msUSD underbacking",
+        "url": "https://paragraph.com/@metronomedao/post-mortem-msethmsusd-underbacking"
+      }
+    ],
+    "rationale": "Re-opened Metronome primary docs and the 2026-07-30 post-mortem on 2026-08-08. Deposit/mintage caps still enumerate eligible msUSD collateral (USDC, DAI, FRAX, ETH, WBTC, sfrxETH, and Vesper va-tokens) with per-asset caps and CF-based mintage formula. The post-mortem discloses that the synth swap module accumulated unbacked float, leaving ~4.57 million msUSD (and ~6,367 msETH) in circulation without matching debt positions at the time of disclosure; the protocol has deployed protocol-owned liquidity and defensive positions sized to close the gap if msUSD/msETH depeg by roughly 30%. Because pools are cross-margin multi-synth, DepositToken balances still cannot be attributed solely to msUSD without debt-side attribution the issuer does not publish. No public dashboard, attestation, or dual-source on-chain snapshot of current msUSD-specific weights was found, so the documented eligible envelope is retained as one 100% basket-needs-split row rather than a fabricated allocation.",
+    "compositionBasis": "Metronome Synth collateral-cap, supported-assets, liquidation documentation, and July 2026 underbacking post-mortem (re-opened 2026-08-08)",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition, and the July 2026 post-mortem confirms a period of underbacking in the synth swap module that left approximately 4.57 million msUSD without matching debt positions.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer names eligible collateral and deposit/mintage limits but does not disclose current composition weights; multi-synth cross-margin pools prevent inventing an msUSD-only split from pool TVL."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Metronome Synth per-asset DepositToken and Pool contracts (Ethereum, Optimism, Base, Hemi)",
+        "role": "other"
+      },
+      {
+        "name": "Vesper pool contracts underlying va-token collateral",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Metronome Synth supported assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
+      },
+      {
+        "label": "Metronome Synth contract addresses",
+        "url": "https://docs.metronome.io/metronome-synth/contracts"
+      }
+    ],
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design — hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "knownUnknownExposurePct": 100
+  }
+}

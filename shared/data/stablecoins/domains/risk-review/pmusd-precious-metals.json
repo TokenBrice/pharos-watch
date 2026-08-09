@@ -1,0 +1,36 @@
+{
+  "id": "pmusd-precious-metals",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: pmUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "pmUSD uses an external gold-linked price for RWf(x) treasury accounting, but RAAC explicitly disables liquidation and self-liquidation, so there is no external liquidation-oracle branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "RAAC documents pmUSD as a manager-only RWf(x) fToken where xPM absorbs collateral-price volatility, the treasury reads an Instruxi/Chainlink-linked RWA price, and all liquidation and self-liquidation mechanisms are disabled. Under-collateralization instead blocks operations and permits pro-rata fToken redemption, so collateral liquidation branches are not applicable.",
+      "sources": [
+        {
+          "label": "RAAC RWf(x) documentation",
+          "url": "https://docs.raac.io/rw-fx/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RAAC RWf(x) documentation",
+        "url": "https://docs.raac.io/rw-fx/"
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "cetes-etherfuse",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "CETES is issued by Etherfuse as a NAV-accreting tokenized fund. On Solana the mintAuthority is a 1-of-2 SPL Token-2022 multisig controlled by Etherfuse; on Base/Polygon the owner is a single EOA also holding the proxy admin upgrade path.",
+    "controls": [
+      {
+        "label": "Etherfuse issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Etherfuse mints CETES on KYC'd subscription and burns on redemption at NAV against CETES bonds custodied via INDEVAL; supply creation is issuer-controlled with no permissionless route."
+      },
+      {
+        "label": "CETES Solana SPL Token-2022 mint authority — 1-of-2 multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Solana mainnet (2026-06-11): getAccountInfo on CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f shows mintAuthority = A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP; getAccountInfo on A6nFyQb... shows it is a Token-2022 SPL multisig with numRequiredSigners=1, numValidSigners=2, signers=[G26XjZN79HvpTCJKwKCBqw1EWSurUAdTjLwXjB89yBAc, CB8DiXX5DUEqvc1xA4PAhYMNUVaqW5BGatantgqEHJ4A]. FreezeAuthority is None."
+      },
+      {
+        "label": "CETES Base/Polygon owner EOA + proxy admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Base block 47200682 and Polygon (2026-06-11): owner() on 0x834df4c1d8f51be24322e39e4766697be015512f returned 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f on both chains; eth_getCode on that address = 2 bytes (EOA confirmed). EIP-1967 proxy admin slot = 0x322922f0e1675a8e7be2a38b0636a7c184082ca8 (ProxyAdmin contract), whose owner() also returns 0xf0a5e0... (same EOA). EIP-1967 implementation slot = 0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678. The same EOA controls both the token role and the upgrade path."
+      }
+    ],
+    "review": {
+      "evidence": "Solana: CETES mintAuthority confirmed as 1-of-2 SPL Token-2022 multisig (A6nFyQb...) with 2 Etherfuse-operated signers. Base/Polygon: owner = EOA 0xf0a5e0... (also owns the ProxyAdmin at 0x322922...). The EOA controls both ownership and upgrade rights on EVM chains.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Etherfuse Proof of Reserves",
+          "url": "https://app.etherfuse.com/legal/proof-of-reserves"
+        },
+        {
+          "label": "CETES Base contract",
+          "url": "https://basescan.org/address/0x834df4c1d8f51be24322e39e4766697be015512f"
+        },
+        {
+          "label": "CETES Solana mint",
+          "url": "https://solscan.io/token/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "id": "yusd-aegis",
+  "reserves": [
+    {
+      "name": "Copper",
+      "pct": 71.9,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aegis and Copper",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fireblocks",
+      "pct": 27.9,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aegis and Fireblocks",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Insurance Fund Usage",
+      "pct": 0.2,
+      "risk": "very-high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aegis protocol insurance fund (delta-neutral strategy backstop)",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Aegis Accountable YUSD dashboard API",
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+      },
+      {
+        "label": "Aegis YUSD backing and strategy",
+        "url": "https://aegis.im/"
+      }
+    ],
+    "rationale": "The 2026-07-27 Accountable snapshot split the adapter's scored reserve envelope into Copper 71.9%, Fireblocks 27.9%, and Insurance Fund Usage 0.2%; the separately reported Insurance Fund bucket stays excluded from total reserves. Insurance Fund Usage is the drawn portion of Aegis's own insurance fund (funded from funding-rate yield as the delta-neutral backstop) currently deployed inside the scored reserve envelope, so it is classified as protocol self-reserve hedged-crypto rather than an external obligor. Accountable bucket labels are dynamic: a later same-day snapshot (dashboard ts 1785170794) showed small Binance and chain-dust buckets in place of Insurance Fund Usage, so curated rows track the named 2026-07-27 captured exposures. Aegis describes the envelope as pooled BTC spot and short COIN-M perpetual positions, but the public snapshot does not split either custodian bucket into spot, derivative equity, margin, or venue exposures.",
+    "compositionBasis": "Accountable reserves_split values, normalized by the existing live-reserve adapter after excluding the separately reported insurance fund",
+    "compositionAsOf": "2026-07-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both custody buckets contain an undisclosed mix of spot, hedge, margin, and counterparty exposures; the drawn insurance-fund slice is disclosed as protocol self-reserve.",
+    "knownUnknownExposurePct": 99.8,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Copper",
+        "pct": 71.9,
+        "disposition": "basket-needs-split",
+        "rationale": "The snapshot identifies the custody bucket but does not split its BTC spot, derivative, margin, and venue exposures."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Fireblocks",
+        "pct": 27.9,
+        "disposition": "basket-needs-split",
+        "rationale": "The snapshot identifies the custody bucket but does not split its BTC spot, derivative, margin, and venue exposures."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Insurance Fund Usage",
+        "pct": 0.2,
+        "disposition": "self-reserve",
+        "rationale": "The slice is the drawn portion of Aegis's own insurance fund inside the scored reserve envelope, a protocol self-reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

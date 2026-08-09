@@ -1,0 +1,140 @@
+{
+  "id": "dola-inverse-finance",
+  "reserves": [
+    {
+      "name": "sUSDe collateral",
+      "pct": 81.9,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ethena (sUSDe staked USDe issuer)",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "basis",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS collateral",
+      "pct": 11.8,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault issuer)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Other collateral",
+      "pct": 3.3,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM residual collateral markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ETH / Liquid staking (wstETH, WETH)",
+      "pct": 1.4,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ETH and liquid staking tokens (Lido wstETH, WETH)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Governance tokens (INV, CRV, CVX)",
+      "pct": 1.1,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BTC (WBTC, cbBTC)",
+      "pct": 0.5,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped BTC custodians (WBTC, Coinbase cbBTC)",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse Finance FiRM markets API",
+        "url": "https://www.inverse.finance/api/f2/fixed-markets"
+      },
+      {
+        "label": "Inverse Finance DOLA documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+      },
+      {
+        "label": "Inverse Finance transparency documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      }
+    ],
+    "rationale": "Re-verified against the live Inverse FiRM markets API on 2026-08-08. This review mirrors the live dola-inverse adapter's exact normalized names and one-decimal weights. The adapter buckets all non-tracked stablecoins and unrecognized collateral symbols into the 3.3% 'Other collateral' slice, which is classified as a residual protocol-position exposure rather than a tracked stablecoin dependency.",
+    "compositionBasis": "Inverse Finance FiRM markets API totalDebt values normalized by the live dola-inverse adapter",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every live adapter slice is named and classified; the 3.3% 'Other collateral' bucket is an aggregate of non-tracked collateral markets and is classified as a residual protocol-position exposure.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "ETH / Liquid staking (wstETH, WETH)",
+        "pct": 1.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH and liquid-staking collateral is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Governance tokens (INV, CRV, CVX)",
+        "pct": 1.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Governance-token collateral is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "BTC (WBTC, cbBTC)",
+        "pct": 0.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Bitcoin collateral is not a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

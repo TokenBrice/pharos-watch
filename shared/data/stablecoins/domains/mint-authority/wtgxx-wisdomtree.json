@@ -1,0 +1,76 @@
+{
+  "id": "wtgxx-wisdomtree",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "WTGXX minting is gated by REGISTRAR_ROLE (keccak256 = 0xedcc084d...) across all EVM chains. Confirmed REGISTRAR_ROLE = EOA 0x726D3b3e... and DEFAULT_ADMIN = EOA 0x6257759e... on Ethereum, Arbitrum, Avalanche, Base, Optimism, and Plume. Stellar issuer has 2 signers (weights 255+50, thresholds 25/50/150) confirming centralized issuer model.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x726D3b3e18e301719b383FdE4F99A5d31B9438e5",
+        "label": "WTGXX REGISTRAR_ROLE holder (all EVM chains)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WTGXX Sourcify implementation (ETH)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+          },
+          {
+            "label": "Etherscan WTGXX Ethereum",
+            "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179"
+          }
+        ],
+        "evidence": "At Ethereum block 25295081, eth_getCode confirms EOA (no bytecode). REGISTRAR_ROLE = keccak256('REGISTRAR_ROLE') = 0xedcc084d3dcd65a1f7f23c65c46722faca6953d28e43150a467cf43e5c309238. hasRole(REGISTRAR_ROLE, 0x726d3b3e...) = true on Ethereum (RoleGranted logs), Arbitrum (RoleGranted logs), Avalanche (hasRole call at block ~87750732), Base (hasRole call at block 47200982), Optimism, and Plume — same EOA holds REGISTRAR_ROLE on all 6 EVM chains."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6257759edD99f677052727f7Ef3a055029DFA58a",
+        "label": "WTGXX DEFAULT_ADMIN_ROLE holder (all EVM chains)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WTGXX Ethereum token",
+            "url": "https://etherscan.io/address/0x1fecf3d9d4fee7f2c02917a66028a48c6706c179"
+          }
+        ],
+        "evidence": "At Ethereum block 25295081, eth_getCode confirms EOA (no bytecode). hasRole(DEFAULT_ADMIN_ROLE=0x0000..., 0x6257759e...) = true on Ethereum (RoleGranted logs), Arbitrum (RoleGranted logs), Base (hasRole call), and Optimism (hasRole call) — same EOA holds DEFAULT_ADMIN on all verified EVM chains."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "WisdomTree WTGXX",
+          "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+        },
+        {
+          "label": "WisdomTree Connect",
+          "url": "https://www.wisdomtree.com/connect"
+        },
+        {
+          "label": "WTGXX Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xC2A8ca84BC363605c36757f9409b214b6ee710c9?fields=sources,abi,metadata"
+        },
+        {
+          "label": "Arbitrum Blockscout RoleGranted logs",
+          "url": "https://arbitrum.blockscout.com/api?module=logs&action=getLogs&address=0xfeb26f0943c3885b2cb85a9f933975356c81c33d&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d&fromBlock=0&toBlock=latest"
+        },
+        {
+          "label": "Stellar Horizon WTGXX issuer account",
+          "url": "https://horizon.stellar.org/accounts/GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+        }
+      ],
+      "evidence": "REGISTRAR_ROLE = keccak256('REGISTRAR_ROLE') = 0xedcc084d... confirmed as the mint role from AccessControl.sol source. At block 25295081 (ETH) / 47200982 (Base): EOA 0x726d3b3e... holds REGISTRAR_ROLE on Ethereum, Arbitrum, Avalanche, Base, Optimism, Plume (hasRole calls all return true). EOA 0x6257759e... holds DEFAULT_ADMIN_ROLE on all EVM chains. Both EOAs confirmed no-bytecode. Stellar account GDMBNMFJ... has 2 signers (weights 255+50), thresholds 25/50/150, auth_required+auth_revocable+clawback — consistent with centralized issuer model. All addressable mint-capable surfaces verified across all deployments.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

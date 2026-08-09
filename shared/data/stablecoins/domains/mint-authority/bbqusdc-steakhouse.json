@@ -1,0 +1,106 @@
+{
+  "id": "bbqusdc-steakhouse",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "bbqUSDC is an immutable MetaMorpho ERC-4626 vault (no EIP-1967 proxy slots); shares are minted only against USDC deposits. Vault owner is the Steakhouse Safe v1.4.1 8/5. Base USDC issuance is inherited from Circle.",
+    "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Smokehouse USDC vault",
+          "url": "https://etherscan.io/address/0xbeefff209270748ddd194831b3fa287a5386f5bc#code"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xbeefff209270748ddd194831b3fa287a5386f5bc",
+        "label": "Smokehouse USDC MetaMorpho vault (immutable, deposit-only mint)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Vault shares are minted only against deposited USDC. No EIP-1967 proxy admin or implementation slot was found; the owner can manage Morpho vault parameters but cannot mint unbacked base USDC.",
+        "sources": [
+          {
+            "label": "Morpho vault page",
+            "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+          },
+          {
+            "label": "MetaMorpho source",
+            "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, asset() returned USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48), owner() returned Steakhouse Safe 0x0a0e559b..., and the EIP-1967 implementation, proxy-admin, and beacon slots were all zero. The direct MetaMorpho code therefore has no implementation-replacement path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Inherited Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Reviewed USDC metadata source",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
+      }
+    ],
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+        },
+        {
+          "label": "Etherscan token contract",
+          "url": "https://etherscan.io/token/0xbeefff209270748ddd194831b3fa287a5386f5bc"
+        },
+        {
+          "label": "MetaMorpho source",
+          "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Circle USDC transparency",
+          "url": "https://www.circle.com/transparency"
+        },
+        {
+          "label": "Deloitte USDC examination - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "NYDFS regulated virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        }
+      ],
+      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
+      "reviewer": "Codex data review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

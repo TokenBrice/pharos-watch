@@ -1,0 +1,100 @@
+{
+  "id": "dusd-alto",
+  "reserves": [
+    {
+      "name": "frxUSD held by the DUSD USM",
+      "pct": 90.4,
+      "risk": "low",
+      "coinId": "frxusd-frax",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Finance / frxUSD",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WETH / wstETH / rETH mint-market collateral",
+      "pct": 5.9,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum native asset and liquid staking tokens (WETH, Lido wstETH, Rocket Pool rETH) posted as collateral in Alto DUSD mint markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDe mint-market collateral",
+      "pct": 3.6,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena sUSDe staking contract and underlying USDe reserve",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "market",
+        "basis",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Syrup USDC mint-market collateral",
+      "pct": 0.1,
+      "risk": "medium",
+      "coinId": "syrupusdc-maple",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple Syrup USDC vault and underlying Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex Safety Score V9 reserve batch 7; R13 structuring pass",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Alto live protocol snapshot API",
+        "url": "https://altofoundation.org/api/protocol-snapshot"
+      },
+      {
+        "label": "Alto DUSD mint and borrow documentation",
+        "url": "https://docs.alto.money/alto-protocol/dusd"
+      },
+      {
+        "label": "DUSD USM on Blockscout",
+        "url": "https://eth.blockscout.com/address/0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91"
+      }
+    ],
+    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and are not backing sources. The 2026-07-21 issuer API reports active mint-market DUSD debt of 32,735.51647 against sUSDe, 3,903.60575 against WETH, 885.53777 against syrupUSDC, 633.58275 against rETH, and 49,500.86509 against wstETH. Combining those debts with the USM's 822,997.840132 frxUSD balance at Ethereum block 25580115 still rounds to 90.4% frxUSD, 5.9% ETH/LST collateral, 3.6% sUSDe, and 0.1% syrupUSDC. The 2026-08-08 R13 pass added explicit V9 scoring fields (assetClass, issuerOrObligor, riskFactors, liquidityHorizon) to every slice, including the tracked-stablecoin slices.",
+    "compositionBasis": "Current issuer API mint-market DUSD debt combined with the on-chain USM underlying balance",
+    "compositionAsOf": "2026-07-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All active DUSD issuance paths and their direct backing assets are identified.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "WETH / wstETH / rETH mint-market collateral",
+        "pct": 5.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The slice contains ETH and liquid-staking collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

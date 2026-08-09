@@ -1,0 +1,50 @@
+{
+  "id": "ylds-figure",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "YLDS is a face-amount certificate issued by Figure Certificate Company, registered under the Investment Company Act of 1940 (File No. 811-23913) and the Securities Act of 1933 (File No. 333-275154, effective February 18, 2025). The GENIUS Act (enacted as Public Law 119-27) expressly excludes from the definition of 'payment stablecoin' any digital asset that is a 'security' under the Investment Company Act. Face-amount certificates are a defined category of investment company security under that Act. YLDS therefore falls outside the GENIUS Act's jurisdiction and is exempt from its yield prohibition and PPSI requirements."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Figure Certificate Company",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC (Investment Company Act of 1940, face-amount certificate company)",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "YLDS is a registered face-amount certificate under the Investment Company Act of 1940, not a payment stablecoin. The GENIUS Act (enacted as Public Law 119-27) expressly excludes from its 'payment stablecoin' definition any digital asset that is a security under the Investment Company Act of 1940. The issuer (Figure Certificate Company, CIK 0001974395) confirms YLDS is 'exempt from the yield prohibition in the GENIUS Act.' No GENIUS authorization, pathway, or enforcement assessment applies.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "YLDS prospectus (SEC S-1, File No. 333-275154)",
+        "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
+        "sourceKind": "issuer-filing"
+      },
+      {
+        "label": "Figure Certificate Company SEC EDGAR filings (CIK 0001974395)",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001974395&type=&dateb=&owner=include&count=10",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "GENIUS Act enacted text (Public Law 119-27)",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute"
+      },
+      {
+        "label": "YLDS website — confirms GENIUS Act yield exemption",
+        "url": "https://www.ylds.com/",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

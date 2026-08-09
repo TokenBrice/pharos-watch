@@ -1,0 +1,88 @@
+{
+  "id": "usd3-reserve-protocol",
+  "reserves": [
+    {
+      "name": "Savings USDS",
+      "pct": 25,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Static Aave Ethereum USDC",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Wrapped Compound USDCv3",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Compound and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Steakhouse USDC strategy",
+      "pct": 25,
+      "risk": "medium",
+      "coinId": "steakusdc-steakhouse",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Steakhouse and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve DTF transparency API",
+        "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "Reserve Yield DTF overview",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview"
+      }
+    ],
+    "rationale": "USD3's governed basket targets four identified collateral positions at approximately equal weight. The authored 25% slices are a rounded fallback for static display, not a claim that a transient API snapshot remains exact; the existing reserve-protocol-dtf onchain adapter is authoritative for current live weights.",
+    "compositionBasis": "Approximate equal-weight governed basket targets cross-checked against Reserve documentation; live onchain adapter is authoritative",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current collateral token identities and weights are disclosed, but the API does not disclose the underlying custody allocation or protocol-level reserve composition inside the wrapped strategy tokens.",
+    "knownUnknownExposurePct": 0
+  }
+}

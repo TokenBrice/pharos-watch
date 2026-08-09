@@ -1,0 +1,101 @@
+{
+  "id": "usr-resolv",
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "USR minting was gated by an off-chain backend: users deposited collateral on-chain via requestSwap, then an off-chain SERVICE_ROLE signer attested the USR amount and completed the mint via completeSwap. The minting contract performed no oracle, ratio, per-tx, or max-supply check, and the SERVICE_ROLE was a single EOA whose compromise let an attacker mint 80M unbacked USR in March 2026.",
+    "mintIncidents": [
+      {
+        "date": "2026-03-22",
+        "status": "active",
+        "summary": "A compromised off-chain SERVICE_ROLE key and unchecked mint parameters let the attacker mint about 80M unbacked USR and extract roughly $25M.",
+        "sources": [
+          {
+            "label": "The Block — Resolv USR 80M unbacked mint",
+            "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+          },
+          {
+            "label": "CoinDesk — Resolv stablecoin exploit",
+            "url": "https://www.coindesk.com/markets/2026/03/23/resolv-stablecoin-drops-70-after-usd80-million-exploit-after-attacker-mints-usr"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "label": "Resolv SERVICE_ROLE off-chain minting signer",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "requestSwap/completeSwap relied on an off-chain SERVICE_ROLE backend signer; incident reporting describes a single EOA AWS-KMS key compromise.",
+          "onchainAmountBounds": "Minting contract performed no oracle, ratio, per-transaction, or max-supply check tying minted USR to deposited collateral.",
+          "unsupportedReason": "Post-exploit SERVICE_ROLE holder set still includes multiple contracts/signers; this frozen asset remains scored as unbounded/compromised."
+        },
+        "evidence": "Post-mortem and incident analyses describe a requestSwap/completeSwap flow where the minted USR amount is supplied by an off-chain SERVICE_ROLE backend (single EOA, AWS-KMS key) with no on-chain validation tying minted amount to deposited collateral; its compromise produced 80M unbacked USR."
+      },
+      {
+        "label": "Admin Safe (DEFAULT_ADMIN, token owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "chain": "ethereum",
+        "address": "0xd6889f307be1b83bb355d5da7d4478fb0d2af547",
+        "signerCount": 6,
+        "threshold": 4,
+        "routeChecks": {
+          "pausersAdminsUpgraders": "Admin Safe holds DEFAULT_ADMIN/token owner posture and can authorize SERVICE_ROLE changes; reviewed as 4-of-6 Safe v1.3 with no modules or guard.",
+          "caps": "Admin can manage roles, but the compromised mint route had no effective on-chain collateral or max-supply bound."
+        },
+        "evidence": "At block 25295177: USR token owner() = 0xd6889f…; Blockscout: GnosisSafeProxy; getThreshold() = 4; getOwners() returned 6 addresses; masterCopy slot0 = 0xd9db270c… (Safe v1.3); guard slot = 0x0; modules empty. DEFAULT_ADMIN RoleGranted to this Safe is active (initial 0x8729dae was revoked).",
+        "safe": {
+          "owners": [
+            "0x9a73d57bb1fb280c5672a13f655675de25f13b70",
+            "0x8de707f6f4cffd55ca9f4e493cf126818ea70482",
+            "0xd279d5f4e2979d61ea646865599e4f35b10f9fec",
+            "0xe84b20a7590c51bb4aa913f29407254a4d817c77",
+            "0x5bfeee5e8105c7ca7f78b08c61c25842656bda18",
+            "0x21bdfe7265a702d7f462b46c00a0fb39b39b9972"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "unknown",
+          "version": "1.3.0",
+          "observedBlock": 25295177,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "USR token (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295177: USR token (0x66a1e37…) is a TransparentUpgradeableProxy; impl = 0xef4c4bc… (ContractName 'SimpleToken', SERVICE_ROLE-gated mint/burn); proxy admin = 0x44a41b… (ProxyAdmin contract), ProxyAdmin owner = 0x290d954… (large contract, 16090 bytes). Token owner() = 0xd6889f… (GnosisSafeProxy): 6 owners, 4/6 threshold, Safe v1.3, no modules (getModulesPaginated returned empty), no guard (storage slot = 0x0). DEFAULT_ADMIN RoleGranted: originally 0x8729dae (revoked) + 0xd6889f (Safe, active). SERVICE_ROLE: 13 RoleGranted, 5 RoleRevoked; current active holders: 0xa27a69 (contract 24938 bytes), 0xac85ef (contract 27892 bytes), 0x60a7b7, 0x9f805f, 0x36c9b5, 0xd6889f (Safe), 0x1202f5. Multiple backend signers remain post-exploit; coin is frozen since 2026-04-27.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "USR token (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110"
+        },
+        {
+          "label": "The Block — Resolv USR depeg / 80M unbacked mint",
+          "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+        },
+        {
+          "label": "resolv-im/resolv-contracts-public (GitHub)",
+          "url": "https://github.com/resolv-im/resolv-contracts-public"
+        }
+      ]
+    }
+  }
+}

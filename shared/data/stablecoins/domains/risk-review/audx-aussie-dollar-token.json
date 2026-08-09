@@ -1,0 +1,175 @@
+{
+  "id": "audx-aussie-dollar-token",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ethereum Blockscout AUDX contract",
+        "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      },
+      {
+        "label": "Polygon Blockscout AUDX contract",
+        "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      },
+      {
+        "label": "AUDX website",
+        "url": "https://www.audxtoken.com/"
+      }
+    ],
+    "evidence": "The reviewed AUDX ERC1967 deployment evidence identifies a BLACKLISTER role alongside DEFAULT_ADMIN_ROLE, PAUSER, MINTER_ROLE, SALVAGER, and UPGRADER on the Ethereum and Polygon token contracts. That role is issuer-controlled through the deployment admin, so AUDX has direct holder-level transfer restriction capability; the issuer also describes AUDX as an issuer-managed token available on Ethereum and Polygon.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "TAU Pty Ltd issuer-native multichain AUDX: terms state issuance on Ethereum and Polygon and expressly permit issuance on other blockchains; the issuer website claims 12+ supported chains. Exact on-chain checks at Conflux eSpace block 153047580 and XDC block 105432932 re-confirm Aussie Dollar Token / AUDX / 18 decimals with MINTER_ROLE held by the same issuer EOAs already inventoried in mintAuthority (0x1274d873 on Conflux; 0xc9d8603b on XDC, matching Ethereum/Polygon). All four tracked deployments are reviewed as native-issuance issuer routes with no third-party bridge controller.",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok Safety Score V9 wave-8 controls research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AUDX website (12+ chains supported)",
+        "url": "https://www.audxtoken.com/"
+      },
+      {
+        "label": "AUDX transparency",
+        "url": "https://www.audxtoken.com/transparency"
+      },
+      {
+        "label": "AUDX issuer terms and conditions (may issue on other blockchains)",
+        "url": "https://www.audxtoken.com/terms-and-conditions"
+      },
+      {
+        "label": "Conflux eSpace RPC write-time re-read",
+        "url": "https://evm.confluxrpc.com"
+      },
+      {
+        "label": "XDC Ankr RPC write-time re-read",
+        "url": "https://rpc.ankr.com/xdc"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TAU's current terms state that AUDX is issued on Ethereum and Polygon and that the company may mint or transfer AUDX to a nominated wallet. At Ethereum block 25573503, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for the deployment minter 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. No third-party bridge is documented for the issued Ethereum token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573503,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX Ethereum deployment",
+            "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TAU's current terms state that AUDX is issued on Ethereum and Polygon and that the company may mint or transfer AUDX to a nominated wallet. At Polygon block 90560276, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for the deployment minter 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. No third-party bridge is documented for the issued Polygon token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 90560276,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX Polygon deployment",
+            "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
+      },
+      {
+        "id": "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "destinationChain": "conflux",
+        "contractAddress": "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Write-time re-read at Conflux eSpace block 153047580: name()=Aussie Dollar Token, symbol()=AUDX, decimals=18, hasRole(MINTER_ROLE, 0x1274d87337eb9091e22b9686ae34ad54c989c883)=true. That minter is the same Conflux DEFAULT_ADMIN+MINTER EOA already inventoried in mintAuthority. TAU terms §2 authorize issuance on blockchains beyond Ethereum/Polygon; the issuer website states 12+ supported chains. No third-party bridge controller is present on this native deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-28",
+        "observedBlock": 153047580,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX website (Supported Blockchains / 12+ chains)",
+            "url": "https://www.audxtoken.com/"
+          },
+          {
+            "label": "AUDX Conflux eSpace deployment",
+            "url": "https://evm.confluxscan.org/address/0x47a365e29697c700c75d58936b3d93a8a20a43c9"
+          },
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
+      },
+      {
+        "id": "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "xdc",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Write-time re-read at XDC block 105432932 (Ankr): name()=Aussie Dollar Token, symbol()=AUDX, decimals=18, hasRole(MINTER_ROLE, 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28)=true. That minter is the same multi-chain DEFAULT_ADMIN+MINTER EOA used on Ethereum/Polygon/XDC in mintAuthority. TAU terms §2 authorize issuance on other blockchains; the issuer website states 12+ supported chains. Same-address ERC-20 deployment with issuer minter role is native issuance, not a third-party bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-28",
+        "observedBlock": 105432932,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX website (Supported Blockchains / 12+ chains)",
+            "url": "https://www.audxtoken.com/"
+          },
+          {
+            "label": "AUDX XDC deployment",
+            "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "XDC Ankr public RPC",
+            "url": "https://rpc.ankr.com/xdc"
+          }
+        ]
+      }
+    ]
+  }
+}

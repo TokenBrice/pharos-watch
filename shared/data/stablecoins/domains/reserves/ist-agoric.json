@@ -1,0 +1,15 @@
+{
+  "id": "ist-agoric",
+  "reserves": [
+    {
+      "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
+      "pct": 40,
+      "risk": "high"
+    },
+    {
+      "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
+      "pct": 60,
+      "risk": "low"
+    }
+  ]
+}

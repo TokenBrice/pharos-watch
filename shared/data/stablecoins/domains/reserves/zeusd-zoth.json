@@ -1,0 +1,98 @@
+{
+  "id": "zeusd-zoth",
+  "reserves": [
+    {
+      "name": "ZeUSD RWA collateral envelope (Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Multiple eligible RWA issuers and unspecified escrow counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verify (zeusd-zoth)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD product documentation (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+      },
+      {
+        "label": "Zoth ZeUSD mechanics (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+      },
+      {
+        "label": "Zoth ZeUSD terms and conditions (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+      },
+      {
+        "label": "Zoth contract deployments (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      },
+      {
+        "label": "ZeUSD V1 Ethereum implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28 of the product page, mechanics page, Terms, and contract-deployments registry (markdown endpoints fetched live): product and Terms still define ZeUSD as RWA-backed against high-quality liquid off-chain/on-chain RWAs including U.S. T-Bills, ETFs, MMFs, and Reverse Repos; mechanics and Terms still state accepted collateral as Treasuries/ETFs/MMFs (on- and off-chain) secured via isolated access-controlled escrow smart-contract vaults (on-chain) and traditional or omnibus escrow accounts (off-chain). The deployments page still labels the tracked Ethereum V1 stack 'Depricated' (token 0x7DC9748DA8E762e569F9269f48F69A1a9F8Ea761, router 0x6283F77Db630D6fe69A454ef6cf626e98B117C9b, historical USYC/wSTBT/T-Bill/wM/USD0++/ZTLN sub-vaults listed without balances) and publishes a separate V2 stack outside this coin's contracts. Independent on-chain corroboration at Ethereum block 25627223: symbol()='ZeUSD', decimals()=6, totalSupply()~27.65M units, and router depositsPaused()=true. No current component allocation, attestation, proof-of-reserves report, or assets-and-liabilities reconciliation is published in any re-opened source, so the single bounded RWA envelope with basket-needs-split and knownUnknownExposurePct=100 is retained; historical sub-vault names are not converted into weights.",
+    "compositionBasis": "Zoth product, mechanics, and Terms eligible-collateral statements re-opened 2026-07-28; component weights remain undisclosed",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current collateral positions, values, RWA issuers, escrow providers, cross-chain allocation, and assets-and-liabilities reconciliation are not published in accessible source material.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ZeUSD RWA collateral envelope (Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer documents eligible collateral categories and historical V1 vaults, but not a current component allocation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zoth isolated access-controlled escrow smart-contract vaults on Ethereum (on-chain RWA collateral)",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed traditional or omnibus escrow account providers (off-chain RWA collateral)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verify (zeusd-zoth)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD mechanics (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+      },
+      {
+        "label": "Zoth ZeUSD terms and conditions (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+      },
+      {
+        "label": "Zoth contract deployments (re-opened 2026-07-28)",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      }
+    ],
+    "uncertainty": "Re-opened 2026-07-28: mechanics and Terms still document mixed custody channels — isolated access-controlled escrow smart-contract vaults for on-chain assets and traditional/omnibus escrow for off-chain assets — grounding the mixed segregation rating, but they name no escrow agent, bank, or custodian, publish no account terms, and describe no trust, SPV, or other bankruptcy-remoteness structure, so bankruptcyRemoteness and rehypothecation remain unknown. The Terms still assert a 'fully non-custodial CDP', which holds only for the smart-contract channel; the off-chain escrow channel is custodial by construction and its operator is unidentified. The Terms also give Zoth discretion to liquidate or reinvest collateral into the same RWA product. The tracked V1 stack remains labeled deprecated on the deployments page, and router depositsPaused() was true at Ethereum block 25627223; the March 2025 admin-key compromise that drained roughly $8.4M from a Zoth sub-vault remains direct precedent that access-controlled vault custody can fail. Current collateral inventory, if any, is unreconciled."
+  }
+}

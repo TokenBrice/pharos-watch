@@ -1,0 +1,204 @@
+{
+  "id": "susdc-spark",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "spUSDC shares are minted against deposited USDC in Spark's Ethereum and Avalanche ERC-4626 vaults and inherit Circle's reviewed USDC issuer mint authority. Both vaults are UUPS proxies: Ethereum upgrades resolve through Spark's SubProxy and Sky's 48-hour DSPause path, while Avalanche upgrades resolve through the Spark executor driven by its LayerZero governance receiver.",
+    "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+      ],
+      "implementationAddresses": [
+        "0x1b992302652a92611dcd5090d1cb388c6377f455",
+        "0xc2c0582d1cce30449cf561c7b9c4d6d527547f12"
+      ],
+      "adminAddresses": [
+        "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "0x7566DEbC906C17338524A414343fA61BcA26A843",
+        "0xd905be48983D405C6fD7f5a983D2351fb61C691F",
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "0xbE286431454714F511008713973d3B053A2d38f3",
+        "0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579815,
+      "sources": [
+        {
+          "label": "Spark address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry"
+        },
+        {
+          "label": "spUSDC vault on Etherscan",
+          "url": "https://etherscan.io/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        },
+        {
+          "label": "SparkVault verified implementation",
+          "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+        },
+        {
+          "label": "Avalanche spUSDC vault",
+          "url": "https://snowscan.xyz/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "label": "Spark Savings USDC vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ERC-4626 share accounting over deposited USDC; does not mint base USDC.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579815,
+        "sources": [
+          {
+            "label": "Spark docs",
+            "url": "https://docs.spark.fi"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ],
+        "evidence": "At Ethereum block 25579815, the vault was a 163-byte ERC-1967 UUPS proxy with implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, zero admin and beacon slots, asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, and DEFAULT_ADMIN_ROLE held by Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Shares are deposit-backed and do not create base USDC."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
+        "label": "Spark Savings USDC Avalanche vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ERC-4626 share accounting over deposited Avalanche-native USDC; does not mint base USDC.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90859314,
+        "sources": [
+          {
+            "label": "Avalanche spUSDC vault",
+            "url": "https://snowscan.xyz/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ],
+        "evidence": "At Avalanche block 90859314, the vault was a 163-byte ERC-1967 UUPS proxy with implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12, zero admin and beacon slots, asset() = native USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e, and DEFAULT_ADMIN_ROLE held by SPARK_EXECUTOR 0x7566DEbC906C17338524A414343fA61BcA26A843."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "label": "Spark/Sky SubProxy upgrade governance (48-hour DSPause)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The SubProxy is the Ethereum vault's DEFAULT_ADMIN_ROLE member. Sky governance can replace the UUPS implementation or change deposit controls through the 48-hour DSPause path.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579815,
+        "sources": [
+          {
+            "label": "SparkVault verified implementation",
+            "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+          },
+          {
+            "label": "Spark SubProxy verified source",
+            "url": "https://eth.blockscout.com/address/0x3300f198988e4c9c63f75df86de36421f06af8c4?tab=contract"
+          },
+          {
+            "label": "Sky DSPause",
+            "url": "https://eth.blockscout.com/address/0xbE286431454714F511008713973d3B053A2d38f3?tab=contract"
+          },
+          {
+            "label": "Sky Chief",
+            "url": "https://eth.blockscout.com/address/0x929d9A1435662357F54AdcF64DcEE4d6b867a6f9?tab=contract"
+          }
+        ],
+        "evidence": "The SparkVault UUPS authorization is restricted to DEFAULT_ADMIN_ROLE. At Ethereum block 25579815 that role was held by the Spark SubProxy; its arbitrary-execution path resolves through DSPauseProxy and DSPause with delay() = 172800 under Sky Chief governance, matching the independently reviewed spUSDT governance path."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x7566DEbC906C17338524A414343fA61BcA26A843",
+        "label": "Spark Avalanche cross-chain governance executor",
+        "role": "governor",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "SPARK_EXECUTOR holds the Avalanche vault's DEFAULT_ADMIN_ROLE and receives authorized governance actions through Spark's LayerZero receiver.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90859314,
+        "sources": [
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          },
+          {
+            "label": "Avalanche Spark executor",
+            "url": "https://snowscan.xyz/address/0x7566DEbC906C17338524A414343fA61BcA26A843"
+          },
+          {
+            "label": "Avalanche Spark LayerZero receiver",
+            "url": "https://snowscan.xyz/address/0xd905be48983D405C6fD7f5a983D2351fb61C691F"
+          }
+        ],
+        "evidence": "At Avalanche block 90859314, hasRole(DEFAULT_ADMIN_ROLE, 0x7566DEbC906C17338524A414343fA61BcA26A843) on the spUSDC vault returned true. The Spark registry identifies that contract as SPARK_EXECUTOR and 0xd905be48983D405C6fD7f5a983D2351fb61C691F as its LayerZero governance receiver."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Inherited Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Circle USDC docs",
+            "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+          }
+        ],
+        "evidence": "Inherited from the verified `usdc-circle` mintAuthority. Circle's MasterMinter can authorize issuer minters and raise mint allowances; wrapper share issuance cannot bypass this base-supply authority."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Circle USDC docs",
+          "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Spark docs",
+          "url": "https://docs.spark.fi"
+        },
+        {
+          "label": "Spark address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry"
+        },
+        {
+          "label": "SparkVault verified implementation",
+          "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455?tab=contract"
+        }
+      ],
+      "evidence": "Fixed-block reads on 2026-07-21 resolved both tracked wrapper deployments. At Ethereum block 25579815, spUSDC was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455; its DEFAULT_ADMIN_ROLE holder was the Spark SubProxy governed through Sky's 172800-second DSPause path. At Avalanche block 90859314, the same-address vault was a UUPS proxy using implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12; its DEFAULT_ADMIN_ROLE holder was SPARK_EXECUTOR, identified by the Spark registry with LayerZero receiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F. Both asset() reads returned the local native USDC deployment. Wrapper shares remain deposit-backed; base supply authority, reconciliation, and supervision inherit from reviewed USDC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
+      "reviewer": "P2 mint-free cohort; Sol Ultra V9 curation pass",
+      "reviewedAt": "2026-07-21",
+      "disposition": "scoreable"
+    }
+  }
+}

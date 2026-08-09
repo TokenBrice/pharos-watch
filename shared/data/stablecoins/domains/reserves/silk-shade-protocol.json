@@ -1,0 +1,101 @@
+{
+  "id": "silk-shade-protocol",
+  "reserves": [
+    {
+      "name": "DAO-whitelisted ShadeLend vault collateral basket (current identities and weights private)",
+      "pct": 100,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "other",
+      "issuerOrObligor": "ShadeLend vault depositors and issuers of DAO-whitelisted collateral assets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi T08 wave-2 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Shade Protocol documentation",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/"
+      },
+      {
+        "label": "SILK minting and redemption mechanisms",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+      },
+      {
+        "label": "SILK overcollateralized minting (ShadeLend)",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+      },
+      {
+        "label": "What Is Shade Lend? (collateral categories and example collateral set)",
+        "url": "https://shadeprotocol.io/blog/what-is-shade-lend"
+      },
+      {
+        "label": "Shade Protocol source repository",
+        "url": "https://github.com/securesecrets/shade"
+      },
+      {
+        "label": "Shade Protocol application",
+        "url": "https://app.shadeprotocol.io"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-08-08 of Shade SILK overcollateralized minting docs and the Shade Lend announcement: SILK is minted by locking 120–150%+ accepted collateral in ShadeLend isolated vault markets with stability-pool liquidations; vaults span three documented categories (stablecoins, staking derivatives, normal crypto tokens) with examples including stkd-SCRT, stATOM, stOSMO, stLUNA, IST, DAI, FRAX, and USDC. Secret Network privacy still prevents a public constituent reconciliation and the live whitelist is not published, so the envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
+    "compositionBasis": "Shade documentation of overcollateralized vault backing, Stability Pool liquidations, and collateral redemptions; current private collateral mix undisclosed",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current collateral identities, balances, and weights cannot be reconciled from the reviewed public sources or private Secret Network state.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "DAO-whitelisted ShadeLend vault collateral basket (current identities and weights private)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The protocol documents whitelisted vault collateral but does not publish the current constituent inventory or weights.",
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ShadeLend vault contracts on Secret Network - self-custodied, no third-party custodian",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Secret Network (onchain)"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "SILK overcollateralized minting (ShadeLend)",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+      },
+      {
+        "label": "SILK minting and redemption mechanisms",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+      },
+      {
+        "label": "Shade Protocol source repository",
+        "url": "https://github.com/securesecrets/shade"
+      }
+    ],
+    "uncertainty": "SILK backing sits in ShadeLend vault contracts on Secret Network with no third-party or legal custodian, so there is no bankruptcy-remoteness structure by construction. Secret Network's privacy model prevents reading current vault balances, collateral composition, or admin key configurations from public state; the docs describe collateral as locked until liquidation or repayment but publish no explicit rehypothecation terms."
+  }
+}

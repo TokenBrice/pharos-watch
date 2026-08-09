@@ -1,0 +1,55 @@
+{
+  "id": "usdn-noble",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USDN is a rebasing yield-bearing stablecoin that accrues T-bill yield directly to holder balances every 30 seconds via M0's rebase mechanism. The GENIUS Act defines a payment stablecoin as one the issuer is obligated to redeem at a fixed monetary value; USDN balances grow over time rather than redeeming at a fixed amount. The Act also explicitly prohibits payment stablecoin issuers from paying any yield to holders — USDN's entire design is yield distribution. These structural features place USDN outside the GENIUS payment stablecoin definition."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "NASD Inc (Noble)",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USDN is a rebasing yield-bearing T-bill wrapper built on M0 infrastructure; it falls outside the GENIUS Act payment stablecoin definition because (1) it does not redeem at a fixed monetary value (balances rebase upward as yield accrues), and (2) its core design distributes yield directly to holders, which the Act prohibits for in-scope payment stablecoins. Noble's legal entity is NASD Inc (US-based); M0 provides infrastructure but is not the issuer. Noble announced migration from Cosmos appchain to EVM L1 in January 2026; USDN remains the flagship asset on the new chain.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "GENIUS Act text S.1582 – payment stablecoin definition and yield prohibition",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Noble USDN – yield-bearing rebasing design",
+        "url": "https://noble.xyz/usdn",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Noble blog – introducing USDN",
+        "url": "https://noble.xyz/blog/introducing-usdn",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "M0 dashboard – reserve transparency",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

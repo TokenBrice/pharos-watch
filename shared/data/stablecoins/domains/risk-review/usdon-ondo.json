@@ -1,0 +1,121 @@
+{
+  "id": "usdon-ondo",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+      },
+      {
+        "label": "Website",
+        "url": "https://app.ondo.finance/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USDon is an Ondo Global Markets asset, and Ondo documents a LayerZero-based token bridge for Global Markets assets across Ethereum, BNB Chain, Solana, and HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "Lock & Mint",
+          "Burn & Mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ondo Token Bridge",
+        "url": "https://docs.ondo.finance/tools/ondo-bridge"
+      },
+      {
+        "label": "Ondo Global Markets technical docs",
+        "url": "https://docs.ondo.finance/ondo-global-markets/technical"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xace8e719899f6e91831b18ae746c9a965c2119f1",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on Ethereum: TransparentUpgradeableProxy with the reviewed MINTER_ROLE set (GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c, Ondo 3/6 Safe 0x7607c08928bdbab77f88872b49667dcb877524db; verified on-chain 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on ethereum explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xace8e719899f6e91831b18ae746c9a965c2119f1"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on BSC: proxy with Ondo's chain-local admin 0x005793c2c4c966a0d261d60ffcba4269fa72bdc2 (verified on-chain 2026-07-20; no bridge endpoint surface).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on bsc explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+          }
+        ]
+      },
+      {
+        "id": "solana:ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on Solana: Token-2022 mint whose authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD is a program-derived address of Ondo's own Solana program (verified on-chain 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on solana explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
+          }
+        ]
+      }
+    ]
+  }
+}

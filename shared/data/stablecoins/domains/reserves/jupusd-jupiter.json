@@ -1,0 +1,62 @@
+{
+  "id": "jupusd-jupiter",
+  "reserves": [
+    {
+      "name": "USDtb",
+      "pct": 88.5,
+      "risk": "low",
+      "coinId": "usdtb-ethena",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Anchorage Digital Bank, N.A.",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC",
+      "pct": 11.5,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle stablecoin issuers",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JupUSD live reserve API",
+        "url": "https://api.jupusd.money/api/data"
+      },
+      {
+        "label": "Jupiter JupUSD documentation",
+        "url": "https://docs.jup.ag/user-docs/earn/jupusd"
+      },
+      {
+        "label": "Jupiter mint and redeem documentation",
+        "url": "https://developers.jup.ag/docs/jupusd"
+      }
+    ],
+    "rationale": "The exact July 14 JupUSD reserve capture reports 88.5% USDtb and 11.5% USDC. Jupiter documents both as accepted reserve collateral and says target weights can fluctuate around 90/10 as reserves are rebalanced.",
+    "compositionBasis": "JupUSD live reserve API holdings captured on July 14, 2026",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both direct reserve assets are identified and linked to tracked upstream stablecoins; their underlying reserve composition is reviewed on those assets.",
+    "knownUnknownExposurePct": 0
+  }
+}

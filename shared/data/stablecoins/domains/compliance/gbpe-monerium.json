@@ -1,0 +1,20 @@
+{
+  "id": "gbpe-monerium",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Central Bank of Iceland",
+    "authorizedEntity": "Monerium ehf",
+    "references": [
+      {
+        "label": "ESMA interim MiCA EMT register - Monerium ehf",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Monerium e-money tokens - EURe and GBPe",
+        "url": "https://docs.monerium.com/tokens/"
+      }
+    ]
+  }
+}

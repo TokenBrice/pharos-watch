@@ -1,0 +1,319 @@
+{
+  "id": "susds-sky",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Sky Chainlog active deployment registry",
+        "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+      },
+      {
+        "label": "Ethereum sUSDS verified implementation source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+      },
+      {
+        "label": "Base sUSDS verified implementation source and ABI",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8"
+      },
+      {
+        "label": "OP Mainnet sUSDS verified implementation source and ABI",
+        "url": "https://optimism.blockscout.com/api/v2/smart-contracts/0x6f0888dda6a5e35451d5be0fabb20171715788b3"
+      },
+      {
+        "label": "Arbitrum sUSDS verified implementation source and ABI",
+        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x5aee6b37d6e31860804575aee3e2f368a0a428e7"
+      },
+      {
+        "label": "Sky USDS parent contracts repository",
+        "url": "https://github.com/sky-ecosystem/usds"
+      },
+      {
+        "label": "Sky USDS token documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+      },
+      {
+        "label": "Solscan parent USDS mint",
+        "url": "https://solscan.io/token/USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA"
+      },
+      {
+        "label": "Solana JSON-RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Independent Solana PublicNode RPC",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Sky savings transparency dashboard",
+        "url": "https://financial.skyeco.com/usds/savings"
+      },
+      {
+        "label": "Sky terms of use",
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+      },
+      {
+        "label": "Sky archived shutdown documentation",
+        "url": "https://developers.skyeco.com/archive/shutdown/shutdown/"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC control reads",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "OP Mainnet public RPC control reads",
+        "url": "https://optimism-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum public RPC control reads",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "sUSDS is structurally linked to usds-sky by both variantOf and mintAuthority.inheritedFrom. Current-head reads on 2026-08-08 resolved the four tracked proxies as follows: Ethereum block 25711847 to 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0; Base block 49711042 to 0x982f2df63fe38ab8d55f4b1464e8cfdc8ea5dec8; Optimism block 155306328 to 0x6f0888dda6a5e35451d5be0fabb20171715788b3; Arbitrum block 492469331 to 0x5aee6b37d6e31860804575aee3e2f368a0a428e7. Each EIP-1967 admin slot was zero, and each current verified implementation exposed ordinary holder transfers and ward-gated UUPS upgrades but no current blacklist, pause, seizure, or holder-freeze function. The inherited parent remains freeze-positive: finalized Solana slots 438038182 and 438038183 returned active USDS freezeAuthority AYPtjx4Hc8us1ikULUedkmZ3wtiD6tmL7gK3qe4V3oHt. Therefore the freeze disposition is inherited from usds-sky, while local UUPS transfer restrictability remains captured by the deployment overlay.",
+    "reviewer": "OpenAI Codex C01 control wave",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "sUSDS is an ERC-4626 savings wrapper over USDS and has no borrower-owned collateral positions or local liquidation engine. Its required USDS parent carries the separately reviewed Sky Vault oracle, auction, backstop, and bad-debt branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Sky documents sUSDS as an ERC-4626 savings token whose users deposit USDS for shares and withdraw USDS without protocol fees. It does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDS parent branch review.",
+      "sources": [
+        {
+          "label": "Sky sUSDS documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        },
+        {
+          "label": "Sky Oracle Security Module documentation",
+          "url": "https://developers.skyeco.com/protocol/core/osm/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Sky Oracle Security Module documentation",
+        "url": "https://developers.skyeco.com/protocol/core/osm/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "sUSDS is issued natively by the Sky Savings USDS vault on Ethereum. Its three authored non-Ethereum deployments are SkyLink canonical rollup lock/mint representations on Base, OP Mainnet, and Arbitrum; no unauthored NTT or liquidity route influences this profile tier. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to those three representations.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "SkyLink Base Token Bridge",
+        "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "SkyLink OP Token Bridge",
+        "url": "https://github.com/sky-ecosystem/op-token-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "SkyLink Arbitrum Token Bridge",
+        "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sky sUSDS token docs",
+        "url": "https://developers.sky.money/protocol/tokens/susds/"
+      },
+      {
+        "label": "SkyLink Base bridge guide",
+        "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+      },
+      {
+        "label": "SkyLink OP Token Bridge repository",
+        "url": "https://github.com/sky-ecosystem/op-token-bridge"
+      },
+      {
+        "label": "SkyLink Arbitrum Token Bridge repository",
+        "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "protocol": "Sky",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sUSDS is the ERC-4626 savings wrapper natively issued on Ethereum by the Sky Savings USDS vault (variantOf usds-sky); shares mint against deposited USDS, no bridge representation. Same native convention as the reviewed usds-sky ethereum row. At Ethereum block 25583986, eth_call totalSupply() returned 4,292,580,066.641414652615533299 sUSDS. Subtracting the near-synchronous Base, OP Mainnet, and Arbitrum representation supplies leaves 3,950,133,734.460878175318270476 sUSDS economically resident on Ethereum (92.0223658763%).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583986,
+        "sources": [
+          {
+            "label": "Sky sUSDS token docs",
+            "url": "https://developers.sky.money/protocol/tokens/susds/"
+          },
+          {
+            "label": "sUSDS vault on Etherscan",
+            "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+          },
+          {
+            "label": "Pinned Ethereum block 25583986",
+            "url": "https://etherscan.io/block/25583986"
+          }
+        ]
+      },
+      {
+        "id": "base:0x5875eee11cf8398102fdad704c9e96607675467a",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5875eee11cf8398102fdad704c9e96607675467a",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: wards(0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7) = 1 on the Base sUSDS token, so the SkyLink OP Token Bridge (same controller as the reviewed usds-sky Base row) is the mint authority for this representation; Sky governance relay holds admin. At Base block 48941163, eth_call totalSupply() returned 10,829,128.842209047357151231 sUSDS, equal to 0.2522755236% of the canonical Ethereum supply measured six seconds earlier.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 48941163,
+        "sources": [
+          {
+            "label": "SkyLink Base bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          },
+          {
+            "label": "Sky governance Base bridge initialization (USDS and sUSDS)",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "sUSDS token on Basescan (wards probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a"
+          },
+          {
+            "label": "Pinned Base block 48941163",
+            "url": "https://basescan.org/block/48941163"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: wards(0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6) = 1 on the OP Mainnet sUSDS token, so the SkyLink OP Token Bridge (same controller as the reviewed usds-sky OP Mainnet row) is the mint authority for this representation. At OP Mainnet block 154536448, eth_call totalSupply() returned 4,621,771.164539919688606715 sUSDS, equal to 0.1076688400% of the canonical Ethereum supply measured six seconds earlier.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 154536448,
+        "sources": [
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          },
+          {
+            "label": "sUSDS token on OP Mainnet explorer (wards probed 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+          },
+          {
+            "label": "Pinned OP Mainnet block 154536448",
+            "url": "https://optimistic.etherscan.io/block/154536448"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xddb46999f8891663a8f2828d25298f70416d7610",
+        "protocol": "SkyLink Arbitrum Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: Rely event log of the Arbitrum sUSDS token includes 0x13f7f24ca959359a4d710d32c715d4bce273c793, the SkyLink Arbitrum Token Bridge (same controller as the reviewed usds-sky Arbitrum row), making it the mint authority for this representation. At Arbitrum block 486322344, eth_call totalSupply() returned 326,995,432.173787510251504877 sUSDS, equal to 7.6176897599% of the canonical Ethereum supply measured seven seconds earlier.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x13f7f24ca959359a4d710d32c715d4bce273c793",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x13f7f24ca959359a4d710d32c715d4bce273c793"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 486322344,
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "sUSDS token on Arbiscan (Rely wards probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610"
+          },
+          {
+            "label": "Pinned Arbitrum block 486322344",
+            "url": "https://arbiscan.io/block/486322344"
+          }
+        ]
+      }
+    ]
+  }
+}

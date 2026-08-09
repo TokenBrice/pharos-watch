@@ -1,0 +1,81 @@
+{
+  "id": "uty-xsy",
+  "reserves": [
+    {
+      "name": "USDC deposits swept to custodial managed backing",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint custodian and undisclosed strategy counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex reserve composition audit",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+      },
+      {
+        "label": "XSY Accountable reserve dashboard",
+        "url": "https://accountable.xsy.fi/"
+      }
+    ],
+    "rationale": "Current YieldPoint flow documentation establishes that UTY is minted 1:1 against USDC on Base, the deposited USDC is immediately swept to a custodian wallet as off-chain managed backing, and redemption returns USDC after a seven-day asynchronous bonding period. Neither the current docs nor the public Accountable surface supports the historical 30% USDC, 35% long AVAX, and 35% short-perpetual weights, so those unsupported point-in-time percentages are replaced by one aggregate managed-backing envelope.",
+    "compositionBasis": "Current YieldPoint issuance and redemption flows plus the designated Accountable reserve surface; managed-asset composition undisclosed",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The USDC subscription and redemption asset is known, but current managed positions, retained USDC, strategy weights, venues, counterparties, hedge notionals, margin, and liquidation buffers remain undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDC deposits swept to custodial managed backing",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu (off-exchange custody for strategy assets)",
+        "role": "custodian"
+      },
+      {
+        "name": "Copper Clearloop (off-exchange settlement and custody)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/core-flows"
+      },
+      {
+        "label": "XSY Accountable reserve dashboard",
+        "url": "https://accountable.xsy.fi/"
+      }
+    ],
+    "uncertainty": "YieldPoint documents custody via Ceffu and Copper Clearloop off-exchange settlement, which keeps strategy assets in segregated custody rather than on venue, but venue margin accounts, account terms, bankruptcy remoteness, and any reuse permissions are not disclosed.",
+    "knownUnknownExposurePct": 100
+  }
+}

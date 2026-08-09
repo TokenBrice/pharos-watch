@@ -1,0 +1,93 @@
+{
+  "id": "bold-liquity",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "BOLD minting is limited to registered Liquity v2 branch contracts used by borrower collateral markets; the BOLD token owner is renounced and no privileged durable issuer mint path is resolved.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 25539955,
+      "sources": [
+        {
+          "label": "BOLD verified token contract",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        },
+        {
+          "label": "Pinned Liquity BoldToken source",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/BoldToken.sol"
+        },
+        {
+          "label": "Pinned Liquity mainnet branch manifest",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/addresses/1.json"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+        "label": "BOLD token / registered Liquity branch minters",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BOLDToken.mint is callable only by registered BorrowerOperations or ActivePool contracts; owner() is the zero address after collateral registry setup.",
+        "sources": [
+          {
+            "label": "Liquity BOLD contract source",
+            "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+          },
+          {
+            "label": "Liquity v2 docs",
+            "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+          },
+          {
+            "label": "Pinned Liquity mainnet branch manifest",
+            "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/addresses/1.json"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25539955, BOLD and the WETH, wstETH, and rETH branch registries in the pinned manifest had owner() = 0x0000000000000000000000000000000000000000; the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified source restricts mint to the registered BorrowerOperations or ActivePool addresses."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Liquity BOLD contract source",
+          "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+        },
+        {
+          "label": "Liquity v2 docs",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+        },
+        {
+          "label": "Pinned Liquity BoldToken source",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/BoldToken.sol"
+        },
+        {
+          "label": "Pinned Liquity mainnet branch manifest",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/addresses/1.json"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "At Ethereum block 25539955, BOLD and all three mainnet branch registries had zero owners, while the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified contract and pinned Liquity source restrict minting to registered BorrowerOperations or ActivePool contracts, and setCollateralRegistry permanently renounces the token owner. No privileged durable issuer mint path is present.",
+      "reviewer": "TERRA-III Safety Score V9 control review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable"
+    }
+  }
+}

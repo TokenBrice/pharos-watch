@@ -20,13 +20,6 @@
     "yieldBearing": true,
     "navToken": true
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: msY resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "collateral": "msUSD strategy vault shares backed by Main Street's delta-neutral options and derivatives strategy reserve; exchange-rate gains accrue to msY holders",
   "pegMechanism": "ERC-4626-style staking token over msUSD; users stake msUSD for msY, whose exchange rate appreciates with strategy returns, while final USDC redemption inherits Main Street's primary-market caps and cooldowns",
   "mechanismArchetype": "synthetic-delta-neutral",
@@ -57,124 +50,9 @@
       "decimals": 18
     }
   ],
-  "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "msY is an ERC-4626-style strategy wrapper over Main Street USD. Wrapper minting creates msY shares against deposited MSUSD, while durable base-dollar issuance is inherited from the reviewed MSUSD parent.",
-    "inheritedFrom": "msusd-main-street",
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0x890a5122aa1da30fec4286de7904ff808f0bd74a",
-        "label": "msY ERC-4626-style wrapper",
-        "role": "wrapper",
-        "authorityType": "contract",
-        "directMintAbility": "none",
-        "capDescription": "The wrapper mints msY shares through deposit/mint flows against MSUSD asset deposits; it does not mint base MSUSD.",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Sourcify msY implementation source",
-            "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x843e3a09675e5fa00951c55727f8b0f2076c0d2c/metadata.json"
-          },
-          {
-            "label": "Ethereum msY contract",
-            "url": "https://etherscan.io/address/0x890a5122aa1da30fec4286de7904ff808f0bd74a#code"
-          }
-        ],
-        "evidence": "asset() returned 0x4ba01f22827018b4772CD326C7627FB4956A7C00, the Ethereum MSUSD parent; implementation ABI exposes deposit/mint/redeem/withdraw wrapper functions."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858",
-        "label": "msY owner Safe",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "parameter-only",
-        "threshold": 3,
-        "signerCount": 4,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "version": "1.4.1",
-          "threshold": 3,
-          "owners": [
-            "0x5A8F0e61B503D958D0c9996268b373555295402D",
-            "0x7C7BC56841070b577FD1413f14381bd8466aD5c0",
-            "0x95d617E8be77D8Ad57745Ae814FeD83e55bb4108",
-            "0x19F63Dda10b162F0a35c3018ef3710606273D8E3"
-          ],
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
-          "source": "safe-api",
-          "observedBlock": 25295174
-        },
-        "sources": [
-          {
-            "label": "Ethereum msY contract",
-            "url": "https://etherscan.io/address/0x890a5122aa1da30fec4286de7904ff808f0bd74a#readProxyContract"
-          },
-          {
-            "label": "Safe Transaction Service",
-            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
-          }
-        ],
-        "evidence": "At Ethereum block 25295174: owner() returned this Safe; Safe API confirmed threshold=3, 4 owners, enabledModules=[], guard=0x0 (no guard), fallbackHandler=0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy=0x41675C099F32341bf84BFc5382aF534df5C7461a."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x4ba01f22827018b4772CD326C7627FB4956A7C00",
-        "label": "Inherited MSUSD mint surface",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Sourcify MSUSD implementation source",
-            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x96271bEa7A9c4B8eDd6c3A05E548f05F157ADA46/sources/src/v2/msUSDV2.sol"
-          }
-        ],
-        "evidence": "Parent MSUSD metadata already records a reviewed 2026-05-24 mintAuthority profile; msY inherits durable base issuance from that parent."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "Main Street docs",
-          "url": "https://mainstreet-finance.gitbook.io/mainstreet.finance/"
-        },
-        {
-          "label": "Sourcify msY implementation source",
-          "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x843e3a09675e5fa00951c55727f8b0f2076c0d2c/metadata.json"
-        },
-        {
-          "label": "Safe Transaction Service msY Safe",
-          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
-        }
-      ],
-      "evidence": "Local variant metadata, parent MSUSD mintAuthority, and Ethereum RPC/source reads show msY as a wrapper over MSUSD rather than a separate base stablecoin mint path. At block 25295174: Safe API confirmed guard=0x0 (no guard), enabledModules=[], threshold=3 of 4 owners. The owner Safe has parameter-only influence (deposit toggles and cooldown settings); share issuance follows only MSUSD deposits into the vault.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
-    }
-  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "msUSD options strategy vault shares",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "msusd-main-street",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "defiLlamaPoolId": "8a28570f-2316-488a-94a7-67c87e76c1f1",
     "yieldSource": "Main Street savings (msY)",

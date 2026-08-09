@@ -1,0 +1,84 @@
+{
+  "id": "hbd-hive",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "HBD is created at the Hive protocol layer through a HIVE<->HBD conversion mechanism; supply expands when HIVE is converted to HBD, bounded by a 20% print-stop threshold and a 30% hard-cap haircut. At irreversible block 108364554, consensus-counted HBD debt was 25.25345% after excluding treasury-held HBD, so hbd_print_rate was 0 while HBD-to-HIVE conversion still paid the full nominal amount.",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "Hive witness consensus set (parameter governance)",
+      "observedAt": "2026-07-22",
+      "observedBlock": 108364554,
+      "sources": [
+        {
+          "label": "Hive protocol configuration source",
+          "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/protocol/include/hive/protocol/config.hpp"
+        },
+        {
+          "label": "Hive blockchain API",
+          "url": "https://api.hive.blog"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Hive conversion mechanism (protocol-level mint/burn)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hive",
+        "capDescription": "HBD is minted via on-chain HIVE-to-HBD conversion using the 3.5-day median price. Consensus stops new HBD printing at a 20% debt ratio and haircuts HBD-to-HIVE conversion above the 30% hard limit. At block 108364554 the treasury-adjusted ratio was 25.25345%, so printing was halted but the nominal conversion payout was not haircut.",
+        "canRaiseCap": true,
+        "evidence": "Hive API state at irreversible block 108364554 reported 32,394,046.860 total HBD, 23,179,590.895 treasury HBD, 568,196,982.317 HIVE, and a 0.048 HBD/HIVE median feed. The implementation subtracts treasury HBD, producing 9,214,455.965 counted HBD and a 25.25345% debt ratio. hbd_print_rate=0 therefore reflects the 20% print stop, while the feed remained above the 30% hard-cap minimum. No permissioned minter exists: conversion is consensus-enforced and open to all users.",
+        "failureDomainKeys": [
+          "protocol:hive-blockchain"
+        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 108364554
+      },
+      {
+        "label": "Hive witness consensus set (parameter governance)",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "hive",
+        "canRaiseCap": true,
+        "evidence": "Block-producing witnesses directly set the HBD interest rate. Debt-limit constants and related consensus logic change through Hive's witness-approved hard-fork process rather than a live administrator call. Witnesses govern issuance terms through consensus but do not directly mint to arbitrary accounts.",
+        "failureDomainKeys": [
+          "witness-set:hive"
+        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 108364554
+      }
+    ],
+    "review": {
+      "evidence": "Hive API state at irreversible block 108364554 and the pinned consensus implementation establish the live debt controls. Total HBD was 32,394,046.860, but consensus subtracts 23,179,590.895 treasury HBD before calculating debt; counted HBD was therefore 9,214,455.965. With 568,196,982.317 HIVE and a 0.048 HBD/HIVE median feed, debt was 25.25345%. New printing was stopped, but the feed exceeded the 0.0378396893 hard-cap minimum and the current nominal HBD-to-HIVE conversion payout remained 1.0. There is no token proxy or contract administrator: HBD mint logic is base-layer consensus code changed through Hive's witness-approved hard-fork path.",
+      "reviewer": "GPT SOL-NR-A wave6",
+      "reviewedAt": "2026-07-22",
+      "sources": [
+        {
+          "label": "Hive Dollar (HBD) overview",
+          "url": "https://hive.io/en/hbd/"
+        },
+        {
+          "label": "Hive developer docs",
+          "url": "https://developers.hive.io/"
+        },
+        {
+          "label": "Hive blockchain API — get_config and get_dynamic_global_properties",
+          "url": "https://api.hive.blog"
+        },
+        {
+          "label": "Hive protocol configuration source",
+          "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/protocol/include/hive/protocol/config.hpp"
+        },
+        {
+          "label": "Pinned Hive debt-ratio implementation",
+          "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/chain/database.cpp"
+        }
+      ]
+    }
+  }
+}

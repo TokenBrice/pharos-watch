@@ -1,0 +1,45 @@
+{
+  "id": "srusde-strata",
+  "reserves": [
+    {
+      "name": "Senior tranche USDe vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Strata protocol overview",
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+      },
+      {
+        "label": "Strata Ethena USDe market",
+        "url": "https://docs.strata.markets/markets"
+      },
+      {
+        "label": "Strata FAQ redemption terms",
+        "url": "https://docs.strata.markets/resources/faqs"
+      }
+    ],
+    "rationale": "The current live reserve capture is a single 100% senior-tranche USDe vault-share exposure. Strata documents srUSDe as an ERC-4626 senior tranche over the Ethena USDe/sUSDe strategy, with USDe withdrawals subject to a seven-day cooldown; the existing tracked dependency preserves the upstream USDe failure domain.",
+    "compositionBasis": "Current Strata live reserve capture and official srUSDe market documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed sources establish the wrapper and upstream strategy identity but do not publish a current breakdown of underlying Ethena backing assets inside the srUSDe position.",
+    "knownUnknownExposurePct": 0
+  }
+}

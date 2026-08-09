@@ -1,0 +1,10 @@
+{
+  "id": "rusd-revolut",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: RUSD resolves to Yes because existing metadata classifies the asset as centralized and an EMI-regulated issuer can freeze and reissue under its compliance program.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  }
+}

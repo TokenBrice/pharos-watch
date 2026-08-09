@@ -1,0 +1,127 @@
+{
+  "id": "xusd-babelfish",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "XUSD is BabelFish's meta-stablecoin aggregator on Rootstock: any user mints XUSD 1:1 by depositing an accepted bAsset stablecoin (DLLR, USDT, USDC, DAI, DOC) and redeems back, subject to basket-balance constraints and fees. The masset manager (0x1440) is proxy-admin'd by a 2-of-5 Gnosis Safe and its owner is a 3-of-5 Gnosis Safe, together controlling the accepted-asset basket.",
+    "controls": [
+      {
+        "label": "BabelFish masset manager (XUSD aggregator, 0x1440)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "rootstock",
+        "address": "0x1440d19436beeaf8517896bffb957a88ec95a00f",
+        "canRaiseCap": false,
+        "capDescription": "XUSD minting is user-driven 1:1 against accepted bAsset deposits and basket-balance constraints in the masset manager, not discretionary supply creation.",
+        "evidence": "At Rootstock block 8935202: XUSD token 0xb5999795 owner() returned masset manager proxy 0x1440d19436beeaf8517896bffb957a88ec95a00f (confirmed as a contract). Masset manager EIP-1967 proxy admin slot returned 0x37a706259f5201c03f6cb556a960f30f86842d01 (Gnosis Safe multisig, 2-of-5). Masset manager owner() returned 0xbd687d470a7e8b36c666968bb79376904725e4dd (Gnosis Safe multisig, 3-of-5). Minting is user-driven 1:1 against deposited bAssets, not discretionary.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: XUSD masset manager",
+            "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+          }
+        ]
+      },
+      {
+        "label": "BabelFish multisig — masset manager owner (3-of-5 Gnosis Safe, 0xbd687d)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "rootstock",
+        "address": "0xbd687d470a7e8b36c666968bb79376904725e4dd",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xfee171a152c02f336021fb9e79b4fac2304a9e7e",
+            "0x9e0816a71b53ca67201a5088df960fe90910de55",
+            "0xe1a148735f07bc5fe7cfb60499d325c8380488a8",
+            "0xcae473b17917c9a3cc0562389433733137f95464",
+            "0xeabb83a1cefc5f50c83bc4252c618d3294152a86"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "legacy-gnosis-multisig",
+          "observedBlock": 8935202,
+          "source": "onchain"
+        },
+        "evidence": "At Rootstock block 8935202: getOwners() on 0xbd687d returned 5 signers; required() returned 3. This is the legacy Gnosis multisig pattern (not Safe v1.x). Controls basket composition and protocol parameters."
+      },
+      {
+        "label": "BabelFish proxy admin multisig (2-of-5 Gnosis Safe, 0x37a706)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "rootstock",
+        "address": "0x37a706259f5201c03f6cb556a960f30f86842d01",
+        "threshold": 2,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xfe9d5402dc3c86cbabe80231cd48d98ba742d3f6",
+            "0xeabb83a1cefc5f50c83bc4252c618d3294152a86",
+            "0x13be55487d37fe3c66ee7305e1e9c1ac85de75ae",
+            "0xcae473b17917c9a3cc0562389433733137f95464",
+            "0xfee171a152c02f336021fb9e79b4fac2304a9e7e"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "legacy-gnosis-multisig",
+          "observedBlock": 8935202,
+          "source": "onchain"
+        },
+        "evidence": "At Rootstock block 8935202: EIP-1967 proxy admin of masset manager = 0x37a706; getOwners() returned 5 signers; required() returned 2. This 2-of-5 multisig controls upgrades to the masset manager implementation."
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x1440d19436beeaf8517896bffb957a88ec95a00f"
+      ],
+      "implementationAddresses": [
+        "0x92d7ad53b2d824277d22877d5299c2af479da322"
+      ],
+      "adminAddresses": [
+        "0x37a706259f5201c03f6cb556a960f30f86842d01"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BabelFish proxy admin multisig (2-of-5 Gnosis Safe, 0x37a706)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 9075576,
+      "sources": [
+        {
+          "label": "Rootstock explorer: XUSD masset manager",
+          "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "At Rootstock block 8935202: XUSD token owner() = masset manager proxy 0x1440d194; masset manager EIP-1967 proxy admin = Gnosis multisig 0x37a706 (2-of-5); masset manager owner() = Gnosis multisig 0xbd687d (3-of-5). Both multisigs enumerated via getOwners()/required() on-chain. Mint path confirmed as user-driven 1:1 aggregator. Full control chain verified. Upgrade-authority follow-up (2026-07-21): re-read at Rootstock block 9075576 confirms the masset manager's EIP-1967 implementation slot resolves to 0x92d7ad53b2d824277d22877d5299c2af479da322 (31,859-byte deployed contract) and the admin slot still resolves to the 2-of-5 Safe 0x37a706259f5201c03f6cb556a960f30f86842d01, whose getOwners() returned the same five signers already on file — this multisig, not any single key, is the sole path that can change XUSD's mint-critical masset-manager logic, and no timelock was found on the proxy admin path.",
+      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
+      "reviewedAt": "2026-07-21",
+      "sources": [
+        {
+          "label": "Sovryn XUSD overview",
+          "url": "https://wiki.sovryn.com/en/technical-documents/xusd-overview"
+        },
+        {
+          "label": "BabelFish",
+          "url": "https://babelfish.money/"
+        },
+        {
+          "label": "Rootstock explorer: XUSD masset manager",
+          "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "gyen-gyen",
+  "reserves": [
+    {
+      "name": "JPY in FDIC-insured institutions or T-bills (≤3 months)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

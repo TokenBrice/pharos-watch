@@ -1,0 +1,151 @@
+{
+  "id": "acrdx-anemoy-apollo",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout ACRDX ShareToken",
+          "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f?tab=contract"
+        },
+        {
+          "label": "Centrifuge protocol source",
+          "url": "https://github.com/centrifuge/protocol-v3"
+        },
+        {
+          "label": "Centrifuge Spoke architecture",
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/spoke/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Anemoy / Centrifuge fund issuance authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Permissioned fund-share issuance: Anemoy (through Centrifuge) mints ACRDX against KYC-gated NAV subscriptions and burns on redemption; transfers are restricted to whitelisted holders. No permissionless mint route.",
+        "sources": [
+          {
+            "label": "Anemoy ACRDX launch",
+            "url": "https://www.anemoy.io/news/acrdx-launched"
+          }
+        ]
+      },
+      {
+        "label": "ACRDX Centrifuge Spoke ward (direct mint path — Ethereum, Plume, Monad)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract — the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout ACRDX ShareToken",
+            "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+          },
+          {
+            "label": "Ethereum Blockscout Centrifuge Spoke",
+            "url": "https://eth.blockscout.com/address/0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+          }
+        ]
+      },
+      {
+        "label": "ACRDX Ethereum/Plume Root ward (protocol admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "address": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) — Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there.",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout Centrifuge Root",
+            "url": "https://eth.blockscout.com/address/0x7ed48c31f2fdc40d37407cbabf0870b2b688368f"
+          }
+        ]
+      },
+      {
+        "label": "Centrifuge ProtocolGuardian Safe (Root authority)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0x9711730060c73ee7fcfe1890e8a0993858a7d225",
+        "threshold": 4,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "safe": {
+          "owners": [
+            "0xb307f0b2eddb84ef63f3f9dc99a3a1a66d68eb3a",
+            "0x044671acf58340ac9d7ab782d3f93d1943fe24bf",
+            "0x701da7a0c8ee46521955cc29d32943d47e2c02b9",
+            "0x5e7a86178252aeae9cbda30f9c342c71799a3ee1",
+            "0xe9441b34f71659cca2bfe90d98ee0e57d9cad28f",
+            "0x4d47a7a89478745200bd51c26ba87664538df541",
+            "0x080001dbe12fa46a1d7c03fa0cbf1839e367f155",
+            "0xd55114BfE98a2ca16202Aa741BeE571765292616",
+            "0x9edec77dd2651ce062ab17e941347018ad4eaea9"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295029,
+          "source": "onchain"
+        },
+        "evidence": "The Centrifuge ProtocolGuardian (0xceb7...35c6) has a safe() function that returns 0x9711730060c73ee7fcfe1890e8a0993858a7d225. This Safe is a 4/9 Gnosis Safe v1.4.1 (masterCopy slot 0 = 0x41675c09...). getOwners() returned 9 addresses; threshold (slot 4) = 4; getModulesPaginated returned empty modules; guard (slot 6) = 0. ProtocolGuardian is warded on Root (wards(0xceb7...) = 1 at block 25295029).",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout ProtocolGuardian",
+            "url": "https://eth.blockscout.com/address/0xceb7ed5d5b3bad3088f6a1697738b60d829635c6"
+          },
+          {
+            "label": "Ethereum Blockscout Centrifuge ProtocolGuardian Safe",
+            "url": "https://eth.blockscout.com/address/0x9711730060c73ee7fcfe1890e8a0993858a7d225"
+          }
+        ]
+      }
+    ],
+    "reconciliation": "continuous",
+    "supervision": "prudential",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Anemoy ACRDX launch",
+          "url": "https://www.anemoy.io/news/acrdx-launched"
+        },
+        {
+          "label": "Ethereum Blockscout ACRDX ShareToken",
+          "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        },
+        {
+          "label": "Chronicle ACRDX Proof of Asset",
+          "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+        },
+        {
+          "label": "BVI FSC - Anemoy Capital SPC Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+        },
+        {
+          "label": "BVI FSC - Anemoy Asset Management Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited"
+        }
+      ],
+      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain). Economic-control evidence reviewed 2026-07-15: Chronicle Proof of Asset continuously verifies ACRDX asset and NAV data from the fund administrator. The BVI FSC registry matches Anemoy Capital SPC Limited, the exact current professional-fund issuer.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

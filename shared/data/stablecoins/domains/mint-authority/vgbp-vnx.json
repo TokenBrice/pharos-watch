@@ -1,0 +1,333 @@
+{
+  "id": "vgbp-vnx",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "VGBP has three independently mintable native deployments. Base and Celo use VNXCToken proxies whose chain-local VNXManager role-0 bearers can grant the minter role and set arbitrary per-minter allowances with no delay; 0xd630...051f already has a 1 billion VGBP allowance on each chain. Solana uses the classic SPL Token program with one unrestricted mint authority. No on-chain multisig, timelock, global supply cap, or disclosed MPC/HSM custody was found at the exact cutoff.",
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0xd63052e09af164cef57695d3b96043ea848b051f",
+        "label": "VGBP Base direct minter and role-0 bearer",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Current raw allowance is 1e27, equal to 1 billion VGBP at 18 decimals; the same address can reset its allowance through role 0.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
+        ],
+        "sources": [
+          {
+            "label": "Base VNX direct minter",
+            "url": "https://base.blockscout.com/address/0xd63052e09af164cef57695d3b96043ea848b051f"
+          }
+        ],
+        "evidence": "At Base block 48592766 this EOA held minter role 2 and role 0, with a positive 1e27 raw allowance. One signature can mint within that allowance or use role 0 to configure an arbitrary replacement allowance. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "base",
+        "address": "0x7ed9f1458200e21cc7482c288db7cf5e6280493e",
+        "label": "VGBP Base VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can grant role 2 and configure any per-minter allowance; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "base:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+        ],
+        "bypassSurfaces": [
+          "Role-0 bearers can grant themselves minter role 2 and set an arbitrary allowance immediately.",
+          "Role-0 bearers can transfer token ownership through VNXManager and replace the token RBAC address."
+        ],
+        "sources": [
+          {
+            "label": "Base VGBP VNXManager",
+            "url": "https://base.blockscout.com/address/0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Base block 48592766 (hash 0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), role 0 bearers were 0xd63052e09af164cef57695d3b96043ea848b051f and 0xacc56ebcc391108a725f269fdd82d6cbe65b311a; role 1 bearer was 0xd630...051f; role 2 bearer was 0xd630...051f. Role 0 administers all three roles."
+      },
+      {
+        "chain": "base",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VGBP Base role-0 minter administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "No current allowance, but role 0 can grant minter role 2 and configure an arbitrary allowance in separate immediate transactions.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Base VNX role-0 bearer",
+            "url": "https://base.blockscout.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Base block 48592766 this EOA was a role-0 bearer and had zero current allowance. Role 0 can grant itself or another address minter role 2 and set any allowance without a timelock. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "celo",
+        "address": "0x7ed9f1458200e21cc7482c288db7cf5e6280493e",
+        "label": "VGBP Celo VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can grant role 2 and configure any per-minter allowance; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 72074122,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "celo:0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+        ],
+        "bypassSurfaces": [
+          "Role-0 bearers can grant themselves minter role 2 and set an arbitrary allowance immediately.",
+          "Role-0 bearers can transfer token ownership through VNXManager and replace the token RBAC address."
+        ],
+        "sources": [
+          {
+            "label": "Celo VGBP VNXManager",
+            "url": "https://celo.blockscout.com/address/0x7ed9f1458200e21cc7482c288db7cf5e6280493e"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Celo block 72074122 (hash 0x3d682f57c8a3a120d15e0ad384a4c7cacfaabbd9ef184c1d9d6f4cd3de2da427), role 0 bearers were 0xd63052e09af164cef57695d3b96043ea848b051f and 0xacc56ebcc391108a725f269fdd82d6cbe65b311a; role 1 bearer was 0xd630...051f; role 2 bearer was 0xd630...051f. Role 0 administers all three roles."
+      },
+      {
+        "chain": "celo",
+        "address": "0xd63052e09af164cef57695d3b96043ea848b051f",
+        "label": "VGBP Celo direct minter and role-0 bearer",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Current raw allowance is 1e27, equal to 1 billion VGBP at 18 decimals; the same address can reset its allowance through role 0.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 72074122,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
+        ],
+        "sources": [
+          {
+            "label": "Celo VNX direct minter",
+            "url": "https://celo.blockscout.com/address/0xd63052e09af164cef57695d3b96043ea848b051f"
+          }
+        ],
+        "evidence": "At Celo block 72074122 this EOA held minter role 2 and role 0, with a positive 1e27 raw allowance. One signature can mint within that allowance or use role 0 to configure an arbitrary replacement allowance. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "celo",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VGBP Celo role-0 minter administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "No current allowance, but role 0 can grant minter role 2 and configure an arbitrary allowance in separate immediate transactions.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 72074122,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Celo VNX role-0 bearer",
+            "url": "https://celo.blockscout.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Celo block 72074122 this EOA was a role-0 bearer and had zero current allowance. Role 0 can grant itself or another address minter role 2 and set any allowance without a timelock. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "solana",
+        "address": "51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY",
+        "label": "VGBP Solana mint and freeze authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Classic SPL Token mint authority; no supply cap or mint allowance is enforced.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"
+        ],
+        "bypassSurfaces": [
+          "The authority can rotate the mint and freeze authorities without a timelock."
+        ],
+        "sources": [
+          {
+            "label": "Solana VGBP mint",
+            "url": "https://explorer.solana.com/address/5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1"
+          },
+          {
+            "label": "SPL Token program",
+            "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432714278 (block height 410782389, hash 2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), this on-curve System Program account was both mint and freeze authority. One signature can mint without an on-chain cap. All two later mint-address transactions through the audit cutoff were checked and contained no authority mutation, so the state projects back to the exact slot. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "label": "VGBP deployment-wide upgrade authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 2,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "bypassSurfaces": [
+          "On Base and Celo, proxy-admin owner 0xd630...051f can use the inherited changeProxyAdmin path.",
+          "On Base and Celo, either role-0 bearer can grant itself proxy-admin role 1 and call upgrade or upgradeAndCall.",
+          "The Solana Token program is immutable, but its mint authority can rotate itself."
+        ],
+        "sources": [
+          {
+            "label": "Base VGBP proxy admin",
+            "url": "https://base.blockscout.com/address/0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4"
+          },
+          {
+            "label": "Celo VGBP proxy admin",
+            "url": "https://celo.blockscout.com/address/0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4"
+          },
+          {
+            "label": "VNXProxyAdmin source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/ProxyAdmin.sol"
+          }
+        ],
+        "evidence": "The Base and Celo proxies each use chain-local VNXProxyAdmin 0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4, owned by 0xd630...051f. Role 1 can upgrade, and role 0 administers role 1; role-0 bearers are 0xd630...051f and 0xacc5...311a on both chains. Each listed bearer is an EOA and one bearer can reach an upgrade path with no delay. Solana Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 has null upgrade authority."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "Exact-cutoff state was reconstructed at 2026-07-13T20:34:40Z from Base block 48592766, Celo block 72074122, and finalized Solana slot 432714278. Base role changes at blocks 48323261, 48323271, 48323282, 48323293, and allowance update 48323563 occurred before the cutoff and explain why the previous manager/admin inventory was stale. Storage, role membership, token allowances, EIP-1967 implementation/admin/beacon slots, account ownership, and post-slot Solana mint transactions were checked. All three independent mint paths and all immediate authorization or upgrade bypasses are represented above; EVM and Solana issuer keys are single-account controls on-chain, while off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): No credible recurring current reconciliation was established for VGBP: AREVA General Auditing and Trust Company Limited issued a token-specific report only for 2024-12-31, published 2025-02-05, and VNX's current transparency page has no 2025 VGBP report. Liechtenstein FMA's exact VNX Commodities AG match is only a TT Service Provider registration, not prudential EMT-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Base VGBP proxy",
+          "url": "https://base.blockscout.com/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+        },
+        {
+          "label": "Celo VGBP proxy",
+          "url": "https://celo.blockscout.com/address/0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"
+        },
+        {
+          "label": "VNXCToken source",
+          "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/vnxc.sol"
+        },
+        {
+          "label": "VNXManager source",
+          "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+        },
+        {
+          "label": "Solana VGBP mint",
+          "url": "https://explorer.solana.com/address/5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1"
+        },
+        {
+          "label": "AREVA VNX fiat-token report for 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Liechtenstein FMA register search - VNX",
+          "url": "https://register.fma-li.li/search?searchText=VNX"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"
+      ],
+      "implementationAddresses": [
+        "0x0d12d751e71dec6bfed7f5ac34b1fb8df4782ab1",
+        "0xf3e535d35b662015765a2d73e81db5735562b569"
+      ],
+      "adminAddresses": [
+        "0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "VGBP deployment-wide upgrade authorities",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Base VGBP proxy",
+          "url": "https://base.blockscout.com/address/0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411"
+        },
+        {
+          "label": "Celo VGBP proxy",
+          "url": "https://celo.blockscout.com/address/0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f"
+        },
+        {
+          "label": "VNXProxyAdmin source",
+          "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/ProxyAdmin.sol"
+        },
+        {
+          "label": "SPL Token program",
+          "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ]
+    }
+  }
+}

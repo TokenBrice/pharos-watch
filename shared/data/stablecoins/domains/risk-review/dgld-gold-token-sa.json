@@ -1,0 +1,79 @@
+{
+  "id": "dgld-gold-token-sa",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: DGLD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Gold Token SA issues DGLD natively on Ethereum and Base; per-chain token proxies are administered by the issuer's own EOAs (mint-authority review 2026-07-16). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex static metadata correction review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DGLD post-incident report",
+        "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+      },
+      {
+        "label": "DGLD smart-contract audits",
+        "url": "https://dgld.ch/legal/smart-contract-audits"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "protocol": "Gold Token SA DGLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum DGLD token is a transparent proxy whose EIP-1967 admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE resolve to Gold Token SA issuer EOAs (mint-authority review 2026-07-16, verified). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DGLD ethereum token",
+            "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8"
+          },
+          {
+            "label": "DGLD website",
+            "url": "https://dgld.ch/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
+        "destinationChain": "base",
+        "contractAddress": "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
+        "protocol": "Gold Token SA DGLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base DGLD token is a transparent proxy whose EIP-1967 admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE resolve to Gold Token SA issuer EOAs (mint-authority review 2026-07-16, verified). No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DGLD base token",
+            "url": "https://basescan.org/address/0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+          },
+          {
+            "label": "DGLD website",
+            "url": "https://dgld.ch/"
+          }
+        ]
+      }
+    ]
+  }
+}

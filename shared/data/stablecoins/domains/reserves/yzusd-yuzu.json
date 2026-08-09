@@ -1,0 +1,422 @@
+{
+  "id": "yzusd-yuzu",
+  "reserves": [
+    {
+      "name": "Ethena USDe loop",
+      "pct": 32.869999999999926,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena USDe held in leveraged loop strategies",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Ethena sUSDe loop",
+      "pct": 16.420000000000055,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena sUSDe held in leveraged loop strategies",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Maple syrupUSDT loop",
+      "pct": 10.659999999999993,
+      "risk": "high",
+      "coinId": "syrupusdt-maple",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple Finance syrupUSDT lending positions",
+      "riskFactors": [
+        "credit",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Maple syrupUSDC loop",
+      "pct": 8.819999999999993,
+      "risk": "high",
+      "coinId": "syrupusdc-maple",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple Finance syrupUSDC lending positions",
+      "riskFactors": [
+        "credit",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Yuzu yzPRIME",
+      "pct": 6.129999999999993,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Yuzu yzPRIME prime fund (RWA portfolio)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Maple syrupUSDG loop",
+      "pct": 5.069999999999992,
+      "risk": "high",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Maple Finance syrupUSDG (Global Dollar) lending/loop positions",
+      "riskFactors": [
+        "credit",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Superstate USTB loop",
+      "pct": 4.569999999999992,
+      "risk": "high",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Superstate USTB held in leveraged loop strategies",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Aave USDC",
+      "pct": 4.159999999999993,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave USDC lending markets",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Liquidity buffer",
+      "pct": 2.279999999999994,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether USDT0 liquidity buffer",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Agora AUSD Pendle PT loop",
+      "pct": 2.2599999999999945,
+      "risk": "high",
+      "coinId": "ausd-agora",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Agora AUSD Pendle principal-token loop positions",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Fasanara mGLO loop",
+      "pct": 1.9900000000000002,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Midas mGLO (Fasanara Global Diversified Alternative Debt strategy) held in leveraged loop strategies",
+      "riskFactors": [
+        "credit",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Aave USDT0",
+      "pct": 1.3000000000000003,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave USDT0 lending markets",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Fasanara mGLOBAL loop",
+      "pct": 0.8300000000000003,
+      "risk": "high",
+      "coinId": "mglobal-midas-fasanara",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Midas mGLOBAL (Fasanara global private-credit strategy) held in leveraged loop strategies",
+      "riskFactors": [
+        "credit",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Agora AUSD Pendle PT",
+      "pct": 0.5400000000000003,
+      "risk": "high",
+      "coinId": "ausd-agora",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Agora AUSD Pendle principal-token positions",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Securitize VBILL loop",
+      "pct": 0.35000000000000014,
+      "risk": "high",
+      "coinId": "vbill-vaneck",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Securitize VBILL held in leveraged loop strategies",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Ethena USDe",
+      "pct": 0.35000000000000014,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena USDe spot holdings",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Aave GHO",
+      "pct": 0.35000000000000014,
+      "risk": "medium",
+      "coinId": "gho-aave",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave GHO lending markets",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Aave RLUSD",
+      "pct": 0.35000000000000014,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave RLUSD lending markets",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Other reserve assets",
+      "pct": 0.35000000000000014,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Other reserve assets",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Aave GHO Savings",
+      "pct": 0.35000000000000014,
+      "risk": "low",
+      "coinId": "sgho-aave",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave GHO Savings lending markets",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi R05 reserve re-verify (yzusd-yuzu)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Yuzu Accountable dashboard API (exposure_split)",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
+      },
+      {
+        "label": "Yuzu proof of reserve dashboard",
+        "url": "https://yuzu.accountable.capital/"
+      },
+      {
+        "label": "Yuzu underlying strategies documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/underlying-strategies"
+      },
+      {
+        "label": "Yuzu Accountable transparency documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/transparency/accountable"
+      }
+    ],
+    "rationale": "Re-open of the Yuzu Accountable dashboard API on 2026-08-08 returned exposure_split rows dated 2026-08-08T10:43:06.249000+00:00 with total_reserves=$52,659,760.71 and yzUSD supply=$50,011,733.37. The adapter renameMap is mirrored exactly in curated reserve slice names so live-adapter rows classify. Added [Aave]_USDC to the adapter mapping (new material exposure_split bucket not previously captured). Small Rest_of_Assets/dust remains unmapped below the adapter's riskMap coverage. Exact weights remain attestor-feed numbers (probable, not audit-verified).",
+    "compositionBasis": "Accountable exposure_split snapshot of 2026-08-08T10:43:06.249000+00:00 normalized to total_reserves; live adapter renameMap names mirrored verbatim",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "0.35% of backing consists of Accountable Rest_of_Assets and attestor dust not individually mapped to strategies or tracked stablecoins.",
+    "knownUnknownExposurePct": 0.35000000000000014,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 4,
+        "reserveName": "Yuzu yzPRIME",
+        "pct": 6.129999999999993,
+        "disposition": "self-reserve",
+        "rationale": "yzPRIME is Yuzu's own prime fund token, not a tracked third-party stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "Fasanara mGLO loop",
+        "pct": 1.9900000000000002,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Midas mGLO (Fasanara Global Diversified Alternative Debt strategy) is not a tracked Pharos asset, so no dependency edge can be linked; the sister mGLOBAL token is tracked as mglobal-midas-fasanara."
+      },
+      {
+        "reserveIndex": 18,
+        "reserveName": "Other reserve assets",
+        "pct": 0.35000000000000014,
+        "disposition": "insufficient-evidence",
+        "rationale": "Accountable Rest_of_Assets residual plus attestor-level dust not individually mapped to a named strategy or tracked stablecoin; below disclosure granularity and therefore retained as an unlinked basket with insufficient evidence for a more precise classification."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Fordefi (institutional MPC wallets, policy threshold 4-of-n with default block)",
+        "role": "custodian"
+      },
+      {
+        "name": "Accountable (third-party reserve attestation and monitoring)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave-8 phase1 reserve",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Yuzu Accountable dashboard API (fordefi policy fields)",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
+      },
+      {
+        "label": "Yuzu Fordefi MPC documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/fordefi-mpc"
+      },
+      {
+        "label": "Yuzu proof of reserve dashboard",
+        "url": "https://yuzu.accountable.capital/"
+      }
+    ],
+    "uncertainty": "Write-time re-open 2026-07-28: Accountable still reports Fordefi workspace policy default_action=block and m_threshold=4 (fordefi.modified_at=2026-07-25), with fifteen disclosed main wallets and seven RWA fund wallets. Issuer Fordefi docs corroborate MPC custody over protocol funds. Legal segregation, insolvency treatment of strategy positions, and any off-chain custodial arrangements remain undisclosed; reserves are deliberately deployed into third-party yield strategies."
+  }
+}

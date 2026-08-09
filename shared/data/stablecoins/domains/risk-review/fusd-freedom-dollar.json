@@ -1,0 +1,55 @@
+{
+  "id": "fusd-freedom-dollar",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "upstreamSuppressionRationale": "The text-based resolver can infer upstream exposure from ZANO reserve language, but ZANO reserve volatility is collateral risk, not an issuer or upstream stablecoin freeze surface under FreezeWatch semantics.",
+    "sources": [
+      {
+        "label": "Zano Confidential Asset deployment semantics",
+        "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
+      },
+      {
+        "label": "Zano asset-update semantics",
+        "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
+      },
+      {
+        "label": "Zano public daemon RPC",
+        "url": "https://node.zano.org/json_rpc"
+      },
+      {
+        "label": "Freedom Dollar asset explorer",
+        "url": "https://explorer.zano.org/assets?asset_id=86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f"
+      }
+    ],
+    "evidence": "At Zano height 3807334 on 2026-08-08, get_asset_info returned the same FUSD asset-owner key, hidden_supply = false, and an on-chain descriptor calling the asset censorship-resistant. Zano's primary documentation states that the owner key is used only for EMIT and UPDATE validation, that update_asset can change only the owner, and that ordinary Confidential Asset transfers are protocol operations rather than issuer contract calls. No blacklist, freeze, pause, seizure, or arbitrary holder-burn authority exists for the asset owner. ZANO reserve volatility is collateral risk rather than an upstream stablecoin freeze surface, so direct holder freeze is false.",
+    "reviewer": "OpenAI Codex C05 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Freedom Dollar documents one shared, publicly auditable ZANO reserve and decentralized market-making bots around the one-dollar target, but it does not identify an oracle, liquidation engine, or reserve-shortfall procedure.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "FUSD is issued against a shared ZANO reserve and defended by DEX market-making orders rather than borrower-specific collateral positions. The reviewed white paper exposes no separately liquidatable collateral markets, so there are no oracle/liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Freedom Dollar white paper",
+          "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Freedom Dollar white paper",
+        "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "tgld-tenbin",
+  "reserves": [
+    {
+      "name": "USDC collateral (on-chain manager + Hidden Road prime-brokerage custody; CME gold-futures margin)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    }
+  ]
+}

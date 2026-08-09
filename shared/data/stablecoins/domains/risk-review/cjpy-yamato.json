@@ -1,0 +1,141 @@
+{
+  "id": "cjpy-yamato",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Yamato documentation",
+        "url": "https://docs.yamato.fi/v/en"
+      },
+      {
+        "label": "CJPY verified contract and ABI",
+        "url": "https://eth.blockscout.com/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
+      },
+      {
+        "label": "CJPY Currency source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Currency.sol"
+      },
+      {
+        "label": "CurrencyOS source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/CurrencyOS.sol"
+      },
+      {
+        "label": "Yamato source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Yamato.sol"
+      },
+      {
+        "label": "Live Yamato proxy",
+        "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (block 25712439 storage and controller reads)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-verified at Ethereum block 25712439 (2026-08-08T19:49:11Z). Direct storage reads bind CJPY's private currencyOS slot 6 to 0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f, while private governance slot 7 and the EIP-1967 implementation slot are zero; the token route is fixed and non-proxy. The pinned Currency source gives that CurrencyOS exclusive burn(address,uint256) authority and burns the supplied address without allowance. CurrencyOS exposes burnCurrency(address,uint256) to registered Yamato contracts and resolves governance() to 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec, whose live Safe remained 2-of-4. That governance can add Yamato callers and upgrade CurrencyOS, while the already-bound route can destroy an arbitrary CJPY holder balance. This is a direct individual-holder intervention capability even though CJPY has no named blacklist, freeze, or pause function.",
+    "reviewer": "Codex C10 wave1 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Yamato's sole ETH pledge branch derives ETH/JPY from Chainlink ETH/USD and JPY/USD feeds and reverts when either component is broken or stale; there is no alternate provider fallback in the live PriceFeedV3 path.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "SOL-8",
+      "rationale": "The live Yamato deployment exposes one ETH-backed CJPY pledge market. Its composite oracle, 130% minimum collateral ratio, permissionless redemption path, reserve-funded residual-debt sweep, and pause behavior form one collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "Live Yamato implementation",
+          "url": "https://etherscan.io/address/0x0bfa59f9fbe9565c240cd64311c86e90e59a4838#code"
+        },
+        {
+          "label": "Yamato mainnet deployments",
+          "url": "https://github.com/DeFiGeek-Community/yamato/tree/f0eb294909f9d95c60a7eabba6ca783842f0153b/deployments/mainnet"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SOL-8",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yamato PriceFeedV3 source",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/PriceFeedV3.sol"
+      },
+      {
+        "label": "Live Yamato PriceFeed proxy",
+        "url": "https://etherscan.io/address/0x3f4e4dad0ac01da50a774f3389b70506c96fff2f"
+      }
+    ],
+    "branches": [
+      {
+        "id": "yamato-eth-pledges",
+        "label": "Yamato ETH pledges",
+        "tier": "standard-external",
+        "summary": "The sole CJPY debt branch prices ETH in JPY from two Chainlink components and permits under-MCR pledge redemption, with zero-collateral residual debt routed to the Sweep Reserve process.",
+        "collateralAssets": [
+          "ETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "Chainlink ETH/USD divided by Chainlink JPY/USD -> Yamato PriceFeedV3 -> ETH pledge collateral ratio",
+            "address": "0x3f4E4Dad0AC01Da50A774F3389b70506c96FfF2f",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25530969,
+            "failureDomainKeys": [
+              "chainlink-eth-usd",
+              "chainlink-jpy-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeedV3 rejects non-positive, malformed, future-dated, or unavailable Chainlink responses. It reverts when ETH/USD is older than one hour or JPY/USD is older than 24 hours; the deployed V3 path has no alternate-provider fallback.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530969,
+        "collateralParameters": [
+          {
+            "asset": "ETH",
+            "minimumCollateralRatioPct": 130,
+            "note": "The live Yamato proxy returned MCR = 130 at Ethereum block 25530969. CJPY debt is backed only by native ETH pledges."
+          }
+        ],
+        "liquidationMechanism": "Any caller holding CJPY can invoke Yamato's redemption path against the lowest-collateralized pledges below the 130% MCR. The contracts contain no time-based waiting gate before an eligible pledge can be redeemed.",
+        "liquidationDelaySec": 0,
+        "backstop": "Redemption burns the caller's CJPY against pledge debt and transfers the corresponding ETH. If a pledge reaches zero collateral with debt remaining, the permissionless sweep process repays that debt from the protocol Sweep Reserve, subject to available reserve balance.",
+        "shutdownOrBadDebtBehavior": "Broken or stale Chainlink input makes PriceFeedV3 revert rather than use an alternate feed. Yamato's pause guard stops user actions when governance pauses the protocol; zero-collateral residual debt remains queued for reserve-funded sweeping and cannot be swept when the Sweep Reserve is empty.",
+        "failureDomainKeys": [
+          "chainlink-eth-usd",
+          "chainlink-jpy-usd",
+          "yamato-sweep-reserve",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Yamato PriceFeedV3 source",
+            "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/PriceFeedV3.sol"
+          },
+          {
+            "label": "Live Yamato implementation",
+            "url": "https://etherscan.io/address/0x0bfa59f9fbe9565c240cd64311c86e90e59a4838#code"
+          },
+          {
+            "label": "Live YamatoRedeemerV5 implementation",
+            "url": "https://etherscan.io/address/0xd869dd57566daf8f160090fc0f3ff362f953a019#code"
+          },
+          {
+            "label": "Live YamatoSweeperV3 implementation",
+            "url": "https://etherscan.io/address/0x91dc6c1463889d90dcb6cc8629e9db6b20bd253c#code"
+          }
+        ]
+      }
+    ]
+  }
+}

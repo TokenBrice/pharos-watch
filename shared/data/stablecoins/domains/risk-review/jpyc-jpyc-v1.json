@@ -1,0 +1,57 @@
+{
+  "id": "jpyc-jpyc-v1",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/jpycoin"
+      },
+      {
+        "label": "Website",
+        "url": "https://jpyc.co.jp/"
+      }
+    ],
+    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "JPYC v1 legacy deployments on Polygon and Gnosis use third-party bridge rails from Ethereum rather than purely issuer-native multichain issuance. The reviewed durable route is Polygon PoS plus Gnosis OmniBridge lock/mint exposure for the non-Ethereum contracts.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Polygon PoS Bridge",
+        "slug": "polygon-pos",
+        "url": "https://docs.polygon.technology/pos/concepts/bridge/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Gnosis OmniBridge",
+        "slug": "gnosis-omnibridge",
+        "url": "https://docs.gnosischain.com/bridges/OmniBridge/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "JPYC site",
+        "url": "https://jpyc.jp/"
+      },
+      {
+        "label": "JPYC SDK docs",
+        "url": "https://jpyc-support.freshdesk.com/support/solutions/articles/70000675847-jpyc-sdk%EF%BC%88english%EF%BC%89"
+      }
+    ]
+  }
+}

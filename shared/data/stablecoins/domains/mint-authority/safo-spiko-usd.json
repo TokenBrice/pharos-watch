@@ -1,0 +1,121 @@
+{
+  "id": "safo-spiko-usd",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "SAFO tokens are UUPS-upgradeable ERC-20s governed by a per-chain Permission Manager (PM) contract. On Ethereum, the PM's ADMIN group (group 0) is held by a legacy 6-signer multisig (threshold 3) at 0x4eaa52b6. The mint requirement on the Ethereum token is group 0 or group 2; only the multisig currently holds group 0 (group 2 was previously assigned to an EOA that has since been removed). The PM itself is upgradeable but has no separate proxy admin, so upgrades require group 0 approval by this multisig.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xcbade7d9bdee88411cb6cbcbb29952b742036992",
+        "0x344278aff344d6fb960705dc18a4912221608472"
+      ],
+      "implementationAddresses": [
+        "0xbf5fb9284c9cf2798d5f18a9702af620cd4351be",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko Permission Manager ADMIN group — Ethereum (6-signer legacy multisig, threshold 3)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25576670,
+      "sources": [
+        {
+          "label": "SAFO Ethereum token",
+          "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        },
+        {
+          "label": "Spiko PermissionManager",
+          "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
+        },
+        {
+          "label": "Spiko Token UUPS source",
+          "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/token/Token.sol"
+        },
+        {
+          "label": "Spiko PermissionManager UUPS source",
+          "url": "https://raw.githubusercontent.com/spiko-tech/contracts/main/contracts/permissions/PermissionManager.sol"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Spiko token minter role (governed by Permission Manager)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Spiko's token is a UUPS-upgradeable ERC-20 whose privileged functions (including mint/burn) are governed by a central Permission Manager; Spiko, as transfer agent for the SICAV, mints fund shares on KYC-gated subscription at the published NAV.",
+        "chain": "ethereum",
+        "address": "0x344278aff344d6fb960705dc18a4912221608472",
+        "failureDomainKeys": [
+          "contract:ethereum:0x344278aff344d6fb960705dc18a4912221608472",
+          "contract:arbitrum:0xa925c217e4c1c82ee721ebd496d3863d5c2d829a"
+        ]
+      },
+      {
+        "label": "Spiko Permission Manager ADMIN group — Ethereum (6-signer legacy multisig, threshold 3)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25576670, authority() on SAFO ETH token 0xcbade7d9 returned PM 0x344278aff344d6fb960705dc18a4912221608472. getRequirements on the PM returned the ADMIN group mask for upgradeToAndCall on both the token and PermissionManager; getGroups() resolves this multisig to that ADMIN group. getOwners() returned 6 signers and getThreshold() = 3. The token and PermissionManager have EIP-1967 implementation slots 0xbf5fb9284c9cf2798d5f18a9702af620cd4351be and 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e respectively, with zero EIP-1967 admin slots, so this group is the UUPS upgrade control.",
+        "sources": [
+          {
+            "label": "SAFO Ethereum token",
+            "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+          },
+          {
+            "label": "Spiko Permission Manager",
+            "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
+          },
+          {
+            "label": "Spiko smart contracts (tech blog)",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "failureDomainKeys": [
+          "multisig:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+        ]
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "Ethereum block 25576670: SAFO token authority = PM 0x344278aff. The PM ADMIN group 0 resolves to 0x4eaa52b6, a 6-signer legacy multisig with threshold 3. The PM requires that ADMIN group for upgradeToAndCall on both the token and PermissionManager; both are UUPS proxies with zero EIP-1967 admin slots. Group 2 (previously EOA 0x60a9, now removed via remGroup tx history) remains a separate mint group. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Spiko smart contracts (tech blog)",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko contracts repo",
+          "url": "https://github.com/spiko-tech/contracts"
+        },
+        {
+          "label": "SAFO Ethereum token",
+          "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        },
+        {
+          "label": "Spiko Dollar fund transparency",
+          "url": "https://www.spiko.io/spiko-dollar"
+        },
+        {
+          "label": "AMF GECO - Spiko Amundi Overnight Swap Fund",
+          "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
+        }
+      ]
+    }
+  }
+}

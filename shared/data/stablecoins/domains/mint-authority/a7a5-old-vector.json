@@ -1,0 +1,101 @@
+{
+  "id": "a7a5-old-vector",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "A7A5 is issued by Old Vector LLC; minting and redemption run off-chain through KYC-gated authorized partners against RUB deposits. On-chain, the Ethereum token's issue() function is owned by a 3-of-5 custom multisig (5 EOA signers), and the Tron token's owner is a 3-of-5 Multisig contract (5 EOA signers). Both tokens are direct immutable deployments with no proxy or other mint-logic upgrade path.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "A7A5 Ethereum verified source",
+          "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
+        },
+        {
+          "label": "A7A5 Tron verified contract code",
+          "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
+        },
+        {
+          "label": "A7A5 Tron contract detail",
+          "url": "https://apilist.tronscanapi.com/api/contract?contract=TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Old Vector LLC issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Issuer-operated primary-market mint/redeem: Old Vector LLC creates A7A5 supply against custodied RUB bank deposits via KYC-verified partners (e.g. a7a5.kg); no on-chain permissionless mint exists."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29",
+        "label": "A7A5 ETH token owner (custom 3-of-5 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25526129 (2026-07-13), owner() on A7A5 Ethereum (0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9) returns 0x7d2d47e441915ff9c2d5a6e4a7aadd5e02722e29. That contract has getOwners() returning the same 5 EOA addresses (0x6dab4c10..., 0xae8dd5dd..., 0x8b04bdc0..., 0x99d3df8c..., 0x3353d63a...) and getThreshold()=3. The token's EIP-1967 implementation and beacon slots are zero; its exact-block runtime hash is 0x762de09de4267df1038313af242dd978f2835d193d90a51de836e808eae57dc9. No modules or guard were detected on the owner multisig."
+      },
+      {
+        "chain": "tron",
+        "address": "TML1DbrPXYDDwatGxw66iEwECnXCG54uJy",
+        "label": "A7A5 Tron token owner (3-of-5 multisig)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Tron block 83506136 (2026-06-11): owner() on A7A5 Tron (TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ) returns TML1DbrPXYDDwatGxw66iEwECnXCG54uJy, which is a Tron Multisig contract. getOwners() returns 5 owner hex addresses; getThreshold()=3. All 5 owner addresses resolve as non-contract EOAs on Tron."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At Ethereum block 25526129 (2026-07-13), the A7A5 token owner remains the custom 3-of-5 multisig with the same five EOA owners. The verified Ethereum source declares owner, compliance, and accountant as constructor-set immutable values, exposes no upgrade function, and the implementation and beacon slots are zero. On Tron, the independently deployed A7A5 runtime exposes the same direct token interface; Tronscan reports it fully verified and non-proxy, and opcode inspection of the 12,955-byte executable region found no DELEGATECALL, CALLCODE, or SELFDESTRUCT path. The Tron owner was previously confirmed at block 83506136 as a 3-of-5 multisig with five EOA owners. The issuer-backend control cannot be independently confirmed from chain state, but both addressable on-chain mint surfaces and both immutable token runtimes are resolved. Mint-tier review (2026-07-15): No credible recurring independent reconciliation was located: Old Vector LLC publishes issuer-controlled transparency and an ad hoc reserve document, without a named independent attestor, stable cadence, or current liability reconciliation. Kyrgyz Finnadzor virtual-asset registration for Old Vector LLC is VASP/issuance status, not prudential reserve supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "A7A5 ETH token Blockscout",
+          "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9"
+        },
+        {
+          "label": "A7A5 Tron owner Multisig (TML1Dbr...)",
+          "url": "https://tronscan.org/#/contract/TML1DbrPXYDDwatGxw66iEwECnXCG54uJy"
+        },
+        {
+          "label": "A7A5 Tron token contract",
+          "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
+        },
+        {
+          "label": "A7A5 issuer transparency",
+          "url": "https://docs.a7a5.io/legal/transparency.md"
+        },
+        {
+          "label": "A7A5 issuer reserve document",
+          "url": "https://www.a7a5.io/audit.pdf"
+        },
+        {
+          "label": "Kyrgyz Financial Market Supervision Service",
+          "url": "https://fsa.gov.kg/"
+        }
+      ]
+    }
+  }
+}

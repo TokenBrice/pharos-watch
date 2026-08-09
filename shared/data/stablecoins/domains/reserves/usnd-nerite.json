@@ -1,0 +1,30 @@
+{
+  "id": "usnd-nerite",
+  "reserves": [
+    {
+      "name": "tBTC",
+      "pct": 86.5,
+      "risk": "medium"
+    },
+    {
+      "name": "rETH (Rocket Pool)",
+      "pct": 10.2,
+      "risk": "low"
+    },
+    {
+      "name": "WETH",
+      "pct": 2.1,
+      "risk": "very-low"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 1,
+      "risk": "low"
+    },
+    {
+      "name": "Other collateral (ARB, rsETH, weETH, COMP)",
+      "pct": 0.2,
+      "risk": "high"
+    }
+  ]
+}

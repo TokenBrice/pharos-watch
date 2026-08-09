@@ -1,0 +1,92 @@
+{
+  "id": "zys-zephyr-protocol",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "ZYS is minted and redeemed through Zephyr's native consensus conversion between ZSD and ZYS at the protocol yield-share price. The pinned v2.3.0 source exposes user-facing MINT_YIELD and REDEEM_YIELD transaction types with RingCT amount-conservation checks and no admin or emergency mint route.",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Zephyr native ZSD-to-ZYS conversion rules",
+      "observedAt": "2026-08-08",
+      "observedBlock": 837231,
+      "sources": [
+        {
+          "label": "Zephyr v2.3.0 transaction types",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+        },
+        {
+          "label": "Zephyr v2.3.0 conversion routing",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+        },
+        {
+          "label": "Zephyr v2.3.0 RingCT yield-conversion checks",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp#L1340-L1390"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Zephyr native ZSD-to-ZYS conversion rules",
+        "role": "other",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "ZYS issuance burns user-supplied ZSD and mints ZYS at the consensus yield-share rate; the reviewed binary exposes no privileged supply-creation path.",
+        "sources": [
+          {
+            "label": "Zephyr v2.3.0 transaction types",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+          },
+          {
+            "label": "Zephyr v2.3.0 conversion routing",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+          },
+          {
+            "label": "Zephyr v2.3.0 RingCT yield-conversion checks",
+            "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp#L1340-L1390"
+          }
+        ],
+        "evidence": "At the still-current Zephyr v2.3.0 commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a, source/destination asset identity deterministically selects MINT_YIELD only for ZSD-to-ZYS conversion and REDEEM_YIELD only for ZYS-to-ZSD conversion. RingCT verification derives the expected minted amount from the consensus yield price and 0.1% conversion fee, then enforces balance conservation. The transaction enum contains no admin, foundation, or emergency mint type; Explorer block 837231 confirms the live network remains on HF11.",
+        "failureDomainKeys": [
+          "protocol:zephyr-chain"
+        ],
+        "observedAt": "2026-08-08",
+        "observedBlock": 837231
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Zephyr v2.0.0 ZSD Yield release",
+          "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.0.0"
+        },
+        {
+          "label": "Zephyr v2.3.0 transaction types",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+        },
+        {
+          "label": "Zephyr v2.3.0 conversion routing",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+        },
+        {
+          "label": "Zephyr v2.3.0 RingCT yield-conversion checks",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp#L1340-L1390"
+        },
+        {
+          "label": "Zephyr Explorer HF11 block 837231",
+          "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
+        }
+      ],
+      "evidence": "Re-reviewed 2026-08-08. GitHub still identifies v2.3.0 at commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a as the latest official release, and Explorer block 837231 confirms the live network remains on HF11. ZYS is a native consensus asset, so an EVM-style owner or proxy slot is not the relevant authority interface. The pinned transaction router permits ZYS creation only when a user converts ZSD through MINT_YIELD; the RingCT verifier calculates the minted quantity from the consensus yield price, applies the protocol fee, and rejects an imbalanced proof. ZYS issuance is a native consensus conversion, not an issuer-backend reserve reconciliation path, so reconciliation is explicitly not-applicable. No privileged mint transaction type or key-controlled bypass exists in the reviewed current source.",
+      "reviewer": "Codex C10 wave1 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "id": "mapollo-midas",
+  "reserves": [
+    {
+      "name": "Apollo Crypto managed yield strategy NAV",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Apollo Crypto (strategy manager) via Midas mAPOLLO liquid-yield token",
+      "riskFactors": [
+        "basis",
+        "counterparty",
+        "credit",
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mAPOLLO product page",
+        "url": "https://midas.app/mapollo"
+      },
+      {
+        "label": "Midas transparency dashboard",
+        "url": "https://midas.app/transparency"
+      },
+      {
+        "label": "Midas mAPOLLO final terms (prospectus documents)",
+        "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+      }
+    ],
+    "rationale": "Midas identifies the live mAPOLLO exposure as an Apollo Crypto managed-yield strategy NAV — the signed final terms define a crypto-denominated stablecoin-yield strategy allocating dynamically across market-neutral spot, lending, arbitrage, derivatives, and token rewards — but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'Apollo Crypto managed yield strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
+    "compositionBasis": "Midas mAPOLLO product, final-terms, and transparency disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete current underlying strategy allocation, venue exposures, and custody providers are undisclosed; the single NAV slice is the whole envelope, with the strategy internals intentionally unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Apollo Crypto managed yield strategy NAV",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The product is disclosed only as a managed market-neutral strategy NAV without a current structured underlying asset and failure-domain inventory."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Midas mAPOLLO issuance and redemption vault contracts (Ethereum)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "Apollo Crypto strategy wallets and trading venues (undisclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mAPOLLO smart contracts",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      },
+      {
+        "label": "Midas Liquid Yield Token overview",
+        "url": "https://docs.midas.app/liquid-yield-token"
+      },
+      {
+        "label": "Midas mAPOLLO final terms (prospectus documents)",
+        "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+      }
+    ],
+    "uncertainty": "Midas documents the mAPOLLO token, deposit and redemption vaults, and NAV data-feed contracts, and the final terms describe a dynamically allocated market-neutral strategy, so strategy assets are actively deployed and reused by design. The underlying strategy wallets, trading venues, custodians, provider shares, legal segregation, and bankruptcy-remoteness terms are not disclosed. The Midas Attestation Engine notarizes periodic NAV and proof-of-reserve checkpoints (vLayer notarization, LlamaRisk/Canary verification) but does not publish a position-level custody inventory.",
+    "knownUnknownExposurePct": 100
+  }
+}

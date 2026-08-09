@@ -1,0 +1,133 @@
+{
+  "id": "fidd-fidelity",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "FIDD is issuer-operated by Fidelity Digital Assets. The Ethereum token is a UUPS proxy with three DEFAULT_ADMIN_ROLE EOAs, five MINTER_ROLE EOAs, and one separate UPGRADER_ROLE EOA. There is no ProxyAdmin or timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+      ],
+      "implementationAddresses": [
+        "0x8ae9cb3d9095da33555494110f567e3d974c6753"
+      ],
+      "adminAddresses": [
+        "0xd5d9417d47d547e4e7338d28352dcbae81fe27a3"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FIDD UPGRADER_ROLE holder",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526837,
+      "sources": [
+        {
+          "label": "Ethereum FIDD UUPS proxy",
+          "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d#code"
+        },
+        {
+          "label": "FIDD implementation verified source",
+          "url": "https://eth.blockscout.com/address/0x8ae9cb3d9095da33555494110f567e3d974c6753?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Fidelity issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Fidelity FIDD overview",
+            "url": "https://www.fidelity.com/learning-center/trading-investing/FIDD-stablecoin"
+          },
+          {
+            "label": "Fidelity Digital Assets stablecoin",
+            "url": "https://www.fidelitydigitalassets.com/stablecoin"
+          }
+        ],
+        "evidence": "Fidelity describes FIDD as issued and supported by Fidelity Digital Assets under a full-service model covering issuance, purchases, redemptions, and reserves. All on-chain MINTER_ROLE holders are EOAs operated by Fidelity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7C135549504245B5eAe64fc0E99Fa5ebabb8e35D",
+        "label": "FIDD Ethereum token (AccessControl)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum FIDD token",
+            "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "evidence": "At Ethereum block 25526837, the implementation remained 0x8ae9cb3d9095da33555494110f567e3d974c6753 and the proxy-admin and beacon slots were zero. getRoleMemberCount() still returned three DEFAULT_ADMIN_ROLE and five MINTER_ROLE holders, with the same addresses previously enumerated; eth_getCode returned empty bytecode for all eight."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd5d9417d47d547e4e7338d28352dcbae81fe27a3",
+        "label": "FIDD UPGRADER_ROLE holder",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526837,
+        "sources": [
+          {
+            "label": "Ethereum FIDD UUPS proxy",
+            "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d#readProxyContract"
+          },
+          {
+            "label": "FIDD implementation verified source",
+            "url": "https://eth.blockscout.com/address/0x8ae9cb3d9095da33555494110f567e3d974c6753?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526837, getRoleMemberCount(UPGRADER_ROLE) returned 1 and getRoleMember(...,0) returned this address; eth_getCode returned empty bytecode. Verified MintableToken source restricts _authorizeUpgrade() to UPGRADER_ROLE, so this single EOA can replace mint logic immediately."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Fidelity FIDD overview",
+          "url": "https://www.fidelity.com/learning-center/trading-investing/FIDD-stablecoin"
+        },
+        {
+          "label": "Ethereum FIDD token",
+          "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+        },
+        {
+          "label": "Fidelity Digital Assets FIDD transparency",
+          "url": "https://www.fidelitydigitalassets.com/stablecoin"
+        },
+        {
+          "label": "PwC FIDD reserve examination - May 2026",
+          "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        },
+        {
+          "label": "OCC active national trust banks",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
+        }
+      ],
+      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. Economic-control evidence reviewed 2026-07-15: PwC examines FIDD reserves monthly; the latest available report covers 2026-05-29 and reconciles reserve assets to token liabilities. The OCC active national trust-bank list matches Fidelity Digital Assets, N.A. (charter 25398), the exact issuer.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "sdai-sky",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "sDAI is an ERC-4626 savings wrapper over DAI; wrapper minting is deposit/share accounting while durable DAI mint authority is inherited from reviewed Maker/Sky DAI.",
+    "inheritedFrom": "dai-makerdao",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "sDAI Ethereum contract",
+          "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
+        "label": "sDAI ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "sDAI token",
+            "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+          },
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          }
+        ],
+        "evidence": "At Ethereum block 25294731: asset() returned DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F; name() returned 'Savings Dai'. EIP-1967 proxy admin slot = 0x0 (not upgradeable); owner() reverts (no owner). No privileged mint function — shares minted only on DAI deposit via ERC-4626 deposit/mint. Wrapper is immutable with no upgrade surface."
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "sDAI token",
+          "url": "https://etherscan.io/address/0x83F20F44975D03b1b09e64809B757c47f942BEeA#readContract"
+        }
+      ],
+      "evidence": "Refreshed 2026-07-20 from the verified Ethereum wrapper evidence: at block 25294731 sDAI is a non-upgradeable ERC-4626 wrapper (no proxy admin, no owner, and no privileged minter), with asset() = DAI. Shares mint only against deposited DAI, so local wrapper issuance is economically bounded; durable DAI mint authority remains inherited from dai-makerdao. No named prudential supervisor was established for the wrapper itself.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    }
+  }
+}

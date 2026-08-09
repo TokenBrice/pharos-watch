@@ -1,0 +1,44 @@
+{
+  "id": "bbqusdc-steakhouse",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Official MetaMorpho source (no pause/blacklist/freeze)",
+        "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+      },
+      {
+        "label": "Sourcify exact-match Smokehouse USDC MetaMorpho vault",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeefff209270748ddd194831b3fa287a5386f5bc?fields=sources,compilation"
+      },
+      {
+        "label": "Ethereum 1rpc observation block 25648449",
+        "url": "https://1rpc.io/eth"
+      },
+      {
+        "label": "Circle USDC Ethereum token (upstream freeze)",
+        "url": "https://etherscan.io/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is the immutable Ethereum MetaMorpho vault 0xbeef…f5bc. At Ethereum block 25648449: EIP-1967 implementation/admin slots are zero (non-proxy direct code); asset()=USDC 0xa0b8…eb48; owner()=Steakhouse Safe 0x0a0e…f8dd; no pause/paused/isBlacklisted/blacklist/freeze/burn(account) selectors in bytecode. Official MetaMorpho.sol is ERC4626 + ERC20Permit + Ownable2Step with no holder deny-list, pause, or seizure path — owner curation/fees do not gate share transfer. Local transfer posture is therefore permissionless. Holder freeze exposure is inherited from the USDC reserve asset (Circle blacklist on the underlying), via variantOf/mintAuthority.inheritedFrom usdc-circle, not from a vault-level control. Transfer categorical publication still requires chainCirculatingById for material deployment scope.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "bbqUSDC is tracked as one Ethereum MetaMorpho vault token. The reviewed Steakhouse and Morpho source set does not show a durable bridge route for this vault share.",
+    "reviewedAt": "2026-06-20",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Steakhouse legacy vaults",
+        "url": "https://www.steakhouse.financial/docs/products/vault-products/legacy-vaults"
+      },
+      {
+        "label": "Morpho Smokehouse USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeefff209270748ddd194831b3fa287a5386f5bc/smokehouse-usdc"
+      }
+    ]
+  }
+}

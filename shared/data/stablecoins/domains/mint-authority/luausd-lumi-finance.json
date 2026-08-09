@@ -1,0 +1,96 @@
+{
+  "id": "luausd-lumi-finance",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "LUAUSD mint is onlyOwner. The token's owner is an ERC1967Proxy (0xb422502…) whose own owner is a 3-of-5 Gnosis Safe L2 v1.3.0 (0x7e502e2…) on Arbitrum with no modules and no guard.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xb422502156118aa49eff0d4da26fdedccb186049"
+      ],
+      "implementationAddresses": [
+        "0x6da67ac33e87bb801536ea65aa5e6e6d8bf223e0"
+      ],
+      "adminAddresses": [
+        "0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Lumi Finance mint governance Safe (3-of-5)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 486132451,
+      "sources": [
+        {
+          "label": "LUAUSD UtilityToken",
+          "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c#code"
+        },
+        {
+          "label": "LUAUSD owner-controller proxy",
+          "url": "https://arbiscan.io/address/0xb422502156118aa49eff0d4da26fdedccb186049#code"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Lumi Finance mint governance Safe (3-of-5)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "chain": "arbitrum",
+        "address": "0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x0f369f61983cb0c4a432e4a81aaaa24f2d48be45",
+            "0x95c65f6e029c72c46f239161a40d11e0d13b23c4",
+            "0xa11db99124828ba7a71bb1347b85aa705e5ce2e3",
+            "0x03d6a28f0500aa8b0ce2437e5eaf39cee0ab2cd0",
+            "0xa01efb6d3a821e05b1426939728340cfb652d91c"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 472422019,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Sourcify UtilityToken.sol",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+          },
+          {
+            "label": "LUAUSD token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
+          }
+        ],
+        "evidence": "At Arbitrum block 472419740, owner() on 0x1dd6b5f9… returned 0xb422502156118aa49eff0d4da26fdedccb186049 (ERC1967Proxy, implementation 0x6da67ac33e87bb801536ea65aa5e6e6d8bf223e0). owner() on that proxy returned 0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498. getOwners() returned 5 addresses; threshold() returned 3. masterCopy slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Safe L2 v1.3.0 on Arbitrum). getModulesPaginated returned empty; guard slot 0x4a20…c4c7 = 0x0. UtilityToken.sol mint() is onlyOwner with no supply cap."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify UtilityToken.sol",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+        },
+        {
+          "label": "LUAUSD token on Arbiscan",
+          "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
+        }
+      ],
+      "evidence": "At Arbitrum block 472419740: owner() on the LUAUSD UtilityToken returned 0xb422502156118aa49eff0d4da26fdedccb186049 (ERC1967Proxy). owner() on that proxy returned 0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498. getOwners() on that address returned 5 signers; threshold() = 3; masterCopy slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Gnosis Safe L2 v1.3.0). No modules, no guard, no fallback handler detected.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

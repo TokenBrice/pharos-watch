@@ -1,0 +1,24 @@
+{
+  "id": "eurq-quantoz",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "DNB",
+    "authorizedEntity": "Quantoz Payments B.V.",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — Issuers of EMT (EMTWP.csv)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Quantoz EURQ whitepaper v1.4 (30-04-2026)",
+        "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8aa5175db824c8a5190cc_EURQ-WP-1.4%20(30-4-2026).pdf"
+      },
+      {
+        "label": "DNB public register — Quantoz Payments B.V.",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      }
+    ]
+  }
+}

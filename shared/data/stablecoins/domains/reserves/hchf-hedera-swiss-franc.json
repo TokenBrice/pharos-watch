@@ -1,0 +1,88 @@
+{
+  "id": "hchf-hedera-swiss-franc",
+  "reserves": [
+    {
+      "name": "HBAR overcollateralized Troves",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "HLiquity protocol pools (ActivePool, DefaultPool, StabilityPool) on Hedera",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "HLiquity token IDs, pools, and contracts",
+        "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts"
+      },
+      {
+        "label": "HLiquity documentation",
+        "url": "https://docs.hliquity.org/"
+      },
+      {
+        "label": "Hedera mirror node — HCHF token 0.0.6070123",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+      },
+      {
+        "label": "Omniscia HLiquity audit",
+        "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
+      }
+    ],
+    "rationale": "HCHF is issued by HLiquity, a Liquity V1 fork on Hedera developed by Swisscoast AG, and is backed solely by HBAR locked in per-user Troves whose collateral is held in aggregate protocol pools (ActivePool, DefaultPool, StabilityPool, CollSurplusPool, GasPool). The mirror node confirms token 0.0.6070123 with no admin, freeze, KYC, or wipe keys, and HLiquity's contract ownership is renounced, so the entire reserve is on-chain HBAR verifiable in real time; there is no fiat or off-chain component.",
+    "compositionBasis": "HLiquity protocol design (single-collateral HBAR CDP) confirmed against Hedera mirror-node token and contract state",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the only collateral is HBAR in protocol pools. Per-Trove collateral ratios vary by user, and aggregate coverage floats with the HBAR price.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "HBAR overcollateralized Troves",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "HBAR is an exogenous Layer-1 cryptoasset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "HLiquity ActivePool, DefaultPool, StabilityPool, and auxiliary pool contracts on Hedera",
+        "role": "other",
+        "jurisdiction": "Hedera"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "HLiquity token IDs, pools, and contracts",
+        "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts"
+      },
+      {
+        "label": "Omniscia HLiquity audit",
+        "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
+      },
+      {
+        "label": "Swisscoast AG (HLiquity developer)",
+        "url": "https://swisscoast.org/contact"
+      }
+    ],
+    "uncertainty": "Collateral is pooled in immutable, ownership-renounced protocol contracts rather than held by any bank or custodian, and it is not lent out by the protocol design. Legal segregation and bankruptcy-remoteness concepts do not map onto contract custody, so those fields remain unknown; Trove-level collateral is recorded per user in the TroveManager but held in aggregate pools.",
+    "knownUnknownExposurePct": 0
+  }
+}

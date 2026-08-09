@@ -1,0 +1,107 @@
+{
+  "id": "eure-monerium",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "EURE is minted via Monerium's licensed EMI flow; the Ethereum token owner is a 3/6 Safe (Monerium-operated); proxy admin slot is zero; all addressable mint-capable surfaces confirmed.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294789,
+      "sources": [
+        {
+          "label": "Monerium smart-contract source",
+          "url": "https://github.com/monerium/smart-contracts"
+        },
+        {
+          "label": "EURE token owner Safe",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Monerium issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Monerium tokens docs",
+            "url": "https://monerium.dev/docs/contracts-v2"
+          },
+          {
+            "label": "Monerium smart-contract source",
+            "url": "https://github.com/monerium/smart-contracts"
+          }
+        ],
+        "evidence": "Monerium docs describe SEPA bank deposits as issuance orders; EURE is minted by the Monerium backend after KYC/AML. Issuer-backend model corroborated: on-chain owner is a Monerium-operated 3/6 Safe; no other mint-capable surface exists."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f",
+        "label": "EURE token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "threshold": 3,
+          "owners": [
+            "0x98f3Ae9569F88513cf260b850730d42d9470CFe2",
+            "0x431d580632d95804Ccb74B4F2DFA22ef58eCF027",
+            "0x02C4D14022F7779e5f1eD4224a4BDE3e166E35F0",
+            "0xcb124a864489382d072aaA19F715C4CD836e57bE",
+            "0x63bD39AC130879203766663D0408da306C553263",
+            "0x26338dc69fC608719F444d5B8726f7Fd2c7a4787"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25294789,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+          }
+        ],
+        "evidence": "At Ethereum block 25294789: owner() returned 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f. Safe API (api.safe.global) confirmed threshold 3, 6 owners, no modules, zero guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (v1.3.0). EIP-1967 proxy admin slot = zero."
+      }
+    ],
+    "reconciliation": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Monerium tokens docs",
+          "url": "https://monerium.dev/docs/contracts-v2"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f/"
+        },
+        {
+          "label": "Monerium financial information",
+          "url": "https://monerium.com/financial-information/"
+        },
+        {
+          "label": "Central Bank of Iceland Monerium EMI authorization",
+          "url": "https://sedlabanki.is/frettir-og-utgefid-efni/grein/2019-06-14-fjarmalaeftirlitid-veitir-monerium-emi-ehf-starfsleyfi-sem-rafeyrisfyrirtaeki"
+        }
+      ],
+      "evidence": "At Ethereum block 25294789: EURE Ethereum owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard). EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs and the Safe being the sole control point. Monerium reports annual audits and semi-annual statements, but the latest published table ends at 2024 and aggregates all Monerium e-money rather than independently reconciling EURe token supply; the same page says regular public safeguarded-fund attestations are still being prepared. No qualifying attestor, cadence, or latest EURe report date was found, so reconciliation is unknown. The Central Bank of Iceland authorization matches Monerium EMI ehf. and the issuer page expressly identifies prudential EMI supervision, supporting prudential supervision despite the reconciliation gap.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

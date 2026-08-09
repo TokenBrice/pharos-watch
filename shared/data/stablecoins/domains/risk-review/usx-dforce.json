@@ -1,0 +1,184 @@
+{
+  "id": "usx-dforce",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "dForce USX documentation",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      },
+      {
+        "label": "dForce official site",
+        "url": "https://dforce.network/"
+      },
+      {
+        "label": "USX Ethereum deployment",
+        "url": "https://etherscan.io/address/0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8#code"
+      },
+      {
+        "label": "USX BSC deployment",
+        "url": "https://bscscan.com/address/0xb5102cee1528ce2c760893034a4603663495fd72#code"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: dForce documentation and tracked EVM deployments establish USX's multi-chain scope and upstream reserve exposure, but do not establish a complete holder-level blacklist or freeze inventory across all routes.",
+    "evidence": "USX is tracked across Ethereum, BSC, Arbitrum, Optimism, Base, Polygon, Kava, and Avalanche deployments. The reviewed dForce sources establish the asset scope but do not prove deployment-wide holder-control behavior; inherited exposure is not treated as a direct USX blacklist.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "dForce says Chainlink Price Feeds are the primary oracle solution for its lending and stablecoin protocols, with no stronger USX-specific failover documented.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dForce Chainlink oracle announcement",
+        "url": "https://medium.com/dforcenet/dforce-integrates-chainlink-price-feeds-on-arbitrum-7a0c800c084e"
+      },
+      {
+        "label": "dForce USX docs",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin.md"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "dForce documents USX as its protocol stablecoin across supported chains. No independent bridge protocol was resolved in the review, so the route is treated as dForce-managed native multichain issuance rather than third-party bridge supply.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dForce USX docs",
+        "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"
+      },
+      {
+        "label": "dForce website",
+        "url": "https://dforce.network/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "bsc:0xb5102cee1528ce2c760893034a4603663495fd72",
+        "destinationChain": "bsc",
+        "contractAddress": "0xb5102cee1528ce2c760893034a4603663495fd72",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x641441c631e2f909700d2f41fd87f0aa6a6b4edb",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x641441c631e2f909700d2f41fd87f0aa6a6b4edb",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "optimism:0xbfd291da8a403daaf7e5e9dc1ec0aceacd4848b9",
+        "destinationChain": "optimism",
+        "contractAddress": "0xbfd291da8a403daaf7e5e9dc1ec0aceacd4848b9",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "base:0xc142171b138db17a1b7cb999c44526094a4dae05",
+        "destinationChain": "base",
+        "contractAddress": "0xc142171b138db17a1b7cb999c44526094a4dae05",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0xcf66eb3d546f0415b368d98a95eaf56ded7aa752",
+        "destinationChain": "polygon",
+        "contractAddress": "0xcf66eb3d546f0415b368d98a95eaf56ded7aa752",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "kava:0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+        "destinationChain": "kava",
+        "contractAddress": "0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "avalanche:0x853ea32391aaa14c112c645fd20ba389ab25c5e0",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x853ea32391aaa14c112c645fd20ba389ab25c5e0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

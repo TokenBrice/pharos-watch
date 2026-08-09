@@ -1,0 +1,157 @@
+{
+  "id": "usdx-kava",
+  "reserves": [
+    {
+      "name": "HBTC (Huobi BTC) CDP collateral",
+      "pct": 80.77,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Huobi (HBTC)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BTCB (Binance BTC) CDP collateral",
+      "pct": 7.91,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Binance (BTCB)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "XRPB (Binance XRP) CDP collateral",
+      "pct": 3.47,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Binance / Ripple (XRPB)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "KAVA CDP collateral",
+      "pct": 3.11,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Kava Labs (KAVA)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BNB CDP collateral",
+      "pct": 2.88,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Binance (BNB)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BUSD CDP collateral",
+      "pct": 1.65,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos / Binance (BUSD)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT CDP collateral",
+      "pct": 0.21,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "issuerOrObligor": "Tether (USDT)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kava x/cdp params API",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Kava x/cdp live CDP inventory",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
+      },
+      {
+        "label": "Kava bank supply by denom (USDX)",
+        "url": "https://api.data.kava.io/cosmos/bank/v1beta1/supply/by_denom?denom=usdx"
+      }
+    ],
+    "rationale": "At Kava chain height ~21878704, every live x/cdp CDP was enumerated and grouped by collateral type. The collateral-value mix (overcollateralized vault balances) is HBTC 80.77%, BTCB 7.91%, XRPB 3.47%, KAVA 3.11%, BNB 2.88%, BUSD 1.65% and USDT 0.21%. The total on-chain collateral value (~$52.3M) exceeds total USDX supply (~$9.85M); the percentages describe the reserve portfolio allocation, not a supply-weighted debt split.",
+    "compositionBasis": "Live Kava x/cdp CDP inventory aggregated by collateral type and valued in USDX terms",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All live CDP collateral is identified and classified. The legacy CDP module is the only material issuance path; no current issuer attestation or off-chain reserve statement exists.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Kava Mint on-chain CDP vault contracts",
+        "role": "custodian",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kava CDP module docs",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+      },
+      {
+        "label": "Kava x/cdp live CDP inventory",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
+      }
+    ],
+    "uncertainty": "Collateral is held non-custodially in the on-chain Kava x/cdp module account and individual CDP vaults. No legal custodian, statutory segregation, insolvency remoteness, or rehypothecation terms apply at the protocol layer; each underlying collateral asset carries its own issuer/custody risk.",
+    "knownUnknownExposurePct": 0
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "usdu-unitas",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself — a self-referential pattern that prevents standard key-based verification.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 103620388,
+      "sources": [
+        {
+          "label": "BscScan contract",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+        },
+        {
+          "label": "USDU Solana mint",
+          "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "USDU BSC owner — Gnosis Safe 3-of-5",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb17ec02641cbb05932041853ffec86a7191e91cc",
+            "0x276dbda1cccbd41e83ef37a4ce9ef0961c8c9f2b",
+            "0x2010161b0ecf277908beac2ff80538cda9b4090b",
+            "0x01444f55dd8d6b5ac61e0676b7c9476e52f069c6",
+            "0x4334c72283c03215706ff4a5a0604c2ea82cb1ae"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 103620388,
+          "source": "onchain"
+        },
+        "evidence": "At BSC block 103620388: token owner() = 0x8e3811b4…; getOwners() returned 5 EOA addresses (all eth_getCode=0x), threshold()=3, getModulesPaginated returned empty array (no modules), guard slot 6 = 0x0 (no guard), VERSION()='1.4.1'. BSC token is Ownable (non-upgradeable, mint() is onlyOwner) so the Safe is the sole on-chain minter on BSC.",
+        "sources": [
+          {
+            "label": "USDU BSC contract",
+            "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882"
+          }
+        ]
+      },
+      {
+        "label": "USDU Solana mint authority",
+        "role": "direct-minter",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "chain": "solana",
+        "address": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "canRaiseCap": "unknown",
+        "evidence": "Solana Token-2022 mint 9ckR7pPP…: mintAuthority = the mint address itself (self-referential). Extensions present: metadataPointer and tokenMetadata (updateAuthority also = mint address). No freezeAuthority. Supply = 10,951,433 USDU. This pattern cannot be verified via standard key-based authority reads — the controlling program or keypair is unknown from on-chain state alone. Judgment per the moveUSD precedent: a self-referential Token-2022 mintAuthority (the mint address itself) is a non-executable, non-signing account, so no party can invoke MintTo on Solana; the Solana supply is effectively frozen.",
+        "sources": [
+          {
+            "label": "USDU Solana mint",
+            "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+          }
+        ]
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "BscScan contract",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882"
+        },
+        {
+          "label": "USDU Solana mint",
+          "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+        },
+        {
+          "label": "Accountable independent USDU proof of solvency",
+          "url": "https://accountable.unitas.so/"
+        },
+        {
+          "label": "Unitas transparency page",
+          "url": "https://sol.unitas.so/transparency"
+        }
+      ],
+      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface. Accountable independently reconciles USDU backing assets to token liabilities. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-07, with its proof signature validated 2026-07-07; the observed evidence therefore supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

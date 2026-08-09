@@ -1,0 +1,92 @@
+{
+  "id": "syrupusdc-maple",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "inheritedFrom": "usdc-circle",
+    "summary": "syrupUSDC is Maple's ERC-4626 strategy-vault receipt for USDC lent to institutional borrowers; shares are minted against USDC deposits and do not create base USDC supply, so its mint authority is inherited from USDC (usdc-circle).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "label": "Maple syrupUSDC ERC-4626 vault token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "syrupUSDC shares are minted/burned by the Maple ERC-4626 vault against USDC deposits and FIFO-queued withdrawals; this share accounting cannot create or destroy base USDC supply.",
+        "evidence": "At Ethereum block 25295167: asset() returned USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48. EIP-1967 impl slot = 0x0 and admin slot = 0x0 (not upgradeable). No proxy admin or module surface detected. Wrapper share accounting only."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE982615d461DD5cD06575BbeA87624fda4e3de17",
+        "label": "Inherited USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Ethereum USDC contract",
+            "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+          }
+        ],
+        "evidence": "Underlying USDC supply is issuer-minted by Circle via the MasterMinter. Live masterMinter() reads resolve to this contract, which can authorize minters for the base USDC monetary supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xFcb19e6a322b27c06842A71e8c725399f049AE3a",
+        "label": "Inherited USDC token owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USDC contract",
+            "url": "https://etherscan.io/address/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48#code"
+          }
+        ],
+        "evidence": "Underlying USDC token owner/admin can authorize USDC mint administration; syrupUSDC wrapper shares inherit this base USDC authority."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "evidence": "At Ethereum block 25295167: syrupUSDC asset() = USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 confirmed; EIP-1967 impl slot = 0x0, admin slot = 0x0 (not upgradeable, no proxy admin surface). Wrapper is a non-upgradeable ERC-4626 vault; durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Maple Finance",
+          "url": "https://maple.finance/"
+        },
+        {
+          "label": "Maple syrupUSDC and syrupUSDT Proof of Reserves",
+          "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+        },
+        {
+          "label": "Maple transparency dashboard",
+          "url": "https://maple.finance/transparency"
+        }
+      ],
+      "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "syrupUSDC on Etherscan",
+          "url": "https://etherscan.io/address/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b#code"
+        }
+      ]
+    }
+  }
+}

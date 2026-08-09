@@ -1,0 +1,16 @@
+{
+  "id": "usr-resolv",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "The Block",
+        "url": "https://www.theblock.co/post/394582/resolvs-usr-stablecoin-depegs-after-attacker-mints-80-million-unbacked-tokens-extracts-roughly-25-million"
+      }
+    ],
+    "evidence": "Explicit Direct retained: incident reporting and the local obituary record that Resolv burned unbacked USR supply via a blacklist freeze after the March 2026 exploit.",
+    "reviewer": "Codex inferred-status backfill audit",
+    "reviewedAt": "2026-05-12"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "id": "rlusd-ripple",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: RLUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "RLUSD is issued by Ripple on Ethereum and XRPL as issuer-native stablecoin deployments, not as a holder-facing third-party bridge wrapper. Cross-chain route risk is therefore reviewed as issuer-native mint/redeem exposure.",
+    "reviewedAt": "2026-07-16",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripple stablecoin page",
+        "url": "https://ripple.com/solutions/stablecoin/"
+      },
+      {
+        "label": "XRPL issued currencies docs",
+        "url": "https://xrpl.org/docs/concepts/tokens/fungible-tokens/"
+      },
+      {
+        "label": "Ripple RLUSD token addresses",
+        "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+      },
+      {
+        "label": "Ripple RLUSD mint and redemption lifecycle",
+        "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+        "protocol": "Ripple native RLUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD mint and redemption lifecycle",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+          }
+        ]
+      },
+      {
+        "id": "xrpl:524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "destinationChain": "xrpl",
+        "contractAddress": "524C555344000000000000000000000000000000.rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+        "protocol": "Ripple native RLUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Ripple RLUSD token addresses",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/token-addresses"
+          },
+          {
+            "label": "Ripple RLUSD on XRP Ledger",
+            "url": "https://docs.ripple.com/products/stablecoin/developer-resources/rlusd-on-the-xrpl"
+          },
+          {
+            "label": "Ripple RLUSD mint and redemption lifecycle",
+            "url": "https://docs.ripple.com/products/stablecoin/overview/rlusd"
+          }
+        ]
+      }
+    ]
+  }
+}

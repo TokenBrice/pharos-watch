@@ -1,0 +1,74 @@
+{
+  "id": "cusd-cap",
+  "reserves": [
+    {
+      "name": "USDC",
+      "pct": 91.7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WTGXX",
+      "pct": 8.3,
+      "risk": "low",
+      "coinId": "wtgxx-wisdomtree",
+      "depType": "collateral",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap Ethereum cUSD vault read interface",
+        "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc#readProxyContract"
+      },
+      {
+        "label": "Ethereum block 25540229 used for the cUSD vault snapshot",
+        "url": "https://etherscan.io/block/25540229"
+      },
+      {
+        "label": "Cap Vault read-method implementation pinned at commit 695c8280",
+        "url": "https://github.com/cap-labs-dev/cap-contracts/blob/695c8280b410bce1b43c9254cb214be30fe51dde/contracts/vault/Vault.sol#L173-L185"
+      },
+      {
+        "label": "Cap vault documentation",
+        "url": "https://docs.cap.app/concepts/vault"
+      },
+      {
+        "label": "Circle USDC transparency",
+        "url": "https://www.circle.com/transparency"
+      },
+      {
+        "label": "WTGXX SEC Form N-MFP3 for June 30, 2026",
+        "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 25540229 (hash 0x050d9c47fab878a8bdd60775f78193c15fb10f514ba6cb80c2ba1982a4721056), the cUSD vault assets() call returned exactly USDC and WTGXX. totalSupplies() returned 55,897,897.772864 USDC and 5,092,033.265897586 WTGXX, which normalized to 91.7% and 8.3%. Their combined configured-dollar value reconciled to 99.9983% of cUSD totalSupply; both live rows therefore have exact tracked identities and reviewed asset classes.",
+    "compositionBasis": "Fixed-block Cap vault totalSupplies by accepted asset, valued at the adapter's configured one-dollar unit values and normalized across the complete assets() enumeration",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The vault's complete assets() enumeration contains only the two identified tracked assets. Borrower and fractional-reserve strategy risk remains a mechanism-level exposure rather than an unidentified reserve slice.",
+    "knownUnknownExposurePct": 0
+  }
+}

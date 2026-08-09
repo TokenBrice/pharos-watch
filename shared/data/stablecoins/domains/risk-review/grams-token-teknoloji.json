@@ -1,0 +1,95 @@
+{
+  "id": "grams-token-teknoloji",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: GRAMS resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "GRAMS moves cross-chain through an issuer-operated burn/mint mechanism built into its own StableCoin contract: externalTransfer() routes tokens to the supply manager and burns them on the source chain, and externalTransferFrom() mints on the destination, both restricted to the issuer's onlySupplyManager role plus whenNotPaused and KYC/freeze compliance controls. There is no third-party bridge protocol (no LayerZero/OFT, Axelar ITS, Hyperlane, or Wormhole/NTT) and the identical multichain address reflects the same custom issuer contract (shared with Token Teknoloji's USDOT/EUROT/TRYT family), not an omnichain standard. The durable cross-chain supply path is issuer-native burn-mint.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "Snowtrace verified source - StableCoin (GRAMS) with ExternallyTransferable burn/mint",
+        "slug": "snowtrace-grams",
+        "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
+        "note": "externalTransfer() burns on source, externalTransferFrom() mints on destination, both onlySupplyManager whenNotPaused; no third-party bridge protocol"
+      },
+      {
+        "source": "explorer",
+        "name": "PolygonScan verified source - StableCoin (GRAMS), exact match, identical address",
+        "slug": "polygonscan-grams",
+        "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
+        "note": "Same StableCoin contract as Avalanche; verified exact source match"
+      },
+      {
+        "source": "issuer",
+        "name": "Token Teknoloji - Gram Silver (GRAMS) reserve token page",
+        "slug": "token-teknoloji-grams",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ],
+        "note": "Lists separate ETH/AVAX/Polygon contracts; describes issuer mint-and-burn against reserves; no bridge or omnichain standard documented"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Snowtrace verified source code - StableCoin (GRAMS), Avalanche",
+        "url": "https://snowtrace.io/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+      },
+      {
+        "label": "PolygonScan - StableCoin (GRAMS), verified exact match, Polygon",
+        "url": "https://polygonscan.com/address/0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0"
+      },
+      {
+        "label": "Token Teknoloji - Gram Silver (GRAMS) issuer page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21"
+      },
+      {
+        "id": "polygon:0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0x97cf07b5401b76d69bf48a4f6fdf63684e0748e0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21"
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "pc0000089-tradable",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tradable",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "evidence": "PC0000089 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000089 has one tracked zkSync deployment in the local catalog, and reviewed Tradable materials do not show holder-facing supply moving through a separate bridge route. The row is triaged as single-chain/native.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tradable docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable website",
+        "url": "https://www.tradable.xyz/"
+      }
+    ]
+  }
+}

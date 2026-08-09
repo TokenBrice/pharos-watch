@@ -1,0 +1,170 @@
+{
+  "id": "aid-gaib",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: AID resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "AID is a LayerZero OFT omnichain deployment at the same EVM address on Ethereum, Arbitrum, Base, and BNB Chain. Cross-chain movement uses LayerZero burn/mint messaging rather than the Arbitrum canonical rollup bridge.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 BRDG curation",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "LayerZero OFT",
+        "slug": "layerzero",
+        "url": "https://blog.gaib.ai/the-ai-dollar-is-live/",
+        "bridgeTypes": [
+          "oft",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "GAIB AID launch blog",
+        "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
+      },
+      {
+        "label": "GAIB AID transparency",
+        "url": "https://aid.gaib.ai/transparency"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "GAIB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "GAIB AID launch blog",
+            "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
+          },
+          {
+            "label": "GAIB AID transparency",
+            "url": "https://aid.gaib.ai/transparency"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "GAIB AID launch blog",
+            "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
+          },
+          {
+            "label": "GAIB AID transparency",
+            "url": "https://aid.gaib.ai/transparency"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "base:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "GAIB AID launch blog",
+            "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
+          },
+          {
+            "label": "GAIB AID transparency",
+            "url": "https://aid.gaib.ai/transparency"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "GAIB AID launch blog",
+            "url": "https://blog.gaib.ai/the-ai-dollar-is-live/"
+          },
+          {
+            "label": "GAIB AID transparency",
+            "url": "https://aid.gaib.ai/transparency"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      }
+    ]
+  }
+}

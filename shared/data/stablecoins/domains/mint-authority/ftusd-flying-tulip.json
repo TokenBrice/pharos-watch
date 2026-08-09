@@ -1,0 +1,183 @@
+{
+  "id": "ftusd-flying-tulip",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "ftUSD on both Ethereum and Sonic is controlled by the same self-controlled, no-timelock 3-of-5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the upgradeable minter contract (0x56c5892b). Ethereum has a Safe Allowance Module with a bounded native-asset allowance; it has no reviewed ftUSD minter call path. Sonic reports no enabled module.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9"
+      ],
+      "adminAddresses": [
+        "0x1118E1C057211306A40A4D7006C040dBFE1370cb"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "ftUSD token owner / masterMinter",
+      "observedAt": "2026-08-09",
+      "observedBlock": 25720088,
+      "sources": [
+        {
+          "label": "Flying Tulip contract addresses",
+          "url": "https://docs.flyingtulip.com/contract-addresses/"
+        },
+        {
+          "label": "Flying Tulip ftUSD Ethereum minter",
+          "url": "https://etherscan.io/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
+        },
+        {
+          "label": "Flying Tulip ftUSD Sonic minter",
+          "url": "https://sonicscan.org/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
+        },
+        {
+          "label": "ftUSD owner Safe",
+          "url": "https://app.safe.global/eth:0x1118e1c057211306a40a4d7006c040dbfe1370cb/home"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "label": "ftUSD minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Flying Tulip docs",
+            "url": "https://docs.flyingtulip.com/"
+          },
+          {
+            "label": "Ethereum ftUSD token",
+            "url": "https://etherscan.io/address/0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+          }
+        ],
+        "evidence": "At Ethereum block 25720088, token owner() and masterMinter() returned Safe 0x1118e1c0, token minter() returned this contract, and minter owner() returned the same Safe. The minter's EIP-1967 implementation slot resolved to 0x986841b77f3aa934d315d48121842e3c622e5440 and its admin slot was zero, consistent with a UUPS-controlled path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "label": "ftUSD token owner / masterMinter",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xB7B543337539219A5a1326aCB71dBa8Bba408bc8",
+            "0x3c42749709BF354B3aE0Db29Fd2dd88089b21B4E",
+            "0xf9E5aF16243041cE3141284D225CAfC0fC749a10",
+            "0x09E2B49280f1879172b2C3345d08896921707881",
+            "0xD0CA88388d1732594D611535314e9B6745396f5A"
+          ],
+          "enabledModules": [
+            "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"
+          ],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 25720088,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "ftUSD owner Safe API",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+          },
+          {
+            "label": "Safe Allowance Module documentation",
+            "url": "https://docs.safe.global/home/ai-agent-quickstarts/agent-with-spending-limit"
+          },
+          {
+            "label": "Ethereum module-enabling transaction",
+            "url": "https://etherscan.io/tx/0x8d38eadf5e68cfe1e4395c5f5360500dc17925b8c773e538dc95c0274ac51a22"
+          }
+        ],
+        "evidence": "At Ethereum block 25720088, owner() and masterMinter() returned this Safe, which also owned the minter contract. The Safe API returned threshold 3 of 5, zero guard, and Allowance Module 0xCFbF...3134. The module reported signer 0xf9E5...9a10 as its sole delegate, with a 2 ETH weekly allowance, 0.1 ETH spent in the current period, and zero allowances for ftUSD, USDC, USDT, and WETH. Its transfer allowance does not establish a call path that can authorize or upgrade the ftUSD minter without the Safe threshold."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9",
+        "label": "ftUSD minter contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Flying Tulip contract addresses",
+            "url": "https://docs.flyingtulip.com/contract-addresses/"
+          },
+          {
+            "label": "Sonic ftUSD minter",
+            "url": "https://sonicscan.org/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
+          }
+        ],
+        "evidence": "At Sonic block 77315268, token owner() and masterMinter() returned Safe 0x1118e1c0, token minter() returned this contract, and minter owner() returned the same Safe. The minter's EIP-1967 implementation slot resolved to 0x986841b77f3aa934d315d48121842e3c622e5440 and its admin slot was zero, matching the Ethereum UUPS-controlled path."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x1118E1c057211306A40A4D7006C040dBFE1370cb",
+        "label": "ftUSD token owner / masterMinter",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0xB7B543337539219A5a1326aCB71dBa8Bba408bc8",
+            "0x3c42749709BF354B3aE0Db29Fd2dd88089b21B4E",
+            "0xf9E5aF16243041cE3141284D225CAfC0fC749a10",
+            "0x09E2B49280f1879172b2C3345d08896921707881",
+            "0xD0CA88388d1732594D611535314e9B6745396f5A"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "observedBlock": 77315268,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "ftUSD Sonic owner Safe API",
+            "url": "https://api.safe.global/tx-service/sonic/api/v1/safes/0x1118e1c057211306a40A4d7006C040dbfE1370Cb/"
+          }
+        ],
+        "evidence": "At Sonic block 77315268, token owner(), masterMinter(), and minter owner() all returned this Safe. The Sonic Safe API separately returned the same five owners, threshold 3, zero guard, no enabled modules, and the same fallback handler as Ethereum. No timelock was established."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Flying Tulip docs",
+          "url": "https://docs.flyingtulip.com/"
+        },
+        {
+          "label": "Flying Tulip ftUSD dashboard (self-reported backing)",
+          "url": "https://flyingtulip.com/ftusd/dashboard/"
+        },
+        {
+          "label": "Flying Tulip contract addresses (3-of-5 Safe controls the mint)",
+          "url": "https://docs.flyingtulip.com/contract-addresses/"
+        }
+      ],
+      "evidence": "At Ethereum block 25720088 and Sonic block 77315268, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and minter owner() returned the same Safe. Both minter proxies resolved to EIP-1967 implementation 0x986841b77f3aa934d315d48121842e3c622e5440 with a zero admin slot. The same 3-of-5 Safe therefore controls the entire mint and upgrade surface on both chains with no reviewed timelock or independent cap. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer.",
+      "reviewer": "Codex ftUSD correction review",
+      "reviewedAt": "2026-08-09"
+    }
+  }
+}

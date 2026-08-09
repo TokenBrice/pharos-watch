@@ -1,0 +1,20 @@
+{
+  "id": "mf-one-midas",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mF-ONE",
+        "url": "https://midas.app/mfone"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mF-ONE is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  }
+}

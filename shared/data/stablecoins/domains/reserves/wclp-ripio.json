@@ -1,0 +1,71 @@
+{
+  "id": "wclp-ripio",
+  "reserves": [
+    {
+      "name": "Chilean-peso cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed Chilean financial institution(s) and Ripio wFIAT issuer",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "OpenAI Codex backing review; Kimi T24 re-verification",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "Ripio's current local-stablecoin page identifies WCLP as a Chilean-peso stablecoin in its wFIAT product family. Re-checked 2026-08-08: the wFIAT attestation index publishes CPA certifications for wARS (December 2025 and March 2026), wBRL, wCOP, and wMXN as of 2026-03-31, but still no wCLP attestation or reserve report, so the composition stays unclassified rather than borrowing sibling-token assurance. The repository's existing collateral description supports a single aggregate reserve envelope of Chilean-peso cash and liquid local-currency instruments, but the reviewed issuer page does not publish a WCLP-specific asset split, named financial institution, or reserve attestation.",
+    "compositionBasis": "Ripio wFIAT local-stablecoin disclosure for WCLP",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full 100% reserve envelope remains unclassified beyond Chilean-peso cash and liquid local-currency instruments; no per-token attestation or current category weights were found.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Chilean-peso cash and local-currency liquid instruments",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Ripio identifies the wFIAT reserve family but does not publish WCLP-specific category weights, counterparties, or an assurance report."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Chilean financial institution(s)",
+        "role": "bank",
+        "jurisdiction": "Chile"
+      },
+      {
+        "name": "Ripio wFIAT issuer and onchain token contracts",
+        "role": "other",
+        "jurisdiction": "Chile"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "uncertainty": "Ripio does not name WCLP reserve institutions, account structure, legal segregation, bankruptcy treatment, or rehypothecation terms on the reviewed product page. Ordinary holders also lack a documented direct issuer redemption right in the existing token metadata."
+  }
+}

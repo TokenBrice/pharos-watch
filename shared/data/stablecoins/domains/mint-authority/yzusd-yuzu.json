@@ -1,0 +1,256 @@
+{
+  "id": "yzusd-yuzu",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "yzUSD mints via Yuzu's eligible-investor primary-mint model: 40 EOA accounts hold MINTER_ROLE on the Plasma token (enumerated exhaustively at block 27578074). Upgrades run through a 48-hour timelock (delay 172800s) with a 4-of-5 proposer Safe; limit/restriction parameters are managed by a 3-of-5 Safe behind a 12-hour timelock. Collateral operations sit in a Fordefi MPC treasury workspace.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+      ],
+      "implementationAddresses": [
+        "0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe"
+      ],
+      "adminAddresses": [
+        "0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
+        "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "0xa2a9700407934e913c840556b3d29f19cf6f203d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "yzUSD upgrade timelock (48 hours)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 27578361,
+      "sources": [
+        {
+          "label": "Plasmascan yzUSD proxy",
+          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+        },
+        {
+          "label": "Plasmascan yzUSD implementation",
+          "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+        },
+        {
+          "label": "Routescan API - yzUSD ProxyAdmin",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa"
+        },
+        {
+          "label": "Routescan API - 48-hour upgrade timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+        },
+        {
+          "label": "Plasma RPC fixed-block reads",
+          "url": "https://plasma.drpc.org"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Yuzu issuer / eligible-investor primary mint",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "chain": "plasma",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Yuzu Stablecoin (yzUSD) docs",
+            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+          }
+        ],
+        "evidence": "Yuzu docs state only Eligible Investors (KYC/AML/KYB screened) may mint/redeem yzUSD 1:1 with USDT0 through the protocol; once issued, yzUSD trades freely on secondary markets. The backend-to-token authorization path is not inferred from that product description."
+      },
+      {
+        "chain": "plasma",
+        "label": "yzUSD MINTER_ROLE EOA set (40 accounts, eligible-investor primary minters)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "role:plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc:minter-role"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 27578074,
+        "sources": [
+          {
+            "label": "yzUSD on Plasmascan",
+            "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+          },
+          {
+            "label": "Yuzu Money docs",
+            "url": "https://docs.yuzu.money/"
+          }
+        ],
+        "evidence": "At Plasma block 27578074 (2026-07-20), a full RoleGranted/RoleRevoked event scan of the yzUSD token 0x6695c0f8706c5ace3bdf8995073179cca47926dc (Routescan index, from deployment) was reconciled against per-account hasRole(MINTER_ROLE) calls and eth_getCode: exactly 40 live MINTER_ROLE holders, all EOAs (no contract bytecode): 0x0305c8aa090070000ee41a82d9226482f0296e08, 0x0f2daf4f6430b28d5240186994c7d048897ed428, 0x1df19acdfb6d80ba8ea6b6ec20ed233246a8a250, 0x1fa34cbc70df96ee00cd107f80cec09068db829c, 0x2348e47892f2792ac8dd9df25b723a15d27233e2, 0x241c2aed5b484c5dd72162250c432359a3d5d7c4, 0x2926b9b273ba30b666345532d7bf5eb561e9ca89, 0x2970e339c886e883c0add0e91c5e5a54f9725440, 0x2c5732b7b3af0a63f0e96ffd5c541df3e27167db, 0x37d4474abe0432e4c22e7fabc5a15f68f6cd29b7, 0x41c0eab4153f794b137ca85a6bff975e3ee2026c, 0x496b741a3ca342ddb9a758b9bc329013fbff8cbb, 0x4d6e070f21cbab01b19d505d07b36b981229d386, 0x5de1b7f14de50ed6e430ea144eed8bc9d0bbb30c, 0x732fe63200dd4a5eba02ffa11f150a4c81b01e84, 0x8714d57fbbdbd202b10cafdf562996a2ed961e13, 0x8e234a6fe4ee15ea4b15088b64af80db26c8ae69, 0x8f3a367400e1d296c5598124bc5344b8e552ace3, 0x9858e9eda9031927f175b7f5a887e51d7cd7ba16, 0xa6012497ba8b4d82422cebbe67d730e4bc6c199c, 0xb377c5415b6be1fd5f4f2e80f59e53ebc489262b, 0xb554d6a19464784f14f5a5691612e50443c052d7, 0xb7f15d1122c0f91ee77c1172b9efa4c061952e3c, 0xbba12b603cf1fadb57d1597ed6b84448348e7f41, 0xbe190fddf87bbc1202221c6fbe5beda23e440e67, 0xc3696ffdc029e339e5852d32c5c4efa97ef60579, 0xc42d4102c5106cb5725517c0aa51939107247397, 0xc72f80402c060d6fb89359f319d1daa20166f282, 0xc953bc5f74a6b3f3c7e3539390116a233ce92108, 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82, 0xd015bbabcc0cc6f0a44397e8ddd5be54ae5f5b60, 0xd1e70089bd036896b7454ed5dc5e74c656cc0f7a, 0xd9f0834e7ca9b9262df3189b850ebf9514027e82, 0xdbafa316c236c090e7633cf7cf5ebdd2947b50a1, 0xe541385ee7d5b60e907cf945825ee4e72db75b96, 0xe765c1f860d1d949af634e0cac67bbe161b8eb58, 0xe8f4f324e11c1cadf348b9bf201e380b61d3c695, 0xec0d6af584c9816db3938de9a3f882aee601ae08, 0xf59a44c065fec295ffba1393443256533b3fd6fb, 0xf7121a3616752e29ced0a04ae5df6d76335ada0c. These are Yuzu's eligible-investor primary minters per the issuer model."
+      },
+      {
+        "label": "yzUSD upgrade timelock (48 hours)",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Routescan API - 48-hour upgrade timelock",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+          },
+          {
+            "label": "Plasma RPC fixed-block timelock reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, ProxyAdmin.owner() is this TimelockController and getMinDelay() is 172800 seconds. Safe 0xa2a9...203d holds PROPOSER_ROLE and CANCELLER_ROLE; EOA 0x1eC4...0483 is an additional canceller; EXECUTOR_ROLE is open to the zero address; DEFAULT_ADMIN_ROLE is held by the timelock itself."
+      },
+      {
+        "label": "yzUSD upgrade proposer Safe (4-of-5)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "threshold": 4,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x1c6aCBdC24f88cc538ca9b2A4f872019e8d39F95",
+            "0x87B39bacc760A39822807e358BF21Bd5772D7CE2",
+            "0xA92Cb0695913B0FAC4Dc87048f958105d2E2ca7c",
+            "0x1eC4d0023c89c34903026AB8A3056e5b21490483",
+            "0x0939DC5CC492C4Ba54ba1fAb0EE3B3e1B4adb60f"
+          ],
+          "threshold": 4,
+          "observedBlock": 27099366,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Plasmascan 4-of-5 upgrade proposer Safe",
+            "url": "https://plasmascan.to/address/0xa2a9700407934e913c840556b3d29f19cf6f203d#readContract"
+          },
+          {
+            "label": "Plasma RPC fixed-block Safe reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, getOwners() returned five EOAs and getThreshold() returned 4. The Safe can propose upgrades through the 48-hour timelock but cannot execute an unscheduled upgrade."
+      },
+      {
+        "label": "yzUSD limit/restriction manager Safe (3-of-5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "chain": "plasma",
+        "address": "0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x1c6aCBdC24f88cc538ca9b2A4f872019e8d39F95",
+            "0x87B39bacc760A39822807e358BF21Bd5772D7CE2",
+            "0xA92Cb0695913B0FAC4Dc87048f958105d2E2ca7c",
+            "0x1eC4d0023c89c34903026AB8A3056e5b21490483",
+            "0x0939DC5CC492C4Ba54ba1fAb0EE3B3e1B4adb60f"
+          ],
+          "threshold": 3,
+          "observedBlock": 27099366,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Plasmascan 3-of-5 manager Safe",
+            "url": "https://plasmascan.to/address/0xe61ad2de346db42879b6ee3c7cf0c6a2cdc0530d#readContract"
+          },
+          {
+            "label": "Plasma RPC fixed-block role and Safe reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "RoleGranted/RoleRevoked logs reconciled with current hasRole calls at block 27099366 show this 3-of-5 Safe directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Its five owners are the same as the 4-of-5 upgrade Safe's, but its threshold is 3."
+      },
+      {
+        "label": "yzUSD limit/restriction timelock (12 hours)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "chain": "plasma",
+        "address": "0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c",
+        "timelockDelaySec": 43200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 27099366,
+        "sources": [
+          {
+            "label": "Routescan API - 12-hour manager timelock",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+          },
+          {
+            "label": "Plasma RPC fixed-block role and timelock reads",
+            "url": "https://plasma.drpc.org"
+          }
+        ],
+        "evidence": "At block 27099366, this TimelockController has getMinDelay() = 43200 seconds and directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Safe 0xe61a...530d is proposer and canceller; EOA 0x0939...b60f is an additional canceller; execution is open and DEFAULT_ADMIN_ROLE is held by the timelock itself."
+      }
+    ],
+    "review": {
+      "evidence": "At Plasma block 27099366, yzUSD is a TransparentUpgradeableProxy with implementation 0x32d7...5cfe and ProxyAdmin 0x6ccf...d2aa. ProxyAdmin.owner() is a 172800-second TimelockController proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each held by a 3-of-5 Safe and a 43200-second TimelockController proposed by that Safe; both Safes have the same five EOA owners. Full RoleGranted/RoleRevoked history reconciled against hasRole calls at block 27578074 found exactly 40 live MINTER_ROLE holders, all EOAs and enumerated in the direct-minter control evidence. Fordefi remains documented in custodyProfile but is excluded from mint controls because it has no mint authority.",
+      "reviewer": "GPT SOL-NR-A wave6",
+      "reviewedAt": "2026-07-22",
+      "sources": [
+        {
+          "label": "Yuzu Stablecoin (yzUSD) docs",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        },
+        {
+          "label": "Yuzu Accountable dashboard API",
+          "url": "https://cache.accountable.capital/dashboard/yuzu"
+        },
+        {
+          "label": "Plasmascan yzUSD proxy",
+          "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+        },
+        {
+          "label": "Plasmascan yzUSD implementation",
+          "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+        },
+        {
+          "label": "Routescan API - yzUSD ProxyAdmin",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa"
+        },
+        {
+          "label": "Routescan API - 48-hour upgrade timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+        },
+        {
+          "label": "Routescan API - 12-hour manager timelock",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x5f3d29ef17700f8658c566dac7fbd76e0d86b78c"
+        },
+        {
+          "label": "Plasma RPC fixed-block reads",
+          "url": "https://plasma.drpc.org"
+        }
+      ],
+      "disposition": "scoreable"
+    }
+  }
+}

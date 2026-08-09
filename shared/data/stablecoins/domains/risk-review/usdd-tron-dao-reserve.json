@@ -1,0 +1,241 @@
+{
+  "id": "usdd-tron-dao-reserve",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "USDD freeze-free core-features disclosure",
+        "url": "https://docs.usdd.io/introduction/core-features"
+      },
+      {
+        "label": "Official USDD deployment addresses",
+        "url": "https://docs.usdd.io/developers/deployment-addresses"
+      },
+      {
+        "label": "Sourcify verified Ethereum USDD source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4f8e5de400de08b164e7421b3ee387f461becd1a?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "Sourcify verified BSC USDD source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x45e51bc23d592eb2dba86da3985299f7895d66ba?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "Tronscan verified USDD source",
+        "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+      }
+    ],
+    "evidence": "USDD's official documentation explicitly describes the token as freeze-free. The canonical Tron, Ethereum, and BSC direct implementations expose wards for mint, rely, and deny, but transfer and burn require holder authority or allowance and contain no blacklist, holder freeze, seizure, or pause mechanism. Ethereum and BSC implementation and admin slots were zero, so an upgrade cannot add a hidden token-level freeze path.",
+    "reviewer": "Codex C01 control/access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "USDD CDP collateral prices pass through per-collateral Median, OSM, and Spot modules before reaching Vat, with Chainlink and WinkLink documented as the primary feed sources.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDD supports governed CDP collateral types with per-ilk oracle modules, collateral ratios, liquidation parameters, and auction contracts. The documented collateral types share one Median-to-OSM-to-Spot and Dog-to-Clipper mechanism family; PSM stablecoin conversion is a fixed-price issuance rail rather than a collateral-liquidation branch.",
+      "sources": [
+        {
+          "label": "USDD oracle architecture",
+          "url": "https://docs.usdd.io/developers/oracle"
+        },
+        {
+          "label": "USDD liquidation and auction architecture",
+          "url": "https://docs.usdd.io/developers/liquidation-and-auction"
+        },
+        {
+          "label": "USDD system architecture",
+          "url": "https://docs.usdd.io/system-architecture/system-architecture"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDD oracle architecture",
+        "url": "https://docs.usdd.io/developers/oracle"
+      },
+      {
+        "label": "USDD liquidation and auction architecture",
+        "url": "https://docs.usdd.io/developers/liquidation-and-auction"
+      },
+      {
+        "label": "USDD deployment addresses",
+        "url": "https://docs.usdd.io/developers/deployment-addresses"
+      }
+    ],
+    "branches": [
+      {
+        "id": "usdd-cdp-ilks",
+        "label": "USDD governed CDP collateral types",
+        "tier": "medianized-with-delay",
+        "summary": "Governed USDD collateral types share per-ilk Median, OSM, and Spot pricing followed by Dog and collateral-specific Clipper liquidation auctions.",
+        "collateralAssets": [
+          "Governance-approved USDD CDP collateral types"
+        ],
+        "chains": [
+          "tron",
+          "ethereum",
+          "bsc"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink and WinkLink data feeds",
+            "path": "Supported feeds -> per-collateral Median -> OSM current/next price -> Spot -> Vat",
+            "chain": "tron, ethereum, and bsc",
+            "failureDomainKeys": [
+              "chainlink",
+              "winklink",
+              "usdd-governance"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The OSM retains a current value and separately stages the next Median value; if updates stop, Vat continues using the last Spot value and the collateral price can become stale.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "Governance-approved USDD CDP collateral types",
+            "note": "Each collateral type has a governed Spot liquidation ratio and Dog liquidation capacity; USDD documentation states the minimum ratio varies by asset and illustrates a 130% liquidation threshold."
+          }
+        ],
+        "liquidationMechanism": "When a Vault falls below its collateral-specific minimum ratio, Dog initiates liquidation and the corresponding Clipper sells collateral through a descending-price Dutch auction; proceeds repay USDD debt and penalties and surplus collateral returns to the user.",
+        "liquidationDelaySec": 0,
+        "backstop": "Collateral-auction proceeds cover Vault debt; the documented system architecture provides Vow accounting and a Flop debt-auction path that sells governance tokens to recapitalize a protocol deficit.",
+        "shutdownOrBadDebtBehavior": "Uncovered system deficits can proceed to the documented debt-auction path. Deployment records also identify End and ESM contracts on supported CDP chains for emergency shutdown and settlement.",
+        "failureDomainKeys": [
+          "chainlink",
+          "winklink",
+          "usdd-governance",
+          "usdd-auction-keepers"
+        ],
+        "sources": [
+          {
+            "label": "USDD oracle architecture",
+            "url": "https://docs.usdd.io/developers/oracle"
+          },
+          {
+            "label": "USDD liquidation example",
+            "url": "https://docs.usdd.io/developers/liquidation-and-auction/example-process"
+          },
+          {
+            "label": "USDD Dog contract",
+            "url": "https://docs.usdd.io/developers/core-contracts/dog"
+          },
+          {
+            "label": "USDD system architecture",
+            "url": "https://docs.usdd.io/system-architecture/system-architecture"
+          },
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Material USDD supply on Tron, Ethereum, and BSC uses chain-local native token and Join rails. Legacy BTTC predicate representations remain peripheral bridge risk and are not treated as canonical issuance.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "USDD chain-local native issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDD docs",
+        "url": "https://docs.usdd.io"
+      },
+      {
+        "label": "USDD website",
+        "url": "https://usdd.io/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tron:TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "destinationChain": "tron",
+        "contractAddress": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Tron USDD token",
+            "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "Ethereum USDD token",
+            "url": "https://eth.blockscout.com/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+        "destinationChain": "bsc",
+        "contractAddress": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
+        "protocol": "USDD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "USDD deployment addresses",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "BSC USDD token",
+            "url": "https://bscscan.com/address/0x45e51bc23d592eb2dba86da3985299f7895d66ba#code"
+          }
+        ]
+      }
+    ]
+  }
+}

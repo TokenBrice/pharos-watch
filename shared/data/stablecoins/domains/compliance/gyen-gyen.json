@@ -1,0 +1,75 @@
+{
+  "id": "gyen-gyen",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "GMO-Z.com Trust Company, Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS limited purpose trust company",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://stablecoin.z.com/attestation/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "GYEN has NYDFS trust-company supervision and monthly attestations, but no public GENIUS state-qualified approval or official application source was located. GMO-Z.com Trust Company announced a wind-down of GYEN and ZUSD issuance on May 15, 2026, with the parent GMO Internet Group dissolving the subsidiary and recording a ¥2.2bn write-down; the entity is pursuing a strategic shift to Japan. No GENIUS authorization posture is expected to develop given the planned dissolution.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "NYDFS virtual currency businesses",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "GMO Trust attestations",
+        "url": "https://stablecoin.z.com/attestation/",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "GMO Trust stablecoin overview",
+        "url": "https://stablecoin.z.com/what-are-gyen-and-zusd/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "GMO Trust wind-down announcement (May 15, 2026)",
+        "url": "https://stablecoin.z.com/press/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-15",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "NYDFS virtual currency business registry",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "GMO Trust press page and Medium blog — wind-down of GYEN/ZUSD announced May 15 2026; no GENIUS application or authorization posture found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "NYDFS trust-company and reserve-attestation materials were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, or official application source was located for GYEN. GMO-Z.com Trust Company announced dissolution of its U.S. stablecoin operations on May 15, 2026, making future authorization pursuit unlikely.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

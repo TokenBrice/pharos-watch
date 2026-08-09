@@ -1,0 +1,93 @@
+{
+  "id": "usdz-anzen",
+  "reserves": [
+    {
+      "name": "SPCT (Secured Private Credit Token)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Anzen Group Ltd SPCT portfolio (U.S. private-credit ABS obligors)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anzen USDz transparency documentation",
+        "url": "https://docs.anzen.finance/usdz-101/transparency"
+      },
+      {
+        "label": "Anzen USDz collateral documentation",
+        "url": "https://docs.anzen.finance/usdz-101/backing-assets-collateral"
+      },
+      {
+        "label": "USDz Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+      },
+      {
+        "label": "SPCT pool Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
+      }
+    ],
+    "rationale": "Anzen states that each USDz is backed 1:1 by SPCT and identifies SPCT as the permissioned on-chain representation of its U.S. private-credit ABS portfolio. Public-RPC totalSupply reads on 2026-07-20 returned SPCT pool (0xf30a29f1c540724fd8c5c4be1af604a6c6800d29) totalSupply 8,225,104.2033 against aggregate USDz totalSupply of 8,120,206.6146 across Ethereum (811,082.23), Base (6,690,509.36), Arbitrum (77,436.72), Blast (41,012.52), and Manta (500,165.78) — both figures unchanged from the 2026-07-14 readings, keeping SPCT coverage near 101.3% of USDz supply and confirming the single-asset reserve path without any USTB or other dependency. The 100% SPCT slice is unchanged; underlying loan-level weights are not published beyond Anzen's documented criteria (U.S.-based assets, ABS-only structures, single-asset concentration limits). Liquidity horizon is marked over-seven-days because SPCT is permissioned (KYC/KYB whitelist) and represents private credit, so reserve-level liquidation runs at loan/redemption timelines rather than public-market ones.",
+    "compositionBasis": "Anzen issuer disclosure corroborated by SPCT and multichain USDz totalSupply reads (public RPC, 2026-07-20)",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "SPCT is fully identified as the direct reserve asset; its underlying private-credit loan-level weights are not a tracked-stablecoin dependency question and are not published by the issuer.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "SPCT (Secured Private Credit Token)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SPCT represents private-credit collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anzen protocol contracts — SPCT pool 0xf30a29f1c540724fd8c5c4be1af604a6c6800d29 (Ethereum); no disclosed third-party custodian for on-chain reserves",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anzen USDz collateral documentation (holder-claim disclaimer)",
+        "url": "https://docs.anzen.finance/usdz-101/backing-assets-collateral"
+      },
+      {
+        "label": "Anzen USDz transparency documentation",
+        "url": "https://docs.anzen.finance/usdz-101/transparency"
+      },
+      {
+        "label": "Anzen Terms of Service (Anzen Group Ltd, BVI; no regulatory registration)",
+        "url": "https://anzen.finance/terms"
+      },
+      {
+        "label": "SPCT pool Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
+      }
+    ],
+    "uncertainty": "SPCT is a permissioned token (KYC/KYB-whitelisted holders) whose pool contract on Ethereum (0xf30a29f1c540724fd8c5c4be1af604a6c6800d29) anchors the on-chain reserve; the off-chain custody chain for the underlying U.S. private-credit ABS notes — custodian, trustee, servicer, and account segregation — is not disclosed in Anzen docs reviewed 2026-07-20. Anzen's collateral documentation explicitly disclaims any holder claim: information about the collateral 'does not create any relationship between USDz and the collateral or claims for USDz holders to the collateral assets', so no bankruptcy-remoteness structure for USDz holders is documented (marked none rather than unknown on that explicit disclaimer). Anzen Group Ltd (BVI) states in its Terms of Service that it is not registered with any regulatory body in any jurisdiction. Whether SPCT or the underlying collateral is rehypothecated or re-deployed is not addressed in issuer documentation (marked unknown). Loan-level composition, obligor identities, and weightings are not published; the legacy transparency host rwa.anzen.finance did not resolve during this review, while app.anzen.finance/transparency remains the live dashboard referenced by the proof-of-reserves record."
+  }
+}

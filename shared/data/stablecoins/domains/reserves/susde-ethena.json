@@ -1,0 +1,41 @@
+{
+  "id": "susde-ethena",
+  "reserves": [
+    {
+      "name": "USDe staking vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "usde-ethena",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena sUSDe staking vault and USDe",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ethena staking USDe documentation",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde"
+      }
+    ],
+    "rationale": "Ethena documents sUSDe as a staking wrapper: users deposit USDe, receive vault shares, and redeem shares for proportional USDe. The direct reserve envelope is therefore a 100% USDe wrapper dependency.",
+    "compositionBasis": "Ethena sUSDe staking documentation and the exact live ERC-4626 single-asset row",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "sUSDe has no independent reserve portfolio; upstream USDe hedge collateral, custody, and counterparty allocation are tracked on the parent asset.",
+    "knownUnknownExposurePct": 0
+  }
+}

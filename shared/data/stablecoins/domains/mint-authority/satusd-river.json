@@ -1,0 +1,216 @@
+{
+  "id": "satusd-river",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "satUSD mint authority is resolved through the fully enumerated Ethereum and Base ward histories plus the reviewed deployment inventory for every other tracked chain. Chain-local SatoshiXApp contracts mint CDP debt, while the same River owner EOA controls UUPS upgrades and can appoint unrestricted wards.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+        "0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+      ],
+      "implementationAddresses": [
+        "0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d",
+        "0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+      ],
+      "adminAddresses": [
+        "0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "satUSD UUPS owner and ward administrator",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "satUSD Ethereum proxy",
+          "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+        },
+        {
+          "label": "satUSD Base proxy",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb8374e4DfF99202292da2FE34425e1dE665b67E6",
+        "label": "satUSD Ethereum SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324, satoshiXApp() on proxy 0x195885... returned this contract. Verified DebtTokenWithLz source permits satoshiXApp to call mint(), mintWithGasCompensation(), and enableTroveManager().",
+        "sources": [
+          {
+            "label": "satUSD Ethereum proxy",
+            "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x9a3c724ee9603A7550499bE73DC743B371811dd3",
+        "label": "satUSD Base SatoshiXApp mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The verified debt token permits this SatoshiXApp to mint CDP debt and fixed gas compensation; the intended economic bound is the source-chain overcollateralized position and liquidation logic.",
+        "observedBlock": 48618018,
+        "evidence": "At Base block 48618018, satoshiXApp() on proxy 0x70654... returned this contract. The Base proxy uses the same verified DebtTokenWithLz mint checks as Ethereum.",
+        "sources": [
+          {
+            "label": "satUSD Base proxy",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162#code"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "label": "satUSD UUPS owner and ward administrator",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530324,
+        "evidence": "At Ethereum block 25530324 and Base block 48618018, owner() on both satUSD UUPS proxies returned this address and eth_getCode returned empty bytecode. Verified implementation source gates _authorizeUpgrade(), rely(), and deny() with onlyOwner; a relied ward may call mint() without a numeric token-contract cap.",
+        "sources": [
+          {
+            "label": "satUSD on Etherscan",
+            "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+          },
+          {
+            "label": "satUSD on Basescan",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5cd923fb3a229813e53253a37dce0b1d8aee5296",
+        "label": "satUSD Ethereum River system contract ward (impl 0x87440b10)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570752,
+        "evidence": "rely() tx 0x1f2c608234ec787e174b96d712a8fc978f5cdc2e0f832e21cf0607c9fb2bdb46 (block 23182825) enabled this ward; wards() read 2026-07-20 still true. 163-byte UUPS proxy with implementation 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338; owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. Ward mint calls are unbounded at the token contract.",
+        "sources": [
+          {
+            "label": "satUSD Ethereum ward contract",
+            "url": "https://etherscan.io/address/0x5cd923fb3a229813e53253a37dce0b1d8aee5296"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x355961ace96134fe7ba72b24b24559e7ca4aed86",
+        "label": "satUSD Ethereum River system contract ward (impl 0xf3d6913b)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570752,
+        "evidence": "rely() tx 0xb184590360390eea70fbaa80669bec8a8f41ea165621e6db02c995af14823768 (block 23217269) enabled this ward; wards() read 2026-07-20 still true. 163-byte UUPS proxy with implementation 0xf3d6913b6725d7812aacf9f4f9219106470c3e20; owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47.",
+        "sources": [
+          {
+            "label": "satUSD Ethereum ward contract",
+            "url": "https://etherscan.io/address/0x355961ace96134fe7ba72b24b24559e7ca4aed86"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0",
+        "label": "satUSD Base operational EOA ward",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "rely() tx 0x9acafdd16f83cf85ab845ea97bd9961e55eb5aaede1501ce289f1b6b67a4e5ff (block 29456817) enabled this ward; wards() read 2026-07-20 still true; eth_getCode empty (EOA).",
+        "sources": [
+          {
+            "label": "satUSD Base ward EOA",
+            "url": "https://basescan.org/address/0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xc25981394d1612930c79faf083fdc3fe8d0773c7",
+        "label": "satUSD Base operational EOA ward",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "rely() tx 0x32192a8d0bd3ad65ab4d83a0af411b24abcdfaaff732bf9c537feb7cadf2de75 (block 30251012) enabled this ward; wards() read 2026-07-20 still true; eth_getCode empty (EOA).",
+        "sources": [
+          {
+            "label": "satUSD Base ward EOA",
+            "url": "https://basescan.org/address/0xc25981394d1612930c79faf083fdc3fe8d0773c7"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "label": "satUSD Base UUPS owner and ward administrator",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "owner() on the Base satUSD UUPS proxy 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address (read 2026-07-20, eth_getCode empty). It is the same River owner EOA recorded as the Ethereum proxy admin; on Base it can _authorizeUpgrade() and rely() new mint wards, so it is the cap-raise authority for the Base SatoshiXApp cap-limited minter.",
+        "sources": [
+          {
+            "label": "satUSD Base proxy",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "2026-07-20 full-history enumeration: every transaction to the Ethereum satUSD proxy (2,058 txs) and Base satUSD proxy (10,000 txs) was scanned for rely()/deny()/enableTroveManager() via explorer transaction APIs. Ethereum: 4 rely calls, no deny, no enableTroveManager — current wards()=true set is SatoshiXApp 0xb8374e4DfF99202292da2FE34425e1dE665b67E6, owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47, and River system UUPS proxies 0x5cd923fb3a229813e53253a37dce0b1d8aee5296 (impl 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338) and 0x355961ace96134fe7ba72b24b24559e7ca4aed86 (impl 0xf3d6913b6725d7812aacf9f4f9219106470c3e20). Base: 3 rely calls, no deny, no enableTroveManager — wards()=true set is SatoshiXApp 0x9a3c724ee9603A7550499bE73DC743B371811dd3 and operational EOAs 0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0 and 0xc25981394d1612930c79faf083fdc3fe8d0773c7. The troveManager mapping is empty on both chains (enableTroveManager was never called and the mapping has no other writer). wards(address) reads at 2026-07-20 confirm every listed member is still enabled.",
+      "reviewer": "P2 mint-free cohort; OpenAI Codex V9 deployment reconciliation",
+      "reviewedAt": "2026-07-21",
+      "sources": [
+        {
+          "label": "River docs",
+          "url": "https://docs.river.inc"
+        },
+        {
+          "label": "satUSD on Etherscan",
+          "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+        },
+        {
+          "label": "satUSD on Basescan",
+          "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+        }
+      ],
+      "disposition": "scoreable"
+    }
+  }
+}

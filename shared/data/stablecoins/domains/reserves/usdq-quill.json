@@ -1,0 +1,119 @@
+{
+  "id": "usdq-quill",
+  "reserves": [
+    {
+      "name": "WETH",
+      "pct": 1,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum, Quill Finance, and wETH custodial contracts",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "wstETH (Lido)",
+      "pct": 97.7,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido, Ethereum, and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "weETH (Ether.fi)",
+      "pct": 1.2,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ether.fi, Ethereum, and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "SCR",
+      "pct": 0.1,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Scroll and Quill Finance markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-6 V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Quill USDQ documentation",
+        "url": "https://docs.quill.finance/faq/usdusdq"
+      },
+      {
+        "label": "Quill Finance app",
+        "url": "https://app.quill.finance/"
+      },
+      {
+        "label": "Quill contract-address registry",
+        "url": "https://docs.quill.finance/documentation/contract-addresses"
+      },
+      {
+        "label": "Scroll public RPC",
+        "url": "https://rpc.scroll.io"
+      }
+    ],
+    "rationale": "The independent Liquity-v2 branch producer read all four configured Quill ActivePools on Scroll at one capture and normalized their current collateral values. Each row retains its LST, market, counterparty, liquidity, and smart-contract failure domains.",
+    "compositionBasis": "All configured Quill Scroll branch balances captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All configured positive Quill branches are identified; validator, wrapper, and liquidation-liquidity details remain structured risks within the four classified exposures.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "WETH",
+        "pct": 1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "wstETH (Lido)",
+        "pct": 97.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is liquid-staking collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "weETH (Ether.fi)",
+        "pct": 1.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "weETH is liquid-restaking collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "SCR",
+        "pct": 0.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SCR is crypto collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

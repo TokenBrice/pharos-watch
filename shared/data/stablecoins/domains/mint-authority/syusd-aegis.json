@@ -1,0 +1,131 @@
+{
+  "id": "syusd-aegis",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "sYUSD is Aegis's yield-bearing ERC-4626 wrapper over YUSD. Both Ethereum and BSC deployments are transparent proxies controlled via ProxyAdmin → 3/5 Safe (same Safe address on both chains, v1.4.1, no modules, no guard). Shares minted only by depositing YUSD; base YUSD mint authority is inherited from reviewed yusd-aegis controls.",
+    "inheritedFrom": "yusd-aegis",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "0x24db057b19241eefb9b522e8627c293ed8f93af2"
+      ],
+      "adminAddresses": [
+        "0x5b35fca1874083000a6ef64ff27c891f311282a9",
+        "0x87696e700eb66a4c807731f68ad33d9dba2036a8"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Aegis sYUSD upgrade owner Safe (3-of-5)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25295176,
+      "sources": [
+        {
+          "label": "sYUSD Ethereum proxy (Etherscan)",
+          "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+        },
+        {
+          "label": "Aegis sYUSD docs",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4fe78ef65bd8edded480efab030ba680646503c8",
+        "label": "Aegis sYUSD upgrade owner Safe (3-of-5)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xa09a1319ace58b466d71377b958248265420cf6c",
+            "0x9bd53dda93630ba2856cbbd376e3ed04d3d23d21",
+            "0x0b241d2f1a060feae6968f7ced3221d4ab29d865",
+            "0x89caffdd8f3ca008aaeaa69ba85332ca85d18d3e",
+            "0x7eff43566b8c7491a39f81e3bf9e4d9b2d212787"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25295176,
+          "source": "onchain"
+        },
+        "capDescription": "Transparent proxy; EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9; ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8 (3/5).",
+        "sources": [
+          {
+            "label": "sYUSD Ethereum proxy (Etherscan)",
+            "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+          },
+          {
+            "label": "Aegis sYUSD docs",
+            "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+          }
+        ],
+        "evidence": "At Ethereum block 25295176: EIP-1967 admin slot = ProxyAdmin 0x5b35fca1874083000a6ef64ff27c891f311282a9 (2144 bytes); ProxyAdmin owner() = Safe 0x4fe78ef65bd8edded480efab030ba680646503c8. Safe getOwners()=5 owners, getThreshold()=3. masterCopy=0x41675c (v1.4.1). getModulesPaginated sentinel only (no modules). Guard keccak slot=0x0. BSC deployment 0x24db057b19241eefb9b522e8627c293ed8f93af2: admin slot = ProxyAdmin 0x87696e700eb66a4c807731f68ad33d9dba2036a8; ProxyAdmin owner() = same Safe 0x4fe78ef... (BSC masterCopy=0x29fcb43, v1.4.1, same 5 owners, threshold=3, no modules)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xC4Df68e592245cA5202fE8b7C438d2b799820fc2",
+        "label": "Inherited AegisMinting",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AegisMinting Sourcify source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+          }
+        ],
+        "evidence": "Inherited from reviewed yusd-aegis mintAuthority."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "sYUSD Ethereum proxy (Etherscan)",
+          "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+        },
+        {
+          "label": "Aegis sYUSD docs",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "AegisMinting Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+        },
+        {
+          "label": "Aegis Accountable transparency dashboard",
+          "url": "https://aegis.accountable.capital/"
+        },
+        {
+          "label": "Aegis Accountable signed dashboard API",
+          "url": "https://aegis.accountable.capital:10443/dashboard"
+        },
+        {
+          "label": "Aegis official site",
+          "url": "https://aegis.im/"
+        },
+        {
+          "label": "Aegis transparency dashboard guide",
+          "url": "https://paragraph.com/%40aegis-im-2/transparency-dashboard-guide"
+        }
+      ],
+      "evidence": "Wrapper surface verified at Ethereum block 25295176 and BSC block 103632491: both deployments are transparent proxies controlled by same 3/5 Safe (v1.4.1, no modules, no guard) via per-chain ProxyAdmins. Base YUSD mint authority reviewed under yusd-aegis. Reserve reconciliation: Accountable independently retrieves backing data for inherited YUSD reserves and publishes signed proofs plus a reserve-history series. The primary API returned a signed snapshot at 2026-07-15 21:16:00 UTC, a Merkle update at 21:24:02 UTC, and daily history through 2026-07-15. This recurring third-party evidence supports periodic reconciliation; the conservative authoring does not treat the dashboard's Live label alone as continuous cadence. Neither Aegis's product materials nor the reviewed corporate information established an exact prudential supervisor for the YUSD/sYUSD issuer or product. Reviewed 2026-07-15. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified transparent-proxy/ProxyAdmin/Safe evidence into canChangeMintLogic/controlRef fields; no new on-chain read was required.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

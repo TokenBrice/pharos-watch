@@ -1,0 +1,130 @@
+{
+  "id": "nwisdom-nest",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "nWISDOM is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs WisdomTree-fund allocation. Both Teller and Manager are owned by the same Nest 3-of-6 Safe.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Nest Wisdom Vault Teller and Manager constructor-deployed contracts",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295096,
+      "sources": [
+        {
+          "label": "Nest smart contracts",
+          "url": "https://docs.nest.credit/developers/smart-contracts/"
+        },
+        {
+          "label": "Nest Wisdom Vault Teller verified source",
+          "url": "https://etherscan.io/address/0xA1D572b63C963c6421236C22A10140305C6d41fd#code"
+        },
+        {
+          "label": "Nest Wisdom Vault Manager verified source",
+          "url": "https://etherscan.io/address/0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Nest Wisdom Vault Teller (issuance/redemption)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xA1D572b63C963c6421236C22A10140305C6d41fd",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Nest smart contracts (Teller address)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, owner() on the Wisdom Vault Teller returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, confirmed as a 3-of-6 Gnosis Safe (v1.3.0+L2) via Safe API."
+      },
+      {
+        "label": "Nest Wisdom Vault Manager (strategy/admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc",
+        "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Nest smart contracts (Manager address)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, owner() on the Wisdom Vault Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982, the same 3-of-6 Safe that owns the Teller."
+      },
+      {
+        "label": "Nest 3-of-6 Safe (Teller and Manager owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66a0c12A7Bf3dD40ddA33cD43beb553D2D7fBF7F",
+            "0x98bE74D3d5604904D0686eEf9b4267F681F9520a",
+            "0xCEf3d04f13A6C1A7614657641aB574C2d29D4cc6",
+            "0x4e1D7121544A586B0a1C35d7e196b0DD9Ba7f572",
+            "0x315e376Ca228d8e1376CCcad2Abb0b4aa8A77F3A",
+            "0x6d303F4E0e3406C397855551A006c8b33D4F3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1dE2FE6b99BE3d9d37841FeD19F573804",
+          "version": "1.3.0+L2",
+          "observedBlock": 25295096,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Nest Wisdom Vault Teller owner() at Ethereum block 25295096",
+            "url": "https://etherscan.io/address/0xA1D572b63C963c6421236C22A10140305C6d41fd#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, owner() on both Teller and Manager returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed: 3-of-6 threshold, version 1.3.0+L2, no modules, no guard."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At Ethereum block 25295096: owner() on Wisdom Vault Teller (0xA1D572b6) and Manager (0x8226B661) both returned 0xa08A0Dc480BD60d1d56C8EeC6c722125eAfEa982. Safe API confirmed 3-of-6 Safe, version 1.3.0+L2, modules [], guard zero. Shared Safe with ntbill-nest. All mint-capable surfaces confirmed. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nWISDOM supply to portfolio assets was found. Regulation of underlying WisdomTree products does not prudentially supervise the Nest wrapper issuer.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Nest smart contracts (Teller/Manager addresses)",
+          "url": "https://docs.nest.credit/developers/smart-contracts"
+        },
+        {
+          "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
+          "url": "https://nest.credit/blog/how-nest-vaults-work"
+        },
+        {
+          "label": "Nest vault NAV methodology",
+          "url": "https://docs.nest.credit/about/vaults/"
+        },
+        {
+          "label": "Nest nWISDOM integration",
+          "url": "https://docs.nest.credit/developers/integration-guides/nwisdom/"
+        },
+        {
+          "label": "Nest terms identifying Nest DAO LLC",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+        }
+      ]
+    }
+  }
+}

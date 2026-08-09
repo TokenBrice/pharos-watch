@@ -1,0 +1,50 @@
+{
+  "id": "mf-one-midas",
+  "reserves": [
+    {
+      "name": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital F-ONE strategy",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mF-ONE product disclosure",
+        "url": "https://midas.app/mfone"
+      },
+      {
+        "label": "Midas product documentation",
+        "url": "https://docs.midas.app/"
+      }
+    ],
+    "rationale": "Midas describes mF-ONE as indirect exposure to Fasanara Capital's diversified private-credit and digital-asset strategy. The product is a NAV-based tokenized investment strategy rather than a cash-pegged token, so the reserve is represented as one strategy exposure without inventing underlying borrower, asset, or venue weights.",
+    "compositionBasis": "Current Midas mF-ONE product disclosure and strategy description",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Midas identifies the Fasanara strategy and its broad private-credit and digital-asset mandate, but does not publish a current facility-level allocation, borrower concentration, maturity schedule, or custody breakdown in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The F-ONE strategy is an external private-credit and digital-asset portfolio, not another tracked stablecoin or wrapper with a canonical dependency ID."
+      }
+    ]
+  }
+}

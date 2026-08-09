@@ -1,0 +1,205 @@
+{
+  "id": "usdp-parallel",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "USDp's Ethereum Parallelizer diamond mints and burns against a governed collateral basket under a 5/8 Safe-controlled AccessManager. All 23 deployments resolve to the same 5/8 Parallel team signer set: the Ethereum Safe 0x25Fc7ffa, the shared non-Ethereum Safe 0xc5201ffe on 18 chains, 0x2046c041 on Polygon, 0xd22b9e8e on Plume, 0xF6Cd93af on Fraxtal, and 0x1AD681fa on Sei. The team Safe can re-authorize minters and diamondCut mint-critical logic without a configured delay, so the mint is economically unbounded.",
+    "upgradeability": {
+      "model": "diamond",
+      "proxyAddresses": [
+        "0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
+      ],
+      "implementationAddresses": [
+        "0x58426574855da7a8c47e1d134d51fd17dca5129b"
+      ],
+      "adminAddresses": [
+        "0x94ea8800444017695345156319e96bdb1e355f7a",
+        "0x25fc7ffa8f9da3582a36633d04804f0004706f9b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712344,
+      "sources": [
+        {
+          "label": "Parallelizer diamond (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
+        },
+        {
+          "label": "Current DiamondCut facet (Ethereum)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58426574855da7a8c47e1d134d51fd17dca5129b"
+        },
+        {
+          "label": "ParallelAccessManager (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+        },
+        {
+          "label": "Parallel team Safe (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Parallelizer module (Angle Transmuter fork, diamond proxy)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "Mint at oracle value against the whitelisted basket, bounded by per-asset exposure limits and adaptive fees that widen on depeg; redemption is proportional across the basket.",
+        "evidence": "Re-verified at Ethereum block 25712339 on 2026-08-08: ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a returned hasRole(110, 0x6efeddf9269c3683ba516cb0e2124fe335f262a2) = true with zero execution delay, and the USDp token maps mint(address,uint256) to role 110. The diamond is therefore the direct token minter. User mint remains bounded by its governed collateral-list, oracle-value, exposure-limit, and adaptive-fee logic; the diamond cannot grant itself roles or raise those bounds without the external AccessManager admin.",
+        "chain": "ethereum",
+        "address": "0x6efeddf9269c3683ba516cb0e2124fe335f262a2",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712339,
+        "sources": [
+          {
+            "label": "Parallelizer diamond (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
+          },
+          {
+            "label": "parallel-parallelizer (GitHub)",
+            "url": "https://github.com/parallel-protocol/parallel-parallelizer"
+          }
+        ]
+      },
+      {
+        "label": "Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-08-08",
+          "observedBlock": 25712340,
+          "source": "onchain"
+        },
+        "evidence": "Re-verified on 2026-08-08 at Ethereum blocks 25712339-25712340: hasRole(ADMIN_ROLE=0, Safe 0x25fc7ffa8f9da3582a36633d04804f0004706f9b) and hasRole(10, Safe) both returned true with zero execution delay on ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a. canCall(Safe, diamond, diamondCut=0x1f931c1c) returned immediate=true with zero delay, and facetAddress(diamondCut) resolved to current verified facet 0x58426574855da7a8c47e1d134d51fd17dca5129b. Safe getOwners() returned the same eight owners, getThreshold() returned five, getModulesPaginated() returned none, and the guard storage slot remained zero. The Safe can grant token minters, raise collateral parameters, and replace diamond facets without a configured delay.",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+          },
+          {
+            "label": "Parallel team Safe (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x25fc7ffa8f9da3582a36633d04804f0004706f9b",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712340
+      },
+      {
+        "chain": "base",
+        "address": "0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95",
+        "label": "Parallel team Safe 5/8 (non-Ethereum ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 49714019,
+          "observedAt": "2026-08-08",
+          "source": "onchain"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 49714019,
+        "evidence": "Verified on-chain 2026-07-20. USDp.authority() resolves to only four distinct non-Ethereum ParallelAccessManagers: 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (Base, Arbitrum, OP Mainnet), 0xfd28f108e95f4d41daae9dbfff707d677985998e (17 chains), 0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78 (Sonic) and 0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811 (Polygon); on every one of them getTargetFunctionRole(USDp, mint(address,uint256)) = role 110 and getRoleAdmin(110) = role 10. hasRole(ADMIN_ROLE=0, 0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95) and hasRole(10, same) are both true on Base (block 48888065), Arbitrum, OP Mainnet, Avalanche, Sonic, Scroll, Ink, World Chain, BNB Chain, X Layer, Berachain, Gnosis, Unichain, Linea, Plasma, Katana, Hemi and HyperEVM. Polygon uses Safe 0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a and Plume uses Safe 0xd22b9e8ee5b6490c667d90c6819e53e9503ee139; owner-linked-list walks from Safe storage slot 2 show all three Safes carry the identical eight signers and threshold 5 as the Ethereum team Safe. Safe state read from storage on Base: ownerCount 8, threshold 5, Safe 1.4.1 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, module list sentinel-only, guard 0x0. The original deployer EOA 0x66ccec236bbce5f1bbd1b2fc0a4014e57a55ad02 was granted ADMIN_ROLE at deployment and no longer holds it on Base or OP Mainnet.",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Base)",
+            "url": "https://base.blockscout.com/address/0x0e4e7ca9D7b1e6293D0713EfEFB4bcA010DEbf46"
+          },
+          {
+            "label": "Parallel team Safe 5/8 (Base)",
+            "url": "https://base.blockscout.com/address/0xc5201FfE258a95Af986e7CD1FCaD54f3F63f2c95"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The non-Ethereum route inventory was enumerated on 2026-07-20: all 22 non-Ethereum deployments resolve to just four AccessManagers, each gating mint(address,uint256) behind role 110 with role 10 as its role admin, and on 20 of the 22 chains the terminal ADMIN_ROLE holder is a Parallel team 5/8 Safe carrying the same eight signers as the Ethereum Safe (0xc5201ffe... on 18 chains, 0x2046c041... on Polygon, 0xd22b9e8e... on Plume). Role-110 membership is chain-specific rather than shared: on Base four contracts hold it (0x08417cdb, 0xc3bef21e, 0x472ed57b, 0x4dde0e30) while the same manager grants none of them on OP Mainnet. Follow-up 2026-07-27 resolves the two remaining chains. On Fraxtal (head block 39180535), full-range event enumeration on ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e (OZ AccessManager v5 RoleGranted(uint64,address,uint32,uint48,bool) topic) shows ADMIN_ROLE granted to the deployer EOA 0x66ccec236bbce5f1bbd1b2fc0a4014e57a55ad02 at deployment (block 33117174), re-granted together with roles 10/11/20/21/30/31 to Safe 0xF6Cd93af204947c9aAF55B15d907f8F4D08b91A3 at block 33165703, and the deployer's ADMIN_ROLE revoked at block 34899269; no other ADMIN_ROLE grant exists. Current state: hasRole(0, Safe)=true, hasRole(10, Safe)=true, getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=0. The Fraxtal Safe (EIP-1167 proxy) returns threshold 5 and the identical eight Parallel team signers, no enabled modules, and no guard (pre-GuardManager Safe version); Parallel's own governance docs name it the Fraxtal Protocol & DAO Treasury 5-of-8 multisig. On Sei (head block 222569346), public RPCs expose no archive before block 206599999 so grant history is not enumerable, but current-state reads show hasRole(0, 0x1AD681fa147f35AB7B35c7a289B1938Bc0171e8b)=true and hasRole(10, same)=true while the deployer EOA no longer holds ADMIN_ROLE; getTargetFunctionRole(USDp, mint)=110 and getRoleAdmin(110)=10. The issuer's governance docs name 0x1AD681fa as the Sei Protocol & DAO Treasury 5-of-8 multisig, and on-chain it returns threshold 5 with the same eight signers, no enabled modules, and no guard. All 23 deployments' terminal mint-grant authority is therefore the same 5/8 Parallel team signer set.",
+      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20); Kimi data review (2026-07-27)",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Parallelizer module docs",
+          "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+        },
+        {
+          "label": "parallel-parallelizer (GitHub)",
+          "url": "https://github.com/parallel-protocol/parallel-parallelizer"
+        },
+        {
+          "label": "ParallelAccessManager (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+        },
+        {
+          "label": "ParallelAccessManager (Base)",
+          "url": "https://base.blockscout.com/address/0x0e4e7ca9D7b1e6293D0713EfEFB4bcA010DEbf46"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Base)",
+          "url": "https://base.blockscout.com/address/0xc5201FfE258a95Af986e7CD1FCaD54f3F63f2c95"
+        },
+        {
+          "label": "Parallel governance docs — DAO multisigs (Sei 0x1AD681fa, Fraxtal 0xF6Cd93af)",
+          "url": "https://docs.parallel.best/governance/dao-multisigs"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Fraxtal)",
+          "url": "https://fraxscan.com/address/0xF6Cd93af204947c9aAF55B15d907f8F4D08b91A3#code"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Sei)",
+          "url": "https://seitrace.com/address/0x1AD681fa147f35AB7B35c7a289B1938Bc0171e8b?tab=contract"
+        }
+      ]
+    }
+  }
+}

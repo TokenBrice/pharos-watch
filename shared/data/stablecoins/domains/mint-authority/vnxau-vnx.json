@@ -1,0 +1,741 @@
+{
+  "id": "vnxau-vnx",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "VNXAU has seven independently mintable native deployments. Ethereum, Base, Polygon, and Etherlink use VNXDGR proxies with uncapped increaseSupply() access for every chain-local VNXManager role-0 bearer. Solana has one unrestricted SPL mint authority, Tezos has two unrestricted role-0 bearers, and Stellar has one effective master signer on the issuer account. No deployment enforces a global supply cap or timelock, no on-chain multisig was found, and off-chain MPC/HSM custody is unknown.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "label": "VNXAU Ethereum direct minter 0x7b0c...9403",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum role-0 bearer",
+            "url": "https://eth.blockscout.com/address/0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129 this code-empty account was a role-0 bearer and could mint any amount with one signature. It also owned the proxy-admin contract. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "label": "VNXAU Ethereum VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 is the uncapped supply-controller role and can add or remove role bearers immediately.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "ethereum:0xcdb3867935247049e87c38ea270edd305d84c9ae"
+        ],
+        "bypassSurfaces": [
+          "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
+          "The token owner is this manager; role 0 can use transferContractOwnership and then replace the token RBAC address."
+        ],
+        "sources": [
+          {
+            "label": "Ethereum VNXManager",
+            "url": "https://eth.blockscout.com/address/0xcdb3867935247049e87c38ea270edd305d84c9ae"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), role-0 bearers were 0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403, 0xacc56ebcc391108a725f269fdd82d6cbe65b311a, and 0x45a149f42ff0b77d148d05904dd7577df36a545a; role-1 bearer was 0xacc5...311a. Supply-controller and asset-protection role IDs were both 0."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VNXAU Ethereum direct minter 0xacc5...311a",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum role-0 bearer",
+            "url": "https://eth.blockscout.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129 this code-empty account was a role-0 bearer and the existing role-1 upgrader. It could mint any amount with one signature. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x45a149f42ff0b77d148d05904dd7577df36a545a",
+        "label": "VNXAU Ethereum direct minter 0x45a1...545a",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0x45a149f42ff0b77d148d05904dd7577df36a545a"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum role-0 bearer",
+            "url": "https://eth.blockscout.com/address/0x45a149f42ff0b77d148d05904dd7577df36a545a"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129 this code-empty account was a role-0 bearer and could mint any amount with one signature. It could also self-grant role 1 immediately. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "base",
+        "address": "0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d",
+        "label": "VNXAU Base VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 is the uncapped supply-controller role and can add or remove role bearers immediately.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "base:0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d"
+        ],
+        "bypassSurfaces": [
+          "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
+          "The token owner can replace the token RBAC address immediately."
+        ],
+        "sources": [
+          {
+            "label": "Base VNXManager",
+            "url": "https://base.blockscout.com/address/0xc4c917fda20fc2f39c629c809c4c3662a8cf7d9d"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Base block 48592766 (hash 0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), role-0 bearers were 0xd63052e09af164cef57695d3b96043ea848b051f, 0xacc56ebcc391108a725f269fdd82d6cbe65b311a, and 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6; role-1 bearer was 0xd630...051f. Supply-controller and asset-protection role IDs were both 0."
+      },
+      {
+        "chain": "base",
+        "address": "0xd63052e09af164cef57695d3b96043ea848b051f",
+        "label": "VNXAU Base direct minter 0xd630...051f",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f"
+        ],
+        "sources": [
+          {
+            "label": "Base role-0 bearer",
+            "url": "https://base.blockscout.com/address/0xd63052e09af164cef57695d3b96043ea848b051f"
+          }
+        ],
+        "evidence": "At Base block 48592766 this code-empty account was a role-0 bearer, token owner, role-1 upgrader, and proxy-admin owner. It could mint any amount with one signature. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "base",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VNXAU Base direct minter 0xacc5...311a",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Base role-0 bearer",
+            "url": "https://base.blockscout.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Base block 48592766 this code-empty account was a role-0 bearer and could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "base",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "label": "VNXAU Base direct minter 0xb65a...09c6",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
+        ],
+        "sources": [
+          {
+            "label": "Base role-0 bearer",
+            "url": "https://base.blockscout.com/address/0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
+          }
+        ],
+        "evidence": "At Base block 48592766 this code-empty account was a role-0 bearer and could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xbbe070a5f848b532fd4c9ceee77f66867fb70172",
+        "label": "VNXAU Polygon VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 is the uncapped supply-controller role and can add or remove role bearers immediately.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "polygon:0xbbe070a5f848b532fd4c9ceee77f66867fb70172"
+        ],
+        "bypassSurfaces": [
+          "Role 0 administers role 1, so any role-0 bearer can grant itself the proxy-upgrader role without delay.",
+          "The token owner is this manager; role 0 can use transferContractOwnership and then replace the token RBAC address."
+        ],
+        "sources": [
+          {
+            "label": "Polygon VNXManager",
+            "url": "https://polygonscan.com/address/0xbbe070a5f848b532fd4c9ceee77f66867fb70172"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Polygon block 90179923 (hash 0x64a5f7f3fc10d6571c92d89894aac431fb8a523db7eaeba33787b9604a0d34d4), role-0 bearers were 0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403 and 0xacc56ebcc391108a725f269fdd82d6cbe65b311a; role-1 bearer was 0xacc5...311a. Supply-controller and asset-protection role IDs were both 0."
+      },
+      {
+        "chain": "polygon",
+        "address": "0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+        "label": "VNXAU Polygon direct minter 0x7b0c...9403",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
+        ],
+        "sources": [
+          {
+            "label": "Polygon role-0 bearer",
+            "url": "https://polygonscan.com/address/0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403"
+          }
+        ],
+        "evidence": "At Polygon block 90179923 this code-empty account was a role-0 bearer and could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VNXAU Polygon direct minter 0xacc5...311a",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Polygon role-0 bearer",
+            "url": "https://polygonscan.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Polygon block 90179923 this code-empty account was a role-0 bearer and the existing role-1 upgrader. It could mint any amount with one signature. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x36526b007def3a3efa5a197afe86caf65ec1b9a5",
+        "label": "VNXAU Etherlink VNXManager",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 is the uncapped supply-controller role and can add or remove role bearers immediately.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48196648,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "etherlink:0x36526b007def3a3efa5a197afe86caf65ec1b9a5"
+        ],
+        "bypassSurfaces": [
+          "Role 0 administers role 1, which was empty; any role-0 bearer can grant itself that proxy-upgrader role without delay.",
+          "The token owner can replace the token RBAC address immediately."
+        ],
+        "sources": [
+          {
+            "label": "Etherlink VNXManager",
+            "url": "https://explorer.etherlink.com/address/0x36526b007def3a3efa5a197afe86caf65ec1b9a5"
+          },
+          {
+            "label": "VNXManager source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/rbac.sol"
+          }
+        ],
+        "evidence": "At Etherlink block 48196648 (hash 0x921eee47831143a0374020ffe2015a8e172fee01de3baae7c31f1eaf692cd97a), role-0 bearers were 0x21f5727b19051a0a483f05ce3c379202daa559c1, 0xacc56ebcc391108a725f269fdd82d6cbe65b311a, and 0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6; role 1 was empty. Supply-controller and asset-protection role IDs were both 0."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x21f5727b19051a0a483f05ce3c379202daa559c1",
+        "label": "VNXAU Etherlink direct minter 0x21f5...59c1",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48196648,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0x21f5727b19051a0a483f05ce3c379202daa559c1"
+        ],
+        "sources": [
+          {
+            "label": "Etherlink role-0 bearer",
+            "url": "https://explorer.etherlink.com/address/0x21f5727b19051a0a483f05ce3c379202daa559c1"
+          }
+        ],
+        "evidence": "At Etherlink block 48196648 this code-empty account was a role-0 bearer, token owner, and proxy-admin owner. It could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+        "label": "VNXAU Etherlink direct minter 0xacc5...311a",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48196648,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+        ],
+        "sources": [
+          {
+            "label": "Etherlink role-0 bearer",
+            "url": "https://explorer.etherlink.com/address/0xacc56ebcc391108a725f269fdd82d6cbe65b311a"
+          }
+        ],
+        "evidence": "At Etherlink block 48196648 this code-empty account was a role-0 bearer and could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+        "label": "VNXAU Etherlink direct minter 0xb65a...09c6",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can call increaseSupply() for an arbitrary amount; no global supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48196648,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
+        ],
+        "sources": [
+          {
+            "label": "Etherlink role-0 bearer",
+            "url": "https://explorer.etherlink.com/address/0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6"
+          }
+        ],
+        "evidence": "At Etherlink block 48196648 this code-empty account was a role-0 bearer and could mint any amount with one signature or self-grant role 1. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "solana",
+        "address": "51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY",
+        "label": "VNXAU Solana mint and freeze authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Classic SPL Token mint authority; no supply cap or mint allowance is enforced.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "solana:51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY"
+        ],
+        "bypassSurfaces": [
+          "The authority can rotate the mint and freeze authorities without a timelock."
+        ],
+        "sources": [
+          {
+            "label": "Solana VNXAU mint",
+            "url": "https://explorer.solana.com/address/9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R"
+          },
+          {
+            "label": "SPL Token program",
+            "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432714278 (block height 410782389, hash 2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), this on-curve System Program account was both mint and freeze authority. One signature can mint without an on-chain cap. All 60 later mint-address transactions through the audit cutoff were checked and contained no authority mutation, so the state projects back to the exact slot. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "tezos",
+        "address": "tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3",
+        "label": "VNXAU Tezos owner and role-0 minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can mint an arbitrary amount; no supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 14047971,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "tezos:tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3"
+        ],
+        "bypassSurfaces": [
+          "As contract owner, this account can replace the RBAC or implementation contract immediately through set_contract."
+        ],
+        "sources": [
+          {
+            "label": "Tezos VNXAU storage at level 14047971",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv/storage?level=14047971"
+          },
+          {
+            "label": "VNX Tezos contracts",
+            "url": "https://gitlab.com/vnx/smart-contracts/tezos-smartcontracts/-/tree/5901cb010960307dd74af63f70125bb2e9e7317f"
+          }
+        ],
+        "evidence": "At Tezos level 14047971 (hash BM9Cp1cVnVAa15NFHehSBPLonuNVh91MfZX4G5ggKhDtvd3YBJW), this implicit account was the token owner and one of two RBAC role-0 bearers. One signature can mint or burn any amount, freeze or unfreeze, and pause. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "tezos",
+        "address": "tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH",
+        "label": "VNXAU Tezos role-0 minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "Role 0 can mint an arbitrary amount; no supply cap was found.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 14047971,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "tezos:tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH"
+        ],
+        "sources": [
+          {
+            "label": "Tezos VNXAU storage at level 14047971",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv/storage?level=14047971"
+          },
+          {
+            "label": "VNX Tezos contracts",
+            "url": "https://gitlab.com/vnx/smart-contracts/tezos-smartcontracts/-/tree/5901cb010960307dd74af63f70125bb2e9e7317f"
+          }
+        ],
+        "evidence": "At Tezos level 14047971 this implicit account was the second RBAC role-0 bearer. One signature can mint or burn any amount, freeze or unfreeze, and pause. It cannot independently replace the implementation unless the owner grants it that path. On-chain data does not establish whether the issuer uses MPC or HSM custody."
+      },
+      {
+        "chain": "stellar",
+        "address": "GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
+        "label": "VNXAU Stellar issuer master signer",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 1,
+        "timelockDelaySec": 0,
+        "capDescription": "The issuer account can issue arbitrary VNXAU units; Stellar assets have no protocol supply cap.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 63463325,
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "stellar:GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+        ],
+        "bypassSurfaces": [
+          "The master signer can change signer weights, thresholds, and authorization flags immediately.",
+          "AUTH_REVOCABLE and AUTH_CLAWBACK_ENABLED permit trustline revocation and eligible-balance clawback."
+        ],
+        "sources": [
+          {
+            "label": "Stellar VNXAU issuer",
+            "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+          }
+        ],
+        "evidence": "At Stellar ledger 63463325 (hash abd18d4cad6e6a0baf1bd42f9f95f4657fae28ac2a773a98a2a7640438730a1), the issuer state had last changed at ledger 62809173 and therefore was unchanged at the exact cutoff. Low, medium, and high thresholds were 0; the sole signer was the master key with weight 1, producing an effective 1-of-1 control because Stellar still requires account authorization. AUTH_REQUIRED was false, AUTH_REVOCABLE true, AUTH_IMMUTABLE false, and AUTH_CLAWBACK_ENABLED true. Off-chain MPC/HSM custody is unknown."
+      },
+      {
+        "label": "VNXAU deployment-wide upgrade authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "threshold": 1,
+        "signerCount": 8,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "failureDomainKeys": [
+          "issuer:vnx",
+          "eoa:0x7b0c15f39cd987a7d3f5d8d10b57ac6d633e9403",
+          "eoa:0xacc56ebcc391108a725f269fdd82d6cbe65b311a",
+          "eoa:0x45a149f42ff0b77d148d05904dd7577df36a545a",
+          "eoa:0xd63052e09af164cef57695d3b96043ea848b051f",
+          "eoa:0xb65a7f02ce38efc0b6978c4167ed8f8d5d7209c6",
+          "eoa:0x21f5727b19051a0a483f05ce3c379202daa559c1",
+          "eoa:0x88f239d6629e98d6828fdba8f8f415d4b903af4a",
+          "tezos:tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3"
+        ],
+        "bypassSurfaces": [
+          "Each EVM VNXManager role-0 bearer can self-grant role 1 and call upgrade or upgradeAndCall without delay.",
+          "Each EVM VNXProxyAdmin owner can change the proxy admin through the inherited owner path.",
+          "The Tezos owner can replace the implementation or RBAC contract through set_contract without delay.",
+          "The Solana Token program is immutable and the Stellar asset has no contract implementation, but their issuance authorities remain rotatable."
+        ],
+        "sources": [
+          {
+            "label": "Ethereum VNXAU proxy admin",
+            "url": "https://eth.blockscout.com/address/0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+          },
+          {
+            "label": "Base VNXAU proxy admin",
+            "url": "https://base.blockscout.com/address/0x35bb28feef0499d7580ed8e8ef1a19ab346b79e8"
+          },
+          {
+            "label": "Polygon VNXAU proxy admin",
+            "url": "https://polygonscan.com/address/0xed69422ba3813968371ce9a55a8b40965725a117"
+          },
+          {
+            "label": "Etherlink VNXAU proxy admin",
+            "url": "https://explorer.etherlink.com/address/0x385ddca38c98743b5bc6e299371511066ea47a2b"
+          },
+          {
+            "label": "VNXProxyAdmin source",
+            "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/ProxyAdmin.sol"
+          },
+          {
+            "label": "Tezos VNXAU storage at level 14047971",
+            "url": "https://api.tzkt.io/v1/contracts/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv/storage?level=14047971"
+          }
+        ],
+        "evidence": "At the exact cutoff, Ethereum role 1 was held by 0xacc5...311a and role 0 by 0x7b0c...9403, 0xacc5...311a, and 0x45a1...545a; proxy-admin owner was 0x7b0c...9403. Base role 1 and proxy-admin ownership were held by 0xd630...051f, while role 0 also included 0xacc5...311a and 0xb65a...09c6. Polygon role 1 was held by 0xacc5...311a, role 0 also included 0x7b0c...9403, and proxy-admin owner was 0x88f2...af4a. Etherlink role 1 was empty, role 0 included 0x21f5...59c1, 0xacc5...311a, and 0xb65a...09c6, and proxy-admin owner was 0x21f5...59c1. Any one listed EVM principal can reach an upgrade path immediately. Tezos owner tz1Rk3...dsm3 can replace implementation KT1SU44cZ3Jobc4tVA87TZa5JZVVY8CrdmXd or RBAC KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum VNXAU proxy",
+          "url": "https://eth.blockscout.com/address/0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        },
+        {
+          "label": "Base VNXAU proxy",
+          "url": "https://base.blockscout.com/address/0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        },
+        {
+          "label": "Polygon VNXAU proxy",
+          "url": "https://polygonscan.com/address/0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+        },
+        {
+          "label": "Etherlink VNXAU proxy",
+          "url": "https://explorer.etherlink.com/address/0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        },
+        {
+          "label": "VNXDGR source",
+          "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/DGR.sol"
+        },
+        {
+          "label": "Solana VNXAU mint",
+          "url": "https://explorer.solana.com/address/9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R"
+        },
+        {
+          "label": "Tezos VNXAU storage at level 14047971",
+          "url": "https://api.tzkt.io/v1/contracts/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv/storage?level=14047971"
+        },
+        {
+          "label": "Stellar VNXAU issuer",
+          "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+        },
+        {
+          "label": "AREVA VNXAU 2025 report",
+          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Liechtenstein FMA register search - VNX",
+          "url": "https://register.fma-li.li/search?searchText=VNX"
+        }
+      ],
+      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), Base block 48592766 (0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), Polygon block 90179923 (0x64a5f7f3fc10d6571c92d89894aac431fb8a523db7eaeba33787b9604a0d34d4), Etherlink block 48196648 (0x921eee47831143a0374020ffe2015a8e172fee01de3baae7c31f1eaf692cd97a), finalized Solana slot 432714278 and block height 410782389 (2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), Tezos level 14047971 (BM9Cp1cVnVAa15NFHehSBPLonuNVh91MfZX4G5ggKhDtvd3YBJW), and Stellar ledger 63463325 (abd18d4cad6e6a0baf1bd42f9f95f4657fae28ac2a773a98a2a7640438730a1). Storage, role membership, EIP-1967 implementation/admin/beacon slots, code status, owners, program authorities, Tezos exact-level storage, and Stellar signers/flags were checked. All seven independent mint paths and every immediate authorization or upgrade bypass are represented above. No Safe or other on-chain multisig, timelock, guard, or cap was found; off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited performs recurring annual agreed-upon procedures; the latest VNXAU report covers 2025-12-31 and was published 2026-03-23, reconciling each chain's supply to allocated physical gold. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential ART issuer.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
+    },
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
+        "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
+        "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
+        "KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+      ],
+      "implementationAddresses": [
+        "0x1c17d67706423735b8bbf5b234d63b872bd584c4",
+        "0x709616610224dd12542bf7e862c00d0beb4a66c5",
+        "0x5f85aaab5294541fff808d16c026aec31d5b3f87",
+        "0x83b787f31c15a3428ea10b0ef4dae59b40e18f12",
+        "KT1SU44cZ3Jobc4tVA87TZa5JZVVY8CrdmXd"
+      ],
+      "adminAddresses": [
+        "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
+        "0x35bb28feef0499d7580ed8e8ef1a19ab346b79e8",
+        "0xed69422ba3813968371ce9a55a8b40965725a117",
+        "0x385ddca38c98743b5bc6e299371511066ea47a2b",
+        "tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "VNXAU deployment-wide upgrade authorities",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum VNXAU proxy",
+          "url": "https://eth.blockscout.com/address/0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+        },
+        {
+          "label": "Base VNXAU proxy",
+          "url": "https://base.blockscout.com/address/0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+        },
+        {
+          "label": "Polygon VNXAU proxy",
+          "url": "https://polygonscan.com/address/0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+        },
+        {
+          "label": "Etherlink VNXAU proxy",
+          "url": "https://explorer.etherlink.com/address/0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+        },
+        {
+          "label": "VNXProxyAdmin source",
+          "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/ProxyAdmin.sol"
+        },
+        {
+          "label": "VNX Tezos contracts",
+          "url": "https://gitlab.com/vnx/smart-contracts/tezos-smartcontracts/-/tree/5901cb010960307dd74af63f70125bb2e9e7317f"
+        },
+        {
+          "label": "SPL Token program",
+          "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "label": "Stellar VNXAU issuer",
+          "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+        }
+      ]
+    }
+  }
+}

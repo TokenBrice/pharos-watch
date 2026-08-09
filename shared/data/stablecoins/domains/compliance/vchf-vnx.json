@@ -1,0 +1,21 @@
+{
+  "id": "vchf-vnx",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register (issuers of EMTs, updated June 4 2026) – VNX Commodities AG not listed",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "FMA Liechtenstein – EMT issuance under MiCAR reserved to credit institutions and e-money institutions",
+        "url": "https://www.fma-li.li/en/financial-intermediaries/financial-institutions-division/activities-under-micar/e-money-tokens-emts"
+      },
+      {
+        "label": "Bitstamp – VEUR and VCHF trading disabled for EU/EEA customers Jan 2025 for MiCA non-compliance; deposits/withdrawals suspended May 2025, balances auto-converted to USDC May 2025",
+        "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea/"
+      }
+    ]
+  }
+}

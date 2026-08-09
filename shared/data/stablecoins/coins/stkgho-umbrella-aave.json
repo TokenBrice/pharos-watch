@@ -9,128 +9,6 @@
     "yieldBearing": true,
     "navToken": true
   },
-  "canBeBlacklisted": true,
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sources": [
-      {
-        "label": "Sourcify exact-match Umbrella StakeToken implementation (pause + whenNotPaused _update)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
-      },
-      {
-        "label": "Ethereum PublicNode RPC observation block 25648452",
-        "url": "https://ethereum.publicnode.com"
-      },
-      {
-        "label": "stkGHO proxy on Etherscan",
-        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
-      },
-      {
-        "label": "Aave Umbrella documentation",
-        "url": "https://aave.com/help/umbrella/umbrella"
-      },
-      {
-        "label": "Aave GHO underlying token",
-        "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
-      }
-    ],
-    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is the Ethereum upgradeable proxy 0x4f82…5033. At Ethereum block 25648452: EIP-1967 implementation 0x75e8…0197, admin ProxyAdmin 0xde9f…6a9a whose owner is Aave Governance V3 Level-1 Executor 0x5300…192A; asset()=GHO 0x40d1…c2f; paused()=false; owner() on the stake token = 0xd400…a8. Sourcify exact-match StakeToken.sol inherits PausableUpgradeable, exposes onlyOwner pause()/unpause(), and gates _update (and therefore transfer/transferFrom) with whenNotPaused — so the owner can block all holder share transfers while paused. No isBlacklisted/blacklist/freeze/burn(account) selectors on the implementation. Freeze reach is therefore direct (global pause) under Aave governance-controlled ownership, not inherited-only; GHO remains an additional upstream exposure. Transfer categorical posture matches restrictable via the same pause surface; material-scope publication of the transfer overlay still requires chainCirculatingById for this asset.",
-    "reviewer": "Grok T55 access review",
-    "reviewedAt": "2026-07-30"
-  },
-  "mintAuthority": {
-    "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "stkGHO.v1 is an ERC-4626-style Umbrella staking receipt over GHO; wrapper minting is deposit/share accounting while durable GHO mint authority is inherited from reviewed Aave facilitator controls. The proxy is upgradeable via Aave Governance V3 Level-1 Executor, a bounded on-chain governance path.",
-    "inheritedFrom": "gho-aave",
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "proxyAddresses": [
-        "0x4f827a63755855cdf3e8f3bcd20265c833f15033"
-      ],
-      "implementationAddresses": [
-        "0x75e8ac0c063b6966e2a9954adedf39bde9370197"
-      ],
-      "adminAddresses": [
-        "0xde9f8379a5a972100d0373103a849e8abdf56a9a"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "Aave Governance V3 Level-1 Executor (proxy upgrade admin owner)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25295167,
-      "sources": [
-        {
-          "label": "Aave address book",
-          "url": "https://github.com/aave-dao/aave-address-book"
-        },
-        {
-          "label": "ProxyAdmin on Etherscan",
-          "url": "https://etherscan.io/address/0xde9f8379a5a972100d0373103a849e8abdf56a9a#readContract"
-        }
-      ]
-    },
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0x4f827a63755855cdf3e8f3bcd20265c833f15033",
-        "label": "stkGHO Umbrella wrapper (upgradeable proxy)",
-        "role": "wrapper",
-        "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Aave Umbrella docs",
-            "url": "https://aave.com/help/umbrella/umbrella"
-          },
-          {
-            "label": "stkGHO token",
-            "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
-          }
-        ],
-        "evidence": "At Ethereum block 25295167: asset() returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed. EIP-1967 impl slot = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; admin slot = 0xde9f8379a5a972100d0373103a849e8abdf56a9a (ProxyAdmin). ProxyAdmin.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A (Aave Governance V3 Level-1 Executor). Upgrade path is bounded by on-chain Aave governance."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
-        "label": "Aave Governance V3 Level-1 Executor (proxy upgrade admin owner)",
-        "role": "minter-admin",
-        "authorityType": "contract",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Aave address book",
-            "url": "https://github.com/aave-dao/aave-address-book"
-          },
-          {
-            "label": "ProxyAdmin on Etherscan",
-            "url": "https://etherscan.io/address/0xde9f8379a5a972100d0373103a849e8abdf56a9a#readContract"
-          }
-        ],
-        "evidence": "At Ethereum block 25295167: stkGHO EIP-1967 proxy admin slot = ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a. ProxyAdmin.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, the Aave Governance V3 Level-1 Executor. Implementation upgrades require Aave on-chain governance; this is a bounded admin path."
-      }
-    ],
-    "economicCapSemantics": "raiseable",
-    "review": {
-      "sources": [
-        {
-          "label": "Aave Umbrella docs",
-          "url": "https://aave.com/help/umbrella/umbrella"
-        },
-        {
-          "label": "stkGHO token",
-          "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
-        }
-      ],
-      "evidence": "At Ethereum block 25295167: asset() = GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed; proxy impl = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a owned by Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Upgrade admin surface confirmed and bounded by on-chain governance. Durable mint authority inherits from reviewed parent GHO. stkGHO shares are minted only against deposited GHO, and changing the wrapper's mint economics requires the Aave Governance executor; the encoding-derived unbounded value is therefore superseded by raiseable economic semantics. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified EIP-1967 proxy/ProxyAdmin/executor evidence into the record's canChangeMintLogic/controlRef fields; no new on-chain read was required.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15"
-    }
-  },
   "variantOf": "gho-aave",
   "variantKind": "risk-absorption",
   "wrapperOperator": "parent-protocol",
@@ -138,40 +16,6 @@
   "collateral": "GHO staked into Aave Umbrella as a slashable safety-module asset covering GHO deficits; holders earn Umbrella rewards while accepting cooldown and automated slashing risk",
   "pegMechanism": "ERC-4626-style staking receipt over GHO with 1:1 convertToAssets under normal conditions; unstaking requires Aave Umbrella cooldown and withdrawal-window mechanics, and deficit events can reduce redeemable value through slashing",
   "mechanismArchetype": "cdp",
-  "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "stkGHO is a slashable Aave Umbrella safety-module receipt and has no borrower-owned collateral positions or token-level liquidation oracle. Its underlying GHO exposure inherits the external Aave reserve-oracle and bad-debt risks reviewed on the parent asset.",
-    "branchModel": "single-path",
-    "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "Aave documents Umbrella as an automated safety module that stakes assets and burns or slashes the staked receipt to cover protocol deficits. stkGHO depositors do not open GHO borrower positions, so there are no stkGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
-      "sources": [
-        {
-          "label": "Aave Umbrella help",
-          "url": "https://aave.com/help/umbrella/umbrella"
-        },
-        {
-          "label": "Aave Umbrella development proposal",
-          "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
-        }
-      ]
-    },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Aave Umbrella help",
-        "url": "https://aave.com/help/umbrella/umbrella"
-      },
-      {
-        "label": "Aave Umbrella development proposal",
-        "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
-      }
-    ]
-  },
   "detailProvider": "coingecko",
   "links": [
     {
@@ -201,15 +45,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "reserves": [
-    {
-      "name": "GHO staked in Aave Umbrella safety module",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "gho-aave",
-      "depType": "wrapper"
-    }
-  ],
   "yieldConfig": {
     "yieldSource": "Aave Umbrella stkGHO rewards",
     "yieldType": "governance-set"

@@ -1,0 +1,90 @@
+{
+  "id": "nusd-neutrl",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "NUSD is a synthetic delta-neutral dollar whose token grants MINTER_ROLE to Neutrl's StableMinter and DEFAULT_ADMIN_ROLE to a separate admin; mint is routed through Neutrl's Router.sol into AssetReserve/StableMinter, while redemption is KYC-gated.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530540,
+      "sources": [
+        {
+          "label": "NUSD token contract",
+          "url": "https://etherscan.io/address/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+        },
+        {
+          "label": "NUSD StableMinter contract",
+          "url": "https://etherscan.io/address/0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D",
+        "label": "NUSD StableMinter MINTER_ROLE",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "NUSD is minted only by holders of MINTER_ROLE; in practice the Router.sol mint() flow pulls collateral into AssetReserve.sol and a Minter contract issues NUSD 1:1, with a maxMintPerBlock rate limit.",
+        "routeChecks": {
+          "rateLimits": "Mint enforces maxMintPerBlock to limit per-block issuance.",
+          "signingModel": "Mint is permissionless via Router.sol; redemption is restricted to KYC/KYB-approved counterparties (asymmetric design)."
+        },
+        "evidence": "Ethereum role reads confirmed 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D holds MINTER_ROLE; Neutrl docs list it as StableMinter and describe Router.sol mint() routing collateral to AssetReserve.sol before StableMinter issues NUSD with a maxMintPerBlock cap. At block 25530540, StableMinter is a direct non-proxy contract owned by the token admin EOA, which can change its configured mint limit.",
+        "sources": [
+          {
+            "label": "NUSD token (Etherscan)",
+            "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+          },
+          {
+            "label": "Neutrl addresses",
+            "url": "https://docs.neutrl.finance/resources-and-ecosystem/addresses"
+          },
+          {
+            "label": "Neutrl minting docs",
+            "url": "https://docs.neutrl.finance/protocol-mechanics/minting"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x51De41ec06e779715d7FB71Ef83A736cFc903217",
+        "label": "NUSD DEFAULT_ADMIN_ROLE (token admin)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The NUSD token admin (DEFAULT_ADMIN_ROLE, with transferAdmin/acceptAdmin) can grant/revoke MINTER_ROLE and DENYLIST_MANAGER_ROLE, concentrating mint-authorization and denylist control in a single admin.",
+        "evidence": "At Ethereum block 25294779, eth_getCode(0x51De41ec06e779715d7FB71Ef83A736cFc903217) returned 0x (empty bytecode) — confirmed EOA. hasRole(DEFAULT_ADMIN_ROLE) previously confirmed true for this address.",
+        "sources": [
+          {
+            "label": "NUSD token (Etherscan)",
+            "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "MINTER_ROLE is held by StableMinter 0xFF0B98C0B1d8390b2A7cFFBCcd4e20bFcfb8191D; DEFAULT_ADMIN_ROLE is held by 0x51De41ec06e779715d7FB71Ef83A736cFc903217, verified EOA by eth_getCode returning 0x. Rechecked at Ethereum block 25530540: both NUSD and StableMinter have empty ERC-1967 implementation slots, direct deployed bytecode, and owner() = 0x51De41ec06e779715d7FB71Ef83A736cFc903217. Mint logic is not proxy-upgradeable, while the admin can change StableMinter parameters or authorize a replacement minter.",
+      "reviewer": "Codex CTRL batch 07",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "NUSD token (Etherscan)",
+          "url": "https://etherscan.io/token/0xe556aba6fe6036275ec1f87eda296be72c811bce"
+        },
+        {
+          "label": "Neutrl minting docs",
+          "url": "https://docs.neutrl.finance/"
+        }
+      ]
+    }
+  }
+}

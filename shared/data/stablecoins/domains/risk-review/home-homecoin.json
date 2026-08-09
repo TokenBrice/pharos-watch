@@ -1,0 +1,41 @@
+{
+  "id": "home-homecoin",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "HomeCoin official website",
+        "url": "https://www.homecoin.finance/"
+      },
+      {
+        "label": "Pinned HomeDAO Pool16 source",
+        "url": "https://github.com/homecoin-finance/HomeDAO/blob/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol"
+      },
+      {
+        "label": "Pinned HomeDAO legal-agreements directory",
+        "url": "https://github.com/homecoin-finance/HomeDAO/tree/e2742bb707aa6d75eb310ed8729c3ca04f91d296/agreements"
+      },
+      {
+        "label": "HOME verified Pool16 implementation",
+        "url": "https://eth.blockscout.com/address/0x366049d336e73cfaf39c6a933780ca4c96ea084c?tab=contract"
+      },
+      {
+        "label": "HOME proxy exact Sourcify source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62?fields=abi,metadata"
+      },
+      {
+        "label": "HOME ProxyAdmin verified contract",
+        "url": "https://eth.blockscout.com/address/0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f?tab=contract"
+      },
+      {
+        "label": "Ethereum RPC authority read",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712294: HOME proxy 0xb8919522331c59f5c16bdfaa6a121a6e03a91f62 pointed to verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c behind ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f. ProxyAdmin owner 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 remained a five-owner, threshold-three legacy multisig. The current implementation and exact ABI expose standard transfer/transferFrom behavior but no blacklist, pause, freeze, seize, allowlist, or privileged holder-burn path. The official repository contains mortgage-originator agreements, but no current token-holder terms that positively exclude an issuer-level legal restriction were available; absence of such terms cannot support a false verdict. The direct review therefore remains honestly possible, while the live no-timelock 3/5 upgrade path is verified as restrictable in the transfer overlay.",
+    "reviewer": "OpenAI Codex C06 access review",
+    "reviewedAt": "2026-08-08",
+    "upstreamSuppressionRationale": "Mortgage, USDC liquidity, and foreclosure risks can impair HOME's backing or redemption value, but the reviewed current token implementation gives neither the mortgage obligors nor reserve-asset issuers a direct holder restriction path on HOME. Those exposures remain backing and dependency risks; future token restrictions through the live proxy upgrade authority are represented in the transfer overlay."
+  }
+}

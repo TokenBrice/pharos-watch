@@ -1,0 +1,44 @@
+{
+  "id": "gtusdc-gauntlet",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Verified gtUSDC MetaMorpho vault source",
+        "url": "https://eth.blockscout.com/address/0xdd0f28e19c1780eb6396170735d45153d261490d?tab=contract"
+      },
+      {
+        "label": "Official morpho-org/metamorpho MetaMorpho.sol",
+        "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+      },
+      {
+        "label": "Morpho vault curation documentation",
+        "url": "https://docs.morpho.org/curate/"
+      }
+    ],
+    "evidence": "Re-verified 2026-07-30 at Ethereum block 25648562. The Blockscout exact-match verified MetaMorpho source (compiler v0.8.21) and all 40 bundled dependencies expose no holder blacklist, freeze, pause, allowlist, or transfer hook; holder transfer/transferFrom are vanilla OpenZeppelin ERC20 paths and the vault never overrides the ERC20 _update hook. The vault is immutable (EIP-1967 implementation slot zero) with owner() the Gauntlet Safe 4/7 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, whose reach is limited to vault parameters (fees, caps, timelocks, market allocation) with no holder-transfer gating. The inherited classification is retained: the vault's sole asset is USDC supplied into Morpho markets, so Circle's issuer-side blacklist authority over USDC (failure domain asset:usdc-circle) can freeze the upstream collateral, while gtUSDC shares themselves carry no token-level restriction.",
+    "reviewer": "Kimi T53 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "gtUSDC has one tracked Ethereum vault contract. The Across/World candidate signal did not resolve to a durable gtUSDC bridge route, so this is reviewed as a native single-chain vault token.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Morpho curation docs",
+        "url": "https://docs.morpho.org/curate/"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "L2BEAT World Chain",
+        "url": "https://l2beat.com/interop/protocols/world"
+      }
+    ]
+  }
+}

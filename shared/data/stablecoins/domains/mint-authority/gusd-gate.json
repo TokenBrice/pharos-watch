@@ -1,0 +1,114 @@
+{
+  "id": "gusd-gate",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "Gate GUSD uses OpenZeppelin AccessControl on a UUPS ERC1967 proxy. MINTER_ROLE is held by one EOA; DEFAULT_ADMIN_ROLE and UPGRADER_ROLE are held by a second EOA with no timelock.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+      ],
+      "implementationAddresses": [
+        "0xc181faf98a90993bba78af4a9d5dde37d3dbadaf"
+      ],
+      "adminAddresses": [
+        "0x191af8dade347e8f93a0798ec84ab5ef07c981be"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Gate GUSD DEFAULT_ADMIN_ROLE holder",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526610,
+      "sources": [
+        {
+          "label": "Ethereum Gate GUSD UUPS proxy",
+          "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5#code"
+        },
+        {
+          "label": "Ethereum Gate GUSD implementation runtime",
+          "url": "https://etherscan.io/address/0xc181faf98a90993bba78af4a9d5dde37d3dbadaf#code"
+        },
+        {
+          "label": "Gate GUSD proxy creation and role initialization",
+          "url": "https://eth.blockscout.com/tx/0x29a769ce1021f37980833f27bef76e94f07e10a1a91eb1edf5398121c59de1d4"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x83393a1796eadda65e8b46900f0c1845d433c609",
+        "label": "Gate GUSD MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526610,
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "RoleGranted(MINTER_ROLE=0x9f2df0..., 0x83393a...) was emitted by the proxy creation transaction at block 23237330. At block 25526610, hasRole(MINTER_ROLE, 0x83393a...) returned true and eth_getCode returned empty; the complete role-event history contains no revocation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x191af8dade347e8f93a0798ec84ab5ef07c981be",
+        "label": "Gate GUSD DEFAULT_ADMIN_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526610,
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "The proxy creation transaction at block 23237330 granted this EOA both DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. At block 25526610, both hasRole checks returned true and eth_getCode returned empty; the complete role-event history contains no revocation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaf6186B3521B60E27396B5d23b48ABc34bF585C5",
+        "label": "Gate GUSD Ethereum token proxy",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526610,
+        "sources": [
+          {
+            "label": "Ethereum Gate GUSD token",
+            "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+          }
+        ],
+        "evidence": "At block 25526610, the EIP-1967 implementation slot resolved to 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF, while the admin and beacon slots were zero. The implementation's proxiableUUID() returned the EIP-1967 implementation slot."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Gate GUSD",
+          "url": "https://www.gate.com/gusd"
+        },
+        {
+          "label": "Ethereum Gate GUSD token",
+          "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
+        }
+      ],
+      "evidence": "At Ethereum block 25526610, the UUPS proxy implementation was 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF with zero EIP-1967 admin and beacon slots. The implementation returned the standard proxiableUUID and exposes upgradeToAndCall guarded by UPGRADER_ROLE. Complete RoleGranted/RoleRevoked enumeration from proxy creation block 23237330 identifies EOA 0x83393a... as the sole minter and EOA 0x191af8... as both default admin and upgrader, with no revocations; current hasRole and eth_getCode reads confirmed both identities. On 2026-07-15, Gate's GUSD product page was rechecked: it makes issuer reserve claims but provides no dated recurring independent supply-to-reserve report or prudential issuer registry, so reconciliation remains unknown and the no-delay issuer-controlled mint is economically unbounded.",
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

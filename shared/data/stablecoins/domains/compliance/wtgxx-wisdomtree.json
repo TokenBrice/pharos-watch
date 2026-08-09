@@ -1,0 +1,72 @@
+{
+  "id": "wtgxx-wisdomtree",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "WTGXX is a share class of a Rule 2a-7-registered Investment Company Act of 1940 money market fund (WisdomTree Treasury Money Market Digital Fund), making it a security under federal securities laws. The GENIUS Act (Public Law 119-27, signed July 18, 2025) explicitly excludes from the payment stablecoin definition any digital asset that is a security as defined in section 2 of the Securities Act of 1933, section 3 of the Securities Exchange Act of 1934, or section 2 of the Investment Company Act of 1940. WTGXX is not marketed as a payment instrument — it is positioned as a qualifying GENIUS Act reserve asset for payment stablecoin issuers, not as a payment stablecoin itself.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27 — payment stablecoin definition and securities exclusion",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "WisdomTree GENIUS Act compliance disclosure — WTGXX as reserve asset",
+          "url": "https://www.marketsmedia.com/wisdomtree-to-offer-only-sec-registered-genius-act-compliant-fund/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-10-01",
+          "accessedAt": "2026-06-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "WisdomTree Digital Management, Inc. (fund manager) / WisdomTree Digital Trust (fund issuer)",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC — registered under Investment Company Act of 1940, Rule 2a-7 government money market fund",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "WTGXX is outside GENIUS Act payment-stablecoin tracking because it is a digital share class of a Rule 2a-7-registered money market fund — a security explicitly excluded from the GENIUS Act's definition of 'payment stablecoin' (Public Law 119-27, sec. 2(a), signed July 18, 2025). WTGXX's role under the GENIUS Act is as a qualifying reserve asset for stablecoin issuers (the fund restructured its portfolio by November 2025 to hold only Treasuries ≤93 days and overnight repos, meeting GENIUS Act reserve requirements). WisdomTree separately launched USDW (previously WUSD), a distinct payment stablecoin issued by WisdomTree Digital Trust Company, a New York-chartered trust — USDW is the entity that may eventually pursue GENIUS Act authorization as a permitted payment stablecoin issuer; WTGXX is not that entity.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 — payment stablecoin definition and securities exclusion",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "WisdomTree GENIUS Act compliance disclosure — WTGXX as reserve asset",
+        "url": "https://www.marketsmedia.com/wisdomtree-to-offer-only-sec-registered-genius-act-compliant-fund/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-10-01",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "WisdomTree USDW stablecoin launch — separate GENIUS Act-intent payment stablecoin",
+        "url": "https://coincentral.com/wisdomtree-expands-into-stablecoins-with-usdw-and-tokenized-yield/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-23",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "WisdomTree Treasury Money Market Digital Fund (WTGXX) product page",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

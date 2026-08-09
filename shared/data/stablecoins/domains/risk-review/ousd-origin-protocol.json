@@ -1,0 +1,85 @@
+{
+  "id": "ousd-origin-protocol",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Origin Dollar OUSD.sol (GitHub master)",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/token/OUSD.sol"
+      },
+      {
+        "label": "Origin Dollar VaultCore.sol (GitHub master)",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/vault/VaultCore.sol"
+      },
+      {
+        "label": "Ethereum OUSD proxy (Etherscan)",
+        "url": "https://etherscan.io/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86#code"
+      },
+      {
+        "label": "Ethereum OUSD implementation 0xa7b7c59a (storage slot EIP-1967)",
+        "url": "https://etherscan.io/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33#code"
+      },
+      {
+        "label": "Origin OUSD docs",
+        "url": "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Origin governed upgradeability proxy source",
+        "url": "https://github.com/OriginProtocol/origin-dollar/blob/master/contracts/contracts/proxies/InitializeGovernedUpgradeabilityProxy.sol"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712273. OUSD 0x2a8e1e676ec238d8a992307b495b45b3feaa5e86 used implementation 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 and exposes burn(address,uint256), a live arbitrary-account balance-destruction primitive restricted to the authorized Vault 0xe75d77b1865ae93c7eaa3040b038d7aa7bc02f70. The Vault used implementation 0x8294cbd6dcb1e06b07dc1e93f391f50b514d5145. Both proxies are governed by timelock 0x35918cde7233f2d6a9f6904caccab6b3f0893e69f, whose minimum delay was 172800 seconds. The privileged Vault burn mechanism makes blacklistability true; the governor's ability to replace token or Vault logic independently makes the deployment restrictable. USDC backing freeze exposure remains a reserve/dependency risk rather than the basis for this direct verdict.",
+    "reviewer": "OpenAI Codex C06 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "OUSD supply is confined to its canonical Ethereum deployment; the single reviewed route is native issuance by the Origin Protocol vault. No bridge route carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Origin Dollar docs",
+        "url": "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd"
+      },
+      {
+        "label": "Origin Dollar repository",
+        "url": "https://github.com/OriginProtocol/origin-dollar"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+        "protocol": "Origin Protocol OUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "OUSD is issued only on Ethereum mainnet by the Origin Protocol OUSD vault; the entire captured supply is the canonical Ethereum deployment (0x2a8e1e676ec238d8a992307b495b45b3feaa5e86). No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OUSD token (Etherscan)",
+            "url": "https://etherscan.io/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          },
+          {
+            "label": "OUSD docs",
+            "url": "https://docs.ousd.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

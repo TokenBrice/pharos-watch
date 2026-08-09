@@ -1,0 +1,153 @@
+{
+  "id": "onyc-onre",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "ONYC mint authority is PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX, which is signed by the OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The program remains upgradeable through Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, controlled without delay by autonomous 3-of-6 multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN. The prior record incorrectly classified the off-curve vault PDA as an EOA.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+      ],
+      "implementationAddresses": [
+        "91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+      ],
+      "adminAddresses": [
+        "FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f",
+        "2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "OnRe program upgrade Squads v4 multisig",
+      "observedAt": "2026-07-13",
+      "observedBlock": 432714278,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "OnRe program",
+          "url": "https://explorer.solana.com/address/onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+        },
+        {
+          "label": "OnRe ProgramData",
+          "url": "https://explorer.solana.com/address/91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+        },
+        {
+          "label": "OnRe Squads vault",
+          "url": "https://explorer.solana.com/address/FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f"
+        },
+        {
+          "label": "OnRe Squads multisig",
+          "url": "https://explorer.solana.com/address/2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "OnRe program PDA (mint authority)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+        ],
+        "evidence": "At Solana slot 432714278, ONYC mint 5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5 retained mint authority AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX. The authority is an OnRe-program-owned PDA. A cutoff transaction at slot 432713422 showed the OnRe program directly invoking Tokenkeg MintToChecked with that PDA as mint authority.",
+        "sources": [
+          {
+            "label": "ONYC SPL mint on Solana Explorer",
+            "url": "https://explorer.solana.com/address/5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"
+          },
+          {
+            "label": "OnRe program on Solana Explorer",
+            "url": "https://explorer.solana.com/address/onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe"
+          }
+        ]
+      },
+      {
+        "chain": "solana",
+        "address": "FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f",
+        "label": "OnRe program upgrade Squads v4 multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+        ],
+        "sources": [
+          {
+            "label": "OnRe ProgramData",
+            "url": "https://explorer.solana.com/address/91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg"
+          },
+          {
+            "label": "OnRe Squads vault",
+            "url": "https://explorer.solana.com/address/FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f"
+          },
+          {
+            "label": "OnRe Squads multisig",
+            "url": "https://explorer.solana.com/address/2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, ProgramData 91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg named off-curve Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f as upgrade authority. The vault resolved to autonomous multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with threshold 3, six on-curve members, zero timelock, and no config authority. Members were 2HGJuU5LhHoxn1oaRiQWc9wAsVaFSRubrgtMcomu4dJH, 5xmqRUqK33A2oBRxjyG36HgMjjM19NRt8gYEBT9u78s6, 8dk5KyDAttJYT4pa9nSQYqLEK85w7ZbcHZdZjBMHoAhz, 96yg1uazqtxT4R4mTKPDcLSfbp3AAJiXJFMKZj28bsSk, DiNi78eqjYxVdwXiAiran2Fh4sPAbvQA4oDTq2a6mDQe, and J7nrqDcSuL77TPr1Vz7n8RC4VUeN4pXfx6Xx9E4SA59e. The Squads v4 program itself had no upgrade authority."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "At Solana slot 432714278, ONYC mint authority remained PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX under OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The live ProgramData upgrade authority was off-curve Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, not an EOA. It resolved to autonomous 3-of-6 Squads multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with zero timelock and no config authority. The Squads program itself was immutable. No permissionless mint route existed. Reserve reconciliation: OnRe appointed Apex Group as independent attestation provider for ONyc, with monthly attestations; the latest published product attestation covers ONyc NAV, treasury balances, and reserve allocations as of 2026-05-31. Prudential supervision: the Bermuda Monetary Authority registry identifies On Re SAC Ltd (registration number 55347) as both a Class IIGB insurer and a Class F digital-asset business, matching the ONyc issuing entity. Reviewed 2026-07-15.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "ONYC SPL mint on Solana Explorer",
+          "url": "https://explorer.solana.com/address/5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"
+        },
+        {
+          "label": "OnRe ONYC docs",
+          "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+        },
+        {
+          "label": "OnRe FAQ",
+          "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+        },
+        {
+          "label": "OnRe appointment of Apex as independent ONyc attestation provider",
+          "url": "https://www.onre.finance/blog/onre-appoints-apex-group-as-independent-attestation-provider-for-onyc"
+        },
+        {
+          "label": "ONyc asset attestation for March 2026",
+          "url": "https://www.onre.finance/blog/onyc-asset-attestation-march-2026"
+        },
+        {
+          "label": "ONyc asset attestation for May 2026",
+          "url": "https://www.onre.finance/blog/onyc-asset-attestation-may-2026"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated-entities registry",
+          "url": "https://www.bma.bm/regulated-entities"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "id": "mxne-real-mxn",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "MXNe is issued by Brale across Base (BraleToken ERC1967 proxy), Solana (SPL mint), and Stellar (issuer account); on each chain a single issuer-controlled EOA/keypair holds all mint and admin rights.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x269cae7dc59803e5c596c95756faeebb6030e0af"
+      ],
+      "implementationAddresses": [
+        "0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5"
+      ],
+      "adminAddresses": [
+        "0xb180f98037a63a3dca66b6b4ddbf250265b65110"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Brale MINTER_ROLE EOA — Base",
+      "observedAt": "2026-07-21",
+      "observedBlock": 48917714,
+      "sources": [
+        {
+          "label": "MXNe Base BraleToken proxy",
+          "url": "https://base.blockscout.com/address/0x269cae7dc59803e5c596c95756faeebb6030e0af"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Brale MINTER_ROLE EOA — Base",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110",
+        "canRaiseCap": true,
+        "evidence": "At Base block 47200644, hasRole(MINTER_ROLE, 0xb180f98037a63a3dca66b6b4ddbf250265b65110) on the BraleToken proxy (0x269cae7dc59803e5c596c95756faeebb6030e0af) returned true. eth_getCode confirms EOA. Same address also holds DEFAULT_ADMIN_ROLE. MINTER_ROLE = keccak256('MINTER_ROLE') = 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6. Contract source confirmed as BraleToken (OpenZeppelin AccessControl + UUPS) via Blockscout."
+      },
+      {
+        "label": "Brale mint authority keypair — Solana",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH",
+        "canRaiseCap": true,
+        "evidence": "getAccountInfo on SPL mint 6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa returned mintAuthority=3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH and freezeAuthority=same. That account is owned by System Program and non-executable (regular Solana keypair/EOA)."
+      },
+      {
+        "label": "Brale issuer account — Stellar",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "stellar",
+        "address": "GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "canRaiseCap": true,
+        "evidence": "Stellar Horizon: issuer GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR has 1 signer (self, weight=1), all thresholds=0, auth_revocable and auth_clawback_enabled set — standard single-key issuer account."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "evidence": "At Base block 47200644: BraleToken proxy 0x269cae7dc59803e5c596c95756faeebb6030e0af (ERC1967 → impl 0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5, source BraleToken confirmed on Blockscout). MINTER_ROLE and DEFAULT_ADMIN_ROLE both held by EOA 0xb180f98037a63a3dca66b6b4ddbf250265b65110. Solana: mintAuthority and freezeAuthority = keypair 3mdd4X7wJjWmhF99jfTNGmSr39EXSAXcdEiS47GejduH (Solana System Program owner = regular keypair). Stellar: issuer GCQCNWT…KHZR is a single-key account. All three chains show Brale-controlled single-EOA/keypair issuer model consistent with documented permissioned mint/redeem. Mint-tier review (2026-07-15): BHR Mexico performs recurring independent reasonable-assurance examinations for Etherfuse MX, S.A. de C.V.; the current primary latest endpoint returns the report dated 2026-06-26, reconciling token commitments to bank and investment assets. FinCEN and state transmitter records match Brale Inc., but those are AML/payments permissions rather than prudential stablecoin-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Brale MXNe",
+          "url": "https://brale.xyz/stablecoins/MXNe"
+        },
+        {
+          "label": "Brale: Introducing MXNe",
+          "url": "https://brale.xyz/blog/introducing-mxne"
+        },
+        {
+          "label": "Base Blockscout — MXNe BraleToken proxy",
+          "url": "https://base.blockscout.com/address/0x269cae7dc59803e5c596c95756faeebb6030e0af"
+        },
+        {
+          "label": "Etherfuse proof of reserves",
+          "url": "https://app.etherfuse.com/legal/proof-of-reserves"
+        },
+        {
+          "label": "FinCEN MSB registry search",
+          "url": "https://www.fincen.gov/resources/msb-state-selector"
+        },
+        {
+          "label": "BHR Mexico latest Etherfuse assurance report",
+          "url": "https://api.etherfuse.com/statement/attestation/latest"
+        }
+      ]
+    }
+  }
+}

@@ -13,6 +13,8 @@ Research-heavy metadata can move independently from a coin's scalar identity and
 
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
+The layout migration is complete: no base coin file carries a domain-owned field. Every coin whose research a domain covers has that domain's sidecar, so a base file's absence of a domain directory entry now means the coin has no such research, not that the field is still awaiting migration. Author new research directly in the sidecar.
+
 `reserveReview` records the human review of a reserve composition: review date and reviewer, confidence, sources, composition basis and optional as-of date, reviewed scope, known-unknown exposure, and fingerprinted dispositions for selected unlinked slices. A disposition stores the current reserve index, exact name, and percentage, so changing, resizing, or reordering a reviewed slice makes validation fail until the review is revisited. Candidate IDs are research leads only; they do not create dependency edges. The reserves sidecar may contain any of `reserves`, `reserveReview`, and `custodyProfile`, but a merged coin may only carry a review when it also has reserve composition.
 
 Reserve slices may carry only review-useful structured backing facts: `assetClass`, `issuerOrObligor`, `riskFactors`, `liquidityHorizon`, and `maturityDaysMax`. These supplement the existing risk, dependency-link, and blacklistability fields. Do not infer a maturity maximum from weighted-average maturity, preserve false precision in an opaque basket, or assign issuer/custodian shares that the source does not disclose.
@@ -35,7 +37,7 @@ Research review envelopes, including `reserveReview` and `custodyProfile`, remai
 
 1. Check whether `domains/<domain>/<id>.json` exists.
 2. If it exists, edit the sidecar. Do not copy its fields back into `coins/<id>.json`.
-3. If it does not exist, keep a narrow one-off update in the base file or deliberately migrate the whole domain with the workflow below.
+3. If it does not exist, create it. Do not author domain-owned fields in the base file; the migration below exists for legacy layouts, not for new research.
 4. Preserve existing evidence and values unless the task includes reviewed research. A layout migration must not invent or refresh facts.
 5. Run focused schema/loader tests before regenerating artifacts.
 
@@ -71,6 +73,8 @@ npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts \
 ```
 
 The tool moves only already-authored fields, validates the strict sidecar and base shapes, rebuilds the merged coin in memory, and refuses to write unless that projection is deeply equal to the original. It also refuses partial migrations when a target sidecar already exists while owned fields remain in the base file.
+
+Both sides of that equality check are overlaid with the coin's *other* domains' existing sidecars. The merged `StablecoinMeta` schema carries cross-domain refinements — a base-owned `liveReservesConfig` is validated against a `reserves` slice that may already live in the reserves sidecar — so comparing base-only projections would fail closed on every coin that is already partly migrated.
 
 ## Coordinated Generation
 

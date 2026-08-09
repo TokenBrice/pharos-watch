@@ -1,0 +1,44 @@
+{
+  "id": "sdola-inverse-finance",
+  "reserves": [
+    {
+      "name": "DOLA deposited in the sDOLA savings wrapper",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "dola-inverse-finance",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "market"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse sDOLA product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Ethereum sDOLA verified source",
+        "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code"
+      },
+      {
+        "label": "Inverse transparency disclosure",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      }
+    ],
+    "rationale": "sDOLA is a receipt claim for one ERC-4626 asset: DOLA. The verified Ethereum implementation and official product guide identify DOLA as the deposited asset and describe immediate unwraps; no separate reserve basket or allocation is disclosed for the wrapper. The parent DOLA claim remains independently evaluated on its own record.",
+    "compositionBasis": "Verified Ethereum sDOLA ERC-4626 source and asset() read at block 25534205, plus Inverse sDOLA product disclosure.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unclassified wrapper-reserve exposure is present: the full wrapper reserve is the identified parent DOLA claim, whose own backing is evaluated on the DOLA record.",
+    "knownUnknownExposurePct": 0
+  }
+}

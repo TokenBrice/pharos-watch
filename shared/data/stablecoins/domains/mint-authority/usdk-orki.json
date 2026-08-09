@@ -1,0 +1,37 @@
+{
+  "id": "usdk-orki",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "summary": "USDK is a Liquity-v2 BoldToken on Swellchain. owner() reverts (no Ownable); collateralRegistryAddress is set to 0xce9f80a0...; mint() reverts 'BoldToken: Caller is not BO or AP' for any non-branch sender; branch addresses are locked at construction. No individual admin can mint or alter branch assignments.",
+    "controls": [
+      {
+        "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "swellchain",
+        "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
+      }
+    ],
+    "review": {
+      "evidence": "At Swellchain block 24247324: owner() reverts (no Ownable in pure BoldToken); collateralRegistryAddress = 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912; mint() from non-branch address reverts 'BoldToken: Caller is not BO or AP'; EIP-1967 proxy admin slot = zero; implementation (0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e) is non-upgradeable. Branch minters are permanently fixed; no individual or admin can grant new mint rights.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Orki USDK token on Swellchain (Swell explorer)",
+          "url": "https://explorer.swellnetwork.io/address/0x0000baa0b1678229863c0a941c1056b83a1955f5"
+        },
+        {
+          "label": "Orki USDK docs",
+          "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+        }
+      ]
+    }
+  }
+}

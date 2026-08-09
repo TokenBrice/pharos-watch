@@ -1,0 +1,430 @@
+{
+  "id": "slvon-ondo",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. Ethereum, BSC, and HyperEVM use upgradeable token deployments administered through 2-hour timelocks; each reviewed timelock has a 5-of-9 Safe as an admin. The Solana Token-2022 mint authority is Ondo's GM program PDA, while a single EOA can upgrade that program without an on-chain delay.",
+    "upgradeability": {
+      "model": "beacon",
+      "proxyAddresses": [
+        "0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
+        "0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
+        "0xd53d98d13d93c817011645442c2e4d46e499b460"
+      ],
+      "implementationAddresses": [
+        "0xebbcb2cee51c2fee4062c9c1270dcb98b0b22250",
+        "0x578f397ca4661d1db4d9a65065d6b284a1a850fd",
+        "0x0d25c65d0cc97af724ffd7a54eb287660e8dfad4"
+      ],
+      "adminAddresses": [
+        "0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598",
+        "0xc046b05a920e4b412815934dd8e58904dda73315",
+        "0x258269e782ab73aca6c0574990ff29b79aafffb6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 7200,
+      "controlRef": "SLVon deployment-wide beacon-owner timelocks",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Sourcify SLVon Ethereum BeaconProxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify SLVon Ethereum UpgradeableBeacon",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        },
+        {
+          "label": "HyperEVM RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Ondo Global Markets issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Ondo GM mints/redeems SLVon against custodied SLV economic exposure for eligible investors only; no permissionless or user-collateralized mint route exists and eligibility/transfer restrictions are enforced by the issuer.",
+        "sources": [
+          {
+            "label": "Ondo Global Markets overview",
+            "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+          }
+        ]
+      },
+      {
+        "label": "GMTokenManager (MINTER_ROLE[0])",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c",
+        "chain": "ethereum",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295049, getRoleMember(MINTER_ROLE, 0) on SLVon ETH returned 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c. Contract verified as GMTokenManager (Ondo's Global Markets issuance contract) on Blockscout.",
+        "sources": [
+          {
+            "label": "SLVon ETH contract on Etherscan",
+            "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+          }
+        ]
+      },
+      {
+        "label": "OndoOFT (MINTER_ROLE[1] — bridge)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e",
+        "chain": "ethereum",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295049, getRoleMember(MINTER_ROLE, 1) returned 0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e. Contract verified as OndoOFT (LayerZero OFT bridge) on Blockscout. Enables cross-chain supply bridging.",
+        "sources": [
+          {
+            "label": "SLVon ETH contract on Etherscan",
+            "url": "https://etherscan.io/address/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4"
+          }
+        ]
+      },
+      {
+        "label": "SLVon Ethereum admin and beacon-owner TimelockController (2-hour delay)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+        "chain": "ethereum",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531363,
+        "evidence": "At Ethereum block 25531363, getMinDelay() returned 7200. DEFAULT_ADMIN_ROLE had two members: the timelock itself and 5-of-9 Safe 0xcd35671dcab88d05ee29dc4d360181529390b17f. PROPOSER_ROLE had 0x71a4d411b5f7941dee020417fca30413712f1646. EXECUTOR_ROLE and CANCELLER_ROLE each had 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc and 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The same timelock owns the Ethereum beacon and remains the token DEFAULT_ADMIN, so it can replace mint logic or authorize minters after the 2-hour delay.",
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Sourcify SLVon Ethereum UpgradeableBeacon",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598?fields=compilation,proxyResolution"
+          }
+        ]
+      },
+      {
+        "label": "Ondo governance Safe - Ethereum TimelockController admin (5-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xcd35671dcab88d05ee29dc4d360181529390b17f",
+        "chain": "ethereum",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "version": "1.4.1",
+          "observedBlock": 25531363,
+          "observedAt": "2026-07-14",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531363,
+        "evidence": "At Ethereum block 25531363, this Safe remained one of the TimelockController's two DEFAULT_ADMIN_ROLE members. getOwners() returned the same nine owners, getThreshold() returned 5, getModulesPaginated returned no modules, the guard slot was zero, VERSION() returned 1.4.1, and slot 0 resolved singleton 0x41675c099f32341bf84bfc5382af534df5c7461a.",
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "label": "SLVon deployment-wide beacon-owner timelocks",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "ethereum:0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+          "bsc:0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+          "hyperevm:0x6253fbc5bcf4f49c80745694366f05d6c7be0e83"
+        ],
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Sourcify SLVon Ethereum BeaconProxy",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4?fields=compilation,proxyResolution"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "This umbrella control exists because the upgradeability schema accepts one controlRef; it does not imply a shared controller. Ethereum beacon 0x985462c9... is owned by timelock 0x3715b215..., BSC beacon 0xc046b05a... by timelock 0x8860bbfc..., and HyperEVM beacon 0x258269e7... by timelock 0x6253fbc5.... Each owner returned getMinDelay() = 7200. The Ethereum timelock is administered by 5-of-9 Safe 0xcd35671d.... At pinned BSC block 111360010 and HyperEVM block 41089232, the other timelocks each had themselves plus 5-of-9 Safe 0xa3a3c713... in DEFAULT_ADMIN_ROLE; their proposer, executor, and canceller memberships were also enumerated."
+      },
+      {
+        "label": "SLVon BSC direct minters",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "bsc",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 111360010,
+        "failureDomainKeys": [
+          "contract:bsc:0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299",
+          "contract:bsc:0x02a4144f5f84fcfbca63f89f1c0038d3053ea525"
+        ],
+        "evidence": "At pinned BSC block 111360010 (hash 0xece995265468e7bf911781bc64d115778a9ac83f97243943d508de5e29703685), SLVon MINTER_ROLE had two members: Ondo's documented GMTokenManager 0x91f8aff3... and OndoOFT 0x02a4144f.... The OFT token() call returned the SLVon BSC token address.",
+        "sources": [
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ]
+      },
+      {
+        "label": "Ondo governance Safe - BSC TimelockController admin (5-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xa3a3c71380128972f172ff4052af7b6405da6364",
+        "chain": "bsc",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 111360781,
+          "observedAt": "2026-07-21",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 111360781,
+        "evidence": "At pinned BSC block 111360781 (hash 0xfb98ca2bf4c080005fd985a803004c3cbba40d6ca976b3715b7eeef8e3b7f0c7), this Safe returned the listed nine owners and threshold 5. getModulesPaginated returned no modules, the guard slot was zero, VERSION() returned 1.4.1, and slot 0 resolved singleton 0x29fcb43b.... It is a DEFAULT_ADMIN_ROLE member of the SLVon BSC timelock.",
+        "sources": [
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "label": "SLVon HyperEVM OndoOFT direct minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85",
+        "chain": "hyperevm",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089232,
+        "evidence": "At pinned HyperEVM block 41089232 (hash 0x91c7e3d0b5f89f78c4813e9a0f49075c9273b4ea2a00b2f247a83111ad0738d5), SLVon had one MINTER_ROLE member, 0x7b97e37f.... The verified OndoOFT contract's token() call returned the HyperEVM SLVon address.",
+        "sources": [
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "HyperEVM OndoOFT contract",
+            "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
+          }
+        ]
+      },
+      {
+        "label": "Ondo governance Safe - HyperEVM TimelockController admin (5-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xa3a3c71380128972f172ff4052af7b6405da6364",
+        "chain": "hyperevm",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 41089839,
+          "observedAt": "2026-07-21",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089839,
+        "evidence": "At pinned HyperEVM block 41089839 (hash 0x371521ef47d7ddc851d73fc41b4d551e48ee18b74928e1868e19c8b4f15df50c), this Safe returned the listed nine owners and threshold 5. getModulesPaginated returned no modules, the guard slot was zero, VERSION() returned 1.4.1, and slot 0 resolved singleton 0x29fcb43b.... It is a DEFAULT_ADMIN_ROLE member of the SLVon HyperEVM timelock.",
+        "sources": [
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ]
+      },
+      {
+        "label": "Ondo Solana GM program mint-authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "chain": "solana",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 434387395,
+        "failureDomainKeys": [
+          "program:solana:XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm"
+        ],
+        "evidence": "At finalized Solana slot 434387395, the SLVon Token-2022 mint authority was 9foMHsSD... and no account existed at that address, consistent with a program-derived address. Ondo documents the GM program as XzTT4XB8...; Zellic's audit identifies the program's mint_authority PDA and minting instruction controls.",
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Zellic Ondo GM Solana audit",
+            "url": "https://docs.ondo.finance/pdf/GM-Solana-Zellic-12-29-2025.pdf"
+          }
+        ]
+      },
+      {
+        "label": "Ondo Solana GM program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
+        "chain": "solana",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-07-21",
+        "observedBlock": 434387395,
+        "evidence": "At finalized Solana slot 434387395, Ondo's GM program was an upgradeable BPF program whose ProgramData account F4F1Zdqw... named 9ECeczLt... as upgrade authority. That authority was a funded, zero-data system account, so this terminal EOA can replace minting logic without an on-chain timelock.",
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "unknown",
+    "review": {
+      "evidence": "Sourcify verifies the Ethereum token and upgradeable beacon, and pinned RPC reads resolve the Ethereum, BSC, and HyperEVM beacons, implementations, and 2-hour owner timelocks. Ethereum's direct minters and 5-of-9 admin Safe were already resolved. At pinned BSC block 111360010 and HyperEVM block 41089232, the terminal timelock role graphs were enumerated; both timelocks include the same 5-of-9 Safe as admin. Separate pinned Safe reads found the same nine owners, threshold 5, no enabled modules, and no guard on both chains. At finalized Solana slot 434387395, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as mint authority, while the upgradeable program named a single funded system-account EOA as its no-delay upgrade authority. These observations close the previously identified deployment-wide authority questions; the centralized upgrade and mint paths remain scoring risks rather than evidence gaps.",
+      "reviewer": "P2 mint-free cohort; OpenAI Codex NR-recovery review",
+      "reviewedAt": "2026-07-21",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Ondo Global Markets overview",
+          "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+        },
+        {
+          "label": "Sourcify SLVon Ethereum BeaconProxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Sourcify SLVon Ethereum UpgradeableBeacon",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598?fields=compilation,proxyResolution"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        },
+        {
+          "label": "HyperEVM RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
+        },
+        {
+          "label": "Solana mainnet RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Ondo Global Markets trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        }
+      ]
+    }
+  }
+}

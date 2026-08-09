@@ -1,0 +1,85 @@
+{
+  "id": "jusd-juicedollar",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "JuiceDollar smart-contract functions",
+        "url": "https://docs.juicedollar.com/smart-contracts/functions"
+      },
+      {
+        "label": "JuiceDollar disclaimer",
+        "url": "https://docs.juicedollar.com/disclaimer.html"
+      },
+      {
+        "label": "CitreaScan verified JUSD source",
+        "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      },
+      {
+        "label": "CitreaScan JUSD ABI",
+        "url": "https://api.citreascan.com/api?module=contract&action=getabi&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      },
+      {
+        "label": "JuiceDollar token source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+      },
+      {
+        "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+      },
+      {
+        "label": "Citrea Public RPC (block 11058127 code, storage, minter and allowance reads)",
+        "url": "https://rpc.mainnet.citrea.xyz"
+      },
+      {
+        "label": "JuiceDollar live stablecoin info API",
+        "url": "https://api.juicedollar.com/ecosystem/stablecoin/info"
+      }
+    ],
+    "evidence": "Re-verified at Citrea block 11058127 (2026-08-08T19:49:23Z). The canonical JUSD contract remained direct non-proxy bytecode with a zero EIP-1967 implementation slot. Its pinned verified source uses ordinary OpenZeppelin ERC-20 transfer paths and exposes no blacklist, freeze, pause, seizure, or holder-transfer hook. burnFrom(address,uint256) is minter-only but always calls _spendAllowance: the official function reference likewise states that burning from another address requires allowance. Live reads showed StablecoinBridgeUSDT 0x5cc0e668f8ba61e111b6168e19d17d3c65040614 is a minter but has allowance zero from an ordinary address. The token reports an implicit maximum allowance to its Equity reserve for any owner, but Equity is not thereby a minter; minters receive implicit allowance only from another minter, a registered position, or the reserve itself, not an ordinary holder. The reviewed disclaimer concerns interface availability and liability and establishes no issuer custody or account-freeze power. Direct holder freeze is therefore false; the positive USDT.e reserve remains a separate upstream dependency.",
+    "reviewer": "Codex C10 wave1 control review; OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "JuiceDollar's tracked WCBTC CDP path uses permissionless challenges and Dutch auctions to discover collateral price and liquidate positions, explicitly replacing an external oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "JuiceDollar documents the WCBTC position path as an oracle-free challenge system: a challenger starts an auction, the Dutch auction discovers the collateral market price, and a bid below the position liquidation price completes liquidation. The tracked stablecoin bridge routes are separate 1:1 conversions and do not create borrower collateral branches, so there is no external feed branch to inventory.",
+      "sources": [
+        {
+          "label": "JuiceDollar challenges and auctions",
+          "url": "https://docs.juicedollar.com/positions/auctions"
+        },
+        {
+          "label": "JuiceDollar opening positions",
+          "url": "https://docs.juicedollar.com/positions/open"
+        },
+        {
+          "label": "JuiceDollar smart-contract functions",
+          "url": "https://docs.juicedollar.com/smart-contracts/functions"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JuiceDollar challenges and auctions",
+        "url": "https://docs.juicedollar.com/positions/auctions"
+      },
+      {
+        "label": "JuiceDollar opening positions",
+        "url": "https://docs.juicedollar.com/positions/open"
+      },
+      {
+        "label": "JuiceDollar smart-contract functions",
+        "url": "https://docs.juicedollar.com/smart-contracts/functions"
+      }
+    ]
+  }
+}

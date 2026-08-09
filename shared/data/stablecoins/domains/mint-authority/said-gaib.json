@@ -1,0 +1,168 @@
+{
+  "id": "said-gaib",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8"
+      ],
+      "implementationAddresses": [
+        "0xe2986b3e5b3e77896ae0509f6740d1106273374d"
+      ],
+      "adminAddresses": [
+        "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+        "0x32793f6b11820fa9c7039dfa640b751f491a027d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "sAID DEFAULT_ADMIN EOA (independent immediate upgrade path)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573289,
+      "sources": [
+        {
+          "label": "sAID UUPS proxy",
+          "url": "https://eth.blockscout.com/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8?tab=contract"
+        },
+        {
+          "label": "Current verified sAID implementation",
+          "url": "https://eth.blockscout.com/address/0xe2986b3e5b3e77896ae0509f6740d1106273374d?tab=contract"
+        },
+        {
+          "label": "sAID admin Safe",
+          "url": "https://eth.blockscout.com/address/0x32793f6b11820fa9c7039dfa640b751f491a027d"
+        }
+      ]
+    },
+    "summary": "sAID is GAIB's ERC-4626 strategy-vault wrapper over AID. Wrapper shares remain AID-backed with no privileged current-implementation mint path, but either a legacy DEFAULT_ADMIN EOA or an independent 3-of-5 DEFAULT_ADMIN Safe can replace the UUPS implementation immediately. Base issuance inherits the reviewed AID mint-authority profile.",
+    "inheritedFrom": "aid-gaib",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+        "label": "sAID ERC-4626 UUPS wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "asset() is AID 0x18f52b3fb465118731d9e0d276d4eb3599d57596. Public ERC-4626 mint and deposit remain asset-backed, with maxMint and maxDeposit returning uint256 maximum; the current implementation has no privileged share-mint path.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
+        "sources": [
+          {
+            "label": "GAIB sAID docs",
+            "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+          },
+          {
+            "label": "GAIB AID and sAID contracts",
+            "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+          },
+          {
+            "label": "Ethereum sAID contract",
+            "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8"
+          }
+        ],
+        "evidence": "At Ethereum block 25573289, asset() returned AID and the proxy's ERC-1967 implementation slot resolved to 0xe2986b3e5b3e77896ae0509f6740d1106273374d; admin and beacon slots were zero and UPGRADE_INTERFACE_VERSION() returned 5.0.0. The current implementation's public ERC-4626 mint and deposit paths transfer matching AID assets."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+        "label": "sAID DEFAULT_ADMIN EOA (independent immediate upgrade path)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
+        "failureDomainKeys": [
+          "ethereum:0x3885be006eba7a7f5d555b4f78f237536700d1b1"
+        ],
+        "sources": [
+          {
+            "label": "Current verified sAID implementation",
+            "url": "https://eth.blockscout.com/address/0xe2986b3e5b3e77896ae0509f6740d1106273374d?tab=contract"
+          }
+        ],
+        "evidence": "The current implementation authorizes UUPS replacement for DEFAULT_ADMIN_ROLE. At Ethereum block 25573289, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be006eba7a7f5d555b4f78f237536700d1b1) returned true. This address has no bytecode and retains an immediate upgrade path with no timelock."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x32793f6b11820fa9c7039dfa640b751f491a027d",
+        "label": "sAID DEFAULT_ADMIN Safe (independent 3-of-5 upgrade path)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573303,
+        "failureDomainKeys": [
+          "ethereum:0x32793f6b11820fa9c7039dfa640b751f491a027d"
+        ],
+        "safe": {
+          "owners": [
+            "0x64ec15220b9f73a9c341c6d646ca48e33571dae3",
+            "0x45dac672a0c9d58367aaac1c190f1862d46e4cda",
+            "0xe406b806f0cb0d3dd69719d0ee03069c0bfe3a10",
+            "0x5b14755eb9890296a2acdade2fffeb2bc56ff847",
+            "0x38987c7062cc3c286eff57de5a0a433e8227d1c7"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25573303,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "sAID admin Safe",
+            "url": "https://eth.blockscout.com/address/0x32793f6b11820fa9c7039dfa640b751f491a027d"
+          },
+          {
+            "label": "sAID admin Safe state",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d"
+          }
+        ],
+        "evidence": "At Ethereum block 25573303, this separate Safe retained DEFAULT_ADMIN_ROLE and can replace the UUPS implementation independently of the EOA. Direct getOwners() returned the five listed owners, getThreshold() returned 3, and getModulesPaginated from the sentinel returned an empty module list. The current Safe state reports version 1.4.1 and zero guard."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "GAIB sAID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
+        },
+        {
+          "label": "GAIB AID and sAID contracts",
+          "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+        },
+        {
+          "label": "Ethereum sAID contract",
+          "url": "https://etherscan.io/address/0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8"
+        },
+        {
+          "label": "sAID admin Safe state",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d"
+        }
+      ],
+      "evidence": "Re-reviewed 2026-07-20. At Ethereum block 25573289, sAID used UUPS implementation 0xe2986b3e5b3e77896ae0509f6740d1106273374d with zero external admin and beacon slots; asset() returned AID and both the EOA 0x3885be006eba7a7f5d555b4f78f237536700d1b1 and Safe 0x32793f6b11820fa9c7039dfa640b751f491a027d returned true for DEFAULT_ADMIN_ROLE. The Safe was independently enumerated at block 25573303 as 3-of-5 with no enabled modules and zero guard. Either role holder can replace local logic immediately, but current share creation remains AID-deposit backed. No independent sAID supply-versus-reserve reconciliation or named prudential supervisor is established.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    }
+  }
+}

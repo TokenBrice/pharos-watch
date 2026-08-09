@@ -1,0 +1,104 @@
+{
+  "id": "dllr-sovryn",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Rootstock Blockscout: verified DLLR MetaAssetToken source and ABI",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+      },
+      {
+        "label": "Rootstock Blockscout: Mynt MassetManager proxy",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x5f777270259e32f79589fe82269db6209f7b7582"
+      },
+      {
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
+      }
+    ],
+    "evidence": "At Rootstock block 9055762 on 2026-07-15, verified DLLR MetaAssetToken source and RPC state show owner() = the Sovryn Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f and massetManagerProxy() = 0x5f777270259e32f79589fe82269db6209f7b7582. The token gates burn(account, amount) only by equality to massetManagerProxy, allowing the appointed manager to burn an arbitrary holder balance. setMassetManagerProxy(address) is onlyOwner and rejects only the zero address, so the owner can appoint an arbitrary address as manager. On-chain eth_call confirmed the owner setter succeeds and the current manager can call burn. This is direct individual holder-balance control; failure domains are the owner/timelock and an owner-appointed MassetManager.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Mynt documents DLLR as an aggregator token minted and redeemed 1:1 against supported bAssets such as ZUSD and DOC. The DLLR aggregation layer does not create borrower debt positions or liquidate collateral; collateral-oracle and liquidation risks remain in the independent upstream bAsset protocols.",
+      "sources": [
+        {
+          "label": "Sovryn builder portal: Mynt contracts",
+          "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+        },
+        {
+          "label": "Sovryn Dollar product page",
+          "url": "https://sovryn.com/sovryn-dollar"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sovryn builder portal: Mynt contracts",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      },
+      {
+        "label": "Sovryn Dollar product page",
+        "url": "https://sovryn.com/sovryn-dollar"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "DLLR exists only on Rootstock; Sovryn's Mynt aggregator mints DLLR 1:1 against accepted bAsset stablecoins on Rootstock. No cross-chain route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DLLR on Rootstock explorer (verified 2026-07-20)",
+        "url": "https://explorer.rootstock.io/address/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+      },
+      {
+        "label": "Sovryn docs",
+        "url": "https://wiki.sovryn.com/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "rootstock:0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+        "destinationChain": "rootstock",
+        "canonicalChain": "rootstock",
+        "contractAddress": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+        "protocol": "Sovryn Mynt native DLLR",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Rootstock at block 9071400: DLLR token 0xc1411567d2670e24d9c4daaa7cda95686e1250aa (symbol DLLR). Minting runs through the Mynt MassetManager 1:1 bAsset aggregator per the verified mint-authority review; Sovryn GovernorAlpha (48h Timelock) administers the basket. Native single-chain deployment; no bridge mints this token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 9071400,
+        "sources": [
+          {
+            "label": "DLLR on Rootstock explorer (verified 2026-07-20)",
+            "url": "https://explorer.rootstock.io/address/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+          },
+          {
+            "label": "Sovryn docs",
+            "url": "https://wiki.sovryn.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

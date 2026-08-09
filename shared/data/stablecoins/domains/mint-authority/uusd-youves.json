@@ -1,0 +1,101 @@
+{
+  "id": "uusd-youves",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "uUSD is minted by Youves vaults on Tezos: users lock XTZ/tzBTC/USDt/SIRS collateral at collateral-specific target ratios to mint uUSD, and the Youves DAO contract (Murmuration-derived, YOU governance) is set as administrator over the minting engine, with a keyholder break-glass guardian.",
+    "controls": [
+      {
+        "label": "Youves minting engine / vault contracts",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "tezos",
+        "address": "KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-20",
+        "capDescription": "Mint bounded by collateral-specific target ratios (e.g. ~200% XTZ, ~115% stablecoins) enforced by the Youves vault/engine with oracle-driven liquidation; the 4-of-7 admin multisig can reconfigure engine parameters.",
+        "evidence": "2026-07-20 TzKT reads: this is the Youves Vault Creator engine whose storage token_contract = the tracked uUSD token KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW and whose administrators bigmap includes the 4-of-7 FlatYouves DEX Admin multisig KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4. Users open vaults that lock collateral and mint uUSD against collateral-specific target ratios, with a price oracle setting liquidation thresholds.",
+        "modulesOrGuardsStatus": "not-applicable"
+      },
+      {
+        "label": "Youves DAO contract (YOU governance) + break-glass guardian",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "chain": "tezos",
+        "address": "KT1C3T98TqCm38cHPauZ4SopkQ4torCsxgab",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-07-20",
+        "evidence": "2026-07-20 TzKT reads: this contract is aliased 'Youves DAO' and appears in the Vault Creator engine's administrators bigmap. Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian.",
+        "modulesOrGuardsStatus": "not-applicable"
+      },
+      {
+        "chain": "tezos",
+        "address": "KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4",
+        "label": "FlatYouves DEX Admin — 4-of-7 Tezos multisig (admin of all three uUSD engines)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "TzKT — uUSD engine admin",
+            "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/operations"
+          }
+        ],
+        "evidence": "At Tezos level 13594990, the admin of all three uUSD minting engines resolved to this 4-of-7 multisig via TzKT storage reads (Phase 0c continuation)."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+        "KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 14059094,
+      "sources": [
+        {
+          "label": "TzKT uUSD token contract",
+          "url": "https://api.tzkt.io/v1/contracts/KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW/script"
+        },
+        {
+          "label": "TzKT Youves uUSD minting engine",
+          "url": "https://api.tzkt.io/v1/contracts/KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH/script"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "At Tezos level 13594990 (2026-06-11), TzKT bigmap reads of all three uUSD engine administrator bigmaps (7710, 22750, 75204) confirm KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4 (FlatYouves DEX Admin) as the sole or primary admin across all engines; that contract's storage holds 7 Tezos public keys with threshold 4 (4-of-7 Tezos multisig, stored_counter=120). The uUSD token admin bigmap (7705) lists the three vault-creator / engine contracts as administrators. The Youves DAO governance token is KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL (YOU Governance). The relationship between the DAO governance contract and the engine admin (FlatYouves DEX Admin multisig) is not confirmed on-chain — the DAO is not directly wired as an engine admin; the 4-of-7 multisig appears to be the operative administrator. Promotion judgment: every mint-capable surface is confirmed — engines are cap-limited contracts and their shared admin is the confirmed 4-of-7 multisig. The DAO-vs-multisig governance relationship colors posture, not control confirmation (same standard as other verified multisig-admin coins). Economic-control adjudication (2026-07-20): the 4-of-7 FlatYouves DEX Admin multisig is the sole operative administrator of all three uUSD engines and can reconfigure collateral target ratios and engine parameters with no timelock and no independent bound, so the per-vault collateral cap is economically unbounded from the protocol's perspective even though any individual mint is collateral-limited. Collateral sits in on-chain Tezos vaults and is continuously readable, so there is no off-chain supply-versus-reserve attestation cadence, and no financial regulator supervises Youves. modulesOrGuardsStatus is recorded as not-applicable on the Tezos engine and DAO controls because Gnosis Safe modules and guards have no counterpart on those contracts.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Youves governance docs",
+          "url": "https://docs.youves.com/governance/Governance-Mechanism/"
+        },
+        {
+          "label": "Minting on youves (deep-dive)",
+          "url": "https://medium.com/@youves/minting-on-youves-a-deep-dive-1d27dbefa5b7"
+        },
+        {
+          "label": "TzKT: uUSD engine KT1FFE2 admin bigmap",
+          "url": "https://tzkt.io/KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH/storage/"
+        },
+        {
+          "label": "TzKT: FlatYouves DEX Admin multisig",
+          "url": "https://tzkt.io/KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4/"
+        }
+      ],
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
+  }
+}

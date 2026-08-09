@@ -1,0 +1,36 @@
+{
+  "id": "usdh-hermetica",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDh resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDh is issuer-minted from deposited USDC or USDT and backed by a centrally operated BTC basis strategy; Hermetica may pause redemptions when valuation feeds fail but does not expose a borrower-liquidation oracle path.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Hermetica issues USDh directly to approved participants against USDC or USDT deposits and manages a protocol-level BTC/perpetual hedge. Users do not open collateralized debt positions, so there are no market-specific collateral-health or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Hermetica USDh mint and redemption design",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/mint"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hermetica USDh mint and redemption design",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/mint"
+      }
+    ]
+  }
+}

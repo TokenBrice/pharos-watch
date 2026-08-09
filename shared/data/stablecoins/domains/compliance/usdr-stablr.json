@@ -1,0 +1,87 @@
+{
+  "id": "usdr-stablr",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "MFSA",
+    "authorizedEntity": "StablR Ltd",
+    "references": [
+      {
+        "label": "ESMA MiCA register (issuers of EMTs)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "StablR EMI license (MiCAR-compliant EMTs)",
+        "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
+      },
+      {
+        "label": "StablR USDR whitepaper",
+        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "StablR Ltd",
+    "issuerDomicile": "Malta",
+    "licensingRegulator": "MFSA; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.stablr.com/proof-of-reserve",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "StablR publishes reserve visibility and quarterly independent reviews, not a monthly public attestation cadence. The May 24 2026 multisig exploit triggered public EFRI concerns and a StablR DORA/MiCA incident disclosure; Pharos removed a previously misattributed MFSA Ref. 2026-19 citation because that notice concerned an unrelated entity. No PPSI approval, state-qualified status, official application, or foreign exception found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "StablR USDR",
+        "url": "https://www.stablr.com/usdr",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "StablR proof of reserve",
+        "url": "https://www.stablr.com/proof-of-reserve",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "StablR USDR whitepaper",
+        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_USDR_V2.1.pdf",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "CoinDesk: StablR freezes USDR and EURR (May 2026)",
+        "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens",
+        "sourceKind": "news"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "EFRI public concerns and StablR cybersecurity incident disclosure for the May 2026 USDR/EURR exploit",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "MFSA/MiCA issuer evidence and StablR reserve/redemption disclosures were found, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for USDR. The May 2026 exploit is tracked through StablR incident disclosures and public EFRI concerns; the previously cited MFSA Ref. 2026-19 item was removed as unrelated.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

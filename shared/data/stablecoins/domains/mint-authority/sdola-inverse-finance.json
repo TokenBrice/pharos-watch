@@ -1,0 +1,69 @@
+{
+  "id": "sdola-inverse-finance",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "sDOLA is an ERC-4626 savings wrapper over DOLA; wrapper minting is deposit/share accounting while durable DOLA mint authority is inherited from reviewed parent DOLA.",
+    "inheritedFrom": "dola-inverse-finance",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0xb45ad160634c528cc3d2926d9807104fa3157305"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 25534205,
+      "sources": [
+        {
+          "label": "Ethereum sDOLA verified source",
+          "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code"
+        },
+        {
+          "label": "Inverse dola-savings source (pinned commit)",
+          "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "label": "sDOLA ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum sDOLA verified source",
+            "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code"
+          },
+          {
+            "label": "Inverse dola-savings source (pinned commit)",
+            "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+          }
+        ],
+        "observedAt": "2026-07-15",
+        "observedBlock": 25534205,
+        "evidence": "At Ethereum block 25534205, asset() returned DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4, gov() returned Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b, and operator() was zero. The EIP-1967 implementation and admin slots were zero. Verified source shows immutable constructor wiring; gov can set the operator or governance and sweep ERC-20 tokens other than DBR, but cannot change deployed share-accounting logic. The wrapper cannot mint DOLA; durable DOLA mint authority remains inherited from the reviewed parent."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum sDOLA verified source",
+          "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code"
+        },
+        {
+          "label": "Inverse dola-savings source (pinned commit)",
+          "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+        }
+      ],
+      "evidence": "At Ethereum block 25534205, the sDOLA asset() is DOLA 0x865377367054516e17014CcdED1e7d814EDC9ce4 and both EIP-1967 slots are zero. The verified implementation and pinned source show an immutable ERC-4626 wrapper: deposits create receipt shares but do not mint DOLA. Timelock governance can operate configured wrapper functions but cannot replace the deployed mint/share-accounting logic; durable mint authority remains inherited from reviewed parent DOLA.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

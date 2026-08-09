@@ -1,0 +1,104 @@
+{
+  "id": "cdxusd-cod3x",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Sourcify exact-match Base CdxUSD ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=abi,compilation,metadata"
+      },
+      {
+        "label": "Cod3x cdxUSD technical overview (facilitator mint/burn design)",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      {
+        "label": "Base PublicNode RPC calls at block 49332025",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Write-time re-review on 2026-07-31 of the sole tracked Base deployment 0xc0d3700000987c99b3c9009069e4f8413fd22330. Sourcify's exact-match ABI exposes ERC-20 transfer/transferFrom, facilitator mint/burn, owner/guardian administration, and pauseBridge/unpauseBridge/lzPause, but no isBlacklisted, blacklist, freeze, seize, pause(), or paused() surface. At Base block 49332025 (timestamp 2026-07-30T23:16:33Z), live eth_call returned owner=0xc0D3700924301AC384E5Eae3272E08220752DE3D, guardian=0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba, lzPause=false, and totalSupply=6,150,000e18; paused() reverted. The deployed ABI/bytecode exposes pauseBridge (0x7dd0480f) and lzPause (0x3771e259) while the blacklist/freeze selectors isBlacklisted (0xfe575a87), blacklist (0xf9f92be4), pause (0x8456cb59), and paused (0x5c975abb) are absent. Cod3x's current technical overview describes facilitator credit mint/burn under protocol limits, not holder freeze. Bridge pause is confined to LayerZero OFT paths, not ordinary ERC-20 transfers. Conclusion: no direct holder freeze/blacklist; canBeBlacklisted=false.",
+    "upstreamSuppressionRationale": "Facilitator strategies may hold freezable third-party stablecoins or crypto collateral, which can impair redemption value, but those issuers have no holder-level freeze path on the cdxUSD ERC-20 itself. That exposure remains reserve/dependency risk, not cdxUSD token blacklistability.",
+    "reviewer": "Codex T58 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-31"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "cdxUSD supply is created through governance-limited Facilitator credit buckets rather than user CDPs whose collateral health is continuously priced for liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Cod3x documents cdxUSD as a GHO-style system in which approved Facilitators receive bounded lines of credit and mint or burn under protocol limits. The token layer does not expose borrower-owned collateral positions, per-collateral health factors, or permissionless liquidation branches; any strategy risk belongs to the individual Facilitator rather than a shared cdxUSD liquidation engine.",
+      "sources": [
+        {
+          "label": "Cod3x tech stack: cdxUSD Facilitators",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cod3x tech stack: cdxUSD Facilitators",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "cdxUSD is an omnichain stablecoin moved cross-chain as a LayerZero OFT; the exact captured supply sits on Base, where the OFT contract is the mint/burn authority for the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked cdxUSD contract set has one Base deployment, and reviewed Cod3x material describes mint/burn facilitators rather than a cross-chain token route.",
+    "sources": [
+      {
+        "label": "Cod3x cdxUSD tech stack",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xc0d3700000987c99b3c9009069e4f8413fd22330",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc0d3700000987c99b3c9009069e4f8413fd22330",
+        "protocol": "LayerZero OFT (Cod3x)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the Cod3x USD token on Base returns the LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fE728c, so this deployment is the Cod3x OFT and the OFT contract itself is the mint/burn authority for the representation (totalSupply 6,150,000 cdxUSD, matching the exact captured supply; OFT owner/delegate 0xc0d3700924301ac384e5eae3272e08220752de3d).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0xc0d3700000987c99b3c9009069e4f8413fd22330",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:base:0xc0d3700000987c99b3c9009069e4f8413fd22330"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "cdxUSD on Basescan (endpoint() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330"
+          },
+          {
+            "label": "Cod3x documentation",
+            "url": "https://docs.cod3x.org/"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      }
+    ]
+  }
+}

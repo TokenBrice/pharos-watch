@@ -1,0 +1,120 @@
+{
+  "id": "scusd-rings",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Veda BoringVault source (BeforeTransferHook)",
+        "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+      },
+      {
+        "label": "Veda TellerWithMultiAssetSupport deny/beforeTransfer source",
+        "url": "https://github.com/Veda-Labs/boring-vault/blob/main/src/base/Roles/TellerWithMultiAssetSupport.sol"
+      },
+      {
+        "label": "Ethereum scUSD BoringVault verified source",
+        "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+      },
+      {
+        "label": "Sonic scUSD BoringVault verified source",
+        "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+      },
+      {
+        "label": "Ethereum public RPC (hook/teller state)",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Sonic public RPC (hook/teller state)",
+        "url": "https://rpc.soniclabs.com"
+      }
+    ],
+    "evidence": "2026-07-30 re-review of both material deployments (Ethereum block 25648302, Sonic block 76778912). scUSD is the immutable Veda BoringVault share token at 0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae on Ethereum and Sonic (owner()=0; authority=RolesAuthority 0x7D5f6108e23c0CB2cfD744E5c46f1aAfFc30A348). transfer/transferFrom call BeforeTransferHook; on both chains hook() returns the LayerZeroTeller 0x358CFACf00d0B4634849821BB3d1965b472c776a. That Teller bytecode and the public TellerWithMultiAssetSupport source expose denyAll/denyFrom/denyTo/denyOperator (requiresAuth) and beforeTransfer(from,to,operator), which reverts TransferDenied for deny-listed parties and SharesAreLocked during any share-lock window. shareLockPeriod()=0 and isPaused()=false at observation; deny calls from unprivileged callers revert UNAUTHORIZED, so activation is gated by RolesAuthority grants under chain-specific 4/6 Veda/Paladin Safe + one-day TimelockController paths documented in mintAuthority. Failure domain: Veda/Paladin RolesAuthority+Teller deny surface on each chain, plus LayerZero share routing. Upstream USDC/USDT/DAI/GHO freeze exposure remains via reserves and is not the token-level control path. Direct holder freeze/blacklistability is therefore true, not merely possible.",
+    "reviewer": "Grok T34 wave-2 unknown reduction",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "scUSD is reviewed as a Sonic/Ethereum Rings asset whose architecture includes cross-chain components: underlying capital is bridged through the Sonic bridge and vault shares can be bridged through LayerZero. Because holder-facing supply can depend on bridge/vault-share routing, Pharos scores the route as external lock/mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "bridgeTypes": [
+          "oft",
+          "external-messaging"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sonic Rings explainer",
+        "url": "https://blog.soniclabs.com/rings-protocol-explained-scusd-and-sceth/"
+      },
+      {
+        "label": "LlamaRisk Rings review",
+        "url": "https://llamarisk.com/research/2025-03-27t21-51-19-000z"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "scUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          },
+          {
+            "label": "Rings scUSD documentation",
+            "url": "https://docs.rings.money/"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "destinationChain": "sonic",
+        "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "scUSD token on Sonicscan",
+            "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          },
+          {
+            "label": "Rings scUSD documentation",
+            "url": "https://docs.rings.money/"
+          }
+        ]
+      }
+    ]
+  }
+}

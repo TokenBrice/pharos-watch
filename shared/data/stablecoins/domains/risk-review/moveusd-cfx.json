@@ -1,0 +1,20 @@
+{
+  "id": "moveusd-cfx",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Solana mainnet RPC: MOVEUSD mint",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solana Token Program freeze authority documentation",
+        "url": "https://solana.com/docs/tokens/basics/freeze-account"
+      }
+    ],
+    "evidence": "At finalized Solana slot 432913343, the live MOVEUSD mint lists 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm as both its freezeAuthority and mintAuthority. Under the SPL Token Program, a current freeze authority can freeze individual token accounts, preventing transfers, burns, and delegate changes until thawed.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  }
+}

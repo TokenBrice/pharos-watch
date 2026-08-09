@@ -14,40 +14,6 @@
   "detailProvider": "defillama",
   "geckoId": "inter-stable-token",
   "cmcSlug": "inter-stable-token",
-  "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Inter Protocol vaults receive collateral prices from the Flux Aggregator data feed, whose operators submit median prices by round.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Inter Protocol vault docs",
-        "url": "https://docs.inter.trade/inter-protocol-system-documentation/vaults"
-      },
-      {
-        "label": "Agoric vault implementation discussion",
-        "url": "https://community.agoric.com/t/inter-protocol-vaults-contract-implementations/261?page=2"
-      }
-    ]
-  },
-  "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "IST is native to the Agoric/Inter Protocol stack and appears on Osmosis through Cosmos ecosystem routing rather than a reviewed EVM bridge. No material third-party bridge route was resolved, so the profile is native/single-chain for scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Inter Protocol docs",
-        "url": "https://docs.inter.trade/"
-      },
-      {
-        "label": "Inter Protocol analytics",
-        "url": "https://analytics.inter.trade/"
-      }
-    ]
-  },
   "links": [
     {
       "label": "Website",
@@ -82,28 +48,9 @@
       "decimals": 6
     }
   ],
-  "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "evidence": "IST itself is minted by the protocol, but PSM collateral assets can inherit issuer-level freeze controls.",
-    "reviewedAt": "2026-05-18",
-    "reviewer": "OpenAI Codex review",
-    "sourceFreeRationale": "Agoric Inter Protocol PSM collateral design"
-  },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "reserves": [
-    {
-      "name": "Overcollateralized crypto vaults (IBC ATOM, stATOM)",
-      "pct": 40,
-      "risk": "high"
-    },
-    {
-      "name": "Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)",
-      "pct": 60,
-      "risk": "low"
-    }
-  ],
   "notices": [
     {
       "type": "info",
@@ -111,55 +58,6 @@
       "message": "DefiLlama (llamaId 135) now includes Agoric-native and Osmosis IST rows, but still differs from CoinGecko's cross-chain supply treatment. Pharos uses the DefiLlama series as the primary feed; reserve dependency scoring keeps the mixed USDC/USDT/DAI PSM slice unlinked until the live source exposes stablecoin-level weights."
     }
   ],
-  "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "IST was minted through Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",
-    "controls": [
-      {
-        "chain": "agoric",
-        "label": "Inter Protocol vaults + PSM (minter contracts)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "IST mints only via overcollateralized Inter Protocol vaults or the PSM (1:1 against approved IBC stablecoins), each subject to a governance-set MintLimit; there is no centralized issuer minter.",
-        "evidence": "Inter Protocol docs describe IST minting through overcollateralized vaults and a Parity Stability Module, each with a governance-set mint limit."
-      },
-      {
-        "chain": "agoric",
-        "label": "BLD stakers + Economic Committee governance",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "BLD stakers approve collateral onboarding and contract upgrades; the elected Economic Committee sets risk parameters and PSM/vault mint limits and can pause contracts in emergencies.",
-        "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing."
-      }
-    ],
-    "review": {
-      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Inter Protocol governance docs",
-          "url": "https://docs.inter.trade/inter-protocol-system-documentation/protocol-and-chain-governance"
-        },
-        {
-          "label": "Inter Protocol docs",
-          "url": "https://docs.inter.trade/"
-        }
-      ],
-      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from docs; Agoric chain governance state is not publicly queryable without a node endpoint, blocking on-chain confirmation.",
-      "unresolvedQuestions": [
-        "Confirm the current Economic Committee member addresses and governance contract state via Agoric REST API (e.g. https://main.api.agoric.net) or a live Agoric node before raising confidence."
-      ]
-    }
-  },
   "status": "frozen",
   "frozenAt": "2025-06-26",
   "obituary": {

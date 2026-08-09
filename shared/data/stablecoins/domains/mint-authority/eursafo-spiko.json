@@ -1,0 +1,137 @@
+{
+  "id": "eursafo-spiko",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "EURSAFO is the EUR share class of Spiko's AMF-authorized UCITS fund. Tokens are minted by Spiko's daily-operator relayer contracts (two UUPS proxies) under a PermissionManager (custom RBAC), with a Gnosis Safe 1.4.1 (8/3) as the super-admin that controls upgrades and permission assignments.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0xe4880249745eac5f1ed9d8f7df844792d560e750"
+      ],
+      "implementationAddresses": [
+        "0x13ae01cbce8530012516fbc1273803d4995aee71",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko super-admin Safe (8/3, UUPS upgrade + permission admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "EURSAFO contract on Etherscan",
+          "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0#code"
+        },
+        {
+          "label": "PermissionManager on Etherscan",
+          "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Spiko daily-operator minter contracts (two UUPS proxies)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "At Ethereum block 25295046, PermissionManager (0x344278aff…, ERC1967Proxy → PermissionManager impl) initialization logs (block 19690268) assign mint function (0x40c10f19) and burn (0x9dc29fac) access to 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750. Both are UUPS proxies (impl 0x15ea0ec4, 'Token' contract) with owner() = 0x0 — operated as issuer backend relayers via the PermissionManager system.",
+        "sources": [
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          },
+          {
+            "label": "EURSAFO contract on Etherscan",
+            "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+          }
+        ]
+      },
+      {
+        "label": "Spiko super-admin Safe (8/3, UUPS upgrade + permission admin)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xe9106c617d7180bf6badcfa5edc664b726c5dcbb",
+            "0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949",
+            "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.4.1",
+          "observedBlock": 25295092,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295092, PermissionManager initialization log (block 19690268) assigns ADMIN group (group id 0) admin role to 0x4eaa52b6280593a8820c45ce38f974290ae52cea; masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe 1.4.1 L2); threshold() = 3; getOwners() returned 8 addresses; getModules() = 0; guard slot = 0x0. ADMIN group controls upgradeToAndCall on both the Token proxy and PermissionManager proxy.",
+        "sources": [
+          {
+            "label": "EURSAFO contract on Etherscan",
+            "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+          },
+          {
+            "label": "PermissionManager on Etherscan",
+            "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "observedAt": "2026-07-20"
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko Euro",
+          "url": "https://www.spiko.io/spiko-euro"
+        },
+        {
+          "label": "EURSAFO contract on Etherscan",
+          "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        },
+        {
+          "label": "AMF GECO - Spiko Amundi Overnight Swap Fund",
+          "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
+        }
+      ]
+    }
+  }
+}

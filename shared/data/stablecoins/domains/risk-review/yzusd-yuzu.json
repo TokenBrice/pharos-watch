@@ -1,0 +1,197 @@
+{
+  "id": "yzusd-yuzu",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Yuzu Money overview",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
+        "label": "Yuzu Money security infrastructure",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
+      },
+      {
+        "label": "YZUSD Plasma implementation",
+        "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
+      },
+      {
+        "label": "Pinned official YuzuUSD source",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/YuzuUSD.sol"
+      },
+      {
+        "label": "Pinned official YuzuProto source",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/proto/YuzuProto.sol"
+      },
+      {
+        "label": "Plasma public RPC used for fixed-block reads",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Yuzu reserve composition dashboard",
+        "url": "https://cache.accountable.capital/dashboard/yuzu"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. The current Plasma implementation's pause is confined to mint and redeem paths, and its restriction-manager role only administers minter/redeemer roles; no current holder-transfer blacklist, freeze, seizure, or arbitrary holder-burn hook was found. Yuzu's Hypernative/Sentinel documentation describes surgical blocking of malicious wallets from protocol interactions, but does not establish that this control can intercept an ordinary yzUSD ERC-20 transfer. Current reserves also contain issuer-freezable USDT0, syrupUSDT, syrupUSDC, syrupUSDG, USTB, mGLOBAL, USDe, sUSDe, and AUSD; those controls can impair backing or exits but cannot directly freeze a yzUSD holder balance. The prior inherited verdict was invalid because yzUSD has no single resolvable parent identity. Possible is retained honestly because the documented operational-blocking boundary and issuer legal terms could not be proven to exclude holder-token reach.",
+    "reviewer": "OpenAI Codex C04 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "Yuzu documents yzUSD as a pooled, overcollateralized product minted and redeemed against USDT0, with yzPP as a first-loss tranche; it does not describe borrower-owned collateral positions with oracle-triggered liquidations.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Yuzu describes yzUSD as a senior pool tranche minted against pooled backing assets and protected by the separate yzPP first-loss pool. Minting, redemption, and loss absorption are pool-level operations rather than borrower-specific debt positions with collateral-ratio liquidations, so no liquidation-oracle branch applies to yzUSD.",
+      "sources": [
+        {
+          "label": "Yuzu Money overview",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        },
+        {
+          "label": "Yuzu Protection Pool",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+        },
+        {
+          "label": "Yuzu stablecoin app",
+          "url": "https://app.yuzu.money/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yuzu Protection Pool",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/yuzu-protection-pool-yzpp"
+      },
+      {
+        "label": "Yuzu staked yzUSD wrapper",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-stablecoin/staked-yzusd-syzusd"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "yzUSD's only material deployment is native issuance on Plasma. DefiLlama still reports ~24 yzUSD on a legacy Monad LayerZero OFT (0x9dcB0D17eDDE04D27F387c89fECb78654C373858), but peers(eid) returns zero for all probed endpoint ids on the Monad OFT (re-verified 2026-07-20 at block 88919965) and Yuzu announced it replaced LayerZero with Chainlink CCIP as its exclusive cross-chain infrastructure. The dormant Monad residue is inventoried as a reviewed subthreshold retired route and excluded from material tiering.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero V2 OFT (retired yzUSD route)",
+        "slug": "layerzero-v2",
+        "url": "https://metadata.layerzero-api.com/v1/metadata",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter"
+        ],
+        "note": "LayerZero metadata maps the Plasma adapter and Monad NativeOFT at 0x9dcb...3858 to canonical Plasma yzUSD. Both endpoint peer mappings were zero at Plasma block 27084996 and Monad block 88919965; the Monad token retained 23.772 yzUSD of residual supply."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Yuzu announcement - migration from LayerZero to Chainlink CCIP",
+        "url": "https://x.com/YuzuMoneyX/status/2074480433233027222"
+      },
+      {
+        "label": "LayerZero deployment metadata - yzUSD Plasma adapter and Monad OFT",
+        "url": "https://metadata.layerzero-api.com/v1/metadata"
+      },
+      {
+        "label": "DefiLlama yzUSD adapter - Monad representation bridged from Plasma",
+        "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/yuzu-usd/index.ts"
+      },
+      {
+        "label": "Plasma yzUSD token contract",
+        "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+      },
+      {
+        "label": "Plasma legacy yzUSD OFT adapter",
+        "url": "https://plasmascan.to/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+      },
+      {
+        "label": "Monad legacy yzUSD OFT contract",
+        "url": "https://monadscan.com/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+      },
+      {
+        "label": "Monad transaction clearing the Plasma OFT peer",
+        "url": "https://monadscan.com/tx/0xbf550ea959a1b075bc1227103d534dc90be8ad8c24afd7dc2f942a14ccd167f8"
+      }
+    ],
+    "routes": [
+      {
+        "id": "plasma:0x6695c0f8706c5ace3bdf8995073179cca47926dc",
+        "destinationChain": "plasma",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
+        "protocol": "Yuzu Money",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The native Plasma deployment carries the material supply. The retired Monad OFT residue is separately inventoried as a reviewed subthreshold route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedBlock": 27084996,
+        "sources": [
+          {
+            "label": "Plasma yzUSD token contract",
+            "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc#code"
+          },
+          {
+            "label": "Yuzu announcement - migration from LayerZero to Chainlink CCIP",
+            "url": "https://x.com/YuzuMoneyX/status/2074480433233027222"
+          }
+        ],
+        "observedAt": "2026-07-20"
+      },
+      {
+        "id": "monad:0x9dcb0d17edde04d27f387c89fecb78654c373858",
+        "sourceChain": "plasma",
+        "destinationChain": "monad",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x9dcb0d17edde04d27f387c89fecb78654c373858",
+        "protocol": "LayerZero V2 OFT (retired)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Retired Monad representation with 23.772 yzUSD total supply and zero peers at block 88919965. The transparent proxy uses implementation 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38; ProxyAdmin 0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e and the OFT are both controlled without delay by no-code EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The route is reviewed for control completeness but remains retired and immaterial.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 88919965,
+        "controllerChain": "monad",
+        "controllerAddress": "0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x9dcb0d17edde04d27f387c89fecb78654c373858",
+          "contract:monad:0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e",
+          "eoa:evm:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "sources": [
+          {
+            "label": "Monad legacy yzUSD OFT contract",
+            "url": "https://monadscan.com/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+          },
+          {
+            "label": "Monad transaction clearing the Plasma OFT peer",
+            "url": "https://monadscan.com/tx/0xbf550ea959a1b075bc1227103d534dc90be8ad8c24afd7dc2f942a14ccd167f8"
+          },
+          {
+            "label": "LayerZero deployment metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "id": "uty-xsy",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "YieldPoint contract addresses",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts.md"
+      },
+      {
+        "label": "Base UTY proxy and verified implementation",
+        "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Avalanche UTY contract",
+        "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Katana UTY contract",
+        "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      }
+    ],
+    "evidence": "The current Base implementation has no deployed holder blacklist or freeze function. At Base block 48619333, Avalanche block 90284859, and Katana block 37285133, however, the same no-code EOA 0xa695bb4b9a86daf0581233031f273697135e3016 directly owned every tracked zero-delay UUPS proxy and could replace token logic with holder-control functionality. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-22"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "UTY's documented Base mint path deposits USDC 1:1 and sweeps the backing to a custodian-managed strategy. XSY discloses exchange-level liquidation risk for managed short hedges, but public sources do not identify the strategy price-feed topology, freshness bounds, or fallback controls.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "YieldPoint documents one Base hub vault: users deposit USDC to mint UTY, backing is swept to a custodian, and redemption uses an asynchronous withdrawal queue. XSY describes protocol-managed strategy modules rather than borrower-owned debt positions. Therefore per-collateral oracle and liquidation branches do not apply; exchange liquidation of managed hedges remains strategy risk.",
+      "sources": [
+        {
+          "label": "YieldPoint core flows",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+        },
+        {
+          "label": "YieldPoint contracts",
+          "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+        },
+        {
+          "label": "XSY protocol mechanics",
+          "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+        },
+        {
+          "label": "XSY risks",
+          "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+      },
+      {
+        "label": "YieldPoint contracts",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+      },
+      {
+        "label": "XSY protocol mechanics",
+        "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+      },
+      {
+        "label": "XSY risks",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "UTY moves cross-chain via LayerZero's OFT standard in a hub-and-spoke design: Base is the hub holding the canonical UTY/yUTY ERC-7540 vault token, where a ShareOFTAdapter lockbox LOCKS tokens sent cross-chain (not burned); Avalanche and Katana are spoke chains where UTY is a mint/burn OFT against the locked hub balance. Each pathway is verified by at least 2 independent LayerZero DVNs (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind). On-chain confirmed: Base 0xBA515304... is the ERC4626/7540 vault; Avalanche 0xBA515304... (same CREATE2 address) is a LayerZero OFT spoke. Note: the registry's older Avalanche address 0xdbc5192a... is a separate legacy native-mint deployment, distinct from the live OFT spoke.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero (OFT Adapter lockbox on Base hub + mint/burn spoke OFTs)",
+        "slug": "layerzero",
+        "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations",
+        "bridgeTypes": [
+          "oft-adapter-lockbox",
+          "oft-mint-burn"
+        ],
+        "note": "Base ShareOFTAdapter locks the canonical UTY vault token; Avalanche/Katana spoke OFTs mint/burn. Threshold of >=2 independent DVNs per pathway (Base-Avalanche: LayerZero Labs + Google Cloud; Base-Katana: LayerZero Labs + Nethermind)."
+      }
+    ],
+    "sources": [
+      {
+        "label": "YieldPoint docs - bridge operations (OFT send/receive, lock/unlock on hub, named DVNs)",
+        "url": "https://docs.yieldpoint.io/protocol/integration/bridge-operations"
+      },
+      {
+        "label": "YieldPoint docs - tokens and fees (ShareOFTAdapter lockbox model vs spoke mint/burn OFTs)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/tokens-and-fees"
+      },
+      {
+        "label": "YieldPoint docs - architecture overview (Base hub, Avalanche/Katana spokes, LayerZero, no custom bridge)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/overview"
+      },
+      {
+        "label": "YieldPoint docs - contract addresses (Base ShareOFTAdapter 0xC6fE7C50...; UTY 0xBA515304... across Base/Avalanche/Katana)",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "sourceChain": "base",
+        "destinationChain": "avalanche",
+        "canonicalChain": "base",
+        "contractAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "protocol": "LayerZero OFT (XSY Unity spoke)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the UTY token on avalanche returns the LayerZero endpoint 0x1a44076050125825900e736c501f859c50fE728c, so this deployment is the Unity OFT spoke and the OFT contract itself is the mint/burn authority for the representation (locks against the Base ShareOFTAdapter hub 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:avalanche:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UTY on avalanche explorer (endpoint() probed 2026-07-20)",
+            "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "base:0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "protocol": "XSY Unity (canonical hub, ShareOFTAdapter lockbox)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical UTY hub on Base: the ShareOFTAdapter lockbox 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1 returns token() = this UTY and owner() = the XSY operator 0xa695bb4b9a86daf0581233031f273697135e3016 (verified on-chain 2026-07-20; the Avalanche OFT's peers(30184) points back to this adapter), so Base hosts the canonical token that OFT spokes lock against.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UTY on Basescan (lockbox probed 2026-07-20)",
+            "url": "https://basescan.org/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          },
+          {
+            "label": "XSY Unity docs",
+            "url": "https://docs.xsy.fi/"
+          }
+        ]
+      },
+      {
+        "id": "katana:0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "sourceChain": "base",
+        "destinationChain": "katana",
+        "canonicalChain": "base",
+        "contractAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "protocol": "LayerZero OFT (XSY Unity spoke)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the UTY token on katana returns the LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, so this deployment is the Unity OFT spoke and the OFT contract itself is the mint/burn authority for the representation (locks against the Base ShareOFTAdapter hub 0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "katana",
+        "controllerAddress": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0xba515304d8153c4b162dc79f867e152df9c127eb"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UTY on katana explorer (endpoint() probed 2026-07-20)",
+            "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "id": "djed-coti",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the oracle. The minting policy (Plutus V1) is immutable on Cardano — the reserve-ratio enforcement cannot be bypassed; COTI only controls the oracle price feed.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Djed mainnet announcement (COTI)",
+          "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        },
+        {
+          "label": "Koios script_info — Djed minting policy plutusV1",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Djed autonomous bank contract (reserve mint/burn)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "cardano",
+        "capDescription": "DJED mint allowed only while the ADA reserve ratio stays at or above 400% (and within the 400%-800% band); mint price set by oracle ADA/USD.",
+        "canRaiseCap": false,
+        "evidence": "Koios script_info re-verified 2026-07-20: the DJED minting policy (hash 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is type plutusV1, created in tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead. Plutus V1 minting policies are immutable on Cardano — the reserve-ratio enforcement (mint allowed only within the 400%-800% reserve band) is hardcoded in the script and cannot be changed, upgraded, or bypassed. The policy hash is the on-chain identity of the autonomous bank's mint authority.",
+        "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
+        "failureDomainKeys": [
+          "protocol:djed",
+          "contract:cardano:8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61"
+        ],
+        "observedAt": "2026-07-20"
+      },
+      {
+        "label": "COTI / IOG operator (oracle price feed only)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "evidence": "COTI controls the ADA/USD oracle price NFT used by the Djed Plutus script. The oracle can only update the price feed — it cannot bypass the immutable reserve-ratio enforcement in the Plutus V1 script. The upgrade path is absent (Plutus V1 scripts cannot be upgraded on Cardano)."
+      }
+    ],
+    "review": {
+      "evidence": "Koios API re-verified 2026-07-20: the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) remains a plutusV1 script created at tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead — immutable, with the 400%-800% reserve-ratio band encoded in the script itself. Minting is therefore economically bounded by actual ADA reserves entering the bank contract (economicCapSemantics: bounded); no issuer or governance path can mint beyond the band. COTI's administrative surface stays limited to the off-chain oracle price feed, which cannot bypass the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Djed mainnet announcement (COTI)",
+          "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        },
+        {
+          "label": "Koios script_info — Djed minting policy plutusV1",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        }
+      ]
+    },
+    "economicCapSemantics": "bounded"
+  }
+}

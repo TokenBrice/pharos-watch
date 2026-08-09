@@ -1,0 +1,634 @@
+{
+  "id": "frax-frax",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "FRAX Ethereum verified source (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x853d955acef822db058eb8505911ed77f175b99e"
+      },
+      {
+        "label": "Ethereum public RPC observation block",
+        "url": "https://etherscan.io/block/25648138"
+      },
+      {
+        "label": "CrossChainCanonical source (frax-solidity)",
+        "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonical.sol"
+      },
+      {
+        "label": "Sourcify verified Polygon zkEVM FRAX (material CrossChainCanonical)",
+        "url": "https://sourcify.dev/server/v2/contract/1101/0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d?fields=all"
+      },
+      {
+        "label": "FraxFerry / cross-chain docs",
+        "url": "https://docs.frax.finance/cross-chain/bridge"
+      },
+      {
+        "label": "Fraxtal WFRAX predeploy (distinct gas-token wrapper; sub-material for FRAX stablecoin)",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002"
+      },
+      {
+        "label": "Frax balance sheet API",
+        "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712115. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum remained a direct non-proxy deployment (EIP-1967 implementation slot zero); pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. The live balance sheet contains issuer-freezable reserve assets, but those are collateral impairment dependencies rather than a direct FRAX holder-control mechanism. The direct blacklist verdict is therefore false, with reserve and bridge risks preserved in their owning reviews.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Legacy FRAX is Ethereum-native; its tracked EVM deployments are Frax's own CrossChainCanonicalFRAX tokens administered by per-chain Frax 3-of-5 Safes (owner/timelock reads 2026-07-20, supply historically via Multichain swap-ins and FraxFerry), with the Fraxtal predeploy (WFRAX gas-token wrapper) native to Fraxtal. Peripheral non-EVM routes: NEAR via Rainbow Bridge lock-mint, Osmosis via Axelar, Solana via Wormhole. An EOA-administered ZKsync Era deployment is the one weak controller in the set.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "FraxFerry",
+        "url": "https://docs.frax.finance/cross-chain/bridge",
+        "bridgeTypes": [
+          "lockMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Rainbow Bridge",
+        "url": "https://github.com/Near-One/omni-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Axelar",
+        "url": "https://axelar.network/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Wormhole",
+        "url": "https://wormhole.com/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Frax cross-chain overview",
+        "url": "https://docs.frax.com/protocol/crosschain/overview"
+      },
+      {
+        "label": "FraxFerry docs",
+        "url": "https://docs.frax.finance/cross-chain/bridge"
+      },
+      {
+        "label": "Frax LayerZero x Stargate docs",
+        "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x853d955acef822db058eb8505911ed77f175b99e",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x853d955acef822db058eb8505911ed77f175b99e",
+        "protocol": "Frax",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Frax cross-chain overview",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "FraxFerry docs",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          },
+          {
+            "label": "Frax LayerZero x Stargate docs",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x17fc002b466eec40dae837fc4be5c67993ddbd6f",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x17fc002b466eec40dae837fc4be5c67993ddbd6f",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the arbitrum FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0xe61D9ed1e5Dc261D1e90a99304fADCef2c76FD10, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority; extra minter 0x1c5400491fE82EE8FC21489C51e402B3c8a2fB81 (contract, likely a Frax AMO, unverified) also holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX arbitrum token (owner Safe 0xe61D9ed1e5Dc261D1e90a99304fADCef2c76FD10)",
+            "url": "https://arbiscan.io/address/0x17fc002b466eec40dae837fc4be5c67993ddbd6f"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+        "destinationChain": "optimism",
+        "contractAddress": "0x2e3d870790dc77a83dd1d18184acc7439a53f475",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the optimism FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x0dF840dCbf1229262A4125C1fc559bd338eC9491, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX optimism token (owner Safe 0x0dF840dCbf1229262A4125C1fc559bd338eC9491)",
+            "url": "https://optimistic.etherscan.io/address/0x2e3d870790dc77a83dd1d18184acc7439a53f475"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x45c32fa6df82ead1e2ef74d17b76547eddfaff89",
+        "destinationChain": "polygon",
+        "contractAddress": "0x45c32fa6df82ead1e2ef74d17b76547eddfaff89",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the polygon FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-6 Gnosis Safe 0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX polygon token (owner Safe 0xDCB5A4b6Ee39447D700F4FA3303B1d1c25Ea9cA7)",
+            "url": "https://polygonscan.com/address/0x45c32fa6df82ead1e2ef74d17b76547eddfaff89"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the avalanche FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0xc036Caff65c1A31eAa53e60F6e17f1E6689937AA, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX avalanche token (owner Safe 0xc036Caff65c1A31eAa53e60F6e17f1E6689937AA)",
+            "url": "https://snowtrace.io/address/0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x90c97f71e18723b0cf0dfa30ee176ab653e89f40",
+        "destinationChain": "bsc",
+        "contractAddress": "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the bsc FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x8811Da0385cCf1848B21475A42eA4D07Fc5d964a, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX bsc token (owner Safe 0x8811Da0385cCf1848B21475A42eA4D07Fc5d964a)",
+            "url": "https://bscscan.com/address/0x90c97f71e18723b0cf0dfa30ee176ab653e89f40"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0xdc301622e621166bd8e82f2ca0a26c13ad0be355",
+        "destinationChain": "fantom",
+        "contractAddress": "0xdc301622e621166bd8e82f2ca0a26c13ad0be355",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the fantom FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0xE838c61635dd1D41952c68e47159329443283d90, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX fantom token (owner Safe 0xE838c61635dd1D41952c68e47159329443283d90)",
+            "url": "https://ftmscan.com/address/0xdc301622e621166bd8e82f2ca0a26c13ad0be355"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "moonriver:0x1a93b23281cc1cde4c4741353f3064709a16197d",
+        "destinationChain": "moonriver",
+        "contractAddress": "0x1a93b23281cc1cde4c4741353f3064709a16197d",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the moonriver FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x2bBbE751E8C36CD6c92767776067f8Dd3A21941f, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX moonriver token (owner Safe 0x2bBbE751E8C36CD6c92767776067f8Dd3A21941f)",
+            "url": "https://moonriver.moonscan.io/address/0x1a93b23281cc1cde4c4741353f3064709a16197d"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "polygon-zkevm:0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+        "destinationChain": "polygon-zkevm",
+        "contractAddress": "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the polygon-zkevm FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority; timelock_address() = EOA 0x967d0c5f7362A54b156cf2831Fb17dA8681FAD7D (no code). Not a canonical-rollup or third-party bridge mint — the polygon-zkevm shared bridge holds zero FRAX.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX polygon-zkevm token (owner Safe 0x030BD43af99cb72B51dA233A73F7697Cd2461C0b)",
+            "url": "https://zkevm.polygonscan.com/address/0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "moonbeam:0x322e86852e492a7ee17f28a78c663da38fb33bfb",
+        "destinationChain": "moonbeam",
+        "contractAddress": "0x322e86852e492a7ee17f28a78c663da38fb33bfb",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the moonbeam FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x343e4f06BF240d22FbdFd4a2Fe5858BC66E79F12, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX moonbeam token (owner Safe 0x343e4f06BF240d22FbdFd4a2Fe5858BC66E79F12)",
+            "url": "https://moonbeam.moonscan.io/address/0x322e86852e492a7ee17f28a78c663da38fb33bfb"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "boba:0x7562f525106f5d54e891e005867bf489b5988cd9",
+        "destinationChain": "boba",
+        "contractAddress": "0x7562f525106f5d54e891e005867bf489b5988cd9",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the boba FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x3849Ff242Ff385F5124e6420BE681963d3977685, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX boba token (owner Safe 0x3849Ff242Ff385F5124e6420BE681963d3977685)",
+            "url": "https://bobascan.com/address/0x7562f525106f5d54e891e005867bf489b5988cd9"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+        "destinationChain": "aurora",
+        "contractAddress": "0xe4b9e004389d91e4134a28f19bd833cba1d994b6",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the aurora FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x85F61CC39dB983948671b03B8EcB36877d9A337d, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX aurora token (owner Safe 0x85F61CC39dB983948671b03B8EcB36877d9A337d)",
+            "url": "https://explorer.aurora.dev/address/0xe4b9e004389d91e4134a28f19bd833cba1d994b6"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000002",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000002",
+        "protocol": "Fraxtal native (WFRAX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Read 2026-07-20: this predeploy is WFRAX, the wrapped Fraxtal native gas token (ex-FXS lineage), administered by Frax's predeploy ProxyAdmin (owner 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6) — a native Fraxtal deployment, not a bridged representation of the L1 0x853d FRAX stablecoin. Note the DefiLlama-attributed 'FRAX' supply on Fraxtal maps to this predeploy family; the canonical OP-bridge representations of the actual L1 FRAX stablecoin on Fraxtal (0xbc8a334dbde657b27c2aab4c868dea6856e4448f, 0x17fdbadac06c76c73ea73b834341b02779c36aa0) carry only ~2.2k units.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "WFRAX predeploy on Fraxtal (name 'Wrapped Frax', read 2026-07-20)",
+            "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002"
+          },
+          {
+            "label": "Frax cross-chain docs (FRAX is the Fraxtal gas token; WFRAX its wrapper)",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "L2BEAT Fraxtal",
+            "url": "https://l2beat.com/scaling/projects/fraxtal"
+          }
+        ]
+      },
+      {
+        "id": "harmony:0xfa7191d292d5633f702b0bd7e3e3bccc0e633200",
+        "destinationChain": "harmony",
+        "contractAddress": "0xfa7191d292d5633f702b0bd7e3e3bccc0e633200",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the harmony FRAX token is Frax's own CrossChainCanonicalFRAX contract (owner() = timelock_address() = the Frax 3-of-5 Gnosis Safe 0x5D91bA85cfbC0A3673F312f3FD0BA75a85AD73e6, getOwners/getThreshold verified 2026-07-20; signer set overlaps the Ethereum Frax Comptroller Safe signers). Circulating supply historically entered via Multichain anyFRAX swap-ins (the contract's bridge_tokens_array) and FraxFerry lock-release; the Frax Safe is the sole effective mint authority; extra minter 0x8D0A8f07F5Ea7F0982Ed116993200C331E4cdD27 (contract, unidentified) also holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX harmony token (owner Safe 0x5D91bA85cfbC0A3673F312f3FD0BA75a85AD73e6)",
+            "url": "https://explorer.harmony.one/address/0xfa7191d292d5633f702b0bd7e3e3bccc0e633200"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          },
+          {
+            "label": "FraxFerry docs (lock-release ferry)",
+            "url": "https://docs.frax.finance/cross-chain/bridge"
+          }
+        ]
+      },
+      {
+        "id": "near:853d955acef822db058eb8505911ed77f175b99e.factory.bridge.near",
+        "sourceChain": "ethereum",
+        "destinationChain": "near",
+        "canonicalChain": "ethereum",
+        "contractAddress": "853d955acef822db058eb8505911ed77f175b99e.factory.bridge.near",
+        "protocol": "Rainbow Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Rainbow Bridge representation: the '.factory.bridge.near' suffix identifies the NEAR Rainbow ERC-20 connector factory; the Rainbow ERC20 locker 0x23ddd3e3692d1861ed57ede224608875809e127f on Ethereum holds 1,909,103 FRAX in escrow (balanceOf read 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x23ddd3e3692d1861ed57ede224608875809e127f",
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:ethereum:0x23ddd3e3692d1861ed57ede224608875809e127f"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DefiLlama FRAX adapter (near factory entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/frax/index.ts"
+          },
+          {
+            "label": "NEAR omni-bridge contract addresses (Rainbow ERC20 locker)",
+            "url": "https://github.com/Near-One/omni-bridge#contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a",
+        "protocol": "Frax CrossChainCanonical (Frax-issued)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-canonical deployment: the ZKsync Era FRAX token is a Frax CrossChainCanonical-type contract whose owner()/timelock is the EOA 0x6549DAa31C76d5C19099B7bdAD82d8813774C651 (no code, sole minter — unique among the Frax canonical set, which otherwise uses 3-of-5 Safes; flagged in review). Not the canonical zkSync-Era bridge representation (the zkSync Lite main contract holds zero FRAX escrow).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX ZKsync Era token (owner EOA, read 2026-07-20)",
+            "url": "https://era.zksync.network/address/0xb4c1544cb4163f4c2eca1ae9ce999f63892d912a"
+          },
+          {
+            "label": "Frax CrossChainCanonicalFRAX source (frax-solidity)",
+            "url": "https://github.com/FraxFinance/frax-solidity/blob/master/src/hardhat/contracts/ERC20/__CROSSCHAIN/CrossChainCanonicalFRAX.sol"
+          }
+        ]
+      },
+      {
+        "id": "osmosis:ibc/0E43EDE2E2A3AFA36D0CD38BDDC0B49FECA64FA426A82E102F304E430ECF46EE",
+        "sourceChain": "ethereum",
+        "destinationChain": "osmosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "ibc/0E43EDE2E2A3AFA36D0CD38BDDC0B49FECA64FA426A82E102F304E430ECF46EE",
+        "protocol": "Axelar",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Axelar representation: the Osmosis IBC denom is Axelar frax-wei (cosmos chain-registry: counterparty chain axelar, channel-3 to osmosis channel-208), backed by L1 FRAX escrowed through the Axelar gateway on Ethereum; validation is the Axelar validator set.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4F4495243837681061C4743b74B3eEdf548D56A5",
+        "failureDomainKeys": [
+          "protocol:axelar",
+          "contract:ethereum:0x4f4495243837681061c4743b74b3eedf548d56a5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "cosmos chain-registry — Osmosis assetlist (FRAX / Axelar entry)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/osmosis/assetlist.json"
+          },
+          {
+            "label": "DefiLlama FRAX adapter (osmosis Axelar entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/frax/index.ts"
+          }
+        ]
+      },
+      {
+        "id": "solana:FR87nWEUxVgerFGhZM8Y4AggKGLnaXswr1Pd8wZ4kZcp",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "FR87nWEUxVgerFGhZM8Y4AggKGLnaXswr1Pd8wZ4kZcp",
+        "protocol": "Wormhole (Portal)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Wormhole (Portal) wrapped FRAX: the Solana mint has 8 decimals (Wormhole truncation) and mintAuthority equal to the Wormhole token-bridge PDA (byte-identical to Portal-wrapped wBTC's mint authority, read 2026-07-20); L1 FRAX is escrowed by the Wormhole token bridge on Ethereum under guardian-set governance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "BCD75RNBHrJJpW4dXVagL5mPjzRLnVZq4YirJdjEYMV7",
+        "failureDomainKeys": [
+          "protocol:wormhole-token-bridge"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FRAX Solana mint (Wormhole)",
+            "url": "https://solscan.io/token/FR87nWEUxVgerFGhZM8Y4AggKGLnaXswr1Pd8wZ4kZcp"
+          },
+          {
+            "label": "DefiLlama FRAX adapter (solana entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/frax/index.ts"
+          }
+        ]
+      }
+    ]
+  }
+}

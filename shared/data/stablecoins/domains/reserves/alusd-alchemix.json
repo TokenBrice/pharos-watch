@@ -1,0 +1,116 @@
+{
+  "id": "alusd-alchemix",
+  "reserves": [
+    {
+      "name": "DAI yield-token collateral",
+      "pct": 80.2267,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "MakerDAO/Sky (DAI) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC yield-token collateral",
+      "pct": 15.9309,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT yield-token collateral",
+      "pct": 0.3856,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "FRAX yield-token collateral",
+      "pct": 3.4568,
+      "risk": "low",
+      "coinId": "frax-frax",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax (FRAX) via Alchemix-registered yield strategies",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AlchemistV2 on Etherscan",
+        "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+      },
+      {
+        "label": "Alchemix IAlchemistV2State interface (commit 8915ef7b)",
+        "url": "https://github.com/alchemix-finance/v2-foundry/blob/8915ef7b1714c16f9e260a4ef41c5f254d5b7f58/src/interfaces/alchemist/IAlchemistV2State.sol"
+      },
+      {
+        "label": "Alchemix multichain alAsset documentation",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+      },
+      {
+        "label": "Alchemix collateral de-pegging documentation",
+        "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+      }
+    ],
+    "rationale": "At Ethereum block 25530459, the Ethereum AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting controller-local mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each observed slice maps to its exact tracked stablecoin dependency. Re-read 2026-08-08: Alchemix docs still describe L2 xalUSD as backed by Ethereum-collateral; no issuer-published fresher Ethereum Alchemist composition or asset-wide reconciliation was found, so the prior on-chain snapshot remains the latest usable primary-source breakdown and the review is retained as selected-slice evidence rather than an asset-wide composition.",
+    "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
+    "compositionAsOf": "2026-07-28",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "All registered yield-token expected values in the observed Ethereum Alchemist were attributed to their on-chain underlying stablecoins; asset-wide L2, bridge, Transmuter, and AMO exposure remains unreconciled outside this selected slice.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Alchemix AlchemistV2 contracts and registered yield-strategy vaults (Yearn, Aave)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AlchemistV2 on Etherscan",
+        "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+      },
+      {
+        "label": "Alchemix collateral de-pegging documentation",
+        "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+      }
+    ],
+    "uncertainty": "Collateral is deposited non-custodially into AlchemistV2 and routed into registered Yearn/Aave yield strategies, so custody is contract-based rather than with a legal custodian; legal segregation and insolvency treatment do not apply at the protocol layer, and underlying stablecoin issuers retain their own custody and freeze postures.",
+    "knownUnknownExposurePct": 100
+  }
+}

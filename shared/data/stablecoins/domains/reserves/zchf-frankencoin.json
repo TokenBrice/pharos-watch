@@ -1,0 +1,315 @@
+{
+  "id": "zchf-frankencoin",
+  "reserves": [
+    {
+      "name": "BOSS (Boss Info AG)",
+      "pct": 30.8,
+      "risk": "very-high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Boss Info AG",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "cbBTC (Coinbase Wrapped BTC)",
+      "pct": 18.9,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WBTC (Wrapped BTC)",
+      "pct": 13.3,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Bitcoin custodians",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "LsETH (Liquid Staked ETH)",
+      "pct": 8.7,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Liquid Collective protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "DQTS (Draggable quitt.shares)",
+      "pct": 8.5,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "ServiceHunter AG",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "wstETH (Wrapped liquid staked Ether 2.0)",
+      "pct": 7.2,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "SPYon (SPDR S&P 500 ETF (Ondo Tokenized))",
+      "pct": 6.6,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Ondo Finance SPYon structure",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "XAUt (Tether Gold)",
+      "pct": 1.7,
+      "risk": "medium",
+      "coinId": "xaut-tether",
+      "depType": "collateral",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Tether Gold",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "PAXG (Paxos Gold)",
+      "pct": 1.4,
+      "risk": "medium",
+      "coinId": "paxg-paxos",
+      "depType": "collateral",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Paxos Trust Company",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WETH (Wrapped Ether)",
+      "pct": 1.3,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "GNO (Gnosis Token)",
+      "pct": 1.2,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "GnosisDAO",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "REALU (RealUnit Shares)",
+      "pct": 0.2,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "RealUnit Schweiz AG",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "LENDS (Switzerlend AG C1 Shares SHA)",
+      "pct": 0.2,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Switzerlend AG",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frankencoin collateral positions API",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "Frankencoin collateral price mapping",
+        "url": "https://api.frankencoin.com/prices/mapping"
+      },
+      {
+        "label": "Frankencoin collateralized minting documentation",
+        "url": "https://docs.frankencoin.com/positions"
+      },
+      {
+        "label": "ServiceHunter AG company and tokenized-share disclosure",
+        "url": "https://www.servicehunter.ch/"
+      }
+    ],
+    "rationale": "Each weight matches the exact 2026-07-15 fixed-input capture of open, non-denied Frankencoin collateral positions valued through the protocol's price mapping. PAXG and XAUt are exact tracked upstreams; all other rows are explicitly classified exogenous collateral and do not create stablecoin dependency edges.",
+    "compositionBasis": "Latest active collateral balances from Frankencoin's positions API valued by its price-mapping API",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All active collateral assets with positive balances and available prices are identified.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BOSS (Boss Info AG)",
+        "pct": 30.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BOSS is corporate-equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "cbBTC (Coinbase Wrapped BTC)",
+        "pct": 18.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC is Bitcoin collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "WBTC (Wrapped BTC)",
+        "pct": 13.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is Bitcoin collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "LsETH (Liquid Staked ETH)",
+        "pct": 8.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LsETH is liquid-staking collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "DQTS (Draggable quitt.shares)",
+        "pct": 8.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "DQTS is tokenized equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "wstETH (Wrapped liquid staked Ether 2.0)",
+        "pct": 7.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is liquid-staking collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "SPYon (SPDR S&P 500 ETF (Ondo Tokenized))",
+        "pct": 6.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SPYon is tokenized equity-index collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "WETH (Wrapped Ether)",
+        "pct": 1.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is native-asset collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "GNO (Gnosis Token)",
+        "pct": 1.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "GNO is governance-token collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "REALU (RealUnit Shares)",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "REALU is tokenized equity collateral, not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "LENDS (Switzerlend AG C1 Shares SHA)",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LENDS is tokenized equity collateral, not a stablecoin dependency."
+      }
+    ]
+  }
+}

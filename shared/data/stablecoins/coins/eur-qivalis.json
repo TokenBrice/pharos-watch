@@ -25,34 +25,6 @@
   "jurisdiction": {
     "country": "Netherlands"
   },
-  "mica": {
-    "status": "pending",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
-    "competentAuthority": "DNB",
-    "authorizedEntity": "Qivalis B.V.",
-    "references": [
-      {
-        "label": "Qivalis — MiCA-compliant euro stablecoin pending DNB EMI license",
-        "url": "https://qivalis.eu"
-      },
-      {
-        "label": "BNP Paribas joins Qivalis euro-backed stablecoin consortium",
-        "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
-      },
-      {
-        "label": "ESMA interim MiCA EMT issuer register — Qivalis not listed; page latest update 2026-06-12, checked 2026-06-18",
-        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      }
-    ]
-  },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: QEUR resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",

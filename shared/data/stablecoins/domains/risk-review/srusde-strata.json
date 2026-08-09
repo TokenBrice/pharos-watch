@@ -1,0 +1,65 @@
+{
+  "id": "srusde-strata",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "srUSDe verified Tranche implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0xe894055ca1c73648927e225f3ca38ed48e30210b"
+      },
+      {
+        "label": "Strata protocol overview",
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+      },
+      {
+        "label": "Ethena USDe token source (upstream freeze reach)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3?fields=sources"
+      }
+    ],
+    "evidence": "Re-verified 2026-07-30 at Ethereum block 25648480: the srUSDe proxy 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 resolves through its EIP-1967 slot to the Blockscout-verified Tranche implementation 0xe894055ca1c73648927e225f3ca38ed48e30210b, and asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. The ERC-4626 tranche token contains no blacklist, freeze, pause, or holder-selective transfer hook; share transfers are permissionless, while deposit and withdrawal limits route through the CDO and its cooldown and paused-state mechanics, which gate exits rather than transfers. Strata documents srUSDe as the senior ERC-4626 tranche over the Ethena USDe/sUSDe strategy with cooldown-based exits. Holder freeze exposure is therefore inherited from upstream USDe, whose separately reviewed status is directly blacklistable; this direct-code finding remains upgrade-bound by the Strata 2-day timelock.",
+    "reviewer": "Kimi T51 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "srUSDe is a senior ERC-4626 tranche over Strata's USDe strategy and has no borrower-owned collateral positions or token-level liquidation oracle. Junior capital absorbs first loss, while underlying USDe and sUSDe risks remain inherited dependencies.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Strata documents srUSDe and jrUSDe as risk-tranched vaults with ERC-4626 deposits and withdrawals, where the junior tranche provides first-loss protection for the senior tranche. This is a shared strategy and redemption path, not borrower-specific collateralized debt, so there are no srUSDe collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Strata markets",
+          "url": "https://docs.strata.markets/markets"
+        },
+        {
+          "label": "Strata FAQ",
+          "url": "https://docs.strata.markets/resources/faqs"
+        },
+        {
+          "label": "Strata protocol overview",
+          "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Strata markets",
+        "url": "https://docs.strata.markets/markets"
+      },
+      {
+        "label": "Strata FAQ",
+        "url": "https://docs.strata.markets/resources/faqs"
+      },
+      {
+        "label": "Strata protocol overview",
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+      }
+    ]
+  }
+}

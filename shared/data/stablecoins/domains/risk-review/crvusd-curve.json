@@ -1,0 +1,1168 @@
+{
+  "id": "crvusd-curve",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Curve crvUSD source repository",
+        "url": "https://github.com/curvefi/curve-stablecoin"
+      },
+      {
+        "label": "crvUSD Ethereum deployment",
+        "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+      },
+      {
+        "label": "Gnosis crvUSD bridge token",
+        "url": "https://gnosisscan.io/address/0xabef652195f98a91e490f047a5006b71c85f058d#code"
+      },
+      {
+        "label": "Polygon crvUSD bridge token",
+        "url": "https://polygonscan.com/address/0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6#code"
+      },
+      {
+        "label": "BNB Chain crvUSD bridge token",
+        "url": "https://bscscan.com/address/0xe2fb3f127f5450dee44afe054385d74c392bdef4#code"
+      },
+      {
+        "label": "Taiko crvUSD bridge token",
+        "url": "https://taikoscan.io/address/0xc8f4518ed4bab9a972808a493107926ce8237068#code"
+      },
+      {
+        "label": "Fraxtal crvUSD bridge token",
+        "url": "https://fraxscan.com/address/0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3#code"
+      },
+      {
+        "label": "Sonic crvUSD bridge token",
+        "url": "https://sonicscan.org/address/0x7fff4c4a827c84e32c5e175052834111b2ccd270#code"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical crvUSD Stablecoin remained a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified Vyper source has ordinary transfer and allowance-gated transferFrom/burnFrom paths without blacklist, holder freeze, arbitrary-holder seizure, or global transfer pause. The ten tracked bridge representations were previously reviewed through verified source or canonical mappings and likewise exposed bridge mint/burn or upgrade controls rather than a current Curve-controlled holder restriction. Collateral-issuer and bridge impairment remain separate upstream/deployment risks and do not make the direct blacklist verdict inherited.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Nine debt-bearing Ethereum controllers use market-specific Curve EMA and aggregate-stable-price routes. Modern Chainlink clamps were disabled at the reviewed block, while legacy sfrxETH requires an unchecked Chainlink answer; tBTC, weETH, cbBTC, and LBTC add single-pool conversion dependencies without alternate feeds. Per-branch debt shares (debtSharePct) were read from the Curve crvUSD markets API at Ethereum block 25584850 (2026-07-22); the current sfrxETH controller's share was not resolved in that read and is treated as material.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "ControllerFactory reported nine collateral controllers at finalized Ethereum block 25531477, and every controller had both positive total_debt and at least one active loan. Legacy sfrxETH and LBTC had zero debt ceilings but retained debt and loans, so they remain liquidation-active branches rather than exclusions.",
+      "sources": [
+        {
+          "label": "Curve Controller documentation",
+          "url": "https://docs.curve.finance/developer/crvusd/controller"
+        },
+        {
+          "label": "crvUSD ControllerFactory",
+          "url": "https://eth.blockscout.com/address/0xC9332fdCB1C491Dcc683bAe86Fe3cb70360738BC?tab=contract"
+        },
+        {
+          "label": "Finalized Ethereum block 25531477",
+          "url": "https://eth.blockscout.com/block/25531477"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Curve crvUSD oracle documentation",
+        "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+      },
+      {
+        "label": "Curve Controller documentation",
+        "url": "https://docs.curve.finance/developer/crvusd/controller"
+      },
+      {
+        "label": "Curve LLAMMA explainer",
+        "url": "https://docs.curve.finance/developer/crvusd/llamma-explainer"
+      },
+      {
+        "label": "Pinned Curve stablecoin repository",
+        "url": "https://github.com/curvefi/curve-stablecoin/tree/6b0c3096841d46e8d6790630b6443d5510dd87e8"
+      },
+      {
+        "label": "Curve crvUSD markets API (Ethereum)",
+        "url": "https://prices.curve.finance/v1/crvusd/markets/ethereum"
+      }
+    ],
+    "branches": [
+      {
+        "id": "legacy-sfrxeth",
+        "label": "Legacy sfrxETH controller",
+        "tier": "single-source-or-laggy",
+        "summary": "At finalized Ethereum block 25584850 the legacy sfrxETH controller retained five loans and 153,839.980440801457521311 crvUSD of debt despite its closed debt ceiling; its oracle always invokes an unchecked Chainlink ETH/USD clamp and a 900-second Uniswap lower floor around Curve EMA components.",
+        "collateralAssets": [
+          "sfrxETH (legacy market)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve legacy CryptoWithStablePriceAndChainlinkFrxeth",
+            "path": "TriCrypto2 USDT/WBTC/WETH WETH leg 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 + USDT/crvUSD pool 0x390f3595bCa2Df7d23783dFd126427CCeb997BF4 + legacy stable-price aggregator 0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7 + ETH/frxETH pool 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577 + sfrxETH share rate, bounded to Chainlink ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 and a 900-second Uniswap frxETH/FRAX lower floor 0x36C060Cc4b088c830a561E959A679A58205D3F56",
+            "address": "0x19F5B81e5325F882C9853B5585f74f751DE3896d",
+            "chain": "ethereum",
+            "observedAt": "2026-07-22",
+            "observedBlock": 25584850,
+            "failureDomainKeys": [
+              "curve-legacy-tricrypto2",
+              "curve-legacy-stable-aggregator",
+              "chainlink:ethereum:eth-usd-unchecked",
+              "uniswap:ethereum:frxeth-frax-twap",
+              "sfrxeth-share-rate",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider. Chainlink ETH/USD is called unconditionally for a plus-or-minus 1% clamp but updatedAt is not checked; the 900-second Uniswap frxETH/FRAX TWAP is only a lower floor, not failover. Mandatory component reverts block the oracle, and the internal Curve price uses a 600-second EMA.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 25584850,
+        "collateralParameters": [
+          {
+            "asset": "sfrxETH (legacy market)",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x8472A9A7632b173c8Cf3a86D3afec50c35548e76; AMM 0x136e783846ef68C8Bd00a3369F787dF8d683a696; A=100, loan discount 9%, liquidation discount 6%. At finalized block 25584850, debt was 153,839.980440801457521311 crvUSD across five loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0.45,
+        "failureDomainKeys": [
+          "curve-legacy-sfrxeth-oracle",
+          "curve-llamma-liquidators",
+          "curve-no-automatic-bad-debt-backstop",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Finalized Ethereum block 25584850",
+            "url": "https://eth.blockscout.com/block/25584850"
+          },
+          {
+            "label": "Legacy sfrxETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x19F5B81e5325F882C9853B5585f74f751DE3896d?tab=contract"
+          },
+          {
+            "label": "Curve Controller documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/controller"
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "wstETH controller",
+        "tier": "standard-external",
+        "summary": "The wstETH controller prices two Curve Tricrypto routes against the aggregate crvUSD stable price and stETH/wstETH conversion; its configured Chainlink clamps were disabled at the reviewed block.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceWsteth",
+            "path": "Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired stable pools 0x4DEcE678ceceb27446b35C672dC7d61F30bAD69E and 0x390f3595bCa2Df7d23783dFd126427CCeb997BF4 -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62 -> stETH/ETH pool 0x21E27a5E5513D6e65C4f830167390997aA84843a -> wstETH rate",
+            "address": "0xc1793A29609ffFF81f10139fa0A7A444c9e106Ad",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "curve-steth-eth-ema",
+              "wsteth-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink clamps",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 and stETH/ETH 0x86392dC19c0b719886221c78AB11eb8Cf5c52812 plus-or-minus 1.5% clamps; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant",
+              "chainlink:ethereum:steth-eth-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second Chainlink clamps were dormant rather than failover. The active Curve EMA and AggregateStablePrice route has no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x100dAa78fC509Db39Ef7D04DE0c1ABD299f4C6CE; AMM 0x37417B2238AA52D0DD2D6252d989E728e8f706e4; A=100, loan discount 9%, liquidation discount 6%, 150 million crvUSD ceiling. Debt was 7,670,365.763525878213991253 across 77 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 25.5,
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "wstETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xc1793A29609ffFF81f10139fa0A7A444c9e106Ad?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "wbtc",
+        "label": "WBTC controller",
+        "tier": "standard-external",
+        "summary": "The WBTC controller uses the two modern Tricrypto Curve EMA routes and AggregateStablePrice; its configured BTC/USD Chainlink clamp was disabled at the reviewed block.",
+        "collateralAssets": [
+          "WBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceWBTC",
+            "path": "WBTC legs of Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired USDC/crvUSD and USDT/crvUSD pools -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink BTC/USD clamp",
+            "path": "Configured BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second BTC/USD clamp was dormant rather than failover. Active Curve EMA and AggregateStablePrice inputs have no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x4e59541306910aD6dC1daC0AC9dFB29bD9F15c67; AMM 0xE0438Eb3703bF871E31Ce639bd351109c88666ea; A=100, loan discount 9%, liquidation discount 6%, 200 million crvUSD ceiling. Debt was 16,754,863.623974532900875714 across 104 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 50.2,
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "WBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "WETH controller",
+        "tier": "standard-external",
+        "summary": "The WETH controller uses the two modern Tricrypto Curve EMA routes and AggregateStablePrice; its configured ETH/USD Chainlink clamp was disabled at the reviewed block.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceETH",
+            "path": "WETH legs of Tricrypto pools 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B and 0xf5f5B97624542D72A9E06f04804Bf81baA15e2B4 -> paired USDC/crvUSD and USDT/crvUSD pools -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0x966cBDeceFB60A289b0460F7638f4A75F432cA06",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink ETH/USD clamp",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second ETH/USD clamp was dormant rather than failover. Active Curve EMA and AggregateStablePrice inputs have no contractual heartbeat or stale-answer rejection and no alternate provider.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 83.71,
+            "note": "Controller 0xA920De414eA4Ab66b97dA1bFE9e6EcA7d4219635; AMM 0x1681195C176239ac5E72d9aeBaCf5b2492E0C4ee; A=100, loan discount 14.29%, liquidation discount 9.21%, 200 million crvUSD ceiling. Debt was 1,696,250.542549832367317280 across 200 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 5.1,
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "WETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x966cBDeceFB60A289b0460F7638f4A75F432cA06?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "sfrxeth-v2",
+        "label": "Current sfrxETH controller",
+        "tier": "standard-external",
+        "summary": "The current sfrxETH controller combines the modern WETH Curve composite with the frxETH/WETH pool and sfrxETH share rate; its configured ETH/USD clamp was disabled.",
+        "collateralAssets": [
+          "sfrxETH (current market)"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceSfrxeth",
+            "path": "Modern WETH Tricrypto and AggregateStablePrice composite -> frxETH/WETH pool 0x9c3B46C0Ceb5B9e304FCd6D88Fc50f7DD24B31Bc -> sfrxETH share rate",
+            "address": "0x28d7880B5b67fB4a0B1c6Ed6c33c33f365113C29",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve-modern-tricrypto-ema",
+              "curve-aggregate-stable-price",
+              "curve-frxeth-weth-ema",
+              "sfrxeth-share-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink ETH/USD clamp",
+            "path": "Configured ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second ETH/USD clamp was dormant. Active Curve EMA, AggregateStablePrice, and share-rate components have no alternate provider or contractual stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "sfrxETH (current market)",
+            "maximumLtvPct": 89,
+            "note": "Controller 0xEC0820EfafC41D8943EE8dE495fC9Ba8495B15cf; AMM 0xfA96ad0a9E64261dB86950e2dA362f5572c5c6fd; A=100, loan discount 9%, liquidation discount 6%, 50 million crvUSD ceiling. Debt was 1,218,769.139164882615291076 across 18 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "failureDomainKeys": [
+          "curve-modern-tricrypto-ema",
+          "curve-frxeth-weth-ema",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Current sfrxETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x28d7880B5b67fB4a0B1c6Ed6c33c33f365113C29?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "tbtc",
+        "label": "tBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The tBTC controller depends on one crvUSD/tBTC/wstETH pool plus AggregateStablePrice; its configured BTC/USD clamp was disabled and is not failover.",
+        "collateralAssets": [
+          "tBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoWithStablePriceTBTC",
+            "path": "crvUSD/tBTC/wstETH pool 0x2889302a794dA87fBF1D6Db415C1492194663D13 tBTC EMA -> AggregateStablePrice 0x18672b1b0c623a30089A280Ed9256379fb0E4E62",
+            "address": "0xbeF434E2aCF0FBaD1f0579d2376fED0d1CfC4217",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:tbtc-single-pool-ema",
+              "curve-aggregate-stable-price",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Dormant Chainlink BTC/USD clamp",
+            "path": "Configured BTC/USD 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c plus-or-minus 1.5% clamp; use_chainlink=false at the observed block",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "chainlink:ethereum:btc-usd-dormant"
+            ]
+          }
+        ],
+        "fallbackBehavior": "use_chainlink was false, so the configured 86,400-second BTC/USD clamp was dormant. The single active Curve pool and AggregateStablePrice expose no contractual heartbeat, stale-answer rejection, or alternate tBTC price path.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "tBTC",
+            "maximumLtvPct": 89,
+            "note": "Controller 0x1C91da0223c763d2e0173243eAdaA0A2ea47E704; AMM 0xf9bD9da2427a50908C4c6D1599D8e62837C2BCB0; A=100, loan discount 9%, liquidation discount 6%, 50 million crvUSD ceiling. Debt was 3,167,593.156509140683260690 across 17 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 9.33,
+        "failureDomainKeys": [
+          "curve:tbtc-single-pool-ema",
+          "curve-aggregate-stable-price",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "tBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0xbeF434E2aCF0FBaD1f0579d2376fED0d1CfC4217?tab=contract"
+          },
+          {
+            "label": "Curve oracle documentation",
+            "url": "https://docs.curve.finance/developer/crvusd/oracles/overview"
+          }
+        ]
+      },
+      {
+        "id": "weeth",
+        "label": "weETH controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The weETH controller layers one WETH/weETH conversion pool and capped rate updates over the modern WETH oracle, with no alternate weETH path.",
+        "collateralAssets": [
+          "weETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolsRateWAgg",
+            "path": "WETH/weETH pool 0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5 with USE_RATES=true and stored-rate speed cap 1% per minute -> base WETH oracle 0x966cBDeceFB60A289b0460F7638f4A75F432cA06, whose Chainlink clamp was disabled",
+            "address": "0x0a9aE947495034C0bBBAB845Fd75b5BBAfc91aAb",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:weeth-weth-single-pool",
+              "curve-weeth-rate-cap",
+              "curve-modern-weth-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate weETH conversion path. The oracle applies a one-percent-per-minute speed cap to its stored rate and then multiplies by the base WETH Curve composite; the base oracle's Chainlink clamp was disabled, and active Curve inputs have no contractual stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "weETH",
+            "maximumLtvPct": 90.14,
+            "note": "Controller 0x652aEa6B22310C89DCc506710CaD24d2Dba56B11; AMM 0xEd325262f54b2987e74436f4556a27f748146da1; A=70, loan discount 7%, liquidation discount 4%, 20 million crvUSD ceiling. Debt was 159,841.535473546838251713 across ten loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0.42,
+        "failureDomainKeys": [
+          "curve:weeth-weth-single-pool",
+          "curve-modern-weth-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "weETH oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x0a9aE947495034C0bBBAB845Fd75b5BBAfc91aAb?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolsRateWAgg.vy"
+          }
+        ]
+      },
+      {
+        "id": "cbbtc",
+        "label": "cbBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The cbBTC controller layers one cbBTC/WBTC pool over the modern WBTC oracle, with no alternate cbBTC conversion path.",
+        "collateralAssets": [
+          "cbBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolWAgg",
+            "path": "cbBTC/WBTC pool 0x839d6bDeDFF886404A6d7a788ef241e4e28F4802 -> base WBTC oracle 0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb, whose Chainlink clamp was disabled",
+            "address": "0x4710A77a0E0f4c7b0E11CDeB74acB042e62B8d22",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:cbbtc-wbtc-single-pool",
+              "curve-modern-wbtc-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate cbBTC conversion provider. The single pool is multiplied by the modern WBTC Curve composite, whose Chainlink clamp was disabled; active Curve inputs have no contractual heartbeat or stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "cbBTC",
+            "maximumLtvPct": 90.83,
+            "note": "Controller 0xf8C786b1064889fFd3c8A08B48D5e0c159F4cBe3; AMM 0xB6E62Aa178a5421d0A51D17E720A05de78D3137A; A=75, loan discount 6.5%, liquidation discount 3.5%, 50 million crvUSD ceiling. Debt was 1,208,494.487182224333313150 across 20 loans."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 5.34,
+        "failureDomainKeys": [
+          "curve:cbbtc-wbtc-single-pool",
+          "curve-modern-wbtc-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "cbBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x4710A77a0E0f4c7b0E11CDeB74acB042e62B8d22?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolWAgg.vy"
+          }
+        ]
+      },
+      {
+        "id": "lbtc",
+        "label": "LBTC controller",
+        "tier": "single-source-or-laggy",
+        "summary": "The LBTC controller retains two loans despite a zero debt ceiling and layers one eBTC/LBTC/WBTC pool over the modern WBTC oracle without an alternate LBTC path.",
+        "collateralAssets": [
+          "LBTC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Curve CryptoFromPoolWAgg",
+            "path": "eBTC/LBTC/WBTC pool 0xabaf76590478F2fE0b396996f55F0b61101e9502 LBTC/WBTC conversion -> base WBTC oracle 0xBe83fD842DB4937C0C3d15B2aBA6AF7E854f8dcb, whose Chainlink clamp was disabled",
+            "address": "0x2eF4b38A128eCc1aC06B43055553F95af59523de",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531477,
+            "failureDomainKeys": [
+              "curve:lbtc-wbtc-single-pool",
+              "curve-modern-wbtc-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate LBTC conversion provider. The single pool is multiplied by the modern WBTC Curve composite, whose Chainlink clamp was disabled; active Curve inputs have no contractual heartbeat or stale-answer rejection.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531477,
+        "collateralParameters": [
+          {
+            "asset": "LBTC",
+            "maximumLtvPct": 90.83,
+            "note": "Controller 0x8aca5A776a878Ea1F8967e70a23b8563008f58Ef; AMM 0x9a2e6bb3114B1EEB5492D97188A3ECB09E39fac8; A=75, loan discount 6.5%, liquidation discount 3.5%. Debt was 1.066531947162226292 crvUSD across two loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
+          }
+        ],
+        "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
+        "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "curve:lbtc-wbtc-single-pool",
+          "curve-modern-wbtc-oracle",
+          "curve-llamma-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "LBTC oracle verified contract",
+            "url": "https://eth.blockscout.com/address/0x2eF4b38A128eCc1aC06B43055553F95af59523de?tab=contract"
+          },
+          {
+            "label": "Pinned Curve conversion-oracle source",
+            "url": "https://github.com/curvefi/curve-stablecoin/blob/6b0c3096841d46e8d6790630b6443d5510dd87e8/curve_stablecoin/price_oracles/CryptoFromPoolWAgg.vy"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "crvUSD is native on Ethereum and uses canonical bridges for Arbitrum, Base, Optimism, ZKsync, Polygon, Gnosis, Taiko, Fraxtal, and Sonic. Its BNB Chain representation instead depends on Curve's X-DAO LayerZero bridge and minter, so that external messaging route determines the aggregate tier.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Arbitrum Canonical",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/interop/protocols/arbitrum",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "ZKsync Era",
+        "slug": "zksync-era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Gnosis OmniBridge",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Polygon PoS Bridge",
+        "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "explorer",
+        "name": "Curve X-DAO LayerZero Bridge",
+        "url": "https://bscscan.com/address/0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f#code",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      },
+      {
+        "source": "explorer",
+        "name": "Taiko ERC20Vault",
+        "url": "https://taikoscan.io/address/0x1670000000000000000000000000000000000002#code",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Fraxtal OP Stack Bridge",
+        "url": "https://docs.frax.com/fraxtal/addresses/fraxtal-contracts",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Sonic Gateway",
+        "url": "https://docs.soniclabs.com/sonic/build-on-sonic/programmatic-gateway",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Curve crvUSD docs",
+        "url": "https://resources.curve.finance/"
+      },
+      {
+        "label": "L2BEAT Arbitrum Canonical",
+        "url": "https://l2beat.com/interop/protocols/arbitrum"
+      },
+      {
+        "label": "L2BEAT ZKsync Era",
+        "url": "https://l2beat.com/interop/protocols/zksync-era"
+      },
+      {
+        "label": "Curve X-DAO crvUSD bridge on BNB Chain",
+        "url": "https://bscscan.com/address/0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f#code"
+      },
+      {
+        "label": "Fraxtal system bridge contracts",
+        "url": "https://docs.frax.com/fraxtal/addresses/fraxtal-contracts"
+      },
+      {
+        "label": "Sonic Gateway programmatic bridge",
+        "url": "https://docs.soniclabs.com/sonic/build-on-sonic/programmatic-gateway"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "protocol": "Curve",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
+          },
+          {
+            "label": "L2BEAT Arbitrum Canonical",
+            "url": "https://l2beat.com/interop/protocols/arbitrum"
+          },
+          {
+            "label": "L2BEAT ZKsync Era",
+            "url": "https://l2beat.com/interop/protocols/zksync-era"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5",
+        "protocol": "Arbitrum Canonical ERC20 Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Gateway() of the Arbitrum crvUSD token returns 0x09e9222e96e7b4ae2a407b98d48e330053351eee, the Arbitrum One L2 ERC20 gateway, the mint authority for this canonically bridged representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Arbitrum crvUSD token on Arbiscan (l2Gateway() probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5"
+          },
+          {
+            "label": "L2BEAT Arbitrum Canonical",
+            "url": "https://l2beat.com/interop/protocols/arbitrum"
+          },
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x417ac0e078398c154edfadd9ef675d30be60af93",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x417ac0e078398c154edfadd9ef675d30be60af93",
+        "protocol": "Base OP Stack Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the Base crvUSD token return 0x4200000000000000000000000000000000000010, the Base L2StandardBridge, the mint authority for this canonically bridged representation; l1Token() returns the Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Base crvUSD token on Basescan (bridge() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x417ac0e078398c154edfadd9ef675d30be60af93"
+          },
+          {
+            "label": "L2BEAT Base Canonical",
+            "url": "https://l2beat.com/interop/protocols/base"
+          },
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0xabef652195f98a91e490f047a5006b71c85f058d",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xabef652195f98a91e490f047a5006b71c85f058d",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 47243970,
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Gnosis crvUSD bridge token",
+            "url": "https://gnosisscan.io/address/0xabef652195f98a91e490f047a5006b71c85f058d#code"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6",
+        "protocol": "Polygon PoS Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos-bridge",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 90373405,
+        "sources": [
+          {
+            "label": "Polygon PoS state-transfer documentation",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          },
+          {
+            "label": "Polygon crvUSD bridge token",
+            "url": "https://polygonscan.com/address/0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6#code"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xe2fb3f127f5450dee44afe054385d74c392bdef4",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe2fb3f127f5450dee44afe054385d74c392bdef4",
+        "protocol": "Curve X-DAO LayerZero Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f",
+        "failureDomainKeys": [
+          "protocol:curve-xdao-layerzero-v1",
+          "contract:bsc:0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f",
+          "contract:bsc:0xc417e91098402dd4f677782a2ec204c429ce513a"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 110457044,
+        "sources": [
+          {
+            "label": "Curve X-DAO crvUSD bridge",
+            "url": "https://bscscan.com/address/0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f#code"
+          },
+          {
+            "label": "BNB Chain crvUSD token",
+            "url": "https://bscscan.com/address/0xe2fb3f127f5450dee44afe054385d74c392bdef4#code"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6",
+        "protocol": "Optimism OP Stack Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the OP Mainnet crvUSD token return 0x4200000000000000000000000000000000000010, the OP Mainnet L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OP Mainnet crvUSD token on Optimistic Etherscan (bridge() probed 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6"
+          },
+          {
+            "label": "L2BEAT OP Mainnet Canonical",
+            "url": "https://l2beat.com/interop/protocols/optimism"
+          },
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
+          }
+        ]
+      },
+      {
+        "id": "taiko:0xc8f4518ed4bab9a972808a493107926ce8237068",
+        "sourceChain": "ethereum",
+        "destinationChain": "taiko",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc8f4518ed4bab9a972808a493107926ce8237068",
+        "protocol": "Taiko ERC20Vault",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "taiko",
+        "controllerAddress": "0x1670000000000000000000000000000000000002",
+        "failureDomainKeys": [
+          "protocol:taiko-erc20-vault",
+          "contract:taiko:0x1670000000000000000000000000000000000002"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 8842344,
+        "sources": [
+          {
+            "label": "Taiko ERC20Vault",
+            "url": "https://taikoscan.io/address/0x1670000000000000000000000000000000000002#code"
+          },
+          {
+            "label": "Taiko crvUSD bridge token",
+            "url": "https://taikoscan.io/address/0xc8f4518ed4bab9a972808a493107926ce8237068#code"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3",
+        "sourceChain": "ethereum",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3",
+        "protocol": "Fraxtal OP Stack Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:fraxtal-op-stack-bridge",
+          "contract:fraxtal:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 38727179,
+        "sources": [
+          {
+            "label": "Fraxtal system bridge contracts",
+            "url": "https://docs.frax.com/fraxtal/addresses/fraxtal-contracts"
+          },
+          {
+            "label": "Fraxtal crvUSD bridge token",
+            "url": "https://fraxscan.com/address/0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3#code"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86",
+        "sourceChain": "ethereum",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86",
+        "protocol": "zkSync Era Canonical Shared Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Bridge() of the zkSync Era crvUSD token returns 0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102, the zkSync Era L2 shared bridge, the mint authority for this canonically bridged representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102",
+        "failureDomainKeys": [
+          "protocol:zksync-canonical-messaging",
+          "contract:zksync:0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "zkSync Era crvUSD token on Era explorer (l2Bridge() probed 2026-07-20)",
+            "url": "https://explorer.zksync.io/address/0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86"
+          },
+          {
+            "label": "L2BEAT ZKsync Era",
+            "url": "https://l2beat.com/interop/protocols/zksync-era"
+          },
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x7fff4c4a827c84e32c5e175052834111b2ccd270",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x7fff4c4a827c84e32c5e175052834111b2ccd270",
+        "protocol": "Sonic Gateway",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x9Ef7629F9B930168b76283AdD7120777b3c895b3",
+        "failureDomainKeys": [
+          "protocol:sonic-gateway",
+          "contract:sonic:0x9ef7629f9b930168b76283add7120777b3c895b3"
+        ],
+        "observedAt": "2026-07-17",
+        "observedBlock": 76070717,
+        "sources": [
+          {
+            "label": "Sonic Gateway programmatic bridge",
+            "url": "https://docs.soniclabs.com/sonic/build-on-sonic/programmatic-gateway"
+          },
+          {
+            "label": "Sonic crvUSD bridge token",
+            "url": "https://sonicscan.org/address/0x7fff4c4a827c84e32c5e175052834111b2ccd270#code"
+          }
+        ]
+      }
+    ]
+  }
+}

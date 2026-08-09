@@ -1,0 +1,57 @@
+{
+  "id": "jaaa-janus-henderson-anemoy",
+  "reserves": [
+    {
+      "name": "Janus Henderson Anemoy AAA CLO Fund NAV",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anemoy JAAA fund disclosure",
+        "url": "https://www.anemoy.io/funds/jaaa"
+      },
+      {
+        "label": "Chainlink JAAA NAV feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2"
+      },
+      {
+        "label": "Janus Henderson tokenized-fund announcement",
+        "url": "https://www.janushenderson.com/corporate/press-releases/janus-henderson-to-partner-with-anemoy-and-centrifuge-on-its-first-tokenized-fund/"
+      }
+    ],
+    "rationale": "The independent Chainlink producer measures the current JAAA fund-share NAV, not a durable 95/5 holdings split. The exact direct reserve is therefore one Janus Henderson Anemoy AAA CLO Fund share exposure with credit, custody, liquidity, legal, and concentration risks retained.",
+    "compositionBasis": "Exact live Chainlink JAAA NAV row and issuer fund disclosure",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The fund-share identity is known, but current CLO security, cash-buffer, custodian, and counterparty weights are not reproduced by the NAV feed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Janus Henderson Anemoy AAA CLO Fund NAV",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The NAV feed proves the fund-share value but does not publish current security-level holdings or cash weights."
+      }
+    ]
+  }
+}

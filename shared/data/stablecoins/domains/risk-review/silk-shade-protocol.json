@@ -1,0 +1,1363 @@
+{
+  "id": "silk-shade-protocol",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/"
+      },
+      {
+        "label": "SILK docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+      },
+      {
+        "label": "Minting and redemption docs",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+      },
+      {
+        "label": "SNIP-20 reference implementation (code id 877 base; no per-address freeze/blacklist)",
+        "url": "https://github.com/scrtlabs/snip20-reference-impl/blob/master/src/contract.rs"
+      },
+      {
+        "label": "SCRT Labs v1.10 hardcoded-admins proposal (SILK SNIP-25 at code id 877)",
+        "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+      },
+      {
+        "label": "Live SILK contract info",
+        "url": "https://secretnetwork-api.lavenderfive.com/compute/v1beta1/info/secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd"
+      },
+      {
+        "label": "Live SILK admin multisig account",
+        "url": "https://secretnetwork-api.lavenderfive.com/cosmos/auth/v1beta1/accounts/secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at Secret block 26592492. SILK contract secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd remained code id 877 (SILK-25) with admin secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf. The live auth account identifies that admin as a 5-of-7 LegacyAmino multisig. The pinned SNIP-20/SNIP-25 implementation exposes SetContractStatus with NormalRun, StopAllButRedeems, and StopAll states, so the admin has an actual global holder-transfer pause even though the private current status and absence of a selective per-address list prevent claiming a currently exercised blacklist. That verified global stop mechanism resolves direct access to true; reserve-asset freeze exposure is separate backing risk.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "ShadeLend runs 19 registered CDP vaults across two registries (14 current, 5 legacy-deprecated), all priced through the Shade Oracle Router Primary with a single default provider (Band Standard Reference Proxy) plus collateral-family derivative oracles; the router's deviation-guard list is empty and no failover provider exists (SupraOracles remains under research). The dominant debt branch (WETH vault, 74.9% of 207,123.4 SILK aggregate elastic debt) is Band-fresh, but the second-largest (WBTC vault, 18.3%) is frozen with its staleness check disabled, near-zero remaining collateral, and a liquidation query that reverts; the Persistence stkATOM vault's oracle has rejected queries as stale since 2025-02-07 and the Stride stINJ rate since 2026-07-29. Per-vault parameters (max_ltv 45-85%, liquidation discounts 5-10%, 600s collateral staleness tolerance), debt figures, and feed freshness were read directly from the registries, router, derivative oracles, Stability Pool, and Silk Index Oracle at Secret Network block 26592283 (2026-08-08); per-position amounts remain private state. Collateral-to-quote-symbol mapping follows the Stability Pool valid-assets registry, the protocol's own mapping.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-08-08",
+      "reviewer": "wave3-longtail-l03 (research agent)",
+      "rationale": "ShadeLend is an isolated-risk multi-market CDP: the current Single Vault Registry returned 14 vaults and the legacy registry 5 (deprecated, still liquidatable) by compute query at block 26592283, each with its own collateral token, max_ltv, liquidation discount, and oracle staleness tolerance. Every registered vault is authored as a branch below except the legacy USDT vault (zero debt, zero remaining borrowing power, minting closed). Per-branch elastic debt shares were measured from registry debt.elastic values at block 26592283; the zero-debt branches are included with debtSharePct 0 because their normal status permits new borrowing at any time. This supersedes the 2026-07-30 unresolved disposition: the vault inventory and parameters turned out to be publicly queryable through Secret Network's encrypted compute-query path even though position-level amounts stay private.",
+      "sources": [
+        {
+          "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+          "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+        },
+        {
+          "label": "Secret Network LCD compute query provenance: Single Vault Registry Legacy code hash (Lavender.Five)",
+          "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+        },
+        {
+          "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+          "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+        },
+        {
+          "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+        }
+      ]
+    },
+    "reviewedAt": "2026-08-08",
+    "reviewer": "wave3-longtail-l03 (research agent)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Shade tech stack (Band Protocol live; SupraOracles under research)",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/tech-stack.md"
+      },
+      {
+        "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+        "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+      },
+      {
+        "label": "shade-oracle oracle_router source (default provider, deviation test, admin freeze)",
+        "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/oracle_router/src/contract.rs"
+      },
+      {
+        "label": "shade-oracle index_oracle source (when_stale freeze, deviation freeze, admin rollback)",
+        "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/index_oracle/src/contract.rs"
+      },
+      {
+        "label": "securesecrets/shade BandQuery interface (GetReferenceData/GetReferenceDataBulk)",
+        "url": "https://github.com/securesecrets/shade/blob/main/packages/shade_protocol/src/contract_interfaces/oracles/band.rs"
+      },
+      {
+        "label": "Secret Network LCD compute query provenance: Shade Oracle Router Primary code hash (Lavender.Five)",
+        "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm"
+      },
+      {
+        "label": "Secret Network LCD compute query provenance: Silk Index Oracle code hash (Lavender.Five)",
+        "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1552yh3rplmyrjwhcxrq0egg35uy6zwjtszecf0"
+      },
+      {
+        "label": "Secret Network LCD compute query provenance: Shade Stability Pool code hash (Lavender.Five)",
+        "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w"
+      },
+      {
+        "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+      },
+      {
+        "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+        "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+      }
+    ],
+    "branches": [
+      {
+        "id": "stkd-scrt",
+        "label": "ShadeLend vault 1: stkd-SCRT",
+        "tier": "standard-external",
+        "summary": "Largest normal-status vault; stkd-SCRT is priced by Shade's own staking-derivative oracle (code id 687, label stkd_scrt_oracle_shade_0.1) composing the Band SCRT/USD price with the stkd-SCRT staking contract exchange rate; the composite returned 0.0793 USD, fresh within a minute of the block-26592283 observation.",
+        "collateralAssets": [
+          "stkd-SCRT (vault 1)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade stkd-SCRT staking-derivative oracle (code id 687, label stkd_scrt_oracle_shade_0.1)",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k SCRT/USD -> stkd_scrt_oracle secret1zw92hxdc0d2luyf43cs2f2wfpwzzwq59m853uw composing the stkd-SCRT staking contract exchange rate -> Shade Oracle Router Primary key \"stkd-SCRT\" -> vault pricing (quote symbol \"stkd-SCRT\" per the Stability Pool valid-assets registry). Composite returned 0.0793 USD, fresh at the observation time.",
+            "address": "secret1zw92hxdc0d2luyf43cs2f2wfpwzzwq59m853uw",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stkd-scrt-oracle",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "stkd-SCRT (vault 1)",
+            "maximumLtvPct": 50,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4. max_ltv 0.50, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 124 open positions, elastic debt 3,561.2 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 1.7,
+        "failureDomainKeys": [
+          "shade:secret:stkd-scrt-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          },
+          {
+            "label": "securesecrets/shade BandQuery interface (GetReferenceData/GetReferenceDataBulk)",
+            "url": "https://github.com/securesecrets/shade/blob/main/packages/shade_protocol/src/contract_interfaces/oracles/band.rs"
+          }
+        ]
+      },
+      {
+        "id": "usdt",
+        "label": "ShadeLend vault 2: USDT (Axelar saUSDT)",
+        "tier": "standard-external",
+        "summary": "Governance-frozen stablecoin vault (no new borrows; 11 open positions carry 1,522.8 SILK of elastic debt). Collateral is priced from the Band Standard Reference Proxy USDT/USD key \"USDT\" (0.9994 at the observation time, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "USDT (vault 2)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"USDT\") -> ShadeLend vault pricing (quote symbol \"USDT\" per the Stability Pool valid-assets registry). USDT/USD returned 0.9994, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "USDT (vault 2)",
+            "maximumLtvPct": 85,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1wk5j2cntwg2fgklf0uta3tlkvt87alfj7kepuw. max_ltv 0.85, liquidation discount 5%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"frozen\", 11 open positions, elastic debt 1,522.8 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 5% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.7,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "usdc",
+        "label": "ShadeLend vault 3: USDC (Axelar saUSDC)",
+        "tier": "standard-external",
+        "summary": "Governance-frozen stablecoin vault carrying 5,094.0 SILK of elastic debt across 24 open positions. Collateral is priced from the Band Standard Reference Proxy USDC/USD key \"USDC\" (0.9999, sub-minute fresh at the observation time) through the router default provider.",
+        "collateralAssets": [
+          "USDC (vault 3)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"USDC\") -> ShadeLend vault pricing (quote symbol \"USDC\" per the Stability Pool valid-assets registry). USDC/USD returned 0.9999, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "USDC (vault 3)",
+            "maximumLtvPct": 85,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1vkq022x4q8t8kx9de3r84u669l65xnwf2lg3e6. max_ltv 0.85, liquidation discount 5%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"frozen\", 24 open positions, elastic debt 5,094.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 5% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 2.5,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "stride-atom",
+        "label": "ShadeLend vault 4: Stride stATOM",
+        "tier": "single-source-or-laggy",
+        "summary": "Normal-status Stride stATOM vault carrying 1,954.2 SILK of elastic debt. The \"Stride ATOM\" price composes Band ATOM/USD with a stATOM redemption rate pushed by a permissioned UpdateRates bot into the Stride Oracle (code id 926); the composite returned 2.7065 USD, fresh at the observation time. The bot-rate component is a single off-chain source, and the sibling Stride INJ rate had already gone stale 10 days before the observation, so this branch is tiered single-source-or-laggy despite currently fresh data.",
+        "collateralAssets": [
+          "Stride stATOM (vault 4)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Stride staking-derivatives oracle (code id 926) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Stride staking-derivatives oracle secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Stride ATOM\" -> ShadeLend vault pricing. Composite returned 2.7065 USD, fresh at the observation time.",
+            "address": "secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stride-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Stride stATOM (vault 4)",
+            "maximumLtvPct": 65,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret155w9uxruypsltvqfygh5urghd5v0zc6f9g69sq. max_ltv 0.65, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 62 open positions, elastic debt 1,954.2 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.9,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:stride-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "stride-osmo",
+        "label": "ShadeLend vault 5: Stride stOSMO",
+        "tier": "single-source-or-laggy",
+        "summary": "Normal-status Stride stOSMO vault with zero debt at block 26592283 (14 open positions). Pricing is the bot-rate Stride Oracle composite (\"Stride OSMO\" returned 0.0425 USD, fresh); same single-source bot-rate dependence as the other derivative branches.",
+        "collateralAssets": [
+          "Stride stOSMO (vault 5)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Stride staking-derivatives oracle (code id 926) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Stride staking-derivatives oracle secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Stride OSMO\" -> ShadeLend vault pricing. Composite returned 0.0425 USD, fresh at the observation time.",
+            "address": "secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stride-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Stride stOSMO (vault 5)",
+            "maximumLtvPct": 55,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1jrp6z8v679yaq65rndsr970mhaxzgfkymvc58g. max_ltv 0.55, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 14 open positions, elastic debt 0.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:stride-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          }
+        ]
+      },
+      {
+        "id": "atom",
+        "label": "ShadeLend vault 6: ATOM",
+        "tier": "standard-external",
+        "summary": "Normal-status ATOM vault with zero debt at block 26592283 (21 open positions). Collateral is priced from the Band ATOM/USD key \"ATOM\" (1.3803 USD, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "ATOM (vault 6)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"ATOM\") -> ShadeLend vault pricing (quote symbol \"ATOM\" per the Stability Pool valid-assets registry). ATOM/USD returned 1.3803, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "ATOM (vault 6)",
+            "maximumLtvPct": 70,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret19e75l25r6sa6nhdf4lggjmgpw0vmpfvsw5cnpe. max_ltv 0.70, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 21 open positions, elastic debt 0.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "osmo",
+        "label": "ShadeLend vault 7: OSMO",
+        "tier": "standard-external",
+        "summary": "Normal-status OSMO vault with zero debt at block 26592283 (9 open positions). Collateral is priced from the Band OSMO/USD key \"OSMO\" (0.0292 USD, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "OSMO (vault 7)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"OSMO\") -> ShadeLend vault pricing (quote symbol \"OSMO\" per the Stability Pool valid-assets registry). OSMO/USD returned 0.0292, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "OSMO (vault 7)",
+            "maximumLtvPct": 65,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret150jec8mc2hzyyqak4umv6cfevelr0x9p0mjxgg. max_ltv 0.65, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 9 open positions, elastic debt 0.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "ShadeLend vault 8: WETH (Axelar saWETH)",
+        "tier": "standard-external",
+        "summary": "Governance-frozen WETH vault and the dominant ShadeLend debt branch: 155,041.2 SILK of elastic debt (74.9% of aggregate registry debt) across 40 open positions, backed by 198.7 WETH of vault collateral. Collateral is priced from the Band ETH/USD key \"ETH\" (1,918.7 USD, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "WETH (vault 8)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"ETH\") -> ShadeLend vault pricing (quote symbol \"ETH\" per the Stability Pool valid-assets registry). ETH/USD returned 1,918.7, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "WETH (vault 8)",
+            "maximumLtvPct": 75,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret139qfh3nmuzfgwsx2npnmnjl4hrvj3xq5rmq8a0. max_ltv 0.75, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"frozen\", 40 open positions, elastic debt 155,041.2 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 74.9,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "wbtc",
+        "label": "ShadeLend vault 9: WBTC (Axelar saWBTC) - frozen with stranded debt",
+        "tier": "single-source-or-laggy",
+        "summary": "Governance-frozen WBTC vault in a distressed state: 37,867.7 SILK of elastic debt (18.3% of aggregate registry debt) against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC), the collateral oracle staleness check disabled (collateral_oracle_delay 99,999,999,999,999s), and the LiquidatablePositions query reverting with a divide-by-zero error at block 26592283. The price path itself (Band BTC/USD key \"BTC\", 64,984.9 USD, sub-minute fresh) is live, but with the staleness bound disabled the vault would accept arbitrarily old prices, so the branch is tiered single-source-or-laggy.",
+        "collateralAssets": [
+          "WBTC (vault 9)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (default provider, key \"BTC\") -> ShadeLend vault pricing (quote symbol \"BTC\" per the Stability Pool valid-assets registry). BTC/USD returned 64,984.9, fresh at the observation time; the vault's collateral_oracle_delay staleness check is disabled (99,999,999,999,999s).",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "WBTC (vault 9)",
+            "maximumLtvPct": 85,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1guyayjwg5f84daaxl7w84skd8naxvq8vz9upqx. max_ltv 0.85, liquidation discount 5%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 99,999,999,999,999s (staleness check disabled), status \"frozen\", 39 open positions, elastic debt 37,867.7 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 5% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized. For this branch the bad-debt state is not hypothetical: the vault is frozen, its collateral base is effectively exhausted, liquidation enumeration reverts (divide-by-zero in the vault's muldiv), and no reviewed source documents how or whether the 37,867.7 SILK shortfall will be settled. No public postmortem was located for the incident that produced this state (searched 2026-08-08: web queries for a Shade/ShadeLend WBTC vault exploit or oracle incident returned no protocol disclosure).",
+        "debtSharePct": 18.3,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "persistence-atom",
+        "label": "ShadeLend vault 10: Persistence stkATOM",
+        "tier": "single-source-or-laggy",
+        "summary": "Normal-status Persistence stkATOM vault carrying 1,071.0 SILK of elastic debt whose oracle has been dead for 18 months: the Persistence Oracle (code id 944) rejects every \"Persistence ATOM\" price query with \"Derivative rate is stale. Last updated 1738935758\" (2025-02-07). While the rate stays stale the vault cannot price collateral, so borrows and liquidations through the normal path fail closed.",
+        "collateralAssets": [
+          "Persistence stkATOM (vault 10)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Persistence staking-derivatives oracle (code id 944) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Persistence staking-derivatives oracle secret1lgq7h9lmvc2pf408j2st649n52w50xln529jwg (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Persistence ATOM\" -> ShadeLend vault pricing. STALE: get_price reverted at the observation time with \"Derivative rate is stale. Last updated 1738935758\" (2025-02-07), 18 months before the observation.",
+            "address": "secret1lgq7h9lmvc2pf408j2st649n52w50xln529jwg",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:persistence-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Persistence stkATOM (vault 10)",
+            "maximumLtvPct": 65,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret16vjfe24un4z7d3sp9vd0cmmfmz397nh2njpw3e. max_ltv 0.65, liquidation discount 5%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 13 open positions, elastic debt 1,071.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 5% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized. Branch-specific liveness failure observed at block 26592283: with the redemption rate stale since 2025-02-07, this vault's price queries revert, so neither liquidations nor oracle-dependent repayments can execute through the standard path; the debt is effectively frozen in place without a documented settlement path.",
+        "debtSharePct": 0.5,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:persistence-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "ShadeLend vault 11: wstETH",
+        "tier": "single-source-or-laggy",
+        "summary": "Governance-frozen wstETH vault carrying 711.2 SILK of elastic debt across 16 open positions. The \"Lido Staked ETH\" price composes Band ETH/USD with a bot-updated wstETH rate in the Lido Oracle (code id 945); the composite returned 2,381.6 USD, fresh at the observation time. Tiered single-source-or-laggy for the single-source bot-rate dependence shared with the stale Persistence/Stride-INJ siblings.",
+        "collateralAssets": [
+          "wstETH (vault 11)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Lido staking-derivatives oracle (code id 945) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Lido staking-derivatives oracle secret166dngdltwaex4vfsdrv957g7qzavl309lcg3d5 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Lido Staked ETH\" -> ShadeLend vault pricing. Composite returned 2,381.6 USD, fresh at the observation time.",
+            "address": "secret166dngdltwaex4vfsdrv957g7qzavl309lcg3d5",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:lido-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "wstETH (vault 11)",
+            "maximumLtvPct": 70,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret148jzxkagwe0xulf8jt3sw4nuh2shdh788z3gyd. max_ltv 0.70, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"frozen\", 16 open positions, elastic debt 711.2 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.3,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:lido-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          },
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal (Shade contract identities and admins)",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ]
+      },
+      {
+        "id": "sscrt",
+        "label": "ShadeLend vault 12: sSCRT",
+        "tier": "standard-external",
+        "summary": "Normal-status sSCRT vault carrying 117.8 SILK of elastic debt across 21 open positions. Collateral is priced from the Band SCRT/USD key \"SCRT\" (0.0332 USD, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "sSCRT (vault 12)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"SCRT\") -> ShadeLend vault pricing (quote symbol \"SCRT\" per the Stability Pool valid-assets registry). SCRT/USD returned 0.0332, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "sSCRT (vault 12)",
+            "maximumLtvPct": 65,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1k0jntykt7e4g3y88ltc60czgjuqdy4c9e8fzek. max_ltv 0.65, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 21 open positions, elastic debt 117.8 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.1,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "inj",
+        "label": "ShadeLend vault 13: INJ",
+        "tier": "standard-external",
+        "summary": "Normal-status INJ vault with zero debt at block 26592283 (7 open positions). Collateral is priced from the Band INJ/USD key \"INJ\" (4.4033 USD, sub-minute fresh) through the router default provider.",
+        "collateralAssets": [
+          "INJ (vault 13)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"INJ\") -> ShadeLend vault pricing (quote symbol \"INJ\" per the Stability Pool valid-assets registry). INJ/USD returned 4.4033, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "INJ (vault 13)",
+            "maximumLtvPct": 70,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret14706vxakdzkz9a36872cs62vpl5qd84kpwvpew. max_ltv 0.70, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 7 open positions, elastic debt 0.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "stride-inj",
+        "label": "ShadeLend vault 14: Stride stINJ",
+        "tier": "single-source-or-laggy",
+        "summary": "Normal-status Stride stINJ vault with zero debt at block 26592283 whose oracle is already stale: the Stride Oracle rejects \"Stride INJ\" queries with \"Derivative rate is stale. Last updated 1785351758\" (2026-07-29, 10 days before the observation). Any future debt in this vault would be unliquidatable through the standard path until the rate bot resumes updates.",
+        "collateralAssets": [
+          "Stride stINJ (vault 14)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Stride staking-derivatives oracle (code id 926) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Stride staking-derivatives oracle secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Stride INJ\" -> ShadeLend vault pricing. STALE: get_price reverted at the observation time with \"Derivative rate is stale. Last updated 1785351758\" (2026-07-29), 10 days before the observation.",
+            "address": "secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stride-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Stride stINJ (vault 14)",
+            "maximumLtvPct": 60,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query (secretjs, Lavender.Five LCD gateway) against the Shade Single Vault Registry secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny (code hash ac5d501827d9a337a618ca493fcbf1323b20771378774a6bf466cb66361bf021, matching the Shade hackathon reference's current-registry hash). Collateral token secret1eurddal3m0tphtapad9awgzcuxwz8ptrdx7h4n. max_ltv 0.60, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"normal\", 18 open positions, elastic debt 0.0 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:stride-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Shade Single Vault Registry code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          }
+        ]
+      },
+      {
+        "id": "legacy-stkd-scrt",
+        "label": "Legacy ShadeLend vault 1: stkd-SCRT (deprecated)",
+        "tier": "standard-external",
+        "summary": "Deprecated (minting-closed) stkd-SCRT vault on the legacy registry, still liquidatable, carrying 169.3 SILK of elastic debt across 27 open positions; same stkd-SCRT composite oracle path as the current-registry vault.",
+        "collateralAssets": [
+          "stkd-SCRT (legacy vault 1)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade stkd-SCRT staking-derivative oracle (code id 687, label stkd_scrt_oracle_shade_0.1)",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k SCRT/USD -> stkd_scrt_oracle secret1zw92hxdc0d2luyf43cs2f2wfpwzzwq59m853uw composite -> Shade Oracle Router Primary key \"stkd-SCRT\" -> vault pricing. Composite returned 0.0793 USD, fresh at the observation time.",
+            "address": "secret1zw92hxdc0d2luyf43cs2f2wfpwzzwq59m853uw",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stkd-scrt-oracle",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "stkd-SCRT (legacy vault 1)",
+            "maximumLtvPct": 45,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query against the Single Vault Registry Legacy secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw (code hash 148a525ec7bffedfc41cbc5339bf22d9e310d49b65831a269c86774fb732948c, matching the hackathon reference's minting-closed registry); legacy vaults remain liquidatable. Collateral token secret1k6u0cy4feepm6pehnz804zmwakuwdapm69tuc4. max_ltv 0.45, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"deprecated\", 27 open positions, elastic debt 169.3 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.1,
+        "failureDomainKeys": [
+          "shade:secret:stkd-scrt-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Single Vault Registry Legacy code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "legacy-usdc",
+        "label": "Legacy ShadeLend vault 3: USDC (deprecated)",
+        "tier": "standard-external",
+        "summary": "Deprecated (minting-closed) USDC vault on the legacy registry, still liquidatable, carrying 0.06 SILK of elastic debt across 8 open positions; Band USDC/USD default-provider path.",
+        "collateralAssets": [
+          "USDC (legacy vault 3)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol via Band Standard Reference Proxy (default provider of Shade Oracle Router Primary)",
+            "path": "BandChain reference data relayed to Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k on Secret Network -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm (no key-specific override; default provider, key \"USDC\") -> ShadeLend vault pricing (quote symbol \"USDC\" per the Stability Pool valid-assets registry). USDC/USD returned 0.9999, fresh at the observation time.",
+            "address": "secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "USDC (legacy vault 3)",
+            "maximumLtvPct": 85,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query against the Single Vault Registry Legacy secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw (code hash 148a525ec7bffedfc41cbc5339bf22d9e310d49b65831a269c86774fb732948c, matching the hackathon reference's minting-closed registry); legacy vaults remain liquidatable. Collateral token secret1vkq022x4q8t8kx9de3r84u669l65xnwf2lg3e6. max_ltv 0.85, liquidation discount 5%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"deprecated\", 8 open positions, elastic debt 0.1 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 5% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Single Vault Registry Legacy code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          }
+        ]
+      },
+      {
+        "id": "legacy-stride-atom",
+        "label": "Legacy ShadeLend vault 4: Stride stATOM (deprecated)",
+        "tier": "single-source-or-laggy",
+        "summary": "Deprecated (minting-closed) Stride stATOM vault on the legacy registry, still liquidatable, carrying 12.2 SILK of elastic debt across 13 open positions; bot-rate Stride Oracle composite path (fresh at the observation time).",
+        "collateralAssets": [
+          "Stride stATOM (legacy vault 4)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Stride staking-derivatives oracle (code id 926) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Stride staking-derivatives oracle secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Stride ATOM\" -> ShadeLend vault pricing. Composite returned 2.7065 USD, fresh at the observation time.",
+            "address": "secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stride-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Stride stATOM (legacy vault 4)",
+            "maximumLtvPct": 45,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query against the Single Vault Registry Legacy secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw (code hash 148a525ec7bffedfc41cbc5339bf22d9e310d49b65831a269c86774fb732948c, matching the hackathon reference's minting-closed registry); legacy vaults remain liquidatable. Collateral token secret155w9uxruypsltvqfygh5urghd5v0zc6f9g69sq. max_ltv 0.45, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"deprecated\", 13 open positions, elastic debt 12.2 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0.006,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:stride-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Single Vault Registry Legacy code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          }
+        ]
+      },
+      {
+        "id": "legacy-stride-osmo",
+        "label": "Legacy ShadeLend vault 5: Stride stOSMO (deprecated)",
+        "tier": "single-source-or-laggy",
+        "summary": "Deprecated (minting-closed) Stride stOSMO vault on the legacy registry, still liquidatable, carrying 0.7 SILK of elastic debt across 5 open positions; bot-rate Stride Oracle composite path (fresh at the observation time).",
+        "collateralAssets": [
+          "Stride stOSMO (legacy vault 5)"
+        ],
+        "chains": [
+          "secret"
+        ],
+        "feeds": [
+          {
+            "provider": "Shade Stride staking-derivatives oracle (code id 926) composing Band base-asset price with a bot-updated derivative redemption rate",
+            "path": "Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k base price -> Stride staking-derivatives oracle secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4 (redemption rate set by a permissioned UpdateRates bot; contract rejects queries when the rate is stale) -> Shade Oracle Router Primary secret10n2xl5jmez6r9umtdrth78k0vwmce0l5m9f5dm key \"Stride OSMO\" -> ShadeLend vault pricing. Composite returned 0.0425 USD, fresh at the observation time.",
+            "address": "secret1jnp0yzwdwnft4smpnnywt6yxr288xep4aur5d4",
+            "chain": "secret",
+            "stalenessBoundSec": 600,
+            "observedAt": "2026-08-08",
+            "observedBlock": 26592283,
+            "failureDomainKeys": [
+              "band:secret:band-standard-reference-proxy",
+              "shade:secret:stride-staking-derivatives-oracle",
+              "shade:secret:derivative-rate-bot",
+              "shade:secret:oracle-router-primary",
+              "secret"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No alternate oracle provider exists: Shade's tech-stack documentation lists Band Protocol as the live oracle with SupraOracles still under research, and the Oracle Router holds a single default provider (Band Standard Reference Proxy secret1ezamax2vrhjpy92fnujlpwfj2dpredaafss47k). The router's protected-key deviation guard list was empty at block 26592283, so no deviation clamp is currently enforced; an OraclesAdmin can freeze the router via Admin Auth. The Silk Index Oracle (when_stale 3600s) freezes the SILK peg at its last computed value when feeds go stale or its deviation threshold is exceeded, and requires an admin rollback to unfreeze. Vault collateral pricing enforces a per-vault collateral_oracle_delay staleness tolerance (600s on all current vaults except the frozen WBTC vault, where it is disabled at 99,999,999,999,999s); the Overseer's silk_oracle_delay for the SILK Peg leg is 21,600s. Band heartbeat for this Secret Network deployment is not published; all Band-backed keys returned sub-minute-fresh updates at the observation time.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 26592283,
+        "collateralParameters": [
+          {
+            "asset": "Stride stOSMO (legacy vault 5)",
+            "maximumLtvPct": 45,
+            "note": "Observed 2026-08-08 at Secret Network block 26592283 by encrypted compute query against the Single Vault Registry Legacy secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw (code hash 148a525ec7bffedfc41cbc5339bf22d9e310d49b65831a269c86774fb732948c, matching the hackathon reference's minting-closed registry); legacy vaults remain liquidatable. Collateral token secret1jrp6z8v679yaq65rndsr970mhaxzgfkymvc58g. max_ltv 0.45, liquidation discount 10%, borrow fee 0%, interest rate 5% (target), collateral_oracle_delay 600s, status \"deprecated\", 5 open positions, elastic debt 0.7 SILK at block 26592283. Per-position debt and collateral amounts are private Secret Network state (registry returns zeroed position amounts); per-position LTV is exposed only for liquidatable positions."
+          }
+        ],
+        "liquidationMechanism": "Permissionless stability-pool liquidation: anyone can query LiquidatablePositions { vault_id } on the vault registry and execute Liquidate { vault_id, position_id } (Shade hackathon reference). The Shade Stability Pool automatically supplies SILK to repay half of the position's outstanding debt; collateral backing the loan is seized at this vault's 10% liquidation discount and distributed to Stability Pool depositors, the liquidation caller receives 10% of liquidation profits, and a 20% protocol share goes to the Shade treasury (per-vault liquidation_fee config read from the registry). No auction window or liquidation delay is documented; execution is atomic in the calling transaction.",
+        "liquidationDelaySec": 0,
+        "backstop": "The Shade Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w, code id 925 per the SCRT Labs v1.10 proposal) is the only documented liquidation backstop: pooled SILK repays liquidated debt and depositors receive the seized collateral at the vault discount. Its get_pool_info compute query at block 26592283 reported total_silk_deposited of 88,291.3 SILK (epoch 2) against 207,123.4 SILK of aggregate elastic ShadeLend debt across both registries. No insurance fund, protocol bad-debt buyer, or external liquidation backstop is documented in the reviewed sources.",
+        "shutdownOrBadDebtBehavior": "No global shutdown, settlement, write-off, or bad-debt socialization path is documented in the reviewed sources (Shade docs, hackathon reference, shade-oracle source). The observed containment lever is per-vault governance freeze: the registry reports vault status (normal / frozen / deprecated), and frozen vaults block new borrowing while existing debt remains. Behavior when the Stability Pool holds insufficient SILK to cover a liquidation is not published. On-chain precedent at block 26592283: the frozen WBTC vault carries 37,867.7 SILK of elastic debt against near-zero remaining collateral (collateral elastic 2,097 raw units, about 0.00002097 WBTC) and its LiquidatablePositions query reverts with a divide-by-zero error, so that shortfall currently sits stranded and unsocialized.",
+        "debtSharePct": 0,
+        "failureDomainKeys": [
+          "shade:secret:derivative-rate-bot",
+          "shade:secret:stride-staking-derivatives-oracle",
+          "band:secret:band-standard-reference-proxy",
+          "shade:secret:shadelend-stability-pool",
+          "shade:secret:shadelend-permissionless-liquidators",
+          "shade:secret:oracle-router-primary",
+          "secret"
+        ],
+        "sources": [
+          {
+            "label": "Secret Network LCD compute query provenance: Single Vault Registry Legacy code hash (Lavender.Five)",
+            "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend stability-pool liquidations)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+          },
+          {
+            "label": "Shade hackathon reference (ShadeLend vault registry, liquidation interface, 10% caller reward)",
+            "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+          },
+          {
+            "label": "shade-oracle stride_staking_derivatives_oracle source (bot-set rates, stale-rate rejection)",
+            "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/stride_staking_derivatives_oracle/src/contract.rs"
+          }
+        ]
+      }
+    ]
+  }
+}

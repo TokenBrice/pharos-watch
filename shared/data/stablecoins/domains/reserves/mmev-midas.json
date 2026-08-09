@@ -1,0 +1,87 @@
+{
+  "id": "mmev-midas",
+  "reserves": [
+    {
+      "name": "MEV Capital DeFi strategy NAV",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "MEV Capital (strategy manager) via Midas mMEV liquid-yield token",
+      "riskFactors": [
+        "basis",
+        "counterparty",
+        "credit",
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mMEV product page",
+        "url": "https://midas.app/mmev"
+      },
+      {
+        "label": "Midas transparency dashboard",
+        "url": "https://midas.app/transparency"
+      },
+      {
+        "label": "Midas investment risks disclosure",
+        "url": "https://docs.midas.app/legal/investment-risks-1-0-1"
+      }
+    ],
+    "rationale": "Midas identifies the live mMEV exposure as a MEV Capital managed DeFi strategy NAV — the issuer disclosures describe dynamic allocation across DeFi lending, liquidity provision, arbitrage, carry, and liquidation strategies — but does not disclose the current underlying assets, venue allocations, or custody providers. The slice is named to match the live chainlink-nav reserve adapter capture (assetLabel 'MEV Capital DeFi strategy NAV') so the reviewed classification overlays the captured exposure; it remains a bounded aggregate with the underlying allocation explicitly unresolved.",
+    "compositionBasis": "Midas mMEV product, risk, and transparency disclosures",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete current underlying strategy allocation, venue exposures, and custody providers are undisclosed; the single NAV slice is the whole envelope, with the strategy internals intentionally unresolved.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "MEV Capital DeFi strategy NAV",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The product is disclosed only as a managed DeFi strategy NAV without a current structured underlying asset and failure-domain inventory."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Midas mMEV issuance and redemption vault contracts (Ethereum)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "MEV Capital strategy wallets and trading venues (undisclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas smart contracts documentation",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      },
+      {
+        "label": "Midas mMEV product page",
+        "url": "https://midas.app/mmev"
+      }
+    ],
+    "uncertainty": "Midas documents the mMEV token, issuance and redemption vaults, and NAV data-feed contracts, and the strategy disclosures describe a dynamically allocated managed DeFi strategy, so strategy assets are actively deployed and reused by design. The underlying strategy wallets, trading venues, custodians, provider shares, legal segregation, and bankruptcy-remoteness terms are not disclosed.",
+    "knownUnknownExposurePct": 100
+  }
+}

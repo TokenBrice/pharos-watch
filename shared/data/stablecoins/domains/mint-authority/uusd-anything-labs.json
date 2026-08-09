@@ -1,0 +1,88 @@
+{
+  "id": "uusd-anything-labs",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "Unity USD (UUSD) is an upgradeable Ownable proxy ERC-20 on BSC operated by Anything Labs; live reads resolve the token owner to a 4/6 Safe that can mint/burn directly and controls the proxy-admin ownership chain.",
+    "controls": [
+      {
+        "label": "UUSD owner Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 4,
+          "owners": [
+            "0x887818A767C2B3cE9FEfF05e81236cA4a02F5AFD",
+            "0x2477Dc7EE0730610B8Bc5Ff0F5630D6b6367cF4a",
+            "0x2Cc89432315D20FfC6973ec4fcB9DC97cc8812Ac",
+            "0xD6d3375456Dd057b77082bdf58c79f14BFE24bef",
+            "0x06D08a182bc72719392f8C608750eD7ba355B984",
+            "0x4BC41b6E4A6De9d08B185578F05B861dF438D402"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api",
+          "observedBlock": 103627514
+        },
+        "evidence": "BSC owner() returned this Safe at block 103627514. RPC getOwners() decoded 6 owners (matching stored list); storage slot 4 returned threshold 4. No enabled modules; zero guard confirmed. The owner can mint/burn directly under the UUSD implementation."
+      },
+      {
+        "label": "UUSD proxy-admin ownership chain",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "bsc",
+        "address": "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 (reconfirmed at BSC block 103627514), whose owner() resolves to the same 4/6 Safe (0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4). ProxyAdmin is a non-multisig upgrader contract; modules not applicable."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "BSC block 103627514: token owner() = 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4 (4/6 Safe, 6 owners confirmed via RPC getOwners, threshold 4 via storage slot 4); proxy-admin chain confirmed (EIP-1967 slot → 0x61108af7…, owner → 0x2D49CB4…, owner → same Safe). All mint-capable surfaces on-chain confirmed. Reserve backing is undisclosed by issuer but does not affect mint-path verification. UUSD (Anything Labs) is a BSC protocol with no disclosed registered entity or jurisdiction; its site, whitepaper and GitHub disclose no reserve composition, custodian, or independent attestation (only smart-contract security scanners such as SlowMist and GoPlus), so reconciliation is unknown. No financial regulator or licence for Anything Labs or UUSD was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
+      "sources": [
+        {
+          "label": "UUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        },
+        {
+          "label": "UUSD website",
+          "url": "https://uusd.ai/"
+        },
+        {
+          "label": "UUSD whitepaper",
+          "url": "https://uusd.ai/whitepaper.pdf"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "UUSD proxy-admin ownership chain",
+      "observedAt": "2026-06-11",
+      "observedBlock": 103627514,
+      "sources": [
+        {
+          "label": "UUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        }
+      ]
+    }
+  }
+}

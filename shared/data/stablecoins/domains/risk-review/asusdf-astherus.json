@@ -1,0 +1,62 @@
+{
+  "id": "asusdf-astherus",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Aster asUSDF contract inventory",
+        "url": "https://docs.asterdex.com/overview/smart-contracts"
+      },
+      {
+        "label": "Sourcify exact-match asUSDF ABI and source (chain 56)",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb"
+      },
+      {
+        "label": "Pinned Aster asUSDF source (ERC20Pausable + ADMIN_ROLE pause)",
+        "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/oft/asUSDF.sol"
+      },
+      {
+        "label": "BNB Chain public RPC control reads",
+        "url": "https://bsc-dataseed.bnbchain.org"
+      }
+    ],
+    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) is a direct non-proxy AccessControl + ERC20Pausable token. Verified source and Sourcify ABI expose ADMIN_ROLE pause()/unpause() and route _update through ERC20Pausable, so a privileged pause freezes ordinary transfer, transferFrom, mint, and burn for every holder (global transfer restriction). The ABI has no blacklist/freeze/blocklist mapping and no holder-selective allowlist; the only holder-affecting privilege beyond pause is MINTER_AND_BURN_ROLE burn(address from,uint256 amount), which destroys an arbitrary balance without allowance. Re-verified 2026-08-09 on BSC: paused() returned false, the EIP-1967 implementation slot was zero (no implementation swap since the prior review), and the Astherus governance Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f holds ADMIN_ROLE directly (hasRole(0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775, Safe) = 1; getThreshold() = 4), while the timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 does not hold ADMIN_ROLE (hasRole = 0). This corrects the 2026-07-30 framing: global pause authority is live in a 4-of-8 Safe today, not gated behind a six-hour timelock re-grant. The asUSDFEarn wrapper 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695 holds MINTER_AND_BURN_ROLE, and the timelock retains DEFAULT_ADMIN_ROLE and can rotate roles after its delay. Global pause freeze plus privileged burn-from is a known direct access surface; holder-specific blacklist is absent. Upstream USDF freeze exposure remains additional via variantOf usdf-astherus.",
+    "reviewer": "Kimi ACCESS-FREEZE AF01 (verified FV-A)",
+    "reviewedAt": "2026-08-09"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "asUSDF is a NAV-accreting staking wrapper minted from deposited USDF and withdrawn back to USDF through Aster's queue, not a borrower debt market with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Aster documents asUSDF as the yield-bearing wrapper received by staking USDF. Minting and withdrawal change wrapper shares and return the upstream USDF asset; asUSDF does not create collateralized borrower positions or expose collateral-health liquidation branches of its own.",
+      "sources": [
+        {
+          "label": "Aster: mint asUSDF",
+          "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+        },
+        {
+          "label": "Aster USDF and asUSDF tutorials",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster: mint asUSDF",
+        "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      },
+      {
+        "label": "Aster USDF and asUSDF tutorials",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
+      }
+    ]
+  }
+}

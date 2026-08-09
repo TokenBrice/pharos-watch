@@ -1,0 +1,67 @@
+{
+  "id": "dllr-sovryn",
+  "reserves": [
+    {
+      "name": "Sovryn Zero ZUSD",
+      "pct": 99.999978295,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sovryn Zero protocol",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Dollar on Chain DOC",
+      "pct": 0.000021705,
+      "risk": "medium",
+      "coinId": "doc-money-on-chain",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Money on Chain protocol",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-31",
+    "reviewer": "GPT SOL-TAIL-B wave6; Codex T61 dependency re-review 2026-07-31",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Sovryn Mynt and DLLR documentation",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      },
+      {
+        "label": "Sovryn Mynt bAsset-to-mAsset documentation",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt/basset-to-masset"
+      },
+      {
+        "label": "Rootstock public RPC (Mynt holder balanceOf snapshot)",
+        "url": "https://public-node.rsk.co"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-31: Sovryn documents DLLR as a 1:1 Mynt basket whose supported bAssets are ZUSD and DOC, both BTC-backed. Rootstock public RPC at block 9,109,231 (2026-07-30T23:16:22Z) read balanceOf(Mynt MassetManager 0x5f777270259e32f79589fe82269db6209f7b7582) as 1,815,644.8369593427 ZUSD and 0.3940875700965216 DOC, yielding 99.999978295% ZUSD and 0.000021705% DOC. ZUSD remains an untracked exogenous bAsset; DOC is linked to doc-money-on-chain below.",
+    "compositionBasis": "Sovryn Mynt supported-bAsset documentation and Rootstock balanceOf snapshot at block 9,109,231",
+    "compositionAsOf": "2026-07-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Sovryn's Mynt documentation identifies ZUSD and DOC as the supported DLLR bAssets. The live on-chain snapshot supplies the current slice weights, but no issuer attestation independently reconciles the basket or discloses a separate ZUSD reserve report.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Sovryn Zero ZUSD",
+        "pct": 99.999978295,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Sovryn identifies ZUSD as a supported DLLR bAsset, but it is not a tracked Pharos stablecoin and therefore cannot form a dependency graph edge."
+      }
+    ]
+  }
+}

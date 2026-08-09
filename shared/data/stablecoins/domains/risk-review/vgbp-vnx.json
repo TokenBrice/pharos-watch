@@ -1,0 +1,83 @@
+{
+  "id": "vgbp-vnx",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "VNXCToken source",
+        "url": "https://gitlab.com/vnx/smart-contracts/ethereum-contracts/-/blob/947c79a7/contracts/vnxc.sol"
+      },
+      {
+        "label": "Solana VGBP mint",
+        "url": "https://explorer.solana.com/address/5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1"
+      }
+    ],
+    "evidence": "At the 2026-07-13 cutoff, the Base and Celo VNXCToken deployments assigned asset-protection role 0 to issuer-controlled RBAC bearers; that role can freeze and unfreeze addresses, reclaim balances, and pause transfers. The Solana mint separately had freeze authority 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY. These are direct on-chain blacklist or equivalent freeze controls, not a governance inference.",
+    "reviewer": "Codex VNX family authority audit",
+    "reviewedAt": "2026-07-13"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "VGBP has issuer-controlled deployments across its listed chains, and the reviewed mint-authority data resolves direct VNX issuer minting on Base. No separate bridge, lockbox, or liquidity route was resolved, so Pharos treats current route risk as native issuance on supported chains.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "VNX platform docs",
+        "url": "https://vnx.gitbook.io/vnx-platform/"
+      },
+      {
+        "label": "VNX",
+        "url": "https://vnx.li/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "destinationChain": "base",
+        "contractAddress": "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "celo:0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+        "destinationChain": "celo",
+        "contractAddress": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "solana:5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+        "destinationChain": "solana",
+        "contractAddress": "5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

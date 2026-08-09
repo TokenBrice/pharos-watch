@@ -1,0 +1,83 @@
+{
+  "id": "u-united-stables",
+  "reserves": [
+    {
+      "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and undisclosed fiat and stablecoin issuers",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "United Stables live proof of reserves",
+        "url": "https://u.tech/u-client-api/v1/public/u/por"
+      },
+      {
+        "label": "United Stables reserve disclosure",
+        "url": "https://u.tech/"
+      },
+      {
+        "label": "United Stables terms and conditions",
+        "url": "https://u.tech/terms/"
+      }
+    ],
+    "rationale": "The live issuer feed reports only aggregate reserve value and token supply. The issuer's terms identify the eligible reserve envelope as cash, U.S. Treasury bills, and fiat-referenced stablecoins, but explicitly permit the mix and counterparties to change without notice and do not publish constituent identities or weights.",
+    "compositionBasis": "United Stables live aggregate proof of reserves and contractual reserve envelope",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve value is reported as one variable basket; asset weights, stablecoin identities, banking counterparties, custodians, and liquidity terms are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Cash, Treasury bills, and unidentified stablecoins are reported as one combined balance."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed accredited banking institutions",
+        "role": "bank"
+      },
+      {
+        "name": "Undisclosed licensed and qualified digital-asset custodians",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "United Stables reserve disclosure",
+        "url": "https://u.tech/"
+      },
+      {
+        "label": "United Stables terms and conditions",
+        "url": "https://u.tech/terms/"
+      }
+    ],
+    "uncertainty": "The website describes segregated custody accounts, while the governing terms state that United Stables need not segregate reserves and that holders have no preferential, secured, or proprietary insolvency claim. Provider identities, allocations, account terms, and rehypothecation restrictions are not disclosed.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "usdk-orki",
+  "reserves": [
+    {
+      "name": "WETH",
+      "pct": 76.6,
+      "risk": "very-low"
+    },
+    {
+      "name": "weETH (Ether.fi)",
+      "pct": 10.2,
+      "risk": "low"
+    },
+    {
+      "name": "rswETH",
+      "pct": 6.8,
+      "risk": "medium"
+    },
+    {
+      "name": "swETH",
+      "pct": 6.4,
+      "risk": "medium"
+    }
+  ]
+}

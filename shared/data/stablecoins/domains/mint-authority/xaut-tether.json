@@ -1,0 +1,135 @@
+{
+  "id": "xaut-tether",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "XAUT is issuer-minted by Tether Gold; the Ethereum implementation exposes onlyOwner mint/redeem and the token owner is a verified 3/6 legacy multisig contract.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x68749665ff8d2d112fa859aa293f07a622782f38"
+      ],
+      "implementationAddresses": [
+        "0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566"
+      ],
+      "adminAddresses": [
+        "0x856fcc085290ac1e40392442211e6a333afb873e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "XAUT owner legacy multisig",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711756,
+      "sources": [
+        {
+          "label": "Sourcify verified XAUT proxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x68749665ff8d2d112fa859aa293f07a622782f38?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Sourcify verified XAUT ProxyAdmin",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x856fcc085290ac1e40392442211e6a333afb873e?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x68749665ff8d2d112fa859aa293f07a622782f38",
+        "label": "XAUT token onlyOwner mint",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
+        "sources": [
+          {
+            "label": "Sourcify verified XAUT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
+          }
+        ],
+        "evidence": "At Ethereum block 25711756, owner() through the XAUT proxy returned 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828. The verified implementation exposes onlyOwner mint(address,uint256) with no numerical supply cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828",
+        "label": "XAUT owner legacy multisig",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711756,
+        "sources": [
+          {
+            "label": "Sourcify verified XAUT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Sourcify verified XAUT ProxyAdmin",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x856fcc085290ac1e40392442211e6a333afb873e?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Sourcify verified legacy MultiSigWallet",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828?fields=compilation,sources,proxyResolution"
+          },
+          {
+            "label": "Ethereum observation block 25711756",
+            "url": "https://etherscan.io/block/25711756"
+          }
+        ],
+        "evidence": "At Ethereum block 25711756, this address was both XAUT owner() and ProxyAdmin.owner(). It returned required() = 3 and six legacy multisig owners. The owner can mint directly and can make immediate ProxyAdmin upgrades; it is not a Safe, so Safe modules and guards are not applicable."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Tether Gold FAQ",
+          "url": "https://gold.tether.to/faq"
+        },
+        {
+          "label": "Sourcify verified XAUT implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Sourcify verified XAUT ProxyAdmin",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x856fcc085290ac1e40392442211e6a333afb873e?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "BDO Tether Gold Q1 2026 report",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        },
+        {
+          "label": "Tether Gold reports",
+          "url": "https://gold.tether.to/reports"
+        },
+        {
+          "label": "El Salvador CNAD stablecoin issuers",
+          "url": "https://cnad.gob.sv/es/issuers/"
+        },
+        {
+          "label": "Ethereum observation block 25711756",
+          "url": "https://etherscan.io/block/25711756"
+        }
+      ],
+      "evidence": "The canonical XAUT proxy, unrestricted onlyOwner mint path, 3-of-6 token owner, and ProxyAdmin ownership were reverified at Ethereum block 25711756. No public mint-control incident was found in the issuer news and report corpus. Quarterly BDO reconciliation supports periodic reconciliation, while El Salvador CNAD's issuer registry supports retaining prudential supervision for TG Commodities.",
+      "reviewer": "Codex C01 control/access review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

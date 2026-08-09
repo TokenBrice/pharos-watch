@@ -1,0 +1,176 @@
+{
+  "id": "cjpy-yamato",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "CJPY is minted permissionlessly from Yamato's Liquity-v1-style ETH pledges (130% MCR, one-time fee, no interest). The Yamato contract is a UUPS proxy (ERC1967Proxy) pointing to YamatoV4 implementation; upgrade authority (onlyGovernance) is held by a 2-of-4 Gnosis Safe at 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec with no modules. CJPY token is non-upgradeable with no owner; its own private governance variable has been permanently renounced (revokeGovernance), so its CurrencyOS pointer is fixed. CurrencyOS itself (which coordinates minting) is a separate UUPS proxy whose upgrade authority resolves to the same 2-of-4 Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+        "0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f"
+      ],
+      "implementationAddresses": [
+        "0x0bfa59f9fbe9565c240cd64311c86e90e59a4838",
+        "0x811cE73639A05f436a56ea71480cd921a4039542"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Yamato governance Safe (upgrade + parameter authority)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579969,
+      "sources": [
+        {
+          "label": "CurrencyOS contract on Etherscan",
+          "url": "https://etherscan.io/address/0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f"
+        },
+        {
+          "label": "CurrencyOS source (pinned)",
+          "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/CurrencyOS.sol"
+        },
+        {
+          "label": "UUPSBase source (pinned)",
+          "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Dependencies/UUPSBase.sol"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Yamato pledge contract (ETH CDP mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+        "capDescription": "Mint bounded by the 130% minimum collateralization ratio on ETH pledges, with redemption-based peg defense.",
+        "canRaiseCap": "unknown",
+        "evidence": "At Ethereum block 25295201, the Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) has EIP-1967 impl slot pointing to YamatoV4 (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838, 29684 bytes); proxy admin slot = 0x0 (UUPS pattern). Users mint CJPY by overcollateralizing ETH at 130% MCR.",
+        "sources": [
+          {
+            "label": "Yamato contract on Etherscan",
+            "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
+          }
+        ]
+      },
+      {
+        "label": "Yamato governance Safe (upgrade + parameter authority)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "chain": "ethereum",
+        "address": "0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": "unknown",
+        "safe": {
+          "owners": [
+            "0xbe08d5fb542ac0c808bdea3bbcf85caeb2b5522c",
+            "0x975793c7a6a077221aca4e4fb9b7f9a46378463a",
+            "0xcc84f898dec4169239a5b64d038defc6813b7d4f",
+            "0x2773e34d3d4d95be7eaaf502d8504f28b78179bf"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.x",
+          "observedBlock": 25295201,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295201, governance() on the Yamato proxy returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy); getOwners() = 4 addresses; getThreshold() = 2; getModulesPaginated returns empty array (next=sentinel, length=0). YamatoV4 source confirms onlyGovernance modifier gates upgrades and parameter changes.",
+        "sources": [
+          {
+            "label": "Yamato governance Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec"
+          },
+          {
+            "label": "Yamato contract addresses",
+            "url": "https://docs.yamato.fi/en/readme/contract-addresses"
+          }
+        ]
+      },
+      {
+        "label": "CJPY token private governance (renounced)",
+        "role": "governor",
+        "authorityType": "none",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The pinned Currency.sol source declares a private `governance` slot that alone can call setCurrencyOS(); it exposes no public getter.",
+        "sources": [
+          {
+            "label": "Currency source (pinned)",
+            "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Currency.sol"
+          },
+          {
+            "label": "CJPY token on Etherscan",
+            "url": "https://etherscan.io/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
+          }
+        ],
+        "evidence": "Currency.sol declares `address currencyOS` then `address governance` as its own storage variables, placed after ERC20Permit's inherited layout (_balances, _allowances, _totalSupply, _name, _symbol, _nonces occupy slots 0-5). Direct eth_getStorageAt reads on the CJPY token at Ethereum block 25579969 confirm this: slot 2 held totalSupply, slots 3/4 held the packed name/symbol strings, slot 6 (currencyOS) held 0x000000000000000000000000e69c6bf0a6ea2f12abe054988a3e2091a8a3784f, and slot 7 (governance) read all-zero. Since Currency.sol's only governance-mutating function is revokeGovernance() (no replacement setter exists), a zero value means governance has been permanently renounced: setCurrencyOS() can no longer be called by anyone, so the token's currencyOS pointer (0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f) is now fixed."
+      },
+      {
+        "label": "CurrencyOS UUPS governance (Yamato Safe)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xbe08d5fb542ac0c808bdea3bbcf85caeb2b5522c",
+            "0x975793c7a6a077221aca4e4fb9b7f9a46378463a",
+            "0xcc84f898dec4169239a5b64d038defc6813b7d4f",
+            "0x2773e34d3d4d95be7eaaf502d8504f28b78179bf"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.x",
+          "observedBlock": 25295201,
+          "source": "onchain"
+        },
+        "capDescription": "CurrencyOS.addYamato/setDeps (registering new Yamato mint sources) and its UUPS _authorizeUpgrade are both gated onlyGovernance.",
+        "sources": [
+          {
+            "label": "CurrencyOS contract on Etherscan",
+            "url": "https://etherscan.io/address/0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f"
+          },
+          {
+            "label": "UUPSBase source (pinned)",
+            "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Dependencies/UUPSBase.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 25579969, CurrencyOS 0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f is a UUPS proxy (EIP-1967 admin slot = 0x0, implementation = 0x811cE73639A05f436a56ea71480cd921a4039542) whose public governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec — the same 2-of-4 Safe already resolved as the Yamato pledge contract's governance. The pinned UUPSBase source confirms _authorizeUpgrade and the onlyGovernance modifier gate both upgrades and CurrencyOS's addYamato/setDeps functions, with a 2-phase setGovernance/acceptGovernance transfer and a revokeGovernance option available to that Safe."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295201: Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) is an ERC1967Proxy (UUPS) pointing to YamatoV4 impl (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838); proxy admin EIP-1967 slot = 0x0 (UUPS). governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy, 4 owners, threshold 2, no modules). CJPY token (0x1cfa5641c01406ab8ac350ded7d735ec41298372): EIP-1967 proxy admin slot = 0x0, owner() reverts — immutable non-upgradeable token. Follow-up 2026-07-20: the Yamato pledge contract 0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257 exposes MCR()=130 and feePool() but no aggregate supply cap or debt ceiling getter; CJPY minting is bounded only by per-vault ETH collateral at the MCR, so the economic cap semantics are unbounded. Follow-up 2026-07-21: the CJPY token's own private governance/CurrencyOS route (previously unbound to the Safe) is now resolved by direct storage read — governance slot 7 is all-zero (permanently renounced via revokeGovernance(), no replacement setter exists), so the token's currencyOS pointer (0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f) is fixed. CurrencyOS is a separate UUPS proxy whose public governance() resolves to the same 2-of-4 Yamato Safe (0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec), which is also the sole authority for addYamato/setDeps and CurrencyOS upgrades.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude V9 evidence-gap curation",
+      "reviewedAt": "2026-07-21",
+      "sources": [
+        {
+          "label": "Yamato docs",
+          "url": "https://docs.yamato.fi/v/en"
+        },
+        {
+          "label": "Yamato contract on Etherscan",
+          "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
+        },
+        {
+          "label": "Yamato governance Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "id": "fusd-freedom-dollar",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "FUSD is a native Zano Confidential Asset (asset id 8614…4f8f), not a smart contract: Zano has no contract VM, so issuance is a consensus-level EMIT operation that only the holder of the asset-owner key 497d6b7a…c7c1 can sign. That single key can emit up to the descriptor's total_max_supply of 1e15 fUSD against 11.4M fUSD outstanding — a ceiling roughly 87 million times circulation, so the mint is unbounded in practice — and it can hand ownership to any other key. The white paper's over-collateralization and 'DAO' framing is an off-chain operating policy: Zano consensus checks only the owner signature and the max-supply ceiling, never the ZANO reserve. total_max_supply is immutable post-deployment, so no cap-raise path exists.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 3770932,
+      "sources": [
+        {
+          "label": "Zano docs — update_asset (total_max_supply immutable; owner gates EMIT/UPDATE)",
+          "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
+        },
+        {
+          "label": "Zano docs — deploy_asset (asset descriptor: owner, total_max_supply)",
+          "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
+        },
+        {
+          "label": "Zano public daemon RPC (get_asset_info)",
+          "url": "https://node.zano.org/json_rpc"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "address": "497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1",
+        "label": "Freedom Dollar Zano asset-owner key",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "capDescription": "Nominal descriptor ceiling total_max_supply = 10000000000000000000 base units (1e15 fUSD at decimal_point 4) against a current_supply of 114000000000 base units (11,400,000 fUSD). The ceiling is ~87,700,000x circulation and is immutable post-deployment, so it bounds nothing economically: emission is treated as unbounded.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "eoa:zano:497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 3770932,
+        "sources": [
+          {
+            "label": "Zano public daemon RPC (get_asset_info)",
+            "url": "https://node.zano.org/json_rpc"
+          },
+          {
+            "label": "Zano docs — update_asset (total_max_supply immutable; owner gates EMIT/UPDATE)",
+            "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
+          },
+          {
+            "label": "Zano explorer — fUSD asset 8614…4f8f",
+            "url": "https://explorer.zano.org/assets?asset_id=86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f"
+          }
+        ],
+        "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f returned asset_descriptor.owner = 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1 (non-null: ownership is held, not renounced), owner_eth_pub_key = \"\" (empty), total_max_supply = 10000000000000000000, current_supply = 114000000000, decimal_point = 4, hidden_supply = false. Two independent daemons (node.zano.org and 37.27.100.59:10500) returned byte-identical descriptors. Per Zano docs the owner key is the sole authority validated for EMIT and UPDATE, and total_max_supply cannot be changed after deployment. Zano exposes no contract VM, so there is no minter registry, role admin, timelock, or proxy layer above this key; it is a single ed25519 public key with no on-chain multisig or threshold structure."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "disposition": "scoreable",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
+      "sourceFreeRationale": "Resolved directly from Zano consensus state; the prior 'unverifiable privacy chain' disposition was wrong — Zano hides transaction amounts and addresses, but asset descriptors (owner key, supply, cap) are public and readable over the standard daemon RPC.",
+      "unresolvedQuestions": [],
+      "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info on node.zano.org (corroborated by daemon 37.27.100.59:10500) returned for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f: owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, owner_eth_pub_key \"\", total_max_supply 10000000000000000000, current_supply 114000000000, decimal_point 4. Zano docs confirm EMIT and UPDATE are validated against the owner key alone and that total_max_supply is immutable post-deployment. The Freedom Dollar white paper describes issuance as 'On-demand via collateralized ZANO' with market-making bots and a publicly auditable ZANO reserve wallet, but claims no key renunciation and identifies no on-chain contract enforcing collateralization — consistent with a single owner key emitting under off-chain policy. Sole residual unknown: the off-chain custody of the owner private key (single operator vs shared/MPC control) is not observable on-chain, which is true of any key-based authority and does not affect the on-chain authority model. Mint-tier review (2026-07-15): No independent attestor, recurring cadence, or dated reserve-to-liability report was located; the Freedom Dollar whitepaper describes issuer-controlled collateral and a reserve wallet but supplies no independent reconciliation. The materials do not identify a regulated legal issuer, and no exact prudential issuer match was established in FinCEN's MSB registry.",
+      "sources": [
+        {
+          "label": "Zano public daemon RPC (get_asset_info)",
+          "url": "https://node.zano.org/json_rpc"
+        },
+        {
+          "label": "Zano explorer — fUSD asset 8614…4f8f",
+          "url": "https://explorer.zano.org/assets?asset_id=86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f"
+        },
+        {
+          "label": "Zano docs — update_asset (total_max_supply immutable; owner gates EMIT/UPDATE)",
+          "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/update_asset/"
+        },
+        {
+          "label": "Zano docs — deploy_asset (asset descriptor: owner, total_max_supply)",
+          "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
+        },
+        {
+          "label": "Freedom Dollar white paper",
+          "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+        },
+        {
+          "label": "FinCEN MSB registry search",
+          "url": "https://www.fincen.gov/resources/msb-state-selector"
+        }
+      ]
+    }
+  }
+}

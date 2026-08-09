@@ -1,0 +1,10 @@
+{
+  "id": "gelt-tether",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+    "evidence": "GEL₮ resolves to Yes because it is a centralized, Tether-issued fiat-referenced stablecoin under NBG oversight, and no manual override narrows that status.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-05-26"
+  }
+}

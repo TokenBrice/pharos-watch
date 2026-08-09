@@ -1,0 +1,147 @@
+{
+  "id": "kesm-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Mento V3 stablecoin documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "KESm Celo token deployment",
+        "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
+      },
+      {
+        "label": "Mento reserve configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "KESm current verified ABI",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+      },
+      {
+        "label": "Mento StableTokenV2 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento live reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    ],
+    "sourceFreeRationale": "The current holder-facing KESm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. KESm 0x456a3d042c0dbd3db53d5489e98dfb038553b0d0 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict KESm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "KESm's live Celo USDm/KESm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates swaps, but no second feed or automatic failover path is configured.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-22",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "rationale": "At finalized Celo block 72780426 (2026-07-22T00:46:24Z), KESm broker() returned the Mento Broker and its sole exchange provider exposed exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b pairing USDm with KESm. The pool used reference feed 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169, a 360-second reset/expiry window, minimumReports 1, and one active SortedOracles reporter. The pinned backing config classifies KESm as reserve-backed, the pinned deployment registry has no KESm borrower branch, and the live reserve API listed debt-bearing troves only for GBPm, JPYm, and CHFm. KESm therefore has a Broker conversion-oracle path rather than borrower-specific oracle and liquidation branches to enumerate.",
+      "sources": [
+        {
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
+        },
+        {
+          "label": "Mento BiPoolManager verified contract",
+          "url": "https://celo.blockscout.com/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901?tab=contract"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Finalized Celo block 72780426",
+        "url": "https://celo.blockscout.com/block/72780426"
+      },
+      {
+        "label": "KESm token proxy and verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
+      },
+      {
+        "label": "Mento BiPoolManager verified contract",
+        "url": "https://celo.blockscout.com/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901?tab=contract"
+      },
+      {
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "KESm supply is confined to its canonical Celo deployment; the single reviewed route is native Mento Broker issuance against the shared Mento Reserve. No bridge route carries the claim.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Finalized Celo block 72780426",
+        "url": "https://celo.blockscout.com/block/72780426"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+        "protocol": "Mento KESm",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Celo block 72780426, KESm broker() returned the Mento Broker and the tracked token's 21,291,895.334248545419330280-unit supply was native to Celo. Pinned issuer configuration classifies KESm as reserve-backed and the deployment registry contains no KESm borrower branch. No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-22",
+        "sources": [
+          {
+            "label": "KESm token (Celoscan)",
+            "url": "https://celoscan.io/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+          },
+          {
+            "label": "Mento docs",
+            "url": "https://docs.mento.org/"
+          },
+          {
+            "label": "Finalized Celo block 72780426",
+            "url": "https://celo.blockscout.com/block/72780426"
+          }
+        ]
+      }
+    ]
+  }
+}

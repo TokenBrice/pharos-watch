@@ -1,0 +1,220 @@
+{
+  "id": "bc3m-backed",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Backed Finance documentation",
+        "url": "https://docs.backed.fi/"
+      }
+    ],
+    "evidence": "Backed Assets retains transfer-agent freeze and burn authority over bC3M balances under its Swiss DLT Act framework and operates KYC-gated primary issuance.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "bC3M is issuer-minted natively by Backed on each of the seven deployments (same token address via CREATE2); mint authority per chain is covered by the reviewed mint-authority controls. No third-party bridge carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Arbitrum Canonical",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/interop/protocols/arbitrum",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Avalanche Bridge",
+        "slug": "avalanche",
+        "url": "https://l2beat.com/interop/protocols/avalanche",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Backed docs",
+        "url": "https://assets.backed.fi/legal-documentation"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      },
+      {
+        "label": "L2BEAT Arbitrum Canonical",
+        "url": "https://l2beat.com/interop/protocols/arbitrum"
+      },
+      {
+        "label": "L2BEAT Avalanche Bridge",
+        "url": "https://l2beat.com/interop/protocols/avalanche"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on ethereum (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on gnosis (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "base",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on base (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "polygon",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on polygon (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "bsc",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on bsc (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on arbitrum (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "protocol": "Backed native multichain issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "bC3M is issuer-minted by Backed on avalanche (same CREATE2 address on all chains; per-chain direct-minter Safes and the deployment-wide token owner are covered by the reviewed mint-authority controls). No bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Backed Finance",
+            "url": "https://backed.fi/"
+          }
+        ]
+      }
+    ]
+  }
+}

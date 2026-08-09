@@ -1,0 +1,190 @@
+{
+  "id": "usdf-falcon",
+  "reserves": [
+    {
+      "name": "BTC collateral",
+      "pct": 93.7,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network, BTC wrapper issuers, and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other crypto / tokenized assets",
+      "pct": 2,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Multiple token networks and issuers (issuer-reported long-tail altcoins) and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC cash-equivalent assets",
+      "pct": 1.8,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer) held at Falcon custodians",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT cash-equivalent assets",
+      "pct": 1.6,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer) held at Falcon custodians",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Insurance fund",
+      "pct": 0.7,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Falcon Finance insurance fund custody accounts",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ETH / liquid staking collateral",
+      "pct": 0.2,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network, liquid-staking issuers, and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Falcon transparency dashboard",
+        "url": "https://app.falcon.finance/transparency"
+      },
+      {
+        "label": "Falcon transparency API",
+        "url": "https://api.falcon.finance/api/v1/transparency"
+      }
+    ],
+    "rationale": "Rebuilt from the issuer transparency API's per-asset USD breakdown at snapshot 2026-08-07T10:33:01Z. The live adapter now collapses issuer-reported long-tail altcoins into a single Other crypto / tokenized assets bucket; BTC, ETH/liquid-staking, USDC, USDT, and the issuer-reported insurance fund remain separate. All rows are identified by name and value.",
+    "compositionBasis": "Falcon transparency API per-asset USD breakdown at snapshot 2026-08-07T10:33:01Z",
+    "compositionAsOf": "2026-08-07",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every reserve asset reported by the issuer API is identified by name and value; long-tail altcoins are aggregated into a single disclosed basket.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC collateral",
+        "pct": 93.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The BTC and wrapped-BTC bucket is external crypto backing rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Other crypto / tokenized assets",
+        "pct": 2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The aggregated long-tail altcoin bucket is external crypto backing rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Insurance fund",
+        "pct": 0.7,
+        "disposition": "not-applicable",
+        "rationale": "The issuer-reported insurance fund is protocol protection capital, not a tracked stablecoin reserve dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "ETH / liquid staking collateral",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH and liquid-staking collateral are external crypto backing rather than tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Falcon-controlled multisig wallets",
+        "role": "other",
+        "sharePct": 95.4
+      },
+      {
+        "name": "Ceffu",
+        "role": "custodian",
+        "sharePct": 2.5
+      },
+      {
+        "name": "Fireblocks",
+        "role": "custodian",
+        "sharePct": 2
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Falcon transparency API (per-venue custody breakdown)",
+        "url": "https://api.falcon.finance/api/v1/transparency"
+      },
+      {
+        "label": "Falcon Finance transparency and security guide",
+        "url": "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance"
+      },
+      {
+        "label": "Falcon transparency dashboard",
+        "url": "https://app.falcon.finance/transparency"
+      }
+    ],
+    "uncertainty": "The issuer's live transparency API attributes each reserve asset to three custody venues; at the 2026-07-17 snapshot roughly 95.4% sat in Falcon-labelled multisig wallets, 2.6% at Ceffu, and 2.1% at Fireblocks (venue shares shift over time). Falcon states that Fireblocks and Ceffu provide MPC custody and off-exchange settlement, but the reviewed sources do not establish account-level segregation, insolvency treatment, or signer structure, and reserve assets are actively deployed into trading and yield strategies, so reuse is inherent to the strategy.",
+    "knownUnknownExposurePct": 0
+  }
+}

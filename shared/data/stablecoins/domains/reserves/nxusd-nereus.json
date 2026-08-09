@@ -1,0 +1,75 @@
+{
+  "id": "nxusd-nereus",
+  "reserves": [
+    {
+      "name": "Nereus overcollateralized crypto positions including DAI collateral",
+      "pct": 100,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Nereus Finance lending-market collateral depositors (Avalanche and Polygon)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Nereus Finance website",
+        "url": "https://nereus.finance/"
+      },
+      {
+        "label": "Nereus pinned Avalanche deployment manifest",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-08-08: Nereus still describes NXUSD as an overcollateralized borrow against crypto collateral in its Avalanche and Polygon lending markets. docs.nereus.finance now redirects to the marketing landing page, and neither the landing page nor the pinned GitHub deployment manifest publishes a reconciled, dated per-market collateral inventory or weights. The envelope therefore remains one aggregate classified basket rather than invented weights. The curated-validated adapter probes live token supply and carries this reviewed composition into runtime scoring.",
+    "compositionBasis": "Nereus protocol documentation; per-market collateral weights are undisclosed",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current per-market collateral balances and weights across Nereus lending markets are not published; the aggregate basket cannot be split into reviewed constituents.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Nereus overcollateralized crypto positions including DAI collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The protocol publishes its collateral model but no current per-market composition, so no slice can be linked or split on verifiable weights.",
+        "candidateCoinIds": [
+          "dai-makerdao"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Nereus Finance lending market contracts (Avalanche, Polygon)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Nereus Finance documentation",
+        "url": "https://docs.nereus.finance/"
+      }
+    ],
+    "uncertainty": "Collateral is held in Nereus's on-chain lending market contracts rather than with a legal custodian; the reviewed sources do not establish legal segregation, insolvency treatment, or reuse terms, and bridged collateral constituents carry their own bridge custody layers.",
+    "knownUnknownExposurePct": 100
+  }
+}

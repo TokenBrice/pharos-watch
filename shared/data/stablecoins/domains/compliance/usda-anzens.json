@@ -1,0 +1,68 @@
+{
+  "id": "usda-anzens",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDA is an Anzens-issued U.S. dollar stablecoin designed for mint, burn, send, receive, and off-ramp payment flows."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Anzens Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN MSB / 17 US state no-objection letters; BitGo Trust qualified custodian",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Anzens describes USDA as 100% backed and issued by Anzens Inc. (FinCEN MSB, 17 state no-objection letters), with reserves held at BitGo Trust. Pharos found no GENIUS PPSI approval, state-qualified approval, official application, or public intent statement. A LinkedIn post from EMURGO (2026) references a first proof-of-reserves examination report, but no dedicated reserve attestation or transparency URL is published on anzens.com or findable from public sources; reserveDisclosurePresent corrected to false. USDA relaunched under Encryptus partnership after a 2023 pause.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Anzens USDA homepage",
+        "url": "https://www.anzens.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Anzens terms and conditions",
+        "url": "https://www.anzens.com/landing/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "EMURGO post: Anzens publishes first proof-of-reserves report for USDA",
+        "url": "https://www.linkedin.com/posts/emurgo-io_examination-over-usda-reserve-assets-report-activity-7328334550667821056-s0vH",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (2026-06-18)",
+        "Anzens USDA website and terms (2026-06-18)",
+        "Anzens FinCEN MSB and state no-objection-letter disclosures",
+        "EMURGO partner announcements and press releases",
+        "Web searches for Anzens GENIUS Act, PPSI application, or authorization (2026-06-18)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDA/Anzens Inc. Re-verified June 2026 with no change in status.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

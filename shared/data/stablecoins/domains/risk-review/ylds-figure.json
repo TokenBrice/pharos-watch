@@ -1,0 +1,149 @@
+{
+  "id": "ylds-figure",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: YLDS resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "YLDS is issued natively by Figure Certificate Company on Provenance (uylds.fcc) and Stellar (Figure-operated issuer account per ylds.com's stellar.toml); the Ethereum and Solana deployments are Hastra wYLDS — a 1:1 YLDS-backed wrapper from the Figure/Provenance-incubated Hastra protocol moving over Chainlink CCIP (Ethereum admin = 4-of-7 Safe; Solana mint authority EOA documented in the mint-authority review).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "YLDS website",
+        "url": "https://www.ylds.com/"
+      },
+      {
+        "label": "Provenance YLDS docs",
+        "url": "https://docs.provenance.io/learn/the-ylds-stablecoin"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
+        "destinationChain": "solana",
+        "contractAddress": "8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih",
+        "protocol": "Hastra wYLDS (Chainlink CCIP)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Solana YLDS deployment is Hastra wYLDS — a wrapped token backed 1:1 by YLDS from Hastra, the liquidity protocol incubated by Figure and Provenance Blockchain, with cross-chain interoperability on Chainlink CCIP (Figure press release 2025-12-04). The verified mint-authority review (2026-07-15) identifies the Solana direct mint authority EOA AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM as the mint control on this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "provenance",
+        "controllerChain": "solana",
+        "controllerAddress": "AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "signer:solana:AJuGsS1NrHgxpHgUu7AgCvshFGL8WdRwxks9sfAVhNQM"
+        ],
+        "sources": [
+          {
+            "label": "Figure press release — RWA Consortium / Hastra wYLDS (2025-12-04)",
+            "url": "https://investors.figure.com/news-releases/news-release-details/figure-and-leading-crypto-partners-launch-rwa-consortium-onchain"
+          },
+          {
+            "label": "wYLDS Solana mint",
+            "url": "https://solscan.io/token/8fr7WGTVFszfyNWRMXj6fRjZZAnDwmXwEpCrtzmUkdih"
+          }
+        ]
+      },
+      {
+        "id": "provenance:uylds.fcc",
+        "destinationChain": "provenance",
+        "contractAddress": "uylds.fcc",
+        "protocol": "Figure YLDS (Provenance)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: YLDS is issued by Figure Certificate Company on Provenance as the uylds.fcc marker (verified mint-authority review 2026-07-15: 4-of-6 marker admin and mint policy plus individual mint authorities).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "YLDS website (Figure Certificate Company)",
+            "url": "https://www.ylds.com/"
+          },
+          {
+            "label": "Provenance uylds.fcc marker",
+            "url": "https://explorer.provenance.io/asset/uylds.fcc"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+        "sourceChain": "provenance",
+        "destinationChain": "ethereum",
+        "canonicalChain": "provenance",
+        "contractAddress": "0x6ad038ca6c04e885630851278ca0a856ad9a66cc",
+        "protocol": "Hastra wYLDS (Chainlink CCIP)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The Ethereum YLDS-tracked token is 'Hastra wYLDS' (name/symbol verified 2026-07-19), an ERC1967 proxy wrapped token backed 1:1 by YLDS from Hastra — the Figure/Provenance-incubated liquidity protocol — with cross-chain interoperability on Chainlink CCIP. Its DEFAULT_ADMIN_ROLE is the 4-of-7 Gnosis Safe 0x8d358b8ae881f8ea92c3d07783abca21727c6309 (owners read on-chain; original deploy admin fully revoked by block 25032014). DefiLlama counts the Ethereum supply as bridged-from-provenance. Figure's legal disclaimer notes Figure does not itself issue wYLDS.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8d358b8ae881f8ea92c3d07783abca21727c6309",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "safe:ethereum:0x8d358b8ae881f8ea92c3d07783abca21727c6309"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Hastra wYLDS Ethereum token",
+            "url": "https://etherscan.io/address/0x6aD038cA6C04e885630851278ca0a856Ad9a66Cc"
+          },
+          {
+            "label": "Figure press release — RWA Consortium / Hastra wYLDS (2025-12-04)",
+            "url": "https://investors.figure.com/news-releases/news-release-details/figure-and-leading-crypto-partners-launch-rwa-consortium-onchain"
+          },
+          {
+            "label": "DefiLlama YLDS adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/ylds/index.ts"
+          }
+        ]
+      },
+      {
+        "id": "stellar:YLDS-GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3",
+        "destinationChain": "stellar",
+        "canonicalChain": "provenance",
+        "contractAddress": "YLDS-GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3",
+        "protocol": "Figure YLDS (Stellar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuance by Figure Certificate Company: the Stellar YLDS issuer account GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3 declares home domain www.ylds.com, whose stellar.toml names Figure Certificate Company as the organization (with auth_required/auth_revocable/clawback_enabled regulated-asset flags).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "YLDS stellar.toml (Figure Certificate Company)",
+            "url": "https://www.ylds.com/.well-known/stellar.toml"
+          },
+          {
+            "label": "Stellar Expert — YLDS asset",
+            "url": "https://stellar.expert/explorer/public/asset/YLDS-GAC7MOPTQLQUM3KC24AW4GHS3RLF72LPEZO54AH7EZ6TSMGRB5SOAVH3"
+          }
+        ]
+      }
+    ]
+  }
+}

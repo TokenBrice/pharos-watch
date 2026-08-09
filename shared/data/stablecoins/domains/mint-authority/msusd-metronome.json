@@ -1,0 +1,110 @@
+{
+  "id": "msusd-metronome",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF); upgrade authority over the token proxy is controlled by a 3-of-5 Gnosis Safe (no modules, no timelock).",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+      ],
+      "implementationAddresses": [
+        "0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390"
+      ],
+      "adminAddresses": [
+        "0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc",
+        "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25290617,
+      "sources": [
+        {
+          "label": "msUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        },
+        {
+          "label": "Metronome DAO multisig on Etherscan",
+          "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+        "label": "msUSD token proxy (EIP-1967, OZ TransparentUpgradeableProxy)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "msUSD is minted only against deposited collateral within Metronome Synth pools at governance-set collateral factors (75-85%); supply is bounded by collateralized debt with no off-protocol issuer minter and no direct redemption.",
+        "sources": [
+          {
+            "label": "msUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+          }
+        ],
+        "evidence": "At Ethereum block 25,290,617, EIP-1967 slots confirmed: implementation = 0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390, proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33",
+        "label": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xa13011197D6793453d86eBCD3B13Cc49A234C339",
+            "0xB5AbDABE50b5193d4dB92a16011792B22bA3Ef51",
+            "0xb3983cDdBa4B127960A4cDD531AB989264509e23",
+            "0x25FCe091c5b51edEfc7a4A0E765f10ed032e804F",
+            "0xf3e996C8cd4ab3fDad381584D5Bd90C01Ec3C082"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25290617,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Metronome DAO multisig on Etherscan",
+            "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+          }
+        ],
+        "evidence": "ProxyAdmin owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33. Safe API confirmed Gnosis Safe v1.3.0, 3-of-5, nonce 365, no modules, no guard at block 25,290,617."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Metronome Synth docs",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol"
+        },
+        {
+          "label": "msUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        },
+        {
+          "label": "Metronome DAO multisig on Etherscan",
+          "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+        }
+      ]
+    }
+  }
+}

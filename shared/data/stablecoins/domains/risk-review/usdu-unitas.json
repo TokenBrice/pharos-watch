@@ -1,0 +1,172 @@
+{
+  "id": "usdu-unitas",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Unitas Terms of Service",
+        "url": "https://docs.unitas.so/resources/terms-of-service"
+      },
+      {
+        "label": "Unitas documentation",
+        "url": "https://docs.unitas.so/"
+      },
+      {
+        "label": "Unitas BNB deployment",
+        "url": "https://bscscan.com/token/0xea953ea6634d55dac6697c436b1e81a679db5882"
+      },
+      {
+        "label": "Unitas Solana mint",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. Section 5 of Unipay Pte. Ltd.'s binding Unitas Terms of Service explicitly reserves the issuer's right, without prior notice, to freeze, burn, or otherwise restrict USDu or sUSDu under a user's control when it believes the user violated the terms or applicable law. That exact-token issuer power is sufficient for a direct true freeze-reach finding under the access-review contract even though the currently verified BSC ERC-20 and Solana Token-2022 transfer paths themselves remain permissionless and expose no native freeze authority. The prior inherited verdict was invalid because USDU has no upstream stablecoin parent; the legal authority belongs to its own issuer.",
+    "reviewer": "OpenAI Codex C04 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "USDu is issued against a protocol-managed delta-neutral reserve portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Unitas documents whitelist-restricted minting and redemption against deposited USDC, followed by protocol-managed allocation into JLP and hedged perpetual positions. It does not document borrower-specific debt, collateral-ratio thresholds, or liquidatable collateral branches for USDu issuance.",
+      "sources": [
+        {
+          "label": "Unitas minting USDu",
+          "url": "https://docs.unitas.so/solution-design/minting-usdu"
+        },
+        {
+          "label": "Unitas delta-neutral stability",
+          "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Unitas minting USDu",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu"
+      },
+      {
+        "label": "Unitas delta-neutral stability",
+        "url": "https://docs.unitas.so/solution-overview/delta-neutral-stability"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDU has independent native deployments on BSC and Solana, each minted by the issuer on that chain (BSC owner is the reviewed 3-of-5 Safe); no live cross-chain supply route exists.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Unitas roadmap — Cross-chain USDu (LayerZero), Design phase, ETA Q4 2025 (NOT live)",
+        "slug": "layerzero",
+        "url": "https://docs.unitas.so/",
+        "bridgeTypes": [
+          "planned-omnichain-oft"
+        ],
+        "note": "Future route only; not the current durable mechanism"
+      },
+      {
+        "source": "explorer",
+        "name": "USDU BSC token — plain BEP20, mint()/burn() minter role, no OFT/LayerZero interface",
+        "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "bridgeTypes": [
+          "native-mint"
+        ],
+        "note": "Gnosis Safe 3-of-5 sole minter (registry mintAuthority review)"
+      },
+      {
+        "source": "explorer",
+        "name": "USDU Solana Token-2022 mint — self-referential mintAuthority, effectively frozen",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "bridgeTypes": [
+          "native-mint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Minting USDu — USDC mint/redeem by whitelisted/KYC participants, native per chain",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu",
+        "bridgeTypes": [
+          "native-mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Unitas docs (roadmap: cross-chain USDu via LayerZero, Design phase / Q4 2025, not live)",
+        "url": "https://docs.unitas.so/"
+      },
+      {
+        "label": "Unitas docs — Minting USDu (USDC mint/redeem, whitelisted, per chain)",
+        "url": "https://docs.unitas.so/solution-design/minting-usdu"
+      },
+      {
+        "label": "USDU BSC contract (verified plain BEP20, no OFT/LayerZero interface)",
+        "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882"
+      },
+      {
+        "label": "USDU Solana Token-2022 mint (self-referential mintAuthority)",
+        "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+      },
+      {
+        "label": "MEXC guide (Jan 2026) — LayerZero cross-chain still listed as planned",
+        "url": "https://blog.mexc.com/news/what-is-unitas-labs-a-complete-guide-to-usdu-and-cross-chain-yield-stablecoins/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "destinationChain": "bsc",
+        "contractAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "protocol": "Unitas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "BSC USDU is a plain BEP20 minted by owner() = Gnosis Safe 3-of-5 0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3 (verified on BSC at 2026-07-20); no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Unitas Foundation",
+            "url": "https://unitas.foundation/"
+          }
+        ]
+      },
+      {
+        "id": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "destinationChain": "solana",
+        "contractAddress": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
+        "protocol": "Unitas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Solana USDU is a native Token-2022 mint issued by Unitas (mint-authority posture documented in the mint-authority review); no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Unitas Foundation",
+            "url": "https://unitas.foundation/"
+          }
+        ]
+      }
+    ]
+  }
+}

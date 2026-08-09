@@ -1,0 +1,197 @@
+{
+  "id": "zarm-mento",
+  "reserves": [
+    {
+      "name": "AUSD (Agora Dollar)",
+      "pct": 26.2,
+      "risk": "low",
+      "coinId": "ausd-agora",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.9,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "CELO",
+      "pct": 17,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "USDT",
+      "pct": 12.7,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "EURC (Circle euro stablecoin)",
+      "pct": 11.8,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDC",
+      "pct": 3.9,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.6,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "ETH",
+      "pct": 0.9,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum native ether and residual Celo WETH held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento reserve analytics API (live read 2026-07-27)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "rationale": "ZARm mints through the oracle-priced FPMM/BiPoolManager path against the shared Mento Reserve: the reserve analytics API reports active borrower CDP troves only for GBPm, JPYm, CHFm, and XOFm, and none for ZARm (see the oracle-risk branch review). ZARm's reserve exposure is therefore the shared Mento Reserve basket, fetched 2026-07-27: AUSD 26.2%, sUSDS 24.9%, CELO 17.0%, USDT 12.7%, EURC 11.8%, USDC 3.9%, stETH 2.6%, and ETH 0.9% (the API's native ETH row on Ethereum plus its residual Celo WETH row, combined into one 'ETH' slice by the Pharos Mento adapter).",
+    "compositionBasis": "Mento reserve analytics API collateral.assets composition fetched on 2026-07-27",
+    "compositionAsOf": "2026-07-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved basket exposure: every slice is either a tracked stablecoin link or a resolved exogenous crypto asset. The upstream composition of linked stablecoins (AUSD, sUSDS, USDT, EURC, USDC) is scored on those assets' own records.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 17,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network's volatile native asset, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is a Lido ETH staking receipt, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "ETH",
+        "pct": 0.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH is external cryptoasset collateral held by the Mento Reserve (native ETH on Ethereum plus a residual Celo WETH balance), not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento Reserve smart contract (Celo), controlled by Mento governance behind the 172800-second timelock",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Celo (on-chain)"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento Celo deployment inventory",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "uncertainty": "The shared Mento Reserve is self-custodied in on-chain protocol contracts on Celo under Mento governance (48-hour timelock per the 2026-07-15 access review); there is no third-party custodian, trust, or SPV, so no legal segregation or bankruptcy-remoteness structure exists. Parts of the basket are deployed into yield-bearing positions (sUSDS savings shares, stETH staking), which is protocol-level redeployment of reserve assets rather than custodian rehypothecation; per-asset account segregation inside the reserve contract is not published."
+  }
+}

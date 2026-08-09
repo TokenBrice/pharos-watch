@@ -1,0 +1,79 @@
+{
+  "id": "fidd-fidelity",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "FIDD is a Fidelity-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly reserve attestations, issued by a federally chartered OCC-supervised national trust bank."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Fidelity Digital Assets, National Association",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.fidelitydigitalassets.com/stablecoin",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "Fidelity Digital Assets received a conditional OCC national trust bank charter approval on December 12, 2025 (conversion from NY state trust company). This is a trust-charter conditional approval under existing OCC chartering authority — it is not a PPSI approval under the GENIUS Act, which remains in proposed-rules rulemaking. No PPSI application framework exists yet and no issuer has received PPSI status. FIDD launched publicly on February 4, 2026; Fidelity positions FIDD as aligning with GENIUS Act reserve standards but has not announced a formal PPSI application.",
+    "references": [
+      {
+        "label": "OCC Conditional Approval — Fidelity Digital Assets national trust bank charter (Dec 12, 2025)",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Fidelity FIDD launch press release (Feb 4, 2026)",
+        "url": "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-04",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Fidelity Digital Assets stablecoin",
+        "url": "https://www.fidelitydigitalassets.com/stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "FIDD terms",
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC news release nr-occ-2025-125 (Dec 12, 2025) — conditional trust charter approval, not PPSI status",
+        "OCC Bulletin 2026-3 GENIUS Act NPRM (Feb 25, 2026) — PPSI application framework still in proposed rules",
+        "OCC national trust bank materials and rulemaking tracker",
+        "Fidelity Digital Assets stablecoin and FIDD terms pages",
+        "Fidelity FIDD launch press release (Feb 4, 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No PPSI approval, state-qualified approval, or official PPSI application found for FIDD. The OCC conditional trust charter (Dec 12, 2025) confirms issuer pathway but is explicitly not a PPSI approval. No PPSI application framework exists; rulemaking is at NPRM stage.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

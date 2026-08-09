@@ -1,0 +1,94 @@
+{
+  "id": "usdf-astherus",
+  "reserves": [
+    {
+      "name": "USDT-funded spot crypto and corresponding short futures positions",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aster (Astherus) strategy accounts with Ceffu custody and Binance futures counterparties via Ceffu MirrorX",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster USDF product page",
+        "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Aster USDF fund custody and risk management",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+      },
+      {
+        "label": "Aster how USDF works",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
+      },
+      {
+        "label": "Aster USDF FAQs",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+      },
+      {
+        "label": "Ceffu MirrorX",
+        "url": "https://www.ceffu.com/solutions/mirrorx"
+      }
+    ],
+    "rationale": "R02 refresh 2026-08-08 reconfirmed the issuer-documented delta-neutral structure and Ceffu/Binance custody model, with no new public dashboard, attestation, or reserve report publishing retained-USDT, spot-crypto, or futures-margin weights. The product page still describes USDF as backed by crypto assets and corresponding short futures positions with Ceffu custody; the docs still describe USDT mint → Aster Ceffu account → MirrorX 1:1 delegation to a Binance sub-account while assets remain in Ceffu custody, with the strategy buying spot BTC/ETH and shorting matching perpetual notional. Because no supply-weighted split is available and the collateral is an off-exchange, strategy-managed basket, the single reserve is dispositioned as an untracked exogenous hedged-crypto envelope rather than a splittable stablecoin basket.",
+    "compositionBasis": "Issuer-documented delta-neutral backing structure plus independent Ceffu MirrorX custody model; constituent shares are undisclosed",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve class and counterparties are identified, but Aster does not publish current weights for retained USDT, spot BTC/ETH, or futures-margin exposure.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDT-funded spot crypto and corresponding short futures positions",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USDT funds the delta-neutral strategy, but no current constituent weights support treating any portion of the aggregate basket as direct stablecoin collateral. The strategy is an off-exchange, Ceffu-custodied hedged-crypto envelope and is therefore treated as an untracked exogenous asset.",
+        "candidateCoinIds": [
+          "usdt-tether"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu (MirrorX off-exchange settlement)",
+        "role": "custodian"
+      },
+      {
+        "name": "Binance (futures execution venue via MirrorX)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Aster USDF",
+        "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Ceffu MirrorX",
+        "url": "https://www.ceffu.com/solutions/mirrorx"
+      }
+    ],
+    "uncertainty": "Aster documents Ceffu custody with MirrorX off-exchange settlement onto Binance, under which assets remain with the custodian while balances are mirrored to the exchange for the delta-neutral strategy. Account-level segregation, insolvency treatment, and the exact scope of assets deployed as futures margin are not established by the reviewed sources."
+  }
+}

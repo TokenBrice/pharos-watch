@@ -1,0 +1,113 @@
+{
+  "id": "usdq-quill",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDQ is minted when users borrow against overcollateralized CDPs (wETH/wstETH/weETH/SCR) in Quill's Liquity-v2/BOLD fork on Scroll; minting is restricted to registered branch contracts. The USDQ token and QuillAccessManager are UUPS proxies. ADMIN_ROLE of the AccessManager is held by a Gnosis Safe 1.4.1 (0x32fd58b8, 3-of-6, has a guard at 0x075233a1), making the system mutable but multisig-gated.",
+    "controls": [
+      {
+        "label": "Liquity-v2 BoldToken branch minters (BorrowerOperations/ActivePool/StabilityPool)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "scroll",
+        "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps that Quill admin controls can update.",
+        "evidence": "At Scroll block 34053392: USDQ token (0xdb9e8f82d6d45fff803161f2a5f75543972b229a) is a UUPS proxy with implementation at 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523 (code length 20084). No external proxy admin slot populated. Branch minting is restricted to registered BorrowerOperations/ActivePool-style contracts with collateral-registry caps."
+      },
+      {
+        "chain": "scroll",
+        "address": "0xBe589551397d0F28255e429DDB478620b1C2f08a",
+        "label": "QuillAccessManager (UUPS proxy, admin = Quill Safe multisig)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Quill USDQ docs",
+            "url": "https://docs.quill.finance/faq/usdusdq"
+          }
+        ],
+        "evidence": "At Scroll block 34053392: AccessManager (0xBe589551) is a UUPS proxy (impl=0x3e5462da8e6c3971d445d717c389a8bec036b719, 'QuillAccessManagerUpgradeable'). ADMIN_ROLE (id=0) was granted to Safe 0x32fd58b8 at deployment (block 15218053); deployer revoked its own role at block 15218072 per on-chain transaction history."
+      },
+      {
+        "chain": "scroll",
+        "address": "0x32fd58b8c4d454ab585dea736b7d2b5929b6676c",
+        "label": "Quill admin Safe multisig (holds ADMIN_ROLE in AccessManager)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x00e71336b152a8cef3b27342d8b666fbbddb894b",
+            "0x2b714f7c92d023d9b1fb3a25803c9991a9a3a261",
+            "0x7bcef70b6dcbc32096ed53abc8aebc23fb941714",
+            "0xd50a3c21046a750da8ffc8eff4dd2cfadeb4bf91",
+            "0x631703076a19858191c4dccc068d5808f29ecf3c",
+            "0x9b8d3e60c92a62d44a0d414236c050583e91ce39"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x075233a13896b064f19eb3cdeaa2fb03e3457726",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 34053392,
+          "source": "onchain"
+        },
+        "evidence": "At Scroll block 34053392: getOwners() returned 6 addresses, slot3=6 (ownerCount), slot4=3 (threshold). masterCopy at slot0=0x29fcb43b46531bca003ddc8fcb67ffe91900c762 (VERSION=1.4.1). getModules() returned empty array. Guard storage slot=0x075233a13896b064f19eb3cdeaa2fb03e3457726 (contract with 2640-byte code). Fallback handler=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The deployer EOA (0x9b8d3e60) is owner 6 but is not the sole ADMIN_ROLE holder in the AccessManager."
+      }
+    ],
+    "review": {
+      "evidence": "On-chain reads at Scroll block 34053392: USDQ token (0xdb9e8f82) is a UUPS proxy (implementation=0x4103155fb2dcf8b6138c8eb4be0542facc9a7523, no external proxy admin). QuillAccessManager proxy (0xBe589551) is also a UUPS proxy (impl=0x3e5462da8e6c3971d445d717c389a8bec036b719, 'QuillAccessManagerUpgradeable' per Scrollscan). ADMIN_ROLE (id=0) was granted via grantRole tx at Scroll block 15218053 to 0x32fd58b8c4d454ab585dea736b7d2b5929b6676c (the deployer revoked its own ADMIN_ROLE at block 15218072). The ADMIN is a Gnosis Safe 1.4.1 multisig (0x32fd58b8, 3-of-6, no modules, HAS a guard at 0x075233a1, fallback handler=0xfd0732dc). Owner 4 is the deployer EOA (0x9b8d3e60) who retains a Safe signer seat.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Quill & Liquity v2 docs",
+          "url": "https://docs.quill.finance/faq/quill-and-liquity-v2"
+        },
+        {
+          "label": "USDQ docs",
+          "url": "https://docs.quill.finance/faq/usdusdq"
+        },
+        {
+          "label": "QuillAccessManagerUpgradeable on Scrollscan",
+          "url": "https://scrollscan.com/address/0x3e5462da8e6c3971d445d717c389a8bec036b719"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "uups",
+      "adminAddresses": [
+        "0xBe589551397d0F28255e429DDB478620b1C2f08a"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "QuillAccessManager (UUPS proxy, admin = Quill Safe multisig)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 34053392,
+      "sources": [
+        {
+          "label": "USDQ docs",
+          "url": "https://docs.quill.finance/faq/usdusdq"
+        },
+        {
+          "label": "Quill & Liquity v2 docs",
+          "url": "https://docs.quill.finance/faq/quill-and-liquity-v2"
+        },
+        {
+          "label": "QuillAccessManagerUpgradeable on Scrollscan",
+          "url": "https://scrollscan.com/address/0x3e5462da8e6c3971d445d717c389a8bec036b719"
+        }
+      ]
+    }
+  }
+}

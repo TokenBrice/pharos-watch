@@ -1,0 +1,151 @@
+{
+  "id": "xofm-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "XOFm Celo proxy verified source",
+        "url": "https://celo.blockscout.com/address/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08?tab=contract"
+      },
+      {
+        "label": "XOFm StableTokenV2 implementation verified source",
+        "url": "https://celo.blockscout.com/address/0x434563b0604be100f04b7ae485bcafe3c9d8850e?tab=contract"
+      },
+      {
+        "label": "Mento StableTokenV2 v2.2.0 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/c2e344ebd5f3018253cf26cb39a50f81d8db7c21/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento XOFm owner timelock proxy",
+        "url": "https://celo.blockscout.com/address/0x890DB8A597940165901372Dd7DB61C9f246e2147?tab=contract"
+      },
+      {
+        "label": "Mento TimelockController implementation verified source",
+        "url": "https://celo.blockscout.com/address/0x3eFAD8F997F705675924470Ec84677DB68c5A2d0?tab=contract"
+      },
+      {
+        "label": "Mento reserve transparency dashboard",
+        "url": "https://reserve.mento.org/"
+      }
+    ],
+    "sourceFreeRationale": "The current holder-facing XOFm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. XOFm 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict XOFm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Mento's current Celo oracle-priced stable paths use external rate sources through OracleAdapter/SortedOracles and BreakerBox validity gates. XOFm is documented as an oracle-priced FPMM asset rather than a borrower-CDP asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Mento's current Celo guide explicitly places XOFm on the oracle-priced FPMM path, not the collateralized CDP path. The current reserve API reports no active XOFm troves. There is therefore no current XOFm borrower-specific liquidation branch to inventory under V9.",
+      "sources": [
+        {
+          "label": "Mento stable assets on Celo",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento stable token contracts",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        },
+        {
+          "label": "Mento FPMM oracles and circuit breakers",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento stable token contracts",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento FPMM oracles and circuit breakers",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "XOFm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Celo",
+        "slug": "celo",
+        "url": "https://l2beat.com/scaling/projects/celo"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mento stablecoin docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento addresses",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "protocol": "Mento (native)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Mento XOFm on Celo: name 'Mento West African CFA franc', symbol XOFm, totalSupply 19,186,531.6 XOFm (verified on-chain 2026-07-20), matching the exact captured supply; Mento stables are minted natively on Celo by the Mento protocol.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento addresses",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          },
+          {
+            "label": "XOFm on Celo explorer (supply probed 2026-07-20)",
+            "url": "https://celoscan.io/address/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08"
+          }
+        ]
+      }
+    ]
+  }
+}

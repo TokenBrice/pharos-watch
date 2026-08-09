@@ -1,0 +1,30 @@
+{
+  "id": "pc0000033-tradable",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tradable",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "evidence": "PC0000033 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000033 is tracked as a single-chain or natively issued asset for this review, with no source-verified cross-chain route that creates durable supply. Bridge-route scoring is therefore informational and does not add a third-party route penalty.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sourceFreeRationale": "The tracked Tradable PC0000033 token has one ZKsync deployment; reviewed evidence did not identify a token-specific bridge route beyond chain-level infrastructure.",
+    "sources": [
+      {
+        "label": "Tradable deal page",
+        "url": "https://app.tradable.xyz/investor/deals/e2c78ce9-1c20-4f4a-b6ca-eba1b2f575b1"
+      }
+    ]
+  }
+}

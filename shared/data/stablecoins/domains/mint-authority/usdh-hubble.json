@@ -1,0 +1,121 @@
+{
+  "id": "usdh-hubble",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDH mint authority is a PDA of the Hubble Protocol program. The live program remains upgradeable through Hubble DAO SPL Governance: three of seven current council votes can meet the 40% approval threshold, early vote tipping is enabled, and the instruction hold-up is zero.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T"
+      ],
+      "implementationAddresses": [
+        "DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ"
+      ],
+      "adminAddresses": [
+        "vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Hubble program upgrade governance",
+      "observedAt": "2026-07-13",
+      "observedBlock": 432742753,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Hubble program",
+          "url": "https://explorer.solana.com/address/HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T"
+        },
+        {
+          "label": "Hubble ProgramData",
+          "url": "https://explorer.solana.com/address/DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ"
+        },
+        {
+          "label": "Hubble program governance",
+          "url": "https://explorer.solana.com/address/vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Hubble borrowing-market program (USDH mint authority PDA)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "solana",
+        "address": "AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "capDescription": "Current program logic bounds minting by overcollateralized CDP vaults at a 150% minimum collateral ratio against whitelisted Solana assets; Hubble DAO governance can replace that program logic.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432742753,
+        "sources": [
+          {
+            "label": "Hubble docs",
+            "url": "https://docs.hubbleprotocol.io"
+          },
+          {
+            "label": "Solana RPC getAccountInfo",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "USDH mint USDH1SM1ojwWUga67PGrgFWUHibbjqMvuMaDkRJTgkX returned mintAuthority AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq and freezeAuthority None. A fee-drip transaction at slot 425776110 shows Hubble program HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T invoking SPL Token MintTo with that PDA. The program is not immutable: its ProgramData names live upgrade authority vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v."
+      },
+      {
+        "label": "Hubble program upgrade governance",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "chain": "solana",
+        "address": "vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432742753,
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Hubble program governance",
+            "url": "https://explorer.solana.com/address/vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
+          },
+          {
+            "label": "Hubble DAO realm",
+            "url": "https://explorer.solana.com/address/AgR2tq1xcbqwmgDcNRaV1BEP5J3kfJfswP5vn6WWe6uC"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432742753, Hubble ProgramData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ named this SPL Governance account as upgrade authority. The account governs HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T in the Hubble DAO realm. Its council configuration had a 40% yes-vote threshold, minimum one council token to create a proposal, 259200-second base voting time, early vote tipping, and zero instruction hold-up. Seven active council token-owner records each held one deposited vote, so three affirmative votes can meet the threshold and no guaranteed post-approval execution delay applies."
+      }
+    ],
+    "review": {
+      "evidence": "At finalized Solana slot 432742753, USDH mint authority AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq remained the Hubble program PDA and the mint had no freeze authority. Contrary to the prior immutability claim, ProgramData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ encoded live upgrade authority vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v. That address decoded as the Hubble DAO SPL Governance account for the program. Seven active council records held one vote each; the 40% threshold requires three votes, while early tipping and zero instruction hold-up provide no guaranteed execution delay after approval.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Hubble docs",
+          "url": "https://docs.hubbleprotocol.io"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Hubble ProgramData",
+          "url": "https://explorer.solana.com/address/DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ"
+        },
+        {
+          "label": "Hubble program governance",
+          "url": "https://explorer.solana.com/address/vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
+        }
+      ]
+    }
+  }
+}

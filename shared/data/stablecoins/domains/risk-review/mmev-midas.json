@@ -1,0 +1,162 @@
+{
+  "id": "mmev-midas",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas mMEV docs",
+        "url": "https://docs.midas.app/tokens/mmev"
+      },
+      {
+        "label": "Midas risks",
+        "url": "https://docs.midas.app/tokens/mmev/risks"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mMEV is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "mMEV is a NAV-accreting Midas Liquid Yield Token tracking a delta-neutral DeFi strategy; its underlying protocols can have liquidation risk, but mMEV is not itself a borrower CDP.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Midas describes mMEV as a Liquid Yield Token for an MEV Capital-managed, delta-neutral strategy and separately identifies on-chain liquidation calls as one possible strategy activity. The reviewed product materials do not describe mMEV tokenholders opening borrower-owned debt positions or a token-level collateral threshold, liquidation engine, backstop, or shutdown branch; risks in underlying DeFi protocols are not an mMEV CDP branch to inventory under V9.",
+      "sources": [
+        {
+          "label": "Midas mMEV product documentation",
+          "url": "https://docs.midas.app/tokens/mmev"
+        },
+        {
+          "label": "Midas mMEV risk disclosure",
+          "url": "https://docs.midas.app/tokens/mmev/risks"
+        },
+        {
+          "label": "Midas mMEV smart contracts",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mMEV product documentation",
+        "url": "https://docs.midas.app/tokens/mmev"
+      },
+      {
+        "label": "Midas Liquid Yield Token overview",
+        "url": "https://docs.midas.app/liquid-yield-token"
+      },
+      {
+        "label": "Midas mToken pricing",
+        "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "mMEV is issued natively by Midas on Ethereum, Plume, and Etherlink. Row-level on-chain verification on 2026-07-20: each deployment is a Midas-administered transparent proxy (EIP-1967 impl/admin slots read on all three chains), no LayerZero endpoint() surface exists on any of them, and the verified mint-authority review (2026-07-13) confirms each chain mints through its own Midas deposit-vault minter holding M_MEV_MINT_OPERATOR_ROLE plus Midas admin EOAs under chain-local 1-of-3 Safes. No third-party bridge carries the representation; cross-chain movement is issuer-operated.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mMEV page",
+        "url": "https://midas.app/mmev"
+      },
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "protocol": "Midas mMEV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): EIP-1967 impl 0x4fe7f62b2f4ef077aed8f458c8b4652f5de8080f, admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (uniform Midas ProxyAdmin), LayerZero endpoint() reverts. The verified mint-authority review (2026-07-13) confirms Ethereum minting runs through the Midas deposit-vault minter 0xe092737d412e0b290380f9c8548cb5a58174704f and Midas operator EOAs under the chain-local 1-of-3 admin Safe — issuer-native minting, no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570877,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "mMEV Ethereum token",
+            "url": "https://etherscan.io/address/0x030b69280892c888670edcdcd8b69fd8026a0bf3"
+          },
+          {
+            "label": "Midas smart contract addresses",
+            "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "destinationChain": "plume",
+        "contractAddress": "0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "protocol": "Midas mMEV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Plume block 82159591 via rpc.plume.org): EIP-1967 impl 0x6d99f338b796359fedd79ff455d9e0749174c309, admin 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b (Midas ProxyAdmin), LayerZero endpoint() reverts. The verified mint-authority review (2026-07-13) confirms Plume minting runs through the Midas deposit-vault minter 0xe6f0c60fca2bd97d633a3d9d49dbefdf19636d8c holding M_MEV_MINT_OPERATOR_ROLE plus operator EOA 0x2facac0c under the chain-local 1-of-3 admin Safe — issuer-native minting, no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 82159591,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "mMEV Plume token",
+            "url": "https://explorer.plume.org/address/0x7d611dc23267f508de90724731dc88ca28ef7473"
+          },
+          {
+            "label": "Midas smart contract addresses",
+            "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "destinationChain": "etherlink",
+        "contractAddress": "0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "protocol": "Midas mMEV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Etherlink block 48760374): EIP-1967 impl 0x4640679ce4689f6a7ae4399ff406ac6062ad00cc, admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac (same uniform Midas ProxyAdmin as the Ethereum deployment), LayerZero endpoint() reverts. The verified mint-authority review (2026-07-13) confirms Etherlink minting runs through the Midas deposit-vault minter 0x577617613c4fac5a7561f8f3f2cb128a560774bc holding M_MEV_MINT_OPERATOR_ROLE plus operator EOA 0x2facac0c under the chain-local 1-of-3 admin Safe — issuer-native minting, no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48760374,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "mMEV Etherlink token",
+            "url": "https://explorer.etherlink.com/address/0x5542f82389b76c23f5848268893234d8a63fd5c8"
+          },
+          {
+            "label": "Midas smart contract addresses",
+            "url": "https://docs.midas.app/resources/smart-contracts-addresses"
+          }
+        ]
+      }
+    ]
+  }
+}

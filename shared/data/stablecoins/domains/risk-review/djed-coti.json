@@ -1,0 +1,50 @@
+{
+  "id": "djed-coti",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Djed official FAQ",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed"
+      },
+      {
+        "label": "Cardano native-token transfer model",
+        "url": "https://developers.cardano.org/docs/build/native-tokens/cardano-token-registry/"
+      },
+      {
+        "label": "Djed technical review",
+        "url": "https://raw.githubusercontent.com/tweag/tweag-audit-reports/main/Djed-2023-01.pdf"
+      }
+    ],
+    "evidence": "Djed is a Cardano native asset. Cardano's native-token model routes ordinary transfers through the ledger rather than an ERC-20-style token contract; the minting policy controls mint and burn operations, not arbitrary holder transfers. The official Djed documentation and technical review describe the ADA reserve, DJED mint/burn, and SHEN mechanisms without a holder blacklist or freeze path. Direct holder-balance blacklistability remains false.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Djed uses one shared ADA reserve contract and an external pricing index for system-wide mint and redemption accounting; the reviewed primary sources do not identify the production oracle provider or failure handling.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Djed is an autonomous reserve contract that mints and burns DJED and the SHEN reserve coin against one shared base-coin reserve. Users do not open borrower-specific collateral positions, and the reviewed design exposes no market-specific oracle or liquidation branches.",
+      "sources": [
+        {
+          "label": "IOG Djed design article",
+          "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "IOG Djed design article",
+        "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+      }
+    ]
+  }
+}

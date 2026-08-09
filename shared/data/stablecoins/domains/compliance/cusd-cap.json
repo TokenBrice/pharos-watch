@@ -1,0 +1,75 @@
+{
+  "id": "cusd-cap",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "cUSD is USD-pegged and vault-redeemable at ~1:1, which superficially resembles a payment stablecoin, but its proportional basket redemption mechanism (socializing losses across redeemers), absence of a disclosed legal issuer entity, and the protocol's self-description as code-enforced rather than institutionally backed create genuine ambiguity about whether a legal 'permitted issuer' exists under the GENIUS Act definition. The stcUSD product separates yield; cUSD itself does not natively pay yield."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Cap Protocol",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://cap.app/vault/reserves/cUSD",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Cap documents basket-based vault redemption rather than a clean fiat issuer redemption promise. No legal entity is publicly disclosed as the issuer. The protocol operates code-enforced protection without named regulatory oversight. Until a legal issuer entity is disclosed and pathway to GENIUS compliance clarified, applicability remains unclear.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "FDIC GENIUS Act prudential requirements NPRM (FR 2026-06974)",
+        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-10"
+      },
+      {
+        "label": "FinCEN/OFAC AML NPRM (FR 2026-06963)",
+        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-10"
+      },
+      {
+        "label": "Cap docs — introduction",
+        "url": "https://docs.cap.app/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cap vault docs",
+        "url": "https://docs.cap.app/concepts/vault",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Cap cUSD reserves dashboard",
+        "url": "https://cap.app/vault/reserves/cUSD",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — OCC GENIUS Act NPRM; no Cap Protocol mention",
+        "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and — FDIC prudential NPRM; no Cap Protocol application listed",
+        "https://docs.cap.app/ — Cap issuer docs; no regulatory authorization disclosed",
+        "https://docs.cap.app/concepts/vault — vault mechanism; basket redemption confirmed, no issuer entity named",
+        "Web search for Cap Protocol GENIUS Act regulatory filing, June 2026: no results found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Cap Protocol has no publicly disclosed GENIUS authorization, application, or state-qualified status; no legal issuer entity is named in public documentation; basket redemption design diverges from GENIUS payment-stablecoin model; no PPSI application framework exists yet.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

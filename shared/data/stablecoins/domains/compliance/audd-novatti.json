@@ -1,0 +1,76 @@
+{
+  "id": "audd-novatti",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AUDD is a 1:1 AUD-backed payment stablecoin with institutional redemption, multichain distribution, and Coinbase Wallet custody availability for US users (trading restricted to non-US Coinbase users)."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AUDC Pty Ltd",
+    "issuerDomicile": "Australia",
+    "licensingRegulator": "ASIC AFSL No. 700123",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.audd.digital/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-05-31",
+    "notes": "AUDD is a foreign non-USD payment stablecoin with some US presence (Coinbase Wallet custody; not tradable on Coinbase for US-based users). No GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration found. Foreign exception framework still under proposed rulemaking (Treasury NPRM FR 2026-06489). Monthly William Buck attestations confirmed through May 2026.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "AUDD Coinbase listing announcement",
+        "url": "https://www.audd.digital/audd-launches-on-coinbase/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Coinbase AUDD listing blog (global, not US trading)",
+        "url": "https://www.coinbase.com/blog/audd-and-xsgd-live",
+        "sourceKind": "news",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "AUDD terms",
+        "url": "https://www.audd.digital/audd-terms-and-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "AUDD transparency (monthly William Buck attestations through May 2026)",
+        "url": "https://www.audd.digital/transparency/",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin 2026-3 and public releases",
+        "Treasury NPRM on state-regime comparability (FR 2026-06489)",
+        "AUDD issuer website (audd.digital) — no mention of GENIUS Act or US registration",
+        "Coinbase AUDD pages — trading restricted for US users, custody only",
+        "Web search for AUDC/AUDD GENIUS foreign exception or US registration — no results",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public US GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AUDD. Foreign exception registration framework remains in proposed-rulemaking phase as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

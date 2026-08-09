@@ -1,0 +1,40 @@
+{
+  "id": "bib01-backed",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "bIB01 is a tracker certificate (a security) referencing the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF, issued by Backed Assets (JE) Limited (Jersey). GENIUS Act §2(22)(B) (12 U.S.C. §5901(22)(B)) excludes from the payment-stablecoin definition any asset that meets the definition of a security under federal securities laws. Additionally, Backed does not offer or sell to US persons."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Backed Assets (JE) Limited",
+    "issuerDomicile": "Jersey",
+    "licensingRegulator": "Swiss DLT Act registered uncertificated securities framework",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "bIB01 is outside GENIUS payment-stablecoin scope: (1) it is a tracker certificate/security referencing an ETF, not a payment instrument designed for a fixed amount of monetary value (GENIUS Act §2(22)(B) excludes securities from the definition), and (2) Backed Assets (JE) Limited does not offer or sell to US persons. Issuer domicile is Jersey (Channel Islands); the Swiss DLT Act provides the structural framework for token issuance but does not change the Jersey corporate domicile.",
+    "references": [
+      {
+        "label": "GENIUS Act Pub. L. 119-27 full text (Congress.gov)",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Backed bIB01 product page",
+        "url": "https://assets.backed.fi/products/bib01",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

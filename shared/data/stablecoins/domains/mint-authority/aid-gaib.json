@@ -1,0 +1,153 @@
+{
+  "id": "aid-gaib",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "AID uses role-gated issuer minting. On Ethereum, two contract MINTER_ROLE holders are confirmed active (4099 and 3162 bytes). DEFAULT_ADMIN is held by both a 3/5 Safe and an EOA (confirmed no bytecode). On Arbitrum, Base, and BSC, the same DEFAULT_ADMIN Safe and EOA are confirmed; MINTER_ROLE has no active grants on those chains (different impl, bridge-minted).",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x410C19F3f80B64C7486Ae34890Ee9251D0696433",
+        "label": "AID Ethereum MINTER_ROLE holder (contract)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0x410C19…) = true; eth_getCode = 4099 bytes (contract). owner() on this contract returned EOA 0x3885be… (DEFAULT_ADMIN EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE2E1424687EB676b3807693CBb439362b8eA908E",
+        "label": "AID Ethereum MINTER_ROLE holder (contract)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0xE2E142…) = true; eth_getCode = 3162 bytes (contract). owner() on this contract returned 0xee0cd7c… (171-byte contract)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x32793F6B11820Fa9C7039dFa640B751f491A027d",
+        "label": "AID default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x64EC15220B9F73a9C341C6D646Ca48E33571daE3",
+            "0x45dAc672A0c9d58367Aaac1C190F1862d46E4cda",
+            "0xe406B806f0cb0d3Dd69719D0Ee03069c0BFE3a10",
+            "0x5b14755eB9890296A2acdADe2FFFeB2Bc56Ff847",
+            "0x38987c7062cC3C286Eff57De5a0a433e8227D1c7"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedBlock": 25294761,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "AID default-admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+          }
+        ],
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x32793F…) = true on Ethereum, Arbitrum, Base, and BSC. Safe API: threshold 3, 5 owners, no enabled modules, zero guard, masterCopy 0x41675C…."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3885be006eba7a7f5d555b4f78f237536700d1b1",
+        "label": "AID additional default-admin EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AID Ethereum token",
+            "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be…) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19… (owner() confirmed). Same EOA holds DEFAULT_ADMIN on Arbitrum, Base, and BSC."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "GAIB AID docs",
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+        },
+        {
+          "label": "AID Ethereum token",
+          "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
+        },
+        {
+          "label": "AID RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x18f52b3fb465118731d9e0d276d4eb3599d57596&fromBlock=23682560&toBlock=25166950&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AID default-admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+        },
+        {
+          "label": "GAIB AID transparency dashboard",
+          "url": "https://aid.gaib.ai/transparency"
+        },
+        {
+          "label": "GAIB transparency scope (audits cover the financing deployment)",
+          "url": "https://docs.gaib.ai/products/gaib-products/transparency"
+        }
+      ],
+      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none. 2026-07-20 follow-up: the token is a UUPS proxy (EIP-1967 implementation 0x2db74834f556e1f19ed397e5f935a983e4c2f38b, proxiableUUID() returns the EIP-1967 slot, UPGRADE_INTERFACE_VERSION = '5.0.0', upgradeToAndCall present); upgrade authorization is role-gated in the implementation, so the DEFAULT_ADMIN_ROLE holders (Safe 0x32793F6B... 3/5 and EOA 0x3885be...) can change mint-critical logic.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20"
+    },
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x18f52b3fb465118731d9e0d276d4eb3599d57596"
+      ],
+      "implementationAddresses": [
+        "0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AID default-admin Safe",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25570980,
+      "sources": [
+        {
+          "label": "AID Ethereum token proxy (EIP-1967 implementation slot)",
+          "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readProxyContract"
+        },
+        {
+          "label": "AID implementation (proxiableUUID = EIP-1967 slot, UPGRADE_INTERFACE_VERSION 5.0.0)",
+          "url": "https://etherscan.io/address/0x2db74834f556e1f19ed397e5f935a983e4c2f38b#code"
+        }
+      ]
+    }
+  }
+}

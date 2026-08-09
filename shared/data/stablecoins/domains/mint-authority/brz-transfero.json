@@ -1,0 +1,123 @@
+{
+  "id": "brz-transfero",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Non-Ethereum chain owners are issuer-context EOAs or 2-of-3 Safes. Solana mint authority is a system-program wallet. All controls corroborate Transfero centralized issuance.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+      ],
+      "implementationAddresses": [
+        "0x2c4a809e8d86b1688b65581b6c7f50bd670d1b77"
+      ],
+      "adminAddresses": [
+        "0x478e84519f99811be4f9e3960f7489781501542d"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294823,
+      "sources": [
+        {
+          "label": "Ethereum: BRZ token contract",
+          "url": "https://eth.blockscout.com/address/0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "address": "0xaf24edebf7fdaed86d839be018647ba6279b9d7a",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x567a3998c95a3512554002863c820ca04f79fc9f",
+            "0x8c5f00e5bd76b152dd205fb336ad8c6038a117d0",
+            "0x2455e3d4492d8a0638f49dfe869a236b06ea500a"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "masterCopy": "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          "observedBlock": 25294823,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Ethereum: BRZ token contract",
+            "url": "https://eth.blockscout.com/address/0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+          }
+        ],
+        "evidence": "At Ethereum block 25294823: owner() on BRZ ETH (0x01d33fd36ec67c6ada32cf36b31e88ee190b1839) returned 0xaf24edebf7fdaed86d839be018647ba6279b9d7a. Storage of 0xaf24: slot0=GnosisSafe singleton 0xd9db, slot3=ownerCount 3, slot4=threshold 2, slot5=nonce 5. Owners read from linked list at mapping slot 2: 0x567a (EOA), 0x8c5f (EOA), 0x2455 (EOA). Modules: sentinel points to 0x1 (none-detected). masterMinter() (0x2c64) is a matching 2-of-3 Safe (ownerCount=3, threshold=2, nonce=15). ProxyAdmin 0x478e owner() = 0xaf24 (same Safe)."
+      },
+      {
+        "label": "BRZ BSC owner (issuer EOA)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x01455c3b57e40223352a53c9897643273ad78a57",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "BSC: BRZ token contract",
+            "url": "https://bscscan.com/address/0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb"
+          }
+        ],
+        "evidence": "At BSC block 103622902: owner() on BRZ BSC (0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb) returned 0x01455c3b57e40223352a53c9897643273ad78a57; eth_getCode returned 0x (EOA)."
+      },
+      {
+        "label": "BRZ Solana mint authority (Transfero issuer wallet)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Solana BRZ mint: FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
+            "url": "https://solscan.io/token/FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD"
+          }
+        ],
+        "evidence": "Solana getAccountInfo on SPL mint FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD: mint_authority = ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D (system-program account, Transfero issuer wallet). freeze_authority = None."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Transfero BRZ",
+          "url": "https://transfero.com/stablecoins/brz/"
+        },
+        {
+          "label": "Ethereum: BRZ token contract",
+          "url": "https://eth.blockscout.com/address/0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+        },
+        {
+          "label": "Transfero BRZ page",
+          "url": "https://transfero.com/brz"
+        },
+        {
+          "label": "FINMA self-regulatory organisations (VQF is AML-only)",
+          "url": "https://www.finma.ch/en/supervision/self-regulatory-organisations-sros/"
+        }
+      ],
+      "evidence": "Ethereum at block 25294823: owner() = 0xaf24 (2-of-3 GnosisSafe proxy, masterCopy=0xd9db GnosisSafe 1.3.0 singleton). Safe storage: ownerCount=3, threshold=2, nonce=5. Three EOA owners confirmed via linked-list traversal. Modules sentinel = 0x1 (no modules). masterMinter 0x2c64 is an identical 2-of-3 Safe (nonce=15). ProxyAdmin 0x478e owned by same Safe. BSC owner is EOA 0x01455c. Solana mint authority ACvei6 is a system-program wallet. Polygon and Base owners are also 2-of-3 Safes (threshold=2, ownerCount=3). BRZ is issued by Transfero Swiss AG (Zug); the only dated third-party reserve review located is a ~2020 law-firm report, and current transparency relies on Parsiq blockchain analytics rather than a recurring named accounting-firm attestation, so reconciliation is unknown. Transfero Swiss AG's Swiss oversight is VQF membership, a FINMA-recognised AML self-regulatory organisation that is explicitly not prudential supervision, and no FINMA banking/EMI licence for the BRZ issuer was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
+      "disposition": "scoreable"
+    }
+  }
+}
