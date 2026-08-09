@@ -18,6 +18,7 @@ Mint Authority and Exit fold into Safety Score V9, the V8 engine is retired, and
 - **Wave-1 curation**: Research landed 121 mechanism overlays, control and access reviews across the C01-C12 set, reserve composition curation for 79 coins, and wave-3 long-tail dossiers. syrupUSDC is now an RWA credit fund.
 - **Deeper DEX discovery**: DEX discovery registered verified providers for 50 deployment chains, added a Stellar Horizon provider with sweep-aware census bounds, reported complete DexScreener pool counts, and made oversized sweeps resumable.
 - **Coverage and editorial**: Tori trUSD and JPYSC were promoted to active tracking, the v9.14 commodity-claim archetype migrated gold-backed assets onto a shared model, and 40 AI editorial summaries were rewritten against the current scoring set.
+- **ftUSD evidence correction**: Corrected Ethereum-only supply and address scope, removed the financing-to-supply comparison, documented the perpetual PUT, refreshed both live borrow-and-stake strategies, distinguished 3-of-5 Safe control from entity concentration, and updated Safe-module and issuer reserve-source evidence. The valid dependency, liquidation, smart-contract, upgradeability, no-timelock, and independent-assurance risks remain.
 
 ## 2026-07-27 to 2026-08-02
 

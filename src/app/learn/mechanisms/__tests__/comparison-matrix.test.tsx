@@ -36,7 +36,7 @@ describe("MechanismComparisonMatrix", () => {
     // cdp row
     expect(html).toContain("Liquidation cascade");
     // synthetic
-    expect(html).toContain("Funding inversion");
+    expect(html).toContain("Carry / unwind stress");
     // algorithmic
     expect(html).toContain("Reflexive collapse");
     // rwa-credit-fund

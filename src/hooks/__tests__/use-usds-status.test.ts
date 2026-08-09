@@ -9,7 +9,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: useQueryMock,
 }));
 
-import { CRON_15MIN } from "@/lib/cron-intervals";
+import { CRON_USDS_STATUS } from "@/lib/cron-intervals";
 import { useUsdsStatus } from "../api-hooks";
 
 describe("useUsdsStatus", () => {
@@ -30,8 +30,8 @@ describe("useUsdsStatus", () => {
     expect(useQueryMock).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ["usds-status"],
-        staleTime: CRON_15MIN,
-        refetchInterval: 2 * CRON_15MIN,
+        staleTime: CRON_USDS_STATUS,
+        refetchInterval: 2 * CRON_USDS_STATUS,
       }),
     );
   });
