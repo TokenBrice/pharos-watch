@@ -53,11 +53,14 @@ Drop commits matching any of these patterns from **both** `commits[]` and cluste
 - `^chore(\([^)]+\))?: refresh hotspot ratchet`
 - `^chore(\([^)]+\))?: satisfy hotspot ratchet`
 - `^chore(\([^)]+\))?: update .* coverage baseline`
+- `^chore\(ci\): (accept|acknowledge|re-baseline) .*(ratchet|coverage baseline|hotspot)` — the same ratchet-baseline class, phrased as acceptance rather than update
+- `^chore\(generated\): (converge|settle|trailing) ` — generated-artifact convergence commits that don't use the word "refresh"
 - `^(docs|Docs|Agent Docs) cleanup$`
 - `^\[skip ci\]`
 - `^Merge branch 'worktree-agent-`
 - `^Merge pull request #\d+ from [^ ]+/dependabot/`
 - `^chore\(deps(-dev)?\): bump`
+- `^Bump ` — the current Dependabot shape: PRs squash-merge as `Bump <dep> from <x> to <y> (#NNN)` or `Bump the <group> group with N updates (#NNN)`, so the `Merge pull request …/dependabot/` pattern never fires
 - `^Revert "Revert "` → treat as a no-op pair; drop both the revert-of-revert and its original revert if both appear
 
 The two `^Merge …` patterns are normally unreachable under `--no-merges` (step 2); they are kept only as a guard for commit lists collected without that flag.
