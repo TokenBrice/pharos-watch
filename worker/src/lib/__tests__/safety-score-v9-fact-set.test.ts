@@ -4969,6 +4969,274 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(compiled.wrapperLocalFacts.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
   });
 
+  // `safety-score-v9-fact-set-wrapper.ts` had no dedicated suite: the wrapper
+  // dimensions were only ever reached through the happy path of other tests, so
+  // the adverse and unavailable branches went unmeasured. These cases exercise
+  // each remaining branch through the real compiler, not the private helpers.
+  describe("wrapper-local dimension branches", () => {
+    const strategyVaultExtension = () => {
+      const reviewed = extension();
+      reviewed.assets[0]!.variantKind = "strategy-vault";
+      return reviewed;
+    };
+    const localControl = (
+      overrides: Partial<
+        NonNullable<Extract<SafetyScoreV9FactSetExtensionV2["assets"][number]["controlReview"], { state: "partially-reviewed-controls" }>>["controls"][number]
+      > = {},
+    ) => ({
+      controlKey: "custody:reviewed",
+      deploymentKey: "asset:alpha",
+      controlKind: "custody" as const,
+      scope: "global" as const,
+      capabilities: ["custody-transfer" as const],
+      capSemantics: { kind: "bounded" as const, bound: { amount: 0.25, unit: "supply-fraction" as const } },
+      claimImpairment: "bounded" as const,
+      economicLossScope: "reserve-claim" as const,
+      authority: {
+        authorityKey: "ethereum:0x4444444444444444444444444444444444444444",
+        model: "multisig" as const,
+        threshold: { required: 3, total: 6 },
+      },
+      delaySec: 604_800,
+      materialSupplyShare: null,
+      keyCustody: "unknown" as const,
+      modulesOrGuards: "unknown" as const,
+      incidentState: "none" as const,
+      failureDomains: [{ kind: "reserve-custodian" as const, key: "issuer:alpha" }],
+      ...overrides,
+    });
+    const wrapperFacts = (
+      reviewed: SafetyScoreV9FactSetExtensionV2,
+      fixed: ReturnType<typeof exactFixedInput> = exactFixedInput(),
+    ) => {
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+      if (compiled.wrapperLocalFacts.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+      if (compiled.wrapperLocalFacts.formDisposition !== "reviewed") {
+        // A quarantined asset reports every dimension as
+        // `asset-compilation-unavailable`, which would silently pass a
+        // "disposition is not reviewed" assertion for the wrong reason.
+        throw new Error(`Asset was quarantined: ${compiled.wrapperLocalFacts.formSignals.join(",")}`);
+      }
+      return compiled.wrapperLocalFacts.facts;
+    };
+    const boundedStatus = (policyRuleId: string, gapId: string) => ({
+      applicability: { state: "required" as const, policyRuleId, rationale: null, gapId: null },
+      observationState: "bounded-unknown" as const,
+      evidenceRefIds: ["placeholder:evidence"],
+      gapIds: [gapId],
+    });
+    /** Re-derives the content-addressed identities after mutating a capture. */
+    const rebuild = (fixed: ReturnType<typeof exactFixedInput>) => {
+      const {
+        schemaVersion: omittedSchemaVersion,
+        dexPayloadFingerprint: omittedDexPayloadFingerprint,
+        redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+        registryFingerprint: omittedRegistryFingerprint,
+        inputMethodologyVersions: omittedInputMethodologyVersions,
+        baseInputGenerationId: omittedBaseInputGenerationId,
+        ...draft
+      } = fixed;
+      void [
+        omittedSchemaVersion,
+        omittedDexPayloadFingerprint,
+        omittedRedemptionPayloadFingerprint,
+        omittedRegistryFingerprint,
+        omittedInputMethodologyVersions,
+        omittedBaseInputGenerationId,
+      ];
+      return createReportCardsFixedInput(draft);
+    };
+
+    it("escalates an active control incident to critical loss-absorption risk", () => {
+      const reviewed = strategyVaultExtension();
+      reviewed.assets[0]!.controlReview = {
+        state: "partially-reviewed-controls",
+        rationale: "One local custody control is reviewed and currently carries an active incident.",
+        controls: [localControl({ incidentState: "active" })],
+      };
+      expect(wrapperFacts(reviewed).lossAbsorptionEmergencyControls).toMatchObject({
+        disposition: "reviewed",
+        assessment: "critical",
+        signals: expect.arrayContaining(["active-control-incident:custody:reviewed"]),
+      });
+    });
+
+    describe("contract mutability", () => {
+      it("reports the upgrade review unavailable when the mint fact is not known", () => {
+        const reviewed = strategyVaultExtension();
+        const mint = reviewed.assets[0]!.economicControlReview!.mint;
+        mint.status = boundedStatus("v9.control.mint-review", "extension-gap:mint:alpha");
+        mint.reconciliation = "unknown";
+        mint.upgrade = { state: "unknown", controlKey: null };
+        expect(wrapperFacts(reviewed).contractMutability).toMatchObject({
+          assessment: null,
+          signals: ["wrapper-upgrade-review-unavailable"],
+        });
+      });
+
+      it("attributes a reviewed upgrade control that never compiled to the integration, not the issuer", () => {
+        const reviewed = strategyVaultExtension();
+        const upgradeControlKey = "upgrade:unresolved";
+        reviewed.assets[0]!.controlReview = {
+          state: "partially-reviewed-controls",
+          rationale: "The upgrade control is enumerated, but its authority and blast radius stay unresolved.",
+          controls: [
+            localControl({
+              controlKey: upgradeControlKey,
+              controlKind: "upgrade",
+              capabilities: ["upgrade"],
+              capSemantics: { kind: "unknown", bound: null },
+              claimImpairment: "unknown",
+              economicLossScope: "unknown",
+              authority: null,
+              delaySec: null,
+              failureDomains: [],
+            }),
+          ],
+        };
+        reviewed.assets[0]!.economicControlReview!.mint.upgrade = {
+          state: "reviewed",
+          controlKey: upgradeControlKey,
+        };
+        expect(wrapperFacts(reviewed).contractMutability).toMatchObject({
+          disposition: "integration-missing",
+          signals: [`reviewed-upgrade-control-not-compiled:${upgradeControlKey}`],
+        });
+      });
+
+      it("falls back to issuer nondisclosure when the upgrade authority is unreviewed", () => {
+        const reviewed = strategyVaultExtension();
+        reviewed.assets[0]!.economicControlReview!.mint.upgrade = { state: "unknown", controlKey: null };
+        expect(wrapperFacts(reviewed).contractMutability).toMatchObject({
+          disposition: "issuer-undisclosed",
+          signals: ["wrapper-upgrade-authority-undisclosed"],
+        });
+      });
+    });
+
+    it("grades a leveraged reserve exposure high and names the factor", () => {
+      const draft = structuredClone(exactFixedInput());
+      // `leverage` is a first-class `ReserveRiskFactor`, so a curated slice can
+      // state it directly; the wrapper dimension reads the compiled exposure.
+      for (const slice of draft.liveReserveMap.alpha!) slice.riskFactors = ["leverage", "counterparty"];
+      const leverage = wrapperFacts(strategyVaultExtension(), rebuild(draft)).leverage;
+      expect(leverage).toMatchObject({
+        disposition: "reviewed",
+        assessment: "high",
+        signals: expect.arrayContaining(["wrapper-leverage-factor:leverage"]),
+      });
+    });
+
+    describe("exit dimensions", () => {
+      const withRedemptionRoute = (
+        fixed: ReturnType<typeof queuedRedemptionFixedInput>,
+        overrides: Record<string, unknown> = {},
+      ) => {
+        const reviewed = strategyVaultExtension();
+        reviewed.registryFingerprint = fixed.registryFingerprint;
+        reviewed.assets[0]!.routeReviews = [
+          ...buildSafetyScoreV9RouteReviews(fixed, "alpha").map((review) =>
+            review.lane === "redemption" ? { ...review, ...overrides } : review,
+          ),
+        ];
+        reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "alpha");
+        return reviewed;
+      };
+
+      it("holds withdrawal terms unavailable when the redemption fee is reviewed-undisclosed", () => {
+        const fixed = boundedUnknownFeeRedemptionFixedInput();
+        const reviewed = strategyVaultExtension();
+        reviewed.registryFingerprint = fixed.registryFingerprint;
+        reviewed.assets[0]!.assetId = "usdc-circle";
+        reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "usdc-circle");
+        reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "usdc-circle");
+        expect(wrapperFacts(reviewed, fixed).withdrawalTerms).toMatchObject({
+          disposition: "issuer-undisclosed",
+          signals: ["wrapper-withdrawal-fee-undisclosed"],
+        });
+      });
+
+      it("grades withdrawal terms by the worst reviewed access and execution posture", () => {
+        const cases = [
+          // Only the issuer can pull the redemption: holders have no route.
+          [{ holderAccess: "issuer-only" }, "critical"],
+          // Open to holders but gated by an allowlist.
+          [{ holderAccess: "allowlisted" }, "moderate"],
+          // Permissionless, atomic, bounded — nothing left to hold against it.
+          [{}, "low"],
+        ] as const;
+        for (const [overrides, assessment] of cases) {
+          const fixed = queuedRedemptionFixedInput(86_400, true);
+          const reviewed = withRedemptionRoute(fixed, {
+            settlementModel: "atomic",
+            executionModel: "market-depth",
+            executionCertainty: "bounded",
+            holderAccess: "permissionless",
+            settlementSlaSec: null,
+            ...overrides,
+          });
+          expect(wrapperFacts(reviewed, fixed).withdrawalTerms, JSON.stringify(overrides)).toMatchObject({
+            disposition: "reviewed",
+            assessment,
+          });
+        }
+      });
+
+      it("grades a queued redemption by its settlement SLA", () => {
+        for (const [settlementSlaSec, assessment] of [
+          [8 * 86_400, "high"],
+          [2 * 86_400, "moderate"],
+        ] as const) {
+          const fixed = queuedRedemptionFixedInput(86_400, true);
+          const reviewed = withRedemptionRoute(fixed, {
+            settlementModel: "queued",
+            holderAccess: "permissionless",
+            executionModel: "market-depth",
+            executionCertainty: "bounded",
+            settlementSlaSec,
+          });
+          expect(wrapperFacts(reviewed, fixed).withdrawalTerms, String(settlementSlaSec)).toMatchObject({
+            assessment,
+          });
+        }
+      });
+
+      it("calls measured unwind critical when the exit fact is known but nothing is score-eligible", () => {
+        // The only measured route prices its capacity above the policy stress
+        // request's cost ceiling (200 bps), so the curve resolves to nothing at
+        // the request. The exit portfolio is answered but has no capacity to
+        // measure — an adverse answer, not a missing measurement, so it must
+        // not be graded as unavailable.
+        const draft = structuredClone(exactFixedInput());
+        const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+        observation.maxCostBps = 300;
+        observation.capacityCurve = observation.capacityCurve.map((point) => ({ ...point, maxCostBps: 300 }));
+        const fixed = rebuild(draft);
+        const reviewed = strategyVaultExtension();
+        reviewed.assets[0]!.routeReviews = reviewed.assets[0]!.routeReviews.map((review) => ({
+          ...review,
+          executionCosts: review.executionCosts.map((cost) => ({ ...cost, maxCostBps: 300 })),
+        }));
+        const measuredUnwind = wrapperFacts(reviewed, fixed).measuredUnwind;
+        expect(measuredUnwind).toMatchObject({
+          disposition: "reviewed",
+          assessment: "critical",
+          signals: ["wrapper-measured-unwind:no-score-eligible-capacity"],
+        });
+      });
+
+      it("reports measured unwind unavailable when the supply fact carries no stress request", () => {
+        const reviewed = strategyVaultExtension();
+        reviewed.assets[0]!.routeReviews = [];
+        reviewed.assets[0]!.retainedRoutes = [];
+        expect(wrapperFacts(reviewed).measuredUnwind).toMatchObject({
+          assessment: null,
+          signals: ["wrapper-measured-unwind-unavailable"],
+        });
+      });
+    });
+  });
+
   it("keeps a reviewed upgrade control known inside a partial control inventory", () => {
     const fixed = exactFixedInput();
     const mixed = extension();
