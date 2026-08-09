@@ -12,6 +12,7 @@ import {
   type WorkerVersionEvidence,
 } from "@/lib/incident-history-view-model";
 import { formatTimestampSeconds, formatTransitionLabel } from "@/lib/status-dashboard-model";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 export interface HistorySectionProps {
   allTransitions: StatusResponse["timeline"];
@@ -258,7 +259,7 @@ export function HistorySection({
               historyEvidence.state === "error" ||
               historyEvidence.state === "stale" ||
               historyEvidence.completeness !== "complete"
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                ? SEVERITY_TONE_CLASS.watch.pill
                 : undefined
             }
           />
@@ -266,14 +267,14 @@ export function HistorySection({
             label="Transitions 24h"
             value={String(transitionsLast24h)}
             className={
-              isFlapping ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200" : undefined
+              isFlapping ? SEVERITY_TONE_CLASS.watch.pill : undefined
             }
           />
           <SummaryBadge
             label="Stability"
             value={isFlapping ? "Flapping" : "Stable"}
             className={
-              isFlapping ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200" : undefined
+              isFlapping ? SEVERITY_TONE_CLASS.watch.pill : undefined
             }
           />
           <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "Unknown"} />

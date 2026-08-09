@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { focusElement } from "@/lib/focus-element";
 import { useApiKeyRequests } from "@/hooks/use-api-key-requests";
 import {
   API_KEY_REQUEST_ACTION_LABELS,
@@ -36,7 +37,8 @@ import {
   buildAdminMutationReceiptMetadata,
   type AdminMutationReceiptMetadata,
 } from "./admin-mutation-feedback";
-import { type AdminMutationIntentRequest, useAdminMutationIntents } from "./admin-mutation-intent";
+import { type AdminMutationIntentMode, useAdminMutationIntents } from "./admin-mutation-intent";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 const EMPTY_REQUESTS: readonly ApiKeySelfServeRequestAdminSummary[] = [];
 const REQUEST_LIST_LIMIT = 50;
@@ -51,7 +53,7 @@ export function ApiKeyRequestsPanel() {
     status: statusFilter === "all" ? undefined : statusFilter,
     limit: REQUEST_LIST_LIMIT,
   });
-  const { executions, execute, retrySame, executeNew, clear } = useAdminMutationIntents();
+  const { executions, runIntent, clear } = useAdminMutationIntents();
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
@@ -79,58 +81,38 @@ export function ApiKeyRequestsPanel() {
   async function runMutation(
     request: ApiKeySelfServeRequestAdminSummary,
     action: ApiKeyRequestAction,
-    mode: "start" | "retry" | "new",
+    mode: AdminMutationIntentMode,
     reason?: string,
   ) {
     const laneKey = requestMutationLane(action, request.requestId);
-    const intentRequest: AdminMutationIntentRequest | undefined =
-      mode === "start"
-        ? {
-            laneKey,
-            path:
-              action === "reject"
-                ? API_PATHS.apiKeyRequestAdminReject(request.requestId)
-                : API_PATHS.apiKeyRequestAdminReleaseClaim(request.requestId),
-            body: { reason },
-            idempotencyKeyPrefix: laneKey,
-          }
-        : executions[laneKey]?.request;
-    if (!intentRequest) {
-      setMutationError("No API key request intent is available to retry.");
-      return;
-    }
-
-    setBusyRequestId(request.requestId);
     setMutationError(null);
     setReceipt(null);
     setActiveMutation({ request, action, laneKey });
-    const result =
-      mode === "retry"
-        ? await retrySame(laneKey)
-        : mode === "new"
-          ? await executeNew(intentRequest)
-          : await execute(intentRequest);
-    if (!result.didStart) {
-      setBusyRequestId(null);
-      return;
-    }
-    setBusyRequestId(null);
-    if (result.execution.status !== "succeeded") return;
+    const execution = await runIntent({
+      laneKey,
+      mode,
+      buildRequest: () => ({
+        laneKey,
+        path:
+          action === "reject"
+            ? API_PATHS.apiKeyRequestAdminReject(request.requestId)
+            : API_PATHS.apiKeyRequestAdminReleaseClaim(request.requestId),
+        body: { reason },
+        idempotencyKeyPrefix: laneKey,
+      }),
+      setBusy: (busy) => setBusyRequestId(busy ? request.requestId : null),
+      onError: () => setMutationError("No API key request intent is available to retry."),
+    });
+    if (execution?.status !== "succeeded") return;
 
-    const response = result.execution.data as ApiKeySelfServeAdminMutationResponse;
+    const response = execution.data as ApiKeySelfServeAdminMutationResponse;
     setReceipt({
-      receipt: buildAdminMutationReceiptMetadata(result.execution),
+      receipt: buildAdminMutationReceiptMetadata(execution),
       message: `Request marked ${API_KEY_REQUEST_STATUS_LABELS[response.status].toLowerCase()}; claim ${response.claimStatus ?? "none"}.`,
     });
     clear(laneKey);
     setActiveMutation(null);
     await refetch();
-  }
-
-  function focusElement(element: HTMLElement | null) {
-    queueMicrotask(() => {
-      if (element?.isConnected) element.focus();
-    });
   }
 
   function closePendingMutation() {
@@ -236,7 +218,7 @@ export function ApiKeyRequestsPanel() {
         {mutationError ? (
           <div
             role="alert"
-            className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300"
+            className={cn("flex items-start gap-2 rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>{mutationError}</p>
@@ -252,7 +234,7 @@ export function ApiKeyRequestsPanel() {
         {!isLoading && error ? (
           <div
             role="alert"
-            className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-300"
+            className={cn("rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
           >
             {error.message}
           </div>

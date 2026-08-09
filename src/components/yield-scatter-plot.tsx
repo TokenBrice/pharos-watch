@@ -18,6 +18,8 @@ import { useSvgId } from "@/components/chart-primitives/axes";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -514,7 +516,7 @@ export function YieldScatterPlot({
       </div>
       {compact ? null : (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.ok.banner)}>
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             <span className="text-foreground font-medium">Sweet spot</span>
             {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
@@ -529,13 +531,13 @@ export function YieldScatterPlot({
               <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
             )}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.alert.banner)}>
             <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
             <span className="text-foreground font-medium">Danger zone</span>
             <span className="hidden md:inline">= high APY on low safety</span>
           </span>
           {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
+            <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.watch.banner)}>
               <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
               {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
               {apyAxis.clipThreshold.toFixed(0)}%

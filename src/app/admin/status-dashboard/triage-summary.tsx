@@ -4,7 +4,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshControl } from "@/components/status/refresh-countdown";
-import { SummaryBadge } from "@/components/status/page-primitives";
+import { STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { Button } from "@/components/ui/button";
@@ -35,17 +35,19 @@ import {
   normalizeStatusIssues,
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 function formatReserveCoverage(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
 function getEvidenceBadgeClass(state: DashboardEvidence["state"]): string {
-  if (state === "current") return "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+  if (state === "current") return STATUS_OK_PILL_CLASS;
   if (state === "stale" || state === "unavailable") {
-    return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+    return SEVERITY_TONE_CLASS.alert.pill;
   }
-  return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  return SEVERITY_TONE_CLASS.watch.pill;
 }
 
 export interface TriageSummaryProps {
@@ -138,10 +140,10 @@ export function TriageSummary({
   });
   const reserveForecastTone =
     reserveForecast.state === "blocked"
-      ? "border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-200"
+      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-200")
       : reserveForecast.state === "clear"
         ? "border-green-500/30 bg-green-500/10 text-green-900 dark:text-green-200"
-        : "border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100";
+        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-950 dark:text-amber-100");
 
   return (
     <section
@@ -187,7 +189,7 @@ export function TriageSummary({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="cursor-help rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                       recovery hold — raw {data.rawOverallStatus}
                     </span>
                   </TooltipTrigger>
@@ -227,7 +229,7 @@ export function TriageSummary({
             value={String(resolvedIssueGroups.impacting.length)}
             className={
               resolvedIssueGroups.impacting.length > 0
-                ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+                ? SEVERITY_TONE_CLASS.alert.pill
                 : undefined
             }
           />
@@ -239,7 +241,7 @@ export function TriageSummary({
             value={String(data.summary.cronErrors)}
             className={
               data.summary.availabilityImpactingCronErrors > 0
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                ? SEVERITY_TONE_CLASS.watch.pill
                 : undefined
             }
           />
@@ -309,7 +311,7 @@ export function TriageSummary({
         ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)_minmax(18rem,0.7fr)]">
-          <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+          <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Current issues</h3>
               <span className="text-[11px] text-muted-foreground">
@@ -381,7 +383,7 @@ export function TriageSummary({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+          <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Needs attention</h3>
               <span className="text-[11px] text-muted-foreground">
@@ -416,7 +418,7 @@ export function TriageSummary({
           </div>
 
           {evidenceNeedsRefresh ? (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className={cn("rounded-xl border p-4", SEVERITY_TONE_CLASS.watch.banner)}>
               <p className="pharos-kicker">Recommended now</p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -434,7 +436,7 @@ export function TriageSummary({
               onActionFinished={handleRefresh}
             />
           ) : (
-            <div className="rounded-xl border border-border/60 bg-background/35 p-4">
+            <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
               <p className="pharos-kicker">Recommended now</p>
               <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -456,7 +458,7 @@ export function TriageSummary({
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center gap-2 rounded-md text-sm font-medium text-foreground">
             State machine, probe, and discrepancy diagnostics
             {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+              <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                 New signal
               </span>
             ) : null}

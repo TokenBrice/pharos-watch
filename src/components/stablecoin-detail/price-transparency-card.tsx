@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, ChevronDown, Maximize2, RefreshCw, XIcon } from "lucide-react";
+import { ChevronDown, CircleCheck, Maximize2, RefreshCw, TriangleAlert, XIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -353,10 +353,12 @@ export function PriceTransparencyCard({
       : sourceDepthCount === 2
         ? SEVERITY_TONE_CLASS.watch.pill
         : SEVERITY_TONE_CLASS.neutral.pill;
-  const dexAgreementTone = dexPriceCheck?.agrees
-    ? SEVERITY_TONE_CLASS.ok.pill
-    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400";
+  const dexAgreementTone = dexPriceCheck?.agrees ? SEVERITY_TONE_CLASS.ok.pill : SEVERITY_TONE_CLASS.rose.pill;
   const dexAgreementLabel = dexPriceCheck?.agrees ? "Agrees" : "Disagrees";
+  // The glyph tracks the verdict: the compact pill used to render a check-mark
+  // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
+  // severity glyph vocabulary (`src/components/severity-icon.tsx`).
+  const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
   const priceLabel = coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
   const confidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
   const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
@@ -405,7 +407,7 @@ export function PriceTransparencyCard({
                 variant="outline"
                 className={cn("h-5 gap-1 rounded-full px-2 text-[11px] font-medium", dexAgreementTone)}
               >
-                <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
                 {dexAgreementLabel}
               </Badge>
             </div>

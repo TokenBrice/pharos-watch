@@ -21,10 +21,8 @@ import {
   type IncidentTransitionView,
 } from "@/lib/incident-history-view-model";
 import { cn } from "@/lib/utils";
+import { FilterSelect } from "@/components/status/page-primitives";
 import { SeverityPill, StatusPill } from "./severity-pill";
-
-const FILTER_CLASS_NAME =
-  "h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const SURFACE_LABELS: Record<StatusCause["layer"], string> = {
   availability: "Availability",
@@ -210,62 +208,50 @@ export function TransitionTimeline({
       ) : null}
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Severity</span>
-          <select
-            className={FILTER_CLASS_NAME}
-            value={filters.severity}
-            onChange={(event) => onFiltersChange({ severity: event.target.value as IncidentSeverityFilter })}
-          >
-            <option value="all">All severities</option>
-            <option value="critical">Critical</option>
-            <option value="warning">Warning</option>
-            <option value="info">Informational</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </label>
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Surface</span>
-          <select
-            className={FILTER_CLASS_NAME}
-            value={filters.surface}
-            onChange={(event) => onFiltersChange({ surface: event.target.value as IncidentSurfaceFilter })}
-          >
-            <option value="all">All surfaces</option>
-            <option value="availability">Availability</option>
-            <option value="data-quality">Data quality</option>
-            <option value="system">Status system</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </label>
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Cause code</span>
-          <select
-            className={FILTER_CLASS_NAME}
-            value={filters.causeCode ?? ""}
-            onChange={(event) => onFiltersChange({ causeCode: event.target.value || null })}
-          >
-            <option value="">All cause codes</option>
-            {view.causeCodeOptions.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Public impact</span>
-          <select
-            className={FILTER_CLASS_NAME}
-            value={filters.publicImpact}
-            onChange={(event) => onFiltersChange({ publicImpact: event.target.value as IncidentPublicImpactFilter })}
-          >
-            <option value="all">All impact states</option>
-            <option value="impacting">Impacting</option>
-            <option value="not-impacting">Not impacting</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="Severity"
+          value={filters.severity}
+          onChange={(value) => onFiltersChange({ severity: value as IncidentSeverityFilter })}
+        >
+          <option value="all">All severities</option>
+          <option value="critical">Critical</option>
+          <option value="warning">Warning</option>
+          <option value="info">Informational</option>
+          <option value="unknown">Unknown</option>
+        </FilterSelect>
+        <FilterSelect
+          label="Surface"
+          value={filters.surface}
+          onChange={(value) => onFiltersChange({ surface: value as IncidentSurfaceFilter })}
+        >
+          <option value="all">All surfaces</option>
+          <option value="availability">Availability</option>
+          <option value="data-quality">Data quality</option>
+          <option value="system">Status system</option>
+          <option value="unknown">Unknown</option>
+        </FilterSelect>
+        <FilterSelect
+          label="Cause code"
+          value={filters.causeCode ?? ""}
+          onChange={(value) => onFiltersChange({ causeCode: value || null })}
+        >
+          <option value="">All cause codes</option>
+          {view.causeCodeOptions.map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
+        </FilterSelect>
+        <FilterSelect
+          label="Public impact"
+          value={filters.publicImpact}
+          onChange={(value) => onFiltersChange({ publicImpact: value as IncidentPublicImpactFilter })}
+        >
+          <option value="all">All impact states</option>
+          <option value="impacting">Impacting</option>
+          <option value="not-impacting">Not impacting</option>
+          <option value="unknown">Unknown</option>
+        </FilterSelect>
         <div className="flex items-end">
           <Button
             type="button"

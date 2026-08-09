@@ -2,8 +2,9 @@ import type { StatusActionRecommendation } from "@/lib/status/action-recommendat
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { SeverityPill } from "@/components/status/severity-pill";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
-const RECOMMENDED_ACTION_STRIP_CLASS = "rounded-xl border border-border/60 bg-background/35 p-4";
+const RECOMMENDED_ACTION_STRIP_CLASS = `rounded-xl p-4 ${STATUS_PANEL_SHELL_CLASS}`;
 
 export function RecommendedActionStrip({
   recommendations,

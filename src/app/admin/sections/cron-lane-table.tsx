@@ -31,6 +31,7 @@ import {
 import { countConsecutiveStatus, getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import { cn } from "@/lib/utils";
 import type { CronGroup } from "./cron-lane-types";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 interface CronLaneTableProps {
   groups: CronGroup[];
@@ -844,7 +845,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
             tableId="cron-lane"
             chrome="bare"
             stickyHeader
-            className="min-w-0 max-w-full overflow-hidden rounded-lg border border-border/60 bg-background/35"
+            className={cn("min-w-0 max-w-full overflow-hidden rounded-lg", STATUS_PANEL_SHELL_CLASS)}
             tableClassName="min-w-[64rem] border-collapse text-left text-xs"
             tableProps={{ "aria-label": "Cron jobs by trigger group" }}
             viewportClassName="min-w-0 max-w-full max-h-[min(70vh,44rem)]"

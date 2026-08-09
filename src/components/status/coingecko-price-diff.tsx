@@ -4,6 +4,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { CoinGeckoPriceDiff, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 function formatUsdPrice(value: number): string {
   if (value >= 1000) {
@@ -26,10 +27,10 @@ function formatConfidenceLabel(value: string | null): string {
 
 function getDiffBadgeClass(diffPct: number): string {
   if (diffPct >= 20) {
-    return "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400";
+    return SEVERITY_TONE_CLASS.alert.pill;
   }
   if (diffPct >= 10) {
-    return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+    return SEVERITY_TONE_CLASS.watch.pill;
   }
   return "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-400";
 }

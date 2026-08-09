@@ -2,11 +2,12 @@ import type { HealthResponse, StatusResponse } from "@shared/types";
 import type { ReliabilityIssue, ReliabilityIssueKind } from "@/lib/reliability-workspace-model";
 import { getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 const KIND_CLASS: Record<ReliabilityIssueKind, string> = {
-  critical: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  maintenance: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  critical: SEVERITY_TONE_CLASS.alert.pill,
+  warning: SEVERITY_TONE_CLASS.watch.pill,
+  maintenance: SEVERITY_TONE_CLASS.info.pill,
   informational: "border-border bg-muted text-muted-foreground",
   unknown: "border-border bg-muted text-muted-foreground",
 };

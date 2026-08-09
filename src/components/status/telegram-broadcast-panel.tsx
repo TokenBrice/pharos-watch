@@ -9,7 +9,12 @@ import {
   buildAdminMutationReceiptMetadata,
   type AdminMutationReceiptMetadata,
 } from "@/components/status/admin-mutation-feedback";
-import { useAdminMutationIntents } from "@/components/status/admin-mutation-intent";
+import {
+  type AdminMutationIntentMode,
+  useAdminMutationIntents,
+} from "@/components/status/admin-mutation-intent";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { cn } from "@/lib/utils";
 
 const BROADCAST_PATH = "/api/admin-telegram-broadcast";
 const DRY_RUN_LANE = "telegram-broadcast:dry-run";
@@ -50,7 +55,7 @@ export function TelegramBroadcastPanel() {
     canaryChatId: "",
   });
   const [receipt, setReceipt] = useState<{ receipt: AdminMutationReceiptMetadata; message: string } | null>(null);
-  const { executions, execute, retrySame, executeNew } = useAdminMutationIntents();
+  const { executions, runIntent } = useAdminMutationIntents();
 
   const dryRunExecution = executions[DRY_RUN_LANE];
   const liveExecution = executions[LIVE_LANE];
@@ -68,14 +73,20 @@ export function TelegramBroadcastPanel() {
     setState((previous) => ({ ...previous, ...next }));
   }
 
-  async function run(lane: string, dryRun: boolean, mode: "start" | "retry" | "new") {
-    const request = { laneKey: lane, path: BROADCAST_PATH, body: buildBody(state, dryRun) };
-    const result =
-      mode === "retry" ? await retrySame(lane) : mode === "new" ? await executeNew(request) : await execute(request);
-    if (!result.didStart) return;
-    if (result.execution.status === "succeeded") {
+  async function run(lane: string, dryRun: boolean, mode: AdminMutationIntentMode) {
+    const execution = await runIntent({
+      laneKey: lane,
+      mode,
+      buildRequest: () => ({ laneKey: lane, path: BROADCAST_PATH, body: buildBody(state, dryRun) }),
+      // The preview is the primary action and is re-runnable, so a "new"
+      // intent must carry the *current* draft rather than replaying the
+      // previously previewed message.
+      replayStoredRequest: false,
+    });
+    if (execution === null) return;
+    if (execution.status === "succeeded") {
       setReceipt({
-        receipt: buildAdminMutationReceiptMetadata(result.execution),
+        receipt: buildAdminMutationReceiptMetadata(execution),
         message: dryRun
           ? "Broadcast preview completed. Review the projected fan-out below before sending live."
           : "Broadcast accepted. The canary was delivered and the fleet fan-out is queued for the dispatch cron.",
@@ -181,7 +192,7 @@ export function TelegramBroadcastPanel() {
         {dryRunExecution?.status === "succeeded" && dryRunExecution.output ? (
           <div className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground">Preview</h4>
-            <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/35 p-2 text-[11px]">
+            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-[11px]", STATUS_PANEL_SHELL_CLASS)}>
               {dryRunExecution.output}
             </pre>
           </div>
@@ -190,7 +201,7 @@ export function TelegramBroadcastPanel() {
         {liveExecution?.status === "succeeded" && liveExecution.output ? (
           <div className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground">Live result</h4>
-            <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/35 p-2 text-[11px]">
+            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-[11px]", STATUS_PANEL_SHELL_CLASS)}>
               {liveExecution.output}
             </pre>
           </div>

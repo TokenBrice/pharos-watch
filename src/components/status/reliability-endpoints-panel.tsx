@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/status/severity-pill";
 import type { ReliabilityEndpointModel } from "@/lib/reliability-workspace-model";
 import { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-model";
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
+import { cn } from "@/lib/utils";
 
 function sampleLabel(timestamp: number | null): string {
   return timestamp ? new Date(timestamp * 1_000).toLocaleString() : "Unknown";
@@ -54,6 +55,52 @@ function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {
   );
 }
 
+/**
+ * One probe-plane summary card. The worker and browser planes rendered the same
+ * 28-line card twice, differing only in accent hue, copy, and which model half
+ * they read (WS8.9).
+ */
+function PlaneSummary({
+  id,
+  title,
+  accentClassName,
+  description,
+  result,
+  sampledAt,
+  ageSeconds,
+}: {
+  id: string;
+  title: string;
+  /** Left-rule + tint pair; the two planes are deliberately different hues. */
+  accentClassName: string;
+  description: string;
+  result: string;
+  sampledAt: number | null;
+  ageSeconds: number | null;
+}) {
+  return (
+    <section className={cn("border-l-2 px-4 py-3", accentClassName)} aria-labelledby={`${id}-title`}>
+      <h3 id={`${id}-title`} className="text-sm font-semibold text-foreground">
+        {title}
+      </h3>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <dt className="text-muted-foreground">Result</dt>
+          <dd className="font-mono text-foreground">{result}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Last sample</dt>
+          <dd className="text-foreground">
+            {sampleLabel(sampledAt)}
+            {ageSeconds != null ? ` (${formatElapsedSeconds(ageSeconds)} ago)` : ""}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
 const probeHeader = (
   <TableHeader>
     <TableRow>
@@ -75,63 +122,28 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
   return (
     <div className="space-y-5">
       <div className="grid items-start gap-3 md:grid-cols-2">
-        <section
-          className="border-l-2 border-indigo-500 bg-indigo-500/[0.05] px-4 py-3"
-          aria-labelledby="worker-plane-title"
-        >
-          <h3 id="worker-plane-title" className="text-sm font-semibold text-foreground">
-            Worker-origin self-check
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Runs inside the Worker to validate internal execution, bindings, and critical API behavior independently of
-            this browser session. The status payload reports this plane as a summary and does not identify endpoint
-            rows.
-          </p>
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <dt className="text-muted-foreground">Result</dt>
-              <dd className="font-mono text-foreground">
-                {model.workerPlane.passCount}/{model.workerPlane.sampleCount} passing · {model.workerPlane.status}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Last sample</dt>
-              <dd className="text-foreground">
-                {sampleLabel(model.workerPlane.sampledAt)}
-                {workerAge != null ? ` (${formatElapsedSeconds(workerAge)} ago)` : ""}
-              </dd>
-            </div>
-          </dl>
-        </section>
-        <section
-          className="border-l-2 border-cyan-500 bg-cyan-500/[0.05] px-4 py-3"
-          aria-labelledby="browser-plane-title"
-        >
-          <h3 id="browser-plane-title" className="text-sm font-semibold text-foreground">
-            Browser-origin endpoint probes
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Runs from this authenticated operator session to verify same-origin routing, Access proxy behavior, HTTP
-            transport, and endpoint freshness semantics.
-          </p>
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <dt className="text-muted-foreground">Result</dt>
-              <dd className="font-mono text-foreground">
-                {model.browserPlane
-                  ? `${model.browserPlane.passCount}/${model.browserPlane.sampleCount} passing · ${model.browserPlane.status}`
-                  : "Unknown"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Last sample</dt>
-              <dd className="text-foreground">
-                {sampleLabel(model.browserPlane?.updatedAt ?? null)}
-                {browserAge != null ? ` (${formatElapsedSeconds(browserAge)} ago)` : ""}
-              </dd>
-            </div>
-          </dl>
-        </section>
+        <PlaneSummary
+          id="worker-plane"
+          title="Worker-origin self-check"
+          accentClassName="border-indigo-500 bg-indigo-500/[0.05]"
+          description="Runs inside the Worker to validate internal execution, bindings, and critical API behavior independently of this browser session. The status payload reports this plane as a summary and does not identify endpoint rows."
+          result={`${model.workerPlane.passCount}/${model.workerPlane.sampleCount} passing · ${model.workerPlane.status}`}
+          sampledAt={model.workerPlane.sampledAt}
+          ageSeconds={workerAge}
+        />
+        <PlaneSummary
+          id="browser-plane"
+          title="Browser-origin endpoint probes"
+          accentClassName="border-cyan-500 bg-cyan-500/[0.05]"
+          description="Runs from this authenticated operator session to verify same-origin routing, Access proxy behavior, HTTP transport, and endpoint freshness semantics."
+          result={
+            model.browserPlane
+              ? `${model.browserPlane.passCount}/${model.browserPlane.sampleCount} passing · ${model.browserPlane.status}`
+              : "Unknown"
+          }
+          sampledAt={model.browserPlane?.updatedAt ?? null}
+          ageSeconds={browserAge}
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

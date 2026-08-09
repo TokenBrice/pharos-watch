@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
+import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import {
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT,
@@ -169,19 +170,19 @@ export function ContractDeployments({
           ))}
         </div>
         {hiddenDesktopContractCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowAllContracts((current) => !current)}
-            className="pharos-focus-ring mt-2 inline-flex min-h-9 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {showAllContracts ? "Show less" : `Show all ${contracts.length} chains`}
-          </button>
+          <ShowAllToggle
+            open={showAllContracts}
+            onToggle={() => setShowAllContracts((current) => !current)}
+            total={contracts.length}
+            noun="chains"
+            className="mt-2"
+          />
         )}
       </div>
       {hiddenMobileContractCount > 0 ? (
-        <button
-          type="button"
-          onClick={() => {
+        <ShowAllToggle
+          open={showAllContracts}
+          onToggle={() => {
             if (
               showAllContracts &&
               openContractKey &&
@@ -191,10 +192,10 @@ export function ContractDeployments({
             }
             setShowAllContracts((current) => !current);
           }}
-          className="pharos-focus-ring mt-3 inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:hidden"
-        >
-          {showAllContracts ? "Show less" : `Show all ${contracts.length} chains`}
-        </button>
+          total={contracts.length}
+          noun="chains"
+          className="mt-3 sm:hidden"
+        />
       ) : null}
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { API_KEY_TIER_VALUES } from "@shared/types";
+import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
 import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,19 @@ import type {
 } from "@/lib/api-key-admin-view-model";
 import { formatExpirySummary, isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
+import { FilterSelect, STATUS_FILTER_FIELD_CLASS, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 
 type CreateKeyPatch = Partial<CreateKeyState>;
 type EditableKeyPatch = Partial<EditableKeyState>;
 
 const FIELD_CLASS_NAME =
   "min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
-const FILTER_FIELD_CLASS_NAME =
-  "h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
+// The Sort control keeps the bare class: its `<select>` shares a flex row with
+// the direction toggle rather than filling the label, so it is not a
+// `FilterSelect`.
 
 function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>({
   state,
@@ -184,100 +188,72 @@ export function ApiKeyInventoryControls({
           </span>
         </label>
 
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Status</span>
-          <select
-            className={FILTER_FIELD_CLASS_NAME}
-            value={status}
-            onChange={(event) => onQueryChange({ status: event.target.value as ApiKeyInventoryStatusFilter })}
-          >
-            <option value="attention">Needs attention</option>
-            <option value="all">All statuses</option>
-            <option value="expired">Expired</option>
-            <option value="expiring-soon">Expiring soon</option>
-            <option value="inactive">Inactive</option>
-            <option value="non-expiring">Non-expiring</option>
-            <option value="active">Active</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="Status"
+          value={status}
+          onChange={(value) => onQueryChange({ status: value as ApiKeyInventoryStatusFilter })}
+        >
+          <option value="attention">Needs attention</option>
+          <option value="all">All statuses</option>
+          <option value="expired">Expired</option>
+          <option value="expiring-soon">Expiring soon</option>
+          <option value="inactive">Inactive</option>
+          <option value="non-expiring">Non-expiring</option>
+          <option value="active">Active</option>
+        </FilterSelect>
 
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Expiration</span>
-          <select
-            className={FILTER_FIELD_CLASS_NAME}
-            value={expiryPreset}
-            onChange={(event) => onExpiryPresetChange(event.target.value as ApiKeyInventoryExpiryPreset)}
-          >
-            <option value="any">Any expiration</option>
-            <option value="expired">Past due</option>
-            <option value="next-7-days">Due in 7 days</option>
-            <option value="next-30-days">Due in 30 days</option>
-            <option value="after-30-days">After 30 days</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="Expiration"
+          value={expiryPreset}
+          onChange={(value) => onExpiryPresetChange(value as ApiKeyInventoryExpiryPreset)}
+        >
+          <option value="any">Any expiration</option>
+          <option value="expired">Past due</option>
+          <option value="next-7-days">Due in 7 days</option>
+          <option value="next-30-days">Due in 30 days</option>
+          <option value="after-30-days">After 30 days</option>
+        </FilterSelect>
 
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Owner filter</span>
-          <select
-            className={FILTER_FIELD_CLASS_NAME}
-            value={ownerValue}
-            onChange={(event) =>
-              onQueryChange({
-                owner:
-                  event.target.value === ""
-                    ? undefined
-                    : event.target.value === "__unassigned__"
-                      ? null
-                      : event.target.value,
-              })
-            }
-          >
-            <option value="">All owners</option>
-            {options.hasUnassignedOwner ? <option value="__unassigned__">Unassigned</option> : null}
-            {options.owners.map((owner) => (
-              <option key={owner} value={owner}>
-                {owner}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect
+          label="Owner filter"
+          value={ownerValue}
+          onChange={(value) =>
+            onQueryChange({ owner: value === "" ? undefined : value === "__unassigned__" ? null : value })
+          }
+        >
+          <option value="">All owners</option>
+          {options.hasUnassignedOwner ? <option value="__unassigned__">Unassigned</option> : null}
+          {options.owners.map((owner) => (
+            <option key={owner} value={owner}>
+              {owner}
+            </option>
+          ))}
+        </FilterSelect>
 
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Tier filter</span>
-          <select
-            className={FILTER_FIELD_CLASS_NAME}
-            value={query.tier ?? ""}
-            onChange={(event) => onQueryChange({ tier: event.target.value || undefined })}
-          >
-            <option value="">All tiers</option>
-            {options.tiers.map((tier) => (
-              <option key={tier} value={tier}>
-                {tier}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterSelect label="Tier filter" value={query.tier ?? ""} onChange={(value) => onQueryChange({ tier: value || undefined })}>
+          <option value="">All tiers</option>
+          {options.tiers.map((tier) => (
+            <option key={tier} value={tier}>
+              {tier}
+            </option>
+          ))}
+        </FilterSelect>
 
-        <label className="min-w-0 space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Traffic filter</span>
-          <select
-            className={FILTER_FIELD_CLASS_NAME}
-            value={query.trafficClass ?? ""}
-            onChange={(event) =>
-              onQueryChange({ trafficClass: (event.target.value || undefined) as ApiKeyTrafficClass | undefined })
-            }
-          >
-            <option value="">All traffic</option>
-            <option value="external">External</option>
-            <option value="site">Site</option>
-          </select>
-        </label>
+        <FilterSelect
+          label="Traffic filter"
+          value={query.trafficClass ?? ""}
+          onChange={(value) => onQueryChange({ trafficClass: (value || undefined) as ApiKeyTrafficClass | undefined })}
+        >
+          <option value="">All traffic</option>
+          <option value="external">External</option>
+          <option value="site">Site</option>
+        </FilterSelect>
 
         <label className="min-w-0 space-y-1 lg:col-span-2">
           <span className="text-xs font-medium text-muted-foreground">Sort</span>
           <span className="flex gap-2">
             <select
-              className={FILTER_FIELD_CLASS_NAME}
+              className={STATUS_FILTER_FIELD_CLASS}
               value={sort.field}
               onChange={(event) =>
                 onQueryChange({
@@ -353,7 +329,7 @@ export function CreateApiKeyForm({
           { value: "non-expiring", label: "Non-expiring exception" },
         ]}
       />
-      <div className="rounded-md border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+      <div className={cn("rounded-md px-3 py-2 text-xs text-muted-foreground", STATUS_PANEL_SHELL_CLASS)}>
         {state.expiryMode === "default"
           ? "Default 90 days from creation. The request omits expiresAt and the worker applies the standard lifecycle."
           : state.expiryMode === "custom"
@@ -409,7 +385,7 @@ export function TokenRevealDialog({
         <div
           role="status"
           aria-live="assertive"
-          className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+          className={cn("rounded-md border p-3 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
         >
           {revealedToken.label}. The token is ready. Copy it to the approved credential store now.
         </div>
@@ -494,7 +470,7 @@ export function TokenUnavailableReplayDialog({
         </DialogHeader>
         <div
           role="alert"
-          className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+          className={cn("rounded-md border p-3 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
         >
           <p className="font-medium">
             {apiKey.name} · ID {apiKey.id} · <span className="font-mono">{apiKey.maskedToken}</span>
@@ -631,7 +607,7 @@ export function ApiKeyTable({
       tableId="api-keys"
       chrome="bare"
       stickyHeader
-      className="min-w-0 max-w-full overflow-hidden rounded-md border border-border/60 bg-background/35"
+      className={cn("min-w-0 max-w-full overflow-hidden rounded-md", STATUS_PANEL_SHELL_CLASS)}
       viewportClassName="max-h-[34rem]"
       viewportProps={{ vertical: true }}
       tableProps={{ "aria-label": "API key inventory" }}

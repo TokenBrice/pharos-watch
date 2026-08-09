@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, RailStamp, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 
@@ -31,9 +32,9 @@ function coverageLabel(ratio: number): { label: string; tone: "over" | "par" | "
 const TONE_BADGE_CLASSES: Record<"over" | "par" | "under", string> = {
   over: SEVERITY_TONE_CLASS.ok.pill,
   par: SEVERITY_TONE_CLASS.ok.pill,
-  // Rose, not the token's red `alert` — the detail rail's undercollateralized
-  // treatment is a separate hue and is not re-coloured here.
-  under: "border-rose-500/25 bg-rose-500/12 text-rose-700 dark:text-rose-400",
+  // Rose, not the token's red `alert`: the detail rail keeps two failure
+  // vocabularies apart. `rose` is now a token slot of its own (WS8.14).
+  under: SEVERITY_TONE_CLASS.rose.pill,
 };
 
 /**
@@ -117,15 +118,11 @@ export function CollateralizationCard({
       ) : null}
 
       {reviewed != null ? (
-        <div className="border-t border-border/50 px-4 py-3">
-          <a
-            href={reviewed.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring rounded-sm text-[11px] text-frost-blue underline-offset-2 hover:underline"
-          >
-            {reviewed.sourceLabel}
-          </a>
+        <div className="px-4 pb-4">
+          {/* No `trailing` stamp: the reviewed date already has exactly one
+              home on this card — the header `ReviewedStamp` — and the live
+              headline deliberately suppresses it. */}
+          <EvidenceFooter sources={[{ label: reviewed.sourceLabel, url: reviewed.sourceUrl }]} />
         </div>
       ) : null}
     </RailCard>

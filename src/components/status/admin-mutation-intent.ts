@@ -2,9 +2,16 @@
 
 import { useRef, useState } from "react";
 import { AdminMutationError, adminMutation } from "@/lib/admin-access";
-import { RequestFailure } from "@/lib/request";
+import { classifyAdminMutationFailure } from "@/components/status/admin-mutation-failure";
 
 export type AdminMutationIntentStatus = "running" | "succeeded" | "failed" | "unknown";
+
+/**
+ * `start` opens a fresh intent, `retry` replays the *same* idempotency key (the
+ * only safe move after an `unknown`), `new` mints a new key for a deliberate
+ * re-run.
+ */
+export type AdminMutationIntentMode = "start" | "retry" | "new";
 
 export interface AdminMutationIntentRequest {
   laneKey: string;
@@ -46,39 +53,12 @@ function createIdempotencyKey(): string {
   return `admin-intent:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
-function isExecutionUnknownBody(data: unknown): boolean {
-  return Boolean(
-    data && typeof data === "object" && "error" in data && (data as { error?: unknown }).error === "execution_unknown",
-  );
-}
-
-function isActiveIdempotencyConflict(execution: AdminMutationIntentExecution, error: AdminMutationError): boolean {
-  const { result } = error;
-  if (result.status !== 409) return false;
-  const errorMessage =
-    result.data &&
-    typeof result.data === "object" &&
-    "error" in result.data &&
-    typeof (result.data as { error?: unknown }).error === "string"
-      ? (result.data as { error: string }).error.toLowerCase()
-      : "";
-  const reservationConflict =
-    errorMessage.includes("idempotency key is currently reserved") ||
-    errorMessage.includes("idempotency reservation ownership was lost");
-  const sameExecution = result.idempotentReplay === true || result.idempotencyKey === execution.idempotencyKey;
-  return reservationConflict && sameExecution;
-}
-
 function failedExecution(execution: AdminMutationIntentExecution, error: unknown): AdminMutationIntentExecution {
+  const certainty = classifyAdminMutationFailure(error, execution.idempotencyKey);
   if (error instanceof AdminMutationError) {
-    const unknown =
-      isExecutionUnknownBody(error.result.data) ||
-      isActiveIdempotencyConflict(execution, error) ||
-      error.result.executionCertainty?.trim().toLowerCase() === "unknown" ||
-      error.result.status >= 500;
     return {
       ...execution,
-      status: unknown ? "unknown" : "failed",
+      status: certainty,
       requestInFlight: false,
       data: error.result.data,
       output: error.result.formattedBody || error.message,
@@ -86,23 +66,20 @@ function failedExecution(execution: AdminMutationIntentExecution, error: unknown
       httpStatus: error.result.status,
       idempotentReplay: error.result.idempotentReplay,
       responseIdempotencyKey: error.result.idempotencyKey,
-      executionCertainty: error.result.executionCertainty ?? (unknown ? "unknown" : "failed"),
+      executionCertainty: error.result.executionCertainty ?? certainty,
       warning: error.result.warning,
       completedAt: Date.now(),
     };
   }
 
-  const uncertain =
-    error instanceof RequestFailure &&
-    (error.kind === "network" || error.kind === "timeout" || error.kind === "aborted");
   const message = error instanceof Error ? error.message : "Unknown error";
   return {
     ...execution,
-    status: uncertain ? "unknown" : "failed",
+    status: certainty,
     requestInFlight: false,
     output: message,
     error: message,
-    executionCertainty: uncertain ? "unknown" : "failed",
+    executionCertainty: certainty,
     completedAt: Date.now(),
   };
 }
@@ -227,5 +204,74 @@ export function useAdminMutationIntents() {
     setExecutions(next);
   }
 
-  return { executions, execute, retrySame, executeNew, clear };
+  /**
+   * The one start|retry|new runner (WS8.5). Every admin panel repeated the same
+   * five steps: build the request (or recover the stored one for a retry), mark
+   * the lane busy, dispatch to `execute` / `retrySame` / `executeNew`, always
+   * clear busy, and bail out when the run did not actually start.
+   *
+   * `"start"` always builds a fresh request. `"retry"`/`"new"` replay the
+   * stored request so the re-run keeps the original body verbatim — that is
+   * what makes "Start new intent" mean *the same write under a new key*, and
+   * it is why the request is stored on the execution at all. Panels whose
+   * primary action is `"new"` (a re-runnable preview, say) opt out with
+   * `replayStoredRequest: false` and always send current form state.
+   *
+   * Throwing from `buildRequest` (payload validation) is reported through
+   * `onError` instead of escaping, matching the hand-rolled try/catch blocks
+   * this replaces.
+   *
+   * Returns `null` when nothing ran — a still-in-flight lane, a lane parked in
+   * `unknown` (which must be retried explicitly, never silently re-sent), a
+   * missing stored request, or a rejected payload.
+   */
+  async function runIntent({
+    laneKey,
+    mode,
+    buildRequest,
+    replayStoredRequest = true,
+    setBusy,
+    onError,
+  }: {
+    laneKey: string;
+    mode: AdminMutationIntentMode;
+    /** May throw to reject the payload; see `replayStoredRequest` for when it runs. */
+    buildRequest: () => AdminMutationIntentRequest;
+    replayStoredRequest?: boolean;
+    /** Busy latch for the owning row/dialog; always released before returning. */
+    setBusy?: (busy: boolean) => void;
+    onError?: (message: string) => void;
+  }): Promise<AdminMutationIntentExecution | null> {
+    const stored = executionsRef.current[laneKey]?.request;
+    if (mode === "retry" && !stored) {
+      // `retrySame` replays the stored intent by design; without one there is
+      // nothing to retry, whatever we could build here.
+      onError?.(`No admin mutation intent is available to retry for ${laneKey}`);
+      return null;
+    }
+    let request = mode === "start" || (mode === "new" && !replayStoredRequest) ? undefined : stored;
+    if (!request) {
+      try {
+        request = buildRequest();
+      } catch (error) {
+        onError?.(error instanceof Error ? error.message : "Could not prepare the admin mutation");
+        return null;
+      }
+    }
+
+    setBusy?.(true);
+    try {
+      const result =
+        mode === "retry"
+          ? await retrySame(laneKey)
+          : mode === "new"
+            ? await executeNew(request)
+            : await execute(request);
+      return result.didStart ? result.execution : null;
+    } finally {
+      setBusy?.(false);
+    }
+  }
+
+  return { executions, execute, retrySame, executeNew, clear, runIntent };
 }

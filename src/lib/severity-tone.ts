@@ -24,11 +24,26 @@
  *              token carries border + tint only (it is `pill` minus the text pair).
  * - `text`   — text-only accent (arrows, deltas, inline numbers).
  *
- * `alert` is red, not rose. Rose is a separate, smaller palette used by a few
- * detail modules; it is intentionally left out rather than silently re-hued.
+ * `alert` is red, not rose: rose and sky are two further hues the product uses
+ * as *named palette* slots rather than as severity steps, so they get their own
+ * entries (WS8.14) instead of being silently re-hued onto red/blue.
+ *
+ * - `sky`  — "informational, in progress, provisional": pending reviews, running
+ *   lanes, provisional yield sources, request-source attribution. Chosen
+ *   spelling `border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300`
+ *   is the measured majority (10 sites vs 5 for the `/30` border variant), so
+ *   it deliberately keeps a lighter border than the `/30` severity steps.
+ * - `rose` — the detail rail's "structurally short / disagrees" treatment, kept
+ *   distinct from `alert` red so the rail's two failure vocabularies stay
+ *   readable side by side. Spelling matches the house `/30 · /10 · 700/400`
+ *   rhythm (the price-transparency spelling, unchanged by the migration).
+ *
+ * Data-driven ramps that compute a hue from a measured threshold
+ * (`src/lib/severity-colors.ts`, the coverage chip palettes) are engines, not
+ * tokens, and stay where they are.
  */
 
-export type SeverityTone = "ok" | "watch" | "alert" | "neutral" | "info";
+export type SeverityTone = "ok" | "watch" | "alert" | "neutral" | "info" | "sky" | "rose";
 
 export interface SeverityToneClasses {
   /** Outlined badge/chip: border + tint + text. */
@@ -64,5 +79,15 @@ export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
     pill: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
     banner: "border-blue-500/30 bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
+  },
+  sky: {
+    pill: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    banner: "border-sky-500/25 bg-sky-500/10",
+    text: "text-sky-700 dark:text-sky-300",
+  },
+  rose: {
+    pill: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
+    banner: "border-rose-500/30 bg-rose-500/10",
+    text: "text-rose-700 dark:text-rose-400",
   },
 };

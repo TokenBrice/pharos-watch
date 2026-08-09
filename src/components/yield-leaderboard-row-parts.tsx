@@ -14,6 +14,8 @@ import {
   isYieldBenchmarkFallback,
   isYieldRankingSummary,
 } from "@/lib/yield-workbench-row";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -297,7 +299,7 @@ export function YieldSourceDetails({
           {row.yieldSource}
         </TableSourceLink>
         {row.provenance?.sourceSwitch ? (
-          <span className="shrink-0 rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+          <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
             source changed
           </span>
         ) : null}
@@ -492,7 +494,7 @@ export function YieldExpandedDetails({
                   {row.yieldSource}
                 </TableSourceLink>
                 {row.provenance?.sourceSwitch ? (
-                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                  <span className={cn("rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
                     source changed
                   </span>
                 ) : null}

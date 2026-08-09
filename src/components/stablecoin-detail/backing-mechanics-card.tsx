@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { RailCard, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismBackingMetric, MechanismBackingNote, MechanismBackingView } from "@/lib/mechanism-backing";
 
@@ -148,15 +149,8 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
         </div>
       ) : null}
 
-      <div className="border-t border-border/50 px-4 py-3">
-        <a
-          href={view.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring rounded-sm text-[11px] text-frost-blue underline-offset-2 hover:underline"
-        >
-          {view.sourceLabel}
-        </a>
+      <div className="px-4 pb-4">
+        <EvidenceFooter sources={[{ label: view.sourceLabel, url: view.sourceUrl }]} />
       </div>
     </RailCard>
   );

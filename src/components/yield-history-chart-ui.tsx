@@ -14,6 +14,7 @@ import {
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
 import { toTimestampMs } from "@/lib/time";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import {
   PRESET_DAYS,
@@ -193,7 +194,7 @@ export function YieldHistoryTooltip({
         ) : null}
       </div>
       {point.sourceSwitch ? (
-        <div className="mt-2 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-[10px] text-sky-700 dark:text-sky-300">
+        <div className={cn("mt-2 rounded-md border px-2.5 py-2 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
           <span className="block font-medium uppercase tracking-[0.14em]">Source changed</span>
           <span className="mt-1 block normal-case tracking-normal">
             The selected source changed versus the prior published snapshot. This explains provenance churn, not stablecoin safety.

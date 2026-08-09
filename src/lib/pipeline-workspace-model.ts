@@ -29,6 +29,18 @@ export const PIPELINE_MODES = [
 export type PipelineMode = (typeof PIPELINE_MODES)[number]["id"];
 export type PipelineSeverity = WorkspaceSeverity;
 
+/**
+ * The pipeline severity chip vocabulary — label plus the fill-badge class the
+ * `StatusPill` wears. Declared once here because the integrity panel and the
+ * quality table rendered diff-identical copies of it (WS8.9).
+ */
+export const PIPELINE_STATE_META: Record<PipelineSeverity, { label: string; className: string }> = {
+  healthy: { label: "Healthy", className: "bg-green-500/15 text-green-700 dark:text-green-300" },
+  watch: { label: "Watch", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300" },
+  critical: { label: "Critical", className: "bg-red-500/15 text-red-700 dark:text-red-300" },
+  unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
+};
+
 export interface PipelineModeSummary {
   id: PipelineMode;
   label: string;

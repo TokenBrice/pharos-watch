@@ -11,6 +11,7 @@ import {
   formatApiKeyRequestTime,
   statusClassName,
 } from "@/lib/api-key-request-admin-view-model";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 export function ApiKeyRequestCard({
   request,
@@ -28,7 +29,7 @@ export function ApiKeyRequestCard({
   const viewModel = buildApiKeyRequestCardViewModel(request, generatedAt, busyRequestId);
 
   return (
-    <article className="space-y-4 rounded-lg border border-border/60 bg-background/35 p-4">
+    <article className={cn("space-y-4 rounded-lg p-4", STATUS_PANEL_SHELL_CLASS)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">

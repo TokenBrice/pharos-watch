@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { focusElement } from "@/lib/focus-element";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
 import {
@@ -40,7 +41,7 @@ import {
 } from "./admin-mutation-feedback";
 import {
   type AdminMutationIntentExecution,
-  type AdminMutationIntentRequest,
+  type AdminMutationIntentMode,
   useAdminMutationIntents,
 } from "./admin-mutation-intent";
 import {
@@ -53,6 +54,9 @@ import {
   TokenRevealDialog,
   TokenUnavailableReplayDialog,
 } from "./api-keys-panel-parts";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 const EMPTY_KEYS: readonly ApiKeySummary[] = [];
 const CREATE_LANE = "api-key:create";
@@ -87,13 +91,9 @@ function lifecycleLane(action: LifecycleAction, keyId: number): string {
   return `api-key:${action}:${keyId}`;
 }
 
-function focusElement(element: HTMLElement | null) {
-  queueMicrotask(() => element?.focus());
-}
-
 export function ApiKeysPanel() {
   const { data, error, isLoading, isFetching, refetch } = useApiKeys();
-  const { executions, execute, retrySame, executeNew, clear } = useAdminMutationIntents();
+  const { executions, runIntent, clear } = useAdminMutationIntents();
   const [createState, setCreateState] = useState<CreateKeyState>(DEFAULT_CREATE_KEY_STATE);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [inventoryQuery, setInventoryQuery] = useState<ApiKeyInventoryQuery>(() => ({
@@ -244,43 +244,24 @@ export function ApiKeysPanel() {
     });
   }
 
-  async function runCreate(mode: "start" | "retry" | "new") {
+  async function runCreate(mode: AdminMutationIntentMode) {
     setErrorMessage(null);
     setReceipt(null);
-    let request: AdminMutationIntentRequest;
-    try {
-      request =
-        mode === "start"
-          ? {
-              laneKey: CREATE_LANE,
-              path: API_PATHS.apiKeys(),
-              body: buildCreateApiKeyPayload(createState),
-            }
-          : (executions[CREATE_LANE]?.request ??
-            (() => {
-              throw new Error("No create intent is available to retry");
-            })());
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Could not prepare API key creation");
-      return;
-    }
-
-    setCreateBusy(true);
-    const result =
-      mode === "retry"
-        ? await retrySame(CREATE_LANE)
-        : mode === "new"
-          ? await executeNew(request)
-          : await execute(request);
-    if (!result.didStart) {
-      setCreateBusy(false);
-      return;
-    }
-    setCreateBusy(false);
-    if (result.execution.status !== "succeeded") return;
+    const execution = await runIntent({
+      laneKey: CREATE_LANE,
+      mode,
+      buildRequest: () => ({
+        laneKey: CREATE_LANE,
+        path: API_PATHS.apiKeys(),
+        body: buildCreateApiKeyPayload(createState),
+      }),
+      setBusy: setCreateBusy,
+      onError: setErrorMessage,
+    });
+    if (execution?.status !== "succeeded") return;
 
     try {
-      revealToken(result.execution, result.execution.data as ApiKeyCreateResponse, "created", createTriggerRef.current);
+      revealToken(execution, execution.data as ApiKeyCreateResponse, "created", createTriggerRef.current);
       setCreateState(DEFAULT_CREATE_KEY_STATE);
       setIsCreateOpen(false);
       await refreshInventory();
@@ -289,42 +270,27 @@ export function ApiKeysPanel() {
     }
   }
 
-  async function runUpdate(apiKey: ApiKeySummary, draft: EditableKeyState, mode: "start" | "retry" | "new") {
+  async function runUpdate(apiKey: ApiKeySummary, draft: EditableKeyState, mode: AdminMutationIntentMode) {
     const laneKey = updateLane(apiKey.id);
     setErrorMessage(null);
     setReceipt(null);
-    let request: AdminMutationIntentRequest;
-    try {
-      request =
-        mode === "start"
-          ? {
-              laneKey,
-              path: API_PATHS.apiKeyUpdate(apiKey.id),
-              body: buildUpdateApiKeyPayload(draft),
-            }
-          : (executions[laneKey]?.request ??
-            (() => {
-              throw new Error("No update intent is available to retry");
-            })());
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Could not prepare API key update");
-      return;
-    }
+    const execution = await runIntent({
+      laneKey,
+      mode,
+      buildRequest: () => ({
+        laneKey,
+        path: API_PATHS.apiKeyUpdate(apiKey.id),
+        body: buildUpdateApiKeyPayload(draft),
+      }),
+      setBusy: (busy) => setBusyKeyId(busy ? apiKey.id : null),
+      onError: setErrorMessage,
+    });
+    if (execution?.status !== "succeeded") return;
 
-    setBusyKeyId(apiKey.id);
-    const result =
-      mode === "retry" ? await retrySame(laneKey) : mode === "new" ? await executeNew(request) : await execute(request);
-    if (!result.didStart) {
-      setBusyKeyId(null);
-      return;
-    }
-    setBusyKeyId(null);
-    if (result.execution.status !== "succeeded") return;
-
-    const response = result.execution.data as ApiKeyMutationResponse;
+    const response = execution.data as ApiKeyMutationResponse;
     setDrafts((previous) => ({ ...previous, [apiKey.id]: buildEditableKeyState(response.key) }));
     setReceipt({
-      receipt: buildAdminMutationReceiptMetadata(result.execution),
+      receipt: buildAdminMutationReceiptMetadata(execution),
       message: `Updated ${response.key.name}.`,
     });
     const refreshedInventory = await refreshInventory();
@@ -360,44 +326,31 @@ export function ApiKeysPanel() {
     focusElement(origin);
   }
 
-  async function runLifecycle(mode: "start" | "retry" | "new") {
+  async function runLifecycle(mode: AdminMutationIntentMode) {
     if (!pendingLifecycle) return;
     const { action, apiKey } = pendingLifecycle;
     const laneKey = lifecycleLane(action, apiKey.id);
-    const request =
-      mode === "start"
-        ? {
-            laneKey,
-            path: action === "rotate" ? API_PATHS.apiKeyRotate(apiKey.id) : API_PATHS.apiKeyDeactivate(apiKey.id),
-          }
-        : executions[laneKey]?.request;
-    if (!request) return;
-
-    setBusyKeyId(apiKey.id);
-    const result =
-      mode === "retry" ? await retrySame(laneKey) : mode === "new" ? await executeNew(request) : await execute(request);
-    if (!result.didStart) {
-      setBusyKeyId(null);
-      return;
-    }
-    setBusyKeyId(null);
-    if (result.execution.status !== "succeeded") return;
+    const execution = await runIntent({
+      laneKey,
+      mode,
+      buildRequest: () => ({
+        laneKey,
+        path: action === "rotate" ? API_PATHS.apiKeyRotate(apiKey.id) : API_PATHS.apiKeyDeactivate(apiKey.id),
+      }),
+      setBusy: (busy) => setBusyKeyId(busy ? apiKey.id : null),
+    });
+    if (execution?.status !== "succeeded") return;
 
     if (action === "rotate") {
       try {
-        revealToken(
-          result.execution,
-          result.execution.data as ApiKeyRotateResponse,
-          "rotated",
-          lifecycleOriginRef.current,
-        );
+        revealToken(execution, execution.data as ApiKeyRotateResponse, "rotated", lifecycleOriginRef.current);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : "Rotated API key token could not be shown");
       }
     } else {
-      const response = result.execution.data as ApiKeyMutationResponse;
+      const response = execution.data as ApiKeyMutationResponse;
       setReceipt({
-        receipt: buildAdminMutationReceiptMetadata(result.execution),
+        receipt: buildAdminMutationReceiptMetadata(execution),
         message: `Deactivated ${response.key.name}.`,
       });
     }
@@ -451,7 +404,7 @@ export function ApiKeysPanel() {
         {!isLoading && !error ? <ApiKeyInventorySummary items={keySummary} /> : null}
 
         {!isLoading && !error ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/35 px-3 py-2">
+          <div className={cn("flex flex-wrap items-center justify-between gap-3 rounded-lg px-3 py-2", STATUS_PANEL_SHELL_CLASS)}>
             <div>
               <h3 id="api-key-inventory-heading" className="text-sm font-medium text-foreground">
                 Key inventory
@@ -494,7 +447,7 @@ export function ApiKeysPanel() {
         {errorMessage ? (
           <div
             role="alert"
-            className="rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-400"
+            className={cn("rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
           >
             {errorMessage}
           </div>
@@ -508,7 +461,7 @@ export function ApiKeysPanel() {
         {!isLoading && error ? (
           <div
             role="alert"
-            className="space-y-3 rounded-lg border border-red-500/30 bg-red-500/8 p-3 text-sm text-red-700 dark:text-red-400"
+            className={cn("space-y-3 rounded-lg border p-3 text-sm", SEVERITY_TONE_CLASS.alert.pill)}
           >
             <p>{error.message}</p>
             <Button

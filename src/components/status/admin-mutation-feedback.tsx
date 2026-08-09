@@ -2,6 +2,8 @@
 
 import type { AdminMutationIntentExecution } from "./admin-mutation-intent";
 import { Button } from "@/components/ui/button";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { cn } from "@/lib/utils";
 
 export interface AdminMutationReceiptMetadata {
   httpStatus: number | null;
@@ -40,8 +42,8 @@ export function AdminMutationFeedback({
       role={unknown ? "status" : "alert"}
       className={`space-y-2 rounded-md border px-3 py-2 text-xs ${
         unknown
-          ? "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100"
-          : "border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-200"
+          ? cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-900 dark:text-amber-100")
+          : cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-800 dark:text-red-200")
       }`}
     >
       <p className="font-medium">{unknown ? "Outcome unknown" : "Action failed"}</p>
