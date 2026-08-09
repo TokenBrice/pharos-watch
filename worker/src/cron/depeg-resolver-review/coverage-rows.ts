@@ -2,7 +2,7 @@ import {
   hasTerminalEvidence,
   type DdrrV2CoverageInput,
 } from "@shared/lib/depeg-resolver-review";
-import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
+import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { numberValue, stringValue } from "@shared/lib/type-guards";
 import type { DdrrActualEvent, DdrrLineage } from "@shared/types/depeg-resolver-review";

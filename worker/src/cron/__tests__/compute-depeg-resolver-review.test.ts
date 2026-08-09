@@ -3,7 +3,7 @@ import {
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_V2_EFFECTIVE_AT,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {

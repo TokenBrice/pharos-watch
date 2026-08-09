@@ -5,8 +5,8 @@ import {
   formatMethodologyDisplayDate,
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
-} from "../methodology-version";
-import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../depeg-resolver-version";
+} from "../methodology-versions/base";
+import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_VERSION,

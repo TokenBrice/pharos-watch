@@ -3,7 +3,7 @@ import {
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_V2_EFFECTIVE_AT,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import type {
   DdrCanonicalIncident,
   DdrLockTiming,

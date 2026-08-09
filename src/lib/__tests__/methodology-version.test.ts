@@ -6,7 +6,7 @@ import {
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
   type MethodologyChangelogEntry,
-} from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/base";
 
 const TEST_CHANGELOG: MethodologyChangelogEntry[] = [
   {

@@ -59,7 +59,7 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
 
 export const PRINCIPLES_AI_POLICY = {
   title: "On AI-authored content.",
-  body: "Narrative summaries on coin pages and the daily digest are drafted by a large language model against the same data the dashboard renders, then reviewed by a human editor before publish. The numeric outputs — scores, peg deviations, supply, liquidity, freezes — are computed by the worker pipeline, not by the model. AI ships in the narrative panels only, and every such panel carries a disclosure chip naming the model and the reviewer.",
+  body: "Narrative summaries on coin pages and the daily digest are drafted by a large language model against the same data the dashboard renders. Each panel names the model and facts date; a reviewer is named only after approving that exact text. Static adoption, funding, address, TVL, supply, and market-cap claims require a displayed source, date, chain scope, and denominator. Address counts are not presented as users without a dedicated methodology, and project financing is not compared with token supply unless the quantities are economically comparable. The numeric outputs — scores, peg deviations, supply, liquidity, freezes — are computed by the worker pipeline, not by the model.",
 } as const;
 
 export const PRINCIPLES_CORRECTIONS = {

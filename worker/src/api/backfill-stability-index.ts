@@ -1,7 +1,7 @@
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute } from "../lib/db";
-import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
+import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
 import { buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../lib/psi-recompute";
 import {
   buildHistoricalDewsMap,

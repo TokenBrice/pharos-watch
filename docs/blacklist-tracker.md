@@ -5,7 +5,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 ## Methodology And Ownership
 
 - **Current methodology version:** `v3.9972`
-- **Version source:** `shared/lib/blacklist-tracker-version.ts`
+- **Version source:** `shared/lib/methodology-versions/blacklist-tracker.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
 

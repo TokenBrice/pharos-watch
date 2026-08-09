@@ -2,7 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getConditionBand } from "../lib/stability-index";
-import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
 import { round1 } from "@shared/lib/math";
 
 export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {

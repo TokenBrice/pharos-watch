@@ -7,7 +7,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
-} from "../../shared/lib/depeg-resolver-version";
+} from "../../shared/lib/methodology-versions/depeg-resolver";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const DDR_LOCK_READINESS_THRESHOLD = DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD;

@@ -1,6 +1,6 @@
 import { mean, median } from "../stats";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
-import { DDR_PREDICTION_POLICY_VERSION } from "../depeg-resolver-version";
+import { DDR_PREDICTION_POLICY_VERSION } from "../methodology-versions/depeg-resolver";
 import {
   DDRR_COVERAGE_PREDICTION_STATE_VALUES,
   type DdrrCoveragePredictionState,

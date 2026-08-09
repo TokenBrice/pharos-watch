@@ -2,7 +2,7 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
-} from "../depeg-resolver-version";
+} from "../methodology-versions/depeg-resolver";
 import { clamp, roundTo } from "../math";
 import { DDR_INSUFFICIENT_LIVE_PRICE_REASON } from "./resolution";
 import type {

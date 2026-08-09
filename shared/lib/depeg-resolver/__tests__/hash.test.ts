@@ -3,7 +3,7 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
-} from "../../depeg-resolver-version";
+} from "../../methodology-versions/depeg-resolver";
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "../hash";
 import {
   attachDdrPublicRowHash,

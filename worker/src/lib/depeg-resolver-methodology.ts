@@ -2,7 +2,7 @@ import {
   DDR_METHODOLOGY_CHANGELOG_PATH,
   DDR_METHODOLOGY_VERSION,
   DDR_METHODOLOGY_VERSION_LABEL,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { buildMethodologyEnvelope } from "./api-utils";
 
 export function buildDdrMethodologyEnvelope(asOf: number) {

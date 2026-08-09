@@ -116,4 +116,34 @@ describe("AI summary V9 current-value projection", () => {
       ]),
     );
   });
+
+  it("queues volatile adoption, cross-chain drift, holder scope, and financing comparisons", () => {
+    const current: Current = {
+      name: "Flying Tulip USD",
+      symbol: "ftUSD",
+      overallGrade: null,
+      overallScore: null,
+      pegGrade: null,
+      pegScore: null,
+      backingGrade: null,
+      backingScore: null,
+      exitGrade: null,
+      exitScore: null,
+      controlGrade: null,
+      controlScore: null,
+      dewsBand: null,
+      dewsScore: null,
+      depegCount: null,
+      circulatingUsd: 1_075_731,
+    };
+    const oldFtUsd = "Flying Tulip raised $225M and the stablecoin has roughly $730K in circulation from 20 holders, a ratio of venture capital to actual usage.";
+
+    const findings = extractFindings(oldFtUsd, current);
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "volatile-dollar-claim", severity: "medium" }),
+      expect.objectContaining({ kind: "cross-chain-circulation-drift", severity: "medium" }),
+      expect.objectContaining({ kind: "holder-address-scope", severity: "medium" }),
+      expect.objectContaining({ kind: "financing-to-product-scale", severity: "high" }),
+    ]));
+  });
 });

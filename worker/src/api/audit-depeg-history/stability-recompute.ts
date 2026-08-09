@@ -1,4 +1,4 @@
-import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
+import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeStabilityIndex } from "../../lib/stability-index";
 import {

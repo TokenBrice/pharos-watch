@@ -1,17 +1,17 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/blacklist-tracker-version";
-import { CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL } from "@shared/lib/chain-health-version";
-import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-dews-version";
-import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/depeg-resolver-version";
+import { BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/blacklist-tracker";
+import { CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/chain-health";
+import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-dews";
+import { DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
-import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-authority-version";
-import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/mint-burn-flow-version";
-import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/pricing-pipeline-version";
+import { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/mint-authority";
+import { MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/mint-burn-flow";
+import { PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/pricing-pipeline";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL } from "@shared/lib/redemption-backstop-version";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/safety-score-version";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/safety-score";
+import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/stability-index";
+import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/yield-methodology";
 
 export interface MethodologyManifestEntry {
   readonly key: string;

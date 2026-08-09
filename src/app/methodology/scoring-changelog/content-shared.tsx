@@ -3,7 +3,7 @@ import {
   formatMethodologyDisplayDate,
   toMethodologyVersionLabel,
   type MethodologyChangelogEntry,
-} from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/base";
 import { slugifyId } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";

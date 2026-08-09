@@ -1,6 +1,6 @@
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS,
-} from "@shared/lib/safety-score-version";
+} from "@shared/lib/methodology-versions/safety-score";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createMethodologyChangelogRoute } from "../changelog-route-factory";

@@ -7,7 +7,7 @@ import {
   PEG_SCORE_LOOKBACK_SEC,
 } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
-import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
+import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";

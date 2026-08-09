@@ -6,7 +6,7 @@ import {
   DDR_METHODOLOGY_VERSION_LABEL,
   DDR_PREDICTION_POLICY_VERSION,
   DDR_SNAPSHOT_CACHE_GENERATION as DDR_PUBLIC_SNAPSHOT_CACHE_GENERATION,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   buildDdrManifestBasePayload,
   computeDdrManifestBasePayloadHash,

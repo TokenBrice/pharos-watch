@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/safety-score";
 import { scoringAnchorId, StructuredChangelogDetail, VersionCard } from "./content-shared";
 import { scoringChangelogV8Details } from "./content-v8";
 import { scoringChangelogV729Details } from "./content-v7-29";

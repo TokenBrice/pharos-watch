@@ -10,7 +10,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 - **Current methodology version:** `v8.37`
 - **Public changelog page:** `/methodology/yield-changelog/`
-- **Canonical source:** `shared/lib/yield-methodology-version.ts`
+- **Canonical source:** `shared/lib/methodology-versions/yield-methodology.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 

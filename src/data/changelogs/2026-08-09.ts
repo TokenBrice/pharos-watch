@@ -59,6 +59,13 @@ export const entry: ChangelogEntry = {
       description:
         "Tori trUSD and JPYSC were promoted to active tracking, the v9.14 commodity-claim archetype migrated gold-backed assets onto a shared model, and 40 AI editorial summaries were rewritten against the current scoring set.",
     },
+    {
+      label: "ftUSD evidence correction",
+      tag: "coverage",
+      href: "/stablecoin/ftusd-flying-tulip/",
+      description:
+        "Corrected Ethereum-only supply and address scope, removed the financing-to-supply comparison, documented the perpetual PUT, refreshed both live borrow-and-stake strategies, distinguished 3-of-5 Safe control from entity concentration, and updated Safe-module and issuer reserve-source evidence. The valid dependency, liquidation, smart-contract, upgradeability, no-timelock, and independent-assurance risks remain.",
+    },
   ],
   stats: { totalCommits: 127 },
   commits: [

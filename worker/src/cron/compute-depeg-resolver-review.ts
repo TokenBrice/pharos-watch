@@ -6,7 +6,7 @@ import {
 import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import type { DdrOfficialLockOutcome, DdrPredictionErratum } from "@shared/types/depeg-resolver";
 import {

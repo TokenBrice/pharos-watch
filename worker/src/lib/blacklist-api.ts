@@ -1,4 +1,4 @@
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/methodology-versions/blacklist-tracker";
 import type {
   BlacklistAmountSource,
   BlacklistAmountStatus,

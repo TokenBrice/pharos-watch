@@ -4,7 +4,7 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 - **Current methodology version:** `v1.4`
 - **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
-- **Version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/chain-health-version.ts`)
+- **Version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/methodology-versions/chain-health.ts`)
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
 - **Public changelog route:** `/methodology/chain-health-changelog/`
@@ -75,7 +75,7 @@ Maintenance commands:
 When Chain Health behavior changes, update these files together:
 
 1. `shared/lib/chains/health.ts`, `shared/lib/chains/l2beat-risk.ts`, and the `shared/lib/chain-health.ts` facade if exports change
-2. `shared/lib/methodology-versions/chain-health.ts` and the `shared/lib/chain-health-version.ts` facade if exports change
+2. `shared/lib/methodology-versions/chain-health.ts` and the `shared/lib/methodology-versions/chain-health.ts` facade if exports change
 3. `docs/chain-health.md`
 4. `shared/data/methodology-changelogs/chain-health/`
 5. `docs/chains-page.md`

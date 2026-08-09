@@ -11,8 +11,4 @@ createMethodologyVersion({
   changelog: [...MINT_AUTHORITY_V1],
 });
 
-export {
-  MINT_AUTHORITY_METHODOLOGY_PATH,
-  MINT_AUTHORITY_METHODOLOGY_VERSION,
-  MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
-} from "./constants";
+export { MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL } from "./constants";

@@ -1,5 +1,5 @@
 import type { RepairDebtSummary } from "@shared/types/status";
-import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
+import { DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 import { createCronResult, type StructuredCronResult } from "./cron-result";
 import {
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,

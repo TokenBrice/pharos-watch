@@ -27,7 +27,7 @@ import {
   DDR_PREDICTION_POLICY_VERSION,
   DDR_RESOLUTION_RUBRIC_VERSION,
   DDR_SUPPORT_RULES_VERSION,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { loadLatestPublicationManifest } from "../lib/depeg-resolver-publication-store";
 import { loadPredictionErrata } from "../lib/depeg-resolver-errata-store";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";

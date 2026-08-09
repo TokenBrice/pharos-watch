@@ -14,8 +14,8 @@ import {
   PSI_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION_LABEL,
   getPsiMethodologyVersionAt,
-} from "@shared/lib/stability-index-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/stability-index";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 import { round1 } from "@shared/lib/math";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";

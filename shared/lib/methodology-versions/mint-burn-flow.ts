@@ -25,7 +25,6 @@ const mintBurnFlow = createMethodologyVersion({
 
 export {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
-  MINT_BURN_FLOW_METHODOLOGY_VERSION,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "./constants";
 

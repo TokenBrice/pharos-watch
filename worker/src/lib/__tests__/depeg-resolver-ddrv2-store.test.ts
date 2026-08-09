@@ -34,7 +34,7 @@ import {
   DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC,
   DDR_FORECAST_READINESS_STRICT_EARLY_LOCK_THRESHOLD,
   DDR_FORECAST_READINESS_VERSION,
-} from "@shared/lib/depeg-resolver-version";
+} from "@shared/lib/methodology-versions/depeg-resolver";
 import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
 
 interface SqliteD1 extends D1Database {

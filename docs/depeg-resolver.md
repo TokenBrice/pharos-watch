@@ -13,7 +13,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 - **Current methodology version:** `v4.1`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
-- **Canonical source:** `shared/lib/depeg-resolver-version.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
+- **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
 
 DDR versions increase numerically, not semver-style: the next minor release after `v1.9` is `v1.91`, not `v1.10`. A bump is warranted when the resolution rubric, duration stratification, incident grouping, support-gate rules, or reviewer scoring/public audit contract changes.

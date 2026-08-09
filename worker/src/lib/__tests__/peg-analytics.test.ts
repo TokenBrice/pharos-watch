@@ -72,7 +72,7 @@ vi.mock("@shared/lib/peg-rates", () => ({
   ),
 }));
 
-vi.mock("@shared/lib/depeg-dews-version", () => ({
+vi.mock("@shared/lib/methodology-versions/depeg-dews", () => ({
   getDepegDewsMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 

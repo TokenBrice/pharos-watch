@@ -14,8 +14,8 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   getDepegDewsMethodologyVersionAt,
-} from "@shared/lib/depeg-dews-version";
-import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/depeg-dews";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import type { ChartAnnotation } from "@shared/types/chart-annotation";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";

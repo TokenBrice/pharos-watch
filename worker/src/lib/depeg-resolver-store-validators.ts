@@ -1,4 +1,4 @@
-import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/depeg-resolver-version";
+import { DDR_FORECAST_READINESS_BACKSTOP_DELAY_SEC } from "@shared/lib/methodology-versions/depeg-resolver";
 
 export type DdrLockTrigger = "scheduled_24h" | "forecast_readiness" | "readiness_backstop";
 

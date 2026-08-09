@@ -8,7 +8,7 @@ import {
   formatMethodologyDisplayDate,
   methodologyChangelogEntryId,
   toMethodologyVersionLabel,
-} from "@shared/lib/methodology-version";
+} from "@shared/lib/methodology-versions/base";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 interface MethodologyChangelogPageProps {
