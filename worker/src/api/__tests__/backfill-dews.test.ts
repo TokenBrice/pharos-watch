@@ -165,12 +165,7 @@ describe("handleBackfillDEWS", () => {
     ]);
 
     const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
-    const response = await handleBackfillDEWS(
-      db,
-      makeApiUrl("/api/backfill-dews"),
-      true,
-      request,
-    );
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true, request });
 
     expect(response.status).toBe(200);
     expect(computeDEWS).toHaveBeenCalledWith(
@@ -191,7 +186,7 @@ describe("handleBackfillDEWS", () => {
     const db = mockD1();
     const request = makeApiRequest("/api/backfill-dews?repair=refresh-current", { adminKey: "secret" });
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(405);
     const body = (await response.json()) as { error: string };
     expect(body.error).toContain("dry-run=true");
@@ -201,7 +196,7 @@ describe("handleBackfillDEWS", () => {
     const db = mockD1();
     const request = makeApiRequest("/api/backfill-dews?repair=refresh-current&dry-run=true", { adminKey: "secret" });
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       repair: string;
@@ -223,7 +218,7 @@ describe("handleBackfillDEWS", () => {
       method: "POST",
     });
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       repair: string;
@@ -274,7 +269,7 @@ describe("handleBackfillDEWS", () => {
       { adminKey: "secret" },
     );
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       repair: string;
@@ -324,7 +319,7 @@ describe("handleBackfillDEWS", () => {
       { adminKey: "secret" },
     );
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       stablecoinId: string | null;
@@ -388,7 +383,7 @@ describe("handleBackfillDEWS", () => {
       method: "POST",
     });
 
-    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    const response = await handleBackfillDEWS({ db, url: makeApiUrl(request.url), trustedAdmin: true, request });
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       repair: string;

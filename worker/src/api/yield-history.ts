@@ -1,5 +1,4 @@
 import {
-  withErrorHandler,
   buildMethodologyEnvelope,
   parseStablecoinHistoryQuery,
   jsonFreshResponse,
@@ -159,9 +158,7 @@ function normalizeHistorySourceKey(stablecoinId: string, row: YieldHistoryRow, m
  * - default mode (`best`) returns the historically selected best source rows
  * - `sourceKey=<key>` returns source-specific history for that key
  */
-export const handleYieldHistory = withErrorHandler(
-  "yield-history",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Response> => {
     const parsed = parseStablecoinHistoryQuery(url, {
       defaultDays: 90,
       minDays: 1,
@@ -368,5 +365,4 @@ export const handleYieldHistory = withErrorHandler(
         maxAgeSec: CRON_INTERVALS["sync-yield-data"],
       },
     );
-  },
-);
+  };

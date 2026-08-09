@@ -1,4 +1,4 @@
-import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
+import { jsonFreshResponse, errorResponse } from "../lib/api-utils";
 import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
@@ -10,7 +10,7 @@ export function reserveCacheControlForMode(mode: ReservePresentationMode): strin
   return CACHE_PROFILES.reserveFallback;
 }
 
-export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", async (
+export const handleStablecoinReserves = async (
   db: D1Database,
   stablecoinId: string,
 ): Promise<Response> => {
@@ -46,4 +46,4 @@ export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", 
   return jsonFreshResponse(body, {
     cacheControl: reserveCacheControlForMode(resolved.mode),
   });
-});
+};

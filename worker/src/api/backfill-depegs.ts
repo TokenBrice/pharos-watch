@@ -1,7 +1,7 @@
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { jsonResponse } from "../lib/api-utils";
 import { selectBackfillCoins } from "../lib/backfill-query";
-import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
+import { buildAdminJobSummary, noAdminTargetsResponse } from "../lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
 import { toErrorMessage } from "../lib/error-utils";
 import {
@@ -254,16 +254,4 @@ export function handleBackfillDepegsTrusted({
   coingeckoApiKey,
 }: BackfillDepegsRouteContext): Promise<Response> {
   return executeBackfillDepegs(db, url, url.searchParams.get("dry-run") === "true", coingeckoApiKey);
-}
-
-export async function handleBackfillDepegs(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-  coingeckoApiKey?: string | null,
-): Promise<Response> {
-  return runAdminJob({ request, trustedAdmin, url }, (context) =>
-    executeBackfillDepegs(db, url, context.dryRun, coingeckoApiKey),
-  );
 }

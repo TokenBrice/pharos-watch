@@ -5,7 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
@@ -155,7 +155,7 @@ function buildChainsFreshnessMeta(
   };
 }
 
-export const handleChains = withErrorHandler("chains", async (db: D1Database): Promise<Response> => {
+export const handleChains = async (db: D1Database): Promise<Response> => {
   const stablecoinsResult = await loadStablecoinsCache(db, {
     mode: "strict",
     contract: "published",
@@ -199,4 +199,4 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     },
     freshness.headers,
   );
-});
+};

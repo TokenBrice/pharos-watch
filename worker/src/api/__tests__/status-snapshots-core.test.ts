@@ -18,7 +18,7 @@ describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
   it("returns 401 when no ops-api access signal is provided", async () => {
     const db = fixtureMockD1([]);
-    const res = await handleStatus(db, undefined, undefined);
+    const res = await handleStatus({ db });
 
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: string };
@@ -61,7 +61,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -143,7 +143,7 @@ describe("handleStatus", () => {
         },
         ...scenario.tables,
       ]);
-      const response = await handleStatus(db, true, fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }));
+      const response = await handleStatus({ db, trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
       const payload = await response.json();
       const parsed = StatusResponseSchema.parse(payload);
 
@@ -203,7 +203,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, undefined, "status");
+    const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -272,7 +272,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, undefined, "status");
+    const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -305,7 +305,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -356,7 +356,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -414,7 +414,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -445,7 +445,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = { url: "http://[" } as Request;
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { rawOverallStatus: string };
@@ -585,7 +585,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -718,7 +718,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -822,7 +822,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -891,7 +891,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request);
+    const res = await handleStatus({ db, trustedAdmin: true, request });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {

@@ -49,12 +49,19 @@ function readBoolean(url: URL, body: Record<string, unknown>, key: string): bool
   return false;
 }
 
-export async function handleBackfillTape(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean | undefined,
-  request: Request | undefined,
-): Promise<Response> {
+export interface BackfillTapeRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
+
+export async function handleBackfillTape({
+  db,
+  url,
+  trustedAdmin,
+  request,
+}: BackfillTapeRouteContext): Promise<Response> {
   return runAdminJob({ request, trustedAdmin, url, parseBody: true }, async ({ body }) => {
     const requestedClasses = readRepeatable(url, "class");
 

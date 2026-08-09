@@ -8,7 +8,7 @@ import {
   mapRouteStatsRows,
   mapTimeBucketRows,
 } from "../lib/request-source-attribution";
-import { runAdminRoute } from "../lib/route-wrappers";
+import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 
 interface TotalsRow {
   pages_site_requests: number | null;
@@ -59,11 +59,7 @@ interface ApiKeyRow {
   request_count: number | null;
 }
 
-export function handleRequestSourceStats(
-  db: D1Database,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
+export function handleRequestSourceStats({ db, trustedAdmin, request }: AdminRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "request-source-stats",

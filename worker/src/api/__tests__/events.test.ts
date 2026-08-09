@@ -130,16 +130,17 @@ describe("handleEvents", () => {
       { match: "cron_runs", rows: [], first: { started_at: SEC } },
     ]);
 
-    const res = await handleEvents(db, new URL("https://x/api/events"));
-
     expect(
       SafetyScoreTapeProvenanceSchema.safeParse({
         identityStatus: "complete",
         identity: null,
       }).success,
     ).toBe(false);
-    expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toEqual({ error: "Internal Server Error" });
+    // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
+    // `router-contract.test.ts`.
+    await expect(handleEvents(db, new URL("https://x/api/events"))).rejects.toThrow(
+      "Invalid score tape event payload",
+    );
   });
 
   it("returns 200 with mapped events and freshness meta", async () => {

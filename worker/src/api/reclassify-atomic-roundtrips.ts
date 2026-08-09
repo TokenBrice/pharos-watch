@@ -1,5 +1,5 @@
 import { jsonResponse, parseOptionalNonNegativeIntegerParam } from "../lib/api-utils";
-import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
+import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { batchExecute } from "../lib/db";
 import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
@@ -20,6 +20,11 @@ interface RoundtripDiscoveryRow {
   stablecoin_id: string;
   chain_id: string;
   timestamp: number;
+}
+
+export interface ReclassifyAtomicRoundtripsRouteContext {
+  db: D1Database;
+  url: URL;
 }
 
 function resolveSince(url: URL): number | Response {
@@ -52,26 +57,10 @@ function resolveStablecoinId(url: URL): string | null {
  *
  * Returns { done: true } when both passes land < BATCH_SIZE rows.
  */
-export async function handleReclassifyAtomicRoundtrips(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean | undefined,
-  request?: Request,
-): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "reclassify-atomic-roundtrips",
-      request,
-      trustedAdmin,
-    },
-    () => handleReclassifyAtomicRoundtripsTrusted(db, url),
-  );
-}
-
-export async function handleReclassifyAtomicRoundtripsTrusted(
-  db: D1Database,
-  url: URL,
-): Promise<Response> {
+export async function handleReclassifyAtomicRoundtripsTrusted({
+  db,
+  url,
+}: ReclassifyAtomicRoundtripsRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     const since = resolveSince(url);
     if (since instanceof Response) return since;

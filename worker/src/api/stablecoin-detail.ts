@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db-cache";
-import { errorResponse, withErrorHandler } from "../lib/api-utils";
+import { errorResponse } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
@@ -105,9 +105,7 @@ function scheduleStablecoinDetailRefresh(config: {
   );
 }
 
-export const handleStablecoinDetail = withErrorHandler(
-  "stablecoin-detail",
-  async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
+export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: ExecutionContext, coingeckoApiKey?: string | null): Promise<Response> => {
     const cacheKey = `detail:${id}`;
     const cached = await getCache(db, cacheKey);
     const meta = TRACKED_META_BY_ID.get(id);
@@ -158,5 +156,4 @@ export const handleStablecoinDetail = withErrorHandler(
       coingeckoApiKey,
     });
     return createResponseFromSharedResponse(response);
-  },
-);
+  };

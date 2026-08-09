@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleReclassifyAtomicRoundtrips } from "../reclassify-atomic-roundtrips";
+import { handleReclassifyAtomicRoundtripsTrusted } from "../reclassify-atomic-roundtrips";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 
@@ -18,7 +18,7 @@ describe("reclassify-atomic-roundtrips", () => {
       { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
     ]);
     const url = new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips");
-    const res = await handleReclassifyAtomicRoundtrips(db, url, true);
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
     const body = await res.json() as {
       done: boolean;
       updated: number;
@@ -52,7 +52,7 @@ describe("reclassify-atomic-roundtrips", () => {
     ]);
 
     const url = new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips");
-    const res = await handleReclassifyAtomicRoundtrips(db, url, true);
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url });
     const body = await res.json() as {
       done: boolean;
       updated: number;
@@ -79,11 +79,7 @@ describe("reclassify-atomic-roundtrips", () => {
       { match: "WHERE flow_type = 'atomic_roundtrip'", rows: [] },
     ]);
 
-    await handleReclassifyAtomicRoundtrips(
-      db,
-      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
-      true,
-    );
+    await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips") });
 
     const discoveryQueries = db.getHistory().filter((entry) =>
       entry.sql.includes("GROUP BY tx_hash, stablecoin_id, chain_id"),
@@ -124,11 +120,7 @@ describe("reclassify-atomic-roundtrips", () => {
       },
     ]);
 
-    const res = await handleReclassifyAtomicRoundtrips(
-      db,
-      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
-      true,
-    );
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips") });
 
     const body = await res.json() as {
       done: boolean;
@@ -186,11 +178,7 @@ describe("reclassify-atomic-roundtrips", () => {
       { match: "UPDATE mint_burn_events", rows: [], runMeta: { changes: 1 } },
     ]);
 
-    const res = await handleReclassifyAtomicRoundtrips(
-      db,
-      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
-      true,
-    );
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips") });
 
     expect(res.status).toBe(200);
     const updates = db.getHistory().filter((entry) =>
@@ -210,11 +198,7 @@ describe("reclassify-atomic-roundtrips", () => {
 
   it("rejects malformed since values", async () => {
     const db = mockD1([]);
-    const res = await handleReclassifyAtomicRoundtrips(
-      db,
-      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0foo"),
-      true,
-    );
+    const res = await handleReclassifyAtomicRoundtripsTrusted({ db, url: new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips?since=0foo") });
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid since: must be a non-negative integer" });

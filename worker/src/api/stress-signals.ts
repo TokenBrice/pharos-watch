@@ -1,5 +1,4 @@
 import {
-  withErrorHandler,
   resolveOrReject,
   addFreshnessHeaders,
   errorResponse,
@@ -102,9 +101,7 @@ function buildAggregateCoverage(input: {
   return { status: "ok", reasons };
 }
 
-export const handleStressSignals = withErrorHandler(
-  "stress-signals",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleStressSignals = async (db: D1Database, url: URL): Promise<Response> => {
     const nowSec = Math.floor(Date.now() / 1000);
     const stablecoinId = url.searchParams.get("stablecoin");
     const parsedParams = parseQueryParams(url.searchParams, {
@@ -317,5 +314,4 @@ export const handleStressSignals = withErrorHandler(
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf,
     }) }, responseHeaders);
-  },
-);
+  };

@@ -32,13 +32,21 @@ const RUNTIME_BUDGET_MS = 8 * 60_000;
  * through `syncCurrentBalanceCacheForRows` — the same code path the hourly
  * cron uses for newly-fetched events.
  */
-export async function handleBackfillBlacklistCurrentBalances(
-  db: D1Database,
-  url: URL,
-  trustedAdmin: boolean,
-  request: Request,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Response> {
+export interface BackfillBlacklistCurrentBalancesRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin: boolean;
+  request: Request;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}
+
+export async function handleBackfillBlacklistCurrentBalances({
+  db,
+  url,
+  trustedAdmin,
+  request,
+  chainRpcs,
+}: BackfillBlacklistCurrentBalancesRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "backfill-blacklist-current-balances",

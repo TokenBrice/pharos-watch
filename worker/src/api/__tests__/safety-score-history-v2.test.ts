@@ -128,13 +128,11 @@ describe("handleSafetyScoreHistoryV2", () => {
       },
     ]);
 
-    const response = await handleSafetyScoreHistoryV2(
-      db,
-      new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle"),
-    );
-
-    expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Internal Server Error" });
+    // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
+    // `router-contract.test.ts`.
+    await expect(
+      handleSafetyScoreHistoryV2(db, new URL("https://x/api/safety-score-history-v2?stablecoin=usdc-circle")),
+    ).rejects.toThrow();
   });
 
   it("returns an empty history with a current freshness fallback", async () => {

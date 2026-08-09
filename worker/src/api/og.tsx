@@ -494,6 +494,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const topPerformers = allScores.slice(0, 3);
   const bottomPerformers = allScores.slice(-3).reverse();
 
+  const safetyPresentation = safetyScoreOgPresentation(safetySource);
   const data: SafetyScoresCardData = {
     gradeDistribution,
     // An average score is not an asset-level grade under either methodology.
@@ -505,11 +506,11 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     bottomPerformers,
     trend: null,
     safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-    lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
+    lastUpdated: safetyPresentation.lastUpdated,
   };
 
   const png = await renderPng(<SafetyScoresCard data={data} />);
-  return new Response(png, { headers: safetyScoreOgPresentation(safetySource).headers });
+  return new Response(png, { headers: safetyPresentation.headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -733,6 +734,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   // skips chains whose tracked supply is currently zero. Render a degraded
   // "no tracked supply" card instead of 404 so baked share images never break
   // when a chain's supply transiently drops out of the aggregate.
+  const safetyPresentation = safetyScoreOgPresentation(safetySource);
   const data: ChainCardData = chain
     ? {
         name: chain.name,
@@ -748,7 +750,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
           supplyUsd: coin.supplyUsd,
         })),
         safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-        lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
+        lastUpdated: safetyPresentation.lastUpdated,
       }
     : {
         name: CHAIN_META[chainId].name,
@@ -760,11 +762,11 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
         healthBand: null,
         topStablecoins: [],
         safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-        lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
+        lastUpdated: safetyPresentation.lastUpdated,
       };
 
   const png = await renderPng(<ChainCard data={data} />);
-  return new Response(png, { headers: safetyScoreOgPresentation(safetySource).headers });
+  return new Response(png, { headers: safetyPresentation.headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -774,74 +776,53 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
 const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
 
-function handleOgHead(path: string): Response | null {
-  const stablecoinMatch = path.match(STABLECOIN_OG_PATTERN);
-  if (stablecoinMatch) {
-    try {
-      const resolved = resolveOrReject(decodeURIComponent(stablecoinMatch[1]));
-      if (resolved instanceof Response) {
-        return ogErrorResponse("Unknown stablecoin", 404);
-      }
-      return new Response(null, { headers: CACHE_HEADERS });
-    } catch {
-      return ogErrorResponse("Malformed URI", 400);
-    }
-  }
-
-  const chainMatch = path.match(CHAIN_OG_PATTERN);
-  if (chainMatch) {
-    return CHAIN_META[chainMatch[1]]
-      ? new Response(null, { headers: CACHE_HEADERS })
-      : ogErrorResponse("Unknown chain", 404);
-  }
-
-  if (path === "/api/og/safety-scores" || path === "/api/og/depeg" || path === "/api/og/stability-index") {
-    return new Response(null, { headers: CACHE_HEADERS });
-  }
-
-  return null;
+interface OgRoute {
+  pattern: RegExp;
+  /** Decode/normalize the captured segment; a Response short-circuits both GET and HEAD. */
+  resolveCapture?: (capture: string) => string | Response;
+  /** HEAD-only existence check. GET surfaces the same 404 from its renderer. */
+  headCheck?: (capture: string) => Response | null;
+  render: (db: D1Database, capture: string) => Promise<Response>;
 }
 
-export async function handleOg(db: D1Database, path: string, method = "GET"): Promise<Response | null> {
-  if (method === "HEAD") {
-    return handleOgHead(path);
-  }
-
-  try {
-    // /api/og/stablecoin/:id
-    const stablecoinMatch = path.match(STABLECOIN_OG_PATTERN);
-    if (stablecoinMatch) {
-      let coinId: string;
+const OG_ROUTES: readonly OgRoute[] = [
+  {
+    pattern: STABLECOIN_OG_PATTERN,
+    resolveCapture: (raw) => {
       try {
-        coinId = decodeURIComponent(stablecoinMatch[1]);
+        return decodeURIComponent(raw);
       } catch {
         return ogErrorResponse("Malformed URI", 400);
       }
-      return await handleStablecoinOg(db, coinId);
-    }
+    },
+    headCheck: (coinId) =>
+      resolveOrReject(coinId) instanceof Response ? ogErrorResponse("Unknown stablecoin", 404) : null,
+    render: (db, coinId) => handleStablecoinOg(db, coinId),
+  },
+  {
+    pattern: CHAIN_OG_PATTERN,
+    headCheck: (chainId) => (CHAIN_META[chainId] ? null : ogErrorResponse("Unknown chain", 404)),
+    render: (db, chainId) => handleChainOg(db, chainId),
+  },
+  { pattern: /^\/api\/og\/safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
+  { pattern: /^\/api\/og\/depeg$/, render: (db) => handleDepegOg(db) },
+  { pattern: /^\/api\/og\/stability-index$/, render: (db) => handleStabilityIndexOg(db) },
+];
 
-    // /api/og/chain/:id
-    const chainMatch = path.match(CHAIN_OG_PATTERN);
-    if (chainMatch) {
-      return await handleChainOg(db, chainMatch[1]);
-    }
+export async function handleOg(db: D1Database, path: string, method = "GET"): Promise<Response | null> {
+  const route = OG_ROUTES.find((candidate) => candidate.pattern.test(path));
+  if (!route) return null;
 
-    // /api/og/safety-scores
-    if (path === "/api/og/safety-scores") {
-      return await handleSafetyScoresOg(db);
-    }
+  const rawCapture = path.match(route.pattern)?.[1] ?? "";
+  const capture = route.resolveCapture ? route.resolveCapture(rawCapture) : rawCapture;
+  if (capture instanceof Response) return capture;
 
-    // /api/og/depeg
-    if (path === "/api/og/depeg") {
-      return await handleDepegOg(db);
-    }
+  if (method === "HEAD") {
+    return route.headCheck?.(capture) ?? new Response(null, { headers: CACHE_HEADERS });
+  }
 
-    // /api/og/stability-index
-    if (path === "/api/og/stability-index") {
-      return await handleStabilityIndexOg(db);
-    }
-
-    return null;
+  try {
+    return await route.render(db, capture);
   } catch (err) {
     console.error("[og] Render error:", err);
     // Render-internal/transient failure (satori throw, resvg WASM crash, missing

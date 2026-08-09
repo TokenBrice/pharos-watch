@@ -1,5 +1,5 @@
 import { jsonResponse, errorResponse } from "../lib/api-utils";
-import { runAdminRoute, runTrustedAdminMutation } from "../lib/route-wrappers";
+import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { getDepegThresholdBps } from "../lib/constants";
 import { buildInClause } from "../lib/db";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
@@ -488,27 +488,17 @@ async function executeContradictoryRecoveryRepair(
   return jsonResponse(result);
 }
 
-export async function handleAuditDepegHistory(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "audit-depeg-history",
-      request,
-      trustedAdmin,
-    },
-    () => handleAuditDepegHistoryTrusted(db, url, request),
-  );
+export interface AuditDepegHistoryRouteContext {
+  db: D1Database;
+  url: URL;
+  request?: Request;
 }
 
-export async function handleAuditDepegHistoryTrusted(
-  db: D1Database,
-  url: URL,
-  request?: Request,
-): Promise<Response> {
+export async function handleAuditDepegHistoryTrusted({
+  db,
+  url,
+  request,
+}: AuditDepegHistoryRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     try {
       const auditRequest = parseAuditRequest(url, request);

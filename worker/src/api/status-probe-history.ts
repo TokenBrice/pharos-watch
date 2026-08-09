@@ -1,7 +1,6 @@
 import { makeAdminRoute, type AdminUrlRouteContext } from "../lib/route-wrappers";
-import { jsonResponse, parseClampedIntegerParam } from "../lib/api-utils";
+import { jsonResponse, parseClampedIntegerParam, safeJsonParse } from "../lib/api-utils";
 import { getProbePaths } from "@shared/lib/api-endpoints";
-import { safeJsonParse } from "../lib/api-cache-read";
 
 const MAX_DAYS = 30;
 const DEFAULT_DAYS = 7;

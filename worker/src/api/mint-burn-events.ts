@@ -1,5 +1,4 @@
 import {
-  withErrorHandler,
   errorResponse,
   parseEnumParam,
   parseFloatParam,
@@ -37,9 +36,7 @@ interface EventRow {
   price_source: string | null;
 }
 
-export const handleMintBurnEvents = withErrorHandler(
-  "mint-burn-events",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
 
     const stablecoinId = parseRequiredStablecoinIdParam(params);
@@ -154,5 +151,4 @@ export const handleMintBurnEvents = withErrorHandler(
       },
       cacheControl: CACHE_PROFILES.producerBacked,
     });
-  },
-);
+  };

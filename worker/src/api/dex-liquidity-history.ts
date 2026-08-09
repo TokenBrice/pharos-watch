@@ -1,4 +1,4 @@
-import { withErrorHandler, handleStablecoinHistoryRequest } from "../lib/api-utils";
+import { handleStablecoinHistoryRequest } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
@@ -34,9 +34,7 @@ function parseRouteSummary(json: string | null) {
   };
 }
 
-export const handleDexLiquidityHistory = withErrorHandler(
-  "dex-liquidity-history",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleDexLiquidityHistory = async (db: D1Database, url: URL): Promise<Response> => {
     return handleStablecoinHistoryRequest(db, url, {
       query: {
         defaultDays: 90,
@@ -82,5 +80,4 @@ export const handleDexLiquidityHistory = withErrorHandler(
         };
       },
     });
-  },
-);
+  };

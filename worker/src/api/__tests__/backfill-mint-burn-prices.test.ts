@@ -41,13 +41,7 @@ describe("handleBackfillMintBurnPrices", () => {
     const request = makeApiRequest("/api/backfill-mint-burn-prices?limit=25&stablecoin=ustb-superstate", {
       adminKey: "secret",
     });
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl("/api/backfill-mint-burn-prices?limit=25&stablecoin=ustb-superstate"),
-      true,
-      request,
-      { coingeckoApiKey: "cg-key", sourceLoader, nowSec: 123 },
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl("/api/backfill-mint-burn-prices?limit=25&stablecoin=ustb-superstate"), trustedAdmin: true, request, coingeckoApiKey: "cg-key", sourceLoader, nowSec: 123 });
 
     expect(response.status).toBe(200);
     expect(repairHistoricalMintBurnPrices).toHaveBeenCalledWith(db, {
@@ -65,12 +59,7 @@ describe("handleBackfillMintBurnPrices", () => {
 
   it("requires an explicit confirmation token before mutation", async () => {
     const path = "/api/backfill-mint-burn-prices?dry-run=false";
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl(path),
-      true,
-      makeApiRequest(path, { adminKey: "secret" }),
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret" }) });
 
     expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
@@ -82,12 +71,7 @@ describe("handleBackfillMintBurnPrices", () => {
   it("executes only after explicit confirmation and can revisit irreducible rows", async () => {
     const path =
       "/api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=bookmark-123&retry-irreducible=true&limit=500";
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl(path),
-      true,
-      makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "repair-run-1" } }),
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "repair-run-1" } }) });
 
     expect(response.status).toBe(200);
     expect(repairHistoricalMintBurnPrices).toHaveBeenCalledWith(
@@ -105,12 +89,7 @@ describe("handleBackfillMintBurnPrices", () => {
   it("rejects confirmed mutation when the idempotency key exceeds the replay-protected length", async () => {
     const path =
       "/api/backfill-mint-burn-prices?dry-run=false&confirm=historical-mint-prices&bookmark=bookmark-123";
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl(path),
-      true,
-      makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "x".repeat(129) } }),
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret", headers: { "Idempotency-Key": "x".repeat(129) } }) });
 
     expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
@@ -121,24 +100,14 @@ describe("handleBackfillMintBurnPrices", () => {
 
   it("rejects an unbounded limit", async () => {
     const path = "/api/backfill-mint-burn-prices?limit=501";
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl(path),
-      true,
-      makeApiRequest(path, { adminKey: "secret" }),
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl(path), trustedAdmin: true, request: makeApiRequest(path, { adminKey: "secret" }) });
 
     expect(response.status).toBe(400);
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
   });
 
   it("requires admin auth", async () => {
-    const response = await handleBackfillMintBurnPrices(
-      db,
-      makeApiUrl("/api/backfill-mint-burn-prices"),
-      undefined,
-      makeApiRequest("/api/backfill-mint-burn-prices"),
-    );
+    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl("/api/backfill-mint-burn-prices"), request: makeApiRequest("/api/backfill-mint-burn-prices") });
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });

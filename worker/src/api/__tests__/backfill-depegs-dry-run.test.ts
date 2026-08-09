@@ -49,7 +49,7 @@ vi.mock("../../lib/backfill-fx", async (importOriginal) => {
   };
 });
 
-import { handleBackfillDepegs } from "../backfill-depegs";
+import { handleBackfillDepegsTrusted } from "../backfill-depegs";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 import { buildCommodityMedianSeriesFromCg } from "../../lib/backfill-fx";
 
@@ -113,7 +113,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
 
     const body = await res.json() as {
@@ -196,7 +196,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
     const body = await res.json() as {
       recomputedBackfillEvents: number;
@@ -232,7 +232,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
 
     const body = await res.json() as {
@@ -275,7 +275,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
 
     const body = await res.json() as {
@@ -318,7 +318,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
 
     expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
@@ -423,7 +423,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
 
     const body = await res.json() as {
@@ -469,7 +469,7 @@ describe("handleBackfillDepegs replay windows", () => {
       method: "POST",
     });
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url) });
     expect(res.status).toBe(200);
     const body = await res.json() as { eventsCreated: number; skipped?: string[] };
     expect(body.eventsCreated).toBe(0);
@@ -497,7 +497,7 @@ describe("handleBackfillDepegs replay windows", () => {
       },
     );
 
-    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req, "cg-test-key");
+    const res = await handleBackfillDepegsTrusted({ db, url: makeApiUrl(req.url), coingeckoApiKey: "cg-test-key" });
     expect(res.status).toBe(200);
 
     expect(buildCommodityMedianSeriesFromCg).toHaveBeenCalledWith(

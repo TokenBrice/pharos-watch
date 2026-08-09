@@ -1,4 +1,4 @@
-import { withErrorHandler, jsonFreshResponse } from "../lib/api-utils";
+import { jsonFreshResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
@@ -81,7 +81,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
   return decoded.ok ? decoded.payload : null;
 }
 
-export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
+export const handleDigestArchive = async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
     // Blocked rows never published and get no edition number, so a SQL filter
     // is safe here; internal sentinel rows are numbered first and hidden in JS.
@@ -156,4 +156,4 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
     updatedAt: latestTs,
     maxAgeSec: DAY_SECONDS,
   });
-});
+};

@@ -36,7 +36,7 @@ async function resolveDynamicStablecoinRoute(
 ): Promise<Response> {
   const resolved = await decodeAndResolveStablecoinId(match[1], "Malformed URI");
   if (resolved instanceof Response) {
-    return Promise.resolve(resolved);
+    return resolved;
   }
   return handler(resolved.canonicalId);
 }
@@ -80,21 +80,6 @@ function defineDynamicRouteFromDescriptor(
   return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, descriptor.methods, handle);
 }
 
-function rejectMalformedStablecoinOgPath(pathname: string): Response | null {
-  const match = pathname.match(/^\/api\/og\/stablecoin\/(.+)$/);
-  if (!match) return null;
-
-  try {
-    decodeURIComponent(match[1]);
-    return null;
-  } catch {
-    return new Response("Malformed URI", {
-      status: 400,
-      headers: { "Content-Type": "text/plain" },
-    });
-  }
-}
-
 const DYNAMIC_ROUTE_DEFINITIONS = [
   defineDynamicRouteFromDescriptor("stablecoin-summary", (routeCtx, match) =>
     resolveDynamicStablecoinRoute(match, async (canonicalId) => {
@@ -115,9 +100,8 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     }),
   ),
   defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
-    const malformedPathResponse = rejectMalformedStablecoinOgPath(routeCtx.url.pathname);
-    if (malformedPathResponse) return malformedPathResponse;
-
+    // `handleOg` owns the malformed-URI rejection for /api/og/stablecoin/:id and
+    // returns the same 400 text/plain response, so no outer guard is needed here.
     const { handleOg } = await import("../api/og");
     return handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.request.method).then(
       (response) => response ?? errorResponse(404, "Unknown OG route"),
@@ -133,7 +117,7 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     // than misattributing the snapshot row to the wrong canonical id.
     const resolved = await decodeAndResolveStablecoinId(match[2], "Malformed stablecoin id");
     if (resolved instanceof Response) {
-      return Promise.resolve(resolved);
+      return resolved;
     }
     const { handleSnapshotCoin } = await import("../api/snapshot");
     return handleSnapshotCoin(routeCtx.db, match[1], resolved.canonicalId);
@@ -148,12 +132,9 @@ function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
   return {
     dependencies: descriptor.routeDependencies,
     methods: descriptor.methods,
-    handle: (routeCtx, dynamicAdminEndpoint) => {
-      if (dynamicAdminEndpoint.key !== key) {
-        throw new Error(`Dynamic admin route binding "${key}" received endpoint "${dynamicAdminEndpoint.key}"`);
-      }
-      return handle(routeCtx, dynamicAdminEndpoint as DynamicAdminEndpointFor<Key>);
-    },
+    // `bindMatchedDynamicAdminRoute` looks the binding up by the matched key, so
+    // the handler can only ever receive its own endpoint match.
+    handle: handle as DynamicAdminRouteBinding["handle"],
   };
 }
 

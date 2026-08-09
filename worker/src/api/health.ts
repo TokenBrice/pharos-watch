@@ -1,7 +1,4 @@
-import {
-  withErrorHandler,
-  jsonResponse,
-} from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-utils";
 import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
 import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
@@ -9,7 +6,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { logWorkerEvent } from "../lib/structured-log";
 import { readPendingCapacity } from "../cron/telegram-pending";
 
-export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
+export const handleHealth = async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
   const assessment = await assessPublicHealth(db, now, { logPrefix: "health" });
 
@@ -119,4 +116,4 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
   };
 
   return jsonResponse(body, { "Cache-Control": CACHE_PROFILES.realtime });
-});
+};

@@ -100,19 +100,17 @@ describe("handleDexLiquidity", () => {
     expect(body).toEqual({});
   });
 
-  it("returns 500 when dex_prices fails unexpectedly", async () => {
+  // Fails closed: the router boundary turns this throw into the JSON 500 pinned by
+  // `router-contract.test.ts` ("returns a router-level JSON 500 when an unwrapped
+  // route handler throws"). Asserting the throw here keeps the cause visible.
+  it("fails closed when dex_prices fails unexpectedly", async () => {
     const db = mockD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [], throwError: new Error("database is locked") },
     ]);
 
-    const res = await handleDexLiquidity(db);
-
-    expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toEqual({
-      error: "Internal Server Error",
-    });
+    await expect(handleDexLiquidity(db)).rejects.toThrow("database is locked");
   });
 
   it("treats dex_prices as optional when the table is not deployed yet", async () => {

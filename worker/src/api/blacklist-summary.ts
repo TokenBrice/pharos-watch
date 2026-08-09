@@ -3,8 +3,7 @@ import {
   buildMethodologyEnvelope,
   getLatestSuccessfulCronTimestamp,
   jsonResponse,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
@@ -663,9 +662,7 @@ function blacklistSummaryHeaders(freshnessTs: number): Record<string, string> {
   );
 }
 
-export const handleBlacklistSummary = withErrorHandler(
-  "blacklist-summary",
-  async (db: D1Database): Promise<Response> => {
+export const handleBlacklistSummary = async (db: D1Database): Promise<Response> => {
     const now = Math.floor(Date.now() / 1000);
     const snapshot = await readBlacklistSummarySnapshot(db);
     if (snapshot) {
@@ -684,5 +681,4 @@ export const handleBlacklistSummary = withErrorHandler(
 
     const built = await buildBlacklistSummaryPayload(db, now);
     return jsonResponse(built.payload, blacklistSummaryHeaders(built.freshnessTs));
-  },
-);
+  };

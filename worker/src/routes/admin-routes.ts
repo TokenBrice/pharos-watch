@@ -46,84 +46,52 @@ export const ADMIN_STATIC_ROUTES = [
   ),
   defineIdempotentAdminRoute("backfill-stability-index", () =>
     import("../api/backfill-stability-index").then(
-      ({ handleBackfillStabilityIndex }) =>
-        ({ db, trustedAdmin, request }) =>
-          handleBackfillStabilityIndex(db, trustedAdmin, request),
+      ({ handleBackfillStabilityIndex }) => handleBackfillStabilityIndex,
     ),
   ),
   defineConditionalIdempotentAdminRoute(
     "audit-depeg-history",
     ({ request }) => request.method === "POST",
-    () =>
-      import("../api/audit-depeg-history").then(
-        ({ handleAuditDepegHistoryTrusted }) =>
-          ({ db, url, request }) =>
-            handleAuditDepegHistoryTrusted(db, url, request),
-      ),
+    () => import("../api/audit-depeg-history").then(({ handleAuditDepegHistoryTrusted }) => handleAuditDepegHistoryTrusted),
   ),
   defineIdempotentAdminRoute("backfill-cg-prices", () =>
     import("../api/backfill-cg-prices").then(({ handleBackfillCgPricesTrusted }) => handleBackfillCgPricesTrusted),
   ),
   defineIdempotentAdminRoute("backfill-yield-history", () =>
-    import("../api/backfill-yield-history").then(
-      ({ handleBackfillYieldHistory }) =>
-        ({ db, url, trustedAdmin, request }) =>
-          handleBackfillYieldHistory(db, url, trustedAdmin, request),
-    ),
+    import("../api/backfill-yield-history").then(({ handleBackfillYieldHistory }) => handleBackfillYieldHistory),
   ),
   defineConditionalIdempotentAdminRoute(
     "backfill-mint-burn-prices",
     ({ url }) => url.searchParams.get("dry-run") === "false" || url.searchParams.get("dryRun") === "false",
     () =>
       import("../api/backfill-mint-burn-prices").then(
-        ({ handleBackfillMintBurnPrices }) =>
-          ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-            handleBackfillMintBurnPrices(db, url, trustedAdmin, request, { coingeckoApiKey }),
+        ({ handleBackfillMintBurnPrices }) => handleBackfillMintBurnPrices,
       ),
   ),
   defineIdempotentAdminRoute("backfill-mint-burn", () =>
-    import("../api/backfill-mint-burn").then(
-      ({ handleBackfillMintBurn }) =>
-        ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
-          handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
-    ),
+    import("../api/backfill-mint-burn").then(({ handleBackfillMintBurn }) => handleBackfillMintBurn),
   ),
   defineIdempotentAdminRoute("backfill-tape", () =>
-    import("../api/backfill-tape").then(
-      ({ handleBackfillTape }) =>
-        ({ db, url, trustedAdmin, request }) =>
-          handleBackfillTape(db, url, trustedAdmin, request),
-    ),
+    import("../api/backfill-tape").then(({ handleBackfillTape }) => handleBackfillTape),
   ),
   defineIdempotentAdminRoute("reclassify-atomic-roundtrips", () =>
     import("../api/reclassify-atomic-roundtrips").then(
-      ({ handleReclassifyAtomicRoundtripsTrusted }) =>
-        ({ db, url }) =>
-          handleReclassifyAtomicRoundtripsTrusted(db, url),
+      ({ handleReclassifyAtomicRoundtripsTrusted }) => handleReclassifyAtomicRoundtripsTrusted,
     ),
   ),
   defineConditionalIdempotentAdminRoute(
     "backfill-dews",
     ({ request }) => request.method === "POST",
-    () =>
-      import("../api/backfill-dews").then(
-        ({ handleBackfillDEWS }) =>
-          ({ db, url, trustedAdmin, request }) =>
-            handleBackfillDEWS(db, url, trustedAdmin, request),
-      ),
+    () => import("../api/backfill-dews").then(({ handleBackfillDEWS }) => handleBackfillDEWS),
   ),
   defineIdempotentAdminRoute("remediate-blacklist-amount-gaps", () =>
     import("../api/remediate-blacklist-amount-gaps").then(
-      ({ handleRemediateBlacklistAmountGapsTrusted }) =>
-        ({ db, url, request, chainRpcs }) =>
-          handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
+      ({ handleRemediateBlacklistAmountGapsTrusted }) => handleRemediateBlacklistAmountGapsTrusted,
     ),
   ),
   defineIdempotentAdminRoute("backfill-blacklist-current-balances", () =>
     import("../api/backfill-blacklist-current-balances").then(
-      ({ handleBackfillBlacklistCurrentBalances }) =>
-        ({ db, url, trustedAdmin, request, chainRpcs }) =>
-          handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
+      ({ handleBackfillBlacklistCurrentBalances }) => handleBackfillBlacklistCurrentBalances,
     ),
   ),
   defineLazyStaticRoute("reset-cron-lease", () =>

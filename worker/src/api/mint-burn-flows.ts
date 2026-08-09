@@ -1,6 +1,5 @@
 import { getCache } from "../lib/db-cache";
 import {
-  withErrorHandler,
   resolveOrReject,
   errorResponse,
   parseQueryParams,
@@ -52,9 +51,7 @@ import {
 // Handler
 // ---------------------------------------------------------------------------
 
-export const handleMintBurnFlows = withErrorHandler(
-  "mint-burn-flows",
-  async (db: D1Database, url: URL): Promise<Response> => {
+export const handleMintBurnFlows = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
     const parsed = parseQueryParams(params, {
@@ -71,8 +68,7 @@ export const handleMintBurnFlows = withErrorHandler(
       return handlePerCoin(db, resolved.canonicalId, hours);
     }
     return handleAggregate(db, hours);
-  },
-);
+  };
 
 // ---------------------------------------------------------------------------
 // Aggregate mode (no stablecoin param)

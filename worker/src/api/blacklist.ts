@@ -1,6 +1,5 @@
 import {
-  withErrorHandler,
-  errorResponse,
+    errorResponse,
   parseEnumParam,
   parseOptionalEnumParam,
   buildMethodologyEnvelope,
@@ -94,7 +93,7 @@ function getBlacklistCursor(sortBy: BlacklistSortKey, sortDirection: BlacklistSo
   };
 }
 
-export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
+export const handleBlacklist = async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
@@ -199,4 +198,4 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
       };
     },
   });
-});
+};

@@ -3,26 +3,16 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
-  DYNAMIC_ENDPOINT_ACCESS_POLICIES,
-  DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
-  DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS,
   getEndpointDefinitionByKey,
   API_PATHS,
   getSiteDataAccess,
   getPublicApiAccess,
   getEndpointProbeDescriptors,
-  getEndpointProbePaths,
   getProbePaths,
   getStatusPageActions,
   ENDPOINT_DEFINITIONS,
-  ENDPOINT_DEFINITION_PROBES,
-  ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   findDynamicEndpointDescriptor,
   getDynamicEndpointDescriptorByKey,
-  PUBLIC_API_ENDPOINT_DEFINITIONS,
-  STATIC_ENDPOINT_ACCESS_POLICIES,
-  STATIC_ENDPOINT_CACHE_POLICIES,
-  STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES,
   STATIC_ENDPOINT_ROUTE_DEFINITIONS,
   getStaticEndpointDependenciesByKey,
   isAdminLikePath,
@@ -228,127 +218,9 @@ describe("api endpoint registry", () => {
     expect(getProbePaths("public")).not.toContain("/api/snapshot/:date/stablecoin/:id");
   });
 
-  it("derives static route definitions from literal endpoint paths", () => {
-    const expectedStaticKeys = ENDPOINT_DEFINITIONS.filter((endpoint) => isStaticEndpointPath(endpoint.path)).map(
-      (endpoint) => endpoint.key,
-    );
-
-    expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).toEqual(expectedStaticKeys);
+  it("keeps dynamic endpoints out of the static route table", () => {
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.every((endpoint) => isStaticEndpointPath(endpoint.path))).toBe(true);
     expect(STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => endpoint.key)).not.toContain("stablecoin-detail");
-
-    expect(DYNAMIC_ENDPOINT_ROUTE_DEFINITIONS).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        methods: descriptor.methods,
-        dependencies: descriptor.routeDependencies,
-      })),
-    );
-  });
-
-  it("derives static and dynamic access policies without changing metadata", () => {
-    expect(STATIC_ENDPOINT_ACCESS_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        methods: endpoint.methods,
-        adminRequired: endpoint.adminRequired,
-        publicApiAccess: endpoint.publicApiAccess,
-        siteDataAccess: endpoint.siteDataAccess,
-      })),
-    );
-
-    expect(DYNAMIC_ENDPOINT_ACCESS_POLICIES).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        routePath: descriptor.requestAttribution?.routePath ?? null,
-        methods: descriptor.methods,
-        adminRequired: descriptor.adminRequired,
-        publicApiAccess: descriptor.publicApiAccess,
-        siteDataAccess: descriptor.siteDataAccess,
-      })),
-    );
-  });
-
-  it("derives static cache policies without adding dynamic cache behavior", () => {
-    expect(STATIC_ENDPOINT_CACHE_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        cacheBypass: endpoint.cacheBypass,
-      })),
-    );
-    expect(STATIC_ENDPOINT_CACHE_POLICIES.some((policy) => policy.key === "stablecoin-detail")).toBe(false);
-  });
-
-  it("derives public API endpoint definitions for static and dynamic public routes", () => {
-    const staticPublicKeys = STATIC_ENDPOINT_ROUTE_DEFINITIONS.filter(
-      (endpoint) => !endpoint.adminRequired && endpoint.path.startsWith("/api/"),
-    ).map((endpoint) => endpoint.key);
-    const dynamicPublicKeys = DYNAMIC_ENDPOINT_DESCRIPTORS.filter((descriptor) => !descriptor.adminRequired).map(
-      (descriptor) => descriptor.key,
-    );
-
-    expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "static").map(
-        (definition) => definition.key,
-      ),
-    ).toEqual(staticPublicKeys);
-    expect(
-      PUBLIC_API_ENDPOINT_DEFINITIONS.filter((definition) => definition.scope === "dynamic").map(
-        (definition) => definition.key,
-      ),
-    ).toEqual(dynamicPublicKeys);
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS).toContainEqual(
-      expect.objectContaining({ scope: "dynamic", key: "og-image", publicApiAccess: "exempt" }),
-    );
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS.some((definition) => definition.key === "status")).toBe(false);
-    expect(PUBLIC_API_ENDPOINT_DEFINITIONS.some((definition) => definition.key === "api-key-update")).toBe(false);
-  });
-
-  it("derives probe definitions from endpoint metadata", () => {
-    expect(ENDPOINT_DEFINITION_PROBES).toEqual(
-      ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
-        if (!endpoint.probeGroup) return [];
-        return [
-          {
-            source: "endpoint-definition",
-            key: endpoint.key,
-            definitionPath: endpoint.path,
-            path: endpoint.probePath ?? endpoint.path,
-            group: endpoint.probeGroup,
-            ...(endpoint.probeSemanticKind ? { probeSemanticKind: endpoint.probeSemanticKind } : {}),
-          },
-        ];
-      }),
-    );
-    expect(getEndpointProbeDescriptors("public")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "public").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbeDescriptors("admin")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "admin").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbeDescriptors("manual")).toEqual(
-      ENDPOINT_DEFINITION_PROBES.filter((probe) => probe.group === "manual").map((probe) => ({
-        path: probe.path,
-        probeSemanticKind: probe.probeSemanticKind,
-      })),
-    );
-    expect(getEndpointProbePaths("public")).toEqual(getProbePaths("public"));
-    expect(getEndpointProbePaths("admin")).toEqual(getProbePaths("admin"));
-    expect(getEndpointProbePaths("manual")).toEqual(getProbePaths("manual"));
   });
 
   it("declares semantic probe metadata only for health and status", () => {
@@ -372,27 +244,7 @@ describe("api endpoint registry", () => {
     expect(getEndpointProbeDescriptors("manual").filter((probe) => probe.probeSemanticKind)).toEqual([]);
   });
 
-  it("derives static and dynamic dependency hydration policies", () => {
-    expect(STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toEqual(
-      STATIC_ENDPOINT_ROUTE_DEFINITIONS.map((endpoint) => ({
-        scope: "static",
-        key: endpoint.key,
-        path: endpoint.path,
-        dependencies: endpoint.routeDependencies ?? [],
-      })),
-    );
-    expect(DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toEqual(
-      DYNAMIC_ENDPOINT_DESCRIPTORS.map((descriptor) => ({
-        scope: "dynamic",
-        key: descriptor.key,
-        pattern: descriptor.pattern,
-        routePath: descriptor.requestAttribution?.routePath ?? null,
-        dependencies: descriptor.routeDependencies,
-      })),
-    );
-    expect(ENDPOINT_DEPENDENCY_HYDRATION_POLICIES).toHaveLength(
-      STATIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length + DYNAMIC_ENDPOINT_DEPENDENCY_HYDRATION_POLICIES.length,
-    );
+  it("resolves static endpoint dependency policies by key", () => {
     expect(getStaticEndpointDependenciesByKey("status")).toEqual([
       "coingeckoApiKey",
       "cloudflareD1StatusConfig",

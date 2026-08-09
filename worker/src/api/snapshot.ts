@@ -15,7 +15,7 @@
 import {
   SNAPSHOT_DATE_PATTERN,
 } from "@shared/lib/api-endpoints";
-import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { tryParseJson } from "../lib/json-parse";
 import {
@@ -348,7 +348,7 @@ async function loadSnapshotBytes(
   return { row, bytes };
 }
 
-export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (db: D1Database): Promise<Response> => {
+export const handleSnapshotsIndex = async (db: D1Database): Promise<Response> => {
   const result = await db
     .prepare(
       "SELECT snapshot_date, methodology_versions, content_hash, byte_size, created_at FROM public_snapshots ORDER BY snapshot_date DESC",
@@ -365,9 +365,9 @@ export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (d
   }));
 
   return jsonResponse({ snapshots }, { "Cache-Control": CACHE_PROFILES.archive });
-});
+};
 
-export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
+export const handleSnapshotDay = async (
   db: D1Database,
   date: string,
 ): Promise<Response> => {
@@ -385,9 +385,9 @@ export const handleSnapshotDay = withErrorHandler("snapshot-day", async (
       ETag: `"${loaded.row.content_hash}"`,
     },
   });
-});
+};
 
-export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
+export const handleSnapshotCoin = async (
   db: D1Database,
   date: string,
   stablecoinId: string,
@@ -438,4 +438,4 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
       ETag: `"${loaded.row.content_hash}-${stablecoinId}"`,
     },
   });
-});
+};

@@ -580,12 +580,19 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
   });
 }
 
-export function handleBackfillDEWS(
-  db: D1Database,
-  url: URL,
-  trustedAdmin?: boolean,
-  request?: Request,
-): Promise<Response> {
+export interface BackfillDewsRouteContext {
+  db: D1Database;
+  url: URL;
+  trustedAdmin?: boolean;
+  request?: Request;
+}
+
+export function handleBackfillDEWS({
+  db,
+  url,
+  trustedAdmin,
+  request,
+}: BackfillDewsRouteContext): Promise<Response> {
   return runAdminRoute(
     {
       endpoint: "backfill-dews",

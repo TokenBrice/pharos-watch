@@ -56,30 +56,18 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("requires admin auth", async () => {
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-      undefined,
-      makeApiRequest("/api/backfill-mint-burn"),
-      "alchemy-key",
-    );
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), request: makeApiRequest("/api/backfill-mint-burn"), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(401);
   });
 
   it("auto-selects a config when configKey is omitted", async () => {
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -97,18 +85,12 @@ describe("handleBackfillMintBurn", () => {
   it("skips inactive configs during automatic selection", async () => {
     mutableActiveIds.delete("usdt-tether");
 
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -124,18 +106,12 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("returns 404 for an unknown configKey", async () => {
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ configKey: "ethereum-0xdeadbeef" }),
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(404);
     const body = (await response.json()) as { error: string };
@@ -143,36 +119,24 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
         body: "{",
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(["not-an-object"]),
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
@@ -190,13 +154,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      request,
-      "alchemy-key",
-    );
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -229,13 +187,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      request,
-      "alchemy-key",
-    );
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
@@ -267,13 +219,7 @@ describe("handleBackfillMintBurn", () => {
       }),
     });
 
-    const response = await handleBackfillMintBurn(
-      makeDb(),
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      request,
-      "alchemy-key",
-    );
+    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request, alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { done: boolean; chunksProcessed: number };
@@ -419,11 +365,7 @@ describe("handleBackfillMintBurn", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    const response = await handleBackfillMintBurn(
-      db,
-      makeApiUrl("/api/backfill-mint-burn"),
-      true,
-      makeApiRequest("/api/backfill-mint-burn", {
+    const response = await handleBackfillMintBurn({ db, url: makeApiUrl("/api/backfill-mint-burn"), trustedAdmin: true, request: makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
         adminKey: "secret",
         headers: { "Content-Type": "application/json" },
@@ -432,9 +374,7 @@ describe("handleBackfillMintBurn", () => {
           fromBlock: BLOCK_NUMBER,
           toBlock: BLOCK_NUMBER,
         }),
-      }),
-      "alchemy-key",
-    );
+      }), alchemyApiKey: "alchemy-key" });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {

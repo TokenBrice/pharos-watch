@@ -4,8 +4,7 @@ import {
   addFreshnessHeaders,
   errorResponse,
   jsonResponse,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
@@ -15,7 +14,7 @@ import {
   getPrevWeekRaw,
 } from "@shared/lib/supply";
 
-export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", async (
+export const handleStablecoinSummary = async (
   db: D1Database,
   id: string,
 ): Promise<Response> => {
@@ -61,4 +60,4 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.producerBacked,
   }, stablecoinsCache.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins));
-});
+};

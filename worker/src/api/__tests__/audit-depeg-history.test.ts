@@ -13,7 +13,7 @@ vi.mock("../../lib/fetch-retry", () => ({
   },
 }));
 
-import { auditEvents, handleAuditDepegHistory } from "../audit-depeg-history";
+import { auditEvents, handleAuditDepegHistoryTrusted } from "../audit-depeg-history";
 
 stubCryptoForAuth();
 
@@ -117,7 +117,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([{ match: "depeg_events", rows: [] }]);
     const req = makeApiRequest("/api/audit-depeg-history", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(405);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("dry-run=true");
@@ -127,7 +127,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([{ match: "depeg_events", rows: [] }]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { dryRun: boolean; totalMatching: number; limit: number };
     expect(body.dryRun).toBe(true);
@@ -139,7 +139,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=26", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("limit");
@@ -152,7 +152,7 @@ describe("handleAuditDepegHistory method safety", () => {
         adminKey: "secret",
       });
 
-      const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+      const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
       expect(res.status).toBe(400);
       const body = (await res.json()) as { error: string };
       expect(body.error).toContain("Invalid delete parameter");
@@ -166,7 +166,7 @@ describe("handleAuditDepegHistory method safety", () => {
     ]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&delete=1,2", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { dryRun: boolean; deletedEvents: Array<{ id: number }> };
     expect(body.dryRun).toBe(true);
@@ -191,7 +191,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(409);
     const body = (await res.json()) as { error: string; operation: string; conflicts: Array<{ eventId: number }> };
     expect(body.error).toBe("DDRv2 sealed repair required");
@@ -219,7 +219,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("no changes were committed");
@@ -240,7 +240,7 @@ describe("handleAuditDepegHistory method safety", () => {
     ]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=synthetic-splits", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       repair: string;
@@ -282,7 +282,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       dryRun: boolean;
@@ -320,7 +320,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(409);
     const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
     expect(body.operation).toBe("audit-depeg-history:synthetic-splits");
@@ -337,7 +337,7 @@ describe("handleAuditDepegHistory method safety", () => {
     ]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=synthetic-splits&symbol=SUSD", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       repair: string;
@@ -377,7 +377,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       repairedEventCount: number;
@@ -411,7 +411,7 @@ describe("handleAuditDepegHistory method safety", () => {
       adminKey: "secret",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       repair: string;
@@ -441,7 +441,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       repairedEventCount: number;
@@ -472,7 +472,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(409);
     const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
     expect(body.operation).toBe("audit-depeg-history:contradictory-recovery-price");
@@ -633,7 +633,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
     expect(res.status).toBe(409);
     const body = (await res.json()) as { operation: string; conflicts: Array<{ eventId: number }> };
     expect(body.operation).toBe("audit-depeg-history:provenance-invalidation");

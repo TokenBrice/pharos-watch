@@ -5,7 +5,6 @@ import {
   jsonFreshResponse,
   parseBooleanParam,
   parseJsonCursorParam,
-  withErrorHandler,
   buildFreshnessMeta,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -102,7 +101,7 @@ function expandSeverityFloor(value: string | null): string[] | Response {
   return TAPE_EVENT_SEVERITY_VALUES.filter((sev) => SEVERITY_RANK[sev] >= floorRank);
 }
 
-export const handleEvents = withErrorHandler("events", async (db: D1Database, url: URL): Promise<Response> => {
+export const handleEvents = async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
 
   const typeFilters = expandTypeFilters(params);
@@ -194,4 +193,4 @@ export const handleEvents = withErrorHandler("events", async (db: D1Database, ur
       maxAgeSec: FRESHNESS_MAX_AGE_SEC,
     },
   );
-});
+};

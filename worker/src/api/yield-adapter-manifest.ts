@@ -1,7 +1,6 @@
 import {
   jsonResponse,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { YIELD_ADAPTER_MANIFEST } from "../cron/yield-config";
 import {
@@ -130,9 +129,7 @@ function buildPublicEntries(
   return entries;
 }
 
-export const handleYieldAdapterManifest = withErrorHandler(
-  "yield-adapter-manifest",
-  async (): Promise<Response> => {
+export const handleYieldAdapterManifest = async (): Promise<Response> => {
     const updatedAtSec = MANIFEST_UPDATED_AT_SEC;
     const entries = buildPublicEntries(YIELD_METHODOLOGY_VERSION_LABEL, updatedAtSec);
     const payload: YieldAdapterManifestResponse = {
@@ -145,5 +142,4 @@ export const handleYieldAdapterManifest = withErrorHandler(
         "Cache-Control": CACHE_PROFILES.standard,
       },
     });
-  },
-);
+  };

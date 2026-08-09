@@ -1,4 +1,4 @@
-import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
+import { safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import type { DigestInputData } from "@shared/types/digest";
 import { isRecord } from "@shared/lib/type-guards";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
@@ -40,7 +40,7 @@ function isDigestInputDataLike(value: unknown): value is DigestInputData {
   return isRecord(value) && typeof value.totalMcapUsd === "number";
 }
 
-export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
+export const handleDigestSnapshot = async (
   db: D1Database,
   url: URL,
 ): Promise<Response> => {
@@ -182,4 +182,4 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     depegEvents,
     blacklistEvents,
   }, { "Cache-Control": CACHE_PROFILES.archive });
-});
+};

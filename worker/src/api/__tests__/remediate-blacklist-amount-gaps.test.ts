@@ -10,7 +10,7 @@ vi.mock("../../cron/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
 }));
 
-const { handleRemediateBlacklistAmountGaps } = await import("../remediate-blacklist-amount-gaps");
+const { handleRemediateBlacklistAmountGapsTrusted } = await import("../remediate-blacklist-amount-gaps");
 const { fetchEvmTokenBalance } = await import("../../cron/blacklist/balance-providers");
 
 const testChainRpcs = new Map<string, ChainRpcConfig>([
@@ -29,36 +29,24 @@ afterEach(() => {
 
 describe("handleRemediateBlacklistAmountGaps", () => {
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGaps(
-      mockD1([], { requireMatch: false }),
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { requireMatch: false }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },
         body: "{",
-      }),
-      testChainRpcs,
-    );
+      }), chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGaps(
-      mockD1([], { requireMatch: false }),
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { requireMatch: false }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(["not-an-object"]),
-      }),
-      testChainRpcs,
-    );
+      }), chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
@@ -92,13 +80,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       body: JSON.stringify({ chainId: "avalanche", stablecoin: "USDC", dryRun: true }),
     });
 
-    const response = await handleRemediateBlacklistAmountGaps(
-      db,
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      request,
-      testChainRpcs,
-    );
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(200);
     const body = await response.json() as {
@@ -142,13 +124,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       adminKey: "secret-key",
     });
 
-    const response = await handleRemediateBlacklistAmountGaps(
-      db,
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      request,
-      testChainRpcs,
-    );
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(200);
     const body = await response.json() as {
@@ -176,13 +152,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       adminKey: "secret-key",
     });
 
-    const response = await handleRemediateBlacklistAmountGaps(
-      db,
-      makeApiUrl("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true"),
-      true,
-      request,
-      testChainRpcs,
-    );
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?onlyMissingProvenance=true"), request, chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(200);
     const body = await response.json() as {
@@ -210,13 +180,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       body: JSON.stringify({ dryRun: true, maxAttempts: -5 }),
     });
 
-    const response = await handleRemediateBlacklistAmountGaps(
-      db,
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      request,
-      testChainRpcs,
-    );
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(200);
     const body = await response.json() as { filters: { maxAttempts: number } };
@@ -267,13 +231,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       body: JSON.stringify({ chainId: "avalanche", stablecoin: "USDC", dryRun: false }),
     });
 
-    const response = await handleRemediateBlacklistAmountGaps(
-      db,
-      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
-      true,
-      request,
-      testChainRpcs,
-    );
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request, chainRpcs: testChainRpcs });
 
     expect(response.status).toBe(200);
     const body = await response.json() as {

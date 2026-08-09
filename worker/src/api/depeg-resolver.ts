@@ -2,8 +2,7 @@ import { toErrorMessage } from "../lib/error-utils";
 import {
   cacheControlForDegradedPayload,
   jsonFreshResponse,
-  withErrorHandler,
-} from "../lib/api-utils";
+  } from "../lib/api-utils";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildInClause, chunkArray } from "../lib/db";
@@ -548,7 +547,7 @@ async function manifestFallbackResponse(db: D1Database, reason: string): Promise
   }
 }
 
-export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db: D1Database): Promise<Response> => {
+export const handleDepegResolver = async (db: D1Database): Promise<Response> => {
   const cached = await loadDepegResolverSnapshot(db);
   if (cached.kind === "ok") {
     const contract = validateDdrPublicCacheContract(cached.payload);
@@ -611,4 +610,4 @@ export const handleDepegResolver = withErrorHandler("depeg-resolver", async (db:
     updatedAt: nowSec,
     maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
   });
-});
+};
