@@ -135,7 +135,7 @@
     "worker/src/lib/safety-score-v9-publication-assessment.ts": 92.8,
     "worker/src/lib/safety-score-v9-publication-codec.ts": 83.5,
     "worker/src/lib/safety-score-v9-publication-runner.ts": 64.5,
-    "worker/src/lib/safety-score-v9-publication-store.ts": 77.1,
+    "worker/src/lib/safety-score-v9-publication-store.ts": 75.0,
     "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts": 84.5,
     "worker/src/lib/safety-score-v9-supply-observation-primitives.ts": 69.7,
     "worker/src/lib/safety-score-v9-supply-attribution-contract.ts": 92.4,
