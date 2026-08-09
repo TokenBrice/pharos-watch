@@ -340,9 +340,9 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2417,
-    "maxFunctionLines": 261,
-    "branchCount": 279
+    "fileLines": 2498,
+    "maxFunctionLines": 262,
+    "branchCount": 288
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

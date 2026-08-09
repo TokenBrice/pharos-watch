@@ -130,6 +130,19 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   fluent:         { name: "Fluent",          explorerUrl: "https://fluentscan.xyz",                       evmChainId: 25363,    type: "evm",   logoPath: "/chains/fluent.png",         providers: { coingecko: "fluent", geckoTerminal: "fluent" } },
   initia:         { name: "Initia",          explorerUrl: "https://scan.initia.xyz",                      evmChainId: null,     type: "other", logoPath: "/chains/initia.png",         providers: { coingecko: "initia", geckoTerminal: "initia" } },
   agoric:         { name: "Agoric",          explorerUrl: "https://www.mintscan.io/agoric",               evmChainId: null,     type: "other", logoPath: "/chains/agoric.webp"        },
+  // The Balanced (bnUSD) settlement triangle. bnUSD is issued on ICON and
+  // bridged to Archway and Havah, and DefiLlama reports those pools under the
+  // raw labels "Icon" / "Archway" / "Havah". Without these entries
+  // `resolveChainId` returned null for all three, so ~98.9% of bnUSD's tracked
+  // supply landed in the uncanonicalized-chain-label pool — far above the
+  // common-mode materiality floor, which fails closed into
+  // `unresolved-control-identity`. No `providers` block: none of the three has
+  // a registered token-pool provider, so their deployments read
+  // "no registered token-pool provider supports this chain" rather than
+  // claiming a query that cannot run.
+  icon:           { name: "ICON",            explorerUrl: "https://tracker.icon.community",               evmChainId: null,     type: "other", logoPath: "/chains/icon.png"           },
+  archway:        { name: "Archway",         explorerUrl: "https://www.mintscan.io/archway",              evmChainId: null,     type: "other", logoPath: "/chains/archway.png"        },
+  havah:          { name: "Havah",           explorerUrl: "https://scan.havah.io",                        evmChainId: null,     type: "other", logoPath: "/chains/havah.png"          },
 };
 
 /** Alias chains that share a display name. Map alias -> canonical key. */

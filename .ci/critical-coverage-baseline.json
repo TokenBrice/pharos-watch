@@ -129,7 +129,7 @@
     "worker/src/lib/safety-score-v9-fact-set-operational-resilience.ts": 90.9,
     "worker/src/lib/safety-score-v9-fact-set-peg-supply.ts": 96.4,
     "worker/src/lib/safety-score-v9-fact-set-schema.ts": 84.8,
-    "worker/src/lib/safety-score-v9-fact-set-wrapper.ts": 91.5,
+    "worker/src/lib/safety-score-v9-fact-set-wrapper.ts": 100,
     "worker/src/lib/safety-score-v9-fact-set.ts": 83.3,
     "worker/src/lib/safety-score-v9-native-input.ts": 69.5,
     "worker/src/lib/safety-score-v9-peg-provenance.ts": 84.7,

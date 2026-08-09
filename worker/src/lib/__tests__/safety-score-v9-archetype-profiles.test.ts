@@ -4,10 +4,7 @@ import sboldAsset from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
 import sdaiAsset from "@shared/data/stablecoins/coins/sdai-sky.json";
 import susdaiAsset from "@shared/data/stablecoins/coins/susdai-usd-ai.json";
 import wmAsset from "@shared/data/stablecoins/coins/wm-m0.json";
-import {
-  evaluateV9MechanismProfileCoverage,
-  projectV9MechanismProfile,
-} from "@shared/lib/safety-score-v9/mechanism-profiles";
+import { projectV9MechanismProfile } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
 import { resolveWrapperForm } from "../safety-score-v9-fact-set-wrapper";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -26,7 +23,9 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 9) / 1_000;
+// 2026-08-10: the v9.14 commodity overlays are reviewed 2026-08-09 and the
+// mechanism admission gate needs a full elapsed UTC day.
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 10) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -72,52 +71,54 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     });
   });
 
-  // v9.14 phase-1 guard. The `commodity-claim` archetype is registered but no
-  // asset resolves to it yet, so this case must keep asserting the *fiat-cash*
-  // projection byte-for-byte. Phase 2 migrates XAUT: `mechanismArchetype`
-  // becomes `commodity-claim`, the overlay's `profileReview` is rewritten as
-  // four direct components (titleAndAllocation limited, custodyContinuity
-  // unavailable, assuranceAndReconciliation adequate, physicalRedemption
-  // limited — the same facts this test pins), and this expectation moves with it.
-  it("carries XAUT allocated-commodity facts and explicit issuer nondisclosure into backing", () => {
+  // v9.14 phase-2 result. This case was the phase-1 tripwire: it pinned XAUT to
+  // the fiat-cash projection byte-for-byte precisely so the migration could not
+  // land unnoticed. It now pins the migrated shape and, more importantly, the
+  // invariant the migration had to preserve — the Exit pillar still sees the
+  // same `physical-redemption` fact, now DERIVED from the curated backing
+  // component instead of declared a second time inside a profile.
+  it("carries XAUT allocated-commodity facts into the commodity-claim components", () => {
     const overlay = namedOverlay("xaut-tether");
-    expect(overlay.archetype).toBe("fiat-cash");
-    expect(overlay.profileReview?.profile).toBe("allocated-commodity-claim");
-    expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("fiat-cash");
-    // No asset is on the new archetype in the engine-only phase.
+    expect(overlay.archetype).toBe("commodity-claim");
+    // Structurally forbidden: every profile projection declares fiat-cash or
+    // algorithmic, so a commodity overlay cannot carry one.
+    expect(overlay.profileReview).toBeUndefined();
+    expect(ACTIVE_META_BY_ID.get("xaut-tether")?.mechanismArchetype).toBe("commodity-claim");
+    // 15 registry coins migrated; 13 are in the active scored set (GRAMG and
+    // GRAMS are tracked but carry no `llamaId`, so they never enter it). 13
+    // curated overlays — the same two ride the conservative compiler fallback.
     expect(
-      [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim"),
-    ).toEqual([]);
+      [...ACTIVE_META_BY_ID.values()].filter((meta) => meta.mechanismArchetype === "commodity-claim").length,
+    ).toBe(13);
     expect(
-      mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim"),
-    ).toEqual([]);
-    const profile = projectV9MechanismProfile(overlay.profileReview!);
-    const coverage = evaluateV9MechanismProfileCoverage(overlay.profileReview!);
+      mechanismReviewOverlaysAsset.overlays.filter((entry) => entry.archetype === "commodity-claim").length,
+    ).toBe(13);
+
     const review = buildSafetyScoreV9MechanismReview(
       PROFILE_FIXED_INPUT,
       { id: "xaut-tether" } as MechanismMeta,
-      "fiat-cash",
+      "commodity-claim",
     );
-    if (review?.archetype !== "fiat-cash") throw new Error("expected the production XAUT profile review");
+    if (review?.archetype !== "commodity-claim") throw new Error("expected the migrated XAUT commodity review");
 
-    expect(profile.exitFacts.physicalRedemption).toEqual({
-      disposition: "supported",
-      quality: "limited",
-    });
-    expect(getSafetyScoreV9MechanismExitFacts("xaut-tether", "fiat-cash", PROFILE_CLOCK_SEC)).toEqual([
+    // Unchanged from the profile era. Dropping this would regress XAUT's exit
+    // reason from a bounded ceiling to an unbounded pillar reason.
+    expect(getSafetyScoreV9MechanismExitFacts("xaut-tether", "commodity-claim", PROFILE_CLOCK_SEC)).toEqual([
       {
         factKey: "physical-redemption",
         disposition: "supported",
         quality: "limited",
       },
     ]);
-    expect(coverage.gaps).toEqual([
-      { factKey: "custodyContinuity", responsibility: "issuer-undisclosed" },
-      { factKey: "insurance", responsibility: "issuer-undisclosed" },
-    ]);
+    // The nine profile facts fold onto four components without losing a grade:
+    // title takes the weakest of holderTitle / physicalAllocation /
+    // custodianSegregation / bankruptcyRemoteness, custody stays the sourced
+    // nondisclosure that covered custodyContinuity and insurance, assurance
+    // takes the weaker of auditCadence / reserveReconciliation, and redemption
+    // is the fact the profile could only express as an exit declaration.
     expect(review).toMatchObject({
-      archetype: "fiat-cash",
-      claimAndSegregation: {
+      archetype: "commodity-claim",
+      titleAndAllocation: {
         status: { observationState: "known" },
         quality: "limited",
       },
@@ -128,6 +129,10 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
       assuranceAndReconciliation: {
         status: { observationState: "known" },
         quality: "adequate",
+      },
+      physicalRedemption: {
+        status: { observationState: "known" },
+        quality: "limited",
       },
     });
   });

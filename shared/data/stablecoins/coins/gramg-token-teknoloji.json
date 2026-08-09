@@ -13,7 +13,7 @@
   },
   "collateral": "Token Teknoloji's public materials conflict: product copy says equivalent PAXG is held on-chain, while the same page's FAQ and the issuer's reserve disclosures say physical gold is held at Turkish banks, the Central Bank, and company vaults. No current primary evidence reconciles the reserve form or proportions.",
   "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.0321507466,
   "detailProvider": "commodity",
   "geckoId": "gram-gold",
@@ -238,5 +238,17 @@
     "changedAt": "2026-07-15",
     "reviewBy": "2026-08-15",
     "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "GRAMG is a one-gram gold claim issued through Token Teknoloji's mint/redeem and exchange conversion route. Migrated to commodity-claim under methodology v9.14. The issuer's public materials conflict on the backing form — product copy says equivalent PAXG is held on-chain while the same page's FAQ and reserve disclosures say physical gold is held at Turkish banks, the Central Bank, and company vaults — so the coin carries no curated mechanism overlay and its commodity components stay on the conservative compiler fallback until that contradiction is resolved.",
+    "sources": [
+      {
+        "label": "Token Teknoloji Gram Gold (GRAMG) product page",
+        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+      }
+    ]
   }
 }

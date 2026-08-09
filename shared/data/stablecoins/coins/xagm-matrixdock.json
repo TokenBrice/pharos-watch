@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
   "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "matrixdock-silver",
@@ -445,5 +445,21 @@
       "message": "Matrixdock publishes an ozPerToken figure for XAGm, so the Pharos silver-ounce reference uses 1 oz while reserve review should watch the issuer's live metric."
     }
   ],
-  "launchDate": "2026-03-17"
+  "launchDate": "2026-03-17",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "XAGm is a direct allocated-commodity claim on silver: Matrixdock discloses LBMA Good Delivery silver backing with live token-supply-versus-bullion accounting, and the July 2026 Bureau Veritas certificate independently inspected all 66 XAGm silver bars at Brink's Hong Kong, Brink's Singapore, and Malca-Amit Singapore as of 2026-06-30 with no anomalies. Migrated to commodity-claim under methodology v9.14; the owner ruling scopes the archetype to all direct commodity claims, silver included.",
+    "sources": [
+      {
+        "label": "Matrixdock XAGm product disclosure (LBMA Good Delivery silver, live supply/bullion reconciliation)",
+        "url": "https://www.matrixdock.com/xagm"
+      },
+      {
+        "label": "Matrixdock announcement of first XAGm independent physical audit, 2026-07-16",
+        "url": "https://www.matrixdock.com/blog/announcements/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification"
+      }
+    ]
+  }
 }

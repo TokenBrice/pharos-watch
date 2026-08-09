@@ -28,6 +28,28 @@ The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and th
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
 
+### Upstream Exposure And The Safety Score V9 Access Branch
+
+`upstream` needs no parent asset: `resolveBlacklistStatusWithoutExplicitOverride()` in
+`shared/lib/report-card-blacklist-matchers.ts` resolves it from any positive freezable reserve share.
+The Safety Score V9 access branch honours the same edge. `adaptAccessReview()` in
+`worker/src/lib/safety-score-v9-extension.ts` grants `structuralDisposition: "inherited-upstream"` —
+which reclassifies the access gap from `missing-access-review` to the measured
+`inherited-access-exposure` — when the reviewed status is `inherited` and an upstream asset can be
+**named**, either by `variantOf`/`mintAuthority.inheritedFrom` or by a curated reserve slice.
+
+The reserve-slice path is deliberately narrower than the report card's inference: the slice must
+carry an explicit `coinId`, that id must be in the fact set's active asset set, and the named asset's
+own review must resolve to a direct holder freeze. A declared parent takes precedence and keeps its
+`mint-control` failure domain; a reserve-slice upstream carries `reserve-issuer` instead. Scoring is
+unchanged either way — the freeze facts stay `bounded-unknown`, and the disposition only changes how
+the gap is attributed.
+
+Curators must not write `canBeBlacklisted: false` to suppress an honest `inherited` verdict. The
+`upstreamSuppressionRationale` escape hatch exists for false-positive inferences (a same-symbol
+collision, for example), not for "the upstream actor cannot freeze our holder balances" — that
+sentence *is* the definition of the `upstream` tier.
+
 Observed tracker history is evidence, not policy probability. Event counts describe supported observed history and are symbol-level in the current summary payload; the UI must not label them as contract-level totals.
 
 The tracker has two amount layers:

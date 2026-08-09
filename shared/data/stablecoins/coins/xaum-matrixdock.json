@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
   "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "matrixdock-gold",
@@ -448,6 +448,22 @@
             "url": "https://www.matrixdock.com/"
           }
         ]
+      }
+    ]
+  },
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "XAUm is a direct allocated-commodity claim: Matrixdock reports 16,331.178 XAUm outstanding against 16,331.184 troy ounces in 508 bars, and the dated Bureau Veritas July 2026 report physically inspected those 508 bars across Brink's Singapore, Brink's Hong Kong, and Malca-Amit Singapore. Migrated to commodity-claim under methodology v9.14, resolving the archetype flag the M-wave mechanism review raised against the fiat-cash placement.",
+    "sources": [
+      {
+        "label": "Matrixdock XAUm live reserve and redemption disclosure",
+        "url": "https://www.matrixdock.com/xaum"
+      },
+      {
+        "label": "Bureau Veritas July 2026 physical gold inventory report",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
       }
     ]
   }

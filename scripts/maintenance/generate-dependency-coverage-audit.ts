@@ -699,9 +699,22 @@ function findManualDependencyReviewRows(activeCoins: readonly StablecoinMeta[]):
         });
       }
     }
+    // `reviewableDependencies` in `shared/lib/stablecoins/schema.ts` counts the
+    // `variantOf` wrapper edge alongside the manual `dependencies[]` entries, so
+    // a variant that ratifies its parent edge in `dependencyReview` is exactly
+    // what the schema sanctions — sUSDai's serial claim on USDai, for instance.
+    // Without this key the audit reported it as a stale relationship, which is
+    // the `manualDependencyReviewGaps: 1` the wave-1 ratchet accepted.
+    //
+    // Deliberately one-directional: the schema only REQUIRES a review when a
+    // coin has manual-only dependencies, so an unreviewed `variantOf` edge is
+    // not a gap and must not be enumerated as one.
+    const variantWrapperKey = coin.variantOf
+      ? dependencyKey({ id: coin.variantOf, type: "wrapper" })
+      : null;
     for (const relationship of coin.dependencyReview?.relationships ?? []) {
       const key = dependencyKey(relationship);
-      if (manualKeys.has(key) || reserveDependencyKeys.has(key)) continue;
+      if (manualKeys.has(key) || reserveDependencyKeys.has(key) || key === variantWrapperKey) continue;
       gaps.push({
         coinId: coin.id,
         symbol: coin.symbol,

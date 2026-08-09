@@ -40,7 +40,11 @@ export function depthBucket(peakDeviationBps: number): DdrDepthBucket {
   return "catastrophic";
 }
 
-const ROBUST_ARCHETYPES = new Set(["cdp", "fiat-cash", "tbill", "rwa-credit-fund"]);
+// `commodity-claim` joined at v9.14. A claim on identified, vaulted metal is a
+// real-collateral mechanism by exactly the test this set applies; omitting it
+// would have silently flipped every migrated gold and silver token from robust
+// to fragile on an archetype rename, with no methodology basis.
+const ROBUST_ARCHETYPES = new Set(["cdp", "fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
 // `unbounded-reconciled` is a supervisory refinement *within* the unbounded
 // class, not an exit from it: the claim can still be expanded at will, and
 // reconciliation is after-the-fact evidence rather than a bound. It stays

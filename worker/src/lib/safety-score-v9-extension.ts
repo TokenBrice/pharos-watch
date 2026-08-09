@@ -1254,9 +1254,60 @@ function transferMaterialScope(
   };
 }
 
+// FreezeWatch resolves an "inherited" freeze verdict from ANY positive freezable
+// reserve share, with no parent required
+// (`resolveBlacklistStatusWithoutExplicitOverride` in
+// `shared/lib/report-card-blacklist-matchers.ts`). The V9 access branch used to
+// name an upstream only from `variantOf` / `mintAuthority.inheritedFrom`, so a
+// reserve-side inherited verdict fell through to `missing-access-review` — "we
+// never looked" — even though the review HAD looked and found the exposure
+// upstream. That mismatch is what pushed wave-1 curators to write
+// `canBeBlacklisted: false` over 29 honest `"inherited"` verdicts (restored in
+// `1134ab32f`), deleting real reserve-side freeze exposure from the product.
+//
+// This resolver closes it at the source by reading the same curated `coinId`
+// edge the report card already reads. It is deliberately narrower than the
+// report card's inference: only an explicit `coinId` counts (a text-pattern or
+// `blacklistable: true` slice names no asset, so there is nothing to attribute
+// the failure domain to), the id must resolve to a tracked asset, and that
+// asset's OWN review must say it can freeze holder balances directly. An
+// upstream that is merely itself "inherited" does not qualify — naming it would
+// assert a chain this branch does not verify.
+function resolveReserveSliceUpstreamAssetId(
+  meta: V9ExtensionRegistryMeta,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+  activeAssetIds: ReadonlySet<string>,
+): string | null {
+  let best: { assetId: string; pct: number } | null = null;
+  for (const slice of meta.reserves ?? []) {
+    const upstreamId = slice.coinId;
+    if (upstreamId === undefined || upstreamId === meta.id) continue;
+    // `upstreamAssetId` is validated against the compiled fact set's active
+    // asset set, so a tracked-but-unscored id would make the whole fact set
+    // unparseable. Registry membership alone is not enough.
+    if (!activeAssetIds.has(upstreamId)) continue;
+    const upstream = metaById.get(upstreamId);
+    if (upstream === undefined) continue;
+    // Mirrors the report card's blacklistable SEED set: an explicit `true`
+    // review, or centralized governance when the asset carries no review at all.
+    const directlyFreezeCapable =
+      upstream.blacklistabilityReview?.reviewedStatus === true ||
+      (upstream.blacklistabilityReview === undefined && upstream.flags?.governance === "centralized");
+    if (!directlyFreezeCapable) continue;
+    // Deterministic pick: largest reserve share, then lexicographic id. The
+    // fact set is replayed byte-for-byte, so ties must never resolve on
+    // iteration order.
+    if (best === null || slice.pct > best.pct || (slice.pct === best.pct && upstreamId < best.assetId)) {
+      best = { assetId: upstreamId, pct: slice.pct };
+    }
+  }
+  return best?.assetId ?? null;
+}
+
 function adaptAccessReview(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+  activeAssetIds: ReadonlySet<string>,
   evidence: ReviewEvidenceBuilder,
   transferReview: SafetyScoreV9ReviewedTransferFact | undefined,
   materialScope: SafetyScoreV9TransferMaterialScope,
@@ -1299,8 +1350,18 @@ function adaptAccessReview(
       })
     : [];
   const status = review?.reviewedStatus;
-  const inheritedFrom = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
-  const inheritedResolvable = inheritedFrom !== null && metaById.has(inheritedFrom);
+  const declaredInheritedFrom = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
+  const declaredResolvable = declaredInheritedFrom !== null && activeAssetIds.has(declaredInheritedFrom);
+  // A declared parent wins: it is the tighter claim (the whole token inherits
+  // its parent's freeze surface). The reserve-slice edge is the fallback for an
+  // honest "inherited" verdict that has no parent, which is the ordinary shape
+  // for a collateralized asset holding a freezable stablecoin in reserve.
+  const reserveInheritedFrom =
+    declaredResolvable || status !== "inherited"
+      ? null
+      : resolveReserveSliceUpstreamAssetId(meta, metaById, activeAssetIds);
+  const inheritedFrom = declaredResolvable ? declaredInheritedFrom : (reserveInheritedFrom ?? declaredInheritedFrom);
+  const inheritedResolvable = declaredResolvable || reserveInheritedFrom !== null;
   const freezeKnown = status === true || status === false;
   const freezeState =
     blacklistFreshness === "stale" ? "stale" : freezeKnown ? "known" : review ? "bounded-unknown" : "missing";
@@ -1337,7 +1398,17 @@ function adaptAccessReview(
             upstreamAssetId: status === "inherited" ? inheritedFrom : null,
             failureDomains:
               status === "inherited" && inheritedFrom
-                ? [{ kind: "mint-control" as const, key: `asset:${inheritedFrom}` }]
+                ? [
+                    {
+                      // A declared parent transmits freeze reach through the
+                      // upstream's mint/control surface; a reserve-slice
+                      // upstream transmits it through the reserve holding it
+                      // can freeze. Different domains, so they never merge in
+                      // common-mode analysis.
+                      kind: reserveInheritedFrom !== null ? ("reserve-issuer" as const) : ("mint-control" as const),
+                      key: `asset:${inheritedFrom}`,
+                    },
+                  ]
                 : [],
           },
         ];
@@ -1363,6 +1434,9 @@ function adaptAccessReview(
       // "inherited from a named tracked upstream" is a measured structural
       // fact, not missing data. The freeze facts stay bounded-unknown for
       // scoring; the disposition only suppresses the missing-data gap.
+      // The upstream may be named by a declared parent OR by a curated reserve
+      // slice (see `resolveReserveSliceUpstreamAssetId`) — both are named
+      // tracked assets, which is the whole requirement.
       ...(status === "inherited" && inheritedResolvable && freezeState === "bounded-unknown"
         ? { structuralDisposition: "inherited-upstream" as const }
         : {}),
@@ -1403,7 +1477,13 @@ function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegRe
   return { referenceKind: "fiat", referenceKey: pegCurrency, failureDomains: [] };
 }
 
-const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund"]);
+// A claim on identified metal has no oracle- or liquidation-dependent
+// stabilization path any more than a custodial cash claim does: nothing is
+// liquidated against a price feed, and the token-versus-metal spread is the peg
+// layer's measurement. `commodity-claim` was added here at the v9.14 phase-2
+// migration — phase 1 could not have caught the omission, because its
+// zero-coin guard meant no asset ever reached this branch on the new archetype.
+const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund", "commodity-claim"]);
 
 // V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
 // CDP should be graded on the per-market oracle branches that carry material
@@ -2320,6 +2400,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const accessReview = adaptAccessReview(
         meta,
         metaById,
+        activeIds,
         reviewEvidence,
         reviewedTransferFacts.get(assetId),
         transferMaterialScope(fixedInput, assetId, meta),

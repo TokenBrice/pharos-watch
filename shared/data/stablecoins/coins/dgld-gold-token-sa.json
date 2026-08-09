@@ -13,7 +13,7 @@
   },
   "collateral": "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
   "pegMechanism": "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "gold-token-sa-dgld-tokenized-gold",
@@ -357,5 +357,17 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2022-11-03"
+  "launchDate": "2022-11-03",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "DGLD is a direct allocated-commodity claim: the June 2026 General Terms & Conditions make each token proof of Swiss-law co-ownership of allocated LBMA gold with title remaining with tokenholders, require segregated vault custody in Gold Token SA's name on behalf of tokenholders with MKS PAMP SA named as Custodian, and document physical Delivery with KYC. Migrated to commodity-claim under methodology v9.14.",
+    "sources": [
+      {
+        "label": "DGLD General Terms & Conditions, last updated June 2026 (direct legal co-ownership of allocated LBMA gold, physical Delivery)",
+        "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
+      }
+    ]
+  }
 }

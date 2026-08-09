@@ -13,20 +13,20 @@
   },
   "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
   "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex V9 curation",
-    "rationale": "ComTech documents direct issuance and redemption against vaulted physical gold. XDC transaction 0x52bd12282730d81ef04f2d842c34a716d8782c6dde7de11c64582c544f4043db created the tracked CGO contract at block 44335366 on 2022-04-27, establishing the implementation boundary.",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "CGO is a direct allocated-commodity claim: the governing Terms & Conditions document that each Digital Gold unit represents undivided ownership and specific interest in one gram of at least 999 purity gold in the Gold Reserves (3.6-3.7), that the reserves are stored on a segregated, non-commingled basis (4.2), that holders are beneficiaries of an all-risk insurance policy (4.3), and that physical redemption is available from 1 kg (clause 8). Rewritten for methodology v9.14: the prior review kept fiat-cash only because the archetype enum had no commodity-claim value.",
     "sources": [
       {
-        "label": "ComTech Gold website",
-        "url": "https://www.comtechgold.com/"
+        "label": "Comtech Digital Gold Terms & Conditions (undivided one-gram ownership, segregated storage, 1 kg physical redemption)",
+        "url": "https://comtechgold.com/assets/pdf/Terms_and_Conditions.pdf"
       },
       {
-        "label": "CGO XDC contract creation transaction",
-        "url": "https://xdcscan.com/tx/0x52bd12282730d81ef04f2d842c34a716d8782c6dde7de11c64582c544f4043db"
+        "label": "ComTech Gold proof-of-gold-audit page",
+        "url": "https://comtechgold.com/proof-of-gold-audit"
       }
     ]
   },

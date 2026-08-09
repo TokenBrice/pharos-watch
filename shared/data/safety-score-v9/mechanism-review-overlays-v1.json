@@ -3524,8 +3524,8 @@
     },
     {
       "assetId": "cgo-comtech",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Comtech Digital Gold Terms & Conditions, dated 23 August 2022, linked as 'Terms of Use' from the current comtechgold.com site (clause 3.2: each unit is undivided ownership and specific interest in 1 gram of >=999 gold in the Gold Reserves; 3.6: held in the holder's name with the Digitization Entity as custodian/agent; 4.1-4.3: custodians of international repute, segregated non-commingled storage, all-risk insurance with holder as beneficiary; clause 8: physical redemption, 1 kg minimum)",
@@ -3544,10 +3544,10 @@
           "url": "https://comtechgold.com/assets/cgo_whitepaper_v1.pdf"
         }
       ],
-      "notes": "Merged entry: preserves claimAndSegregation and adds custodyContinuity and assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved tier, strengthened evidence). New evidence this session: the governing Terms & Conditions (23 August 2022, still linked as 'Terms of Use' from the live site) document that each Digital Gold unit represents 'undivided ownership and specific interest in one (1) gram of at least 999 purity gold in the Gold Reserves', that the gold is held and stored in the holder's name with Comtech FZCO as custodian/agent in possession (3.6-3.7), that Gold Reserves are stored on a segregated basis and not commingled (4.2), and that holders are beneficiaries of an all-risk insurance policy (4.3), with physical redemption from 1 kg (clause 8). This cures the prior review's gap of 'no governing holder terms', but the tier stays limited, consistent with the DGLD precedent: the claim rests on issuer binding terms only, with no trust structure, no bankruptcy-remoteness analysis, no independent itemized claim report, and a clause-3.5 carve-out allowing up to 10 kg of temporarily unbacked issuance for logistics (to be backed within 24 hours of the next business day). CUSTODY CONTINUITY = limited (new). The current site names TransGuard Group (Emirates Group Company) in Dubai as the vault operator holding CGO gold in segregated, insured vault accounts backed by DMCC Tradeflow Warrants, and names BitGo as qualified digital-asset custodian for token infrastructure; the terms require custodians 'of international repute' and segregated non-commingled storage. What was NOT established: any independent confirmation of the TransGuard custody relationship (the recurring stock letters are ComTech self-signed and say only 'Vaulting Partner'), multiple physical custodians, custodian-failure or successor-custody mechanics, and an explicit non-rehypothecation covenant; single-custodian concentration with self-reported identity supports limited. ASSURANCE AND RECONCILIATION = weak (new). The proof-of-gold series runs from 2022 through 26 February 2026 (39 kg closing) with per-period quantities, but every reviewed letter is a one-page self-signed ComTech FZCO confirmation, none reconciles vaulted gold to CGO token supply, and no independent attestor or examination standard is identified; the only independent 'audit' on the site (ComtechGold_New_Audit.pdf) is a smart-contract code audit, not a reserve report. This issuer self-verification without an independent or liability-side reconciliation supports weak. No existing quality was changed.",
+      "notes": "Merged entry: preserves claimAndSegregation and adds custodyContinuity and assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved tier, strengthened evidence). New evidence this session: the governing Terms & Conditions (23 August 2022, still linked as 'Terms of Use' from the live site) document that each Digital Gold unit represents 'undivided ownership and specific interest in one (1) gram of at least 999 purity gold in the Gold Reserves', that the gold is held and stored in the holder's name with Comtech FZCO as custodian/agent in possession (3.6-3.7), that Gold Reserves are stored on a segregated basis and not commingled (4.2), and that holders are beneficiaries of an all-risk insurance policy (4.3), with physical redemption from 1 kg (clause 8). This cures the prior review's gap of 'no governing holder terms', but the tier stays limited, consistent with the DGLD precedent: the claim rests on issuer binding terms only, with no trust structure, no bankruptcy-remoteness analysis, no independent itemized claim report, and a clause-3.5 carve-out allowing up to 10 kg of temporarily unbacked issuance for logistics (to be backed within 24 hours of the next business day). CUSTODY CONTINUITY = limited (new). The current site names TransGuard Group (Emirates Group Company) in Dubai as the vault operator holding CGO gold in segregated, insured vault accounts backed by DMCC Tradeflow Warrants, and names BitGo as qualified digital-asset custodian for token infrastructure; the terms require custodians 'of international repute' and segregated non-commingled storage. What was NOT established: any independent confirmation of the TransGuard custody relationship (the recurring stock letters are ComTech self-signed and say only 'Vaulting Partner'), multiple physical custodians, custodian-failure or successor-custody mechanics, and an explicit non-rehypothecation covenant; single-custodian concentration with self-reported identity supports limited. ASSURANCE AND RECONCILIATION = weak (new). The proof-of-gold series runs from 2022 through 26 February 2026 (39 kg closing) with per-period quantities, but every reviewed letter is a one-page self-signed ComTech FZCO confirmation, none reconciles vaulted gold to CGO token supply, and no independent attestor or examination standard is identified; the only independent 'audit' on the site (ComtechGold_New_Audit.pdf) is a smart-contract code audit, not a reserve report. This issuer self-verification without an independent or liability-side reconciliation supports weak. No existing quality was changed.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -3555,6 +3555,9 @@
         },
         "assuranceAndReconciliation": {
           "quality": "weak"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },
@@ -3596,8 +3599,8 @@
     },
     {
       "assetId": "dgld-gold-token-sa",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "DGLD General Terms & Conditions, last updated June 2026 (each DGLD is proof of direct legal co-ownership of allocated LBMA gold under Swiss law, art. 646/924 CC; Custodian means MKS PAMP SA or another engaged vaulting provider; deposit agreements must keep gold segregated from third parties and the custodian's own inventories; title remains with tokenholders; GTSA must transfer gold to another custodian if a custodian terminates; Section 18 platform-termination delivery-or-sale election)",
@@ -3612,10 +3615,10 @@
           "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
         }
       ],
-      "notes": "Merged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). The June 2026 GT&Cs (re-read this session) make each token proof of Swiss-law co-ownership of allocated gold with title remaining with tokenholders, require segregated vault custody in GTSA's name on behalf of tokenholders, and document physical Delivery with KYC. Direct binding terms, but no trust structure, no prudential supervision (VQF membership is AML self-regulation only), and no independent claim verification; limited stands. CUSTODY CONTINUITY = limited (preserved). The GT&Cs name MKS PAMP SA as Custodian, require segregation from the custodian's own inventories, and oblige GTSA to transfer gold to another custodian if the deposit agreement terminates; MKS PAMP now owns GTSA, so custodian and issuer are the same group, no independent custodian confirmation was published, and no multi-custodian or non-rehypothecation evidence exists; limited stands. ASSURANCE AND RECONCILIATION = weak (new). The only reconciliation artifact is the operator-run Gold Mapper at explorer.dgld.ch, published by the issuer's own group (MKS PAMP acquired full ownership of Gold Token SA in 2026), so it is not independent; its bar table rendered empty ('No rows') when retrieved this session, and the GT&Cs promise only that GTSA may audit and inspect storage (a right, not a published report). No dated independent attestation or examination of the vaulted gold against DGLD supply was located. Contradicting evidence: the issuer's own post-incident report records that on 2026-02-23 unbacked DGLD (including one 100,000,000-token mint) circulated on Base for roughly 2.5 hours before containment and was detected through DEX price-divergence monitoring rather than any reserve reconciliation; the bridge was retired on 2026-06-30 in favor of per-chain independently allocated backing and legacy balances were reset to zero on 2026-07-15. A self-reported registry with a demonstrated undetected unbacked-mint failure supports weak. What was NOT established: any independent reserve-to-circulation attestation, audit cadence, or third-party confirmation of the bar registry. No existing quality was changed.",
+      "notes": "Merged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). The June 2026 GT&Cs (re-read this session) make each token proof of Swiss-law co-ownership of allocated gold with title remaining with tokenholders, require segregated vault custody in GTSA's name on behalf of tokenholders, and document physical Delivery with KYC. Direct binding terms, but no trust structure, no prudential supervision (VQF membership is AML self-regulation only), and no independent claim verification; limited stands. CUSTODY CONTINUITY = limited (preserved). The GT&Cs name MKS PAMP SA as Custodian, require segregation from the custodian's own inventories, and oblige GTSA to transfer gold to another custodian if the deposit agreement terminates; MKS PAMP now owns GTSA, so custodian and issuer are the same group, no independent custodian confirmation was published, and no multi-custodian or non-rehypothecation evidence exists; limited stands. ASSURANCE AND RECONCILIATION = weak (new). The only reconciliation artifact is the operator-run Gold Mapper at explorer.dgld.ch, published by the issuer's own group (MKS PAMP acquired full ownership of Gold Token SA in 2026), so it is not independent; its bar table rendered empty ('No rows') when retrieved this session, and the GT&Cs promise only that GTSA may audit and inspect storage (a right, not a published report). No dated independent attestation or examination of the vaulted gold against DGLD supply was located. Contradicting evidence: the issuer's own post-incident report records that on 2026-02-23 unbacked DGLD (including one 100,000,000-token mint) circulated on Base for roughly 2.5 hours before containment and was detected through DEX price-divergence monitoring rather than any reserve reconciliation; the bridge was retired on 2026-06-30 in favor of per-chain independently allocated backing and legacy balances were reset to zero on 2026-07-15. A self-reported registry with a demonstrated undetected unbacked-mint failure supports weak. What was NOT established: any independent reserve-to-circulation attestation, audit cadence, or third-party confirmation of the bar registry. No existing quality was changed.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -3623,6 +3626,9 @@
         },
         "assuranceAndReconciliation": {
           "quality": "weak"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },
@@ -3855,18 +3861,18 @@
     },
     {
       "assetId": "kag-kinesis",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, and April 2026 audit)",
           "url": "https://kinesis.money/trust-security/"
         }
       ],
-      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.",
+      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -3876,8 +3882,8 @@
     },
     {
       "assetId": "kau-kinesis",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Kinesis audits archive (independent physical audits conducted biannually by Inspectorate International, a Bureau Veritas company; published archive lists March 2020 through October 2025; FAQ: auditors physically tally vaulted gold and silver and check the total against the record of all KAU and KAG in circulation stored on the Kinesis blockchain, with weight/fineness and storage-quality assessments)",
@@ -3888,10 +3894,10 @@
           "url": "https://kinesis.money/trust-security/"
         }
       ],
-      "notes": "Merged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). Kinesis self-reports that KAU holders legally own fully allocated 9999 gold held off the Kinesis balance sheet, with redemption subject to platform terms (0.45% + $100 + delivery, 100 g minimum); the operative trust/custody agreements were not public, so this remains issuer disclosure at limited. CUSTODY CONTINUITY = limited (preserved). ABX is identified as the custody/vaulting-network partner with fully insured vaults across 13 cities (Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam, Brisbane) and Brinks/Loomis as logistics partners; vault-level allocations per custodian, replacement and failure process, and a reserve-wide non-rehypothecation covenant were not public, so limited stands. ASSURANCE AND RECONCILIATION = adequate (new). Kinesis documents a biannual independent audit program run by Inspectorate International Limited (a Bureau Veritas company): auditors physically tally all vaulted gold and silver, assess weight, fineness and storage quality, and check vaulted totals against the record of all KAU and KAG in circulation on the Kinesis blockchain; results are published, and the public archive shows a consistent twice-yearly cadence from March 2020 through October 2025 (latest entry directly verified this session: October 2025). A prior Pharos mint-tier review (2026-07-15) recorded the April 2026 audit (audit date 2026-04-20, published 2026-06-03 at kinesis.money/audit-april-2026/), but that report page returned HTTP 403 in this session and no archived copy was retrievable, so the April 2026 report could not be re-verified here. This recurring independent physical reconciliation of vaulted metal to circulation, with published reports, supports adequate rather than limited; it does not reach strong because the engagements are physical-inspection audits rather than financial attestation/examination reports with an assurance opinion, the ERC-20 wrapper's own KMS Labs native-KAU holdings are reconciled through the separate Chainlink PoR feed rather than in the Bureau Veritas reports, and no regulator supervises the program. What was NOT established: the April 2026 report's contents, and any independent reconciliation specific to the ERC-20 KAU contract supply. No existing quality was changed.",
+      "notes": "Merged entry: preserves claimAndSegregation and custodyContinuity at limited and adds assuranceAndReconciliation. CLAIM AND SEGREGATION = limited (preserved). Kinesis self-reports that KAU holders legally own fully allocated 9999 gold held off the Kinesis balance sheet, with redemption subject to platform terms (0.45% + $100 + delivery, 100 g minimum); the operative trust/custody agreements were not public, so this remains issuer disclosure at limited. CUSTODY CONTINUITY = limited (preserved). ABX is identified as the custody/vaulting-network partner with fully insured vaults across 13 cities (Dubai, Hong Kong, Istanbul, Vaduz, London, New York, Singapore, Sydney, Toronto, Zurich, Panama City, Batam, Brisbane) and Brinks/Loomis as logistics partners; vault-level allocations per custodian, replacement and failure process, and a reserve-wide non-rehypothecation covenant were not public, so limited stands. ASSURANCE AND RECONCILIATION = adequate (new). Kinesis documents a biannual independent audit program run by Inspectorate International Limited (a Bureau Veritas company): auditors physically tally all vaulted gold and silver, assess weight, fineness and storage quality, and check vaulted totals against the record of all KAU and KAG in circulation on the Kinesis blockchain; results are published, and the public archive shows a consistent twice-yearly cadence from March 2020 through October 2025 (latest entry directly verified this session: October 2025). A prior Pharos mint-tier review (2026-07-15) recorded the April 2026 audit (audit date 2026-04-20, published 2026-06-03 at kinesis.money/audit-april-2026/), but that report page returned HTTP 403 in this session and no archived copy was retrievable, so the April 2026 report could not be re-verified here. This recurring independent physical reconciliation of vaulted metal to circulation, with published reports, supports adequate rather than limited; it does not reach strong because the engagements are physical-inspection audits rather than financial attestation/examination reports with an assurance opinion, the ERC-20 wrapper's own KMS Labs native-KAU holdings are reconciled through the separate Chainlink PoR feed rather than in the Bureau Veritas reports, and no regulator supervises the program. What was NOT established: the April 2026 report's contents, and any independent reconciliation specific to the ERC-20 KAU contract supply. No existing quality was changed.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -3899,6 +3905,9 @@
         },
         "assuranceAndReconciliation": {
           "quality": "adequate"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },
@@ -4026,8 +4035,8 @@
     },
     {
       "assetId": "paxg-paxos",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Pax Gold terms and conditions",
@@ -4044,7 +4053,7 @@
       ],
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "strong"
         },
         "custodyContinuity": {
@@ -4054,7 +4063,7 @@
           "quality": "adequate"
         }
       },
-      "notes": "Carries forward the 2026-07-15 review: current PAXG terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure, and KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces and names Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers, supporting strong claim and segregation and strong custody continuity. Added in this pass: assurance and reconciliation is adequate because the same KPMG attestation provides a current, itemized, independent assets-and-liabilities reconciliation of redeemable tokens to vaulted fine troy ounces on a monthly cadence; adequate rather than strong because the engagement is an attestation over redemption assets rather than an audit or examination of the full reserve relationship. Not established: the June 2026 or later KPMG report was not reviewed in this pass, and per-bar allocation lookup for individual holders remains a Paxos-operated service rather than an independent disclosure."
+      "notes": "Carries forward the 2026-07-15 review: current PAXG terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure, and KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces and names Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers, supporting strong claim and segregation and strong custody continuity. Added in this pass: assurance and reconciliation is adequate because the same KPMG attestation provides a current, itemized, independent assets-and-liabilities reconciliation of redeemable tokens to vaulted fine troy ounces on a monthly cadence; adequate rather than strong because the engagement is an attestation over redemption assets rather than an audit or examination of the full reserve relationship. Not established: the June 2026 or later KPMG report was not reviewed in this pass, and per-bar allocation lookup for individual holders remains a Paxos-operated service rather than an independent disclosure.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact."
     },
     {
       "assetId": "tbill-openeden",
@@ -4286,18 +4295,18 @@
     },
     {
       "assetId": "vnxau-vnx",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "AREVA VNXAU agreed-upon-procedures report as of December 31, 2025",
           "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
         }
       ],
-      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.",
+      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -4354,8 +4363,8 @@
     },
     {
       "assetId": "xaum-matrixdock",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Matrixdock XAUm live reserve and redemption disclosure",
@@ -4378,10 +4387,10 @@
           "url": "https://www.matrixdock.com/blog/announcements/brinks-matrixdock-xaum-gold-partnership"
         }
       ],
-      "notes": "Reviewed 2026-08-08. Matrixdock reports 16,331.178 XAUm outstanding against 16,331.184 troy ounces in 508 bars. Its purpose-trust disclosure says token-issuing and asset-holding SPVs are segregated and bankruptcy remote, but no executed trust deed or holder-facing legal instrument is public, so claimAndSegregation is limited. The dated Bureau Veritas report physically inspected the 508 bars, and Matrixdock's inspection summary identifies Brink's Singapore, Brink's Hong Kong, and Malca-Amit Singapore as the active vault locations; this independently anchors the named custody set, but no failure, replacement, successor-custody, or rehypothecation terms are published, so custodyContinuity is limited. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport auto-resolves that component (audit, assets-only) as adequate. Archetype note: XAUm is a physically allocated gold token, so fiat-cash is a poor conceptual fit; a commodity-reserve archetype would be preferable if one is introduced.",
+      "notes": "Reviewed 2026-08-08. Matrixdock reports 16,331.178 XAUm outstanding against 16,331.184 troy ounces in 508 bars. Its purpose-trust disclosure says token-issuing and asset-holding SPVs are segregated and bankruptcy remote, but no executed trust deed or holder-facing legal instrument is public, so claimAndSegregation is limited. The dated Bureau Veritas report physically inspected the 508 bars, and Matrixdock's inspection summary identifies Brink's Singapore, Brink's Hong Kong, and Malca-Amit Singapore as the active vault locations; this independently anchors the named custody set, but no failure, replacement, successor-custody, or rehypothecation terms are published, so custodyContinuity is limited. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport auto-resolves that component (audit, assets-only) as adequate. Archetype note: XAUm is a physically allocated gold token, so fiat-cash is a poor conceptual fit; a commodity-reserve archetype would be preferable if one is introduced.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -4391,8 +4400,8 @@
     },
     {
       "assetId": "xaut-tether",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026",
@@ -4407,48 +4416,24 @@
           "url": "https://gold.tether.to/faq"
         }
       ],
-      "notes": "Refreshed 2026-08-08 against the latest BDO ISAE 3000R reasonable-assurance report, dated 2026-07-31 and measured at 2026-06-30 23:59 UTC. BDO performed inventory procedures, used specialist inventory/quality reports, verified management's accounting-to-blockchain liability reconciliations, and concluded that the report was fairly presented. The report records 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation, states that the Swiss-vaulted Gold Reserves are owned by XAUT holders rather than TG Commodities, and describes undivided ownership rights in specified bars. The FAQ documents whole-bar physical redemption subject to account, lot-size, and Swiss-delivery conditions. The allocated-commodity profile preserves the distinction between holder title/allocation and bankruptcy treatment: no independent legal opinion tests treatment in an issuer or custodian insolvency, so bankruptcy remoteness remains limited. Custody continuity remains issuer-undisclosed because the reviewed sources refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Quarterly BDO reasonable assurance supports adequate, not strong, assurance cadence while the point-in-time inventory and blockchain-liability reconciliation remain strong.",
+      "notes": "Refreshed 2026-08-08 against the latest BDO ISAE 3000R reasonable-assurance report, dated 2026-07-31 and measured at 2026-06-30 23:59 UTC. BDO performed inventory procedures, used specialist inventory/quality reports, verified management's accounting-to-blockchain liability reconciliations, and concluded that the report was fairly presented. The report records 707,747.139 fine troy ounces of LBMA Good Delivery gold against 707,747.090000 XAUT in circulation, states that the Swiss-vaulted Gold Reserves are owned by XAUT holders rather than TG Commodities, and describes undivided ownership rights in specified bars. The FAQ documents whole-bar physical redemption subject to account, lot-size, and Swiss-delivery conditions. The allocated-commodity profile preserves the distinction between holder title/allocation and bankruptcy treatment: no independent legal opinion tests treatment in an issuer or custodian insolvency, so bankruptcy remoteness remains limited. Custody continuity remains issuer-undisclosed because the reviewed sources refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Quarterly BDO reasonable assurance supports adequate, not strong, assurance cadence while the point-in-time inventory and blockchain-liability reconciliation remain strong.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
-      "profileReview": {
-        "profile": "allocated-commodity-claim",
-        "facts": {
-          "holderTitle": {
-            "disposition": "supported",
-            "quality": "strong"
-          },
-          "physicalAllocation": {
-            "disposition": "supported",
-            "quality": "strong"
-          },
-          "custodianSegregation": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "bankruptcyRemoteness": {
-            "disposition": "supported",
-            "quality": "limited"
-          },
-          "custodyContinuity": {
-            "disposition": "issuer-undisclosed"
-          },
-          "auditCadence": {
-            "disposition": "supported",
-            "quality": "adequate"
-          },
-          "reserveReconciliation": {
-            "disposition": "supported",
-            "quality": "strong"
-          },
-          "insurance": {
-            "disposition": "issuer-undisclosed"
-          },
-          "physicalRedemption": {
-            "disposition": "supported",
-            "quality": "limited"
-          }
+      "components": {
+        "titleAndAllocation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed BDO ISAE 3000R report and the Tether Gold reports index refer only to unnamed custodian(s) and do not identify the Swiss vault operator, provider shares, reserve-wide rehypothecation controls, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Carried over from the allocated-commodity-claim profile, where custodyContinuity and insurance were both issuer-undisclosed.",
+          "sourceUrl": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "adequate"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
-      },
-      "components": {}
+      }
     },
     {
       "assetId": "xo-exodus",
@@ -4586,8 +4571,8 @@
     },
     {
       "assetId": "gldt-gold-dao",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Gold DAO binding terms of service",
@@ -4610,10 +4595,10 @@
           "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2Fsq2DN60j11A1A0uL3tHX%2FAudit%20Report%2009-2025.pdf?alt=media"
         }
       ],
-      "notes": "Gold DAO's binding terms expressly state that GLDT is not legal ownership of gold and that Gold DAO does not guarantee redemption or conversion; a holder must reverse-swap GLDT to a GLD NFT, which alone is described as a deed to a bar. This affirmative contradiction supports weak claim and segregation. The March 2025 KPMG agreed-upon-procedures report is over twelve months old, gives no assurance conclusion, and does not establish current inventory allocation, anti-encumbrance, insurance beneficiary status, alternate vaults, or failure recovery, so custody continuity remains uncurated. 2026-07-20 follow-up: a September 2025 KPMG agreed-upon-procedures report (Swiss Auditing Standard 920, factual findings with an explicit no-assurance disclaimer) names Loomis Schweiz AG, Kloten as the vault operator and verifies serial-level existence and ownership of 7.9 kilograms of gold against 790 certificates for issuer Bity Tokenisation SA, supporting limited custody continuity and limited assurance and reconciliation; the report reconciles bars to certificates rather than GLDT token supply, is about ten months old with the quarterly series stalled after September 2025, and insurance, anti-encumbrance, alternate-vault, and failure-recovery terms were still not established.",
+      "notes": "Gold DAO's binding terms expressly state that GLDT is not legal ownership of gold and that Gold DAO does not guarantee redemption or conversion; a holder must reverse-swap GLDT to a GLD NFT, which alone is described as a deed to a bar. This affirmative contradiction supports weak claim and segregation. The March 2025 KPMG agreed-upon-procedures report is over twelve months old, gives no assurance conclusion, and does not establish current inventory allocation, anti-encumbrance, insurance beneficiary status, alternate vaults, or failure recovery, so custody continuity remains uncurated. 2026-07-20 follow-up: a September 2025 KPMG agreed-upon-procedures report (Swiss Auditing Standard 920, factual findings with an explicit no-assurance disclaimer) names Loomis Schweiz AG, Kloten as the vault operator and verifies serial-level existence and ownership of 7.9 kilograms of gold against 790 certificates for issuer Bity Tokenisation SA, supporting limited custody continuity and limited assurance and reconciliation; the report reconciles bars to certificates rather than GLDT token supply, is about ten months old with the quarterly series stalled after September 2025, and insurance, anti-encumbrance, alternate-vault, and failure-recovery terms were still not established.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "weak"
         },
         "custodyContinuity": {
@@ -4621,6 +4606,9 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "physicalRedemption": {
+          "quality": "weak"
         }
       }
     },
@@ -5372,8 +5360,8 @@
     },
     {
       "assetId": "xagm-matrixdock",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Matrixdock XAGm product disclosure (LBMA Good Delivery silver, live supply/bullion reconciliation, FRS mint budget)",
@@ -5390,17 +5378,17 @@
       ],
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
-          "quality": "limited"
-        },
-        "assuranceAndReconciliation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
         }
       },
-      "notes": "Matrixdock discloses LBMA Good Delivery silver backing, live token-supply-versus-bullion accounting, FRS mint controls, and KYC redemption. The July 2026 Bureau Veritas certificate independently inspected all 66 XAGm silver bars held at Brink's Hong Kong, Brink's Singapore, and Malca-Amit Singapore as of 2026-06-30 with no anomalies. Claim and segregation remains limited because no reviewed binding trust or bankruptcy-remoteness instrument grants tokenholders beneficial ownership of the bullion. Assurance and reconciliation remains limited because the independent audit is assets-only and does not reconcile the inspected silver to multi-chain XAGm liabilities; the liability comparison remains issuer-operated. Custody continuity is now limited rather than unavailable because the audit names all three physical vault providers, but per-vault economic shares, anti-rehypothecation terms, and failure or successor-custody mechanics remain unpublished."
+      "notes": "Matrixdock discloses LBMA Good Delivery silver backing, live token-supply-versus-bullion accounting, FRS mint controls, and KYC redemption. The July 2026 Bureau Veritas certificate independently inspected all 66 XAGm silver bars held at Brink's Hong Kong, Brink's Singapore, and Malca-Amit Singapore as of 2026-06-30 with no anomalies. Claim and segregation remains limited because no reviewed binding trust or bankruptcy-remoteness instrument grants tokenholders beneficial ownership of the bullion. Assurance and reconciliation remains limited because the independent audit is assets-only and does not reconcile the inspected silver to multi-chain XAGm liabilities; the liability comparison remains issuer-operated. Custody continuity is now limited rather than unavailable because the audit names all three physical vault providers, but per-vault economic shares, anti-rehypothecation terms, and failure or successor-custody mechanics remain unpublished.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact."
     },
     {
       "assetId": "kgst-kyrgyz-som",
@@ -6564,8 +6552,8 @@
     },
     {
       "assetId": "ggbr-goldfish-gold",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Goldfish GGBR whitepaper (1/1000 oz claim, over-collateralization, segregated I-ON treasury portion, UCC-1 lien, in-situ model)",
@@ -6580,10 +6568,10 @@
           "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
         }
       ],
-      "notes": "Goldfish's whitepaper and collateral pages state that each GGBR is 1/1000th of a troy ounce of gold, over-collateralized (up to 5:1) by a segregated portion of I-ON Digital Corp's (OTCQB: IONI) treasury of ION.au asset-backed securities, with I-ON's perfected UCC-1 lien on the mineral asset rights giving ION.au holders a secured-creditor position and redemption marketed as available; that issuer-published structure, with an indirect claim chain (GGBR to ION.au security to in-situ gold lien) and no cited trust or segregation statute, supports limited claim and segregation. The collateral page publishes the on-chain reserve wallets, including the 'Goldfish Collateral Wallet from ION' (0x2F371Ba19F89874689a91bA322194F9967Cb640D) and a 'Fireblocks Reserve Wallet' (0x590c0d2fEb641136984EC250c7287C27fA1A05bB), placing collateral custody in Fireblocks MPC wallets while the underlying gold deliberately stays in-situ under the UCC-1 lien rather than with any vault custodian; named but self-reported arrangements support limited custody continuity. CertiK and Cyfrin audit only the smart contracts (Cyfrin report v2.0 dated 2025-10-10 reviewed; it covers token, factory, staking and redemption contract security, not reserves), and NI 43-101 technical reports audit the geology of the in-situ gold, not token-versus-reserve reconciliation, so assurance and reconciliation is weak as an issuer-only assurance claim. Not established: any independent financial attestation reconciling GGBR supply to gold reserves, vault or custodian identities for physical metal (none exists by design in the in-situ model), provider shares, no-rehypothecation or replacement terms, and direct review of the NI 43-101 reports themselves, which were not obtained.",
+      "notes": "Goldfish's whitepaper and collateral pages state that each GGBR is 1/1000th of a troy ounce of gold, over-collateralized (up to 5:1) by a segregated portion of I-ON Digital Corp's (OTCQB: IONI) treasury of ION.au asset-backed securities, with I-ON's perfected UCC-1 lien on the mineral asset rights giving ION.au holders a secured-creditor position and redemption marketed as available; that issuer-published structure, with an indirect claim chain (GGBR to ION.au security to in-situ gold lien) and no cited trust or segregation statute, supports limited claim and segregation. The collateral page publishes the on-chain reserve wallets, including the 'Goldfish Collateral Wallet from ION' (0x2F371Ba19F89874689a91bA322194F9967Cb640D) and a 'Fireblocks Reserve Wallet' (0x590c0d2fEb641136984EC250c7287C27fA1A05bB), placing collateral custody in Fireblocks MPC wallets while the underlying gold deliberately stays in-situ under the UCC-1 lien rather than with any vault custodian; named but self-reported arrangements support limited custody continuity. CertiK and Cyfrin audit only the smart contracts (Cyfrin report v2.0 dated 2025-10-10 reviewed; it covers token, factory, staking and redemption contract security, not reserves), and NI 43-101 technical reports audit the geology of the in-situ gold, not token-versus-reserve reconciliation, so assurance and reconciliation is weak as an issuer-only assurance claim. Not established: any independent financial attestation reconciling GGBR supply to gold reserves, vault or custodian identities for physical metal (none exists by design in the in-situ model), provider shares, no-rehypothecation or replacement terms, and direct review of the NI 43-101 reports themselves, which were not obtained.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
@@ -9779,8 +9767,8 @@
     },
     {
       "assetId": "xnk-kinka",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Kinka site: gold held in bankruptcy-remote custody, separate from Kinka's assets, managed by Gold Management LLC (GM); 1 XNK = 1 troy oz gold",
@@ -9791,16 +9779,19 @@
           "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
         }
       ],
-      "notes": "Segregation vehicle: Gold Management LLC (Japan) — the whitepaper states GM takes custody of the backing gold from Kinka (BVI) Ltd., assumes obligations for XNK holders' exchange claims, and that GM-managed warehouse gold cannot be seized in a Kinka (BVI) or parent bankruptcy (structure designed with a major Japanese law firm). This is documented in issuer documents but not independently verified — no custody/trust agreement is published, and account-level segregation and rehypothecation terms are undisclosed -> claimAndSegregation limited (self-reported structure; rubric lower tier taken vs adequate because no attestation naming custodians exists). custodyContinuity limited: vaulting custodian Loomis International and custody manager GM are named in the whitepaper, but disclosure is self-reported with no third-party confirmation. assuranceAndReconciliation limited: the whitepaper describes regular audits by the TSE-listed parent's independent Japanese auditing firm covering issuance, custody, and storage compliance, plus third-party verification of new issuance, but no audit report is published or named (confidence unverified). Physical redemption: minimum 321.5 XNK for ten 1 kg bars at Loomis/affiliated warehouses, fees vary by collection point; no settlement-time commitment documented.",
+      "notes": "Segregation vehicle: Gold Management LLC (Japan) — the whitepaper states GM takes custody of the backing gold from Kinka (BVI) Ltd., assumes obligations for XNK holders' exchange claims, and that GM-managed warehouse gold cannot be seized in a Kinka (BVI) or parent bankruptcy (structure designed with a major Japanese law firm). This is documented in issuer documents but not independently verified — no custody/trust agreement is published, and account-level segregation and rehypothecation terms are undisclosed -> claimAndSegregation limited (self-reported structure; rubric lower tier taken vs adequate because no attestation naming custodians exists). custodyContinuity limited: vaulting custodian Loomis International and custody manager GM are named in the whitepaper, but disclosure is self-reported with no third-party confirmation. assuranceAndReconciliation limited: the whitepaper describes regular audits by the TSE-listed parent's independent Japanese auditing firm covering issuance, custody, and storage compliance, plus third-party verification of new issuance, but no audit report is published or named (confidence unverified). Physical redemption: minimum 321.5 XNK for ten 1 kg bars at Loomis/affiliated warehouses, fees vary by collection point; no settlement-time commitment documented.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
+          "quality": "limited"
+        },
+        "physicalRedemption": {
           "quality": "limited"
         }
       }
@@ -12649,8 +12640,8 @@
     },
     {
       "assetId": "pgold-pleasing",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "archetype": "commodity-claim",
+      "reviewedAt": "2026-08-09",
       "sources": [
         {
           "label": "Pleasing PGOLD binding Terms of Sale and Service",
@@ -12677,10 +12668,10 @@
           "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md"
         }
       ],
-      "notes": "Pleasing's binding sale terms say each PGOLD is intended to correspond to an undivided interest in vaulted LBMA-standard metal with qualified Hong Kong custodians, and product docs state one token represents one troy ounce of 99.99% gold with KYC-gated physical redemption. The issuer's Hong Kong precious-metals registration corroborates its identity, but the terms hedge the claim and do not establish allocated bars, a trust, segregation or insolvency priority, so claimAndSegregation remains limited. The terms say custodian relationships are on a Transparency page, yet no named vault/custodian, allocation, succession plan or public Transparency page was found. The Reserve Report page contains no dated reconciliation; the terms state Chainlink PoR is informational, and the Beosin report covers staking contracts, not bullion. Custody and assurance are therefore unavailable. The centralized allocated-commodity design maps to the repository's fiat-cash control family; no alternative commodity archetype exists.",
+      "notes": "Pleasing's binding sale terms say each PGOLD is intended to correspond to an undivided interest in vaulted LBMA-standard metal with qualified Hong Kong custodians, and product docs state one token represents one troy ounce of 99.99% gold with KYC-gated physical redemption. The issuer's Hong Kong precious-metals registration corroborates its identity, but the terms hedge the claim and do not establish allocated bars, a trust, segregation or insolvency priority, so claimAndSegregation remains limited. The terms say custodian relationships are on a Transparency page, yet no named vault/custodian, allocation, succession plan or public Transparency page was found. The Reserve Report page contains no dated reconciliation; the terms state Chainlink PoR is informational, and the Beosin report covers staking contracts, not bullion. Custody and assurance are therefore unavailable. The centralized allocated-commodity design maps to the repository's fiat-cash control family; no alternative commodity archetype exists.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
       "metrics": {},
       "components": {
-        "claimAndSegregation": {
+        "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {

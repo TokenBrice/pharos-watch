@@ -13,7 +13,7 @@
   },
   "collateral": "1:1 reserves of Kinesis-native KAU held by KMS Labs S.A. (Panama); native KAU is in turn backed 1:1 by LBMA-approved allocated physical gold in ABX vaults.",
   "pegMechanism": "ERC-20 KAU is redeemable for Kinesis-native KAU through KMS Labs after compliance onboarding, then for physical gold through Kinesis Cayman subject to platform terms; no Kinesis fee-yield accrues on ERC-20 balances.",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "commodity-claim",
   "commodityOunces": 0.03215072258749015,
   "detailProvider": "commodity",
   "geckoId": "kinesis-gold",
@@ -209,5 +209,21 @@
       ]
     }
   },
-  "launchDate": "2025-09-11"
+  "launchDate": "2025-09-11",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Claude v9.14 commodity-claim phase-2 migration",
+    "rationale": "KAU is a direct allocated-commodity claim: Kinesis discloses that holders legally own fully allocated 9999 gold held off the Kinesis balance sheet through the ABX vaulting network, verified every six months against an independent physical precious-metals audit by Inspectorate International (a Bureau Veritas company), with redemption from a 100 g minimum. Migrated to commodity-claim under methodology v9.14.",
+    "sources": [
+      {
+        "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, 100 g redemption minimum)",
+        "url": "https://kinesis.money/trust-security/"
+      },
+      {
+        "label": "Kinesis audits archive (biannual Inspectorate International physical audits)",
+        "url": "https://kinesis.money/audits/"
+      }
+    ]
+  }
 }

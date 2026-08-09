@@ -65,6 +65,10 @@ export function parseRolloutSafetyPolicy(manifestText) {
   };
 }
 
+/**
+ * @param {string} manifestText
+ * @param {{ sectionHeading?: string, nextHeading?: string, allowEmpty?: boolean }} [options]
+ */
 export function parseManifestMigrationRows(manifestText, { sectionHeading, nextHeading, allowEmpty = false } = {}) {
   const startIndex = sectionHeading ? manifestText.indexOf(sectionHeading) : 0;
   if (startIndex === -1) {
