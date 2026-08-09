@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
-import { FRONTEND_API_QUERY_BASE_REGISTRY } from "../api-query-base-registry";
-import { toBaseApiQueryDescriptor, type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
+import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "../schema-like";
 import {
   StabilityIndexLightResponseSchema,
@@ -95,16 +94,11 @@ describe("frontend API query descriptors", () => {
     expect(FRONTEND_API_QUERY_DESCRIPTORS.yieldAdapterManifest).not.toHaveProperty("metaMaxAgeSec");
   });
 
-  it("derives the policy-only projection from the one descriptor table", () => {
-    expect(Object.keys(FRONTEND_API_QUERY_BASE_REGISTRY)).toEqual(Object.keys(FRONTEND_API_QUERY_DESCRIPTORS));
-
+  it("pins every descriptor's response mode", () => {
     for (const key of Object.keys(FRONTEND_API_QUERY_DESCRIPTORS)) {
       const runtimeEntry = FRONTEND_API_QUERY_DESCRIPTORS[key as keyof FrontendApiQueryDescriptorRegistry];
-      const baseEntry = FRONTEND_API_QUERY_BASE_REGISTRY[key as keyof typeof FRONTEND_API_QUERY_BASE_REGISTRY];
       const runtimeDescriptor = resolveEntry(runtimeEntry, key);
-      const baseDescriptor = resolveEntry(baseEntry, key);
 
-      expect(baseDescriptor, key).toEqual(toBaseApiQueryDescriptor(runtimeDescriptor));
       expect(runtimeDescriptor.responseMode, key).toBe(
         EXPECTED_RESPONSE_MODES[key as keyof typeof EXPECTED_RESPONSE_MODES],
       );

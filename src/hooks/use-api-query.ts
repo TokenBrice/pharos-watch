@@ -99,7 +99,7 @@ export function createApiQueryFn<T>(
   };
 }
 
-export function createApiQueryFnWithMeta<T>(
+function createApiQueryFnWithMeta<T>(
   path: string,
   schema?: SchemaLikeSource<T>,
   fetchInit?: RequestInit,
@@ -112,7 +112,7 @@ export function createApiQueryFnWithMeta<T>(
   };
 }
 
-export function createPollingQueryOptions<T>(
+function createPollingQueryOptions<T>(
   key: readonly unknown[],
   queryFn: PollingQueryFunction<T>,
   cronInterval: number,

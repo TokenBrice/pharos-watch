@@ -23,7 +23,6 @@ import {
   type ReserveCompositionRecord,
   type ReserveSyncStateRecord,
 } from "../lib/live-reserves-store";
-import { isReserveRecoveryFaultInjectionTermination } from "../lib/reserve-recovery-fault-injection";
 
 const TRACKED_STABLECOIN_IDS = new Set(TRACKED_META_BY_ID.keys());
 
@@ -191,10 +190,8 @@ export async function syncReserveCoin(args: {
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
-    const scoringAllowsUnverifiedFreshness = false;
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
-      ...(scoringAllowsUnverifiedFreshness ? { scoringAllowsUnverifiedFreshness: true } : {}),
       durationMs,
     };
 
@@ -227,7 +224,6 @@ export async function syncReserveCoin(args: {
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,
           fatal: warnings.filter((warning) => warning.effect === "fatal").length,
         },
-        scoringAllowsUnverifiedFreshness,
         durationMs,
       },
       lastSuccessAt: attemptStartedAt,
@@ -256,7 +252,6 @@ export async function syncReserveCoin(args: {
         console.warn(`[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
       }
     } catch (error) {
-      if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
       if (!(error instanceof Error) || error.message !== timeoutMessage) {
         throw error;
@@ -313,7 +308,6 @@ export async function syncReserveCoin(args: {
       hasWarnings: warningMessages.length > 0,
     });
   } catch (error) {
-    if (isReserveRecoveryFaultInjectionTermination(error)) throw error;
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
     const extras: Record<string, unknown> = {};
     let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;

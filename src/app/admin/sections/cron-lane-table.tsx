@@ -16,9 +16,6 @@ import {
   buildBudgetOnlySurfaceGroups,
   buildCronWorkbenchModel,
   DEFAULT_CRON_WORKBENCH_FILTERS,
-  formatCronAttemptState,
-  formatCronAttemptStatusClass,
-  formatCronDuration,
   formatCronRunStatus,
   formatCronRunTiming,
   isCronRunNotStarted,
@@ -333,147 +330,6 @@ function StaleArtifactEvidence({ artifacts }: { artifacts: CronStaleArtifact[] }
   );
 }
 
-function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
-  const attempt = row.cron.latestAttempt;
-  if (!attempt) {
-    const emptyMessage = row.cron.attemptTelemetry === "scoped-out"
-      ? "Attempt ledger is not enabled for this job."
-      : row.cron.attemptTelemetry === "disabled"
-        ? "Attempt ledger is disabled."
-        : "No attempt has been recorded yet.";
-    return (
-      <section className="mt-4 border-t border-border/60 pt-4" aria-labelledby="cron-latest-attempt-heading">
-        <h4 id="cron-latest-attempt-heading" className="text-xs font-semibold text-foreground">
-          Latest attempt
-        </h4>
-        <p className="mt-2 text-xs text-muted-foreground">{emptyMessage}</p>
-      </section>
-    );
-  }
-
-  const duration = attempt.durationMs == null ? null : formatCronDuration(attempt.durationMs);
-  return (
-    <section className="mt-4 border-t border-border/60 pt-4" aria-labelledby="cron-latest-attempt-heading">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h4 id="cron-latest-attempt-heading" className="text-xs font-semibold text-foreground">
-            Latest attempt #{attempt.attemptNo}
-          </h4>
-          <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">{attempt.attemptId}</p>
-        </div>
-        {attempt.stale ? (
-          <Badge className="bg-red-500/15 text-red-800 dark:text-red-300">Stale</Badge>
-        ) : (
-          <Badge className="bg-muted text-muted-foreground">Current</Badge>
-        )}
-      </div>
-      <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 text-xs">
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">State</dt>
-          <dd className="mt-1 text-foreground">
-            {formatCronAttemptState(attempt.state)}
-            <span className="ml-1 font-mono text-[10px] text-muted-foreground">({attempt.state})</span>
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Outcome</dt>
-          <dd className="mt-1 text-foreground">
-            {formatCronAttemptStatusClass(attempt.statusClass)}
-            {attempt.statusClass ? (
-              <span className="ml-1 break-all font-mono text-[10px] text-muted-foreground">
-                ({attempt.statusClass})
-              </span>
-            ) : null}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Schedule</dt>
-          <dd className="mt-1 break-all font-mono text-foreground">{attempt.scheduleKey}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Producer</dt>
-          <dd className="mt-1 break-all font-mono text-foreground">
-            {attempt.producerKind}
-            {attempt.producerPath ? ` · ${attempt.producerPath}` : ""}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Owner</dt>
-          <dd className="mt-1 break-all font-mono text-foreground">{attempt.owner ?? "Unknown"}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Worker version</dt>
-          <dd className="mt-1 break-all font-mono text-foreground">{attempt.workerVersion ?? "Unknown"}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Last heartbeat</dt>
-          <dd className="mt-1 break-words text-foreground">{formatTimestamp(attempt.lastHeartbeatAt)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Lease until</dt>
-          <dd className="mt-1 break-words text-foreground">{formatTimestamp(attempt.leaseUntil)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Runtime</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{formatDurationValue(duration)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Items</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{attempt.itemCount ?? "N/A"}</dd>
-        </div>
-      </dl>
-      <details className="mt-3 text-xs">
-        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
-          Attempt identifiers and timestamps
-        </summary>
-        <dl className="mt-2 grid min-w-0 gap-2 border-y border-border/55 py-2">
-          <div className="min-w-0">
-            <dt className="text-muted-foreground">Idempotency key</dt>
-            <dd className="break-all font-mono text-foreground">{attempt.idempotencyKey}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-muted-foreground">Invocation ID</dt>
-            <dd className="break-all font-mono text-foreground">{attempt.invocationId ?? "Unknown"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Slot started</dt>
-            <dd className="break-words text-foreground">{formatTimestamp(attempt.slotStartedAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Queued / claimed / started</dt>
-            <dd className="break-words text-foreground">
-              {formatTimestamp(attempt.queuedAt)} · {formatTimestamp(attempt.claimedAt)} ·{" "}
-              {formatTimestamp(attempt.startedAt)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Updated / finished</dt>
-            <dd className="break-words text-foreground">
-              {formatTimestamp(attempt.updatedAt)} · {formatTimestamp(attempt.finishedAt)}
-            </dd>
-          </div>
-        </dl>
-      </details>
-      {attempt.error ? (
-        <div className="mt-3 min-w-0 rounded-md border border-red-500/25 bg-red-500/5 p-3 text-xs text-red-800 dark:text-red-300">
-          <div className="font-medium">Attempt error</div>
-          <div className="mt-1 break-words font-mono">{attempt.error}</div>
-        </div>
-      ) : null}
-      {attempt.metadata && Object.keys(attempt.metadata).length > 0 ? (
-        <details className="mt-3 text-xs">
-          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
-            Full attempt metadata
-          </summary>
-          <pre className="mt-2 max-h-56 max-w-full overflow-auto rounded-md bg-muted p-2 text-xs">
-            {JSON.stringify(attempt.metadata, null, 2)}
-          </pre>
-        </details>
-      ) : null}
-    </section>
-  );
-}
-
 function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSeconds: number }) {
   const lastRun = row.cron.lastRun;
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
@@ -606,7 +462,6 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
       ) : null}
 
       <StaleArtifactEvidence artifacts={row.cron.staleArtifacts ?? []} />
-      <LatestAttemptEvidence row={row} />
 
       {lastRun?.error ? (
         <details className="mt-4 text-xs">
@@ -691,7 +546,7 @@ function CronWorkbenchControls({
               type="search"
               className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
               value={filters.search}
-              placeholder="Job, label, schedule, attempt, or artifact"
+              placeholder="Job, label, schedule, or artifact"
               onChange={(event) => onFiltersChange({ search: event.target.value })}
             />
           </span>
@@ -1124,14 +979,12 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                         {errorStreak > 0 ? <div>errors {errorStreak}</div> : null}
                         {skippedStreak > 0 ? <div>lease skips {skippedStreak}</div> : null}
                         {artifacts > 0 ? <div>stale artifacts {artifacts}</div> : null}
-                        {row.cron.latestAttempt ? <div>attempt #{row.cron.latestAttempt.attemptNo}</div> : null}
                         {prerequisiteEvidence ? <div>{prerequisiteEvidence}</div> : null}
                         {row.runningState === "idle" &&
                         errorStreak === 0 &&
                         skippedStreak === 0 &&
                         artifacts === 0 &&
-                        !prerequisiteEvidence &&
-                        !row.cron.latestAttempt ? (
+                        !prerequisiteEvidence ? (
                           <div>No extra evidence</div>
                         ) : null}
                       </TableCell>

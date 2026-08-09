@@ -87,8 +87,8 @@ const API_KEY_DEFAULT_RATE_LIMIT_INPUT = String(API_KEY_DEFAULT_RATE_LIMIT_PER_M
 const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
 
 const API_KEY_INVENTORY_MIN_PAGE_SIZE = 1;
-export const API_KEY_INVENTORY_DEFAULT_PAGE_SIZE = 25;
-export const API_KEY_INVENTORY_MAX_PAGE_SIZE = 100;
+const API_KEY_INVENTORY_DEFAULT_PAGE_SIZE = 25;
+const API_KEY_INVENTORY_MAX_PAGE_SIZE = 100;
 const DEFAULT_API_KEY_INVENTORY_STATUS_FILTER: ApiKeyInventoryStatusFilter = "attention";
 
 const API_KEY_INVENTORY_STATUS_RANK: Record<ApiKeyInventoryStatus, number> = {
@@ -99,7 +99,7 @@ const API_KEY_INVENTORY_STATUS_RANK: Record<ApiKeyInventoryStatus, number> = {
   active: 4,
 };
 
-export const DEFAULT_API_KEY_INVENTORY_SORT: ApiKeyInventorySort = {
+const DEFAULT_API_KEY_INVENTORY_SORT: ApiKeyInventorySort = {
   field: "status",
   direction: "asc",
 };
@@ -172,7 +172,7 @@ export function buildApiKeyInventorySummary(keys: readonly ApiKeySummary[], nowS
   ];
 }
 
-export function getApiKeyInventoryStatus(key: ApiKeySummary, nowSeconds: number): ApiKeyInventoryStatus {
+function getApiKeyInventoryStatus(key: ApiKeySummary, nowSeconds: number): ApiKeyInventoryStatus {
   if (!key.isActive) {
     return "inactive";
   }
@@ -196,7 +196,7 @@ function normalizeInventoryText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-export function searchApiKeys(keys: readonly ApiKeySummary[], search: string): ApiKeySummary[] {
+function searchApiKeys(keys: readonly ApiKeySummary[], search: string): ApiKeySummary[] {
   const terms = normalizeInventoryText(search).split(/\s+/).filter(Boolean);
   if (terms.length === 0) {
     return [...keys];
@@ -237,7 +237,7 @@ function matchesNormalizedValue(value: string | null, filter: string): boolean {
   return value != null && normalizeInventoryText(value) === normalizeInventoryText(filter);
 }
 
-export function filterApiKeys(
+function filterApiKeys(
   keys: readonly ApiKeySummary[],
   filters: ApiKeyInventoryFilters,
   nowSeconds: number,
@@ -320,7 +320,7 @@ function compareApiKeys(
   return comparison === 0 ? compareNumbers(left.id, right.id) : comparison;
 }
 
-export function sortApiKeys(
+function sortApiKeys(
   keys: readonly ApiKeySummary[],
   sort: ApiKeyInventorySort,
   nowSeconds: number,
@@ -342,7 +342,7 @@ function normalizePage(requestedPage: number): number {
   return Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
 }
 
-export function paginateApiKeys(
+function paginateApiKeys(
   keys: readonly ApiKeySummary[],
   requestedPage = 1,
   requestedPageSize = API_KEY_INVENTORY_DEFAULT_PAGE_SIZE,

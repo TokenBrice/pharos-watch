@@ -1,9 +1,9 @@
-import { DatabaseSync } from "node:sqlite";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { CRON_TIMEOUT_MS } from "../../lib/cron-lease";
+import { CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const NOW = new Date("2026-06-10T03:00:00Z");
 const NOW_SEC = Math.floor(NOW.getTime() / 1000);
@@ -460,31 +460,20 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("executes lifecycle classification against SQLite and fails legacy ambiguity closed", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`
-      CREATE TABLE cron_runs (
-        job TEXT NOT NULL,
-        started_at INTEGER NOT NULL,
-        duration_ms INTEGER NOT NULL,
-        status TEXT,
-        error TEXT,
-        metadata TEXT
-      );
-      CREATE TABLE cron_slot_executions (
-        slot_key TEXT NOT NULL,
-        slot_started_at INTEGER NOT NULL,
-        result_status TEXT,
-        metadata TEXT
-      );
-      CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
-    `);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const insertSlot = sqlite.prepare(
-      "INSERT INTO cron_slot_executions (slot_key, slot_started_at, result_status, metadata) VALUES (?, ?, ?, ?)",
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, execution_owner, started_at, updated_at,
+         result_status, metadata
+       ) VALUES (?, ?, 'finished', 'watchdog-owner', ?, ?, ?, ?)`,
     );
     for (let index = 0; index < 20; index++) {
-      insertSlot.run("halfHourlyOffset", NOW_SEC - index * 60, "ok", null);
+      insertSlot.run(
+        "halfHourlyOffset", NOW_SEC - index * 60,
+        NOW_SEC - index * 60, NOW_SEC - index * 60, "ok", null,
+      );
     }
-    insertSlot.run("halfHourlyOffset", NOW_SEC - 30, "degraded", JSON.stringify({
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 30, NOW_SEC - 30, NOW_SEC - 30, "degraded", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
         publicationFailures: 0,
@@ -494,7 +483,7 @@ describe("runCronDurationWatchdog", () => {
         notStartedCronRuns: 0,
       },
     }));
-    insertSlot.run("halfHourlyOffset", NOW_SEC - 20, "error", JSON.stringify({
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 20, NOW_SEC - 20, NOW_SEC - 20, "error", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
         publicationFailures: 1,
@@ -504,8 +493,11 @@ describe("runCronDurationWatchdog", () => {
         notStartedCronRuns: 0,
       },
     }));
-    insertSlot.run("halfHourlyOffset", NOW_SEC - 10, "error", JSON.stringify({ error: STALE_SLOT_ERROR }));
-    insertSlot.run("halfHourlyOffset", NOW_SEC - 5, "error", JSON.stringify({
+    insertSlot.run(
+      "halfHourlyOffset", NOW_SEC - 10, NOW_SEC - 10, NOW_SEC - 10, "error",
+      JSON.stringify({ error: STALE_SLOT_ERROR }),
+    );
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 5, NOW_SEC - 5, NOW_SEC - 5, "error", JSON.stringify({
       error: STALE_SLOT_ERROR,
       staleSlotReconciliation: {
         publicationFailures: 0,

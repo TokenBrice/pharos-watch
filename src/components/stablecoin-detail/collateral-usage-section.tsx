@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
@@ -113,12 +114,12 @@ export function CollateralUsageSection({ entries }: CollateralUsageSectionProps)
         )}
       </div>
       {needsCollapse && (
-        <button type="button"
-          onClick={() => setShowAll((prev) => !prev)}
-          className="pharos-focus-ring inline-flex min-h-11 w-fit items-center px-2.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline lg:min-h-9"
-        >
-          {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
-        </button>
+        <ShowAllToggle
+          open={showAll}
+          onToggle={() => setShowAll((prev) => !prev)}
+          total={usage.length}
+          noun="stablecoins"
+        />
       )}
     </section>
   );

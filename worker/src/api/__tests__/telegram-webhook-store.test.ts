@@ -9,6 +9,7 @@ import {
   pruneTelegramProcessedUpdates,
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("upsertSubscriberRow", () => {
   it("updates only quiet-hours columns on a mute-only call", async () => {
@@ -167,22 +168,9 @@ describe("pruneTelegramProcessedUpdates", () => {
   });
 
   it("deletes at most 5000 expired processed update rows per call", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE telegram_processed_updates (
-          update_id INTEGER PRIMARY KEY,
-          received_at INTEGER NOT NULL,
-          processed_at INTEGER,
-          update_type TEXT,
-          chat_id TEXT,
-          status TEXT NOT NULL DEFAULT 'processing',
-          error_class TEXT,
-          effect_state TEXT NOT NULL DEFAULT 'unstarted'
-        );
-      `);
-
+      
       const insert = sqlite.prepare(
         `INSERT INTO telegram_processed_updates (
            update_id,

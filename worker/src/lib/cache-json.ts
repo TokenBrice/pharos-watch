@@ -1,5 +1,3 @@
-export type JsonDecodeMode = "strict" | "degraded" | "best-effort";
-
 export interface CachedJsonRow {
   value: string;
   updatedAt: number;
@@ -7,7 +5,6 @@ export interface CachedJsonRow {
 
 interface JsonDecodeOk<T> {
   ok: true;
-  mode: JsonDecodeMode;
   reason: null;
   payload: T;
   updatedAt: number | null;
@@ -15,7 +12,6 @@ interface JsonDecodeOk<T> {
 
 interface JsonDecodeError<T, R extends string> {
   ok: false;
-  mode: JsonDecodeMode;
   reason: R;
   payload: T | null;
   updatedAt: number | null;
@@ -30,7 +26,6 @@ type JsonNormalizerResult<T, R extends string> =
   | { ok: false; reason: R; payload?: T | null };
 
 interface DecodeJsonStringOptions<T, R extends string> {
-  mode: JsonDecodeMode;
   updatedAt?: number | null;
   missingReason?: R;
   parseErrorReason: R;
@@ -38,14 +33,12 @@ interface DecodeJsonStringOptions<T, R extends string> {
 }
 
 function finalizeJsonDecode<T, R extends string>(
-  mode: JsonDecodeMode,
   updatedAt: number | null,
   result: JsonNormalizerResult<T, R>,
 ): JsonDecodeResult<T, R> {
   if (result.ok) {
     return {
       ok: true,
-      mode,
       reason: null,
       payload: result.payload,
       updatedAt,
@@ -53,7 +46,6 @@ function finalizeJsonDecode<T, R extends string>(
   }
   return {
     ok: false,
-    mode,
     reason: result.reason,
     payload: result.payload ?? null,
     updatedAt,
@@ -71,7 +63,6 @@ export function decodeJsonString<T, R extends string>(
     }
     return {
       ok: false,
-      mode: options.mode,
       reason: options.missingReason,
       payload: null,
       updatedAt,
@@ -79,11 +70,10 @@ export function decodeJsonString<T, R extends string>(
   }
 
   try {
-    return finalizeJsonDecode(options.mode, updatedAt, options.normalize(JSON.parse(value)));
+    return finalizeJsonDecode(updatedAt, options.normalize(JSON.parse(value)));
   } catch {
     return {
       ok: false,
-      mode: options.mode,
       reason: options.parseErrorReason,
       payload: null,
       updatedAt,
@@ -92,7 +82,6 @@ export function decodeJsonString<T, R extends string>(
 }
 
 interface DecodeCachedJsonOptions<T, R extends string> {
-  mode: JsonDecodeMode;
   missingReason: R;
   parseErrorReason: R;
   normalize: (parsed: unknown) => JsonNormalizerResult<T, R>;
@@ -103,7 +92,6 @@ export function decodeCachedJson<T, R extends string>(
   options: DecodeCachedJsonOptions<T, R>,
 ): JsonDecodeResult<T, R> {
   return decodeJsonString(cached?.value, {
-    mode: options.mode,
     updatedAt: cached?.updatedAt ?? null,
     missingReason: options.missingReason,
     parseErrorReason: options.parseErrorReason,

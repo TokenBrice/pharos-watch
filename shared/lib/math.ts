@@ -31,6 +31,15 @@ export function round4(value: number): number {
 }
 
 /**
+ * Herfindahl-Hirschman Index (0–1, higher = more concentrated) → diversity score
+ * on the 0–100 scale. Unrounded on purpose: callers own their rounding policy
+ * (the Selector keeps full precision, Chain Health rounds to an integer).
+ */
+export function hhiToDiversityScore(hhi: number): number {
+  return clamp((1 - hhi) * 100, 0, 100);
+}
+
+/**
  * Walk a descending-min threshold table and return the first matching band.
  * The caller owns table order; this helper intentionally does not sort bands.
  */

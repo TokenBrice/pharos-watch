@@ -11,6 +11,7 @@ import {
   hasWorkerReleaseImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -26,10 +27,11 @@ export {
   hasWorkerReleaseImpact,
 };
 
+// Parses NUL-delimited `git diff -z` output; see splitNullDelimited for why the
+// separator matters.
 export function normalizeChangedFiles(rawOutput) {
-  return rawOutput
-    .split(/\r?\n/g)
-    .map((line) => normalizeRepoPath(line.trim()))
+  return splitNullDelimited(rawOutput)
+    .map((path) => normalizeRepoPath(path))
     .filter(Boolean);
 }
 
@@ -95,7 +97,7 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
 
   let changedFiles = [];
   try {
-    const raw = execFile("git", ["diff", "--name-only", "--no-renames", `${baseSha}...${headSha}`], {
+    const raw = execFile("git", ["diff", "--name-only", "--no-renames", "-z", `${baseSha}...${headSha}`], {
       encoding: "utf8",
     });
     changedFiles = normalizeChangedFiles(raw);

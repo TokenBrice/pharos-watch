@@ -16,7 +16,7 @@ vi.mock("../helpers", async (importOriginal) => {
   const fetchOnchainUint256 = vi.fn();
   return {
     ...actual,
-    fetchJsonWithRetry: vi.fn(),
+    fetchJsonAdapterInput: vi.fn(),
     fetchOnchainRawCall,
     fetchOnchainUint256,
     makeOnchainCallers: vi.fn((input, options) => ({
@@ -40,7 +40,7 @@ vi.mock("../helpers", async (importOriginal) => {
   };
 });
 
-import { fetchJsonWithRetry, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { fetchJsonAdapterInput, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
@@ -272,7 +272,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   };
 
   it("PSM slice carries no coinId attribution and metadata surfaces the multi-stable note", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
       count: 2,
       results: [
         {
@@ -320,7 +320,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   });
 
   it("falls back without redemption metadata when LitePSM capacity is unavailable", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
       count: 2,
       results: [
         {
@@ -356,7 +356,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   ] as const)(
     "lets the shared materiality policy classify %s unknown debt",
     async (_label, unknownDebt, emitsDiscovery, degraded) => {
-      vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
         count: 2,
         results: [
           {
@@ -393,7 +393,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   );
 
   it("degrades when an unknown module has malformed debt", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
       count: 2,
       results: [
         {
@@ -426,7 +426,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   });
 
   it("degrades when a known module has malformed debt", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
       count: 2,
       results: [
         {
@@ -458,7 +458,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
   });
 
   it("propagates aborts from the optional LitePSM capacity read", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
       count: 2,
       results: [
         {

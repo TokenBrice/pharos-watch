@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Link2 } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 function shareLabel(row: FailureDomainRow): string {
   if (row.exposureShare === null) return "Unquantified";
@@ -49,17 +49,12 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
   if (view === null) return null;
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Shared failure domains">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Shared failure domains</h2>
-        </div>
-        <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
-          {view.rows.length}
-        </span>
-      </div>
-
+    <RailCard
+      title="Shared failure domains"
+      ariaLabel="Shared failure domains"
+      icon={Link2}
+      trailing={<RailStamp className="shrink-0">{view.rows.length}</RailStamp>}
+    >
       <div className="px-4 pb-4">
         <p className="text-[11px] leading-snug text-muted-foreground">
           Chains and bridges that more than one of this token&apos;s deployments depend on, so they can fail together.
@@ -67,15 +62,12 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
         <ul className="mt-3 space-y-2.5">
           {view.rows.map((row) => <DomainRow key={row.key} row={row} open={open} />)}
         </ul>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="pharos-focus-ring mt-2.5 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
-        >
-          {open ? "Show less" : "How each was measured"}
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-        </button>
+        <InlineDisclosureToggle
+          open={open}
+          onToggle={() => setOpen((value) => !value)}
+          collapsedLabel="How each was measured"
+          className="mt-2.5"
+        />
       </div>
 
       {view.totalAdjustmentPoints > 0 ? (
@@ -89,6 +81,6 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
           </p>
         </div>
       ) : null}
-    </section>
+    </RailCard>
   );
 }

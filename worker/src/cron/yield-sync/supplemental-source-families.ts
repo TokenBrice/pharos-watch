@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { normalizeTokenAddress } from "../dex-liquidity/token-resolution";
 import {
@@ -540,28 +541,14 @@ const SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY = [
   runRoycoDawnFamily,
 ] as const;
 
-async function runSupplementalFamiliesWithConcurrency(
+function runSupplementalFamiliesWithConcurrency(
   context: SupplementalSourceFamilyContext,
 ): Promise<SupplementalSourceFamilyResult[]> {
-  const results: SupplementalSourceFamilyResult[] = [];
-  let nextFamilyIndex = 0;
-  const workerCount = Math.min(
+  return mapWithConcurrency(
+    SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY,
     SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY,
-    SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.length,
+    (runFamily) => runFamily(context),
   );
-
-  await Promise.all(
-    Array.from({ length: workerCount }, async () => {
-      while (nextFamilyIndex < SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY.length) {
-        const familyIndex = nextFamilyIndex;
-        nextFamilyIndex += 1;
-        const runFamily = SUPPLEMENTAL_SOURCE_FAMILY_REGISTRY[familyIndex];
-        results[familyIndex] = await runFamily(context);
-      }
-    }),
-  );
-
-  return results;
 }
 
 export async function loadSupplementalSourceFamilies(

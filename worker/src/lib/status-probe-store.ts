@@ -4,7 +4,7 @@ import type {
   StatusProbeSummary,
 } from "@shared/types/status";
 import { isRecord } from "@shared/lib/type-guards";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import {
   buildStatusProbeRunIdempotencyKey,
   reportStatusPersistenceIssue,

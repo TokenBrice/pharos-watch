@@ -1,6 +1,6 @@
 import { D1_BATCH_SIZE } from "./constants";
 import { chunkArray } from "./collections";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;

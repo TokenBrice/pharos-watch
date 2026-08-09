@@ -1,9 +1,12 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import type { D1Database } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  applyMigrationFile,
+  applyMigrationsThrough,
+  createLatestSchemaSqlite,
+} from "../../test-helpers/latest-schema-sqlite";
 import {
   closeRecoveredPreLockIncidents,
   DDR_FLAP_TOLERANT_MAX_INCIDENT_SPAN_SEC_V1,
@@ -34,95 +37,14 @@ import {
 } from "@shared/lib/depeg-resolver-version";
 import { coverageRowForIncident } from "../../cron/depeg-resolver-review/coverage-rows";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
-const FIXTURES_DIR = join(process.cwd(), "worker/src/test-helpers/migration-fixtures");
 interface SqliteD1 extends D1Database {
   close(): void;
   sqlite: DatabaseSync;
 }
 
-function migrationFiles(): string[] {
-  return [
-    ...new Set(
-      [...readdirSync(FIXTURES_DIR), ...readdirSync(MIGRATIONS_DIR)]
-        .filter((entry) => entry.endsWith(".sql")),
-    ),
-  ].sort();
-}
-
-function applyMigrationFile(db: DatabaseSync, file: string): void {
-  // Test-only migration replay loads repo-controlled SQL from the migration
-  // directory, falling back to the frozen fixtures for migrations absorbed by
-  // the 2026-07-30 baseline squash.
-  const fixturePath = join(FIXTURES_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
-  const path = existsSync(fixturePath) ? fixturePath : join(MIGRATIONS_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
-  db.exec(readFileSync(path, "utf8"));
-}
-
-function applyMigrations(db: DatabaseSync): void {
-  for (const file of migrationFiles()) applyMigrationFile(db, file);
-}
-
-function applyMigrationsThrough(db: DatabaseSync, throughFile: string): void {
-  for (const file of migrationFiles()) {
-    applyMigrationFile(db, file);
-    if (file === throughFile) return;
-  }
-  throw new Error(`Migration ${throughFile} was not found`);
-}
-
 function makeSqliteD1(): SqliteD1 {
-  const sqlite = new DatabaseSync(":memory:");
-  applyMigrations(sqlite);
-
-  function statement(sql: string, binds: unknown[] = []): D1PreparedStatement {
-    const run = () => {
-      const result = sqlite.prepare(sql).run(...(binds as never[]));
-      return {
-        success: true,
-        meta: {
-          changes: result.changes,
-          last_row_id: Number(result.lastInsertRowid ?? 0),
-        },
-      };
-    };
-    return {
-      bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
-      run: async () => run(),
-      first: async <T>() => (sqlite.prepare(sql).get(...(binds as never[])) ?? null) as T | null,
-      all: async <T>() => ({
-        results: sqlite.prepare(sql).all(...(binds as never[])) as T[],
-        success: true,
-        meta: {},
-      }),
-      raw: async () => sqlite.prepare(sql).all(...(binds as never[])) as unknown as unknown[][],
-    } as unknown as D1PreparedStatement;
-  }
-
-  return {
-    sqlite,
-    prepare: (sql: string) => statement(sql),
-    batch: async (statements: D1PreparedStatement[]) => {
-      sqlite.exec("BEGIN");
-      try {
-        const results = [];
-        for (const stmt of statements) results.push(await stmt.run());
-        sqlite.exec("COMMIT");
-        return results as Awaited<ReturnType<D1Database["batch"]>>;
-      } catch (error) {
-        sqlite.exec("ROLLBACK");
-        throw error;
-      }
-    },
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-    close: () => sqlite.close(),
-  } as SqliteD1;
+  const { sqlite, db } = createLatestSchemaSqlite();
+  return Object.assign(db, { sqlite, close: () => sqlite.close() }) as SqliteD1;
 }
 
 function insertOpenEvent(db: SqliteD1, eventId = 1): void {

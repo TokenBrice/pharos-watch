@@ -270,7 +270,6 @@ function parseMintBurnCronMetadata(
   }, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
-      mode: "best-effort",
       updatedAt: startedAt,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",

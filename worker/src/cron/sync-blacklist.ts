@@ -14,7 +14,6 @@ import {
 import { applyTronLedgerMirrorPass, deriveSyncBlacklistStatus } from "./blacklist/sync-support";
 import { toErrorMessage } from "../lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
-import { persistBlacklistProviderScanTelemetry } from "./blacklist/provider-telemetry";
 import { migrateLegacyBlacklistIdentities, type BlacklistLegacyIdentityMigrationResult } from "./blacklist/legacy-identity-migration";
 import { scanBlacklistConfigs } from "./blacklist/config-scan";
 
@@ -90,7 +89,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     stateConflicts,
     blacklistProviderCalls,
     maxProviderSplitDepth,
-    providerScanTelemetry,
     coverageOutcomeCounts,
     configStates,
     zeroCursorConfigs,
@@ -102,8 +100,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
-  let providerTelemetryWritten = 0;
-  let providerTelemetryError: string | null = null;
   let legacyIdentityMigration: BlacklistLegacyIdentityMigrationResult = {
     eventMigrated: 0,
     balanceMigrated: 0,
@@ -155,18 +151,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     runBudget: maintenanceRunBudget,
     signal,
   });
-  try {
-    providerTelemetryWritten = await persistBlacklistProviderScanTelemetry(
-      db,
-      providerScanTelemetry,
-      Math.floor(Date.now() / 1000),
-      signal,
-    );
-  } catch (error) {
-    providerTelemetryError = error instanceof Error ? error.name : "UnknownError";
-    console.warn("[sync-blacklist] Provider telemetry persistence failed:", error);
-  }
-
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   const derivedStatus = deriveSyncBlacklistStatus(apiErrors, runtimeBudgetHit, {
     contractsSkipped,
@@ -265,8 +249,6 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         maxProviderSplitDepth,
         providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
         providerLimiterRequestsPerSecond: BLACKLIST_PROVIDER_REQUESTS_PER_SECOND,
-        providerTelemetryWritten,
-        providerTelemetryError,
         legacyIdentityEventMigrated: legacyIdentityMigration.eventMigrated,
         legacyIdentityBalanceMigrated: legacyIdentityMigration.balanceMigrated,
         legacyIdentityAmbiguousSkipped: legacyIdentityMigration.ambiguousSkipped,

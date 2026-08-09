@@ -8,6 +8,7 @@ import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
+import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
@@ -23,6 +24,7 @@ import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
+import { buildControlPostureView } from "@/lib/control-posture";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
@@ -77,6 +79,7 @@ export function DetailRiskContextSections({
     : null;
   const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
   const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
+  const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
   const showPegChart =
     viewModel.coin.flags.pegCurrency === "USD"
     && !viewModel.isNavToken
@@ -189,6 +192,11 @@ export function DetailRiskContextSections({
         {regulatoryStanding ? (
           <div className="xl:hidden">
             <RegulatoryStandingCard view={regulatoryStanding} />
+          </div>
+        ) : null}
+        {controlPosture ? (
+          <div className="xl:hidden">
+            <ControlPostureCard view={controlPosture} />
           </div>
         ) : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />

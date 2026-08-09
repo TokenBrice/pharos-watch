@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { cn } from "@/lib/utils";
 
 /** Notes shorter than this lose nothing to a 4-line phone clamp. */
@@ -27,15 +27,13 @@ export function AiSummaryProse({ textLength, children }: { textLength: number; c
         {children}
       </p>
       {collapsible ? (
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-xs font-medium text-frost-blue sm:hidden"
-        >
-          {open ? "Show less" : "Read the full note"}
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-        </button>
+        <InlineDisclosureToggle
+          open={open}
+          onToggle={() => setOpen((value) => !value)}
+          collapsedLabel="Read the full note"
+          size="md"
+          className="mt-2 sm:hidden"
+        />
       ) : null}
     </>
   );

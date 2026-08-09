@@ -1,21 +1,44 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+/**
+ * VERITAS fact-contract repros (VER-006/007/008/009/011/012 plus the VERITAS-II
+ * mechanism-overlay expiry finding). Consolidated from six single-incident
+ * files; every assertion and VER-0xx describe name is preserved verbatim.
+ */
+
 import { evaluateV9EconomicControl, type V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
+import miniCapture from "./fixtures/safety-score-v9-rateable-mini-capture.json";
+import {
+  createReportCardsFixedInput,
+  normalizeFixedInput,
+  type ReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetFromNormalizedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
-import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-
-const AS_OF_SEC = 10_000;
-const OBSERVED_AT_SEC = 9_900;
+import {
+  buildSafetyScoreV9BaselineExtension,
+  buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension";
+import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9-extension-mechanism";
+import {
+  makeV9FixedInput,
+  v9NotApplicableStatus,
+  v9Status,
+  v9TestClockSec,
+  V9_FIXTURE_CLOCK_SEC as AS_OF_SEC,
+} from "../../test-helpers/v9-fixed-input";
 
 const DEFAULT_RESERVES: readonly ReserveSlice[] = [
   {
@@ -31,122 +54,46 @@ const DEFAULT_RESERVES: readonly ReserveSlice[] = [
 ];
 
 function requiredStatus(observationState: "known" | "missing", rule: string): V9FactStatusV2 {
-  return {
-    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
-    observationState,
-    evidenceRefIds: observationState === "known" ? [`evidence:${rule}`] : [],
-    gapIds: observationState === "known" ? [] : [`gap:${rule}`],
-  };
+  return v9Status(observationState, rule, { evidenceRefId: `evidence:${rule}`, gapId: `gap:${rule}` });
 }
 
 function notApplicableStatus(rule: string): V9FactStatusV2 {
-  return {
-    applicability: {
-      state: "not-applicable",
-      policyRuleId: rule,
-      rationale: "Reviewed as not applicable for the VERITAS fixture.",
-      gapId: null,
-    },
-    observationState: "known",
+  return v9NotApplicableStatus(rule, {
+    rationale: "Reviewed as not applicable for the VERITAS fixture.",
     evidenceRefIds: [],
-    gapIds: [],
-  };
+  });
 }
 
+/** The shared zero-route VERITAS capture: a reviewed-complete empty DEX surface. */
 function exactFixedInput(reserves: readonly ReserveSlice[] = DEFAULT_RESERVES) {
-  return createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds: ["alpha"],
-    capturedAt: "2026-07-13T00:00:00.000Z",
-    sourceGeneration: "report-cards:veritas:10000",
-    dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
+  return makeV9FixedInput({
+    sourceGeneration: `report-cards:veritas:${AS_OF_SEC}`,
     registryRevision: "registry:veritas",
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: AS_OF_SEC,
-    updatedAt: AS_OF_SEC,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {
-      alpha: {
-        id: "alpha",
-        symbol: "ALPHA",
-        name: "Alpha",
-        pegType: "peggedUSD",
-        pegCurrency: "USD",
-        governance: "centralized",
-        currentDeviationBps: 1,
-        pegScore: 99,
-        priceSource: "fixture-price",
-        priceObservedAt: OBSERVED_AT_SEC,
-        pegPct: 99,
-        severityScore: 0,
-        spreadPenalty: 0,
-        eventCount: 0,
-        worstDeviationBps: 1,
-        activeDepeg: false,
-        lastEventAt: null,
-        trackingSpanDays: 365,
-        methodologyVersion: "peg:veritas-v1",
+    pegMethodologyVersion: "peg:veritas-v1",
+    dexMethodologyVersion: "dex:veritas-v1",
+    reserves,
+    aggregateCirculating: { peggedUSD: 10_000_000 },
+    dexOverrides: {
+      liquidityScore: 0,
+      concentrationHhi: 0,
+      poolCount: 0,
+      chainCount: 0,
+      effectiveTvlUsd: 0,
+      balanceMeasuredTvlUsd: 0,
+      organicMeasuredTvlUsd: 0,
+      exitRouteObservations: [],
+      exitRouteObservationCoverage: {
+        status: "populated",
+        capabilityMatrixVersion: "veritas-zero-route-v1",
+        retainedPoolCount: 0,
+        observationCount: 0,
+        scoreEligibleObservationCount: 0,
+        scoreEligiblePoolCount: 0,
+        unsupportedPoolCount: 0,
+        evidenceCounts: {},
+        unsupportedReasons: {},
       },
     },
-    activeDepegPeakBpsById: {},
-    aggregateCirculatingById: {
-      alpha: { circulating: { peggedUSD: 10_000_000 }, observedAtSec: OBSERVED_AT_SEC },
-    },
-    dexLiqMap: {
-      alpha: {
-        liquidityScore: 0,
-        concentrationHhi: 0,
-        poolCount: 0,
-        chainCount: 0,
-        coverageClass: "primary",
-        coverageConfidence: 1,
-        liquidityEvidenceClass: "measured",
-        hasMeasuredLiquidityEvidence: true,
-        effectiveTvlUsd: 0,
-        balanceMeasuredTvlUsd: 0,
-        organicMeasuredTvlUsd: 0,
-        exitRouteObservations: [],
-        exitRouteObservationCoverage: {
-          status: "populated",
-          capabilityMatrixVersion: "veritas-zero-route-v1",
-          retainedPoolCount: 0,
-          observationCount: 0,
-          scoreEligibleObservationCount: 0,
-          scoreEligiblePoolCount: 0,
-          unsupportedPoolCount: 0,
-          evidenceCounts: {},
-          unsupportedReasons: {},
-        },
-        methodologyVersion: "dex:veritas-v1",
-        updatedAt: OBSERVED_AT_SEC,
-      },
-    },
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: { alpha: false },
-    liveReserveMap: { alpha: [...reserves] },
-    liveReserveProvenanceMap: {
-      alpha: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
-    },
-    chainCirculatingById: {
-      alpha: {
-        ethereum: {
-          current: 10_000_000,
-          circulatingPrevDay: 10_000_000,
-          circulatingPrevWeek: 10_000_000,
-          circulatingPrevMonth: 10_000_000,
-        },
-      },
-    },
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
   });
 }
 
@@ -325,3 +272,136 @@ describe("VERITAS finding VER-009: oracle reasons can escape their archetype all
     }
   });
 });
+
+// VER-012 (folded in from safety-score-v9-veritas-bounded-gap-repro.test.ts).
+// VER-012: ordinary missing access reviews compile with the evidence-owned
+// `missing-pillar-evidence` reason even though the facts are control-owned.
+// This is a work-queue binding defect; Access does not enter the score pillars.
+describe("VERITAS finding VER-012: access gaps violate their reason owner contract", () => {
+  it("keeps every ordinary access gap bound to a reason with the same owner", () => {
+    const fixedInput = createReportCardsFixedInput(miniCapture.draft as unknown as ReportCardsFixedInputDraft);
+    const metaById = new Map<string, V9ExtensionRegistryMeta>(
+      fixedInput.activeAssetIds.map((assetId) => [assetId, { id: assetId, mechanismArchetype: "fiat-cash" }]),
+    );
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput, {
+      metaById,
+      registryFingerprint: fixedInput.registryFingerprint,
+    });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
+
+    // The deliberately sparse baseline extension can now be NR for unrelated
+    // producer-owned exit evidence. Access review gaps themselves must remain
+    // non-withholding and bound to the control owner.
+    expect(
+      evaluated.assets.every((asset) =>
+        asset.trace.nrReasons.every((reason) => reason.code !== "missing-access-review"),
+      ),
+    ).toBe(true);
+
+    const accessGaps = compiled.assets.flatMap((asset) =>
+      asset.gaps.flatMap((gap) =>
+        gap.path.kind === "local-component" && gap.path.componentKey.startsWith("access:") ? [gap] : [],
+      ),
+    );
+    expect(accessGaps.length).toBeGreaterThan(0);
+    for (const gap of accessGaps) {
+      const reason = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry.find((entry) => entry.code === gap.reasonCode)!;
+      const componentKey = gap.path.kind === "local-component" ? gap.path.componentKey : gap.path.kind;
+      expect(reason.ownerDomain, `${gap.reasonCode} is misbound at ${componentKey}`).toBe(gap.ownerDomain);
+    }
+  });
+});
+
+// VER-011 (folded in from veritas-ver-011-v9-producer-capability-identity.test.ts).
+// VER-011: documented-terms freshness can change without changing candidate capability identity.
+{
+  // One day past the newest reviewed registry date, so the baseline extension's
+  // "review is later than the scoring clock" guard stays untripped without a
+  // hand-pinned literal.
+  const VER_011_CLOCK_SEC = v9TestClockSec();
+  const ASSET_ID = "alpha";
+
+  function ver011FixedInput() {
+    return makeV9FixedInput({
+      assetId: ASSET_ID,
+      clockSec: VER_011_CLOCK_SEC,
+      sourceGeneration: "report-cards:fixture:ver-011",
+      reserves: [],
+      includeDexObservations: false,
+      includeDexCoverage: false,
+      dexOverrides: {
+        liquidityScore: 0,
+        concentrationHhi: null,
+        poolCount: 0,
+        chainCount: 0,
+        coverageClass: "unobserved",
+        coverageConfidence: 0,
+        liquidityEvidenceClass: "unobserved",
+        hasMeasuredLiquidityEvidence: false,
+        effectiveTvlUsd: 0,
+        balanceMeasuredTvlUsd: 0,
+        organicMeasuredTvlUsd: 0,
+      },
+      chainSupplyByChain: {
+        ethereum: {
+          current: 1,
+          circulatingPrevDay: 1,
+          circulatingPrevWeek: 1,
+          circulatingPrevMonth: 1,
+        },
+      },
+    });
+  }
+
+  describe("VERITAS finding VER-011: documented-terms freshness is capability-bound", () => {
+    it("changes producer capability and candidate identities with the freshness policy", () => {
+      const fixedInput = ver011FixedInput();
+      const beforeExtension = buildSafetyScoreV9BaselineExtension(fixedInput, {
+        metaById: new Map([[ASSET_ID, { id: ASSET_ID, mechanismArchetype: "fiat-cash" }]]),
+      });
+      const afterExtension = structuredClone(beforeExtension);
+      afterExtension.routeFreshness.documentedTermsMaxAgeSec += 1;
+
+      const before = buildSafetyScoreV9Candidate({
+        fixedInput,
+        extension: beforeExtension,
+        publishedAtSec: VER_011_CLOCK_SEC + 1,
+      });
+      const after = buildSafetyScoreV9Candidate({
+        fixedInput,
+        extension: afterExtension,
+        publishedAtSec: VER_011_CLOCK_SEC + 1,
+      });
+
+      expect(after.extension.routeFreshness.documentedTermsMaxAgeSec).toBe(
+        before.extension.routeFreshness.documentedTermsMaxAgeSec + 1,
+      );
+      expect(after.producerCapabilityDigest).not.toBe(before.producerCapabilityDigest);
+      expect(after.candidate.candidateId).not.toBe(before.candidate.candidateId);
+    });
+  });
+}
+
+// VERITAS-II (folded in from veritas-2-mechanism-overlay-expiry-repro.test.ts).
+{
+type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
+
+describe("VERITAS-II finding: mechanism overlays do not expire after twelve months", () => {
+  it("re-bounds USDC components after its 2026-07-15 review expires", () => {
+    const fixedInput = {
+      clockSec: Date.UTC(2027, 6, 16) / 1_000,
+      liveReserveMap: { "usdc-circle": [{ pct: 100 }] },
+    } as unknown as ReportCardsFixedInput;
+    const meta = { id: "usdc-circle" } as MechanismMeta;
+
+    const review = buildSafetyScoreV9MechanismReview(fixedInput, meta, "fiat-cash");
+    if (review?.archetype !== "fiat-cash") throw new Error("expected the USDC fiat-cash review");
+
+    expect(review.claimAndSegregation.status.observationState).toBe("bounded-unknown");
+    expect(review.claimAndSegregation.quality).toBeNull();
+    expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+    expect(review.custodyContinuity.quality).toBeNull();
+  });
+});
+}

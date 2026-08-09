@@ -64,18 +64,13 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     },
   });
 
-  const resolvedCountByCoin = new Map<string, number>();
-  const resolvedSourceKeysByCoin = new Map<string, Set<string | null>>();
+  const resolvedSourceKeysByCoin = new Map<string, Set<string>>();
   for (const entry of resolvedWithYield) {
     const resolvedYield = entry.yield;
     if (!resolvedYield) continue;
-    resolvedCountByCoin.set(entry.id, (resolvedCountByCoin.get(entry.id) ?? 0) + 1);
-    const sourceKeySet = resolvedSourceKeysByCoin.get(entry.id) ?? new Set<string | null>();
+    const sourceKeySet = resolvedSourceKeysByCoin.get(entry.id) ?? new Set<string>();
     sourceKeySet.add(resolvedYield.sourceKey);
     resolvedSourceKeysByCoin.set(entry.id, sourceKeySet);
-  }
-  for (const [stablecoinId, sourceCount] of resolvedCountByCoin) {
-    if (sourceCount <= 1) resolvedSourceKeysByCoin.get(stablecoinId)?.add(null);
   }
 
   const historySnapshots =

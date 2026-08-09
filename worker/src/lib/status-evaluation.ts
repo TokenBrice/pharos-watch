@@ -26,16 +26,6 @@ import { loadCronHealth } from "./status/cron-health";
 import { buildStatusSummary, emptyStatusSummary } from "./status/summary";
 import { loadBudgetOnlySurfaceStatuses } from "./budget-surface-telemetry";
 import type { CacheFreshnessDiagnostic } from "./api-utils";
-import { normalizeWorkerJobLedgerMode, type WorkerJobLedgerMode } from "./job-ledger";
-
-export interface StatusEvaluationOptions {
-  workerJobLedgerMode?: string | WorkerJobLedgerMode;
-  workerJobLedgerAllowlist?: readonly string[];
-}
-
-function resolveWorkerJobLedgerMode(options: StatusEvaluationOptions): WorkerJobLedgerMode {
-  return normalizeWorkerJobLedgerMode(options.workerJobLedgerMode);
-}
 
 function readRepairRunnerAutoRepairCount(crons: StatusResponse["crons"]): number | null {
   const value = crons["worker-repair-runner"]?.lastRun?.metadata?.autoRepairCount;
@@ -125,7 +115,7 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
   }
 }
 
-export async function computeRawStatus(db: D1Database, now: number, options: StatusEvaluationOptions = {}) {
+export async function computeRawStatus(db: D1Database, now: number) {
   const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status" });
   if (!publicHealth.dbHealthy) {
     return buildDbUnavailableRawStatus();
@@ -134,9 +124,8 @@ export async function computeRawStatus(db: D1Database, now: number, options: Sta
   // Independent status loads run in parallel. The repo's six-request outbound
   // budget applies to fetch phases, not these D1 reads; none is scheduled via
   // waitUntil.
-  const workerJobLedgerMode = resolveWorkerJobLedgerMode(options);
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
-    loadCronHealth(db, now, workerJobLedgerMode, options.workerJobLedgerAllowlist),
+    loadCronHealth(db, now),
     loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, { blacklistMetrics: publicHealth.blacklistMetrics }),
     loadSupplementalStatusSections(db, now),

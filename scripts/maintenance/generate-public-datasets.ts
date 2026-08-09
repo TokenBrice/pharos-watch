@@ -42,7 +42,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/safety-
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
-import { type CsvColumn, escapeCsvField } from "../lib/csv-helpers";
+import { type CsvColumn, escapeCsvField } from "@shared/lib/csv";
 import {
   RELEASE_DATA_FALLBACK_ENV_NAME,
   generatorFetchHeaders,
@@ -250,8 +250,8 @@ async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string):
 }
 
 // --- CSV helpers ------------------------------------------------------------
-// `escapeCsvField` + `CsvColumn` live in scripts/lib/csv-helpers.ts (imported
-// above); the preamble-aware builders below are script-specific.
+// `escapeCsvField` + `CsvColumn` come from shared/lib/csv.ts (imported above);
+// the preamble-aware builders below are script-specific.
 
 interface Preamble {
   endpoint: string;

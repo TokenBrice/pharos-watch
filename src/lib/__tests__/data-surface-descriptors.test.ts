@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
-import { FRONTEND_API_QUERY_BASE_REGISTRY } from "@/lib/api-query-base-registry";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import {
   API_FRESHNESS_MAX_AGE_SEC,
   CACHE_AVAILABILITY_MAX_AGE_SEC,
@@ -29,7 +29,7 @@ type FrontendQueryRegistry = Record<
   FrontendStaticQueryDescriptor | ((...args: never[]) => FrontendStaticQueryDescriptor)
 >;
 
-const FRONTEND_QUERY_REGISTRY = FRONTEND_API_QUERY_BASE_REGISTRY as unknown as FrontendQueryRegistry;
+const FRONTEND_QUERY_REGISTRY = FRONTEND_API_QUERY_DESCRIPTORS as unknown as FrontendQueryRegistry;
 const API_FRESHNESS_BY_KEY = API_FRESHNESS_MAX_AGE_SEC as Record<string, number>;
 const CACHE_FRESHNESS_LANES_BY_KEY = CACHE_FRESHNESS_LANES as Record<string, CacheFreshnessLaneConfig>;
 const DATA_HEALTH_PRESETS_BY_KEY = DATA_HEALTH_PRESETS as Record<string, { label: string; staleTime: number }>;
@@ -251,8 +251,8 @@ describe("data surface descriptors", () => {
 
   it("derives dynamic yield history frontend descriptors from the descriptor builder", () => {
     const surface = DATA_SURFACE_DESCRIPTORS.yieldHistory;
-    const frontendWithSource = FRONTEND_API_QUERY_BASE_REGISTRY.yieldHistory("usdc", 365, "source", "aave-v3");
-    const frontendWithoutSource = FRONTEND_API_QUERY_BASE_REGISTRY.yieldHistory("usdt", 90, "best", null);
+    const frontendWithSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdc", 365, "source", "aave-v3");
+    const frontendWithoutSource = FRONTEND_API_QUERY_DESCRIPTORS.yieldHistory("usdt", 90, "best", null);
 
     expect(frontendWithSource.path).toBe(surface.buildApiPath("usdc", 365, "source", "aave-v3"));
     expect(frontendWithSource.queryKey).toEqual(surface.buildQueryKey("usdc", 365, "source", "aave-v3"));
@@ -278,7 +278,7 @@ describe("data surface descriptors", () => {
     }
   });
 
-  it("pins non-derived cache freshness lanes and keeps descriptors aligned", () => {
+  it("pins the cache freshness lanes and proves descriptors project them", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.stablecoins).toMatchObject({
       cacheKey: "stablecoins",
       producerJob: "sync-stablecoins",
@@ -312,6 +312,10 @@ describe("data surface descriptors", () => {
     });
     expect(FRESHNESS_SENTINEL_CACHE_KEYS).toEqual(["dex-liquidity", "yield-data", "dews"]);
 
+    // Descriptors no longer restate these five fields: they spread the lane via
+    // `surfaceFreshnessLaneFields(...)`. This is now a copy-matches-source check
+    // (the copy is derived), plus proof that lane documentation strings stay off
+    // the descriptor and that the cacheKey lookup still resolves to the same lane.
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
       if (!("cacheFreshnessLaneKey" in surface) || !surface.cacheFreshnessLaneKey) continue;
 
@@ -331,6 +335,8 @@ describe("data surface descriptors", () => {
       expect("freshnessSentinelKey" in surface ? surface.freshnessSentinelKey : undefined).toBe(
         lane.freshnessSentinelKey,
       );
+      expect(surface).not.toHaveProperty("endpointBudgetReason");
+      expect(surface).not.toHaveProperty("availabilityBudgetReason");
     }
   });
 

@@ -96,50 +96,7 @@ describe("pricing application helpers", () => {
     expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
   });
 
-  it("ignores GT probe when primary source is not geckoterminal", () => {
-    const assets = [
-      makeAsset(),
-    ];
-    const candidate = makePriceResult({
-      source: "coingecko",
-      candidateSources: ["coingecko"],
-    });
-
-    applyConsensusResults({
-      assets,
-      primaryPriceResults: new Map([["usdt-tether", candidate]]),
-      validationContexts: createValidationContextResolver(),
-      syncStartSec: 1_800_000_000,
-      reason: "gt-probe",
-    });
-
-    expect(assets[0].price).toBeUndefined();
-  });
-
-  it("applies GT probe candidate when geckoterminal contributed", () => {
-    const assets = [
-      makeAsset(),
-    ];
-    const candidate = makePriceResult({
-      price: 0.997,
-      source: "coingecko",
-      candidateSources: ["coingecko", "geckoterminal"],
-    });
-
-    applyConsensusResults({
-      assets,
-      primaryPriceResults: new Map([["usdt-tether", candidate]]),
-      validationContexts: createValidationContextResolver(),
-      syncStartSec: 1_800_000_000,
-      reason: "gt-probe",
-    });
-
-    expect(assets[0].price).toBe(0.997);
-    expect(assets[0].priceSource).toBe("coingecko");
-  });
-
-  it("downgrades pre-GT single-source asset to low confidence when GT-probe evidence is rejected", () => {
-    // Pre-GT primary pass set this asset to "single-source" with a soft price.
+  it("stamps the existing price when the primary candidate is rejected", () => {
     const assets = [
       makeAsset({
         id: "usdt-tether",
@@ -148,15 +105,10 @@ describe("pricing application helpers", () => {
         priceConfidence: "single-source",
       }),
     ];
-    // After runGtProbePass mutation: GT probe diverged, resulting consensus is still
-    // single-source (GT did not join the sole cluster). validatePrimaryPriceCandidate
-    // rejects the GT-enriched candidate (e.g., temporal-jump).
     const candidate = makePriceResult({
       price: 1.08,
       source: "coingecko",
       confidence: "single-source",
-      candidateSources: ["coingecko", "geckoterminal"],
-      agreeSources: ["coingecko"],
     });
 
     validatePrimaryPriceCandidateMock.mockReturnValue({
@@ -170,30 +122,20 @@ describe("pricing application helpers", () => {
       primaryPriceResults: new Map([["usdt-tether", candidate]]),
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
-      reason: "gt-probe",
+      reason: "primary",
     });
 
-    expect(assets[0].priceConfidence).toBe("low");
-    // The GT-rejected price is not applied — pre-GT price stays.
+    // The rejected candidate is not applied — the pre-existing price stays and is re-stamped.
     expect(assets[0].price).toBe(1.001);
     expect(assets[0].priceSource).toBe("coingecko");
-    const warned = warnSpy.mock.calls.some((args) => {
-      const msg = args.map((a) => String(a)).join(" ");
-      return msg.includes("GT probe evidence rejected") && msg.includes("usdt-tether");
-    });
-    expect(warned).toBe(true);
+    expect(assets[0].priceSyncedAt).toBe(1_800_000_000);
     warnSpy.mockRestore();
   });
 
-  it("only primary pass defaults supply source", () => {
+  it("primary pass defaults supply source", () => {
     const primaryOnly = [
       makeAsset({
         id: "usdt-tether",
-      }),
-    ];
-    const gtOnly = [
-      makeAsset({
-        id: "usdc-circle",
       }),
     ];
 
@@ -205,18 +147,6 @@ describe("pricing application helpers", () => {
       reason: "primary",
     });
 
-    applyConsensusResults({
-      assets: gtOnly,
-      primaryPriceResults: new Map([["usdc-circle", makePriceResult({
-        price: 1.0,
-        candidateSources: ["coingecko", "geckoterminal"],
-      })]]),
-      validationContexts: createValidationContextResolver(),
-      syncStartSec: 1_800_000_000,
-      reason: "gt-probe",
-    });
-
     expect(primaryOnly[0].supplySource).toBe("defillama");
-    expect(gtOnly[0].supplySource).toBeUndefined();
   });
 });

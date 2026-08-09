@@ -1,8 +1,13 @@
 # Worker Import Boundary Waivers
 
-Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`. The check is implemented in `scripts/ci/check-worker-import-boundary.mjs` and runs as part of the shared validation gate.
+Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`.
 
-Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
+Enforcement is split across two mechanisms:
+
+- **frontend→worker** — a `no-restricted-imports` block in `eslint.config.mjs`, so the rule runs on every changed file through `lint:changed` rather than only when a worker file also moves.
+- **worker→frontend** — `scripts/ci/check-worker-import-boundary.mjs`, which bans *any* `@/` or `src/` specifier from `worker/src/` (broader than the enumerable `src/lib/*` shapes ESLint lists) and runs as part of the shared validation gate.
+
+Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule. Every exempt file MUST have an entry below explaining why retirement is not feasible today, and MUST also appear in `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs` — the checker's `checkEslintWaiverSync()` fails when the two lists drift apart.
 
 `MAX_BOUNDARY_WAIVERS` caps the size of the waiver list. Growing the cap is an architectural decision that requires a documented review on this page.
 
@@ -28,7 +33,7 @@ Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule.
 ## Adding a Waiver
 
 1. Confirm the cross-layer import cannot be replaced by promoting metadata into `shared/`.
-2. Append an entry to `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.mjs` with a one-line reason.
+2. Append an entry to `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.mjs` with a one-line reason, and add the same path to `FRONTEND_TO_WORKER_WAIVED_FILES` in `eslint.config.mjs`.
 3. Bump `MAX_BOUNDARY_WAIVERS` and document the new cap.
 4. Add a section to this document explaining the file, reason, what was tried, mitigations, and retirement plan (or "permanent").
 5. Update `scripts/__tests__/worker-boundary-waivers.test.ts` to cover the new entry.

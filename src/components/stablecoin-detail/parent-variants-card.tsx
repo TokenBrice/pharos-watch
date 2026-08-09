@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { useLogos } from "@/hooks/use-logos";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -58,12 +59,12 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
         })}
       </div>
       {needsCollapse && (
-        <button type="button"
-          onClick={() => setShowAll((prev) => !prev)}
-          className="pharos-focus-ring inline-flex min-h-11 w-fit items-center px-2.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline lg:min-h-9"
-        >
-          {showAll ? "Show less" : `Show all ${variants.length} variants`}
-        </button>
+        <ShowAllToggle
+          open={showAll}
+          onToggle={() => setShowAll((prev) => !prev)}
+          total={variants.length}
+          noun="variants"
+        />
       )}
     </section>
   );

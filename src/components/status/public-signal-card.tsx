@@ -7,7 +7,6 @@ interface PublicSignalCardProps {
   badges?: ReactNode;
   description?: ReactNode;
   children?: ReactNode;
-  variant?: "card" | "panel";
   contentClassName?: string;
 }
 
@@ -17,19 +16,12 @@ export function PublicSignalCard({
   badges,
   description,
   children,
-  /* Default is the flat panel: every consumer renders inside a StatusSection
-     card shell, and nesting a card inside a card is forbidden. */
-  variant = "panel",
   contentClassName,
 }: PublicSignalCardProps) {
   return (
-    <article
-      className={
-        variant === "panel"
-          ? "rounded-xl border border-border/60 bg-background/35 p-4"
-          : "pharos-card-shell p-5"
-      }
-    >
+    // Always the flat panel: every consumer renders inside a StatusSection card
+    // shell, and nesting a card inside a card is forbidden.
+    <article className="rounded-xl border border-border/60 bg-background/35 p-4">
       <div className={cn("flex flex-wrap justify-between gap-3", description ? "items-start" : "items-center")}>
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">

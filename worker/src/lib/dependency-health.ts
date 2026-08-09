@@ -133,7 +133,7 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     };
   }
 
-  const updatedAt = cron.lastRun?.startedAt ?? cron.latestAttempt?.updatedAt ?? cron.inFlight?.updatedAt ?? null;
+  const updatedAt = cron.lastRun?.startedAt ?? cron.inFlight?.updatedAt ?? null;
   const ageSeconds = updatedAt != null ? Math.max(0, now - updatedAt) : null;
   const maxAgeSec = cron.expectedIntervalSec * 2;
   if (cron.telemetryUnknown) {
@@ -146,7 +146,7 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     };
   }
   if (!cron.healthy) {
-    const lastStatus = cron.lastRun?.status ?? cron.latestAttempt?.state ?? null;
+    const lastStatus = cron.lastRun?.status ?? null;
     return {
       status: cron.lastRun ? "degraded" : "stale",
       updatedAt,

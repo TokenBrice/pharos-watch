@@ -9,6 +9,7 @@ import {
   recordTelegramMiniAppFirstMutation,
   refreshTelegramAdoptionRetention,
 } from "../telegram-adoption-analytics";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const NOW = Math.floor(Date.parse("2026-08-20T12:00:00Z") / 1_000);
 
@@ -21,41 +22,7 @@ function dayStart(offset: number): number {
 }
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY, created_at INTEGER NOT NULL,
-      first_follow_at INTEGER, first_setup_completed_at INTEGER,
-      global_alert_dews INTEGER NOT NULL DEFAULT 0,
-      global_alert_depeg INTEGER NOT NULL DEFAULT 0,
-      global_alert_safety INTEGER NOT NULL DEFAULT 0,
-      global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
-      global_alert_freeze INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_subscriptions (
-      chat_id TEXT, alert_dews INTEGER DEFAULT 0, alert_depeg INTEGER DEFAULT 0,
-      alert_safety INTEGER DEFAULT 0, alert_launch INTEGER DEFAULT 0, alert_reserve INTEGER DEFAULT 0,
-      alert_freeze INTEGER DEFAULT 0
-    );
-    CREATE TABLE telegram_preset_subscriptions (
-      chat_id TEXT, alert_dews INTEGER DEFAULT 0, alert_depeg INTEGER DEFAULT 0, alert_safety INTEGER DEFAULT 0
-    );
-    CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
-    CREATE TABLE telegram_adoption_daily (
-      day TEXT NOT NULL, campaign TEXT NOT NULL, placement TEXT NOT NULL,
-      stage TEXT NOT NULL, feature TEXT NOT NULL DEFAULT '', latency_bucket TEXT NOT NULL DEFAULT '',
-      outcome TEXT NOT NULL DEFAULT 'success', count INTEGER NOT NULL,
-      first_seen_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
-      PRIMARY KEY (day, campaign, placement, stage, feature, latency_bucket, outcome)
-    );
-    CREATE TABLE telegram_adoption_retention_daily (
-      cohort_day TEXT NOT NULL, measurement_day TEXT NOT NULL, window_days INTEGER NOT NULL,
-      feature TEXT NOT NULL, cohort_size INTEGER NOT NULL, retained_count INTEGER NOT NULL,
-      measured_at INTEGER NOT NULL, quality TEXT NOT NULL,
-      PRIMARY KEY (measurement_day, window_days, feature)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -66,7 +33,9 @@ describe("Telegram adoption analytics", () => {
   beforeEach(() => ({ sqlite, db } = createHarness()));
 
   it("claims a first follow once while keeping chat_id out of the rollup", async () => {
-    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at) VALUES (?, ?)").run("chat-42", NOW);
+    sqlite.prepare(
+      "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES (?, ?, ?)",
+    ).run("chat-42", NOW, NOW);
     const input = { campaign: "landing" as const, placement: "hero" as const, chatId: "chat-42", feature: "preset" as const, nowSec: NOW };
     await recordTelegramFirstFollow(db, input);
     await recordTelegramFirstFollow(db, input);
@@ -95,11 +64,17 @@ describe("Telegram adoption analytics", () => {
   });
 
   it("catches up a bounded seven-day window and is idempotent", async () => {
-    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, first_follow_at, global_alert_dews) VALUES (?, ?, ?, 1)")
-      .run("d7-survivor", dayStart(-8), dayStart(-8));
-    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, first_follow_at) VALUES (?, ?, ?)")
-      .run("d30-survivor", dayStart(-31), dayStart(-31));
-    sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, alert_depeg) VALUES (?, 1)").run("d30-survivor");
+    sqlite.prepare(
+      `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, first_follow_at, global_alert_dews)
+       VALUES (?, ?, ?, ?, 1)`,
+    ).run("d7-survivor", dayStart(-8), dayStart(-8), dayStart(-8));
+    sqlite.prepare(
+      `INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, first_follow_at)
+       VALUES (?, ?, ?, ?)`,
+    ).run("d30-survivor", dayStart(-31), dayStart(-31), dayStart(-31));
+    sqlite.prepare(
+      "INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg) VALUES (?, ?, 1)",
+    ).run("d30-survivor", "usdt-tether");
     const insertCohort = sqlite.prepare(`INSERT INTO telegram_adoption_daily
       (day, campaign, placement, stage, feature, latency_bucket, outcome, count, first_seen_at, last_seen_at)
       VALUES (?, 'organic', 'unknown', 'first_follow', 'direct', '', 'success', ?, ?, ?)`);

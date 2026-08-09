@@ -124,7 +124,7 @@ export function buildCoverageFeatureSummary(
   };
 }
 
-export function countAvailableFeatures(
+function countAvailableFeatures(
   statuses: Record<CoverageFeatureKey, CoverageStatus>,
   keys?: readonly CoverageFeatureKey[],
 ): number {

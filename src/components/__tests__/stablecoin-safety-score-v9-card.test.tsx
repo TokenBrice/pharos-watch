@@ -7,7 +7,12 @@ import {
   SafetyScoreV9PreBreakdownCardSchema,
 } from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
+
+// The shared V9 card fixture derives its pillars from one default quality
+// score; these suites assert on specific pillar values and on which pillar is
+// weakest (the card auto-expands it), so they declare their pillars.
+const EXIT_WEAKEST_PILLARS = makeV9Pillars({ backing: 88, exit: 84, control: 86 });
 
 describe("StablecoinSafetyScoreV9Card", () => {
   afterEach(cleanup);
@@ -23,6 +28,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
     const card = makeV9Card({
       score: 84,
       grade: "A",
+      pillars: EXIT_WEAKEST_PILLARS,
       bindingCap,
       caps: [bindingCap],
       accessPosture: {
@@ -73,12 +79,12 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Backing/ }));
     expect(screen.getAllByText("Backing components").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Reviewed component").length).toBeGreaterThan(0);
-    expect(screen.getByRole("img", { name: "Reviewed component: 88 out of 100, 100% weight" })).toBeTruthy();
+    expect(screen.getAllByText("Reviewed reserves").length).toBeGreaterThan(0);
+    expect(screen.getByRole("img", { name: "Reviewed reserves: 88 out of 100, 100% weight" })).toBeTruthy();
   });
 
   it("renders weighted component bars and control binding semantics from V9 breakdowns", () => {
-    const card = makeV9Card();
+    const card = makeV9Card({ pillars: EXIT_WEAKEST_PILLARS });
     card.breakdowns = {
       backing: {
         evaluatedScore: 86,
@@ -187,7 +193,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
   });
 
   it("shows a positive sub-one component score instead of rounding it to zero", () => {
-    const card = makeV9Card();
+    const card = makeV9Card({ pillars: EXIT_WEAKEST_PILLARS });
     const capacity = card.breakdowns?.exit.primaryRoute?.components.find(
       (component) => component.key === "capacity",
     );

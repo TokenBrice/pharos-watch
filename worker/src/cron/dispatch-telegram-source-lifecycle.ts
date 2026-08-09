@@ -3,7 +3,7 @@ import type { AlertReserveSourceAssessment } from "../lib/alert-reserve-source-c
 import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import { executeSourceRecoveryQueueSidecar } from "./dispatch-telegram-queue-paths";
 import {
@@ -63,7 +63,7 @@ export async function executeSeedPath({
   sharedState,
   reportProgress,
 }: SeedPathContext): Promise<DispatchResult> {
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "snapshot-seed",
     message: "Seeding Telegram alert snapshots",
     providerFamily: "d1",
@@ -94,7 +94,7 @@ export async function executeSeedPath({
   result.reserveSourceUnavailable = reserveSourceUnavailable;
   Object.assign(result, reserveSourceFields(reserveSourceAssessment));
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Seeded Telegram alert snapshots without fanout",
     providerFamily: "telegram-dispatch",
@@ -241,7 +241,7 @@ export async function recoverIncompleteTelegramSourceEvent(args: {
       expiryComplete: expiry.complete,
       expiryRemaining: expiry.remaining,
     };
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: expiry.complete
         ? "Expired unresolved Telegram source event and advanced its stored baseline"

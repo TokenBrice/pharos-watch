@@ -8,6 +8,7 @@ import type {
   CollectorContext,
 } from "../daily-digest/collectors-shared";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const openDatabases: DatabaseSync[] = [];
 const nowSec = 1_785_000_000;
@@ -23,27 +24,7 @@ const identity: SafetyScoreV9PublicationIdentity = {
 };
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE safety_score_history_v2 (
-      history_id TEXT PRIMARY KEY,
-      stablecoin_id TEXT NOT NULL,
-      recorded_at INTEGER NOT NULL,
-      model TEXT NOT NULL,
-      identity_schema_version INTEGER NOT NULL,
-      methodology_version TEXT NOT NULL,
-      policy_id TEXT,
-      policy_digest TEXT,
-      evaluation_build_digest TEXT NOT NULL,
-      base_input_generation_id TEXT NOT NULL,
-      model_publication_generation_id TEXT NOT NULL,
-      transition_kind TEXT NOT NULL,
-      grade TEXT NOT NULL,
-      score REAL,
-      prev_grade TEXT,
-      prev_score REAL
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   openDatabases.push(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };
 }
@@ -67,8 +48,8 @@ function insertHistory(
        history_id, stablecoin_id, recorded_at, model, identity_schema_version,
        methodology_version, policy_id, policy_digest, evaluation_build_digest,
        base_input_generation_id, model_publication_generation_id, transition_kind,
-       grade, score, prev_grade, prev_score
-     ) VALUES (?, 'usdt-tether', ?, 'v9', 1, '9.0', ?, ?, ?, ?, ?, ?, 'A', 88, ?, ?)`,
+       grade, score, prev_grade, prev_score, created_at
+     ) VALUES (?, 'usdt-tether', ?, 'v9', 1, '9.0', ?, ?, ?, ?, ?, ?, 'A', 88, ?, ?, ?)`,
   ).run(
     overrides.historyId ?? "organic-current",
     nowSec - 60,
@@ -80,6 +61,7 @@ function insertHistory(
     overrides.transitionKind ?? "organic-grade-change",
     overrides.prevGrade === undefined ? "B+" : overrides.prevGrade,
     overrides.prevScore === undefined ? 84 : overrides.prevScore,
+    nowSec - 60,
   );
 }
 

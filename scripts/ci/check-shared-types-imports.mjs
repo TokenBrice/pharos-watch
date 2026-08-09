@@ -2,6 +2,7 @@
 
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import ts from "typescript";
+import { reportViolations } from "../lib/report-violations.mjs";
 import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -102,23 +103,22 @@ function runCli() {
     return;
   }
 
-  if (broadTypeViolations.length > 0) {
-    console.error(
-      "[shared-types-imports] import runtime values from @shared/types/<submodule>; reserve @shared/types for import type.",
-    );
-    for (const violation of broadTypeViolations) {
-      console.error(
-        `- ${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.names.join(", ")}`,
-      );
-    }
-  }
+  reportViolations({
+    label: "[shared-types-imports] broad @shared/types value imports",
+    heading:
+      "[shared-types-imports] import runtime values from @shared/types/<submodule>; reserve @shared/types for import type",
+    violations: broadTypeViolations.map(
+      (violation) => `${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.names.join(", ")}`,
+    ),
+  });
 
-  if (sharedTypesBoundaryViolations.length > 0) {
-    console.error("[shared-types-imports] shared/types modules must not import shared/lib modules.");
-    for (const violation of sharedTypesBoundaryViolations) {
-      console.error(`- ${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.source}`);
-    }
-  }
+  reportViolations({
+    label: "[shared-types-imports] shared/types -> shared/lib imports",
+    heading: "[shared-types-imports] shared/types modules must not import shared/lib modules",
+    violations: sharedTypesBoundaryViolations.map(
+      (violation) => `${relative(process.cwd(), violation.file)}:${violation.line} imports ${violation.source}`,
+    ),
+  });
 
   process.exit(1);
 }

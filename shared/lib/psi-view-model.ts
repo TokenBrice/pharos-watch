@@ -43,11 +43,11 @@ export function getDisplayedPsiBasis(current: PsiCurrentLike): "rolling 24h avg"
   return current.avg24h != null ? "rolling 24h avg" : "raw instant";
 }
 
-export function getPsiTodayMidnight(computedAt: number): number {
+function getPsiTodayMidnight(computedAt: number): number {
   return computedAt - (computedAt % DAY_SECONDS);
 }
 
-export function getCompletedPsiHistory<T extends PsiHistoryPointLike>(
+function getCompletedPsiHistory<T extends PsiHistoryPointLike>(
   history: T[],
   currentComputedAt: number,
 ): T[] {

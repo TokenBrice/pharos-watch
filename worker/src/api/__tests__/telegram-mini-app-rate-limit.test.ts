@@ -8,16 +8,10 @@ import {
   TELEGRAM_MINI_APP_MUTATION_BURST_LIMIT,
   TELEGRAM_MINI_APP_MUTATION_BURST_WINDOW_SEC,
 } from "../telegram-mini-app-rate-limit";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function openDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

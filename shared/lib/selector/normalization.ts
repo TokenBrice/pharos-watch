@@ -5,7 +5,7 @@
  *
  * Binding: `agents/impl-plan-drafts/02-engine.md` §5.
  */
-import { clamp } from "../math";
+import { clamp, hhiToDiversityScore } from "../math";
 import type { BluechipGrade } from "../../types";
 
 const BLUECHIP_LADDER: Record<BluechipGrade, number> = {
@@ -93,5 +93,5 @@ export function bluechip(grade: BluechipGrade | null): number | null {
 /** HHI 0–1 (higher = more concentrated) → diversity score 0–100. */
 export function hhiToDiversity(hhi: number | null): number | null {
   if (hhi == null) return null;
-  return clamp((1 - hhi) * 100, 0, 100);
+  return hhiToDiversityScore(hhi);
 }

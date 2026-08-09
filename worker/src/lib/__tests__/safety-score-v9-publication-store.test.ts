@@ -11,6 +11,7 @@ import {
   persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
 } from "../safety-score-v9-publication-store";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const databases: DatabaseSync[] = [];
 
@@ -18,14 +19,7 @@ function database(): {
   sqlite: DatabaseSync;
   db: D1Database;
 } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   databases.push(sqlite);
   return { sqlite, db: createSqliteD1(sqlite) };
 }

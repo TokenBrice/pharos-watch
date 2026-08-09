@@ -8,9 +8,8 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   makeOnchainCallers,
-  requireJsonInputFromConfig,
   reserveDegradedWarning,
   reserveInfoWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
@@ -204,8 +203,7 @@ export async function fetchSkyMakercoreReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "sky-makercore");
-  const payload = await fetchJsonWithRetry<BlockAnaliticaGroupsResponse>(primaryInput.url, signal, 15_000, ctx);
+  const payload = await fetchJsonAdapterInput<BlockAnaliticaGroupsResponse>(config, "sky-makercore", signal, 15_000, ctx);
 
   const groups = payload.results;
   if (!Array.isArray(groups) || groups.length === 0) {

@@ -7,11 +7,10 @@ import { observeFpiControllerRedemptionRoute } from "./fpi-controller-redemption
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
-  parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
-  fetchJsonWithRetry,
   normalizeSlices,
+  parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
 } from "./helpers";
 
@@ -407,8 +406,7 @@ export async function fetchFraxBalanceSheetReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "frax-balance-sheet");
-  const payload = await fetchJsonWithRetry<FraxBalanceSheetResponse>(primaryInput.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<FraxBalanceSheetResponse>(config, "frax-balance-sheet", signal, 12_000, ctx);
 
   if (!isBalanceSheetResponse(payload)) {
     throw new Error("frax-balance-sheet adapter requires a v2 balance-sheet API response");
@@ -427,8 +425,7 @@ export async function fetchFraxFpiCollateralReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "frax-fpi-collateral");
-  const payload = await fetchJsonWithRetry<FraxFpiCollateralResponse>(primaryInput.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<FraxFpiCollateralResponse>(config, "frax-fpi-collateral", signal, 12_000, ctx);
 
   if (!isFpiCollateralResponse(payload)) {
     throw new Error("frax-fpi-collateral adapter requires the FPI collateral API response");

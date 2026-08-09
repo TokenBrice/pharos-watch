@@ -15,7 +15,7 @@ import {
   base64UrlToString,
   bytesToBase64Url,
   stringToBase64Url,
-} from "./base64url";
+} from "@shared/lib/base64url";
 import { parseJson } from "./json-parse";
 
 const V1_TOKEN_VERSION = 1;

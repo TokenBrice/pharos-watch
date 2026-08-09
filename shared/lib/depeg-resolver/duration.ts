@@ -103,6 +103,8 @@ function coinMedianRemainingDurations(comparable: DdrIncident[], ageSec: number)
     .sort((a, b) => a - b);
 }
 
+// Test seam (keep exported): the DDR duration suite pins the trainable-corpus
+// size directly; `computeDuration` cannot expose it. Not a production export.
 export function buildDurationTrainingCorpus(
   incidents: DdrIncident[],
   quarantined: Set<string>,

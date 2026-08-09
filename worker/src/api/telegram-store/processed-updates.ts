@@ -1,4 +1,4 @@
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { parseJson } from "../../lib/json-parse";
 import {
   TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC,

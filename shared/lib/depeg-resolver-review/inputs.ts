@@ -30,12 +30,6 @@ function hasMapLookup(
   return typeof (lookup as ReadonlyMap<number, DdrrActualEventInput | null | undefined>).get === "function";
 }
 
-export interface DdrrReviewBatchInput {
-  assessments: DdrrAssessmentInput[];
-  actualEventsById: DdrrActualEventLookup;
-  nowSec: number;
-}
-
 export interface DdrrV2CoverageInput {
   eventId: number;
   currentEventId?: number | null;

@@ -3,7 +3,7 @@
   "status": "canonical",
   "purpose": "Canonical source-to-document routing for agents and change checks. Code, schemas, registries, and checked runtime data remain authoritative for behavior.",
   "baseDocs": ["docs/agent-task-router.md"],
-  "coreRules": ["Prefer the smallest root-cause fix; avoid unrelated refactors.", "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.", "Do not add manual/on-chain/CMC/DEX supply overrides; primary supply remains DefiLlama with the existing fallback path.", "Keep Tailwind classes as static strings.", "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."],
+  "coreRules": ["Prefer the smallest root-cause fix; avoid unrelated refactors.", "Update matching docs for behavior, API, pipeline, methodology, or data-source changes.", "Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.", "Keep Tailwind classes as static strings.", "Do not edit shadcn primitives in src/components/ui/ unless explicitly required."],
   "taskFamilies": [
     {
       "id": "stablecoin-registry",
@@ -12,7 +12,7 @@
       "docsToRead": ["docs/stablecoin-data.md", "docs/listing-policy.md", "docs/classification.md", "docs/shadow-stablecoins.md", "shared/data/stablecoins/AGENTS.md"],
       "docsLikelyRequired": ["docs/about-page.md", "docs/listing-policy.md", "docs/classification.md", "feature methodology docs when behavior changes"],
       "checks": ["npm run check:stablecoin-data", "npm run check:commit-derived-artifacts after base coin source commits", "vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
-      "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Commit base coin sources before final sitemap-date generation.", "Do not add manual supply overrides."],
+      "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Commit base coin sources before final sitemap-date generation.", "Do not add ad hoc supply overrides outside documented fail-closed admission paths."],
       "prefixes": ["shared/data/stablecoins/", "shared/lib/stablecoins/"],
       "exactPaths": ["shared/lib/stablecoin-id-registry.ts", "shared/lib/classification.ts"]
     },

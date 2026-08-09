@@ -143,6 +143,17 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: ["shared/data/stablecoins/coins/**", "shared/data/stablecoins/domains/**"],
   }),
   generatedArtifact({
+    id: "agents-doc",
+    checkCommand: "node scripts/maintenance/generate-agents-doc.mjs --check",
+    command: "node scripts/maintenance/generate-agents-doc.mjs",
+    bootstrap: true,
+    outputPaths: ["AGENTS.md"],
+    phase: 0,
+    reproducibility: "deterministic",
+    script: "scripts/maintenance/generate-agents-doc.mjs",
+    sourcePaths: ["CLAUDE.md"],
+  }),
+  generatedArtifact({
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",

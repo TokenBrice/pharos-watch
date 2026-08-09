@@ -10,6 +10,7 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mjs";
 import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -681,7 +682,7 @@ function buildWarnings(changedFiles) {
     warnings.push("D1 migrations are applied before the new Worker is live; keep them backward-compatible.");
   }
   if (changedFiles.some((file) => file === "AGENTS.md" || file === "CLAUDE.md")) {
-    warnings.push("AGENTS.md and CLAUDE.md must stay synchronized.");
+    warnings.push("AGENTS.md is generated from CLAUDE.md; edit CLAUDE.md and run node scripts/maintenance/generate-agents-doc.mjs.");
   }
   if (changedFiles.some((file) => file.startsWith("shared/data/stablecoins/"))) {
     warnings.push("Stablecoin data changes must not introduce manual supply overrides.");
@@ -693,24 +694,27 @@ function getRepoChangedFiles({ baseRef, execFile = execFileSync, headRef, staged
   if (baseRef || headRef) {
     const base = baseRef || "origin/main";
     const head = headRef || "HEAD";
-    const raw = execFile("git", ["diff", "--name-only", `${base}...${head}`], {
+    const raw = execFile("git", ["diff", "--name-only", "-z", `${base}...${head}`], {
       cwd: REPO_ROOT,
       encoding: "utf8",
     });
-    return raw.split(/\r?\n/g);
+    return splitNullDelimited(raw);
   }
 
   if (staged) {
-    const raw = execFile("git", ["diff", "--name-only", "--cached"], { cwd: REPO_ROOT, encoding: "utf8" });
-    return raw.split(/\r?\n/g);
+    const raw = execFile("git", ["diff", "--name-only", "--cached", "-z"], { cwd: REPO_ROOT, encoding: "utf8" });
+    return splitNullDelimited(raw);
   }
 
-  const trackedRaw = execFile("git", ["diff", "--name-only", "HEAD", "--"], { cwd: REPO_ROOT, encoding: "utf8" });
-  const untrackedRaw = execFile("git", ["ls-files", "--others", "--exclude-standard"], {
+  const trackedRaw = execFile("git", ["diff", "--name-only", "-z", "HEAD", "--"], {
     cwd: REPO_ROOT,
     encoding: "utf8",
   });
-  return [...trackedRaw.split(/\r?\n/g), ...untrackedRaw.split(/\r?\n/g)];
+  const untrackedRaw = execFile("git", ["ls-files", "--others", "--exclude-standard", "-z"], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+  });
+  return [...splitNullDelimited(trackedRaw), ...splitNullDelimited(untrackedRaw)];
 }
 
 export function readChangedFiles(options = {}) {

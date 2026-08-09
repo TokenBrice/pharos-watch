@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/ops-limits";
 import { errorResponse } from "./api-response";
 import { bytesToHex } from "./hash";
-import { bytesToBase64Url } from "./base64url";
+import { bytesToBase64Url } from "@shared/lib/base64url";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const API_KEY_PREFIX_BYTES = 8;

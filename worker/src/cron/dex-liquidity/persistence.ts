@@ -11,7 +11,7 @@ import {
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -335,8 +335,10 @@ function canReuseHistoricalSnapshot(
   expectedScoredIds: ReadonlySet<string>,
   incomingRouteHistoryIds: ReadonlySet<string>,
 ): boolean {
+  // `idx_dex_hist_coin_date_unique` makes (stablecoin_id, snapshot_date) unique, so the row
+  // list for one snapshot date is already one row per identity.
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
-  if (activeIds.size !== rows.length || !setsEqual(activeIds, expectedActiveIds)) return false;
+  if (!setsEqual(activeIds, expectedActiveIds)) return false;
 
   const scoredIds = new Set(rows.filter((row) => row.liquidity_score != null).map((row) => row.stablecoin_id));
   if (!setsEqual(scoredIds, expectedScoredIds)) return false;

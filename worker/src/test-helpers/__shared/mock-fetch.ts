@@ -1,13 +1,13 @@
 import { vi, type Mock } from "vitest";
 
-export interface MockResponseRoute {
+interface MockResponseRoute {
   match: string;
   body: unknown;
   status?: number;
   headers?: Record<string, string>;
 }
 
-export interface MockReplayRoute {
+interface MockReplayRoute {
   match: string;
   /** Ordered results to replay for this route. */
   outcomes: MockFetchOutcome[];
@@ -16,17 +16,17 @@ export interface MockReplayRoute {
   headers?: never;
 }
 
-export type MockRoute = MockResponseRoute | MockReplayRoute;
+type MockRoute = MockResponseRoute | MockReplayRoute;
 
-export interface MockResponseOutcome {
+interface MockResponseOutcome {
   body: unknown;
   status?: number;
   headers?: Record<string, string>;
 }
 
-export type MockFetchOutcome = MockResponseOutcome | Error | { stall: true };
+type MockFetchOutcome = MockResponseOutcome | Error | { stall: true };
 
-export interface MockFetchOptions {
+interface MockFetchOptions {
   /** Require every fetch URL to match a configured route. */
   requireMatch?: boolean;
   /** Match the full request URL exactly instead of substring search. */
@@ -37,14 +37,14 @@ export interface MockFetchOptions {
 
 type MockFetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-export interface MockFetchHistoryEntry {
+interface MockFetchHistoryEntry {
   url: string;
   method: string;
   headers: Record<string, string>;
   body: string | null;
 }
 
-export type MockFetchSpy = Mock<MockFetchFn> & {
+type MockFetchSpy = Mock<MockFetchFn> & {
   getHistory(): MockFetchHistoryEntry[];
   assertAllRoutesUsed(): void;
   assertAllOutcomesUsed(): void;

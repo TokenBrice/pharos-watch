@@ -9,16 +9,10 @@ import {
   TELEGRAM_CHAT_FLOOD_UPSERT_SQL,
 } from "../telegram-store/processed-updates";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    )
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

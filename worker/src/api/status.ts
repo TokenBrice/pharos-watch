@@ -23,7 +23,6 @@ import { runAdminRoute } from "../lib/route-wrappers";
 import { SCHEDULED_TASK_DESCRIPTORS } from "@shared/lib/scheduled-runner-registry";
 import type { ProducerHeadStatus } from "@shared/types/status";
 import { loadProducerHeads } from "../lib/producer-history";
-import type { WorkerJobLedgerMode } from "../lib/job-ledger";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 
 type StatusSnapshotFallbackReason = Exclude<StatusRawSnapshotLoadResult["kind"], "fresh"> | "bypassed";
@@ -123,23 +122,16 @@ function statusSnapshotSectionError(
 async function resolveRawStatusForResponse(
   db: D1Database,
   now: number,
-  workerJobLedgerMode: WorkerJobLedgerMode,
-  workerJobLedgerAllowlist: readonly string[],
   request?: Request,
 ): Promise<ResolvedRawStatus> {
   if (shouldBypassStatusSnapshot(request)) {
     return {
-      raw: await computeRawStatus(db, now, { workerJobLedgerMode, workerJobLedgerAllowlist }),
+      raw: await computeRawStatus(db, now),
       snapshotFallbackReason: "bypassed",
     };
   }
 
-  const snapshot = await loadStatusRawSnapshot(
-    db,
-    now,
-    workerJobLedgerMode,
-    workerJobLedgerAllowlist,
-  );
+  const snapshot = await loadStatusRawSnapshot(db, now);
   if (snapshot.kind === "fresh") {
     return {
       raw: snapshot.raw,
@@ -148,7 +140,7 @@ async function resolveRawStatusForResponse(
   }
 
   return {
-    raw: await computeRawStatus(db, now, { workerJobLedgerMode, workerJobLedgerAllowlist }),
+    raw: await computeRawStatus(db, now),
     snapshotFallbackReason: snapshot.kind,
     snapshotError: snapshot.error,
   };
@@ -160,8 +152,6 @@ export function handleStatus(
   request?: Request,
   coingeckoApiKey?: string | null,
   cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
-  workerJobLedgerMode: WorkerJobLedgerMode = "off",
-  workerJobLedgerAllowlist: readonly string[] = [],
   workerCanaryMode: WorkerCanaryMode = "off",
 ): Promise<Response> {
   return runAdminRoute(
@@ -176,13 +166,7 @@ export function handleStatus(
         raw,
         snapshotFallbackReason,
         snapshotError,
-      } = await resolveRawStatusForResponse(
-        db,
-        now,
-        workerJobLedgerMode,
-        workerJobLedgerAllowlist,
-        request,
-      );
+      } = await resolveRawStatusForResponse(db, now, request);
       const persistenceIssues: StatusPersistenceIssue[] = [];
       const collectPersistenceIssue = (issue: StatusPersistenceIssue) => {
         persistenceIssues.push(issue);

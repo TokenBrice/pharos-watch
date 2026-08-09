@@ -42,7 +42,6 @@ function buildTopPools(
   if (!topPoolsJson) return null;
 
   const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(topPoolsJson, {
-    mode: "degraded",
     updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",

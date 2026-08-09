@@ -1,4 +1,4 @@
-import { cloneRedemptionBackstopConfig, cloneRedemptionDocSource, type RedemptionBackstopConfig } from "./shared";
+import { cloneRedemptionBackstopConfig, type RedemptionBackstopConfig } from "./shared";
 
 export interface RedemptionBackstopRegistryEntry {
   id: string;
@@ -56,40 +56,6 @@ export function defineBatch(
     config,
     ...(options?.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
   }));
-}
-
-export function defineOverride(
-  id: string,
-  base: RedemptionBackstopConfig,
-  overrides: Partial<RedemptionBackstopConfig>,
-  reason: string,
-  options?: { sourceFilePath?: string },
-): RedemptionBackstopRegistryEntry {
-  if (!reason.trim()) {
-    throw new Error(`Redemption backstop config override for "${id}" requires a reason.`);
-  }
-
-  return {
-    id,
-    config: {
-      ...cloneRedemptionBackstopConfig(base),
-      ...overrides,
-      ...(overrides.capacityModel ? { capacityModel: { ...overrides.capacityModel } } : {}),
-      ...(overrides.costModel ? { costModel: { ...overrides.costModel } } : {}),
-      ...(overrides.v9ComposedDexExit
-        ? {
-            v9ComposedDexExit: {
-              ...overrides.v9ComposedDexExit,
-              docs: overrides.v9ComposedDexExit.docs.map(cloneRedemptionDocSource),
-            },
-          }
-        : {}),
-      ...(overrides.docs ? { docs: overrides.docs.map(cloneRedemptionDocSource) } : {}),
-      ...(overrides.notes ? { notes: [...overrides.notes] } : {}),
-    },
-    overrideReason: reason,
-    ...(options?.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
-  };
 }
 
 /**

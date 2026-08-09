@@ -6,7 +6,6 @@ describe("decodeJsonString", () => {
     const result = decodeJsonString<{ value: number }, "missing" | "json-parse-failed" | "invalid-shape">(
       JSON.stringify({ value: 42 }),
       {
-        mode: "strict",
         updatedAt: 1_700_000_000,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
@@ -26,7 +25,6 @@ describe("decodeJsonString", () => {
 
     expect(result).toEqual({
       ok: true,
-      mode: "strict",
       reason: null,
       payload: { value: 42 },
       updatedAt: 1_700_000_000,
@@ -37,7 +35,6 @@ describe("decodeJsonString", () => {
     const result = decodeJsonString<{ value: number }, "missing" | "json-parse-failed" | "invalid-shape">(
       "{bad-json",
       {
-        mode: "strict",
         updatedAt: 1_700_000_000,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
@@ -47,7 +44,6 @@ describe("decodeJsonString", () => {
 
     expect(result).toEqual({
       ok: false,
-      mode: "strict",
       reason: "json-parse-failed",
       payload: null,
       updatedAt: 1_700_000_000,
@@ -58,7 +54,6 @@ describe("decodeJsonString", () => {
     const result = decodeJsonString<{ value: number }, "missing" | "json-parse-failed">(
       null,
       {
-        mode: "degraded",
         updatedAt: null,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
@@ -68,7 +63,6 @@ describe("decodeJsonString", () => {
 
     expect(result).toEqual({
       ok: false,
-      mode: "degraded",
       reason: "missing",
       payload: null,
       updatedAt: null,
@@ -79,7 +73,6 @@ describe("decodeJsonString", () => {
     const result = decodeJsonString<{ value: number }, "missing" | "json-parse-failed" | "invalid-shape">(
       JSON.stringify({ value: "oops" }),
       {
-        mode: "best-effort",
         parseErrorReason: "json-parse-failed",
         missingReason: "missing",
         normalize: () => ({ ok: false, reason: "invalid-shape", payload: { value: 0 } }),
@@ -88,7 +81,6 @@ describe("decodeJsonString", () => {
 
     expect(result).toEqual({
       ok: false,
-      mode: "best-effort",
       reason: "invalid-shape",
       payload: { value: 0 },
       updatedAt: null,
@@ -104,7 +96,6 @@ describe("decodeCachedJson", () => {
         updatedAt: 1_700_000_123,
       },
       {
-        mode: "strict",
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: (parsed) => {
@@ -123,7 +114,6 @@ describe("decodeCachedJson", () => {
 
     expect(result).toEqual({
       ok: true,
-      mode: "strict",
       reason: null,
       payload: { value: 7 },
       updatedAt: 1_700_000_123,

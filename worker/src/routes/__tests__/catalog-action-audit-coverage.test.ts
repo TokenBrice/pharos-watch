@@ -6,6 +6,7 @@ import { getCatalogActionAuditOwner } from "../../lib/catalog-action-audit";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { getRouteMatch } from "../registry";
 import type { FullRouteContext } from "../shared";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function makeContext(db: D1Database, request: Request): FullRouteContext {
   return {
@@ -32,22 +33,7 @@ describe("catalog action audit coverage", () => {
   });
 
   it("runs canonical auditing at the shared router boundary", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`
-      CREATE TABLE admin_action_audit (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        created_at INTEGER NOT NULL,
-        actor TEXT NOT NULL,
-        action TEXT NOT NULL,
-        target TEXT,
-        result TEXT NOT NULL,
-        http_status INTEGER,
-        details_json TEXT,
-        intent_key TEXT
-      );
-      CREATE UNIQUE INDEX idx_admin_action_audit_action_intent
-        ON admin_action_audit (action, intent_key) WHERE intent_key IS NOT NULL;
-    `);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     const db = createSqliteD1(sqlite);
     const endpoint = getEndpointDefinitionByKey("trigger-digest")!;
     const request = new Request("https://ops-api.pharos.watch/api/trigger-digest", {

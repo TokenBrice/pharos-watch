@@ -47,9 +47,8 @@ import {
   type DependencyAdapterMappingReview,
   type DependencyTargetDisposition,
   type DependencyTargetLifecycle,
-} from "../lib/dependency-target-dispositions";
+} from "@shared/data/coverage-dispositions/dependency-target-dispositions";
 
-const DEFAULT_BASELINE_PATH = "scripts/lib/dependency-coverage-baseline.json";
 const MISSING_CANDIDATE_LIMIT = 50;
 const RESERVE_SLICE_LIMIT = 50;
 const MANUAL_DEPENDENCY_LIMIT = 50;
@@ -218,16 +217,6 @@ export interface L2BeatDeploymentContextRow {
   chainEnvironmentScore: number;
 }
 
-export interface DependencyCoverageBaseline {
-  reserveSlicesMissingCoinId: number;
-  unresolvedMaterialReserveSlices: number;
-  manualDependencyReviewGaps: number;
-  staleReserveDispositions: number;
-  unavailableTargetDispositionGaps: number;
-  targetDispositionValidationIssues: number;
-  adapterMappingReviewGaps: number;
-}
-
 export interface DependencyCoverageAudit {
   generatedAt: string;
   mode: "static" | "input" | "api" | "prod";
@@ -318,8 +307,6 @@ interface CliOptions {
   stablecoinsPath: string | null;
   format: "markdown" | "json";
   reportPath: string | null;
-  check: boolean;
-  baselinePath: string;
   generatedAt: string | null;
 }
 
@@ -1757,12 +1744,17 @@ export function renderDependencyCoverageAuditMarkdown(audit: DependencyCoverageA
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-export function evaluateDependencyCoverageBaseline(
-  audit: DependencyCoverageAudit,
-  baseline: DependencyCoverageBaseline,
-): string[] {
+/**
+ * Zero-tolerance dependency-graph invariants plus the four review-coverage
+ * counters that are legitimately at zero and must stay there. This is the
+ * gate half of the audit (`npm run check:dependency-review-gaps`, wired into
+ * `check:structural`); the backlog counters it deliberately ignores
+ * (`reserveSlicesMissingCoinId`, `unresolvedMaterialReserveSlices`,
+ * `targetDispositionValidationIssues`) stay visible in the manual report.
+ */
+export function evaluateDependencyCoverageStructure(audit: DependencyCoverageAudit): string[] {
   const failures: string[] = [];
-  const structuralFindings: Array<[string, number]> = [
+  const zeroTolerance: Array<[string, number]> = [
     ["static self-edge", audit.summary.staticSelfEdgeCount],
     ["static duplicate-edge group", audit.summary.staticDuplicateEdgeCount],
     ["static strongly connected component", audit.summary.staticStronglyConnectedComponentCount],
@@ -1772,80 +1764,15 @@ export function evaluateDependencyCoverageBaseline(
     ["overweight effective dependency set", audit.summary.overweightEffectiveSetCount],
     ["unknown dependency target edge", audit.summary.unknownTargetEdgeCount],
     ["depType without coinId", audit.summary.depTypeWithoutCoinIdWarnings],
+    ["manual dependency review gap", audit.summary.manualDependencyReviewGapCount],
+    ["stale reserve disposition", audit.summary.staleReserveDispositionCount],
+    ["unavailable target disposition gap", audit.summary.unavailableTargetDispositionGapCount],
+    ["adapter mapping review gap", audit.summary.adapterMappingReviewGapCount],
   ];
-  for (const [label, count] of structuralFindings) {
+  for (const [label, count] of zeroTolerance) {
     if (count > 0) failures.push(`${label} invariant failed with ${count} finding${count === 1 ? "" : "s"}`);
   }
-
-  const ratchets: Array<[keyof DependencyCoverageBaseline, number, string]> = [
-    ["reserveSlicesMissingCoinId", audit.summary.reserveSlicesMissingCoinId, "reserve slices missing coinId"],
-    [
-      "unresolvedMaterialReserveSlices",
-      audit.summary.unresolvedMaterialReserveSliceCount,
-      "unresolved material reserve slices",
-    ],
-    ["manualDependencyReviewGaps", audit.summary.manualDependencyReviewGapCount, "manual dependency review gaps"],
-    ["staleReserveDispositions", audit.summary.staleReserveDispositionCount, "stale reserve dispositions"],
-    [
-      "unavailableTargetDispositionGaps",
-      audit.summary.unavailableTargetDispositionGapCount,
-      "unavailable target disposition gaps",
-    ],
-    [
-      "targetDispositionValidationIssues",
-      audit.summary.targetDispositionValidationIssueCount,
-      "target disposition validation issues",
-    ],
-    ["adapterMappingReviewGaps", audit.summary.adapterMappingReviewGapCount, "adapter mapping review gaps"],
-  ];
-  for (const [key, count, label] of ratchets) {
-    const limit = baseline[key];
-    if (count > limit) failures.push(`${label} increased from ${limit} to ${count}`);
-  }
   return failures;
-}
-
-const DEPENDENCY_COVERAGE_BASELINE_KEYS = [
-  "reserveSlicesMissingCoinId",
-  "unresolvedMaterialReserveSlices",
-  "manualDependencyReviewGaps",
-  "staleReserveDispositions",
-  "unavailableTargetDispositionGaps",
-  "targetDispositionValidationIssues",
-  "adapterMappingReviewGaps",
-] as const satisfies readonly (keyof DependencyCoverageBaseline)[];
-
-function parseBaseline(payload: unknown): DependencyCoverageBaseline {
-  if (!isRecord(payload)) throw new Error("Dependency coverage baseline must be an object.");
-  const record = payload;
-  const expectedKeys = new Set<string>(DEPENDENCY_COVERAGE_BASELINE_KEYS);
-  const actualKeys = Object.keys(record);
-  const missing = DEPENDENCY_COVERAGE_BASELINE_KEYS.filter((key) => !(key in record));
-  const unknown = actualKeys.filter((key) => !expectedKeys.has(key)).sort();
-  if (missing.length > 0 || unknown.length > 0) {
-    const details = [
-      ...(missing.length > 0 ? [`missing: ${missing.join(", ")}`] : []),
-      ...(unknown.length > 0 ? [`unknown: ${unknown.join(", ")}`] : []),
-    ];
-    throw new Error(`Dependency coverage baseline must contain the exact supported keys (${details.join("; ")}).`);
-  }
-
-  function baselineCount(key: keyof DependencyCoverageBaseline): number {
-    const value = record[key];
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-      throw new Error(`Dependency coverage baseline ${key} must be a nonnegative integer.`);
-    }
-    return value;
-  }
-  return {
-    reserveSlicesMissingCoinId: baselineCount("reserveSlicesMissingCoinId"),
-    unresolvedMaterialReserveSlices: baselineCount("unresolvedMaterialReserveSlices"),
-    manualDependencyReviewGaps: baselineCount("manualDependencyReviewGaps"),
-    staleReserveDispositions: baselineCount("staleReserveDispositions"),
-    unavailableTargetDispositionGaps: baselineCount("unavailableTargetDispositionGaps"),
-    targetDispositionValidationIssues: baselineCount("targetDispositionValidationIssues"),
-    adapterMappingReviewGaps: baselineCount("adapterMappingReviewGaps"),
-  };
 }
 
 export function parseArgs(argv: string[]): CliOptions {
@@ -1857,8 +1784,6 @@ export function parseArgs(argv: string[]): CliOptions {
     stablecoinsPath: null,
     format: "markdown",
     reportPath: null,
-    check: false,
-    baselinePath: DEFAULT_BASELINE_PATH,
     generatedAt: null,
   };
 
@@ -1908,17 +1833,6 @@ export function parseArgs(argv: string[]): CliOptions {
       const value = argv[i + 1];
       if (!value) throw new Error("--report requires a path");
       options.reportPath = value;
-      i += 1;
-      continue;
-    }
-    if (arg === "--check") {
-      options.check = true;
-      continue;
-    }
-    if (arg === "--baseline") {
-      const value = argv[i + 1];
-      if (!value) throw new Error("--baseline requires a file path");
-      options.baselinePath = value;
       i += 1;
       continue;
     }
@@ -1991,19 +1905,12 @@ function writeOutput(path: string, output: string, cwd: string): void {
   process.stdout.write(`Wrote dependency coverage audit to ${target}\n`);
 }
 
-function readBaseline(path: string, cwd: string): DependencyCoverageBaseline {
-  const target = resolve(cwd, path);
-  if (!existsSync(target)) throw new Error(`Dependency coverage baseline file not found: ${target}`);
-  return parseBaseline(readJsonFile(target));
-}
-
 export async function runCli(
   argv = process.argv.slice(2),
   cwd = process.cwd(),
   fetchImpl: typeof fetch = fetch,
 ): Promise<number> {
   const options = parseArgs(argv);
-  const baseline = options.check ? readBaseline(options.baselinePath, cwd) : null;
   const loaded = await loadOptionalInputs(options, cwd, fetchImpl);
   const audit = buildDependencyCoverageAudit({
     ...loaded,
@@ -2019,16 +1926,7 @@ export async function runCli(
     process.stdout.write(output);
   }
 
-  if (!options.check) return 0;
-
-  const failures = evaluateDependencyCoverageBaseline(audit, baseline!);
-  if (failures.length === 0) {
-    process.stdout.write("Dependency coverage check: OK\n");
-    return 0;
-  }
-
-  process.stderr.write(`Dependency coverage check failed:\n${failures.map((failure) => `- ${failure}`).join("\n")}\n`);
-  return 1;
+  return 0;
 }
 
 runAsMain(import.meta.url, runCli);

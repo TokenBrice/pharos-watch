@@ -13,19 +13,23 @@ import ts from "typescript";
 /**
  * Map a file extension to the TypeScript ScriptKind enum value.
  *
- * .tsx → TSX  |  .jsx → JSX  |  .ts / .mts → TS
- * .js / .mjs → JS  |  anything else → TS (safe default for unknown types)
+ * .tsx → TSX  |  .jsx → JSX  |  .ts / .mts / .cts → TS
+ * .js / .mjs / .cjs → JS  |  anything else → TS (safe default for unknown types)
  *
  * Note: check-client-registry-imports previously mapped .jsx → TSX.
  * The canonical mapping uses JSX, which is the correct ScriptKind for
  * .jsx files (TSX is for TypeScript JSX; JSX is for JavaScript JSX).
+ *
+ * Getting this wrong is not cosmetic: parsing a .tsx file without ScriptKind.TSX
+ * makes every JSX element a parse error, so scanners silently see an empty or
+ * truncated AST instead of failing.
  */
 export function getScriptKind(file) {
   const ext = extname(file);
   if (ext === ".tsx") return ts.ScriptKind.TSX;
   if (ext === ".jsx") return ts.ScriptKind.JSX;
-  if (ext === ".ts" || ext === ".mts") return ts.ScriptKind.TS;
-  if (ext === ".js" || ext === ".mjs") return ts.ScriptKind.JS;
+  if (ext === ".ts" || ext === ".mts" || ext === ".cts") return ts.ScriptKind.TS;
+  if (ext === ".js" || ext === ".mjs" || ext === ".cjs") return ts.ScriptKind.JS;
   return ts.ScriptKind.TS;
 }
 

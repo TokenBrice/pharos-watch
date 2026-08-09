@@ -7,7 +7,7 @@ import type {
 import { DISAMBIGUATION_TTL_SEC } from "../telegram-webhook-shared";
 import { throwIfAborted } from "../../lib/abort";
 import { dedupeCoins } from "../../lib/telegram-coin-dedupe";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import type { CronResult } from "../../lib/cron-logger";
 import { createCronResult } from "../../lib/cron-result";
 import { d1ChangeCount } from "./_internals";

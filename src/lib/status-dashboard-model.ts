@@ -9,6 +9,7 @@ import { getPollingWindow } from "@/hooks/use-api-query";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
+import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { getActivePriceCoverageImpactDetail, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
@@ -143,12 +144,6 @@ const STATUS_PRIORITY = {
   healthy: 0,
   degraded: 1,
   stale: 2,
-} as const;
-
-const SEVERITY_RANK = {
-  critical: 0,
-  warning: 1,
-  info: 2,
 } as const;
 
 const ISSUE_KIND_RANK: Record<DashboardIssueKind, number> = {
@@ -390,8 +385,8 @@ export function normalizeStatusIssues(
       existing != null &&
       cause.code === ACTIVE_PRICE_COVERAGE_CAUSE_CODE &&
       additionalCauses.includes(cause) &&
-      SEVERITY_RANK[cause.severity] === SEVERITY_RANK[existing.severity];
-    if (!existing || SEVERITY_RANK[cause.severity] < SEVERITY_RANK[existing.severity]) {
+      STATUS_CAUSE_SEVERITY_RANK[cause.severity] === STATUS_CAUSE_SEVERITY_RANK[existing.severity];
+    if (!existing || STATUS_CAUSE_SEVERITY_RANK[cause.severity] < STATUS_CAUSE_SEVERITY_RANK[existing.severity]) {
       deduped.set(id, cause);
     } else if (isRicherActivePriceCause) {
       deduped.set(id, {
@@ -421,7 +416,7 @@ export function normalizeStatusIssues(
     .sort((a, b) => {
       const kindDelta = ISSUE_KIND_RANK[a.kind] - ISSUE_KIND_RANK[b.kind];
       if (kindDelta !== 0) return kindDelta;
-      const severityDelta = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+      const severityDelta = STATUS_CAUSE_SEVERITY_RANK[a.severity] - STATUS_CAUSE_SEVERITY_RANK[b.severity];
       if (severityDelta !== 0) return severityDelta;
       return a.code.localeCompare(b.code);
     });

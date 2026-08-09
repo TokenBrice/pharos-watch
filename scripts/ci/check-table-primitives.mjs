@@ -3,7 +3,8 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, posix, relative, sep } from "node:path";
 import ts from "typescript";
-import { collectSourceFiles, formatScannedOk, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mjs";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
 import { parseSourceFile } from "../lib/ts-ast.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
@@ -348,19 +349,14 @@ export function collectTableInventory({
 }
 
 export function printTablePrimitiveReport(report) {
-  if (report.violations.length > 0) {
-    process.stderr.write("Table primitive adoption violations:\n\n");
-    for (const violation of report.violations) {
-      process.stderr.write(
-        `  ${violation.file}:${violation.line} [${violation.kind}] ${violation.reason}\n`,
-      );
-    }
-    process.stderr.write("\nUse src/components/table/ for visible product tables.\n");
-    return 1;
-  }
-
-  process.stdout.write(formatScannedOk("Table primitive adoption", report.scannedFiles.length));
-  return 0;
+  return reportViolations({
+    label: "Table primitive adoption",
+    violations: report.violations.map(
+      (violation) => `${violation.file}:${violation.line} [${violation.kind}] ${violation.reason}`,
+    ),
+    hint: "Use src/components/table/ for visible product tables.",
+    scannedCount: report.scannedFiles.length,
+  });
 }
 
 export function printTableInventory(entries, { json = false } = {}) {

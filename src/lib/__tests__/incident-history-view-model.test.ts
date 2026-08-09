@@ -203,41 +203,7 @@ describe("incident history view model", () => {
           productiveCount: 2,
         },
       ],
-      crons: {
-        digest: {
-          lastRun: null,
-          recentRuns: [],
-          expectedIntervalSec: 60,
-          healthy: true,
-          latestAttempt: {
-            attemptId: "attempt-1",
-            idempotencyKey: "idem-1",
-            scheduleKey: "daily",
-            job: "digest",
-            slotStartedAt: 3_000,
-            producerPath: "digest",
-            producerKind: "cron",
-            invocationId: "inv-2",
-            workerVersion: "worker-v1",
-            state: "completed",
-            statusClass: "ok",
-            attemptNo: 1,
-            owner: null,
-            leaseUntil: null,
-            queuedAt: 3_000,
-            claimedAt: 3_001,
-            startedAt: 3_002,
-            lastHeartbeatAt: 3_099,
-            finishedAt: 3_100,
-            updatedAt: 3_100,
-            durationMs: 98_000,
-            itemCount: 1,
-            stale: false,
-            error: null,
-          },
-        },
-      },
-    } satisfies Pick<StatusResponse, "producerHeads" | "crons">;
+    } satisfies Pick<StatusResponse, "producerHeads">;
 
     expect(deriveWorkerVersionEvidence(input)).toEqual({
       status: "observed",
@@ -246,7 +212,7 @@ describe("incident history view model", () => {
       sourceCount: 1,
       sources: ["producer:prices"],
     });
-    expect(deriveWorkerVersionEvidence({ producerHeads: [], crons: {} })).toEqual({
+    expect(deriveWorkerVersionEvidence({ producerHeads: [] })).toEqual({
       status: "unavailable",
       version: null,
       observedAt: null,

@@ -1,6 +1,6 @@
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -90,7 +90,7 @@ async function dispatchTelegramAlertsImpl(
   sharedState?: TelegramDispatchSharedState,
   reportProgress?: CronProgressReporter,
 ): Promise<{ itemCount: number; metadata: string }> {
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "circuit-check",
     message: "Checking Telegram API circuit",
     providerFamily: "telegram-api",
@@ -111,7 +111,7 @@ async function dispatchTelegramAlertsImpl(
       sharedState,
       reportProgress,
     });
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipped fresh Telegram dispatch because the API circuit is open",
       providerFamily: "telegram-api",
@@ -133,7 +133,7 @@ async function dispatchTelegramAlertsImpl(
   try {
     throwIfAborted(signal);
 
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "source-loading",
       message: "Loading Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
@@ -165,7 +165,7 @@ async function dispatchTelegramAlertsImpl(
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "source-loaded",
       message: "Loaded Telegram alert source snapshots",
       providerFamily: "telegram-dispatch",
@@ -232,7 +232,7 @@ async function dispatchTelegramAlertsImpl(
       return { itemCount: 0, metadata: JSON.stringify(result) };
     }
 
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "event-detection",
       message: "Detecting Telegram alert events",
       providerFamily: "telegram-dispatch",
@@ -288,7 +288,7 @@ async function dispatchTelegramAlertsImpl(
         signal,
       );
     }
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "event-detection-complete",
       message: "Completed Telegram alert event detection",
       providerFamily: "telegram-dispatch",

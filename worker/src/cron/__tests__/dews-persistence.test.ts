@@ -33,17 +33,7 @@ function buildDewsRow(stablecoinId: string): DewsComputedRow {
 }
 
 function openDailyHistoryDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE stress_signal_history (
-      stablecoin_id TEXT NOT NULL,
-      snapshot_date INTEGER NOT NULL,
-      score REAL NOT NULL,
-      band TEXT NOT NULL,
-      signals_json TEXT NOT NULL,
-      PRIMARY KEY (stablecoin_id, snapshot_date)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

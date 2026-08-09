@@ -107,7 +107,7 @@ jobs:
       - run: npm run check:verified-doc-links
       - run: npm run check:doc-source-paths
       - run: npm run check:doc-sync
-      - run: npm run check:agent-doc-sync
+      - run: npm run check:generated-artifacts -- --only=agents-doc
 
   gitleaks:
     name: Gitleaks PR scan
@@ -118,20 +118,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Install pinned gitleaks
-        env:
-          GITLEAKS_VERSION: 8.30.0
-          GITLEAKS_TARBALL_SHA256: 79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e
-        run: |
-          curl -fsSLo /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          echo "${GITLEAKS_TARBALL_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
-          chmod +x /tmp/gitleaks
+      # The gitleaks version + tarball SHA-256 pin lives only in
+      # scripts/ci/run-gitleaks.mjs, which downloads and checksum-verifies the
+      # pinned binary before scanning. Blocking gate (see the pr-gate job).
       - name: Scan PR commit range for secrets
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: /tmp/gitleaks git --no-banner --redact --exit-code 1 --log-opts="--no-merges ${BASE_SHA}..${HEAD_SHA}" .
+          GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
+          GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci/run-gitleaks.mjs --range
 
   pr-gate:
     name: PR gate

@@ -203,7 +203,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, undefined, "off", [], "status");
+    const res = await handleStatus(db, true, request, undefined, undefined, "status");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -272,7 +272,7 @@ describe("handleStatus", () => {
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus(db, true, request, undefined, undefined, "off", [], "status");
+    const res = await handleStatus(db, true, request, undefined, undefined, "status");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

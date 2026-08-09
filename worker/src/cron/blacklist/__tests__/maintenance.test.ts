@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../amount-repair-queue";
 import { migrateLegacyBlacklistIdentities } from "../legacy-identity-migration";
-import { boundBlacklistProviderFailureSamples, persistBlacklistProviderScanTelemetry } from "../provider-telemetry";
 
 describe("blacklist maintenance foundations", () => {
   it("queues unresolved amounts and records bounded retry backoff", async () => {
@@ -75,44 +74,5 @@ describe("blacklist maintenance foundations", () => {
     expect(history.some((entry) => entry.sql.includes("blacklist-legacy-balance-identity-copy"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("blacklist-legacy-balance-identity-delete"))).toBe(true);
     expect(history.map((entry) => entry.sql).join("\n")).not.toContain("DELETE FROM blacklist_events");
-  });
-
-  it("bounds retained provider failure samples and persists call/depth telemetry", async () => {
-    expect(boundBlacklistProviderFailureSamples(["first\nline", "x".repeat(200), "third", "fourth", "fifth"])).toEqual([
-      "first line",
-      "x".repeat(120),
-      "third",
-      "fourth",
-    ]);
-
-    const db = mockD1();
-    const written = await persistBlacklistProviderScanTelemetry(
-      db,
-      [
-        {
-          configKey: "arbitrum-contract",
-          chainId: "arbitrum",
-          providerMode: "rpc-or-topics",
-          coverageOutcome: "complete",
-          fromCursor: 480_000_000,
-          scannedToCursor: 480_025_000,
-          safeHead: 482_000_000,
-          fetchedRowCount: 13,
-          insertedRowCount: 13,
-          providerCallCount: 4,
-          maxSplitDepth: 2,
-          failureSamples: ["bounded"],
-          observedAt: 1_700_000_000,
-        },
-      ],
-      1_700_000_000,
-    );
-
-    expect(written).toBe(1);
-    const insert = db.getHistory().find((entry) => entry.sql.includes("blacklist-provider-scan-telemetry-insert"));
-    expect(insert?.binds).toContain(4);
-    expect(insert?.binds).toContain(2);
-    expect(insert?.binds).toContain('["bounded"]');
-    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-provider-scan-telemetry-prune"))).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { getScriptKind } from "./ts-ast.mjs";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import {
@@ -938,7 +939,7 @@ function validateStaticConfigSourceFile(
 ): void {
   const sourceText = sourceTextByPath.get(filePath);
   if (sourceText == null) return;
-  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true);
+  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, getScriptKind(filePath));
   const registryEntries: { id: string; kind: "expandIds" | "property" }[] = [];
 
   function visit(node: ts.Node): void {

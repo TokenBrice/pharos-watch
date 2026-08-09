@@ -3,10 +3,9 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
-  requireJsonInputFromConfig,
   slicesFromPercentages,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -156,8 +155,7 @@ export async function fetchTetherTransparencyReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, ADAPTER_NAME);
-  const payload = await fetchJsonWithRetry<TetherTransparencyResponse>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<TetherTransparencyResponse>(config, ADAPTER_NAME, signal, 12_000, ctx);
   const params = parseLiveReserveAdapterParams("tether-transparency", config.params);
   return adaptTetherTransparency(payload, params);
 }

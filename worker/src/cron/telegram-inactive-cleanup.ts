@@ -2,7 +2,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
 import { forgetSubscriber } from "../api/telegram-store/forget";
-import { runBoundedQueue } from "./shared/bounded-queue";
+import { mapWithConcurrency } from "../lib/concurrency";
 
 /**
  * Weekly cleanup of inactive Telegram subscribers.
@@ -131,15 +131,15 @@ export async function runTelegramInactiveCleanup(
   const candidates = await loadCandidateChats(db, cutoffSec, MAX_DELETIONS_PER_RUN);
   throwIfAborted(signal);
 
-  const deletionResults = await runBoundedQueue({
-    items: candidates,
-    concurrency: 1,
-    signal,
-    worker: async (chatId) => {
+  const deletionResults = await mapWithConcurrency(
+    candidates,
+    1,
+    async (chatId) => {
       await forgetSubscriber(db, chatId);
       return 1;
     },
-  });
+    { signal },
+  );
   const deleted = deletionResults.reduce((sum, count) => sum + count, 0);
 
   await setCache(db, CACHE_LAST_RUN_KEY, String(now));

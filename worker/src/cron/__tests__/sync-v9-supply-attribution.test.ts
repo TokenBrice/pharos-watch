@@ -1,11 +1,9 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createSupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   buildNativeV9InputCacheEntry,
   NATIVE_V9_INPUT_CACHE_KEY,
@@ -38,21 +36,9 @@ vi.mock(
 const { syncSafetyScoreV9SupplyAttribution } =
   await import("../sync-v9-supply-attribution");
 
-const JOURNAL_MIGRATION = readFileSync(
-  join(
-    process.cwd(),
-    "worker/src/test-helpers/migration-fixtures/0223_safety_score_v9_supply_attribution_journal.sql",
-  ),
-  "utf8",
-);
 
 function openDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(
-    "CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)",
-  );
-  sqlite.exec(JOURNAL_MIGRATION);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 describe("syncSafetyScoreV9SupplyAttribution", () => {

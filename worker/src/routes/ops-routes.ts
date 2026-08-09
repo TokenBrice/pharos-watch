@@ -10,8 +10,6 @@ export const OPS_STATIC_ROUTES = [
           request,
           coingeckoApiKey,
           cloudflareD1StatusBindings,
-          workerJobLedgerMode,
-          workerJobLedgerAllowlist,
           workerCanaryMode,
         }) =>
           handleStatus(
@@ -20,8 +18,6 @@ export const OPS_STATIC_ROUTES = [
             request,
             coingeckoApiKey,
             cloudflareD1StatusBindings,
-            workerJobLedgerMode,
-            workerJobLedgerAllowlist,
             workerCanaryMode,
           ),
     ),

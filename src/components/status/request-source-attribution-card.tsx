@@ -66,7 +66,6 @@ export function RequestSourceAttributionCard({
 
   return (
     <PublicSignalCard
-      variant="panel"
       title="Site vs external demand"
       titleBadges={
         stats ? (

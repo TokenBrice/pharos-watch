@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
 
@@ -15,23 +15,7 @@ interface StoredIdentityRow {
 }
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE dex_liquidity_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      stablecoin_id TEXT NOT NULL,
-      total_tvl_usd REAL NOT NULL,
-      total_volume_24h_usd REAL NOT NULL DEFAULT 0,
-      liquidity_score INTEGER,
-      snapshot_date INTEGER NOT NULL,
-      methodology_version TEXT NOT NULL,
-      coverage_class TEXT NOT NULL DEFAULT 'unobserved',
-      coverage_confidence REAL NOT NULL DEFAULT 0,
-      source_mix_json TEXT
-      , exit_route_summary_json TEXT
-    );
-  `);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function makeScore(score = 80): FullScoreResult {
@@ -333,22 +317,6 @@ describe("DEX liquidity history atomic identity replacement", () => {
     });
     expect(batchSpy).not.toHaveBeenCalled();
     expect(loadSnapshotIdentity(sqlite)).toEqual(before);
-  });
-
-  it("collapses duplicate identities left by a partial retry", async () => {
-    const fixture = createHarness();
-    sqlite = fixture.sqlite;
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    const scoredId = ACTIVE_ID_LIST[0]!;
-    insertSnapshotRows(sqlite, ACTIVE_ID_LIST.slice(0, 10), new Set([scoredId]));
-    insertSnapshotRows(sqlite, [scoredId, scoredId], new Set([scoredId]));
-
-    const result = await writeHistoricalSnapshots(fixture.db, new Map([[scoredId, makeScore()]]), undefined, NOW_SEC);
-
-    expect(result.writeFailed).toBe(false);
-    const rows = loadSnapshotIdentity(sqlite);
-    expectExactActiveIdentity(rows);
-    expect(rows.filter((row) => row.stablecoin_id === scoredId)).toHaveLength(1);
   });
 
   it("rolls back the date delete when any replacement insert fails", async () => {

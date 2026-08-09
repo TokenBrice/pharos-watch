@@ -3,12 +3,18 @@ import {
   CRON_ABANDONED_JOB_GRACE_MS,
   CronJobAbandonedError,
   CronTimeoutError,
-  cacheKeySegment,
+} from "./cron-lease-primitives";
+import {
   getCronTimeoutBudgetMetadata,
   resolveCronTimeoutBudget,
-  runWithOverloadRetry,
   type ResolvedCronTimeoutBudget,
-} from "./cron-lease";
+} from "./cron-timeouts";
+import {
+  runWithOverloadRetry,
+} from "./d1-overload-retry";
+import {
+  cacheKeySegment,
+} from "./scheduled-slot-fence";
 import { setCache } from "./db-cache";
 import {
   recordProducerOutcome,
@@ -237,7 +243,7 @@ export interface CronResult {
   error?: string;
   /**
    * Affirmative discriminant set only on results produced by the cron-stage
-   * abort builders (see `buildAbortedCronStageResult`). Lets `isAbortResult`
+   * abort builders (see `abortResult` in `sync-stablecoins/runtime.ts`). Lets `isAbortResult`
    * identify the abort sentinel without relying on the absence of fields from
    * other stage result shapes.
    */

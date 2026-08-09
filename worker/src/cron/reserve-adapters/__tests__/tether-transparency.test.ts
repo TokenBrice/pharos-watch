@@ -9,7 +9,7 @@ vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   return {
     ...actual,
-    fetchJsonWithRetry: vi.fn(),
+    fetchJsonAdapterInput: vi.fn(),
   };
 });
 
@@ -19,7 +19,7 @@ import {
   type TetherTransparencyParams,
   type TetherTransparencyResponse,
 } from "../tether-transparency";
-import { fetchJsonWithRetry } from "../helpers";
+import { fetchJsonAdapterInput } from "../helpers";
 import { validateAdapterOutput } from "../validate";
 import { getReserveAdapter } from "../index";
 
@@ -184,13 +184,14 @@ describe("adaptTetherTransparency", () => {
 
 describe("fetchTetherTransparencyReserves", () => {
   it("fetches the shared transparency.json endpoint and adapts the usdt entry", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
     const config = makeConfig(USDT_PARAMS);
 
     const result = await fetchTetherTransparencyReserves(makeCoin("usdt-tether"), config, signal);
 
-    expect(fetchJsonWithRetry).toHaveBeenCalledWith(
-      "https://tether.to/transparency.json",
+    expect(fetchJsonAdapterInput).toHaveBeenCalledWith(
+      config,
+      "tether-transparency",
       signal,
       12_000,
       undefined,
@@ -199,7 +200,7 @@ describe("fetchTetherTransparencyReserves", () => {
   });
 
   it("fetches the same endpoint and adapts the xaut entry when configured", async () => {
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
+    vi.mocked(fetchJsonAdapterInput).mockResolvedValue(TETHER_TRANSPARENCY_FIXTURE);
     const config = makeConfig(XAUT_PARAMS);
 
     const result = await fetchTetherTransparencyReserves(makeCoin("xaut-tether"), config, signal);
@@ -210,7 +211,7 @@ describe("fetchTetherTransparencyReserves", () => {
   });
 
   it("propagates an error when the endpoint request fails", async () => {
-    vi.mocked(fetchJsonWithRetry).mockRejectedValue(new Error("HTTP 500 for https://tether.to/transparency.json"));
+    vi.mocked(fetchJsonAdapterInput).mockRejectedValue(new Error("HTTP 500 for https://tether.to/transparency.json"));
     const config = makeConfig(USDT_PARAMS);
 
     await expect(fetchTetherTransparencyReserves(makeCoin("usdt-tether"), config, signal)).rejects.toThrow(

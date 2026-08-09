@@ -283,7 +283,7 @@ export function buildStablecoinsSyncResult(input: {
   stalenessCheckFailureReason?: string;
   supplyGapReconciliation?: SupplyGapReconciliationResult | null;
   trackedCoverage?: TrackedCoverageRestoreResult | null;
-  gtProbe: { updatedCount: number; stats: GtProbeStats };
+  gtProbe: { stats: GtProbeStats };
   depegErrorCount: number;
   depegErrors: string[];
   upstreamFetchOk?: boolean;
@@ -340,10 +340,7 @@ export function buildStablecoinsSyncResult(input: {
     enrichment: compactDiagnosticValue(input.enrichStats),
     authoritativeOverrides: input.authoritativeOverrideCount ?? 0,
     authoritativeOverrideStats: compactDiagnosticValue(input.authoritativeOverrideStats),
-    gtProbe: {
-      updatedCount: input.gtProbe.updatedCount,
-      ...compactDiagnosticValue(input.gtProbe.stats) as Record<string, unknown>,
-    },
+    gtProbe: compactDiagnosticValue(input.gtProbe.stats),
     priceValidation: compactDiagnosticValue(input.priceValidationStats),
     providerDiagnostics: compactDiagnosticValue(input.providerDiagnostics ?? []),
     rejectedPrices: input.rejectedCount,

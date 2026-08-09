@@ -38,7 +38,6 @@ export interface SelectorQuestionCardProps<TValue extends string> {
   softConfirmation?: SelectorQuestionCardSoftConfirmation<TValue>;
   onBack?: () => void;
   onNext?: () => void;
-  nextLabel?: string;
   showActions?: boolean;
   /** Optional content rendered above the option grid (e.g. tooltips). */
   helper?: ReactNode;
@@ -72,15 +71,6 @@ function matchesSoftConfirmation<TValue extends string>(
   return active === trigger;
 }
 
-function nextLabelFor({
-  step,
-  totalSteps,
-  custom,
-}: { step: number; totalSteps: number; custom?: string }): string {
-  if (custom) return custom;
-  return step === totalSteps ? "See my shortlist" : "Next";
-}
-
 /**
  * One wizard question card. Renders <fieldset><legend>...</legend></fieldset>
  * with native radio or checkbox semantics.
@@ -105,7 +95,6 @@ function SelectorQuestionCardInner<TValue extends string>(
     softConfirmation,
     onBack,
     onNext,
-    nextLabel,
     showActions = true,
     helper,
   } = props;
@@ -258,7 +247,7 @@ function SelectorQuestionCardInner<TValue extends string>(
               "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:border-border/55 disabled:bg-muted/50 disabled:text-muted-foreground sm:min-h-9",
             )}
           >
-            {nextLabelFor({ step, totalSteps, custom: nextLabel })}
+            {step === totalSteps ? "See my shortlist" : "Next"}
           </button>
         </div>
       ) : null}

@@ -35,12 +35,9 @@ function makeCronHealth(
     staleCronArtifacts: 0,
     expiredCronLeases: 0,
     orphanedCronProgressRows: 0,
-    activeJobAttempts: 0,
-    staleJobAttempts: 0,
     cronHistoryQueryFailed: false,
     cronProgressQueryFailed: false,
     cronLeaseQueryFailed: false,
-    jobAttemptQueryFailed: false,
     scheduledSlotEventMarkerQueryFailed: overrides?.scheduledSlotEventMarkerQueryFailed ?? false,
     scheduledSlots: {
       runningSlots: 0,

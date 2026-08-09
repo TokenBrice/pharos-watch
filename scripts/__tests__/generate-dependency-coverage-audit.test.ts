@@ -1,13 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import {
   buildDependencyCoverageAudit,
-  evaluateDependencyCoverageBaseline,
+  evaluateDependencyCoverageStructure,
   parseArgs,
   renderDependencyCoverageAuditMarkdown,
   runCli,
@@ -665,7 +662,7 @@ describe("generate-dependency-coverage-audit", () => {
     expect(markdown).toContain("Base Chain (base)");
   });
 
-  it("uses structural invariants and reviewed-gap ratchets without requiring edge-count growth", () => {
+  it("enforces zero-tolerance graph invariants and review gaps without requiring edge-count growth", () => {
     const withEdge = buildDependencyCoverageAudit({
       activeCoins: [
         coin({ id: "upstream", symbol: "UP" }),
@@ -675,20 +672,10 @@ describe("generate-dependency-coverage-audit", () => {
     const withoutWrongEdge = buildDependencyCoverageAudit({
       activeCoins: [coin({ id: "upstream", symbol: "UP" }), coin({ id: "dependent", symbol: "DEP" })],
     });
-    const baseline = {
-      reserveSlicesMissingCoinId: 0,
-      unresolvedMaterialReserveSlices: 0,
-      manualDependencyReviewGaps: 0,
-      staleReserveDispositions: 0,
-      unavailableTargetDispositionGaps: 0,
-      targetDispositionValidationIssues: 0,
-      adapterMappingReviewGaps: 0,
-    };
-
     expect(withEdge.summary.staticEdgeCount).toBe(1);
     expect(withoutWrongEdge.summary.staticEdgeCount).toBe(0);
-    expect(evaluateDependencyCoverageBaseline(withEdge, baseline)).toEqual([]);
-    expect(evaluateDependencyCoverageBaseline(withoutWrongEdge, baseline)).toEqual([]);
+    expect(evaluateDependencyCoverageStructure(withEdge)).toEqual([]);
+    expect(evaluateDependencyCoverageStructure(withoutWrongEdge)).toEqual([]);
 
     const linkageFailure = buildDependencyCoverageAudit({
       activeCoins: [coin({
@@ -696,11 +683,12 @@ describe("generate-dependency-coverage-audit", () => {
         reserves: [{ name: "Stablecoin basket", pct: 100, risk: "low", depType: "mechanism" }],
       })],
     });
-    expect(evaluateDependencyCoverageBaseline(linkageFailure, baseline)).toEqual([
+    // Reserve-slice backlog counters stay out of the gate; the linkage
+    // invariant is the only failure this audit shape is allowed to raise.
+    expect(evaluateDependencyCoverageStructure(linkageFailure)).toEqual([
       "depType without coinId invariant failed with 1 finding",
-      "reserve slices missing coinId increased from 0 to 1",
-      "unresolved material reserve slices increased from 0 to 1",
     ]);
+    expect(linkageFailure.summary.reserveSlicesMissingCoinId).toBe(1);
   });
 
   it("parses CLI options", () => {
@@ -710,16 +698,12 @@ describe("generate-dependency-coverage-audit", () => {
       "--stablecoins",
       "agents/stablecoins.json",
       "--json",
-      "--check",
-      "--baseline",
-      "agents/baseline.json",
     ])).toMatchObject({
       reportCardsPath: "agents/report-cards.json",
       stablecoinsPath: "agents/stablecoins.json",
       format: "json",
-      check: true,
-      baselinePath: "agents/baseline.json",
     });
+    expect(() => parseArgs(["--check"])).toThrow("Unknown argument: --check");
     expect(() => parseArgs(["--prod", "--api-base", "https://api.example.test"])).toThrow(
       "Choose only one of --prod or --api-base.",
     );
@@ -732,51 +716,6 @@ describe("generate-dependency-coverage-audit", () => {
     await expect(
       runCli(["--stablecoins", "agents/missing-stablecoins.json"], process.cwd()),
     ).rejects.toThrow("--stablecoins file not found");
-  });
-
-  it("requires an existing exact-shape baseline in check mode", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "dependency-coverage-baseline-"));
-    const baselinePath = join(cwd, "baseline.json");
-    const completeBaseline = {
-      reserveSlicesMissingCoinId: 10_000,
-      unresolvedMaterialReserveSlices: 10_000,
-      manualDependencyReviewGaps: 10_000,
-      staleReserveDispositions: 10_000,
-      unavailableTargetDispositionGaps: 10_000,
-      targetDispositionValidationIssues: 10_000,
-      adapterMappingReviewGaps: 10_000,
-    };
-
-    try {
-      await expect(runCli(["--check", "--baseline", "missing.json"], cwd)).rejects.toThrow(
-        "Dependency coverage baseline file not found",
-      );
-
-      const partial = { ...completeBaseline } as Record<string, number>;
-      delete partial.reserveSlicesMissingCoinId;
-      const malformed = [
-        { value: partial, message: "missing: reserveSlicesMissingCoinId" },
-        { value: { ...completeBaseline, staticEdgeCount: 1 }, message: "unknown: staticEdgeCount" },
-        {
-          value: { ...completeBaseline, reserveSlicesMissingCoinId: -1 },
-          message: "reserveSlicesMissingCoinId must be a nonnegative integer",
-        },
-      ];
-      for (const testCase of malformed) {
-        writeFileSync(baselinePath, `${JSON.stringify(testCase.value)}\n`, "utf8");
-        await expect(runCli(["--check", "--baseline", "baseline.json"], cwd)).rejects.toThrow(testCase.message);
-      }
-
-      writeFileSync(baselinePath, `${JSON.stringify(completeBaseline)}\n`, "utf8");
-      const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-      try {
-        await expect(runCli(["--check", "--baseline", "baseline.json", "--json"], cwd)).resolves.toBe(0);
-      } finally {
-        stdout.mockRestore();
-      }
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
   });
 
   it("sends site-origin headers when fetching prod site-data", async () => {

@@ -9,7 +9,7 @@ import {
 } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { executeAtomicBatch } from "./db";
 import { parseJson } from "./json-parse";
 import {

@@ -36,6 +36,7 @@ export type MethodologyContextKey =
   | "psiStressBreadth"
   | "psiTrend"
   | "safetyScore"
+  | "controlPosture"
   | "resilience"
   | "freezable"
   | "freezableUpstream"
@@ -124,6 +125,14 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
       "The published score follows the bounded-headroom pillar aggregate through peg and deployment adjustments, then applies any binding caps. Insufficient required evidence produces NR.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  },
+  controlPosture: {
+    title: "Control posture",
+    summary:
+      "A descriptive classification of where operational authority sits. It preserves a legacy metadata field for context and does not enter Safety Score V9.",
+    detail:
+      "V9 Economic Control uses reviewed mint, oracle, and bridge evidence instead of this classification.",
+    methodologyPath: "/methodology/#safety-scores-methodology",
   },
   resilience: {
     title: "Resilience",

@@ -15,6 +15,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
 import { PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { cn } from "@/lib/utils";
@@ -226,17 +227,18 @@ function CompactPriceTransparencyCard({
   ];
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Price transparency">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Price Transparency</h2>
-        {updatedAtLabel ? (
-          <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
+    <RailCard
+      title="Price Transparency"
+      ariaLabel="Price transparency"
+      trailing={
+        updatedAtLabel ? (
+          <RailStamp className="gap-1.5">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
             {updatedAtLabel}
-          </span>
-        ) : null}
-      </div>
-
+          </RailStamp>
+        ) : null
+      }
+    >
       <div className="px-4 pb-4">
         <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
           {coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A"}
@@ -299,7 +301,7 @@ function CompactPriceTransparencyCard({
           ))}
         </div>
       </div>
-    </section>
+    </RailCard>
   );
 }
 

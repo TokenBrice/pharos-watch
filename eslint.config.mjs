@@ -31,6 +31,80 @@ const apiPathRestrictedSyntax = [
   },
 ];
 
+// Everything outside `worker/` that ESLint lints. Kept as one list so the
+// ADR-2 frontend→worker ban and any block that overrides `no-restricted-imports`
+// for a subset of these paths stay in sync (flat config *replaces* a rule's
+// options when two config objects match the same file, it does not merge them).
+const NON_WORKER_SOURCE_GLOBS = [
+  "src/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+  "shared/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+  "scripts/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+  "functions/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+];
+
+// ADR-2, frontend→worker half: nothing under src/, shared/, scripts/ or
+// functions/ may reach into worker/src/. The reviewed exceptions are the
+// `BOUNDARY_WAIVERS` registry in `scripts/ci/check-worker-import-boundary.mjs`
+// (capped at MAX_BOUNDARY_WAIVERS, documented in
+// docs/process/boundary-waivers.md); that script cross-checks that every waived
+// file is ignored here, so the two lists cannot drift apart.
+const frontendToWorkerRestrictedImportPatterns = [
+  {
+    group: ["worker/src", "worker/src/**", "**/worker/src", "**/worker/src/**"],
+    message:
+      "ADR-2: src/, shared/, scripts/ and functions/ must not import worker/src/**. Promote runtime-neutral logic into shared/ instead, or add a reviewed entry to BOUNDARY_WAIVERS (docs/process/boundary-waivers.md).",
+  },
+];
+
+// Waived by docs/process/boundary-waivers.md → keep in sync with
+// BOUNDARY_WAIVERS in scripts/ci/check-worker-import-boundary.mjs.
+const FRONTEND_TO_WORKER_WAIVED_FILES = ["scripts/ci/check-frozen-invariants.ts"];
+
+// Cached StablecoinData current-supply reads in route/component/API code go
+// through `getCirculatingRaw()`; `sumPegBuckets` is the raw bucket adder and
+// belongs to the ingestion/normalization layer that builds those objects.
+const supplyHelperRestrictedImportPaths = [
+  {
+    name: "@shared/lib/supply",
+    importNames: ["sumPegBuckets"],
+    message: "Route/component/API StablecoinData current supply should use getCirculatingRaw(), not sumPegBuckets().",
+  },
+];
+
+// Raw-bucket parsers that legitimately sum peg buckets before a StablecoinData
+// object exists. Ported verbatim from the retired
+// `scripts/ci/check-supply-helper-usage.mjs` waiver list:
+//   - backfill-depegs-extraction.ts       — parses raw DefiLlama token-history bucket rows.
+//   - stablecoin-detail/cache-fallback.ts — sums a caller-provided fallback bucket map.
+//   - backfill-supply-history.ts          — normalizes raw DefiLlama detail/history bucket maps.
+const SUPPLY_HELPER_WAIVED_FILES = [
+  "worker/src/api/backfill-depegs-extraction.ts",
+  "worker/src/api/stablecoin-detail/cache-fallback.ts",
+  "worker/src/api/backfill-supply-history.ts",
+];
+
+const workerRestrictedImportPaths = [
+  // Bare "viem" re-exports clients/transports; force the codec-only entry point.
+  {
+    name: "viem",
+    message: "Worker code may only import pure ABI codecs from viem/utils, not bare viem (clients/transports).",
+  },
+];
+
+const workerRestrictedImportPatterns = [
+  {
+    group: ["@/lib/*", "src/lib/*", "../src/lib/*", "../../src/lib/*", "../../../src/lib/*", "../../../../src/lib/*"],
+    message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
+  },
+  {
+    // Worker only needs viem's pure ABI codecs from viem/utils. Any other viem
+    // subpath (clients/transports/actions) would pull the websocket transport
+    // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed.
+    group: ["viem/*", "!viem/utils"],
+    message: "Worker code may only import pure ABI codecs from viem/utils, not viem clients/transports.",
+  },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -113,36 +187,31 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": [
         "error",
+        { paths: workerRestrictedImportPaths, patterns: workerRestrictedImportPatterns },
+      ],
+    },
+  },
+  {
+    // Worker API handlers additionally answer to the canonical-supply rule. The
+    // three raw-bucket parsers are excluded from this block, which drops them
+    // back onto the plain worker restrictions above.
+    files: ["worker/src/api/**/*.{ts,tsx}"],
+    ignores: SUPPLY_HELPER_WAIVED_FILES,
+    rules: {
+      "no-restricted-imports": [
+        "error",
         {
-          // Bare "viem" re-exports clients/transports; force the codec-only entry point.
-          paths: [
-            {
-              name: "viem",
-              message: "Worker code may only import pure ABI codecs from viem/utils, not bare viem (clients/transports).",
-            },
-          ],
-          patterns: [
-            {
-              group: [
-                "@/lib/*",
-                "src/lib/*",
-                "../src/lib/*",
-                "../../src/lib/*",
-                "../../../src/lib/*",
-                "../../../../src/lib/*",
-              ],
-              message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
-            },
-            {
-              // Worker only needs viem's pure ABI codecs from viem/utils. Any other viem
-              // subpath (clients/transports/actions) would pull the websocket transport
-              // surface (and its `ws` advisory) into the bundle. Keep viem/utils allowed.
-              group: ["viem/*", "!viem/utils"],
-              message: "Worker code may only import pure ABI codecs from viem/utils, not viem clients/transports.",
-            },
-          ],
+          paths: [...workerRestrictedImportPaths, ...supplyHelperRestrictedImportPaths],
+          patterns: workerRestrictedImportPatterns,
         },
       ],
+    },
+  },
+  {
+    files: NON_WORKER_SOURCE_GLOBS,
+    ignores: FRONTEND_TO_WORKER_WAIVED_FILES,
+    rules: {
+      "no-restricted-imports": ["error", { patterns: frontendToWorkerRestrictedImportPatterns }],
     },
   },
   {
@@ -152,10 +221,28 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          patterns: [{
-            group: ["@shared/*"],
-            message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
-          }],
+          patterns: [
+            {
+              group: ["@shared/*"],
+              message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
+            },
+            ...frontendToWorkerRestrictedImportPatterns,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Route and component code reads cached StablecoinData supply through
+    // getCirculatingRaw(). Re-states the ADR-2 patterns because flat config
+    // replaces rule options rather than merging them.
+    files: ["src/app/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: supplyHelperRestrictedImportPaths,
+          patterns: frontendToWorkerRestrictedImportPatterns,
         },
       ],
     },

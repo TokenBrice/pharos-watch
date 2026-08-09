@@ -10,7 +10,7 @@ import {
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
-import { CRON_TIMEOUT_MS } from "../../../lib/cron-lease";
+import { CRON_TIMEOUT_MS } from "../../../lib/cron-timeouts";
 import {
   PUBLIC_DATASET_CRON_TIMEOUT_MS,
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_BUDGET_MS,

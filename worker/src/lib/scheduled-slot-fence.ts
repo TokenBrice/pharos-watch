@@ -3,7 +3,9 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import {
   reconcileStaleSlotArtifactsAndRecordEvent,
+  getExpectedJobsForScheduledSlot,
   hasActiveChildLeaseForScheduledSlot,
+  STALE_SLOT_ERROR,
   type StaleSlotExecutionArtifact,
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
@@ -94,7 +96,6 @@ export interface ScheduledSlotSweepSummary {
   candidateSlots: number;
   slotsReconciled: number;
   syntheticCronRuns: number;
-  jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
   recoveryCheckpointsPrepared: number;
@@ -108,7 +109,6 @@ export interface ScheduledSlotSweepSummary {
   }>;
 }
 
-const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
 async function getScheduledSlotExecution(
   db: D1Database,
@@ -170,6 +170,21 @@ async function finishStaleScheduledSlotExecution(
   nowSec: number,
   reconciliation: StaleSlotReconciliationSummary,
 ): Promise<boolean> {
+  // Scope the survivor guard to this slot's own child jobs. `slot_started_at` is an
+  // aligned wall-clock timestamp shared across schedules (08:00 UTC is a quarter-hourly,
+  // hourly and daily boundary at once), so a timestamp-only NOT EXISTS lets a foreign
+  // schedule's live progress row block the finish and park the slot in 'reconciling'.
+  const childJobs = getExpectedJobsForScheduledSlot(slot.slot_key);
+  const survivingChildProgressGuard =
+    childJobs.length > 0
+      ? `
+           AND NOT EXISTS (
+             SELECT 1
+               FROM cron_run_progress progress
+              WHERE progress.slot_started_at = cron_slot_executions.slot_started_at
+                AND progress.job IN (${childJobs.map(() => "?").join(", ")})
+           )`
+      : "";
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -183,12 +198,7 @@ async function finishStaleScheduledSlotExecution(
            AND slot_started_at = ?
            AND state = 'reconciling'
            AND execution_owner = ?
-           AND execution_generation = ?
-           AND NOT EXISTS (
-             SELECT 1
-               FROM cron_run_progress progress
-              WHERE progress.slot_started_at = cron_slot_executions.slot_started_at
-           )`,
+           AND execution_generation = ?${survivingChildProgressGuard}`,
       )
       .bind(
         nowSec,
@@ -201,6 +211,7 @@ async function finishStaleScheduledSlotExecution(
         slot.slot_started_at,
         reconciliationOwner,
         reconciliationGeneration,
+        ...childJobs,
       )
       .run(),
   );
@@ -268,7 +279,6 @@ export async function sweepStaleScheduledSlotExecutions(
     candidateSlots: staleSlots.length,
     slotsReconciled: 0,
     syntheticCronRuns: 0,
-    jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     recoveryCheckpointsPrepared: 0,
@@ -312,7 +322,6 @@ export async function sweepStaleScheduledSlotExecutions(
     }
     summary.slotsReconciled++;
     summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
-    summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
     summary.progressRowsCleared += reconciliation.progressRowsCleared;
     summary.leasesCleared += reconciliation.leasesCleared;
     summary.recoveryCheckpointsPrepared += reconciliation.recoveryCheckpointsPrepared;

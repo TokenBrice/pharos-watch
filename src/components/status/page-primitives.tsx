@@ -45,7 +45,6 @@ export function StatusSection({
   kicker,
   title,
   description,
-  accentClassName,
   summary,
   headingLevel = "h2",
   variant = "card",
@@ -55,7 +54,6 @@ export function StatusSection({
   kicker?: string;
   title: string;
   description?: string;
-  accentClassName?: string;
   summary?: ReactNode;
   headingLevel?: "h1" | "h2";
   variant?: "card" | "workspace";
@@ -71,7 +69,6 @@ export function StatusSection({
         variant === "card"
           ? "pharos-card-shell scroll-mt-36 px-4 py-5 md:scroll-mt-28 sm:px-5 lg:px-6"
           : "min-w-0 max-w-full scroll-mt-[var(--ops-sticky-offset)]",
-        accentClassName,
       )}
     >
       <div

@@ -22,7 +22,7 @@ import {
 } from "@shared/types/tron-measured-execution";
 import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "../../lib/error-utils";
 import { parseJson } from "../../lib/json-parse";
 import {

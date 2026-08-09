@@ -57,7 +57,6 @@ function decodePsiObjectField(
   context: string,
 ): { ok: true; value: Record<string, unknown> } | { ok: false; reason: PsiJsonDecodeReason } {
   const decoded = decodeJsonString<Record<string, unknown>, PsiJsonDecodeReason>(value, {
-    mode: "strict",
     updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",

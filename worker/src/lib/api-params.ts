@@ -1,7 +1,7 @@
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { errorResponse } from "./api-response";
-import { base64UrlToBytes, bytesToBase64Url } from "./base64url";
+import { base64UrlToBytes, bytesToBase64Url } from "@shared/lib/base64url";
 
 export type NumericRangePolicy = "clamp" | "reject";
 

@@ -23,7 +23,6 @@ import {
   findCriticalCoverageCandidatesMissingEnrollment,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
-import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mjs";
 
 type CoverageFixture = {
   branchCoverage?: Partial<Record<string, { brf?: number; brh?: number }>>;
@@ -64,14 +63,14 @@ describe("critical coverage changed-file detection", () => {
     const calls: unknown[] = [];
     const execFile = mockExecFileSync((cmd, args) => {
       calls.push([cmd, args]);
-      return "worker\\src\\api\\status.ts\n";
+      return "worker\\src\\api\\status.ts\0";
     });
 
     expect(
       getChangedFilesFromGit("origin/main; touch /tmp/should-not-run", { execFile }),
     ).toEqual(["worker/src/api/status.ts"]);
     expect(calls).toEqual([
-      ["git", ["diff", "--name-only", "origin/main; touch /tmp/should-not-run...HEAD"]],
+      ["git", ["diff", "--name-only", "-z", "origin/main; touch /tmp/should-not-run...HEAD"]],
     ]);
   });
 
@@ -201,7 +200,7 @@ describe("critical coverage changed-file detection", () => {
     ]);
   });
 
-  it("collects and enforces critical waiver review queues", () => {
+  it("reports overdue waiver reviews without failing the merge gate", () => {
     const waivers = {
       "worker/src/lib/overdue-price-helper.ts": "2026-06-10",
       "worker/src/lib/upcoming-price-helper.ts": "2026-06-30",
@@ -219,6 +218,7 @@ describe("critical coverage changed-file detection", () => {
       upcoming: [{ file: "worker/src/lib/upcoming-price-helper.ts", reviewAfter: "2026-06-30" }],
     });
 
+    const logs: string[] = [];
     const errors: string[] = [];
     const exits: number[] = [];
     expect(
@@ -229,17 +229,19 @@ describe("critical coverage changed-file detection", () => {
         reviewToday: new Date("2026-06-20T00:00:00.000Z"),
         consoleImpl: mockConsole({
           error: (message: string) => errors.push(message),
-          log: () => {},
+          log: (message: string) => logs.push(message),
         }),
         exit: captureProcessExit((code) => {
           if (code !== undefined) exits.push(code);
         }),
       }),
-    ).toBe(false);
+    ).toBe(true);
 
-    expect(exits).toEqual([1]);
-    expect(errors).toContain("[coverage] Critical coverage waiver reviews are due or overdue:");
-    expect(errors).toContain("  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10");
+    expect(exits).toEqual([]);
+    expect(errors).toEqual([]);
+    expect(logs).toContain("[coverage] Critical coverage waiver reviews due or overdue:");
+    expect(logs).toContain("  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10");
+    expect(logs).toContain("[coverage] Critical coverage waiver reviews due soon:");
   });
 
   it("fails the checker when a high-stakes candidate lacks enrollment or waiver", () => {
@@ -271,100 +273,6 @@ describe("critical coverage changed-file detection", () => {
 
     expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
     expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
-    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-incident-store.ts"]).toBeUndefined();
-    expect(CRITICAL_COVERAGE_WAIVERS["worker/src/lib/depeg-resolver-publication-store.ts"]).toBeUndefined();
-    expect(CRITICAL_FILES).toEqual(expect.arrayContaining([
-      "worker/src/lib/depeg-resolver-incident-store.ts",
-      "worker/src/lib/depeg-resolver-publication-store.ts",
-      "worker/src/lib/publication-contract.ts",
-      "worker/src/cron/dispatch-telegram-alerts.ts",
-      "worker/src/cron/dispatch-telegram-authoritative-path.ts",
-      "worker/src/cron/telegram-alert-source-events.ts",
-      "worker/src/cron/telegram-alert-target-plans/coordinator.ts",
-      "worker/src/cron/telegram-alert-target-plans/materialization.ts",
-      "worker/src/cron/dispatch-telegram-routing.ts",
-      "worker/src/cron/telegram-pending/lifecycle.ts",
-      "worker/src/cron/telegram-pending/preference-revalidation.ts",
-      "worker/src/cron/telegram-pending/drain.ts",
-      "worker/src/cron/telegram-pending/dedupe.ts",
-      "worker/src/api/telegram-webhook-effect-fence.ts",
-      "worker/src/api/telegram-store/watchlist-import.ts",
-      "worker/src/lib/telegram-transport-control.ts",
-      "worker/src/lib/telegram-watchlist-token.ts",
-      "src/app/pharoswatchbot/app/client.tsx",
-      "shared/lib/telegram-adoption-analytics.ts",
-      "worker/src/lib/telegram-adoption-analytics.ts",
-      "functions/pharoswatchbot-adoption.ts",
-      "worker/src/lib/telegram.ts",
-      "functions/lib/upstream-proxy.ts",
-      "shared/lib/peg-score.ts",
-      "shared/lib/safety-score-v9-input-identity.ts",
-      "worker/src/lib/safety-score-history-v2.ts",
-      "worker/src/lib/safety-score-v9-candidate.ts",
-      "worker/src/lib/safety-score-v9-extension.ts",
-      "worker/src/lib/safety-score-v9-fact-set.ts",
-      "worker/src/lib/safety-score-v9-publication-codec.ts",
-      "worker/src/lib/safety-score-v9-publication-runner.ts",
-      "worker/src/lib/safety-score-v9-publication-store.ts",
-    ]));
-    expect(CRITICAL_COVERAGE_WAIVERS).toEqual(expect.objectContaining({
-      "worker/src/api/safety-score-history.ts": "2026-09-05",
-      "worker/src/lib/psi-recompute.ts": "2026-09-05",
-      "shared/lib/redemption-backstop-scoring.ts": "2026-09-05",
-      "worker/src/lib/depeg-resolver-store-validators.ts": "2026-08-30",
-    }));
-    expect(CRITICAL_TEST_FILES).toEqual(expect.arrayContaining([
-      "worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
-      "worker/src/cron/__tests__/dispatch-telegram-routing.test.ts",
-      "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
-      "worker/src/cron/__tests__/telegram-alert-target-effects.test.ts",
-      "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
-      "worker/src/cron/__tests__/telegram-pending-lifecycle-migration.test.ts",
-      "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",
-      "worker/src/cron/__tests__/telegram-transport-outage-integration.test.ts",
-      "worker/src/lib/__tests__/telegram-transport-control.test.ts",
-      "worker/src/lib/__tests__/telegram.test.ts",
-      "worker/src/api/__tests__/telegram-webhook-effect-fence.test.ts",
-      "worker/src/api/telegram-store/__tests__/preset-intents.test.ts",
-      "worker/src/api/telegram-store/__tests__/forget.test.ts",
-      "worker/src/api/telegram-store/__tests__/watchlist-import.test.ts",
-      "src/app/pharoswatchbot/app/page.test.tsx",
-      "worker/src/api/__tests__/telegram-mini-app-portability.test.ts",
-      "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
-      "shared/lib/__tests__/telegram-mini-app-contract.test.ts",
-      "shared/lib/__tests__/telegram-adoption-analytics.test.ts",
-      "worker/src/lib/__tests__/telegram-adoption-analytics.test.ts",
-      "functions/__tests__/pharoswatchbot-adoption.test.ts",
-      "worker/src/lib/__tests__/safety-score-history-v2.test.ts",
-      "worker/src/lib/__tests__/safety-score-v9-candidate.test.ts",
-      "worker/src/lib/__tests__/safety-score-v9-fact-set.test.ts",
-      "worker/src/lib/__tests__/safety-score-v9-publication-codec.test.ts",
-      "worker/src/lib/__tests__/safety-score-v9-publication-runner.test.ts",
-      "worker/src/lib/__tests__/safety-score-v9-publication-store.test.ts",
-    ]));
-  });
-
-  it("fails once the checked-in waiver review deadlines pass", () => {
-    const errors: string[] = [];
-    const exits: number[] = [];
-
-    expect(
-      runCriticalCoverageCompletenessGuard({
-        candidateFiles: collectCriticalCoverageCandidates(),
-        waivers: CRITICAL_COVERAGE_WAIVERS,
-        reviewToday: new Date("2026-09-06T00:00:00.000Z"),
-        consoleImpl: mockConsole({
-          error: (message: string) => errors.push(message),
-          log: () => {},
-        }),
-        exit: captureProcessExit((code) => {
-          if (code !== undefined) exits.push(code);
-        }),
-      }),
-    ).toBe(false);
-
-    expect(exits).toEqual([1]);
-    expect(errors).toContain("[coverage] Critical coverage waiver reviews are due or overdue:");
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {

@@ -51,13 +51,6 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   setScheduledCheckpointChildDisposition: vi.fn(async () => {}),
   finishScheduledCheckpoint: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/reserve-recovery-fault-injection", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../../lib/reserve-recovery-fault-injection")>();
-  return {
-    ...original,
-    loadReserveRecoveryFaultInjectionController: vi.fn(async () => null),
-  };
-});
 vi.mock("../preflight-skip", () => ({
   logSkippedCronRun: vi.fn(async () => undefined),
 }));
@@ -70,11 +63,6 @@ import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/l
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
-import {
-  loadReserveRecoveryFaultInjectionController,
-  ReserveRecoveryFaultInjectionTermination,
-  type ReserveRecoveryFaultKillPoint,
-} from "../../../lib/reserve-recovery-fault-injection";
 import {
   finishScheduledCheckpoint,
   loadScheduledCheckpoint,
@@ -123,7 +111,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     });
-    vi.mocked(loadReserveRecoveryFaultInjectionController).mockResolvedValue(null);
     vi.mocked(loadScheduledCheckpoint).mockResolvedValue(recoveryCheckpoint());
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -141,13 +128,10 @@ describe("runFourHourlyReserveSyncSlot", () => {
 
   function buildRuntime(
     recoveryCheckpoint?: ScheduledRecoveryCheckpoint,
-    faultInjectionEnabled = false,
   ): ScheduledRuntimeContext {
     return {
       db: {} as D1Database,
-      env: {
-        ...(faultInjectionEnabled ? { WORKER_RESERVE_FAULT_INJECTION_ENABLED: "true" } : {}),
-      } as ScheduledRuntimeContext["env"],
+      env: {} as ScheduledRuntimeContext["env"],
       ctx: {} as ExecutionContext,
       cron: "11 */4 * * *",
       scheduleKey: "fourHourlyReserveSync",
@@ -587,58 +571,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).not.toHaveBeenCalled();
     expect(checkCollateralDrift).not.toHaveBeenCalled();
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
-  });
-
-  function armFaultAt(killPoint: ReserveRecoveryFaultKillPoint) {
-    const spec = {
-      workerVersion: "preview-v1",
-      scheduleKey: "fourHourlyReserveSync" as const,
-      slotStartedAt: 0,
-      attemptNo: 1,
-      killPoint,
-      targetItemKey: null,
-      armedAt: 0,
-      expiresAt: 1_000,
-    };
-    vi.mocked(loadReserveRecoveryFaultInjectionController).mockResolvedValue({
-      spec,
-      trigger: vi.fn(async (point) => {
-        if (point === killPoint) throw new ReserveRecoveryFaultInjectionTermination(spec);
-      }),
-    });
-  }
-
-  it("does not load a retained fault when execution is disabled", async () => {
-    armFaultAt("after_checkpoint");
-
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime())).resolves.toMatchObject({
-      jobsErrored: 0,
-    });
-    expect(loadReserveRecoveryFaultInjectionController).not.toHaveBeenCalled();
-  });
-
-  it("leaves the checkpoint nonterminal when preview injection fires after checkpoint creation", async () => {
-    armFaultAt("after_checkpoint");
-
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime(undefined, true))).rejects.toBeInstanceOf(
-      ReserveRecoveryFaultInjectionTermination,
-    );
-    expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ["before_sync-redemption-backstops", syncRedemptionBackstops],
-    ["before_sync-kinesis-supply", syncKinesisSupply],
-    ["before_reserve-post-sync-watchdog", checkCollateralDrift],
-  ] as const)("bypasses checkpoint finalization at %s", async (killPoint, blockedSidecar) => {
-    armFaultAt(killPoint);
-
-    await expect(runFourHourlyReserveSyncSlot(buildRuntime(undefined, true))).rejects.toBeInstanceOf(
-      ReserveRecoveryFaultInjectionTermination,
-    );
-    expect(blockedSidecar).not.toHaveBeenCalled();
     expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
   });
 });

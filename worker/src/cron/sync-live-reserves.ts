@@ -42,7 +42,6 @@ import {
   didReserveSyncAttemptBecomeAuthoritative,
   repairAuthoritativeReserveSyncHistory,
 } from "../lib/live-reserves-store";
-import type { ReserveRecoveryFaultInjectionController } from "../lib/reserve-recovery-fault-injection";
 
 interface ReserveCoinQueueResult {
   synced: number;
@@ -262,7 +261,6 @@ async function runReserveCoinQueue(args: {
   budgetConfig: LiveReserveSyncBudgetConfig;
   reportProgress?: CronProgressReporter;
   checkpoint?: ScheduledCheckpointIdentity;
-  faultInjection?: ReserveRecoveryFaultInjectionController | null;
   startIndex: number;
   fullQueue: readonly ConfiguredCoin[];
   manageGlobalCursor: boolean;
@@ -386,10 +384,6 @@ async function runReserveCoinQueue(args: {
                   ? { recoveryLeaseUntil: Math.floor(Date.now() / 1000) + 15 * 60 }
                   : {}),
               }),
-            onAttemptPending: () =>
-              args.faultInjection?.trigger("after_pending_begin", coin.id) ?? Promise.resolve(),
-            onAuthoritativeWrite: () =>
-              args.faultInjection?.trigger("after_authoritative_write", coin.id) ?? Promise.resolve(),
           }
         : {}),
     });
@@ -471,7 +465,6 @@ export async function syncLiveReserves(
   reportProgress?: CronProgressReporter,
   budgetOverrides?: Partial<LiveReserveSyncBudgetConfig>,
   checkpointIdentity?: ScheduledCheckpointIdentity,
-  faultInjection?: ReserveRecoveryFaultInjectionController | null,
 ): Promise<CronResult> {
   const runStartedAt = Math.floor(Date.now() / 1000);
   const runStartedMs = Date.now();
@@ -614,7 +607,6 @@ export async function syncLiveReserves(
     budgetConfig,
     reportProgress,
     checkpoint: checkpointIdentity,
-    faultInjection,
     startIndex: Math.max(0, startIndex),
     fullQueue: SYNC_ORDERED_CONFIGURED_COINS,
     manageGlobalCursor,

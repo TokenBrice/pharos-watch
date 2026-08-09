@@ -22,6 +22,7 @@ vi.mock("@shared/lib/supply", () => ({
 import { snapshotSupply } from "../snapshot-supply";
 import { buildSupplySnapshotCoverageExpectation } from "../../lib/supply-snapshot-completion";
 import type { StablecoinPublicationWaiver } from "../../lib/stablecoin-publication-coverage";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const DEFAULT_REQUIRED_IDS = ["usdt-tether", "usdc-circle"] as const;
 
@@ -452,24 +453,9 @@ describe("snapshotSupply", () => {
   });
 
   it("replaces owned rows exactly while preserving an outside admin row in SQLite", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE cache (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL,
-          updated_at INTEGER NOT NULL
-        );
-        CREATE TABLE supply_history (
-          stablecoin_id TEXT NOT NULL,
-          snapshot_date INTEGER NOT NULL,
-          circulating_usd REAL NOT NULL,
-          price REAL,
-          PRIMARY KEY (stablecoin_id, snapshot_date)
-        );
-      `);
-      const nowSec = Math.floor(Date.now() / 1000);
+            const nowSec = Math.floor(Date.now() / 1000);
       const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
       const previousIds = [...DEFAULT_REQUIRED_IDS, "eurt-test"];
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
@@ -518,20 +504,9 @@ describe("snapshotSupply", () => {
   });
 
   it("repairs null prices in an already-complete same-day snapshot without rewriting other fields", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
-        CREATE TABLE supply_history (
-          stablecoin_id TEXT NOT NULL,
-          snapshot_date INTEGER NOT NULL,
-          circulating_usd REAL NOT NULL,
-          price REAL,
-          PRIMARY KEY (stablecoin_id, snapshot_date)
-        );
-      `);
-      const nowSec = Math.floor(Date.now() / 1000);
+            const nowSec = Math.floor(Date.now() / 1000);
       const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
         "stablecoins",

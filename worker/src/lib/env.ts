@@ -73,10 +73,7 @@ export interface Env {
   MAINTENANCE_MODE?: string;
   REQUEST_SOURCE_ATTRIBUTION_DISABLED?: string;
   API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
-  WORKER_JOB_LEDGER_MODE?: string;
-  WORKER_JOB_LEDGER_ALLOWLIST?: string;
   WORKER_RESERVE_RECOVERY_MODE?: string;
-  WORKER_RESERVE_FAULT_INJECTION_ENABLED?: string;
   WORKER_CANARY_MODE?: string;
 }
 
@@ -140,10 +137,6 @@ export function parseCsvEnv(value: string | undefined): string[] {
     .split(",")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
-}
-
-export function isReserveRecoveryFaultInjectionEnabled(value: string | undefined): boolean {
-  return value?.trim().toLowerCase() === "true";
 }
 
 function parseBooleanEnv(value: string | undefined): boolean | null {

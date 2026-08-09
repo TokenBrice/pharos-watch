@@ -29,7 +29,7 @@ import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
+import type { DepegTrackerRow } from "@/lib/depeg-sort";
 
 interface DepegCoverageMetrics {
   dewsCoverageCount: number;
@@ -117,20 +117,21 @@ export function DepegClient() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteDepegEvents({ includePending: true });
+  const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const {
-    resolverEnabled,
-    resolverReviewerEnabled,
-    resolverData,
-    resolverError,
-    resolverUpdatedAt,
-    resolverMeta,
-    refetchResolver,
-    resolverReviewData,
-    resolverReviewError,
-    resolverReviewUpdatedAt,
-    resolverReviewMeta,
-    refetchResolverReview,
-  } = useDepegResolverSurfaces();
+    data: resolverData,
+    error: resolverError,
+    dataUpdatedAt: resolverUpdatedAt,
+    meta: resolverMeta,
+    refetch: refetchResolver,
+  } = resolver;
+  const {
+    data: resolverReviewData,
+    error: resolverReviewError,
+    dataUpdatedAt: resolverReviewUpdatedAt,
+    meta: resolverReviewMeta,
+    refetch: refetchResolverReview,
+  } = resolverReview;
   const { data: logos } = useLogos();
   const router = useRouter();
 

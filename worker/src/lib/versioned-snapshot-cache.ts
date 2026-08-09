@@ -65,7 +65,6 @@ function parseVersionedSnapshotCache<TPayload, TReason extends string>(
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): VersionedSnapshotCacheLoadResult<TPayload, TReason> {
   const decoded = decodeCachedJson<TPayload, TReason>(cached, {
-    mode: "strict",
     missingReason: options.reasons.missingCache,
     parseErrorReason: options.reasons.jsonParseFailed,
     normalize: (parsed) => {

@@ -5,7 +5,7 @@ Stablecoin analytics dashboard. Static Next.js 16 export to Cloudflare Pages. AP
 Live: https://pharos.watch
 Local dev-server: http://localhost:3000/
 
-This file is mirrored to `AGENTS.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
+`CLAUDE.md` and `AGENTS.md` carry the same content; `AGENTS.md` is generated, so edit `CLAUDE.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
 
 ## Start Here
 
@@ -38,7 +38,7 @@ The _why_ behind these locked decisions lives in the [Architectural Decision Rec
 - Classification labels/colors live in `shared/lib/classification.ts`.
 - Use `getCirculatingRaw()` from `shared/lib/supply.ts`; DefiLlama list `circulating` values are already USD-denominated.
 - Do not multiply DefiLlama list-endpoint supply values by price.
-- Do not add manual/on-chain/CMC/DEX supply overrides.
+- Do not replace DefiLlama list supply with manual/on-chain/CMC/DEX overrides; supplemental supply admission paths must be explicit, documented, fail-closed, and double-count safe.
 - Use `@shared/lib/...` and `@shared/types...` for shared runtime imports; avoid relative cross-boundary imports.
 - Root TS config excludes `worker/`; runtime-neutral shared logic belongs in `shared/lib/`.
 - Cron-backed hooks normally use `staleTime = producer interval` and `refetchInterval = 2x producer interval`.

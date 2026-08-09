@@ -112,12 +112,6 @@ export function formatApproxDurationSeconds(
   return `${Number.isInteger(days) ? days : days.toFixed(1)}d`;
 }
 
-export function formatStalenessDurationSeconds(seconds: number | null): string {
-  if (seconds == null) return "missing";
-  if (seconds >= HOUR_SECONDS) return `${(seconds / HOUR_SECONDS).toFixed(1)}h`;
-  return `${Math.max(1, Math.round(seconds / SECONDS_PER_MINUTE))}m`;
-}
-
 /**
  * Format a millisecond timestamp as a relative time string ("1s ago", "5m ago", "2h ago", "3d ago").
  * Accepts an optional `now` override (ms) for deterministic testing.

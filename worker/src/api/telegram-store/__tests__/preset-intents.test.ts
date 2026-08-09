@@ -7,6 +7,7 @@ import {
 } from "../presets";
 import { unsubscribeAll } from "../forget";
 import { upsertGlobalAlertTypes } from "../subscribers";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 
 const CHAT_ID = "42";
 const NOW_MS = Date.UTC(2026, 6, 10, 12, 0, 0);
@@ -48,71 +49,18 @@ function createFaultInjectingD1(
 }
 
 function openSqlite(): DatabaseSync {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE telegram_subscribers (
-      chat_id TEXT PRIMARY KEY,
-      username TEXT,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      alert_freeze INTEGER NOT NULL DEFAULT 0,
-      global_alert_dews INTEGER NOT NULL DEFAULT 0,
-      global_alert_depeg INTEGER NOT NULL DEFAULT 0,
-      global_alert_safety INTEGER NOT NULL DEFAULT 0,
-      global_alert_launch INTEGER NOT NULL DEFAULT 0,
-      global_alert_reserve INTEGER NOT NULL DEFAULT 0,
-      global_alert_freeze INTEGER NOT NULL DEFAULT 0,
-      global_depeg_worsening_bps_step INTEGER,
-      alert_snooze_until_ts INTEGER,
-      quiet_hours_enabled INTEGER NOT NULL DEFAULT 0,
-      quiet_hours_start_utc INTEGER,
-      quiet_hours_end_utc INTEGER,
-      created_at INTEGER NOT NULL,
-      last_active_at INTEGER NOT NULL,
-      preference_generation INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE telegram_subscriptions (
-      chat_id TEXT NOT NULL,
-      stablecoin_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      alert_launch INTEGER NOT NULL DEFAULT 0,
-      alert_reserve INTEGER NOT NULL DEFAULT 0,
-      alert_freeze INTEGER NOT NULL DEFAULT 0,
-      alert_dews_override INTEGER NOT NULL DEFAULT 0,
-      alert_depeg_override INTEGER NOT NULL DEFAULT 0,
-      alert_safety_override INTEGER NOT NULL DEFAULT 0,
-      alert_launch_override INTEGER NOT NULL DEFAULT 0,
-      alert_reserve_override INTEGER NOT NULL DEFAULT 0,
-      alert_freeze_override INTEGER NOT NULL DEFAULT 0,
-      depeg_worsening_bps_step INTEGER,
-      PRIMARY KEY (chat_id, stablecoin_id)
-    );
-    CREATE TABLE telegram_preset_subscriptions (
-      chat_id TEXT NOT NULL,
-      preset_id TEXT NOT NULL,
-      alert_dews INTEGER NOT NULL DEFAULT 0,
-      alert_depeg INTEGER NOT NULL DEFAULT 0,
-      alert_safety INTEGER NOT NULL DEFAULT 0,
-      depeg_worsening_bps_step INTEGER,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      PRIMARY KEY (chat_id, preset_id)
-    );
-    CREATE TABLE telegram_pending_disambiguation (
-      chat_id TEXT PRIMARY KEY
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return sqlite;
 }
 
 function insertPending(sqlite: DatabaseSync): void {
   sqlite
-    .prepare("INSERT INTO telegram_pending_disambiguation (chat_id) VALUES (?)")
+    .prepare(
+      `INSERT INTO telegram_pending_disambiguation (
+         chat_id, alert_types, resolved_ids, ambiguous_ticker, candidates,
+         remaining_tickers, expires_at
+       ) VALUES (?, '[]', '[]', 'usd', '[]', '[]', 0)`,
+    )
     .run(CHAT_ID);
 }
 

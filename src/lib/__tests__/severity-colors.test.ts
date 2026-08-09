@@ -3,7 +3,6 @@ import {
   TIER_TEXT,
   deviationBgClass,
   deviationColorClass,
-  deviationColorHex,
   deviationIconName,
   getDurabilityBgColor,
   getDurabilityColor,
@@ -15,29 +14,25 @@ import {
 import * as featureFlags from "@/lib/feature-flags";
 
 describe("severity-colors", () => {
-  it("maps deviation thresholds to classes, hex values, and icons", () => {
+  it("maps deviation thresholds to classes and icons", () => {
     expect(deviationColorClass(49)).toBe(
       featureFlags.FEATURE_FLAGS.quietDeviations
         ? "text-muted-foreground"
         : "text-green-700 dark:text-green-400",
     );
     expect(deviationBgClass(49)).toBe("bg-green-500");
-    expect(deviationColorHex(49)).toBe("#22c55e");
     expect(deviationIconName(49)).toBe("CircleCheck");
 
     expect(deviationColorClass(50)).toBe("text-amber-700 dark:text-amber-400");
     expect(deviationBgClass(199)).toBe("bg-amber-500");
-    expect(deviationColorHex(199)).toBe("#f59e0b");
     expect(deviationIconName(199)).toBe("TriangleAlert");
 
     expect(deviationColorClass(200)).toBe("text-orange-700 dark:text-orange-400");
     expect(deviationBgClass(499)).toBe("bg-orange-500");
-    expect(deviationColorHex(499)).toBe("#f97316");
     expect(deviationIconName(499)).toBe("OctagonAlert");
 
     expect(deviationColorClass(500)).toBe("text-red-700 dark:text-red-400");
     expect(deviationBgClass(500)).toBe("bg-red-500");
-    expect(deviationColorHex(500)).toBe("#ef4444");
     expect(deviationIconName(500)).toBe("CircleX");
   });
 

@@ -18,7 +18,7 @@ import {
   requestDigestCopy,
   runDigestChannelDelivery,
 } from "./digest/platform";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
@@ -189,7 +189,7 @@ export async function generateWeeklyRecap(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "preflight",
     message: "Checking weekly recap prerequisites",
     providerFamily: "digest",
@@ -202,7 +202,7 @@ export async function generateWeeklyRecap(
     },
   });
   if (!anthropicApiKey) {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping weekly recap because Anthropic credentials are missing",
       providerFamily: "anthropic",
@@ -218,7 +218,7 @@ export async function generateWeeklyRecap(
   // Check if today is Monday (UTC)
   const now = new Date();
   if (now.getUTCDay() !== 1) {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping weekly recap outside Monday UTC",
       providerFamily: "digest",
@@ -252,7 +252,7 @@ export async function generateWeeklyRecap(
   if (existing) {
     const existingMeta = parseWeeklyDigestMeta(existing.digest_meta, existing.generated_at);
     if (!shouldRetryExistingWeeklyTelegram(existingMeta)) {
-      await reportDigestProgress(reportProgress, {
+      await reportCronProgress(reportProgress, {
         stage: "skipped",
         message: "Skipping weekly recap because this week already exists",
         providerFamily: "digest",
@@ -268,7 +268,7 @@ export async function generateWeeklyRecap(
         existingGeneratedAt: existing.generated_at,
       });
     }
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "telegram-delivery-retry",
       message: "Retrying weekly recap Telegram delivery",
       providerFamily: "telegram-api",
@@ -311,7 +311,7 @@ export async function generateWeeklyRecap(
       nowSec: Math.floor(Date.now() / 1000),
       telegramStatus: retryStatus,
     });
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "complete",
       message: "Completed weekly recap Telegram retry",
       providerFamily: "telegram-api",
@@ -342,7 +342,7 @@ export async function generateWeeklyRecap(
     rawText: entry.rawText,
   }));
 
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "input-collection",
     message: "Collecting weekly recap source digests",
     providerFamily: "pharos-d1",
@@ -387,7 +387,7 @@ export async function generateWeeklyRecap(
   const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
   const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
   const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "input-collected",
     message: "Collected weekly recap source digests",
     providerFamily: "pharos-d1",
@@ -407,7 +407,7 @@ export async function generateWeeklyRecap(
   });
 
   if (currentRows.length < 5) {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping weekly recap because current-week coverage is incomplete",
       providerFamily: "pharos-d1",
@@ -443,7 +443,7 @@ export async function generateWeeklyRecap(
   }
   const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext);
   if (!weeklyData) {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "input-unavailable",
       message: "Failed to build weekly recap input data",
       providerFamily: "pharos-d1",
@@ -454,7 +454,7 @@ export async function generateWeeklyRecap(
   }
 
   const userPrompt = buildWeeklyPrompt(weeklyData, recentWeeklyMeta);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "llm-generation",
     message: "Requesting weekly recap copy from Anthropic",
     providerFamily: "anthropic",
@@ -499,7 +499,7 @@ export async function generateWeeklyRecap(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping weekly recap because Anthropic circuit is open",
       providerFamily: "anthropic",
@@ -529,7 +529,7 @@ export async function generateWeeklyRecap(
   const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
   const hasBlockingQualityIssues =
     digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "llm-generation-complete",
     message: "Received weekly recap copy from Anthropic",
     providerFamily: "anthropic",
@@ -560,7 +560,7 @@ export async function generateWeeklyRecap(
   });
 
   // Store
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "persistence",
     message: "Persisting weekly recap row",
     providerFamily: "d1",
@@ -593,7 +593,7 @@ export async function generateWeeklyRecap(
   // Post to Telegram
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
   throwIfAborted(signal);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "telegram-delivery",
     message: "Delivering weekly recap to Telegram",
     providerFamily: "telegram-api",
@@ -630,7 +630,7 @@ export async function generateWeeklyRecap(
 
   const qualityMetadata = formatQualityMetadata(qualityIssues);
 
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Completed weekly recap generation",
     providerFamily: "digest",

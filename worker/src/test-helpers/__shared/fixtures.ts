@@ -11,7 +11,6 @@ import type {
 } from "@shared/types/market";
 import type { DexLiquidityRow } from "../../api/dex-liquidity-response";
 import type { ApiKeyRow } from "../../lib/api-key-core";
-import { mockD1 } from "./mock-d1";
 
 type BlacklistRow = {
   id: string;
@@ -186,23 +185,6 @@ export function makeApiKeyRow(overrides: Partial<ApiKeyRow> = {}): ApiKeyFixture
     last_used_route: null,
   };
   return { ...defaults, ...overrides } as ApiKeyFixtureRow;
-}
-
-export function makeReportCardsDb(assets: StablecoinData[] = [], nowSec = Math.floor(Date.now() / 1000)) {
-  const cacheValue = JSON.stringify({ peggedAssets: assets });
-  return mockD1([
-    {
-      match: "cache",
-      rows: [
-        { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-        { key: "bluechip-ratings", value: "{}", updated_at: nowSec },
-      ],
-      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
-    },
-    { match: "dex_liquidity", rows: [] },
-    { match: "depeg_events", rows: [] },
-    { match: "supply_history", rows: [] },
-  ]);
 }
 
 export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {

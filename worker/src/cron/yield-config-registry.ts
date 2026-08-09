@@ -13,25 +13,6 @@ export interface YieldAdapterLifecycleEntry {
   reason?: YieldAdapterLifecycleReason;
 }
 
-/**
- * Typed registry mapping stablecoin IDs to their adapter lifecycle state.
- *
- * Default for unlisted IDs is `{ lifecycle: "active" }`. Quarantines and
- * intentional gaps carry a structured reason that supersedes the legacy
- * free-form rationale strings in `QUARANTINED_DETERMINISTIC_ADAPTERS` and
- * `INTENTIONAL_GAP_REASONS`. The legacy string maps remain in place so the
- * existing manifest descriptor `rationale` fields stay populated.
- */
-export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {};
-
-export function registerYieldAdapterLifecycle(
-  entries: Record<string, YieldAdapterLifecycleEntry>,
-): void {
-  for (const [id, entry] of Object.entries(entries)) {
-    YIELD_ADAPTER_LIFECYCLE[id] = entry;
-  }
-}
-
 export interface YieldVariant {
   variantSymbol: string;
   variantAddress?: string;
@@ -127,6 +108,14 @@ export function deriveYieldRegistry(args: {
   autoLendingSafetyBypassIds: Set<string>;
   quarantinedDeterministicAdapters: Record<string, string>;
   intentionalGapReasons: Record<string, string>;
+  /**
+   * Typed lifecycle state per stablecoin ID. Unlisted IDs default to
+   * `{ lifecycle: "active" }`. Quarantines and intentional gaps carry a
+   * structured reason that supersedes the legacy free-form rationale strings in
+   * `quarantinedDeterministicAdapters` / `intentionalGapReasons`; those string
+   * maps stay so the manifest descriptor `rationale` fields keep their copy.
+   */
+  adapterLifecycle: Record<string, YieldAdapterLifecycleEntry>;
 }): {
   registry: YieldRegistryEntry[];
   variantMap: Record<string, YieldVariant>;
@@ -272,7 +261,7 @@ export function deriveYieldRegistry(args: {
         });
       }
       if (entry?.deterministicQuarantineReason) {
-        const lifecycleEntry = YIELD_ADAPTER_LIFECYCLE[stablecoinId] ?? { lifecycle: "active" };
+        const lifecycleEntry = args.adapterLifecycle[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
           kind: "quarantined",
           label: "Quarantined deterministic reader",
@@ -285,7 +274,7 @@ export function deriveYieldRegistry(args: {
         });
       }
       if (entry?.intentionalGapReason) {
-        const lifecycleEntry = YIELD_ADAPTER_LIFECYCLE[stablecoinId] ?? { lifecycle: "active" };
+        const lifecycleEntry = args.adapterLifecycle[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
           kind: "intentional-gap",
           label: "Intentional coverage gap",

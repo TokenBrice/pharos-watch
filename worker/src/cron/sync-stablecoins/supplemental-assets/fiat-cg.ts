@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
-import { runBoundedQueue } from "../../shared/bounded-queue";
+import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, prefersOnChainSupplyMcap } from "./onchain-supply";
@@ -42,11 +42,10 @@ export async function fetchFiatCoinGeckoTokens(
       if (mcap && mcap > 0) mcapMap[token.id] = mcap;
     }
 
-    const results = await runBoundedQueue({
-      items: FIAT_CG_METAS,
-      concurrency: FIAT_CG_TOKEN_CONCURRENCY,
-      signal,
-      worker: async (meta) => {
+    const results = await mapWithConcurrency(
+      FIAT_CG_METAS,
+      FIAT_CG_TOKEN_CONCURRENCY,
+      async (meta) => {
         const nowSec = Math.floor(Date.now() / 1000);
         const pKey = pegTypeKey(meta);
         // Strict path first (15-min freshness gate). If that rejects but CG returned
@@ -142,7 +141,8 @@ export async function fetchFiatCoinGeckoTokens(
           chains: getSupplementalChainLabels(meta),
         } as PeggedAsset;
       },
-    });
+      { signal },
+    );
 
     return results.filter((token): token is PeggedAsset => token !== null);
   } catch (err) {

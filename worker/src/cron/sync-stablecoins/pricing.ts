@@ -365,15 +365,10 @@ export function prevalidatePrices(input: {
 }
 
 /**
- * Applies primary consensus results or GT-probe re-run results to assets.
+ * Applies primary consensus results to assets.
  *
- * Dispatches on `reason`:
- * - `"primary"`: full primary pass. Stamps existing valid prices when no candidate or when
- *   validation rejects. Defaults `supplySource` to `"defillama"` after processing.
- * - `"gt-probe"`: only touches assets whose candidate set includes `"geckoterminal"`. Does
- *   not stamp existing on reject/missing. When the GT-enriched candidate is rejected and
- *   the pre-GT primary was single-source, downgrades confidence to `"low"` — the GT
- *   divergence is new soft evidence against the pre-GT price.
+ * Full primary pass: stamps existing valid prices when there is no candidate or when
+ * validation rejects, and defaults `supplySource` to `"defillama"` after processing.
  */
 export function applyConsensusResults(input: {
   assets: PeggedAsset[];
@@ -382,7 +377,7 @@ export function applyConsensusResults(input: {
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
-  reason: "primary" | "gt-probe";
+  reason: "primary";
 }): void {
   const {
     assets,
@@ -391,19 +386,16 @@ export function applyConsensusResults(input: {
     validationContexts,
     validationReferences,
     syncStartSec,
-    reason,
   } = input;
-
-  const isGtProbe = reason === "gt-probe";
 
   for (const asset of assets) {
     const primaryPriceResult = primaryPriceResults.get(asset.id);
 
     if (!primaryPriceResult) {
-      if (!isGtProbe && hasCurrentAssetPrice(asset)) {
+      if (hasCurrentAssetPrice(asset)) {
         stampExistingSingleSource(asset, syncStartSec);
       }
-    } else if (!isGtProbe || primaryPriceResult.candidateSources.includes("geckoterminal")) {
+    } else {
       const rejectionReason = applyPrimaryCandidate({
         asset,
         candidate: primaryPriceResult,
@@ -414,31 +406,18 @@ export function applyConsensusResults(input: {
       });
 
       if (rejectionReason) {
-        const rejectionLabel = isGtProbe ? "GT-probed price" : "primary consensus price";
         console.warn(
-          `[sync-stablecoins] Rejected ${rejectionLabel} for ${asset.symbol} (id=${asset.id}): ` +
+          `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
             `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
         );
 
-        if (isGtProbe) {
-          // GT probe surfaced evidence that contradicts the pre-GT primary; validation rejected
-          // the GT-enriched candidate (e.g., temporal-jump). The pre-GT price remains on the
-          // asset, but its confidence is no longer defensible as single-source — the GT
-          // divergence is new soft evidence against the pre-GT price. Downgrade to low.
-          if (primaryPriceResult.confidence === "single-source") {
-            asset.priceConfidence = "low";
-            primaryPriceResult.confidence = "low";
-            console.warn(
-              `[sync-stablecoins] GT probe evidence rejected; downgrading ${asset.id} to low-confidence (reason=${rejectionReason})`,
-            );
-          }
-        } else if (hasCurrentAssetPrice(asset)) {
+        if (hasCurrentAssetPrice(asset)) {
           stampExistingSingleSource(asset, syncStartSec);
         }
       }
     }
 
-    if (!isGtProbe && !asset.supplySource) {
+    if (!asset.supplySource) {
       asset.supplySource = "defillama";
     }
   }

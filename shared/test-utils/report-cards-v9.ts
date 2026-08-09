@@ -7,39 +7,6 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-pub
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
 type V9Breakdowns = Exclude<SafetyScoreV9CurrentCard["breakdowns"], null>;
-type V9ExitRoute = NonNullable<V9Breakdowns["exit"]["primaryRoute"]>;
-type V9ControlComponent = V9Breakdowns["control"]["components"][number];
-
-interface V9PillarOffset {
-  offset: number;
-  minimum?: number;
-  maximum?: number;
-}
-
-export interface ReportCardsV9CardFixturePreset {
-  defaultScore: number;
-  defaultQualityScore: number;
-  qualityScoreFromOverridePillars: boolean;
-  defaultPegMultiplier: number;
-  defaultPegAdjustedScore: "score" | number;
-  pillarComponents: readonly string[];
-  pillarOffsets: Record<V9PillarKey, V9PillarOffset>;
-  defaultWeakestPillar: "minimum" | V9PillarKey;
-  breakdowns: {
-    nullWhenAnyPillarIsNull: boolean;
-    backingComponent: {
-      key: string;
-      label: string;
-    };
-    exit: {
-      stressRequest: V9Breakdowns["exit"]["stressRequest"];
-      primaryRoute: Pick<V9ExitRoute, "key" | "label" | "routeFamily">;
-    };
-    controlComponent: Pick<V9ControlComponent, "key" | "label" | "kind" | "posture">;
-  };
-  accessPostureSignals: readonly string[];
-  overridesBeforeDerivedValues: boolean;
-}
 
 export interface ReportCardsV9ResponseFixturePreset {
   safetyScoreIdentity: ReportCardsV9Response["safetyScoreIdentity"];
@@ -47,6 +14,18 @@ export interface ReportCardsV9ResponseFixturePreset {
   asOfSec: number;
   source: ReportCardsV9Response["source"];
 }
+
+/**
+ * One default card shape for every V9 consumer. The worker and frontend suites
+ * used to carry separate presets whose divergences (pillar offsets, weakest
+ * pillar selection, breakdown labels, component names) were accidental rather
+ * than meaningful; the worker values won because the publication path authors
+ * them.
+ */
+const DEFAULT_SCORE = 80;
+const DEFAULT_QUALITY_SCORE = 82;
+const DEFAULT_PEG_MULTIPLIER = 0.98;
+const PILLAR_COMPONENTS = ["reviewed"] as const;
 
 const EXIT_COMPONENTS = [
   { key: "access", label: "Access", weight: 0.2 },
@@ -57,65 +36,56 @@ const EXIT_COMPONENTS = [
   { key: "cost", label: "Cost", weight: 0.1 },
 ] as const;
 
-function applyPillarOffset(score: number, offset: V9PillarOffset): number {
-  const adjusted = score + offset.offset;
-  if (offset.minimum !== undefined) {
-    return Math.max(offset.minimum, adjusted);
-  }
-  if (offset.maximum !== undefined) {
-    return Math.min(offset.maximum, adjusted);
-  }
-  return adjusted;
-}
-
 function buildBreakdowns(
-  preset: ReportCardsV9CardFixturePreset,
   score: number | null,
   pillars: SafetyScoreV9CurrentCard["pillars"],
 ): V9Breakdowns | null {
   if (
     score === null ||
-    (
-      preset.breakdowns.nullWhenAnyPillarIsNull &&
-      (pillars.backing.score === null ||
-        pillars.exit.score === null ||
-        pillars.control.score === null)
-    )
+    pillars.backing.score === null ||
+    pillars.exit.score === null ||
+    pillars.control.score === null
   ) {
     return null;
   }
 
   return {
     backing: {
-      evaluatedScore: pillars.backing.score!,
-      publishedScore: pillars.backing.score!,
+      evaluatedScore: pillars.backing.score,
+      publishedScore: pillars.backing.score,
       aggregationWeight: 0.4,
       adjustments: [],
       groups: [{
         key: "reserves",
         label: "Reserves",
-        score: pillars.backing.score!,
+        score: pillars.backing.score,
         effectiveWeight: 1,
       }],
       components: [{
-        key: preset.breakdowns.backingComponent.key,
-        label: preset.breakdowns.backingComponent.label,
+        key: "reserve:reviewed",
+        label: "Reviewed reserves",
         source: "reserve-exposure",
-        score: pillars.backing.score!,
+        score: pillars.backing.score,
         effectiveWeight: 1,
-        weightedContribution: pillars.backing.score!,
+        weightedContribution: pillars.backing.score,
         observationState: "known",
       }],
     },
     exit: {
-      evaluatedScore: pillars.exit.score!,
-      publishedScore: pillars.exit.score!,
+      evaluatedScore: pillars.exit.score,
+      publishedScore: pillars.exit.score,
       aggregationWeight: 0.35,
       adjustments: [],
-      stressRequest: preset.breakdowns.exit.stressRequest,
+      stressRequest: {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        comparisonWindowSec: 86_400,
+      },
       primaryRoute: {
-        ...preset.breakdowns.exit.primaryRoute,
-        score: pillars.exit.score!,
+        key: "redemption:reviewed",
+        label: "Protocol redemption",
+        routeFamily: "protocol-redemption",
+        score: pillars.exit.score,
         components: EXIT_COMPONENTS.map(({ key, label, weight }) => ({
           key,
           label,
@@ -131,25 +101,47 @@ function buildBreakdowns(
       alternatives: [],
     },
     control: {
-      evaluatedScore: pillars.control.score!,
-      publishedScore: pillars.control.score!,
+      evaluatedScore: pillars.control.score,
+      publishedScore: pillars.control.score,
       aggregationWeight: 0.25,
       adjustments: [],
       method: "minimum-binding-component",
       components: [{
-        ...preset.breakdowns.controlComponent,
-        score: pillars.control.score!,
+        key: "control:reviewed",
+        label: "Reviewed control",
+        kind: "mint",
+        posture: "distributed",
+        score: pillars.control.score,
         binding: true,
       }],
     },
   } satisfies V9Breakdowns;
 }
 
+/** Explicit three-pillar block for suites that assert on specific pillar scores. */
+export function makeReportCardsV9Pillars(scores: {
+  backing: number | null;
+  exit: number | null;
+  control: number | null;
+}): SafetyScoreV9CurrentCard["pillars"] {
+  const pillar = (score: number | null) => ({
+    score,
+    evidenceLevel: "adequate" as const,
+    freshness: "current" as const,
+    components: [...PILLAR_COMPONENTS],
+    reasons: [],
+  });
+  return {
+    backing: pillar(scores.backing),
+    exit: pillar(scores.exit),
+    control: pillar(scores.control),
+  };
+}
+
 export function makeReportCardsV9Card(
-  preset: ReportCardsV9CardFixturePreset,
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
-  const score = overrides.score === undefined ? preset.defaultScore : overrides.score;
+  const score = overrides.score === undefined ? DEFAULT_SCORE : overrides.score;
   const grade = overrides.grade ?? scoreToV9Grade(score);
   const reviewedPillarScores = overrides.pillars === undefined
     ? []
@@ -157,69 +149,41 @@ export function makeReportCardsV9Card(
         .map((pillar) => pillar.score)
         .filter((pillarScore): pillarScore is number => pillarScore !== null);
   const qualityScore = overrides.qualityScore === undefined
-    ? preset.qualityScoreFromOverridePillars && reviewedPillarScores.length > 0
+    ? reviewedPillarScores.length > 0
       ? reviewedPillarScores.reduce((sum, pillarScore) => sum + pillarScore, 0) /
         reviewedPillarScores.length
-      : preset.defaultQualityScore
+      : DEFAULT_QUALITY_SCORE
     : overrides.qualityScore;
   const pegMultiplier =
-    overrides.pegMultiplier === undefined
-      ? preset.defaultPegMultiplier
-      : overrides.pegMultiplier;
-  const pegAdjustedScore = overrides.pegAdjustedScore === undefined
-    ? preset.defaultPegAdjustedScore === "score"
-      ? score
-      : preset.defaultPegAdjustedScore
-    : overrides.pegAdjustedScore;
+    overrides.pegMultiplier === undefined ? DEFAULT_PEG_MULTIPLIER : overrides.pegMultiplier;
+  const pegAdjustedScore =
+    overrides.pegAdjustedScore === undefined ? score : overrides.pegAdjustedScore;
   const pillar = (pillarScore: number | null) => ({
     score: pillarScore,
     evidenceLevel: "adequate" as const,
     freshness: "current" as const,
-    components: [...preset.pillarComponents],
+    components: [...PILLAR_COMPONENTS],
     reasons: [],
   });
   const pillars = overrides.pillars ?? {
-    backing: pillar(
-      qualityScore === null
-        ? null
-        : applyPillarOffset(qualityScore, preset.pillarOffsets.backing),
-    ),
-    exit: pillar(
-      qualityScore === null
-        ? null
-        : applyPillarOffset(qualityScore, preset.pillarOffsets.exit),
-    ),
-    control: pillar(
-      qualityScore === null
-        ? null
-        : applyPillarOffset(qualityScore, preset.pillarOffsets.control),
-    ),
+    backing: pillar(qualityScore === null ? null : Math.max(0, qualityScore - 2)),
+    exit: pillar(qualityScore),
+    control: pillar(qualityScore === null ? null : Math.min(100, qualityScore + 2)),
   };
-  const defaultWeakestPillar = (
-    Object.entries(pillars) as Array<
-      [V9PillarKey, (typeof pillars)["backing"]]
-    >
+  const weakest = (
+    Object.entries(pillars) as Array<[V9PillarKey, (typeof pillars)["backing"]]>
   )
     .filter((entry) => entry[1].score !== null)
     .sort((left, right) => left[1].score! - right[1].score!)[0];
   const weakestPillar = overrides.weakestPillar !== undefined
     ? overrides.weakestPillar
-    : qualityScore === null ||
-        (preset.defaultWeakestPillar === "minimum" && defaultWeakestPillar === undefined)
+    : qualityScore === null || weakest === undefined
       ? null
-      : preset.defaultWeakestPillar === "minimum"
-        ? {
-            pillar: defaultWeakestPillar![0],
-            score: defaultWeakestPillar![1].score!,
-          }
-        : {
-            pillar: preset.defaultWeakestPillar,
-            score: pillars[preset.defaultWeakestPillar].score!,
-          };
+      : { pillar: weakest[0], score: weakest[1].score! };
   const breakdowns = overrides.breakdowns !== undefined
     ? overrides.breakdowns
-    : buildBreakdowns(preset, score, pillars);
-  const baseCard = {
+    : buildBreakdowns(score, pillars);
+  const card = {
     id: "usdc-circle",
     pegMultiplier,
     pegAdjustedScore,
@@ -234,33 +198,19 @@ export function makeReportCardsV9Card(
       primaryExit: "eligibility-gated" as const,
       governance: "single-entity" as const,
       unknownFields: [],
-      signals: [...preset.accessPostureSignals],
+      signals: [],
       reasons: [],
     },
     dependencies: { serial: [], basket: [], cycleBlocked: false as const, reasonCodes: [] },
     stressStateDigest: null,
-  };
-  const derivedValues = {
+    ...overrides,
     score,
     grade,
     qualityScore,
     pillars,
     weakestPillar,
     breakdowns,
-  };
-  const card = (
-    preset.overridesBeforeDerivedValues
-      ? {
-          ...baseCard,
-          ...overrides,
-          ...derivedValues,
-        }
-      : {
-          ...baseCard,
-          ...derivedValues,
-          ...overrides,
-        }
-  ) satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
+  } satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
   const hasScoreStages =
     card.qualityScore !== null &&
     card.pegMultiplier !== null &&

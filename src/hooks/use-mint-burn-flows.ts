@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import {
+  asMetaQueryOptions,
   createRegisteredApiPollingQueryOptions,
   useRegisteredApiQuery,
 } from "./api-hooks";
@@ -76,9 +77,11 @@ export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
 }
 
 export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
-  return createRegisteredApiPollingQueryOptions<MintBurnPerCoinResponse>(
-    FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlowsCoin(stablecoinId, hours),
-    { enabled: !!stablecoinId && (opts?.enabled ?? true) },
+  return asMetaQueryOptions<MintBurnPerCoinResponse>(
+    createRegisteredApiPollingQueryOptions<MintBurnPerCoinResponse>(
+      FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlowsCoin(stablecoinId, hours),
+      { enabled: !!stablecoinId && (opts?.enabled ?? true) },
+    ),
   );
 }
 

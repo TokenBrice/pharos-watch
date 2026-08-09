@@ -1,6 +1,6 @@
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { batchExecute, normalizeBlacklistSyncStateKey } from "../../lib/db";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { throwIfAborted } from "../../lib/abort";
 
 export type BlacklistCursorKind = "evm_block" | "tron_timestamp_ms";

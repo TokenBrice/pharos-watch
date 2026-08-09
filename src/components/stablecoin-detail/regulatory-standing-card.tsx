@@ -5,7 +5,7 @@ import { Check, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { RegulatoryStandingView } from "@/lib/regulatory-standing";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +19,15 @@ export function RegulatoryStandingCard({ view }: { view?: RegulatoryStandingView
   if (!view) return null;
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Regulatory standing">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Regulatory standing</h2>
+    <RailCard
+      title="Regulatory standing"
+      ariaLabel="Regulatory standing"
+      trailing={
         <Badge variant="outline" className={cn("text-[11px] font-medium", view.badgeToneClass)}>
           {view.badgeLabel}
         </Badge>
-      </div>
+      }
+    >
       <div className="space-y-3 px-4 pb-4">
         <p className="text-xs leading-relaxed text-muted-foreground">{view.summary}</p>
         {view.regimes.map((regime) => (
@@ -68,6 +70,6 @@ export function RegulatoryStandingCard({ view }: { view?: RegulatoryStandingView
           trailing={view.reviewedAt ? `Reviewed ${view.reviewedAt}` : undefined}
         />
       </div>
-    </section>
+    </RailCard>
   );
 }

@@ -41,7 +41,6 @@ import {
   formatRelativeAgeSeconds,
   formatRelativeDurationSeconds,
   formatRelativeTimeMs,
-  formatStalenessDurationSeconds,
 } from "../relative-time";
 
 describe("formatScore", () => {
@@ -640,12 +639,6 @@ describe("relative duration helpers", () => {
     expect(formatApproxDurationSeconds(90 * 60, { style: "long" })).toBe("1.5 hr");
     expect(formatApproxDurationSeconds(3 * 86_400, { style: "long" })).toBe("3.0 days");
     expect(formatApproxDurationSeconds(Number.NaN, { invalidFallback: "—" })).toBe("—");
-  });
-
-  it("formats watchdog staleness durations", () => {
-    expect(formatStalenessDurationSeconds(null)).toBe("missing");
-    expect(formatStalenessDurationSeconds(1800)).toBe("30m");
-    expect(formatStalenessDurationSeconds(5400)).toBe("1.5h");
   });
 });
 

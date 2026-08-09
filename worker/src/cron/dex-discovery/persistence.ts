@@ -1,6 +1,6 @@
 import { batchExecute } from "../../lib/db";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { toErrorMessage } from "../../lib/error-utils";
 import { tryParseJson } from "../../lib/json-parse";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";

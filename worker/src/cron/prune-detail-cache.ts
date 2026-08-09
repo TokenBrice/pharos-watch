@@ -2,7 +2,7 @@ import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { createCronResult } from "../lib/cron-result";
 import { batchExecute } from "../lib/db";
 

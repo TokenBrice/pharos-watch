@@ -1,5 +1,5 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   TelegramPulseSchema,

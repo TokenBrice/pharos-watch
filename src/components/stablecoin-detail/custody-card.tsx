@@ -4,7 +4,7 @@
 import { Badge } from "@/components/ui/badge";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { CustodyClientSummary } from "@/lib/stablecoin-detail-custody-client";
 import { cn } from "@/lib/utils";
 
@@ -40,13 +40,15 @@ export function CustodyCard({ summary }: { summary?: CustodyClientSummary | null
   ];
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Custody">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Custody</h2>
+    <RailCard
+      title="Custody"
+      ariaLabel="Custody"
+      trailing={
         <Badge variant="outline" className={cn("text-[11px] font-medium", summary.postureToneClass)}>
           {summary.postureLabel}
         </Badge>
-      </div>
+      }
+    >
       <div className="space-y-3 px-4 pb-4">
         <p className="text-xs leading-relaxed text-muted-foreground">{summary.summary}</p>
         {summary.providers.length > 0 || summary.undisclosedSharePct != null ? (
@@ -88,6 +90,6 @@ export function CustodyCard({ summary }: { summary?: CustodyClientSummary | null
           trailing={summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined}
         />
       </div>
-    </section>
+    </RailCard>
   );
 }

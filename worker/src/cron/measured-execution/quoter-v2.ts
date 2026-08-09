@@ -21,7 +21,7 @@ import {
 } from "./profiles";
 import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { getDexMeasuredExecutionDeployment } from "./registry";
-import { forEachWithConcurrency } from "./concurrency";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { MAX_UINT256, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
 
 const QUOTER_V2_ABI = parseAbi([
@@ -259,7 +259,7 @@ export async function quoteQuoterV2Requests(input: {
   const resultsByLabel = new Map<string, EvmMulticall3Result>();
   const transportFailureLabels = new Set<string>();
   const budgetStopReasonsByLabel = new Map<string, DexMeasuredExecutionBudgetStopReason>();
-  await forEachWithConcurrency([...byChain], 3, async ([chain, requests]) => {
+  await mapWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
@@ -421,7 +421,7 @@ export async function resolveQuoterV2PoolBindings(input: {
     byChain.set(request.target.chain, rows);
   }
 
-  await forEachWithConcurrency([...byChain], 3, async ([chain, requests]) => {
+  await mapWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);

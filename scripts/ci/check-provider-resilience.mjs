@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
+import { reportViolations } from "../lib/report-violations.mjs";
 import { collectSourceFiles, runAsCli } from "../lib/source-files.mjs";
 import {
   PROVIDER_RESILIENCE_REGISTRY,
@@ -213,14 +214,12 @@ export function scanProviderResilience({
 
 export function main(cwd = process.cwd()) {
   const report = scanProviderResilience({ cwd });
-  if (report.violations.length > 0) {
-    process.stderr.write("Provider resilience registry violations:\n\n");
-    for (const violation of report.violations) {
-      process.stderr.write(`  [${violation.kind}] ${violation.message}\n`);
-    }
-    process.stderr.write("\nFix: register the provider surface with timeout/body/circuit/test coverage, or route outbound HTTP through an existing resilient helper.\n");
-    return 1;
-  }
+  const status = reportViolations({
+    label: "Provider resilience registry",
+    violations: report.violations.map((violation) => `[${violation.kind}] ${violation.message}`),
+    hint: "Fix: register the provider surface with timeout/body/circuit/test coverage, or route outbound HTTP through an existing resilient helper.",
+  });
+  if (status !== 0) return status;
 
   process.stdout.write(
     `Provider resilience registry: OK (${report.entries} surfaces, ${report.registeredFiles} files registered)\n`,

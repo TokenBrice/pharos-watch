@@ -12,6 +12,7 @@ import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { getCache, setCache } from "./db-cache";
 import { FrankfurterTimeSeriesSchema, SecondaryFxResponseSchema } from "./external-api-schemas";
 import { rethrowIfAborted } from "./abort";
+import { mapWithConcurrency } from "./concurrency";
 import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "../api/backfill-price-sources";
 
@@ -252,23 +253,17 @@ export async function buildCommodityMedianSeriesFromCg(
     prices: { timestamp: number; price: number }[];
   }> = [];
 
-  let nextIndex = 0;
-  const workerCount = Math.min(COMMODITY_MEDIAN_FETCH_CONCURRENCY, allCommodityCoins.length);
-  await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (nextIndex < allCommodityCoins.length) {
-      const meta = allCommodityCoins[nextIndex++];
-      if (!meta) continue;
-      const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
-      if (!geckoId) continue;
-      const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
-      if (prices.length === 0) continue;
-      sources.push({
-        peg: meta.flags.pegCurrency as CommodityPeg,
-        commodityOunces: meta.commodityOunces,
-        prices,
-      });
-    }
-  }));
+  await mapWithConcurrency(allCommodityCoins, COMMODITY_MEDIAN_FETCH_CONCURRENCY, async (meta) => {
+    const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+    if (!geckoId) return;
+    const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
+    if (prices.length === 0) return;
+    sources.push({
+      peg: meta.flags.pegCurrency as CommodityPeg,
+      commodityOunces: meta.commodityOunces,
+      prices,
+    });
+  });
 
   const result = buildCommodityPeerMedianSeries(sources);
   for (const peg of ["GOLD", "SILVER"] as const) {

@@ -9,6 +9,7 @@ import {
 import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import type { FeedbackEnv } from "../feedback";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 // Stub fetch and crypto.subtle before importing the handler
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
@@ -30,21 +31,7 @@ const FEEDBACK_IDEMPOTENCY_KEY = "feedback-test-key";
 
 function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const canned = createMockD1(tables, options);
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE admin_idempotency_keys (
-      action TEXT NOT NULL,
-      idempotency_key TEXT NOT NULL,
-      request_hash TEXT NOT NULL,
-      response_status INTEGER NOT NULL,
-      response_body TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      reservation_owner TEXT,
-      reservation_generation INTEGER NOT NULL DEFAULT 0,
-      execution_started_at INTEGER,
-      PRIMARY KEY (action, idempotency_key)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   const durable = createSqliteD1(sqlite);
   const durableHistory: Array<{ sql: string; binds: unknown[] }> = [];
   return {
@@ -59,25 +46,7 @@ function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): Mo
 }
 
 function createDurableFeedbackDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE feedback_rate_limit (
-      ip_hash TEXT NOT NULL,
-      submitted_at INTEGER NOT NULL
-    );
-    CREATE TABLE admin_idempotency_keys (
-      action TEXT NOT NULL,
-      idempotency_key TEXT NOT NULL,
-      request_hash TEXT NOT NULL,
-      response_status INTEGER NOT NULL,
-      response_body TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      reservation_owner TEXT,
-      reservation_generation INTEGER NOT NULL DEFAULT 0,
-      execution_started_at INTEGER,
-      PRIMARY KEY (action, idempotency_key)
-    );
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 

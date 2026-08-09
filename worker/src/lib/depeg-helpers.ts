@@ -289,7 +289,6 @@ export async function loadDexPriceSources(
         continue;
       }
       const decoded = decodeJsonString<DexPoolSource[], DexJsonDecodeReason>(row.price_sources_json, {
-        mode: "degraded",
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",

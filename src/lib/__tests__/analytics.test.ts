@@ -42,7 +42,7 @@ describe("trackSearch debounce + clearAllTrackingTimers", () => {
     (globalThis as { window: { location: { pathname: string } } }).window.location.pathname =
       "/pharoswatchbot/app/";
 
-    trackEvent("panel_toggled", { panel: "watchlist", action: "open" });
+    trackEvent("theme_toggled", { theme: "dark" });
 
     expect(gtag).not.toHaveBeenCalled();
   });

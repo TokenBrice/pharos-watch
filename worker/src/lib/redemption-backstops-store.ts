@@ -211,7 +211,6 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
 function parseDetails(value: string | null): RedemptionBackstopDetails {
   if (!value) return {};
   const decoded = decodeJsonString<RedemptionBackstopDetails, "json-parse-failed">(value, {
-    mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
       const raw = parsed as Record<string, unknown>;
@@ -227,7 +226,6 @@ export function normalizeRedemptionBackstopRunMetadata(
 ): RedemptionBackstopRunMetadata {
   if (!value) return {};
   const decoded = decodeJsonString<RedemptionBackstopRunMetadata, "json-parse-failed" | "invalid-payload">(value, {
-    mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

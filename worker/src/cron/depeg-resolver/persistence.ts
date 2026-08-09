@@ -24,6 +24,11 @@ export async function persistDepegResolverReviewArtifacts(
 
   try {
     assessmentWriteCount = await writeDepegResolverAssessments(db, snapshot);
+    if (!storeContracts) {
+      // The reviewer reads only durable v2 incident stores; without them there is nothing to
+      // review. Report it rather than publishing a snapshot built from a weaker source.
+      return { assessmentWriteCount, reviewRows, reviewError: "ddr-review-store-contracts-unavailable" };
+    }
     const reviewResult = await computeAndStoreDepegResolverReview(db, signal, { storeContracts });
     reviewRows = reviewResult.itemCount ?? 0;
   } catch (error) {

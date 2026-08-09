@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
 import { insertDigestRecord, markDigestMetaBlocked } from "../platform";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 
 describe("insertDigestRecord", () => {
   function makeOptions(db: D1Database, signal?: AbortSignal) {
@@ -17,18 +18,7 @@ describe("insertDigestRecord", () => {
   }
 
   function setupDigestSqlite(): DatabaseSync {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`
-      CREATE TABLE daily_digest (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        generated_at INTEGER NOT NULL,
-        digest_text TEXT NOT NULL,
-        input_data TEXT NOT NULL,
-        digest_title TEXT,
-        digest_extended TEXT,
-        digest_meta TEXT
-      );
-    `);
+    const sqlite = createLatestSchemaSqlite().sqlite;
     return sqlite;
   }
 

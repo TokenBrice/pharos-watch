@@ -3,9 +3,8 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
@@ -147,7 +146,6 @@ export async function fetchUsdtbTransparencyReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, "usdtb-transparency");
-  const payload = await fetchJsonWithRetry<UsdtbBackingAndSupplyPayload>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<UsdtbBackingAndSupplyPayload>(config, "usdtb-transparency", signal, 12_000, ctx);
   return adaptUsdtbTransparency(payload);
 }

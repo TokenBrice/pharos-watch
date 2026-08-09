@@ -17,6 +17,7 @@ import {
   upsertRedemptionBackstopSnapshots,
 } from "../redemption-backstops-store";
 import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 /** Realistic mock row matching an actual offchain-issuer config (EURC). */
 function makeRealisticRow(overrides: Record<string, unknown> = {}) {
@@ -1118,43 +1119,20 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
   });
 
   it("prunes old run rows and manifests while preserving the current and latest completed runs", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE redemption_backstop_runs (
-          run_id TEXT PRIMARY KEY,
-          started_at INTEGER NOT NULL,
-          completed_at INTEGER,
-          status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
-          expected_count INTEGER NOT NULL,
-          written_count INTEGER NOT NULL DEFAULT 0,
-          methodology_version TEXT NOT NULL,
-          min_updated_at INTEGER,
-          max_updated_at INTEGER,
-          metadata_json TEXT
-        );
-        CREATE TABLE redemption_backstop_run_rows (
-          snapshot_run_id TEXT NOT NULL,
-          stablecoin_id TEXT NOT NULL,
-          updated_at INTEGER NOT NULL,
-          PRIMARY KEY (snapshot_run_id, stablecoin_id)
-        );
-        CREATE TABLE redemption_backstop_history (
-          stablecoin_id TEXT NOT NULL,
-          snapshot_date INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL,
-          PRIMARY KEY (stablecoin_id, snapshot_date)
-        );
-      `);
-      const insertRun = sqlite.prepare(
+            const insertRun = sqlite.prepare(
         `INSERT INTO redemption_backstop_runs (
           run_id, started_at, completed_at, status, expected_count, written_count,
           methodology_version, min_updated_at, max_updated_at, metadata_json
         ) VALUES (?, ?, ?, ?, 1, 1, '4.04', ?, ?, NULL)`,
       );
       const insertRunRow = sqlite.prepare(
-        "INSERT INTO redemption_backstop_run_rows (snapshot_run_id, stablecoin_id, updated_at) VALUES (?, ?, ?)",
+        `INSERT INTO redemption_backstop_run_rows (
+          snapshot_run_id, stablecoin_id, route_family, access_model, settlement_model,
+          execution_model, output_asset_type, provider, source_mode, methodology_version, updated_at
+        ) VALUES (?, ?, 'issuer-direct', 'permissioned', 't-plus-n', 'discretionary',
+                  'fiat', 'issuer', 'curated', '4.04', ?)`,
       );
       const nowSec = 10_000;
       const retentionSec = 1_000;
@@ -1173,7 +1151,9 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       const historyRetentionSec = 2_000;
       const historyCutoff = nowSec - historyRetentionSec;
       const insertHistory = sqlite.prepare(
-        "INSERT INTO redemption_backstop_history (stablecoin_id, snapshot_date, updated_at) VALUES (?, ?, ?)",
+        `INSERT INTO redemption_backstop_history
+          (stablecoin_id, snapshot_date, updated_at, methodology_version)
+         VALUES (?, ?, ?, '4.04')`,
       );
       insertHistory.run("usdt-tether", historyCutoff - 100, historyCutoff - 100);
       insertHistory.run("usdc-circle", historyCutoff - 50, historyCutoff - 50);

@@ -1,22 +1,8 @@
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function openSqliteWithMigrations(): import("node:sqlite").DatabaseSync {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
-  const sqlite = new DatabaseSync(":memory:");
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-  for (const file of files) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- trusted test-only path under worker/migrations/
-    const sql = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
-    sqlite.exec(sql);
-  }
-  return sqlite;
+  return createLatestSchemaSqlite().sqlite;
 }
 
 function explainQueryPlan(

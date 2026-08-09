@@ -25,7 +25,6 @@ import {
   recordProcessedRows,
   type SyncBlacklistApiErrorConfig,
 } from "./sync-support";
-import { toErrorMessage } from "../../lib/error-utils";
 import {
   claimBlacklistConfigAttempt,
   finalizeBlacklistConfigAttempt,
@@ -34,7 +33,6 @@ import {
   type BlacklistConfigAttempt,
   type BlacklistConfigState,
 } from "./state";
-import type { BlacklistProviderScanTelemetry } from "./provider-telemetry";
 
 type ScanCounters = {
   totalInsertedRows: number;
@@ -60,7 +58,6 @@ type ScanState = {
   stateConflicts: number;
   blacklistProviderCalls: number;
   maxProviderSplitDepth: number;
-  providerScanTelemetry: BlacklistProviderScanTelemetry[];
   coverageOutcomeCounts: Record<string, number>;
 };
 
@@ -212,38 +209,10 @@ async function scanBlacklistConfig(args: {
   return buildEvmScanResult({ result, lastCursor: args.lastBlock });
 }
 
-function recordProviderTelemetry(
-  state: ScanState,
-  configState: BlacklistConfigState,
-  result: BlacklistScanResult,
-  insertedRowsForConfig: number,
-): void {
-  const { config, configKey, cursorValue } = configState;
+function recordProviderTelemetry(state: ScanState, result: BlacklistScanResult): void {
   state.blacklistProviderCalls += result.providerCalls;
   state.maxProviderSplitDepth = Math.max(state.maxProviderSplitDepth, result.maxSplitDepth);
   state.coverageOutcomeCounts[result.coverageOutcome] = (state.coverageOutcomeCounts[result.coverageOutcome] ?? 0) + 1;
-  state.providerScanTelemetry.push({
-    configKey,
-    chainId: config.chain.chainId,
-    providerMode:
-      config.chain.type === "tron"
-        ? "trongrid"
-        : result.usedRpcLogs
-          ? result.topicCount > 1
-            ? "rpc-or-topics"
-            : "rpc"
-          : "etherscan",
-    coverageOutcome: result.coverageOutcome,
-    fromCursor: cursorValue,
-    scannedToCursor: result.scannedToCursor,
-    safeHead: result.safeHead,
-    fetchedRowCount: result.rows.length,
-    insertedRowCount: insertedRowsForConfig,
-    providerCallCount: result.providerCalls,
-    maxSplitDepth: result.maxSplitDepth,
-    failureSamples: result.failureSamples,
-    observedAt: Math.floor(Date.now() / 1000),
-  });
 }
 
 async function finalizeSuccessfulConfigScan(
@@ -352,7 +321,6 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
       chainRpcs: args.chainRpcs,
       getChainTimestampCache: args.getChainTimestampCache,
     });
-    let insertedRowsForConfig = 0;
 
     if (config.chain.type === "tron") {
       await recordOutcomeSafe(args.db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
@@ -382,12 +350,11 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
       chainRpcs: args.chainRpcs,
     });
     recordProcessedRows(state.counters, processed);
-    insertedRowsForConfig = processed.insertedRows;
 
     if (result.incomplete) recordIncompleteConfigScan(configState, result, state);
     if (config.chain.type === "evm") recordEvmApiError(configState, result, state);
 
-    recordProviderTelemetry(state, configState, result, insertedRowsForConfig);
+    recordProviderTelemetry(state, result);
     await finalizeSuccessfulConfigScan(args.db, configState, args.attempt, result, state, args.signal);
     state.totalFetchedEvents += result.rows.length;
     const syncLabel = config.chain.type === "tron" ? "ts" : "block";
@@ -401,7 +368,7 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
 
 async function recordConfigScanException(args: ScanSingleConfigArgs, err: unknown): Promise<void> {
   const { configState, state } = args;
-  const { config, configKey, cursorValue: lastBlock } = configState;
+  const { config, configKey } = configState;
   state.apiErrors++;
   const errorClass = err instanceof Error ? err.name : "UnknownError";
   state.apiErrorClasses[errorClass] = (state.apiErrorClasses[errorClass] ?? 0) + 1;
@@ -419,21 +386,6 @@ async function recordConfigScanException(args: ScanSingleConfigArgs, err: unknow
   configState.consecutiveSkips = 0;
   configState.lastOutcome = "exception";
   state.coverageOutcomeCounts.exception = (state.coverageOutcomeCounts.exception ?? 0) + 1;
-  state.providerScanTelemetry.push({
-    configKey,
-    chainId: config.chain.chainId,
-    providerMode: "exception",
-    coverageOutcome: "exception",
-    fromCursor: lastBlock,
-    scannedToCursor: null,
-    safeHead: null,
-    fetchedRowCount: 0,
-    insertedRowCount: 0,
-    providerCallCount: 0,
-    maxSplitDepth: 0,
-    failureSamples: [toErrorMessage(err)],
-    observedAt: Math.floor(Date.now() / 1000),
-  });
   console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
 }
 
@@ -485,7 +437,6 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     stateConflicts: 0,
     blacklistProviderCalls: 0,
     maxProviderSplitDepth: 0,
-    providerScanTelemetry: [],
     coverageOutcomeCounts: {},
   };
   const chainTimestampCaches = new Map<string, Map<number, number>>();

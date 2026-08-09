@@ -1,9 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import type { D1Database } from "@cloudflare/workers-types";
 import { describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import {
   productionHistoricalMintPriceSourceLoader,
   repairHistoricalMintBurnPrices,
@@ -11,7 +10,6 @@ import {
   type HistoricalMintPriceSourceLoader,
 } from "../mint-burn-historical-price-repair";
 
-const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
 const DAY = 86_400;
 
 interface SqliteD1 extends D1Database {
@@ -20,60 +18,8 @@ interface SqliteD1 extends D1Database {
 }
 
 function makeSqliteD1(): SqliteD1 {
-  const sqlite = new DatabaseSync(":memory:");
-  for (const file of readdirSync(MIGRATIONS_DIR)
-    .filter((entry) => entry.endsWith(".sql"))
-    .sort()) {
-    // Test-only replay of repo-controlled migration files.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    sqlite.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
-  }
-
-  function statement(sql: string, binds: unknown[] = []): D1PreparedStatement {
-    return {
-      bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
-      run: async () => {
-        const result = sqlite.prepare(sql).run(...(binds as never[]));
-        return {
-          success: true,
-          meta: {
-            changes: result.changes,
-            last_row_id: Number(result.lastInsertRowid ?? 0),
-          },
-        };
-      },
-      first: async <T>() => (sqlite.prepare(sql).get(...(binds as never[])) ?? null) as T | null,
-      all: async <T>() => ({
-        results: sqlite.prepare(sql).all(...(binds as never[])) as T[],
-        success: true,
-        meta: {},
-      }),
-      raw: async () => sqlite.prepare(sql).all(...(binds as never[])) as unknown as unknown[][],
-    } as unknown as D1PreparedStatement;
-  }
-
-  return {
-    sqlite,
-    prepare: (sql: string) => statement(sql),
-    batch: async (statements: D1PreparedStatement[]) => {
-      sqlite.exec("BEGIN");
-      try {
-        const results = [];
-        for (const item of statements) results.push(await item.run());
-        sqlite.exec("COMMIT");
-        return results as Awaited<ReturnType<D1Database["batch"]>>;
-      } catch (error) {
-        sqlite.exec("ROLLBACK");
-        throw error;
-      }
-    },
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-    close: () => sqlite.close(),
-  } as SqliteD1;
+  const { sqlite, db } = createLatestSchemaSqlite();
+  return Object.assign(db, { sqlite, close: () => sqlite.close() }) as SqliteD1;
 }
 
 function insertEvent(

@@ -5,8 +5,6 @@ import type {
   CronRunStatus,
   CronStatus,
   StatusResponse,
-  WorkerJobAttemptState,
-  WorkerJobAttemptStatusClass,
 } from "@shared/types";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 
@@ -166,30 +164,6 @@ const NEUTRAL_SKIP_REASON_LABELS: Readonly<Record<string, string>> = {
   "v9-memory-lane-active": "Skipped: V9 memory lane active",
 };
 
-const ATTEMPT_STATE_LABELS: Readonly<Record<WorkerJobAttemptState, string>> = {
-  queued: "Queued",
-  claimed: "Claimed",
-  running: "Running",
-  completed: "Completed",
-  deferred: "Deferred",
-  abandoned: "Abandoned",
-  failed: "Failed",
-  skipped_locked: "Skipped: lease held",
-  cancelled: "Cancelled",
-};
-
-const ATTEMPT_STATUS_CLASS_LABELS: Readonly<Record<WorkerJobAttemptStatusClass, string>> = {
-  ok: "Succeeded",
-  degraded: "Completed with warnings",
-  controlled_error: "Controlled error",
-  thrown_error: "Unhandled error",
-  abandoned: "Abandoned",
-  deferred: "Deferred",
-  skipped_duplicate: "Skipped: duplicate slot",
-  skipped_running: "Skipped: already running",
-  skipped_locked: "Skipped: lease held",
-};
-
 const BUDGET_TELEMETRY_LABELS: Readonly<Record<BudgetOnlySurfaceStatus["telemetryStatus"], string>> = {
   fresh: "Fresh",
   stale: "Stale",
@@ -252,7 +226,6 @@ function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome
 
 function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {
   if (!normalizedSearch) return true;
-  const attempt = row.cron.latestAttempt;
   const artifactText = (row.cron.staleArtifacts ?? [])
     .map((artifact) => `${artifact.kind} ${artifact.leaseOwner ?? ""} ${artifact.progressStage ?? ""}`)
     .join(" ");
@@ -268,9 +241,6 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
     row.rawStatus,
     row.statusLabel,
     row.impactClass,
-    attempt?.attemptId,
-    attempt?.state,
-    attempt?.statusClass,
     artifactText,
   ]
     .filter((value): value is string => typeof value === "string")
@@ -379,14 +349,6 @@ export function formatCronRunStatus(
     if (reason && NEUTRAL_SKIP_REASON_LABELS[reason]) return NEUTRAL_SKIP_REASON_LABELS[reason];
   }
   return status ? RUN_STATUS_LABELS[status] : "No runs";
-}
-
-export function formatCronAttemptState(state: WorkerJobAttemptState): string {
-  return ATTEMPT_STATE_LABELS[state];
-}
-
-export function formatCronAttemptStatusClass(statusClass: WorkerJobAttemptStatusClass | null): string {
-  return statusClass ? ATTEMPT_STATUS_CLASS_LABELS[statusClass] : "Pending outcome";
 }
 
 function formatExactSeconds(durationMs: number): string {

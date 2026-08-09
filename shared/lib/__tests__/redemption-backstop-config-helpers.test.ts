@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   defineBackstopRegistry,
   defineBatch,
-  defineOverride,
   rebindEntriesToRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
@@ -73,16 +72,16 @@ describe("redemption backstop config helpers", () => {
     const baseConfig = createBaseConfig();
     const entries = [
       ...defineBatch(["alpha", "beta"], baseConfig, { sourceFilePath: "shared/base.ts" }),
-      defineOverride(
-        "alpha",
-        baseConfig,
-        {
-          settlementModel: "days",
+      {
+        id: "alpha",
+        config: {
+          ...createBaseConfig(),
+          settlementModel: "days" as const,
           docs: [sourceRef("Override docs", "https://example.com/override", ["route"])],
         },
-        "Reviewed override for alpha.",
-        { sourceFilePath: "shared/override.ts" },
-      ),
+        overrideReason: "Reviewed override for alpha.",
+        sourceFilePath: "shared/override.ts",
+      },
     ];
     const registry = defineBackstopRegistry(entries);
 
@@ -112,12 +111,6 @@ describe("redemption backstop config helpers", () => {
     expect(rebound[0]!.config.reviewedAt).toBe("2026-01-02");
     expect(rebound[0]!.sourceFilePath).toBe("shared/base.ts");
     expect(entries[0]!.config.reviewedAt).toBeUndefined();
-  });
-
-  it("rejects blank override reasons", () => {
-    expect(() => defineOverride("alpha", createBaseConfig(), {}, "   ")).toThrow(
-      'Redemption backstop config override for "alpha" requires a reason.',
-    );
   });
 
   it("builds compact source references", () => {

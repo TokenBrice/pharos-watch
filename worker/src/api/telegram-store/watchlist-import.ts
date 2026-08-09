@@ -1,6 +1,6 @@
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { isSubscribableCoin } from "../../lib/telegram-subscription-eligibility";
 import { TELEGRAM_PRESET_IDS } from "@shared/lib/telegram-presets";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";

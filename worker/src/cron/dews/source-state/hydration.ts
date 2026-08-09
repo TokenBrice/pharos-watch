@@ -581,7 +581,6 @@ export async function hydrateYieldWarnings(ctx: HydrationContext): Promise<Yield
     yieldWarningRowsRead = yieldRows.results.length;
     for (const row of yieldRows.results) {
       const decoded = decodeJsonString<string[], PersistedJsonDecodeReason>(row.warning_signals, {
-        mode: "degraded",
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
         normalize: (parsed) => {
@@ -625,7 +624,6 @@ export async function hydrateYieldRankingsCache(ctx: HydrationContext): Promise<
       .bind("yield-rankings")
       .first<{ value: string | null; updated_at: number | null }>();
     const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(rankingsCache?.value ?? null, {
-      mode: "degraded",
       updatedAt: rankingsCache?.updated_at ?? null,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",

@@ -15,8 +15,8 @@ import {
 } from "../lib/smoke-runtime.mjs";
 import { REDEMPTION_ENUMS, assertRedemptionEntry } from "../lib/smoke-redemption-assertions.mjs";
 
-// Re-export so existing consumers (e.g. smoke-api-redemption-enums.test.ts)
-// can keep importing REDEMPTION_ENUMS from this module.
+// Kept as part of this module's public surface so callers can read the enum
+// catalogue the smoke assertions validate against.
 export { REDEMPTION_ENUMS };
 
 export const STRICT_CONTRACT_SMOKE_PATHS = [

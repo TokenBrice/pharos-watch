@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPsiChartData,
-  getCompletedPsiHistory,
   getDisplayedPsi,
   getPsiBandStreak,
   getPsiCompletedDayPoint,
-  getPsiTodayMidnight,
   upsertPsiHistoryPoint,
 } from "../psi-view-model";
 
 describe("psi-view-model", () => {
   const computedAt = 1_772_401_200; // 2026-03-05T12:00:00Z
-  const todayMidnight = getPsiTodayMidnight(computedAt);
+  // Same UTC-midnight truncation the module applies internally.
+  const todayMidnight = computedAt - (computedAt % 86_400);
   const yesterday = todayMidnight - 86_400;
   const twoDaysAgo = yesterday - 86_400;
 
@@ -35,7 +34,9 @@ describe("psi-view-model", () => {
     });
   });
 
-  describe("getCompletedPsiHistory", () => {
+  // The completed-history filter is module-internal; assert it through the two
+  // exported consumers that depend on today's point being excluded.
+  describe("completed-day filtering", () => {
     it("excludes synthetic or duplicated today points", () => {
       const history = [
         { date: todayMidnight, score: 80, band: "STEADY" },
@@ -43,10 +44,17 @@ describe("psi-view-model", () => {
         { date: twoDaysAgo, score: 74, band: "TREMOR" },
       ];
 
-      expect(getCompletedPsiHistory(history, computedAt)).toEqual([
-        { date: yesterday, score: 76, band: "STEADY" },
-        { date: twoDaysAgo, score: 74, band: "TREMOR" },
-      ]);
+      expect(getPsiCompletedDayPoint(history, computedAt, 1)).toEqual({
+        date: yesterday,
+        score: 76,
+        band: "STEADY",
+      });
+      expect(getPsiCompletedDayPoint(history, computedAt, 2)).toEqual({
+        date: twoDaysAgo,
+        score: 74,
+        band: "TREMOR",
+      });
+      expect(getPsiCompletedDayPoint(history, computedAt, 3)).toBeNull();
     });
   });
 

@@ -1,9 +1,11 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { describe, expect, it } from "vitest";
+import donorCapture from "./fixtures/safety-score-v9-a-plus-donor-capture.json";
 import {
   computeReportCardsRegistryFingerprint,
   createReportCardsFixedInput,
+  normalizeFixedInput,
   type ReportCardsFixedInputDraft,
 } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9-candidate";
@@ -31,8 +33,9 @@ const RETAINED_344_ASSET_IDENTITY = {
     "report-cards:v9:candidate:v1:c88f3b245540f83e157d7948d9a1b239a493e7bdafe205a9ec2354bca51a7596",
 } as const;
 
-// These frozen capture fragments intentionally stay raw until the production
-// fixed-input and extension schemas validate the assembled two-asset fixture.
+// The frozen donor capture lives in JSON so the epoch-shift reclocking tooling
+// can rewrite it in place; the shapes below re-attach the production types the
+// TS literals used to carry, and the suite schema-validates the load.
 type DonorFixedInputFragment = Pick<
   ReportCardsFixedInputDraft,
   | "capturedAt"
@@ -47,1029 +50,43 @@ type DonorFixedInputFragment = Pick<
   | "redemptionStale"
   | "inputFreshness"
   | "pegDataById"
+  | "dexLiqMap"
   | "redemptionBackstopMap"
   | "resolvedBlacklistStatuses"
   | "liveReserveMap"
   | "liveReserveProvenanceMap"
   | "chainCirculatingById"
-> & {
-  dexLiqMap: Record<string, Partial<ReportCardsFixedInputDraft["dexLiqMap"][string]>>;
-};
-
-const donorFixed = {
-  capturedAt: "2026-07-16T11:04:30.000Z",
-  sourceGeneration: "report-cards:8.17:1784199667",
-  dexGenerationId: "dex-liquidity-1784198459",
-  redemptionGenerationId: "redemption:c34304f1-70b6-47d1-8949-8ba9e63dcccc",
-  registryRevision: "sha256:1778128d7fb2310eaac57c924f3a7b1110915427ab6dadd5c18b4712b6e6d76c",
-  methodologyVersion: "8.17",
-  clockSec: 1784199870,
-  updatedAt: 1784199667,
-  liquidityStale: false,
-  redemptionStale: false,
-  inputFreshness: {
-    dexLiquidity: {
-      updatedAt: 1784198459,
-      ageSeconds: 1411,
-      stale: false,
-    },
-    redemptionBackstops: {
-      updatedAt: 1784175209,
-      ageSeconds: 24661,
-      stale: false,
-    },
-  },
-  pegDataById: {
-    "bold-liquity": {
-      id: "bold-liquity",
-      symbol: "BOLD",
-      name: "Liquity BOLD",
-      pegType: "peggedUSD",
-      pegCurrency: "USD",
-      governance: "decentralized",
-      currentDeviationBps: 11,
-      depegEventCoverageLimited: false,
-      pegScore: 100,
-      pegPct: 99.97056337115818,
-      severityScore: 99.76436351026942,
-      spreadPenalty: 0.15939338129295078,
-      eventCount: 6,
-      worstDeviationBps: 134,
-      activeDepeg: false,
-      lastEventAt: 1773394239,
-      trackingSpanDays: 423,
-      methodologyVersion: "6.096",
-    },
-    "usdc-circle": {
-      id: "usdc-circle",
-      symbol: "USDC",
-      name: "USD Coin",
-      pegType: "peggedUSD",
-      pegCurrency: "USD",
-      governance: "centralized",
-      currentDeviationBps: 0,
-      depegEventCoverageLimited: false,
-      pegScore: 93,
-      pegPct: 99.84874562704388,
-      severityScore: 99.77995322882757,
-      spreadPenalty: 7.22367981017985,
-      eventCount: 3,
-      worstDeviationBps: -1211,
-      activeDepeg: false,
-      lastEventAt: 1678683726,
-      trackingSpanDays: 1461,
-      methodologyVersion: "6.096",
-    },
-  },
-  dexLiqMap: {
-    "dai-makerdao": {
-      liquidityScore: 52,
-      effectiveTvlUsd: 56588372,
-      balanceMeasuredTvlUsd: 160908368.1562387,
-      organicMeasuredTvlUsd: 208127513.99127698,
-      methodologyVersion: "5.84",
-      updatedAt: 1784198459,
-      exitRouteObservations: [
-        {
-          routeId:
-            "dex:dai-makerdao:dl:ethereum%3Afp%3Aethereum%3Acurve%3A0x6b175474e89094c44da98b954eedeac495271d0f%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48%3A0xdac17f958d2ee523a2206206994597c13d831ec7:ethereum%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          routeFamily: "dex-amm",
-          scope: {
-            kind: "chain-contract",
-            chain: "Ethereum",
-            contractOrPoolId:
-              "fp:ethereum:curve:0x6b175474e89094c44da98b954eedeac495271d0f:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:0xdac17f958d2ee523a2206206994597c13d831ec7",
-            protocol: "curve",
-          },
-          requestedNotionalUsd: 1000000,
-          settlementHorizonSec: 300,
-          maxCostBps: 200,
-          executableUsd: 1000000,
-          completionRatio: 1,
-          output: {
-            kind: "tracked-stablecoin",
-            trackedAssetIds: ["usdc-circle"],
-            assetKeys: ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"],
-          },
-          evidenceKind: "reserve-based-amm-simulation",
-          confidence: "high",
-          scoreEligible: true,
-          observedAt: 1784198459,
-          freshnessSeconds: 0,
-          commonModeKeys: [
-            "asset:usdc-circle",
-            "chain:ethereum",
-            "pool:ethereum:fp:ethereum:curve:0x6b175474e89094c44da98b954eedeac495271d0f:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:0xdac17f958d2ee523a2206206994597c13d831ec7",
-            "protocol:curve",
-            "token:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          ],
-          capacityCurve: [
-            {
-              requestedNotionalUsd: 100000,
-              maxCostBps: 200,
-              executableUsd: 100000,
-              completionRatio: 1,
-            },
-            {
-              requestedNotionalUsd: 1000000,
-              maxCostBps: 200,
-              executableUsd: 1000000,
-              completionRatio: 1,
-            },
-            {
-              requestedNotionalUsd: 10000000,
-              maxCostBps: 200,
-              executableUsd: 10000000,
-              completionRatio: 1,
-            },
-            {
-              requestedNotionalUsd: 25000000,
-              maxCostBps: 200,
-              executableUsd: 25000000,
-              completionRatio: 1,
-            },
-          ],
-        },
-      ],
-    },
-  },
-  redemptionBackstopMap: {
-    "dai-makerdao": {
-      stablecoinId: "dai-makerdao",
-      score: 100,
-      dexLiquidityScore: 54,
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: 100,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-      routeFamily: "psm-swap",
-      accessModel: "permissionless-onchain",
-      settlementModel: "atomic",
-      executionModel: "deterministic-onchain",
-      outputAssetType: "stable-single",
-      provider: "reserve-sync-metadata",
-      sourceMode: "dynamic",
-      resolutionState: "resolved",
-      routeStatus: "open",
-      routeStatusSource: "onchain",
-      routeStatusReason: "Sky LitePSM USDC pocket balance is readable on-chain",
-      holderEligibility: "any-holder",
-      capacityConfidence: "live-direct",
-      capacityBasis: "live-direct-telemetry",
-      capacitySemantics: "immediate-bounded",
-      capacityProfile: {
-        immediateUsd: 4278091764.838237,
-        eventualUsd: 4855567035.570997,
-        scoringUsd: 4278091764.838237,
-        scoringHorizon: "immediate",
-        capacityProfileConfidence: "live-direct",
-        modeledExitSizeUsd: 25000000,
-        exitRouteObservations: [
-          {
-            routeId: "redemption:dai-makerdao:psm-swap",
-            routeFamily: "protocol-redemption",
-            scope: {
-              kind: "protocol",
-              protocol: "dai-makerdao",
-            },
-            requestedNotionalUsd: 25000000,
-            settlementHorizonSec: 300,
-            maxCostBps: 200,
-            executableUsd: 25000000,
-            completionRatio: 1,
-            output: {
-              kind: "tracked-stablecoin",
-              trackedAssetIds: ["usdc-circle"],
-            },
-            evidenceKind: "onchain-contract-state",
-            confidence: "high",
-            scoreEligible: true,
-            observedAt: 1784175209,
-            freshnessSeconds: 0,
-            commonModeKeys: ["protocol:dai-makerdao"],
-            capacityCurve: [
-              {
-                requestedNotionalUsd: 100000,
-                maxCostBps: 200,
-                executableUsd: 100000,
-                completionRatio: 1,
-              },
-              {
-                requestedNotionalUsd: 1000000,
-                maxCostBps: 200,
-                executableUsd: 1000000,
-                completionRatio: 1,
-              },
-              {
-                requestedNotionalUsd: 5000000,
-                maxCostBps: 200,
-                executableUsd: 5000000,
-                completionRatio: 1,
-              },
-              {
-                requestedNotionalUsd: 25000000,
-                maxCostBps: 200,
-                executableUsd: 25000000,
-                completionRatio: 1,
-              },
-            ],
-          },
-        ],
-      },
-      feeConfidence: "fixed",
-      feeModelKind: "fixed-bps",
-      modelConfidence: "high",
-      confidenceDetails: {
-        capacityEvidenceQuality: 100,
-        feeEvidenceQuality: 100,
-        routeStatusFreshness: 100,
-        holderCohortBreadth: 100,
-        sourceQuality: 100,
-        reviewedDocAgeDays: 108,
-        reasons: [],
-      },
-      immediateCapacityUsd: 4278091764.838237,
-      immediateCapacityRatio: 0.881069447398773,
-      eventualRedeemabilityScore: 100,
-      capacityKind: "live-direct",
-      freshnessKind: "same-run-onchain",
-      sourceUrls: [
-        "https://developers.sky.money/quick-start/guides/lite-psm/",
-        "https://github.com/makerdao/dss-lite-psm",
-      ],
-      settlementDelaySec: 0,
-      liveHolderEligibility: "any-holder",
-      feeBps: 0,
-      feeDescription: "LitePSM docs show fees are not activated for DAI <-> USDC",
-      costScenarioScores: {
-        retail: 100,
-        activeUser: 100,
-        institutional: 100,
-      },
-      routeExitCorrelation: "same-stablecoin-pool-backing",
-      queueEnabled: false,
-      methodologyVersion: "4.18",
-      updatedAt: 1784175209,
-      docs: {
-        label: "Sky Info",
-        url: "https://info.sky.money/",
-        reviewedAt: "2026-03-30",
-        provenance: "config-reviewed",
-        sources: [
-          {
-            label: "Sky Info",
-            url: "https://info.sky.money/",
-            supports: ["capacity"],
-          },
-          {
-            label: "Website",
-            url: "https://makerdao.com/",
-          },
-          {
-            label: "Docs",
-            url: "https://docs.makerdao.com/",
-          },
-        ],
-      },
-      notes: [
-        "Fresh Sky reserve telemetry uses current PSM USDC balance as immediate capacity; fallback retains the reviewed 33% heuristic when live metadata is unavailable",
-        "Live redemption settlement delay is surfaced as a route constraint",
-        "Sky LitePSM USDC pocket balance is readable on-chain",
-      ],
-      capsApplied: [],
-    },
-  },
-  resolvedBlacklistStatuses: {
-    "ausd-agora": true,
-    "usdc-circle": true,
-  },
-  liveReserveMap: {
-    "usdc-circle": [
-      {
-        name: "<3-Month U.S. Treasuries",
-        pct: 73.9,
-        risk: "very-low",
-      },
-      {
-        name: "Other Bank Deposits",
-        pct: 14.5,
-        risk: "very-low",
-      },
-      {
-        name: "Deposits at Systemically Important Institutions",
-        pct: 10.3,
-        risk: "very-low",
-      },
-      {
-        name: "Overnight Reverse Treasury Repo",
-        pct: 1.3,
-        risk: "very-low",
-      },
-    ],
-  },
-  liveReserveProvenanceMap: {
-    "usdc-circle": {
-      source: "circle-transparency",
-      fetchedAt: 1784189546,
-    },
-  },
-  chainCirculatingById: {
-    "pusd-polymarket": {
-      Polygon: {
-        current: 599351821.6545392,
-        circulatingPrevDay: 600645177.3905188,
-        circulatingPrevWeek: 580085866.3442531,
-        circulatingPrevMonth: 0,
-      },
-    },
-  },
-} satisfies DonorFixedInputFragment;
+>;
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type DonorExtensionFragment = Omit<SafetyScoreV9FactSetExtensionV2, "assets"> & {
   assets: Array<{ assetId: string } & Partial<ExtensionAsset>>;
 };
 
-const donorReplay = {
-  extension: {
-    compiledAtSec: 1784199870,
-    registryFingerprint: "1778128d7fb2310eaac57c924f3a7b1110915427ab6dadd5c18b4712b6e6d76c",
-    routeFreshness: {
-      dexMaxAgeSec: 3600,
-      documentedTermsMaxAgeSec: 31536000,
-      redemptionMaxAgeSec: 28800,
-    },
-    schemaVersion: 2,
-    sources: {
-      chainSupply: {
-        generationId: "chain-supply:v1:f39db0df57b99d4bd71927dda131757cf4e6b5fd71d3949153d11c8872fcf681",
-        maxAgeSec: 1800,
-        observedAtSec: 1784199667,
-      },
-      liveReserves: {
-        generationId: "live-reserves:v1:d8eea2ec198aa4772bb22e7e73d2bb63c13be4d17a8753a0e11aa56995b474f5",
-        maxAgeSec: 28800,
-        observedAtSec: 1784189884,
-      },
-      peg: {
-        generationId: "peg:v1:2b3414cddf778c629265e466540c3fad0ef66507a776c21f462079b73554f377",
-        maxAgeSec: 1800,
-        observedAtSec: 1784199667,
-      },
-      registryObservedAtSec: 1784199667,
-      researchOverlays: {
-        generationId: "registry:sha256:1778128d7fb2310eaac57c924f3a7b1110915427ab6dadd5c18b4712b6e6d76c",
-        maxAgeSec: 31536000,
-        observedAtSec: 1784199667,
-      },
-      unavailableRedemptionObservedAtSec: 1784175209,
-    },
-    assets: [
-      {
-        assetId: "ausd-agora" as const,
-        mechanismRiskReview: {
-          archetype: "fiat-cash",
-          assuranceAndReconciliation: {
-            failureDomains: [],
-            quality: "strong",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:assurance-and-reconciliation"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          claimAndSegregation: {
-            failureDomains: [],
-            quality: "strong",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:claim-and-segregation"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          custodyContinuity: {
-            failureDomains: [],
-            quality: "adequate",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:custody-continuity"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-        },
-        accessReview: {
-          freeze: {
-            reviews: [
-              {
-                controlKey: null,
-                failureDomains: [],
-                reach: "individual",
-                reviewKey: "blacklist:ausd-agora",
-                source: "blacklist",
-                status: {
-                  applicability: {
-                    gapId: null,
-                    policyRuleId: "v9.access.freeze-review",
-                    rationale: null,
-                    state: "required",
-                  },
-                  evidenceRefIds: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-                  gapIds: [],
-                  observationState: "known",
-                },
-                upstreamAssetId: null,
-              },
-            ],
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.access.freeze-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          transfer: {
-            posture: "restrictable",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.access.transfer-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-        },
-        researchEvidence: [
-          {
-            confidence: "manual-review",
-            contentSha256: "b9898c8ea93851f6b4aa923fd630e92d448a25d276eccb9d958fc0b142fd9803",
-            evidenceKey: "stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6",
-            maxAgeSec: null,
-            observedAtSec: 1778544000,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.blacklistability-review",
-            url: null,
-          },
-        ],
-        componentEvidence: [
-          {
-            componentKey: "access:freeze",
-            evidenceKeys: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-          },
-          {
-            componentKey: "access:freeze:blacklist:ausd-agora",
-            evidenceKeys: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-          },
-          {
-            componentKey: "access:transfer",
-            evidenceKeys: ["stablecoin-meta.blacklistability-review:0:b9898c8ea93851f6"],
-          },
-        ],
-      },
-      {
-        assetId: "bold-liquity" as const,
-        pegReference: {
-          failureDomains: [],
-          referenceKey: "USD",
-          referenceKind: "fiat",
-        },
-      },
-      {
-        assetId: "dai-makerdao" as const,
-        routeReviews: [
-          {
-            coverageClass: "exact-lower-bound",
-            executionCertainty: "bounded",
-            modelConfidence: "medium",
-            executionCosts: [
-              {
-                executionCostBps: 200,
-                maxCostBps: 200,
-                requestedNotionalUsd: 100000,
-              },
-              {
-                executionCostBps: 200,
-                maxCostBps: 200,
-                requestedNotionalUsd: 1000000,
-              },
-              {
-                executionCostBps: 200,
-                maxCostBps: 200,
-                requestedNotionalUsd: 10000000,
-              },
-              {
-                executionCostBps: 200,
-                maxCostBps: 200,
-                requestedNotionalUsd: 25000000,
-              },
-            ],
-            executionModel: "market-depth",
-            failureDomains: [],
-            holderAccess: "permissionless",
-            lane: "dex",
-            output: {
-              assetKeys: ["usdc-circle"],
-              basketWeights: [],
-              kind: "tracked-stablecoin",
-              valuation: {
-                basis: "price",
-                confidence: "medium",
-                contentSha256: null,
-                expectedUnitValueUsd: 1,
-                maxAgeSec: null,
-                observedAtSec: 1784198459,
-                referenceAssetKey: "usdc-circle",
-                sourceGenerationId: "dex-liquidity-1784198459",
-                sourceId: "report-cards-peg-summary",
-                unitValueUsd: 1,
-                url: null,
-              },
-            },
-            physicalResourceKeys: [
-              "pool:Ethereum:fp:ethereum:curve:0x6b175474e89094c44da98b954eedeac495271d0f:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:0xdac17f958d2ee523a2206206994597c13d831ec7",
-            ],
-            routeId:
-              "dex:dai-makerdao:dl:ethereum%3Afp%3Aethereum%3Acurve%3A0x6b175474e89094c44da98b954eedeac495271d0f%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48%3A0xdac17f958d2ee523a2206206994597c13d831ec7:ethereum%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            settlementModel: "atomic",
-            settlementSlaSec: 0,
-          },
-          {
-            coverageClass: "exact-lower-bound",
-            executionCertainty: "bounded",
-            modelConfidence: "medium",
-            executionCosts: [
-              {
-                executionCostBps: 0,
-                maxCostBps: 200,
-                requestedNotionalUsd: 100000,
-              },
-              {
-                executionCostBps: 0,
-                maxCostBps: 200,
-                requestedNotionalUsd: 1000000,
-              },
-              {
-                executionCostBps: 0,
-                maxCostBps: 200,
-                requestedNotionalUsd: 25000000,
-              },
-              {
-                executionCostBps: 0,
-                maxCostBps: 200,
-                requestedNotionalUsd: 5000000,
-              },
-            ],
-            executionModel: "deterministic",
-            failureDomains: [],
-            holderAccess: "permissionless",
-            lane: "redemption",
-            output: {
-              assetKeys: ["usdc-circle"],
-              basketWeights: [],
-              kind: "tracked-stablecoin",
-              valuation: {
-                basis: "price",
-                confidence: "medium",
-                contentSha256: null,
-                expectedUnitValueUsd: 1,
-                maxAgeSec: null,
-                observedAtSec: 1784175209,
-                referenceAssetKey: "usdc-circle",
-                sourceGenerationId: "redemption:c34304f1-70b6-47d1-8949-8ba9e63dcccc",
-                sourceId: "report-cards-peg-summary",
-                unitValueUsd: 1,
-                url: null,
-              },
-            },
-            physicalResourceKeys: ["protocol:dai-makerdao"],
-            routeId: "redemption:dai-makerdao:psm-swap",
-            settlementModel: "atomic",
-            settlementSlaSec: 0,
-          },
-        ],
-      },
-      {
-        assetId: "europ-schuman" as const,
-        mechanismRiskReview: {
-          archetype: "fiat-cash",
-          assuranceAndReconciliation: {
-            failureDomains: [],
-            quality: "adequate",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:assurance-and-reconciliation"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          claimAndSegregation: {
-            failureDomains: [],
-            quality: "strong",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:claim-and-segregation"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          custodyContinuity: {
-            failureDomains: [],
-            quality: "strong",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.backing.mechanism-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: ["extension-evidence:mechanism:custody-continuity"],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-        },
-      },
-      {
-        assetId: "sdola-inverse-finance" as const,
-        controlReview: {
-          controls: [
-            {
-              authority: {
-                authorityKey: "ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305",
-                model: "contract",
-                threshold: null,
-              },
-              capSemantics: {
-                bound: null,
-                kind: "not-applicable",
-              },
-              capabilities: [],
-              claimImpairment: "none",
-              controlKey: "mint-meta:sdola-inverse-finance:0:2e2408be382ca94f84cc",
-              controlKind: "mint",
-              delaySec: null,
-              deploymentKey: "asset:sdola-inverse-finance",
-              economicLossScope: "access-only",
-              failureDomains: [
-                {
-                  key: "ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305",
-                  kind: "mint-control",
-                },
-              ],
-              keyCustody: "unknown",
-              modulesOrGuards: "unknown",
-              incidentState: "none",
-              materialSupplyShare: null,
-              scope: "global",
-            },
-          ],
-          state: "reviewed-controls",
-        },
-        economicControlReview: {
-          bridge: {
-            routes: [],
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.control.bridge-review",
-                rationale: "Every reviewed deployment route is native issuance; no bridge control carries the claim.",
-                state: "not-applicable",
-              },
-              evidenceRefIds: [
-                "stablecoin-meta.bridge-route-risk:0:b203420e4331b092",
-                "stablecoin-meta.bridge-route-risk:1:11466b79ead57814",
-                "stablecoin-meta.bridge-route-risk:2:2fa668e2df97413e",
-              ],
-              gapIds: [],
-              observationState: "known",
-            },
-          },
-          mint: {
-            controlKey: null,
-            reconciliation: "not-applicable",
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.control.mint-review",
-                rationale: null,
-                state: "required",
-              },
-              evidenceRefIds: [
-                "stablecoin-meta.mint-authority:0:8e07e78f0fb9a457",
-                "stablecoin-meta.mint-authority:1:a0f7405d0bc5755d",
-              ],
-              gapIds: [],
-              observationState: "known",
-            },
-            supervision: "unknown",
-            latestResolvedIncidentAtSec: null,
-            upgrade: {
-              controlKey: null,
-              state: "immutable",
-            },
-          },
-          oracle: {
-            branches: [],
-            status: {
-              applicability: {
-                gapId: null,
-                policyRuleId: "v9.control.oracle-review",
-                rationale:
-                  "Inverse documents sDOLA as a DOLA savings wrapper: users deposit and withdraw DOLA while FiRM revenue accrues through the exchange rate. sDOLA holders do not open FiRM borrower positions, so there are no sDOLA collateral-market or liquidation branches to inventory; the underlying DOLA parent carries the separate FiRM oracle profile.",
-                state: "not-applicable",
-              },
-              evidenceRefIds: [
-                "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-                "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-              ],
-              gapIds: [],
-              observationState: "known",
-            },
-            tier: null,
-          },
-        },
-        researchEvidence: [
-          {
-            confidence: "verified",
-            contentSha256: "b203420e4331b092ff7e519bf5a64e48ea24068b19dfef1bf913cd6985b84875",
-            evidenceKey: "stablecoin-meta.bridge-route-risk:0:b203420e4331b092",
-            maxAgeSec: null,
-            observedAtSec: 1781308800,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.bridge-route-risk",
-            url: "https://docs.chain.link/ccip",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "11466b79ead57814b4c501d9e899d07be211c6c547dc3d620f872696716eda86",
-            evidenceKey: "stablecoin-meta.bridge-route-risk:1:11466b79ead57814",
-            maxAgeSec: null,
-            observedAtSec: 1781308800,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.bridge-route-risk",
-            url: "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "2fa668e2df97413e3288b303a3a3fa76f8c4b2396d25ed58817c2af4d447679a",
-            evidenceKey: "stablecoin-meta.bridge-route-risk:2:2fa668e2df97413e",
-            maxAgeSec: null,
-            observedAtSec: 1781308800,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.bridge-route-risk",
-            url: "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "8e07e78f0fb9a457dc62e61b74489443702ce0baf4080e99f398dd7d52c466ff",
-            evidenceKey: "stablecoin-meta.mint-authority:0:8e07e78f0fb9a457",
-            maxAgeSec: null,
-            observedAtSec: 1784073600,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.mint-authority",
-            url: "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "a0f7405d0bc5755d80a8dac4ef5d9b38678483a2f4c0603b52fde661f9621b87",
-            evidenceKey: "stablecoin-meta.mint-authority:1:a0f7405d0bc5755d",
-            maxAgeSec: null,
-            observedAtSec: 1784073600,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.mint-authority",
-            url: "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "3d569028a463fce3b53f7e109305fd0039c4f48be239658cdc69a2aaa9c60295",
-            evidenceKey: "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-            maxAgeSec: null,
-            observedAtSec: 1783987200,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.oracle-risk",
-            url: "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm",
-          },
-          {
-            confidence: "verified",
-            contentSha256: "479582b567ec9ab7f8dbcdabfddb101b7adb274b1e46407ffd8bc281ce9602df",
-            evidenceKey: "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            maxAgeSec: null,
-            observedAtSec: 1783987200,
-            publishedAtSec: null,
-            sourceId: "stablecoin-meta.oracle-risk",
-            url: "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola",
-          },
-        ],
-        componentEvidence: [
-          {
-            componentKey: "control",
-            evidenceKeys: [
-              "stablecoin-meta.bridge-route-risk:0:b203420e4331b092",
-              "stablecoin-meta.bridge-route-risk:1:11466b79ead57814",
-              "stablecoin-meta.bridge-route-risk:2:2fa668e2df97413e",
-              "stablecoin-meta.mint-authority:0:8e07e78f0fb9a457",
-              "stablecoin-meta.mint-authority:1:a0f7405d0bc5755d",
-            ],
-          },
-          {
-            componentKey: "economic-control:bridge",
-            evidenceKeys: [
-              "stablecoin-meta.bridge-route-risk:0:b203420e4331b092",
-              "stablecoin-meta.bridge-route-risk:1:11466b79ead57814",
-              "stablecoin-meta.bridge-route-risk:2:2fa668e2df97413e",
-            ],
-          },
-          {
-            componentKey: "economic-control:mint",
-            evidenceKeys: [
-              "stablecoin-meta.mint-authority:0:8e07e78f0fb9a457",
-              "stablecoin-meta.mint-authority:1:a0f7405d0bc5755d",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle:backstop",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle:collateral-parameter",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle:feed",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle:liquidation",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-          {
-            componentKey: "economic-control:oracle:shutdown-bad-debt",
-            evidenceKeys: [
-              "stablecoin-meta.oracle-risk:0:3d569028a463fce3",
-              "stablecoin-meta.oracle-risk:1:479582b567ec9ab7",
-            ],
-          },
-        ],
-      },
-      {
-        assetId: "usdc-circle" as const,
-        dependencies: {
-          baseSource: "live-unmapped",
-          dependencyFromLive: true,
-          diagnostics: {
-            graphState: "valid",
-            issueCodes: [],
-            sccMemberAssetIds: [],
-          },
-          edges: [],
-          fallbackReason: null,
-          mappedLiveReserveWeight: 0,
-          source: "live-unmapped",
-        },
-        reserveApplicability: {
-          state: "required",
-        },
-        reserveClassifications: [
-          {
-            assetClass: "treasury-bill",
-            classificationKey: "registry-reviewed:reserve:09933f5382674273c4266be0:2a966dcb71e45571",
-            exposureKey: "reserve:09933f5382674273c4266be0",
-            failureDomains: [
-              {
-                key: "United States Treasury",
-                kind: "reserve-issuer",
-              },
-            ],
-            issuerOrObligorKey: "United States Treasury",
-            liquidityHorizon: "one-day",
-            maturityDaysMax: 92,
-            riskFactors: ["custody", "duration", "liquidity"],
-          },
-          {
-            assetClass: "bank-deposit",
-            classificationKey: "registry-reviewed:reserve:266b42c10fda0e890acbf4d8:2a966dcb71e45571",
-            exposureKey: "reserve:266b42c10fda0e890acbf4d8",
-            failureDomains: [
-              {
-                key: "Systemically important financial institutions",
-                kind: "reserve-issuer",
-              },
-            ],
-            issuerOrObligorKey: "Systemically important financial institutions",
-            liquidityHorizon: "immediate",
-            maturityDaysMax: null,
-            riskFactors: ["concentration", "counterparty", "custody"],
-          },
-          {
-            assetClass: "repo",
-            classificationKey: "registry-reviewed:reserve:2b522c9a32bfa55000f159ea:2a966dcb71e45571",
-            exposureKey: "reserve:2b522c9a32bfa55000f159ea",
-            failureDomains: [
-              {
-                key: "Leading global banks",
-                kind: "reserve-issuer",
-              },
-            ],
-            issuerOrObligorKey: "Leading global banks",
-            liquidityHorizon: "one-day",
-            maturityDaysMax: 1,
-            riskFactors: ["counterparty", "custody", "liquidity"],
-          },
-          {
-            assetClass: "bank-deposit",
-            classificationKey: "registry-reviewed:reserve:3f98b119d81209e7ecc14b13:2a966dcb71e45571",
-            exposureKey: "reserve:3f98b119d81209e7ecc14b13",
-            failureDomains: [
-              {
-                key: "Other regulated financial institutions",
-                kind: "reserve-issuer",
-              },
-            ],
-            issuerOrObligorKey: "Other regulated financial institutions",
-            liquidityHorizon: "immediate",
-            maturityDaysMax: null,
-            riskFactors: ["concentration", "counterparty", "custody"],
-          },
-        ],
-        pegReference: {
-          failureDomains: [],
-          referenceKey: "USD",
-          referenceKind: "fiat",
-        },
-      },
-      {
-        assetId: "usdt-tether" as const,
-        launchedAtSec: 1412553600,
-      },
-    ],
-  },
-} satisfies { extension: DonorExtensionFragment };
+const donorFixed = donorCapture.fixedInput as unknown as DonorFixedInputFragment;
+const donorReplay = { extension: donorCapture.extension as unknown as DonorExtensionFragment };
 
-type DonorAsset = (typeof donorReplay.extension.assets)[number];
+/**
+ * Every donor whose review blocks this suite reads is a reviewed fiat-cash
+ * asset with a reviewed control inventory and an access review, so the loader
+ * narrows those three unions the TS literals used to narrow by inference.
+ */
+type DonorAsset = Omit<ExtensionAsset, "mechanismRiskReview" | "controlReview" | "accessReview"> & {
+  mechanismRiskReview: Extract<
+    NonNullable<ExtensionAsset["mechanismRiskReview"]>,
+    { archetype: "fiat-cash" }
+  >;
+  controlReview: Extract<
+    NonNullable<ExtensionAsset["controlReview"]>,
+    { state: "reviewed-controls" }
+  >;
+  accessReview: NonNullable<ExtensionAsset["accessReview"]>;
+};
 
-function donorAsset<AssetId extends DonorAsset["assetId"]>(
-  assetId: AssetId,
-): Extract<DonorAsset, { assetId: AssetId }> {
+function donorAsset(assetId: string): DonorAsset {
   const asset = donorReplay.extension.assets.find((candidate) => candidate.assetId === assetId);
   if (!asset) throw new Error(`Missing donor asset ${assetId}`);
-  return asset as Extract<DonorAsset, { assetId: AssetId }>;
+  return asset as unknown as DonorAsset;
 }
 
 type DonorRouteReview = SafetyScoreV9FactSetExtensionV2["assets"][number]["routeReviews"][number];
@@ -1104,12 +121,12 @@ function objectKeysDeep(value: unknown): string[] {
 }
 
 function buildFixture() {
-  const sourceDex = donorFixed.dexLiqMap["dai-makerdao"];
-  const dexObservation = clone(findRoute(sourceDex.exitRouteObservations, DAI_DEX_ROUTE_ID));
+  const sourceDex = donorFixed.dexLiqMap["dai-makerdao"]!;
+  const dexObservation = clone(findRoute(sourceDex.exitRouteObservations!, DAI_DEX_ROUTE_ID));
   dexObservation.routeId = ownerRekey(dexObservation.routeId);
   const aggregateExecutableUsd = dexObservation.executableUsd;
-  const sourceRedemption = donorFixed.redemptionBackstopMap["dai-makerdao"];
-  const redemptionObservation = clone(sourceRedemption.capacityProfile.exitRouteObservations[0]);
+  const sourceRedemption = donorFixed.redemptionBackstopMap["dai-makerdao"]!;
+  const redemptionObservation = clone(sourceRedemption.capacityProfile!.exitRouteObservations![0]!);
   redemptionObservation.routeId = ownerRekey(redemptionObservation.routeId);
 
   const fixedInput = createReportCardsFixedInput({
@@ -1189,7 +206,7 @@ function buildFixture() {
         ...clone(sourceRedemption),
         stablecoinId: COMPOSITE_ID,
         capacityProfile: {
-          ...clone(sourceRedemption.capacityProfile),
+          ...clone(sourceRedemption.capacityProfile!),
           exitRouteObservations: [redemptionObservation],
         },
       },
@@ -1331,9 +348,9 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     const fixedDexObservation = fixedDex.exitRouteObservations![0]!;
     const fixedRedemptionObservation =
       fixedInput.redemptionBackstopMap[COMPOSITE_ID]!.capacityProfile!.exitRouteObservations![0]!;
-    const sourceDexObservation = donorFixed.dexLiqMap["dai-makerdao"].exitRouteObservations[0];
+    const sourceDexObservation = donorFixed.dexLiqMap["dai-makerdao"]!.exitRouteObservations![0]!;
     const sourceRedemptionObservation =
-      donorFixed.redemptionBackstopMap["dai-makerdao"].capacityProfile.exitRouteObservations[0];
+      donorFixed.redemptionBackstopMap["dai-makerdao"]!.capacityProfile!.exitRouteObservations![0]!;
     const sourceDexReview = findDonorRouteReview(donors.dai, DAI_DEX_ROUTE_ID);
     const sourceRedemptionReview = findDonorRouteReview(donors.dai, DAI_REDEMPTION_ROUTE_ID);
     const dexReview = compositeExtension.routeReviews.find((review) => review.lane === "dex")!;
@@ -1660,5 +677,33 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it("loads the frozen donor capture through the production schemas", () => {
+    // The capture is stored as JSON so the epoch-shift reclocking tooling can
+    // rewrite it in place; these guards keep the load honest now that the TS
+    // `satisfies` checks no longer stand between the file and the suite.
+    expect(JSON.parse(JSON.stringify(donorCapture))).toEqual(donorCapture);
+    expect(donorReplay.extension.assets.map((asset) => asset.assetId)).toEqual([
+      "ausd-agora",
+      "bold-liquity",
+      "dai-makerdao",
+      "europ-schuman",
+      "sdola-inverse-finance",
+      "usdc-circle",
+      "usdt-tether",
+    ]);
+
+    // Donor assets are deliberately partial fragments, so the capture is
+    // validated the only way it can be: assembled into the two-asset fixture and
+    // parsed by the production fixed-input and extension schemas.
+    const { fixedInput, extension } = buildFixture();
+    expect(normalizeFixedInput(fixedInput)).toEqual(fixedInput);
+    expect(SafetyScoreV9FactSetExtensionV2Schema.parse(extension)).toEqual(extension);
+    expect(extension).toMatchObject({
+      compiledAtSec: donorReplay.extension.compiledAtSec,
+      routeFreshness: donorReplay.extension.routeFreshness,
+      sources: donorReplay.extension.sources,
+    });
   });
 });

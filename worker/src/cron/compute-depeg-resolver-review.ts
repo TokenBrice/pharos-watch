@@ -1,5 +1,4 @@
 import {
-  reviewDepegResolverAssessments,
   reviewDdrrV2Rows,
   type DdrrV2CoverageInput,
   type DdrrV2InvalidatedPredictionInput,
@@ -27,14 +26,13 @@ import type {
 import { normalizeErratumRecord } from "./depeg-resolver/public-projection";
 import { firstPublicationByPredictionId, publicPredictionIdOf } from "./depeg-resolver/storage-adapters";
 import { abortIf } from "./depeg-resolver/utils";
-import { loadAssessments } from "./depeg-resolver-review/assessment-loader";
 import {
   baseFieldsForSealedExposure,
   buildEffectiveIncidentByKey,
   coverageRowForIncident,
   failedPublicationCoverageRow,
 } from "./depeg-resolver-review/coverage-rows";
-import { buildDdrrResponseEnvelope, buildEmptyDdrrSummary } from "./depeg-resolver-review/response-envelope";
+import { buildDdrrResponseEnvelope } from "./depeg-resolver-review/response-envelope";
 import { loadActualEventsByEventIds } from "./depeg-resolver-review/terminal-evidence";
 
 const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
@@ -57,7 +55,7 @@ export interface DdrrV2ReviewSource {
 }
 
 export interface ComputeDepegResolverReviewOptions {
-  storeContracts?: DdrV2StoreContracts | null;
+  storeContracts: DdrV2StoreContracts;
   v2ReviewBuilder?: ((source: DdrrV2ReviewSource, signal?: AbortSignal) => Promise<DdrrResponse>) | null;
 }
 
@@ -380,15 +378,14 @@ async function buildDurableDdrV2ReviewSnapshot(
   });
 }
 
-async function maybeBuildDdrV2ReviewSnapshot(
+async function buildDdrV2ReviewSnapshot(
   db: D1Database,
   nowSec: number,
   signal: AbortSignal | undefined,
-  options: ComputeDepegResolverReviewOptions | undefined,
-): Promise<DdrrResponse | null> {
-  const stores = options?.storeContracts;
-  const builder = options?.v2ReviewBuilder;
-  if (!stores || !stores.loadCanonicalIncidents) return null;
+  options: ComputeDepegResolverReviewOptions,
+): Promise<DdrrResponse> {
+  const stores = options.storeContracts;
+  const builder = options.v2ReviewBuilder;
 
   abortIf(signal, "compute-depeg-resolver-review");
   const loadedIncidents = await stores.loadCanonicalIncidents(db, {
@@ -436,45 +433,20 @@ async function maybeBuildDdrV2ReviewSnapshot(
 
 export async function buildDepegResolverReviewSnapshot(
   db: D1Database,
-  nowSec = Math.floor(Date.now() / 1000),
-  signal?: AbortSignal,
-  options?: ComputeDepegResolverReviewOptions,
+  nowSec: number,
+  signal: AbortSignal | undefined,
+  options: ComputeDepegResolverReviewOptions,
 ): Promise<DdrrResponse> {
   abortIf(signal, "compute-depeg-resolver-review");
-  const v2Snapshot = await maybeBuildDdrV2ReviewSnapshot(db, nowSec, signal, options);
+  const snapshot = await buildDdrV2ReviewSnapshot(db, nowSec, signal, options);
   abortIf(signal, "compute-depeg-resolver-review");
-  if (v2Snapshot) return v2Snapshot;
-
-  const { assessments, parseIssueCount, truncated: assessmentRowsTruncated } = await loadAssessments(db);
-  abortIf(signal, "compute-depeg-resolver-review");
-
-  const actualEventsById = await loadActualEventsByEventIds(db, assessments.map((assessment) => assessment.eventId), signal);
-  abortIf(signal, "compute-depeg-resolver-review");
-
-  const { rows, summary } = assessments.length
-    ? reviewDepegResolverAssessments({ assessments, actualEventsById, nowSec })
-    : { rows: [], summary: buildEmptyDdrrSummary() };
-  const methodologyVersions = [...new Set(assessments.map((assessment) => assessment.methodologyVersion))].sort();
-  const degradedReasons = [
-    parseIssueCount > 0 ? `assessment-parse-issues:${parseIssueCount}` : null,
-    assessmentRowsTruncated ? "assessment-row-cap" : null,
-  ].filter((reason): reason is string => reason != null);
-
-  return buildDdrrResponseEnvelope({
-    nowSec,
-    summary,
-    rows,
-    assessedEventCount: new Set(assessments.map((assessment) => assessment.eventId)).size,
-    assessmentRowsTruncated,
-    methodologyVersions,
-    degradedReasons,
-  });
+  return snapshot;
 }
 
 export async function computeAndStoreDepegResolverReview(
   db: D1Database,
-  signal?: AbortSignal,
-  options?: ComputeDepegResolverReviewOptions,
+  signal: AbortSignal | undefined,
+  options: ComputeDepegResolverReviewOptions,
 ): Promise<CronResult> {
   const snapshot = await buildDepegResolverReviewSnapshot(db, Math.floor(Date.now() / 1000), signal, options);
   await writeDepegResolverReviewSnapshot(db, snapshot);

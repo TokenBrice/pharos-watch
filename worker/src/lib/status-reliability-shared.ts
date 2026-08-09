@@ -5,7 +5,7 @@ import type {  StatusCause,
 } from "@shared/types/status";
 import { clamp } from "@shared/lib/math";
 import { decodeJsonString } from "./cache-json";
-import { runWithOverloadRetry } from "./cron-lease";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { logMalformedJsonPath } from "./json-decode-observability";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
@@ -90,7 +90,6 @@ export function parseCauses(
   const decoded = decodeJsonString<StatusCause[], "missing" | "json-parse-failed" | "invalid-shape">(
     json,
     {
-      mode: "best-effort",
       updatedAt: updatedAt ?? null,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",

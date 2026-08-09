@@ -6,12 +6,6 @@ import { reportCronProgress } from "../../lib/cron-progress";
 import { toErrorMessage } from "../../lib/error-utils";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
-import {
-  buildAbortedCronStageResult,
-  returnIfCronStageAborted,
-  type CronStageContext,
-  type CronStageProgress,
-} from "../shared/stage-contracts";
 
 const SEVERE_PRICE_STALENESS_RATIO = 0.98;
 
@@ -68,7 +62,7 @@ export async function reportStablecoinsStage(
   reportProgress: CronProgressReporter | undefined,
   stage: string,
   message: string,
-  options?: Omit<CronStageProgress, "stage" | "message">,
+  options?: { itemsDone?: number; itemsTotal?: number; metadata?: Record<string, unknown> },
 ): Promise<void> {
   await reportCronProgress(reportProgress, {
     stage,
@@ -79,20 +73,25 @@ export async function reportStablecoinsStage(
   });
 }
 
+function readAbortDetail(signal: AbortSignal | undefined): string {
+  const reason = signal?.reason;
+  if (reason instanceof Error) return reason.message;
+  if (typeof reason === "string" && reason.length > 0) return reason;
+  return "aborted";
+}
+
 export function abortResult(signal: AbortSignal | undefined, stage: string): CronResult {
-  return buildAbortedCronStageResult({
-    signal,
-    stage,
-    serializeMetadata: (metadata) => buildSyncMetadata({ ...metadata }),
-  });
+  return {
+    aborted: true,
+    status: "degraded",
+    itemCount: 0,
+    metadata: buildSyncMetadata({ reason: "aborted", stage, detail: readAbortDetail(signal) }),
+  };
 }
 
 export function returnIfAborted(signal: AbortSignal | undefined, stage: string): CronResult | null {
-  return returnIfCronStageAborted({
-    signal,
-    stage,
-    serializeMetadata: (metadata) => buildSyncMetadata({ ...metadata }),
-  });
+  if (!signal?.aborted) return null;
+  return abortResult(signal, stage);
 }
 
 export async function fillStablecoinsSupplyHistoryStage(
@@ -132,8 +131,8 @@ function buildStalenessSummaryMetadata(staleness: {
 export async function checkStablecoinsPriceStaleness(params: {
   db: D1Database;
   assets: PeggedAsset[];
-  signal?: CronStageContext["signal"];
-  reportProgress?: CronStageContext["reportProgress"];
+  signal?: AbortSignal;
+  reportProgress?: CronProgressReporter;
   progressStage: string;
   progressMessage: string;
   abortStage: string;

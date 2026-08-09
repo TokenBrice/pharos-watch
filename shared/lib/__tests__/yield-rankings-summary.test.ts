@@ -1,7 +1,12 @@
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { projectYieldRankingsSummary } from "../yield-rankings-summary";
-import { YieldRankingSummarySchema, YieldRankingsSummaryResponseSchema } from "@shared/types/yield-summary";
+import {
+  YieldRankingSummaryProvenanceSchema,
+  YieldRankingSummarySchema,
+  YieldRankingSummarySourceRiskSchema,
+  YieldRankingsSummaryResponseSchema,
+} from "@shared/types/yield-summary";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types/yield";
 
 const CURRENT_SCALE_RANKING_COUNT = 175;
@@ -249,6 +254,78 @@ describe("projectYieldRankingsSummary", () => {
     expect(summary.rankings[0].sourceRisk).not.toHaveProperty("dependencyConcentration");
     expect(summary.rankings[0].sourceRisk).not.toHaveProperty("investabilityFlags");
     expect(detailed.rankings[0].altSources).toHaveLength(3);
+  });
+
+  // The projection copies fields off the summary schemas' own `.shape` keys rather
+  // than restating them. These frozen lists pin the emitted wire shape AND its key
+  // order, so a schema reorder or an accidentally added/removed field is visible
+  // here instead of silently changing the published payload bytes.
+  const EXPECTED_ROW_KEYS = [
+    "id",
+    "symbol",
+    "name",
+    "currentApy",
+    "apy30d",
+    "yieldSource",
+    "yieldSourceUrl",
+    "yieldType",
+    "sourceTvlUsd",
+    "pharosYieldScore",
+    "pysNullReason",
+    "safetyScore",
+    "safetyGrade",
+    "benchmarkKey",
+    "benchmarkLabel",
+    "benchmarkRate",
+    "benchmarkIsFallback",
+    "yieldStability",
+    "apyMin30d",
+    "apyMax30d",
+    "warningSignals",
+    "alternateSourceCount",
+    "decisionReasonCode",
+    "rankDelta",
+    "rankChangeDriver",
+    "rankPysDelta",
+    "provenance",
+    "sourceRisk",
+  ];
+  const EXPECTED_PROVENANCE_KEYS = [
+    "sourceKey",
+    "confidenceTier",
+    "calculationMode",
+    "evidenceClass",
+    "evidenceCompleteness",
+    "scoreQualification",
+    "sourceFreshness",
+    "sourceSwitch",
+    "usedDefaultSafety",
+    "safetyProvenance",
+  ];
+  const EXPECTED_SOURCE_RISK_KEYS = [
+    "sourceRiskScore",
+    "sourceRiskPenalty",
+    "sourceDepthRatio",
+    "rewardShare",
+    "sourceAgeSeconds",
+    "observationCount30d",
+    "sourceSwitchCount30d",
+    "venueRiskTier",
+    "venueRiskWeighted",
+    "venueRiskConfidence",
+  ];
+
+  it("emits exactly the summary schema fields, in schema declaration order", () => {
+    const row = projectYieldRankingsSummary(makeDetailedResponse(1)).rankings[0];
+
+    expect(Object.keys(row)).toEqual(EXPECTED_ROW_KEYS);
+    expect(Object.keys(row.provenance ?? {})).toEqual(EXPECTED_PROVENANCE_KEYS);
+    expect(Object.keys(row.sourceRisk ?? {})).toEqual(EXPECTED_SOURCE_RISK_KEYS);
+    // The runtime copy lists are the schemas' own shapes — proving that here means
+    // the frozen lists above pin the schema and the projection at the same time.
+    expect(Object.keys(YieldRankingSummarySchema.shape)).toEqual(EXPECTED_ROW_KEYS);
+    expect(Object.keys(YieldRankingSummaryProvenanceSchema.shape)).toEqual(EXPECTED_PROVENANCE_KEYS);
+    expect(Object.keys(YieldRankingSummarySourceRiskSchema.shape)).toEqual(EXPECTED_SOURCE_RISK_KEYS);
   });
 
   it("rejects detail-field leakage at the row schema boundary", () => {

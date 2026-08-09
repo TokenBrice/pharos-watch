@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import policy from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
+import { DEPEG_SEVERITY_BPS } from "@shared/lib/depeg-config";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
+import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import {
   REDEMPTION_ACCESS_SCORES,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
@@ -13,6 +15,9 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 
 const exitPolicy = (policy as { semantic: { exit: Record<string, unknown> } }).semantic.exit;
+const activeDepegCaps = (
+  policy as { semantic: { formula: { activeDepegCaps: { kind: string; minimumBps: number }[] } } }
+).semantic.formula.activeDepegCaps;
 
 /**
  * CI validation of the one exit scoring engine.
@@ -94,5 +99,23 @@ describe("the redemption domain view projects the single exit-scoring source", (
     expect(SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY.documentedTermsMaxAgeSec).toBe(
       EXIT_ROUTE_SCORING_TABLES.documentedTermsMaxAgeSec,
     );
+  });
+});
+
+/**
+ * The "severe depeg" band (25%) was written three times: the redemption lane, the
+ * digest's critical-risk copy, and the V9 policy JSON. The first two now project
+ * `DEPEG_SEVERITY_BPS.severe`; the policy JSON stays the scoring owner (ADR-19)
+ * and is asserted against the vocabulary here, so a reissue that moves the band
+ * without moving the vocabulary fails CI instead of diverging silently.
+ */
+describe("the depeg severity vocabulary matches the V9 policy JSON", () => {
+  it("pins the policy's F-range active-depeg cap to DEPEG_SEVERITY_BPS.severe", () => {
+    const severeCap = activeDepegCaps.find((cap) => cap.kind === "active-depeg:f");
+    expect(severeCap?.minimumBps).toBe(DEPEG_SEVERITY_BPS.severe);
+  });
+
+  it("keeps the redemption-lane threshold on the same vocabulary entry", () => {
+    expect(REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS).toBe(DEPEG_SEVERITY_BPS.severe);
   });
 });

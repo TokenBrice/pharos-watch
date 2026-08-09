@@ -922,7 +922,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
 
 export type LiveReserveParamSchemaKey = keyof typeof LIVE_RESERVE_PARAM_SCHEMAS;
 
-export * from "./live-reserve-adapter-policy";
+export * from "../types/live-reserve-adapter-policy";
 
 export type LiveReserveSingleAssetProbe = z.infer<typeof singleAssetProbeSchema>;
 export type LiveReserveRedemptionRateProbe = z.infer<typeof redemptionRateProbeSchema>;

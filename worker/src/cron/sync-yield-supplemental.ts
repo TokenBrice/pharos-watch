@@ -76,11 +76,10 @@ export async function syncYieldSupplemental(
     await reportCronProgress(reportProgress, {
       stage,
       message,
+      providerFamily: "yield-supplemental",
       itemsDone: options.itemsDone,
       itemsTotal: options.itemsTotal ?? SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length,
       metadata: {
-        providerFamily: "yield-supplemental",
-        phase: stage,
         providerFamilies: SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
         ...options.metadata,
       },

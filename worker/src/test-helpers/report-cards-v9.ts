@@ -1,7 +1,7 @@
 import {
   makeReportCardsV9Card,
+  makeReportCardsV9Pillars,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
-  type ReportCardsV9CardFixturePreset,
   type ReportCardsV9ResponseFixturePreset,
 } from "@shared/test-utils/report-cards-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
@@ -11,48 +11,6 @@ import type {
 } from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
-
-const V9_CARD_PRESET = {
-  defaultScore: 80,
-  defaultQualityScore: 82,
-  qualityScoreFromOverridePillars: true,
-  defaultPegMultiplier: 0.98,
-  defaultPegAdjustedScore: "score",
-  pillarComponents: ["reviewed"],
-  pillarOffsets: {
-    backing: { offset: -2, minimum: 0 },
-    exit: { offset: 0 },
-    control: { offset: 2, maximum: 100 },
-  },
-  defaultWeakestPillar: "minimum",
-  breakdowns: {
-    nullWhenAnyPillarIsNull: true,
-    backingComponent: {
-      key: "reserve:reviewed",
-      label: "Reviewed reserves",
-    },
-    exit: {
-      stressRequest: {
-        requestedNotionalUsd: 1_000_000,
-        maxCostBps: 200,
-        comparisonWindowSec: 86_400,
-      },
-      primaryRoute: {
-        key: "redemption:reviewed",
-        label: "Protocol redemption",
-        routeFamily: "protocol-redemption",
-      },
-    },
-    controlComponent: {
-      key: "control:reviewed",
-      label: "Reviewed control",
-      kind: "mint",
-      posture: "distributed",
-    },
-  },
-  accessPostureSignals: [],
-  overridesBeforeDerivedValues: false,
-} satisfies ReportCardsV9CardFixturePreset;
 
 const V9_RESPONSE_PRESET = {
   safetyScoreIdentity: {
@@ -78,7 +36,7 @@ const V9_RESPONSE_PRESET = {
 export function makeWorkerV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
-  return makeReportCardsV9Card(V9_CARD_PRESET, overrides);
+  return makeReportCardsV9Card(overrides);
 }
 
 export function makeWorkerReportCardsV9Response(
@@ -118,3 +76,5 @@ export function makeWorkerSafetyScoreV9Publication(
     ...overrides,
   };
 }
+
+export const makeWorkerV9Pillars = makeReportCardsV9Pillars;

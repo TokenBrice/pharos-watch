@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, FlaskConical } from "lucide-react";
+import { FlaskConical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
-import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
+import { RailCard, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -54,14 +56,11 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Mechanism review">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Mechanism review</h2>
-        <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
-          {review.reviewedAt}
-        </span>
-      </div>
-
+    <RailCard
+      title="Mechanism review"
+      ariaLabel="Mechanism review"
+      trailing={<ReviewedStamp date={review.reviewedAt} prefix={null} />}
+    >
       <div className="px-4 pb-4">
         <ArchetypeBadge review={review} />
         <p
@@ -72,21 +71,18 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
         >
           {review.notes}
         </p>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
-        >
-          {open ? "Show less" : "Read more"}
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-        </button>
+        <InlineDisclosureToggle
+          open={open}
+          onToggle={() => setOpen((value) => !value)}
+          collapsedLabel="Read more"
+          className="mt-2"
+        />
       </div>
 
       <div className="px-4 pb-4">
         <EvidenceFooter sources={review.sources} trailing={<ExplainerLink review={review} />} />
       </div>
-    </section>
+    </RailCard>
   );
 }
 
@@ -96,10 +92,6 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
  * lead behind one control the way the rail does.
  */
 function FullMechanismReview({ review }: { review: MechanismReviewView }) {
-  const [open, setOpen] = useState(false);
-  const collapsible = review.notes.length > PROSE_COLLAPSE_THRESHOLD;
-  const showLead = collapsible && !open;
-
   return (
     <Card id="mechanism-review" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT, "xl:hidden")}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
@@ -113,21 +105,13 @@ function FullMechanismReview({ review }: { review: MechanismReviewView }) {
         </div>
       </CardHeader>
       <CardContent className={DETAIL_MODULE_BODY_CLASS}>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-          {showLead ? buildProseLead(review.notes) : review.notes}
-        </p>
-
-        {collapsible ? (
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            className="pharos-focus-ring mt-3 inline-flex min-h-7 items-center gap-1 rounded-sm text-xs font-medium text-frost-blue"
-          >
-            {open ? "Show less" : "Read the full review"}
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-          </button>
-        ) : null}
+        <CollapsibleProse
+          text={review.notes}
+          className="whitespace-pre-line text-sm"
+          collapsedLabel="Read the full review"
+          toggleClassName="mt-3"
+          size="md"
+        />
 
         <EvidenceFooter
           className="mt-5"

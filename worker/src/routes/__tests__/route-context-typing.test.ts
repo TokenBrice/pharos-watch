@@ -21,8 +21,6 @@ describe("route context typing", () => {
       expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"status">>>();
       expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
       expectTypeOf(routeCtx.cloudflareD1StatusBindings).toEqualTypeOf<CloudflareD1StatusBindings>();
-      expectTypeOf(routeCtx.workerJobLedgerMode).toEqualTypeOf<"off" | "shadow" | "write">();
-      expectTypeOf(routeCtx.workerJobLedgerAllowlist).toEqualTypeOf<string[]>();
       expectTypeOf(routeCtx.workerCanaryMode).toEqualTypeOf<"off" | "shadow" | "status" | "alert">();
       expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
       return new Response("ok");
@@ -51,12 +49,6 @@ describe("route context typing", () => {
       expectTypeOf(routeCtx.apiKeyHashPepper).toEqualTypeOf<string | undefined>();
       return new Response("ok");
     });
-
-    defineStaticRoute("reserve-recovery-fault-injection", async (routeCtx) => {
-      expectTypeOf(routeCtx.workerVersion).toEqualTypeOf<string | null>();
-      expectTypeOf(routeCtx.reserveRecoveryFaultInjectionEnabled).toEqualTypeOf<boolean>();
-      return new Response("ok");
-    });
   });
 
   it("narrows dynamic route contexts to declared dependencies", () => {
@@ -83,10 +75,7 @@ describe("route context typing", () => {
       CLOUDFLARE_ACCOUNT_ID: "account",
       CLOUDFLARE_D1_STATUS_API_TOKEN: "token",
       CLOUDFLARE_D1_DATABASE_ID: "database",
-      WORKER_JOB_LEDGER_MODE: "write",
-      WORKER_JOB_LEDGER_ALLOWLIST: "sync-stablecoins,sync-yield-data",
       WORKER_CANARY_MODE: "shadow",
-      WORKER_RESERVE_FAULT_INJECTION_ENABLED: " TRUE ",
       CF_VERSION_METADATA: {
         id: "preview-id",
         tag: "preview-v1",
@@ -119,12 +108,10 @@ describe("route context typing", () => {
       CLOUDFLARE_D1_STATUS_API_TOKEN: "token",
       CLOUDFLARE_D1_DATABASE_ID: "database",
     });
-    expect(statusCtx.workerJobLedgerMode).toBe("write");
-    expect(statusCtx.workerJobLedgerAllowlist).toEqual(["sync-stablecoins", "sync-yield-data"]);
     expect(statusCtx.workerCanaryMode).toBe("shadow");
     expect(statusCtx.feedbackEnv).toBeUndefined();
 
-    const previewFaultCtx = buildRouteContext({
+    const workerVersionCtx = buildRouteContext({
       request,
       url,
       env,
@@ -132,8 +119,7 @@ describe("route context typing", () => {
       trustedAdmin: true,
       routeDependencies: ["workerVersion"] as const,
     });
-    expect(previewFaultCtx.workerVersion).toBe("preview-v1");
-    expect(previewFaultCtx.reserveRecoveryFaultInjectionEnabled).toBe(true);
+    expect(workerVersionCtx.workerVersion).toBe("preview-v1");
 
     const feedbackCtx = buildRouteContext({
       request,

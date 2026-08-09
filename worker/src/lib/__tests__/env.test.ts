@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  isReserveRecoveryFaultInjectionEnabled,
   resolveVaultsFyiConfig,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
@@ -8,16 +7,6 @@ import {
   WORKER_REQUIRED_ENV_KEYS,
   WORKER_RESERVED_ENV_KEYS,
 } from "../env";
-
-describe("isReserveRecoveryFaultInjectionEnabled", () => {
-  it("accepts only a normalized literal true", () => {
-    expect(isReserveRecoveryFaultInjectionEnabled(" TRUE ")).toBe(true);
-    expect(isReserveRecoveryFaultInjectionEnabled("1")).toBe(false);
-    expect(isReserveRecoveryFaultInjectionEnabled("enabled")).toBe(false);
-    expect(isReserveRecoveryFaultInjectionEnabled("false")).toBe(false);
-    expect(isReserveRecoveryFaultInjectionEnabled(undefined)).toBe(false);
-  });
-});
 
 describe("validateWorkerEnvContract", () => {
   it("flags partial Access config", () => {

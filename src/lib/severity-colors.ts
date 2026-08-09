@@ -15,14 +15,6 @@ import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 
 const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
 
-/** Severity hex token map — single source of truth for JS-side hex values */
-const SEVERITY_HEX = {
-  healthy:  "#22c55e",
-  mild:     "#f59e0b",
-  moderate: "#f97316",
-  severe:   "#ef4444",
-} as const;
-
 /** Severity border class with accent opacity — suitable for outlined badges. */
 export function deviationBorderClass(absBps: number): string {
   if (absBps < THRESHOLDS.GREEN) return "border-green-500/50";
@@ -49,13 +41,6 @@ export function deviationBgClass(absBps: number): string {
   if (absBps < THRESHOLDS.AMBER) return "bg-amber-500";
   if (absBps < THRESHOLDS.ORANGE) return "bg-orange-500";
   return "bg-red-500";
-}
-
-export function deviationColorHex(absBps: number): string {
-  if (absBps < THRESHOLDS.GREEN) return SEVERITY_HEX.healthy;
-  if (absBps < THRESHOLDS.AMBER) return SEVERITY_HEX.mild;
-  if (absBps < THRESHOLDS.ORANGE) return SEVERITY_HEX.moderate;
-  return SEVERITY_HEX.severe;
 }
 
 /** Severity icon name (Lucide component name) for a given deviation in basis points */

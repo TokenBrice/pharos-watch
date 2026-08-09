@@ -13,6 +13,7 @@ import {
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
@@ -86,10 +87,9 @@ export function isAllZeroSha(ref) {
 export function getChangedFilesFromGit(ref, { execFile = execFileSync, consoleImpl = console } = {}) {
   if (!ref || isAllZeroSha(ref)) return [];
   try {
-    const raw = execFile("git", ["diff", "--name-only", `${ref}...HEAD`], { encoding: "utf8" });
-    return raw
-      .split(/\r?\n/g)
-      .map((line) => normalizePath(line.trim()))
+    const raw = execFile("git", ["diff", "--name-only", "-z", `${ref}...HEAD`], { encoding: "utf8" });
+    return splitNullDelimited(raw)
+      .map((path) => normalizePath(path))
       .filter(Boolean);
   } catch (err) {
     const message = `[coverage] Could not diff against explicit ref "${ref}": ${String(err).slice(0, 200)}`;
@@ -130,23 +130,25 @@ export function runCriticalCoverageCompletenessGuard({
     criticalFiles,
     waivers,
   });
+  // Waiver review dates are advisory. A calendar date passing is a prompt to
+  // re-review coverage, not evidence that the merge being gated is unsafe, so
+  // the queue is reported and the weekly maintenance lane picks it up.
   const waiverReviewQueue = collectCriticalCoverageWaiverReviewQueue(waivers, {
     candidateFiles,
     today: reviewToday,
   });
-
-  if (
-    waiverErrors.length === 0 &&
-    staleWaivers.length === 0 &&
-    missingEnrollment.length === 0 &&
-    waiverReviewQueue.due.length === 0
-  ) {
-    if (waiverReviewQueue.upcoming.length > 0) {
-      consoleImpl.log("[coverage] Critical coverage waiver reviews due soon:");
-      for (const waiver of waiverReviewQueue.upcoming) {
-        consoleImpl.log(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
-      }
+  for (const [label, rows] of /** @type {[string, {file: string, reviewAfter: string}[]][]} */ ([
+    ["due or overdue", waiverReviewQueue.due],
+    ["due soon", waiverReviewQueue.upcoming],
+  ])) {
+    if (rows.length === 0) continue;
+    consoleImpl.log(`[coverage] Critical coverage waiver reviews ${label}:`);
+    for (const waiver of rows) {
+      consoleImpl.log(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
     }
+  }
+
+  if (waiverErrors.length === 0 && staleWaivers.length === 0 && missingEnrollment.length === 0) {
     return true;
   }
 
@@ -167,12 +169,6 @@ export function runCriticalCoverageCompletenessGuard({
     consoleImpl.error("[coverage] High-stakes candidates missing critical coverage enrollment or waiver:");
     for (const file of missingEnrollment) {
       consoleImpl.error(`  ${file}`);
-    }
-  }
-  if (waiverReviewQueue.due.length > 0) {
-    consoleImpl.error("[coverage] Critical coverage waiver reviews are due or overdue:");
-    for (const waiver of waiverReviewQueue.due) {
-      consoleImpl.error(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
     }
   }
   consoleImpl.error(
@@ -314,5 +310,11 @@ export function runCriticalCoverageCheck({
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runCriticalCoverageCheck();
+  // `--completeness` runs only the enrollment/waiver guard, which needs no lcov
+  // report and is cheap enough for every non-doc PR static validation path.
+  if (process.argv.slice(2).includes("--completeness")) {
+    runCriticalCoverageCompletenessGuard();
+  } else {
+    runCriticalCoverageCheck();
+  }
 }

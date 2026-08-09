@@ -175,10 +175,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `MAINTENANCE_MODE` | `string` | optional | - | - | Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses. |
 | `REQUEST_SOURCE_ATTRIBUTION_DISABLED` | `string` | optional | - | optional | Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes. |
 | `API_KEY_REQUEST_ATTRIBUTION_DISABLED` | `string` | optional | - | - | Worker-only operational telemetry kill switch for per-key public API attribution writes. |
-| `WORKER_JOB_LEDGER_MODE` | `string` | optional | - | - | Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract. |
-| `WORKER_JOB_LEDGER_ALLOWLIST` | `string` | optional | - | - | Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled. |
 | `WORKER_RESERVE_RECOVERY_MODE` | `string` | optional | - | - | Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts. |
-| `WORKER_RESERVE_FAULT_INJECTION_ENABLED` | `string` | optional | - | - | Explicit preview-only arming gate for reserve recovery fault injection. Only a normalized literal `true` enables the test harness; unset or any other value disables it. |
 | `WORKER_CANARY_MODE` | `string` | optional | - | - | Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors. |
 | `OPS_UI_ORIGIN` | `string` | reserved | optional | optional | Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks. |
 | `OPS_API_ORIGIN` | `string` | reserved | optional | - | Ops API origin override; reserved on the worker and active on the Pages admin proxy upstream hop. |
@@ -834,7 +831,7 @@ Chunks statements into batches of 100 (D1's batch limit), executes sequentially,
 
 ### Cron Lease Primitives (Phase C)
 
-Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and are part of `worker/migrations/0000_baseline.sql`.
+Lease primitives are implemented in `worker/src/lib/cron-lease-primitives.ts` and are part of `worker/migrations/0000_baseline.sql`.
 Scheduled slot fencing is backed by migration `0074_cron_slot_executions.sql`.
 
 ```sql

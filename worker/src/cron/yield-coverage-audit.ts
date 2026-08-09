@@ -34,10 +34,8 @@ import {
 } from "../lib/constants";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
 import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
-import {
-  YIELD_ADAPTER_LIFECYCLE,
-  type YieldAdapterLifecycleEntry,
-} from "./yield-config-registry";
+import type { YieldAdapterLifecycleEntry } from "./yield-config-registry";
+import { YIELD_ADAPTER_LIFECYCLE } from "./yield-config-rate-sources";
 import {
   probeQuarantinedDeterministicAdapters,
   type QuarantineRestoreCandidate,
@@ -936,13 +934,10 @@ export async function runYieldCoverageAudit(
     await reportCronProgress(reportProgress, {
       stage,
       message,
+      providerFamily: "yield-coverage-audit",
       itemsDone,
       itemsTotal: YIELD_COVERAGE_AUDIT_PROGRESS_STAGES,
-      metadata: {
-        providerFamily: "yield-coverage-audit",
-        phase: stage,
-        ...metadata,
-      },
+      metadata,
     });
   };
 

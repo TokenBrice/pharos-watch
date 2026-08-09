@@ -2,7 +2,7 @@ import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { hasConfiguredValue } from "@shared/lib/env-utils";
 import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
-import { bytesToBase64Url } from "../../lib/base64url";
+import { bytesToBase64Url } from "@shared/lib/base64url";
 import {
   ApiKeySelfServeRequestSchema,
   ApiKeySelfServeVerifySchema,

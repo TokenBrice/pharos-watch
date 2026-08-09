@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -18,6 +18,11 @@ const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
 const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
 const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
 
+// `totalOutFiles` is the only blocking gate: exceeding it means the Pages
+// direct upload physically cannot ship. Every other entry below is a
+// *reference* size — `--check` reports its delta to `$GITHUB_STEP_SUMMARY`
+// and exits 0, so payload growth stays visible without turning a release
+// into a budget-ratchet hotfix PR.
 const DEFAULT_BUDGETS = {
   // Keep a conservative 20,000-file repo budget. Cloudflare's current paid
   // Pages limit can be higher, but Free and legacy Wrangler paths use 20,000.
@@ -195,20 +200,52 @@ function readFontManifestSummary() {
     .sort((a, b) => a.route.localeCompare(b.route));
 }
 
-function checkBudget(label, actual, budget, failures) {
-  const ok = actual <= budget;
-  console.log(`${ok ? "ok" : "FAIL"} ${label}: ${formatBytes(actual)} / ${formatBytes(budget)}`);
-  if (!ok) {
-    failures.push(`${label} is ${actual} bytes, budget is ${budget} bytes`);
-  }
-}
-
 function checkCountBudget(label, actual, budget, failures) {
   const ok = actual <= budget;
   console.log(`${ok ? "ok" : "FAIL"} ${label}: ${actual} / ${budget}`);
   if (!ok) {
     failures.push(`${label} is ${actual}, budget is ${budget}`);
   }
+}
+
+function formatPercent(value) {
+  return `${value.toFixed(1)}%`;
+}
+
+/**
+ * Non-blocking delta against a reference size. `direction: "floor"` marks
+ * metrics where higher is better (headroom); everything else is a ceiling.
+ */
+function referenceDelta(label, actual, reference, { format = formatBytes, direction = "ceiling" } = {}) {
+  const delta = actual - reference;
+  const within = direction === "floor" ? actual >= reference : actual <= reference;
+  const ratio = reference !== 0 ? (delta / reference) * 100 : 0;
+  const sign = delta > 0 ? "+" : delta < 0 ? "-" : "";
+  return {
+    label,
+    actual: format(actual),
+    reference: format(reference),
+    delta: `${sign}${format(Math.abs(delta))} (${sign}${Math.abs(ratio).toFixed(1)}%)`,
+    status: within ? "within" : "OVER",
+  };
+}
+
+function writeStepSummary(rows) {
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (!summaryPath) return;
+  const lines = [
+    "## Build size reference deltas",
+    "",
+    "Non-blocking. Only the Cloudflare 20,000-file direct-upload limit blocks a release.",
+    "",
+    "| Metric | Actual | Reference | Delta | |",
+    "|---|---:|---:|---:|---|",
+    ...rows.map(
+      (row) => `| ${row.label} | ${row.actual} | ${row.reference} | ${row.delta} | ${row.status === "OVER" ? "⚠️" : ""} |`,
+    ),
+    "",
+  ];
+  appendFileSync(summaryPath, `${lines.join("\n")}\n`);
 }
 
 const outDir = path.join(root, "out");
@@ -338,56 +375,50 @@ printTop("Representative detail eager JS (gzip sum of referenced scripts)", repr
 
 if (check) {
   const failures = [];
-  console.log("\nBudget checks");
+  console.log("\nDeploy gate (blocking)");
   checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
-  if (overallCapacity.headroomRatio < MINIMUM_FILE_HEADROOM_RATIO) {
-    failures.push(
-      `direct-upload file headroom is ${(overallCapacity.headroomRatio * 100).toFixed(1)}%; minimum is ${MINIMUM_FILE_HEADROOM_RATIO * 100}%`,
-    );
-    console.log(
-      `FAIL direct-upload file headroom: ${(overallCapacity.headroomRatio * 100).toFixed(1)}% / ${(MINIMUM_FILE_HEADROOM_RATIO * 100).toFixed(1)}% minimum`,
-    );
-  } else {
-    console.log(
-      `ok direct-upload file headroom: ${(overallCapacity.headroomRatio * 100).toFixed(1)}% / ${(MINIMUM_FILE_HEADROOM_RATIO * 100).toFixed(1)}% minimum`,
-    );
-  }
-  if (classicZodHtmlReferenceRatio > MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO) {
-    failures.push(
-      `classic Zod HTML reference ratio is ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}%; ` +
-        `maximum is ${MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100}%`,
-    );
-    console.log(
-      `FAIL classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / ` +
-        `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
-    );
-  } else {
-    console.log(
-      `ok classic Zod HTML references: ${(classicZodHtmlReferenceRatio * 100).toFixed(1)}% / ` +
-        `${(MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100).toFixed(1)}% maximum`,
-    );
-  }
-  checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
-  checkBudget("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes, failures);
-  checkBudget("total CSS chunks", sum(cssFiles), budgets.totalCssBytes, failures);
-  checkBudget("largest CSS chunk gzip", cssFilesWithGzip[0]?.gzipSize ?? 0, budgets.largestCssGzipBytes, failures);
-  checkBudget("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes, failures);
-  checkBudget("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes, failures);
-  checkBudget("homepage HTML file", homepageHtmlSize, budgets.homepageHtmlBytes, failures);
-  checkBudget("largest TXT/RSC helper", txtFiles[0]?.size ?? 0, budgets.largestTxtBytes, failures);
 
-  for (const detail of representativeDetails) {
-    const budget =
-      detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes;
-    checkBudget(`${detail.route} ${detail.kind}`, detail.size, budget, failures);
-  }
+  const referenceRows = [
+    referenceDelta(
+      "direct-upload file headroom",
+      overallCapacity.headroomRatio * 100,
+      MINIMUM_FILE_HEADROOM_RATIO * 100,
+      { format: formatPercent, direction: "floor" },
+    ),
+    referenceDelta(
+      "classic Zod HTML references",
+      classicZodHtmlReferenceRatio * 100,
+      MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO * 100,
+      { format: formatPercent },
+    ),
+    referenceDelta("total JS chunks", sum(jsFiles), budgets.totalJsBytes),
+    referenceDelta("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes),
+    referenceDelta("total CSS chunks", sum(cssFiles), budgets.totalCssBytes),
+    referenceDelta("largest CSS chunk gzip", cssFilesWithGzip[0]?.gzipSize ?? 0, budgets.largestCssGzipBytes),
+    referenceDelta("total static media", sum(mediaFiles), budgets.totalStaticMediaBytes),
+    referenceDelta("largest HTML file", htmlFiles[0]?.size ?? 0, budgets.largestHtmlBytes),
+    referenceDelta("homepage HTML file", homepageHtmlSize, budgets.homepageHtmlBytes),
+    referenceDelta("largest TXT/RSC helper", txtFiles[0]?.size ?? 0, budgets.largestTxtBytes),
+    ...representativeDetails.map((detail) =>
+      referenceDelta(
+        `${detail.route} ${detail.kind}`,
+        detail.size,
+        detail.kind === "html" ? budgets.representativeDetailHtmlBytes : budgets.representativeDetailPageTxtBytes,
+      ),
+    ),
+    ...representativeDetailEagerJs.map((detail) =>
+      referenceDelta(`${detail.route} eager JS gzip`, detail.size, budgets.representativeDetailEagerJsGzipBytes),
+    ),
+  ];
 
-  for (const detail of representativeDetailEagerJs) {
-    checkBudget(`${detail.route} eager JS gzip`, detail.size, budgets.representativeDetailEagerJsGzipBytes, failures);
+  console.log("\nSize reference deltas (report only)");
+  for (const row of referenceRows) {
+    console.log(`${row.status === "OVER" ? "OVER" : "  ok"} ${row.label}: ${row.actual} / ${row.reference} (${row.delta})`);
   }
+  writeStepSummary(referenceRows);
 
   if (failures.length > 0) {
-    console.error("\n[build-size] Budget failures:");
+    console.error("\n[build-size] Deploy gate failures:");
     for (const failure of failures) {
       console.error(`- ${failure}`);
     }

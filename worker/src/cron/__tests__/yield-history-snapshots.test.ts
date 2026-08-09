@@ -1,34 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { LEGACY_BEST_YIELD_SOURCE_KEY } from "../../lib/yield-history-ownership-handoffs";
 import { loadYieldHistorySnapshots, MAX_PREVIOUS_TVL_HISTORY_ROWS } from "../yield-sync/history";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE yield_history (
-      stablecoin_id TEXT NOT NULL,
-      source_key TEXT,
-      recorded_at INTEGER NOT NULL,
-      is_best INTEGER,
-      apy REAL,
-      apy_base REAL,
-      source_tvl_usd REAL,
-      data_source TEXT,
-      yield_source TEXT,
-      yield_type TEXT,
-      exchange_rate REAL,
-      publication_state TEXT
-    );
-  `);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function insertHistory(
   sqlite: DatabaseSync,
   row: {
     stablecoinId: string;
-    sourceKey: string | null;
+    sourceKey: string;
     recordedAt: number;
     isBest?: number;
     apy?: number;
@@ -70,12 +54,12 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, sourceTvlUsd: 10 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, sourceTvlUsd: 20 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, sourceTvlUsd: 30 });
-    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: null, recordedAt: 170, sourceTvlUsd: 40 });
-    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: null, recordedAt: 190, sourceTvlUsd: 50 });
+    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 170, sourceTvlUsd: 40 });
+    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, sourceTvlUsd: 50 });
 
-    const sourceKeysByStablecoin = new Map<string, Set<string | null>>([
+    const sourceKeysByStablecoin = new Map<string, Set<string>>([
       ["coin-a", new Set(["source-a", "source-b"])],
-      ["coin-b", new Set([null])],
+      ["coin-b", new Set(["source-c"])],
     ]);
     const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300, {
       sourceKeysByStablecoin,
@@ -91,7 +75,7 @@ describe("loadYieldHistorySnapshots", () => {
     ).toEqual([
       { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, tvl: 20 },
       { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, tvl: 30 },
-      { stablecoinId: "coin-b", sourceKey: null, recordedAt: 190, tvl: 50 },
+      { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, tvl: 50 },
     ]);
   });
 
@@ -148,7 +132,7 @@ describe("loadYieldHistorySnapshots", () => {
     });
     insertHistory(sqlite, {
       stablecoinId: "usde-ethena",
-      sourceKey: null,
+      sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY,
       recordedAt: 200,
       isBest: 1,
       sourceTvlUsd: 20,

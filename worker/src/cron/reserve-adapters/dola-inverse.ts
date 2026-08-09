@@ -4,9 +4,8 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
-  requireJsonInputFromConfig,
   parseTimestampLikeToUnixSeconds,
   reserveDegradedWarning,
   slicesFromValues,
@@ -180,9 +179,9 @@ export async function fetchDolaInverseReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = requireJsonInputFromConfig(config, "dola-inverse");
-  const payload = await fetchJsonWithRetry<FirmMarketsResponse>(
-    primaryInput.url,
+  const payload = await fetchJsonAdapterInput<FirmMarketsResponse>(
+    config,
+    "dola-inverse",
     signal,
     12_000,
     ctx,

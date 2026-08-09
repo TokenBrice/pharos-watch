@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 let latestMockDb: MockD1Database | null = null;
 
@@ -1522,22 +1523,13 @@ describe("tracked optional source anchors", () => {
   });
 
   it("ignores unpublished deterministic on-chain anchor rows when selecting prior rates", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE yield_history (
-          stablecoin_id TEXT NOT NULL,
-          exchange_rate REAL,
-          recorded_at INTEGER NOT NULL,
-          publication_generation_id TEXT,
-          publication_state TEXT
-        );
-      `);
-      const insertHistory = sqlite.prepare(
+            const insertHistory = sqlite.prepare(
         `INSERT INTO yield_history (
-          stablecoin_id, exchange_rate, recorded_at, publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?)`,
+          stablecoin_id, source_key, apy, data_source,
+          exchange_rate, recorded_at, publication_generation_id, publication_state
+        ) VALUES (?, 'tier1-anchor', 0, 'defillama', ?, ?, ?, ?)`,
       );
       const sevenDaysAgoSec = 1_747_000_000;
       insertHistory.run("usde-ethena", 1.09, sevenDaysAgoSec - 1, "gen-failed", "failed");
@@ -1569,24 +1561,13 @@ describe("tracked optional source anchors", () => {
   });
 
   it("ignores unpublished Ondo oracle anchor rows when selecting prior exchange rates", async () => {
-    const { DatabaseSync } = await import("node:sqlite");
-    const sqlite = new DatabaseSync(":memory:");
+    const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      sqlite.exec(`
-        CREATE TABLE yield_history (
-          stablecoin_id TEXT NOT NULL,
-          source_key TEXT NOT NULL,
-          exchange_rate REAL,
-          recorded_at INTEGER NOT NULL,
-          publication_generation_id TEXT,
-          publication_state TEXT
-        );
-      `);
-      const insertHistory = sqlite.prepare(
+            const insertHistory = sqlite.prepare(
         `INSERT INTO yield_history (
-          stablecoin_id, source_key, exchange_rate, recorded_at,
+          stablecoin_id, source_key, apy, data_source, exchange_rate, recorded_at,
           publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, 0, 'defillama', ?, ?, ?, ?)`,
       );
       const nowSec = 1_747_000_000;
       insertHistory.run(

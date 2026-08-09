@@ -12,7 +12,7 @@ import {
 } from "@shared/types/tron-measured-execution";
 import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "../../lib/error-utils";
 import { parseJson } from "../../lib/json-parse";

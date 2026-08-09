@@ -40,7 +40,7 @@ Rollback by restoring the prior Worker version or reverting only the compatibili
 
 ## Read-Replication Experiment
 
-D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The experiment Worker at `worker/experiments/d1-read-replication-benchmark.ts` is read-only and is not imported by the production Worker.
+D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Restore it from git history (`worker/experiments/`, last present at `831d75a8f`) before repeating the experiment, keep it read-only, and keep it out of the production Worker's imports.
 
 Prerequisites:
 

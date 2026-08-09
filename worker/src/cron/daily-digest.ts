@@ -7,7 +7,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { deleteCache, setCache } from "../lib/db-cache";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
-import { runWithOverloadRetry } from "../lib/cron-lease";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import {
   deliverTelegramDigestEdition,
@@ -17,7 +17,7 @@ import { buildDailyDigestInput } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
-import { reportDigestProgress } from "./digest/progress";
+import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
@@ -65,7 +65,7 @@ export async function generateDailyDigest(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "preflight",
     message: "Checking daily digest generation prerequisites",
     providerFamily: "digest",
@@ -80,7 +80,7 @@ export async function generateDailyDigest(
   });
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping daily digest because Anthropic credentials are missing",
       providerFamily: "anthropic",
@@ -107,7 +107,7 @@ export async function generateDailyDigest(
       console.log(
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
-      await reportDigestProgress(reportProgress, {
+      await reportCronProgress(reportProgress, {
         stage: "skipped",
         message: "Skipping daily digest because a recent digest exists",
         providerFamily: "digest",
@@ -125,7 +125,7 @@ export async function generateDailyDigest(
     }
   }
 
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "input-collection",
     message: "Collecting daily digest market context",
     providerFamily: "pharos-d1",
@@ -135,7 +135,7 @@ export async function generateDailyDigest(
   const digestInput = await buildDailyDigestInput(db);
   const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, recentTitles, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "input-unavailable",
       message: "Daily digest stablecoins cache is unavailable",
       providerFamily: "pharos-d1",
@@ -160,7 +160,7 @@ export async function generateDailyDigest(
     recentLeadSignalIds,
   });
   const userPromptContent = buildUserPrompt(inputData, recentMeta, { leadRequirements, recentLeadSignalIds });
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "input-collected",
     message: "Collected daily digest context",
     providerFamily: "pharos-d1",
@@ -188,7 +188,7 @@ export async function generateDailyDigest(
     recentMeta,
     degradedReasons,
   });
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "llm-generation",
     message: "Requesting daily digest copy from Anthropic",
     providerFamily: "anthropic",
@@ -225,7 +225,7 @@ export async function generateDailyDigest(
     },
   });
   if (digestCopy.kind === "circuit-open") {
-    await reportDigestProgress(reportProgress, {
+    await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping daily digest because Anthropic circuit is open",
       providerFamily: "anthropic",
@@ -258,7 +258,7 @@ export async function generateDailyDigest(
   if (safetyCopyIssues.length > 0) {
     degradedReasons.push("unbound-safety-copy");
   }
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "llm-generation-complete",
     message: "Received daily digest copy from Anthropic",
     providerFamily: "anthropic",
@@ -282,7 +282,7 @@ export async function generateDailyDigest(
   });
   const now = Math.floor(Date.now() / 1000);
   const digestDate = formatIsoDate(now);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "persistence",
     message: "Persisting daily digest row",
     providerFamily: "d1",
@@ -312,7 +312,7 @@ export async function generateDailyDigest(
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
   const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
   throwIfAborted(signal);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "twitter-delivery",
     message: "Delivering daily digest to Twitter/X",
     providerFamily: "twitter-api",
@@ -370,7 +370,7 @@ export async function generateDailyDigest(
     },
   });
   throwIfAborted(signal);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "telegram-delivery",
     message: "Delivering daily digest to Telegram",
     providerFamily: "telegram-api",
@@ -481,7 +481,7 @@ export async function generateDailyDigest(
     });
   }
   const qualityMetadata = formatQualityMetadata(qualityIssues);
-  await reportDigestProgress(reportProgress, {
+  await reportCronProgress(reportProgress, {
     stage: "complete",
     message: "Completed daily digest generation",
     providerFamily: "digest",

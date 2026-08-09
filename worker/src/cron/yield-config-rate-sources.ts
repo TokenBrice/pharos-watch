@@ -1,6 +1,5 @@
 import type { YieldAdapterLifecycleReason } from "@shared/types/yield";
 import {
-  registerYieldAdapterLifecycle,
   type OnChainRateConfig,
   type RateDerivedConfig,
   type YieldAdapterLifecycleEntry,
@@ -403,14 +402,23 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntrie
   Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
 );
 
-// Register typed lifecycle entries into the shared registry so the coverage
-// audit, manifest endpoint, and any future admin UI can read the same source
-// of truth without re-deriving from the legacy string maps.
-const initialLifecycleEntries: Record<string, YieldAdapterLifecycleEntry> = {};
-for (const [id, reason] of Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED)) {
-  initialLifecycleEntries[id] = { lifecycle: "quarantined", reason };
-}
-for (const [id, reason] of Object.entries(INTENTIONAL_GAP_REASONS_TYPED)) {
-  initialLifecycleEntries[id] = { lifecycle: "intentional-gap", reason };
-}
-registerYieldAdapterLifecycle(initialLifecycleEntries);
+/**
+ * Typed lifecycle entries derived from the two typed reason maps above, so the
+ * registry derivation, coverage audit, manifest endpoint, and any future admin
+ * UI read the same source of truth without re-deriving from the legacy strings.
+ *
+ * Built eagerly as a plain const: `deriveYieldRegistry` takes it as a parameter,
+ * so there is no import-order hazard between this module and the registry.
+ */
+export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {
+  ...Object.fromEntries(
+    Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED).map(
+      ([id, reason]) => [id, { lifecycle: "quarantined", reason }] as const,
+    ),
+  ),
+  ...Object.fromEntries(
+    Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(
+      ([id, reason]) => [id, { lifecycle: "intentional-gap", reason }] as const,
+    ),
+  ),
+};

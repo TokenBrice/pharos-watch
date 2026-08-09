@@ -7,47 +7,14 @@ import {
   MINT_BURN_HOURLY_RETENTION_SEC,
   pruneMintBurnRetention,
 } from "../mint-burn/retention";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const NOW_SEC = 1_800_000_000;
 const HOUR_SEC = 3600;
 const TAPE_CURSOR_KEY = "tape-projector:cursor:mint_burn.large_flow";
 
 function setupDb(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE mint_burn_events (
-      id TEXT PRIMARY KEY,
-      stablecoin_id TEXT NOT NULL,
-      chain_id TEXT NOT NULL,
-      direction TEXT NOT NULL DEFAULT 'mint',
-      amount REAL NOT NULL DEFAULT 1,
-      amount_usd REAL,
-      timestamp INTEGER NOT NULL,
-      price_repair_status TEXT,
-      burn_type TEXT,
-      flow_type TEXT NOT NULL DEFAULT 'standard'
-    );
-    CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
-    CREATE INDEX idx_mbe_coin_chain_ts
-      ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
-    CREATE TABLE mint_burn_hourly (
-      stablecoin_id TEXT NOT NULL,
-      chain_id TEXT NOT NULL,
-      hour_ts INTEGER NOT NULL,
-      mint_count INTEGER NOT NULL DEFAULT 0,
-      burn_count INTEGER NOT NULL DEFAULT 0,
-      mint_volume_usd REAL NOT NULL DEFAULT 0,
-      burn_volume_usd REAL NOT NULL DEFAULT 0,
-      net_flow_usd REAL NOT NULL DEFAULT 0,
-      PRIMARY KEY (stablecoin_id, chain_id, hour_ts)
-    );
-    CREATE INDEX idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
-  `);
+  const sqlite = createLatestSchemaSqlite().sqlite;
   sqlite
     .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
     .run(TAPE_CURSOR_KEY, String(NOW_SEC), NOW_SEC);
@@ -71,12 +38,15 @@ function insertEvent(
   sqlite
     .prepare(
       `INSERT INTO mint_burn_events
-        (id, stablecoin_id, chain_id, amount_usd, timestamp, price_repair_status)
-       VALUES (?, 'usdc-circle', 'ethereum', ?, ?, ?)`,
+        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+         tx_hash, block_number, timestamp, explorer_tx_url, price_repair_status)
+       VALUES (?, 'usdc-circle', 'USDC', 'ethereum', 'mint', 1, ?, ?, 1, ?,
+               'https://etherscan.io/tx/0x0', ?)`,
     )
     .run(
       input.id,
       input.amountUsd === undefined ? 1 : input.amountUsd,
+      `0x${input.id}`,
       input.timestamp,
       input.priceRepairStatus ?? null,
     );

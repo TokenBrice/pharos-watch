@@ -84,6 +84,23 @@ function durableStores(overrides: Partial<DdrV2StoreContracts> = {}): DdrV2Store
   };
 }
 
+/** N distinct policy-universe incidents, each of which yields one DDRR coverage row. */
+function coverageIncidents(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    incidentKey: `ddr2:coverage-${String(index).padStart(5, "0")}`,
+    eventId: index + 1,
+    currentEventId: index + 1,
+    stablecoinId: "lusd-liquity",
+    pegCurrency: "USD",
+    direction: "below" as const,
+    startedAt: STARTED_AT - index,
+    eligibleAt: ELIGIBLE_AT - index,
+    policyUniverseIncluded: true,
+    incidentState: "active" as const,
+    supersededByIncidentKey: null,
+  }));
+}
+
 function incident(overrides: Record<string, unknown> = {}) {
   return {
     incidentKey: "ddr2:22222222222222222222222222222222",
@@ -977,76 +994,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
       sourceEventState: "active",
       actual: { kind: "still_open" },
       verdictReview: "pending",
-    });
-    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
-  });
-
-  it("reviews stored DDR assessments against actual depeg event outcomes", async () => {
-    const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ASSESSED_AT + 7_200,
-            recovery_price: 1,
-          },
-        ],
-      },
-    ]);
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
-
-    expect(snapshot.methodology.version).toBe(DDR_METHODOLOGY_VERSION);
-    expect(snapshot.methodology.versionLabel).toBe(DDR_METHODOLOGY_VERSION_LABEL);
-    expect(snapshot._meta.assessedEventCount).toBe(1);
-    expect(snapshot._meta.reviewedEventCount).toBe(1);
-    expect(snapshot.summary.headline.recoveryLikelihoodAccuracyPct).toBe(1);
-    expect(snapshot.summary.headline.meanSignedDurationErrorSec).toBe(3_600);
-    expect(snapshot.summary.headline.meanAbsoluteDurationErrorSec).toBe(3_600);
-    expect(snapshot.rows[0]).toMatchObject({
-      eventId: 42,
-      kind: "prediction_review",
-      actual: { kind: "recovered" },
-      verdictReview: "correct_recoverable",
-      durationReview: "inside_band",
-      signedDurationErrorSec: 3_600,
-      withinIqr: true,
-    });
-  });
-
-  it("degrades legacy snapshots when stored assessment rows are malformed", async () => {
-    const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: [assessmentRow({ horizons_json: "not-json" })] },
-      { match: "FROM depeg_events", rows: [] },
-    ]);
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
-
-    expect(snapshot._meta.degraded).toBe(true);
-    expect(snapshot._meta.degradedReason).toContain("assessment-parse-issues:1");
-    expect(snapshot._meta.assessedEventCount).toBe(0);
-    expect(snapshot._meta.reviewedEventCount).toBe(0);
-    expect(snapshot.rows).toHaveLength(0);
-    expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
-  });
-
-  it("marks missing source events as data issues without dropping the assessment", async () => {
-    const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },
-      { match: "FROM depeg_events", rows: [] },
-    ]);
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
-
-    expect(snapshot.rows).toHaveLength(1);
-    expect(snapshot.rows[0]).toMatchObject({
-      kind: "prediction_review",
-      actual: { kind: "source_missing" },
-      verdictReview: "data_issue",
     });
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
   });
@@ -2212,54 +2159,27 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(DdrrResponseSchema.safeParse(snapshot)).toMatchObject({ success: true });
   });
 
-  it("keeps headline stats complete while capping public review rows", async () => {
-    const assessmentRows = Array.from({ length: 401 }, (_, index) =>
-      assessmentRow({
-        event_id: index + 1,
-        started_at: STARTED_AT - index,
-      }),
-    );
-    const eventRows = assessmentRows.map((row) => ({
-      id: row.event_id,
-      stablecoin_id: row.stablecoin_id,
-      started_at: row.started_at,
-      ended_at: ASSESSED_AT + 7_200,
-      recovery_price: 1,
-    }));
-    const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: assessmentRows },
-      { match: "FROM depeg_events", rows: eventRows },
-    ]);
+  it("caps public review rows at the published limit", async () => {
+    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(401)) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
 
     expect(snapshot._meta.reviewedEventCount).toBe(401);
     expect(snapshot._meta.publicRowLimit).toBe(400);
     expect(snapshot._meta.publicRowsTruncated).toBe(true);
     expect(snapshot.rows).toHaveLength(400);
-    expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(401);
   });
 
   it("serves more than 100 public review rows without truncation", async () => {
-    const assessmentRows = Array.from({ length: 101 }, (_, index) =>
-      assessmentRow({
-        event_id: index + 1,
-        started_at: STARTED_AT - index,
-      }),
-    );
-    const eventRows = assessmentRows.map((row) => ({
-      id: row.event_id,
-      stablecoin_id: row.stablecoin_id,
-      started_at: row.started_at,
-      ended_at: ASSESSED_AT + 7_200,
-      recovery_price: 1,
-    }));
-    const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: assessmentRows },
-      { match: "FROM depeg_events", rows: eventRows },
-    ]);
+    const db = mockD1([{ match: "FROM depeg_events", rows: [] }]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(101)) });
 
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ASSESSED_AT + 8_000);
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
+      storeContracts: stores,
+    });
 
     expect(snapshot._meta.reviewedEventCount).toBe(101);
     expect(snapshot._meta.publicRowLimit).toBe(400);
@@ -2269,32 +2189,22 @@ describe("buildDepegResolverReviewSnapshot", () => {
 
   it("stores a cache snapshot with headline DDRR stats", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime((ASSESSED_AT + 8_000) * 1000);
+    vi.setSystemTime((ELIGIBLE_AT + 3600) * 1000);
     const db = mockD1([
-      { match: "FROM depeg_resolver_assessments", rows: [assessmentRow()] },
-      {
-        match: "FROM depeg_events",
-        rows: [
-          {
-            id: 42,
-            stablecoin_id: "lusd-liquity",
-            started_at: STARTED_AT,
-            ended_at: ASSESSED_AT + 7_200,
-            recovery_price: 1,
-          },
-        ],
-      },
+      { match: "FROM depeg_events", rows: [] },
       { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
+    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => coverageIncidents(1)) });
 
-    const result = await computeAndStoreDepegResolverReview(db);
+    const result = await computeAndStoreDepegResolverReview(db, undefined, { storeContracts: stores });
     const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
 
     expect(result.itemCount).toBe(1);
     expect(cacheWrite?.binds[0]).toBe("depeg-resolver-review:snapshot");
-    expect(JSON.parse(cacheWrite?.binds[1] as string).payload.summary.headline).toMatchObject({
-      recoveryLikelihoodAccuracyPct: 1,
-      meanSignedDurationErrorSec: 3_600,
+    const payload = JSON.parse(cacheWrite?.binds[1] as string).payload;
+    expect(payload._meta.reviewedEventCount).toBe(1);
+    expect(payload.summary.headline).toMatchObject({
+      recoveryLikelihoodScoredCount: 0,
     });
   });
 });

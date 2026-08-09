@@ -3,8 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildCoverageShortfallWarnings,
-  fetchJsonWithRetry,
-  requireJsonInputFromConfig,
+  fetchJsonAdapterInput,
   reserveDegradedWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestamps,
@@ -93,7 +92,6 @@ export async function fetchRiverProtocolInfoReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, "river-protocol-info");
-  const payload = await fetchJsonWithRetry<RiverProtocolInfoPayload>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<RiverProtocolInfoPayload>(config, "river-protocol-info", signal, 12_000, ctx);
   return adaptRiverProtocolInfo(payload);
 }

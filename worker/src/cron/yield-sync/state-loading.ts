@@ -5,7 +5,6 @@ import {
   type PublishedSafetyScoresResultMap,
 } from "../../lib/safety-scores";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { CronStageContext } from "../shared/stage-contracts";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import {
   getDefaultDeterministicOnChainHealthState,
@@ -275,7 +274,7 @@ export function buildNextDeterministicOnChainHealthState(params: {
 export async function loadYieldSyncState(params: {
   db: D1Database;
   startSec: number;
-  signal?: CronStageContext["signal"];
+  signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   etherscanApiKey?: string | null;
 }): Promise<YieldSyncLoadedState> {

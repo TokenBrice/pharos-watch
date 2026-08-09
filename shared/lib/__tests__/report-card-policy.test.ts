@@ -1,11 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { inferResilienceDefaults, inferGovernanceQuality } from "../report-card-policy";
+import { inferResilienceDefaults } from "../report-card-policy";
 import { BACKING_TYPE_VALUES, GOVERNANCE_TYPE_VALUES } from "@shared/types/core";
 import {
   type BackingType,
   type CollateralQuality,
   type CustodyModel,
-  type GovernanceQuality,
   type GovernanceType,
 } from "@shared/types";
 
@@ -56,12 +55,6 @@ const EXPECTED: Record<`${BackingType}:${GovernanceType}`, ResilienceDefaults> =
   },
 };
 
-const EXPECTED_GOVERNANCE_QUALITY: Record<GovernanceType, GovernanceQuality> = {
-  centralized: "single-entity",
-  "centralized-dependent": "multisig",
-  decentralized: "dao-governance",
-};
-
 describe("inferResilienceDefaults", () => {
   for (const backing of BACKING_TYPE_VALUES) {
     for (const governance of GOVERNANCE_TYPE_VALUES) {
@@ -79,12 +72,4 @@ describe("inferResilienceDefaults", () => {
       }
     }
   });
-});
-
-describe("inferGovernanceQuality", () => {
-  for (const governance of GOVERNANCE_TYPE_VALUES) {
-    it(`maps ${governance} to ${EXPECTED_GOVERNANCE_QUALITY[governance]}`, () => {
-      expect(inferGovernanceQuality(governance)).toBe(EXPECTED_GOVERNANCE_QUALITY[governance]);
-    });
-  }
 });

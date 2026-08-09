@@ -13,10 +13,9 @@ describe("post-deploy acceptance probe selection", () => {
     ]);
   });
 
-  it("selects Worker health plus a deferred cron observation for a Worker release", () => {
+  it("selects only the Worker health smoke for a Worker release", () => {
     expect(selectPostDeployProbes({ workerDeployed: true })).toEqual([
       expect.objectContaining({ id: "worker-health", kind: "smoke", surface: "worker" }),
-      expect.objectContaining({ id: "worker-cron", kind: "cron", surface: "worker", deferred: true }),
     ]);
   });
 
@@ -24,26 +23,21 @@ describe("post-deploy acceptance probe selection", () => {
     expect(selectPostDeployProbes({ pagesDeployed: true, workerDeployed: true }).map((probe) => probe.id)).toEqual([
       "pages-shell",
       "worker-health",
-      "worker-cron",
     ]);
+  });
+
+  it("stays pending when no surface completed deployment", () => {
+    expect(selectPostDeployProbes()).toEqual([]);
+    expect(summarizePostDeployAcceptance([])).toMatchObject({ outcome: "pending" });
   });
 });
 
 describe("post-deploy acceptance outcomes", () => {
-  it("keeps a deferred cron observation explicitly pending", () => {
-    expect(
-      summarizePostDeployAcceptance([
-        { id: "worker-health", outcome: "passed" },
-        { id: "worker-cron", outcome: "pending" },
-      ]),
-    ).toMatchObject({ outcome: "pending" });
-  });
-
-  it("makes a failed smoke probe dominate pending observations", () => {
+  it("makes a failed smoke probe dominate other outcomes", () => {
     expect(
       summarizePostDeployAcceptance([
         { id: "pages-shell", outcome: "failed" },
-        { id: "worker-cron", outcome: "pending" },
+        { id: "worker-health", outcome: "passed" },
       ]),
     ).toMatchObject({ outcome: "failed" });
   });

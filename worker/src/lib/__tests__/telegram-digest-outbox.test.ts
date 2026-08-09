@@ -1,8 +1,6 @@
-import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { fileURLToPath, URL as NodeUrl } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 vi.mock("../digest-safety-context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../digest-safety-context")>();
@@ -34,16 +32,6 @@ interface StoredEdition {
   last_status_code: number | null;
 }
 
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
-const migrationSql = readFileSync(
-  fileURLToPath(new NodeUrl("../../test-helpers/migration-fixtures/0184_telegram_digest_outbox.sql", import.meta.url)),
-  "utf8",
-);
-// eslint-disable-next-line security/detect-non-literal-fs-filename -- checked-in migration fixture only.
-const safetyIdentityMigrationSql = readFileSync(
-  fileURLToPath(new NodeUrl("../../test-helpers/migration-fixtures/0221_telegram_digest_safety_identity.sql", import.meta.url)),
-  "utf8",
-);
 const creds = { botToken: "bot-token", chatId: "channel-1" };
 const safetyContext = {
   status: "unavailable" as const,
@@ -56,22 +44,9 @@ const openDatabases: DatabaseSync[] = [];
 let ownerSequence = 0;
 
 function createHarness(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  sqlite.exec(`
-    CREATE TABLE cache (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE daily_digest (
-      generated_at INTEGER PRIMARY KEY,
-      digest_meta TEXT
-    );
-    ${migrationSql}
-    ${safetyIdentityMigrationSql}
-  `);
+  const { sqlite, db } = createLatestSchemaSqlite();
   openDatabases.push(sqlite);
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return { sqlite, db };
 }
 
 function loadEdition(sqlite: DatabaseSync, editionKey = "daily:2026-07-10"): StoredEdition {
@@ -423,7 +398,9 @@ describe("Telegram digest outbox", () => {
   it("updates weekly compatibility metadata only after the exact edition is sent", async () => {
     const { sqlite, db } = createHarness();
     const generatedAt = Math.floor(Date.now() / 1000);
-    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_meta) VALUES (?, ?)").run(
+    sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, '', '{}', ?)",
+    ).run(
       generatedAt,
       JSON.stringify({ type: "weekly", telegramDelivered: false, telegramDeliveryStatus: "pending" }),
     );

@@ -1,6 +1,6 @@
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
 import { startOfUtcDaySec } from "../../lib/time-constants";

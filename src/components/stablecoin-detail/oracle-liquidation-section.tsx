@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -91,12 +89,7 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
  * most fiat-backed issuers.
  */
 export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClientSummary | null }) {
-  const [summaryOpen, setSummaryOpen] = useState(false);
   if (!summary) return null;
-
-  // 14 of 81 CDP oracle summaries run past 400 characters.
-  const collapsible = summary.summary.length > PROSE_COLLAPSE_THRESHOLD;
-  const showLead = collapsible && !summaryOpen;
 
   const facts: FactGridItem[] = [
     ...(summary.branchCount > 0
@@ -132,20 +125,8 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <div>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {showLead ? buildProseLead(summary.summary) : summary.summary}
-          </p>
-          {collapsible ? (
-            <button
-              type="button"
-              onClick={() => setSummaryOpen((value) => !value)}
-              aria-expanded={summaryOpen}
-              className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-xs font-medium text-frost-blue"
-            >
-              {summaryOpen ? "Show less" : "Read more"}
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", summaryOpen && "rotate-180")} aria-hidden="true" />
-            </button>
-          ) : null}
+          {/* 14 of 81 CDP oracle summaries run past 400 characters. */}
+          <CollapsibleProse text={summary.summary} className="text-sm" toggleClassName="mt-2" size="md" />
         </div>
         <FactGrid aria-label="Oracle and liquidation facts" items={facts} />
         {inlineBranches.length > 0 ? (

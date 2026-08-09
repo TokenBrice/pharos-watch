@@ -1,3 +1,5 @@
+import { DEPEG_SEVERITY_BPS } from "./depeg-config";
+
 /**
  * Redemption-lane severity threshold (absolute bps).
  *
@@ -6,4 +8,4 @@
  * sole owner of every score cap. This threshold is unrelated to scoring: it
  * gates redemption-backstop availability.
  */
-export const REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS = 2500;
+export const REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS = DEPEG_SEVERITY_BPS.severe;

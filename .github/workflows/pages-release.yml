@@ -87,8 +87,12 @@ jobs:
           rm -rf .next
           npm run build
       - run: npm run check:feature-flag-inlining
+      # Blocking: the Cloudflare 20,000-file direct-upload limit. Byte budgets
+      # are reported as non-blocking deltas in the step summary.
       - run: npm run check:build-size
-      - run: npm run check:build-attribution
+      # Blocking security gate: scans the built HTML for inline-script
+      # credential-harvesting shapes that get pharos.watch flagged by Safe Browsing.
+      - run: npm run check:phishing-signatures
       - name: Validate static SEO and published archive continuity
         env:
           SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml

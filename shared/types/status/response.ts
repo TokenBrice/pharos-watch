@@ -53,7 +53,6 @@ export type StatusSectionKey =
   | "canaries"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
-  | "jobAttempts"
   | "scheduledSlots"
   | "mintBurnReconciliation"
   | "reserveDrift"
@@ -104,8 +103,6 @@ export interface StatusResponse {
     staleCronArtifacts?: number;
     expiredCronLeases?: number;
     orphanedCronProgressRows?: number;
-    activeJobAttempts?: number;
-    staleJobAttempts?: number;
     scheduledSlotRunning?: number;
     scheduledSlotStaleCandidates?: number;
     scheduledSlotOldestRunningAgeSec?: number | null;

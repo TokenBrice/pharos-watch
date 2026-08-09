@@ -1,7 +1,9 @@
 import type { CronResult } from "../lib/cron-logger";
-import { CRON_TIMEOUT_MS, runWithOverloadRetry } from "../lib/cron-lease";
+import { CRON_TIMEOUT_MS } from "../lib/cron-timeouts";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { STALE_SLOT_ERROR } from "../lib/scheduled-slot-reconciliation";
 
 /**
  * Duration-trend watchdog for status-tracked cron jobs with explicit app-level
@@ -27,7 +29,6 @@ const LOOKBACK_SEC = 7 * 86400;
 const MIN_RUNS_FOR_TREND = 20;
 const MIN_SLOTS_FOR_ABANDONMENT_TREND = 20;
 const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
-const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
 
 interface JobDurationStats {

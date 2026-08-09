@@ -4,6 +4,8 @@
 // callers must declare a ceiling that leaves headroom for sidecar work. No
 // defaults: pick a number on purpose.
 
+import { throwIfAborted } from "./abort";
+
 function normalizeCap(maxInFlight: number, label: string): number {
   if (!Number.isFinite(maxInFlight) || Math.floor(maxInFlight) !== maxInFlight || maxInFlight < 1) {
     throw new RangeError(`${label} requires maxInFlight to be a positive integer (received ${maxInFlight}).`);
@@ -19,13 +21,21 @@ function normalizeCap(maxInFlight: number, label: string): number {
  * If any `fn` invocation rejects, the returned promise rejects with the first
  * such error. Already-running tasks continue to completion but their results
  * are discarded; new work stops being scheduled.
+ *
+ * When `options.signal` is supplied the abort is checked before any work is
+ * scheduled and again before each iteration picks up its next item, so an
+ * aborted trigger stops enqueuing without waiting for the whole fan-out.
  */
 export async function mapWithConcurrency<T, R>(
   items: readonly T[],
   maxInFlight: number,
   fn: (item: T, index: number) => Promise<R>,
+  options?: { signal?: AbortSignal },
 ): Promise<R[]> {
   const cap = normalizeCap(maxInFlight, "mapWithConcurrency");
+  const signal = options?.signal;
+  throwIfAborted(signal);
+
   const results = new Array<R>(items.length);
   if (items.length === 0) return results;
 
@@ -36,6 +46,12 @@ export async function mapWithConcurrency<T, R>(
   const worker = async (): Promise<void> => {
     for (;;) {
       if (firstError !== undefined) return;
+      try {
+        throwIfAborted(signal);
+      } catch (err) {
+        if (firstError === undefined) firstError = err ?? errorSentinel;
+        return;
+      }
       const i = nextIndex++;
       if (i >= items.length) return;
       try {

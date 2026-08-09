@@ -1,4 +1,4 @@
-import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 import type { CacheWriteResult } from "../../lib/db-cache";
 

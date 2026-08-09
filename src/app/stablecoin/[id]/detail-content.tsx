@@ -22,6 +22,7 @@ import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mec
 import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
+import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
@@ -32,6 +33,7 @@ import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { buildFailureDomainsView } from "@/lib/failure-domains";
 import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
+import { buildControlPostureView } from "@/lib/control-posture";
 import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
@@ -177,6 +179,7 @@ function DetailSummaryRail({
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
   const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
   const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
+  const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -197,6 +200,7 @@ function DetailSummaryRail({
         />
         <BackingMechanicsCard view={mechanismBacking} />
         <CustodyCard summary={viewModel.coin.custodyProfileSummary} />
+        <ControlPostureCard view={controlPosture} />
         <TapeForCoinTeaser coinId={viewModel.id} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />

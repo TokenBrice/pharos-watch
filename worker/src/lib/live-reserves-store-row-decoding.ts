@@ -66,7 +66,6 @@ const STORED_SLICE_SUM_TOLERANCE = 2;
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
   if (!value) return {};
   const decoded = decodeJsonString<Record<string, unknown>, "json-parse-failed" | "invalid-payload">(value, {
-    mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) =>
       parsed && typeof parsed === "object" && !Array.isArray(parsed)
@@ -252,7 +251,6 @@ export function parseSnapshotMetadata(value: string | null | undefined): LiveRes
 export function parseWarnings(value: string | null): LiveReserveWarning[] {
   if (!value) return [];
   const decoded = decodeJsonString<LiveReserveWarning[], "json-parse-failed">(value, {
-    mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => ({
       ok: true,

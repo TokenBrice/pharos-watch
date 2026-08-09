@@ -2,10 +2,9 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  fetchJsonWithRetry,
+  fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
   parseTimestampLikeToUnixSeconds,
-  requireJsonInputFromConfig,
   reserveInfoWarning,
   slicesFromValues,
 } from "./helpers";
@@ -180,7 +179,6 @@ export async function fetchUsdgoTransparencyReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const input = requireJsonInputFromConfig(config, "usdgo-transparency");
-  const payload = await fetchJsonWithRetry<UsdgoTransparencyPayload>(input.url, signal, 12_000, ctx);
+  const payload = await fetchJsonAdapterInput<UsdgoTransparencyPayload>(config, "usdgo-transparency", signal, 12_000, ctx);
   return adaptUsdgoTransparency(payload);
 }
