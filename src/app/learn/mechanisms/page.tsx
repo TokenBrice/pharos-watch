@@ -51,17 +51,17 @@ const FEATURED_MECHANISM_PATHS: ReadonlyArray<{
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mechanism Explainers",
   description:
-    "Learn six stablecoin mechanism designs: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, and tokenized credit funds.",
+    "Learn how every stablecoin mechanism holds its peg: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, tokenized credit funds, and commodity claims.",
   canonical: "/learn/mechanisms/",
   ogImage: `${SITE_URL}/og-editorial-learn.png`,
 });
 
-// Non-frost sequence tones for the six archetype segments (frost stays the
+// Non-frost sequence tones for the archetype segments (frost stays the
 // headline beam). CHART_PALETTE[0] is frost, so start at index 1.
 const MECHANISM_SEGMENT_COLORS = CHART_PALETTE.slice(1, 1 + MECHANISM_ARCHETYPE_VALUES.length);
 
 // Restrained decomposition of the hero's One-Beam total: how the active coins
-// split across the six designs. Reuses the flat proportional-bar idiom
+// split across the tracked designs. Reuses the flat proportional-bar idiom
 // (OutcomeLedger / grade-distribution bar), not a new drawn scene.
 function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, number> }) {
   const segments = MECHANISM_ARCHETYPE_VALUES.map((archetype, index) => ({
@@ -124,14 +124,14 @@ export default function MechanismExplainersHub() {
         { name: "Home", url: "/" },
         { name: "Mechanisms", url: "/learn/mechanisms/" },
       ]}
-      title="Six ways a stablecoin holds its peg"
-      subtitle="The mechanism a coin uses determines how it survives stress. These six explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
+      title="How a stablecoin holds its peg"
+      subtitle="The mechanism a coin uses determines how it survives stress. These explainers map every tracked design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
       titleClassName="max-w-[22ch]"
     >
       <LearnHero
         beamLabel="Active coins tracked"
         beamValue={mechanismTotal}
-        subKicker="Across six designs"
+        subKicker={`Across ${MECHANISM_ARCHETYPE_VALUES.length} designs`}
         sub={
           <div className="space-y-1 text-[13px] sm:text-right">
             <p className="pharos-numeric text-muted-foreground">

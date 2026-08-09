@@ -3525,7 +3525,7 @@
     {
       "assetId": "cgo-comtech",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Comtech Digital Gold Terms & Conditions, dated 23 August 2022, linked as 'Terms of Use' from the current comtechgold.com site (clause 3.2: each unit is undivided ownership and specific interest in 1 gram of >=999 gold in the Gold Reserves; 3.6: held in the holder's name with the Digitization Entity as custodian/agent; 4.1-4.3: custodians of international repute, segregated non-commingled storage, all-risk insurance with holder as beneficiary; clause 8: physical redemption, 1 kg minimum)",
@@ -3600,7 +3600,7 @@
     {
       "assetId": "dgld-gold-token-sa",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "DGLD General Terms & Conditions, last updated June 2026 (each DGLD is proof of direct legal co-ownership of allocated LBMA gold under Swiss law, art. 646/924 CC; Custodian means MKS PAMP SA or another engaged vaulting provider; deposit agreements must keep gold segregated from third parties and the custodian's own inventories; title remains with tokenholders; GTSA must transfer gold to another custodian if a custodian terminates; Section 18 platform-termination delivery-or-sale election)",
@@ -3862,7 +3862,7 @@
     {
       "assetId": "kag-kinesis",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, and April 2026 audit)",
@@ -3883,7 +3883,7 @@
     {
       "assetId": "kau-kinesis",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Kinesis audits archive (independent physical audits conducted biannually by Inspectorate International, a Bureau Veritas company; published archive lists March 2020 through October 2025; FAQ: auditors physically tally vaulted gold and silver and check the total against the record of all KAU and KAG in circulation stored on the Kinesis blockchain, with weight/fineness and storage-quality assessments)",
@@ -4036,7 +4036,7 @@
     {
       "assetId": "paxg-paxos",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Pax Gold terms and conditions",
@@ -4296,7 +4296,7 @@
     {
       "assetId": "vnxau-vnx",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "AREVA VNXAU agreed-upon-procedures report as of December 31, 2025",
@@ -4364,7 +4364,7 @@
     {
       "assetId": "xaum-matrixdock",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Matrixdock XAUm live reserve and redemption disclosure",
@@ -4401,7 +4401,7 @@
     {
       "assetId": "xaut-tether",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of June 30, 2026",
@@ -4572,7 +4572,7 @@
     {
       "assetId": "gldt-gold-dao",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Gold DAO binding terms of service",
@@ -5361,7 +5361,7 @@
     {
       "assetId": "xagm-matrixdock",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Matrixdock XAGm product disclosure (LBMA Good Delivery silver, live supply/bullion reconciliation, FRS mint budget)",
@@ -6553,7 +6553,7 @@
     {
       "assetId": "ggbr-goldfish-gold",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Goldfish GGBR whitepaper (1/1000 oz claim, over-collateralization, segregated I-ON treasury portion, UCC-1 lien, in-situ model)",
@@ -9768,7 +9768,7 @@
     {
       "assetId": "xnk-kinka",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Kinka site: gold held in bankruptcy-remote custody, separate from Kinka's assets, managed by Gold Management LLC (GM); 1 XNK = 1 troy oz gold",
@@ -12641,7 +12641,7 @@
     {
       "assetId": "pgold-pleasing",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-08",
       "sources": [
         {
           "label": "Pleasing PGOLD binding Terms of Sale and Service",
