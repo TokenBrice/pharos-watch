@@ -23,8 +23,8 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-// 2026-08-10: the v9.14 commodity overlays are reviewed 2026-08-09 and the
-// mechanism admission gate needs a full elapsed UTC day.
+// 2026-08-10: past every migrated overlay evidence-pin date and the 2026-08-09
+// archetype reviews, with the overlay same-day admission gate fully elapsed.
 const PROFILE_CLOCK_SEC = Date.UTC(2026, 7, 10) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,

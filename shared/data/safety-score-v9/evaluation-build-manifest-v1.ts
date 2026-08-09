@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "af884f46b9595ef58dab77156ffc9479463340a61b7dfd4aead453c44d9f57ca"
+      "sha256": "f2733385c618606e1e71d69caa80e99f4c40013a2f694f720517c77b5638e44a"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -521,7 +521,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "0ae3020e9adf8235c5f7bf7a75ea9b154a7ab4799369eb28ce181a3b1512870d"
+  "digest": "7d40720d18bf25b3938e8c82dfd8960c9085ac761de21a77ba321e63c792ae74"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
