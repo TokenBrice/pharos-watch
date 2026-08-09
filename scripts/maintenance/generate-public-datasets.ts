@@ -6,7 +6,9 @@
  *
  *   public/datasets/<topic>/latest.{csv,json,ndjson}
  *   public/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}     (90-day retention)
- *   public/sheets/<topic>.csv                                  (flat, IMPORTDATA-friendly)
+ *
+ * The IMPORTDATA-friendly `/sheets/<topic>.csv` URL is a permanent `_redirects`
+ * alias of `/datasets/<topic>/latest.csv`; no separate file is written.
  *
  * Topics: top-stablecoins, depeg-history, scores-latest, peg-mechanism-distribution.
  *
@@ -54,7 +56,6 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const DATASETS_DIR = join(REPO_ROOT, "public/datasets");
-const SHEETS_DIR = join(REPO_ROOT, "public/sheets");
 const RETENTION_DAYS = 90;
 const CHECK_MODE = parseCheckMode(process.argv);
 const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
@@ -524,8 +525,6 @@ interface TopicSpec<T> {
   columns: CsvColumn<T>[];
   /** Methodology label for the preamble. */
   methodologyLabel: string;
-  /** Sheets-friendly column subset (flat-only — no nested cells). */
-  sheetColumns: CsvColumn<T>[];
 }
 
 function topicPreamble(
@@ -538,15 +537,6 @@ function topicPreamble(
     endpoint: topic,
     asOfISO,
     sourceUrl: `${SITE_ORIGIN}/datasets/${topic}/latest.${variant}`,
-    methodologyLabel,
-  };
-}
-
-function sheetPreamble(topic: PublicDatasetTopic, methodologyLabel: string, asOfISO: string): Preamble {
-  return {
-    endpoint: topic,
-    asOfISO,
-    sourceUrl: `${SITE_ORIGIN}/sheets/${topic}.csv`,
     methodologyLabel,
   };
 }
@@ -610,22 +600,15 @@ function writeTopic<T>(
     if (result.changed) written += 1;
   }
 
-  const sheetPreambleObj = sheetPreamble(spec.topic, spec.methodologyLabel, asOfISO);
-  const sheetCsv = buildCsv(spec.rows, spec.sheetColumns, sheetPreambleObj);
-  const sheetResult = writeArtifact(join(SHEETS_DIR, `${spec.topic}.csv`), sheetCsv);
-  if (sheetResult.changed) written += 1;
-
   return { dated: [`${snapshotDate}.csv`, `${snapshotDate}.json`, `${snapshotDate}.ndjson`], written };
 }
 
 interface ArtifactDirs {
   datasetsDir: string;
-  sheetsDir: string;
 }
 
 const DEFAULT_ARTIFACT_DIRS: ArtifactDirs = {
   datasetsDir: DATASETS_DIR,
-  sheetsDir: SHEETS_DIR,
 };
 
 interface JsonArtifactMetadata {
@@ -665,7 +648,6 @@ function checkTopic(
     join(topicDir, "latest.csv"),
     join(topicDir, "latest.json"),
     join(topicDir, "latest.ndjson"),
-    join(dirs.sheetsDir, `${topic}.csv`),
   ];
   for (const path of required) {
     if (!existsSync(path)) {
@@ -780,28 +762,24 @@ function buildTopicSpecs(
       rows: projectTopStablecoins(envelope),
       columns: TOP_STABLECOINS_COLUMNS,
       methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
-      sheetColumns: TOP_STABLECOINS_COLUMNS,
     } as TopicSpec<TopStablecoinRow> as TopicSpec<unknown>,
     {
       topic: "depeg-history",
       rows: projectDepegHistory(depegEvents, snapshotDate),
       columns: DEPEG_HISTORY_COLUMNS,
       methodologyLabel: `depeg-dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}`,
-      sheetColumns: DEPEG_HISTORY_COLUMNS,
     } as TopicSpec<DepegHistoryRow> as TopicSpec<unknown>,
     {
       topic: "scores-latest",
       rows: projectScoresLatest(envelope),
       columns: SCORES_LATEST_COLUMNS,
       methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL} | dews ${DEPEG_DEWS_METHODOLOGY_VERSION_LABEL} | liquidity ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}`,
-      sheetColumns: SCORES_LATEST_COLUMNS,
     } as TopicSpec<ScoreLatestRow> as TopicSpec<unknown>,
     {
       topic: "peg-mechanism-distribution",
       rows: projectPegMechanismDistribution(),
       columns: PEG_MECHANISM_COLUMNS,
       methodologyLabel: `safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}`,
-      sheetColumns: PEG_MECHANISM_COLUMNS,
     } as TopicSpec<PegMechanismDistributionRow> as TopicSpec<unknown>,
   ];
 }
@@ -920,7 +898,6 @@ async function main(): Promise<void> {
   }
 
   ensureDir(DATASETS_DIR);
-  ensureDir(SHEETS_DIR);
 
   let totalWritten = 0;
   let totalPruned = 0;

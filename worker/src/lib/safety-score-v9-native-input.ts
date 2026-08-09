@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
+import { uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { PegSummaryCoinSchema } from "@shared/types/market";
 import {
   DexExitRouteObservationSchema,
@@ -300,10 +302,6 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
 }
 
-function uniqueSorted(values: Iterable<string>): string[] {
-  return [...new Set(values)].sort();
-}
-
 function assertSameIds(actual: readonly string[], expected: readonly string[], label: string): void {
   const actualSorted = [...actual].sort();
   const expectedSorted = [...expected].sort();
@@ -584,21 +582,6 @@ function isNativeV9InputShape(value: unknown): boolean {
 export function normalizeSafetyScoreV9CompilerInput(value: unknown): SafetyScoreV9CompilerInput {
   if (isNativeV9InputShape(value)) return normalizeNativeV9Input(value);
   return normalizeFixedInput(value);
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
 }
 
 async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {

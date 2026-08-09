@@ -1,3 +1,5 @@
+import { numberValue as readNumber } from "@shared/lib/type-guards";
+
 export interface PendingDepegIncident {
   stablecoinId: string;
   symbol: string;
@@ -19,10 +21,6 @@ type PendingCarrier = {
   pendingDepegs?: unknown;
   pending?: unknown;
 };
-
-function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];

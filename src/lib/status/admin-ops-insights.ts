@@ -1,5 +1,7 @@
 import type { HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { readRecord } from "@shared/lib/record-access";
+import { numberValue as readNumber } from "@shared/lib/type-guards";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 
 type CronStatus = StatusResponse["crons"][string];
@@ -19,14 +21,6 @@ export interface ActionReadinessCheck {
   label: string;
   state: "ready" | "watch" | "blocked";
   detail: string;
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function readString(value: unknown): string | null {

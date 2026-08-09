@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readRecord } from "@shared/lib/record-access";
 import type { StatusPageAction, StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 
@@ -152,10 +153,6 @@ export function filterActionCatalog(
     const searchText = getActionSearchText(action);
     return tokens.every((token) => searchText.includes(token));
   });
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 function readAuditPathCandidates(entry: AdminActionAuditEntry): string[] {

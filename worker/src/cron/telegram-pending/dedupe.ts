@@ -1,13 +1,10 @@
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import type { BatchMessage } from "../../lib/telegram";
 import { TELEGRAM_SPLIT_VERSION } from "../../lib/telegram-constants";
 
+/** Base36 FNV-1a, kept compact because the dedupe key is a D1 row key. */
 export function hashDedupePart(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
+  return fnv1a32(value).toString(36);
 }
 
 /**

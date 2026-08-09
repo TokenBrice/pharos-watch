@@ -1,14 +1,7 @@
+import { bytesToBase64 } from "./base64";
 import { API_ORIGIN } from "./runtime-origins";
 
 const CSP_NONCE_BYTES = 16;
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 export function createCspNonce(): string {
   const bytes = new Uint8Array(CSP_NONCE_BYTES);

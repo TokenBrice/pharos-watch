@@ -17,7 +17,10 @@ function pegFilterTagsWhere(matches: (peg: PegCurrency) => boolean): FilterTag[]
     .map(([, metadata]) => metadata.filterTag);
 }
 
-function isCommodityPeg(peg: PegCurrency): boolean {
+/** The metal pegs Pharos tracks. Single definition; every commodity split reads it. */
+export const COMMODITY_PEG_CURRENCIES = ["GOLD", "SILVER"] as const satisfies readonly PegCurrency[];
+
+export function isCommodityPeg(peg: PegCurrency): boolean {
   return peg === "GOLD" || peg === "SILVER";
 }
 

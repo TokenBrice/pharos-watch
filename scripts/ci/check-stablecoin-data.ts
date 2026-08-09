@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 import { CHAIN_META } from "../../shared/lib/chains";
+import { COMMODITY_PEG_CURRENCIES, isCommodityPeg } from "../../shared/lib/filter-tags";
 import { hasRuntimeOnchainSupplyPath } from "../../shared/lib/onchain-supply-probe";
 import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
 import { type ListingDecisionRegistry } from "../../shared/lib/stablecoins/listing-governance";
@@ -19,11 +20,10 @@ import {
   CANONICAL_ORDER_ASSET_FILE,
   findCanonicalOrderIssues,
   findDuplicateStablecoinIds,
-  findNonEmptyLegacyStablecoinShards,
-  formatLegacyShardEntriesIssue,
+  findRecreatedRetiredStablecoinAssetFiles,
+  formatRecreatedRetiredAssetFileIssue,
   GENERATED_PER_COIN_ASSET_FILE,
   loadGeneratedPerCoinCoins,
-  loadLegacyStablecoinEntries,
   loadPerCoinStablecoinEntries,
   STABLECOIN_DATA_DIR,
   syncGeneratedPerCoinAsset,
@@ -95,7 +95,7 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
   if (!isActiveStablecoinMeta(coin)) return null;
   if (coin.llamaId) return null;
 
-  const isCommodity = coin.flags.pegCurrency === "GOLD" || coin.flags.pegCurrency === "SILVER";
+  const isCommodity = isCommodityPeg(coin.flags.pegCurrency);
   if (isCommodity && coin.geckoId) return null;
 
   if (coin.detailProvider === "coingecko") {
@@ -124,7 +124,7 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
 
 function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
   if (!isActiveStablecoinMeta(coin)) return null;
-  if (coin.flags.pegCurrency !== "GOLD" && coin.flags.pegCurrency !== "SILVER") return null;
+  if (!isCommodityPeg(coin.flags.pegCurrency)) return null;
   if (coin.commodityOunces != null && coin.commodityOunces > 0) return null;
 
   return (
@@ -184,17 +184,16 @@ export function getReservePublicLabelIssues(coin: StablecoinMeta): string[] {
 // D2 honesty guard (owner ruling 2026-07-23): the privileged commodity-allocated
 // reserve class (quality 90, maturity N/A) is admissible only when the coin's peg
 // IS the vaulted metal — USD-pegged metal reserves must stay on their risk class.
-const METAL_PEG_CURRENCIES: ReadonlySet<string> = new Set(["GOLD", "SILVER"]);
 
 export function getCommodityAllocatedPegMatchIssues(
   coin: Pick<StablecoinMeta, "flags" | "reserves">,
 ): string[] {
   const issues: string[] = [];
   (coin.reserves ?? []).forEach((reserve, index) => {
-    if (reserve.assetClass === "commodity-allocated" && !METAL_PEG_CURRENCIES.has(coin.flags.pegCurrency)) {
+    if (reserve.assetClass === "commodity-allocated" && !isCommodityPeg(coin.flags.pegCurrency)) {
       issues.push(
         `reserves[${index}] "${reserve.name}" uses assetClass commodity-allocated but pegCurrency ` +
-          `${coin.flags.pegCurrency} is not a matching metal peg (allowed: ${[...METAL_PEG_CURRENCIES].join(", ")})`,
+          `${coin.flags.pegCurrency} is not a matching metal peg (allowed: ${COMMODITY_PEG_CURRENCIES.join(", ")})`,
       );
     }
   });
@@ -454,15 +453,12 @@ function getLogoRegistryIssues(): string[] {
 
 function runStablecoinDataCheck(): void {
   let canonicalOrder: string[] = [];
-  let legacyEntries: StablecoinSourceEntry[] = [];
   let perCoinEntries: StablecoinSourceEntry[] = [];
 
   canonicalOrder = readCanonicalOrder();
 
-  try {
-    legacyEntries = loadLegacyStablecoinEntries();
-  } catch (error) {
-    reportError(error instanceof Error ? error.message : String(error));
+  for (const relativePath of findRecreatedRetiredStablecoinAssetFiles()) {
+    reportError(formatRecreatedRetiredAssetFileIssue(relativePath));
   }
 
   try {
@@ -489,10 +485,6 @@ function runStablecoinDataCheck(): void {
   if (errorCount === 0) {
     const allEntries = perCoinEntries;
     const knownIds = new Set(perCoinEntries.map((entry) => entry.coin.id));
-
-    for (const issue of findNonEmptyLegacyStablecoinShards(legacyEntries)) {
-      reportError(formatLegacyShardEntriesIssue(issue));
-    }
 
     for (const issue of findDuplicateStablecoinIds(allEntries)) {
       reportError(

@@ -1,11 +1,11 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { addFreshnessHeaders, jsonResponseWithHeaders, parseClampedIntegerParam } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
-const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 const DEFAULT_DAYS = 5000;
 const MIN_DAYS = 30;
 const MAX_DAYS = 5000;
@@ -13,13 +13,13 @@ const MAX_DAYS = 5000;
 /** IDs of commodity-pegged stablecoins (gold, silver). */
 const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
 
-const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map(
+const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => isCommodityPeg(c.flags.pegCurrency)).map(
   (c) => c.id,
 );
 
 /** IDs of fiat non-USD stablecoins (EUR, GBP, BRL, VAR, etc.). */
 const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
-  (c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency),
+  (c) => c.flags.pegCurrency !== "USD" && !isCommodityPeg(c.flags.pegCurrency),
 ).map((c) => c.id);
 
 interface AggRow {

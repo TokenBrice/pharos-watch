@@ -1,5 +1,7 @@
 import type React from "react";
 import { CRON_STATUS_COLORS } from "@shared/lib/classification";
+import { readRecord } from "@shared/lib/record-access";
+import { numberValue as readNumber } from "@shared/lib/type-guards";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type {
   CronWorkbenchRow,
@@ -78,14 +80,6 @@ export function formatDurationValue(
       <span className="sr-only">; exact {duration.exactLabel}</span>
     </span>
   );
-}
-
-export function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-export function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function readString(value: unknown): string | null {

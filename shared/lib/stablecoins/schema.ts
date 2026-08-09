@@ -232,7 +232,7 @@ const StablecoinMetaAssetRawSchema = z.object(StablecoinMetaAssetSchemaShape).st
  * Strict source-file shape validation before domain sidecars are merged.
  * Cross-field/catalog invariants run on `StablecoinMetaAssetSchema` after merge.
  */
-export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema;
+export const StablecoinMetaSourceAssetSchema: z.ZodType<StablecoinMeta, unknown> = StablecoinMetaAssetRawSchema;
 
 export const STABLECOIN_SOURCE_DOMAIN_VALUES = ["reserves", "mint-authority", "compliance", "risk-review"] as const;
 export type StablecoinSourceDomain = (typeof STABLECOIN_SOURCE_DOMAIN_VALUES)[number];
@@ -338,7 +338,7 @@ export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = {
 
 const ORACLE_RISK_PROVENANCE_FIELDS = ["reviewedAt", "reviewer", "confidence"] as const;
 
-export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine(
+export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = StablecoinMetaAssetRawSchema.superRefine(
   (meta, ctx) => {
     const bridgeRoutes = meta.bridgeRouteRisk?.routes ?? [];
     const contractKeys = new Set(
@@ -874,7 +874,7 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
   }
 }
 
-export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z
+export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[], unknown> = z
   .array(StablecoinMetaAssetSchema)
   .superRefine(refineMintAuthorityCatalog);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);

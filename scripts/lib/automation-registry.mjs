@@ -345,7 +345,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["stablecoin-prevalidated-registry"],
-    outputPaths: ["public/datasets/**", "public/sheets/*.csv"],
+    outputPaths: ["public/datasets/**"],
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-public-datasets.ts",

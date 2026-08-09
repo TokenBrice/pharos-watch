@@ -1,3 +1,4 @@
+import { bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9CurrentResponseSchema,
@@ -64,14 +65,6 @@ function publicationIdentity(
 
 function utf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return btoa(binary);
 }
 
 function base64ToBytes(value: string, label: string): Uint8Array {

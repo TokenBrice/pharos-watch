@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { buildCommodityPeerMedianSeries, type CommodityPeg } from "@shared/lib/commodity-median";
 import {
   enumerateDates,
@@ -59,9 +60,6 @@ export const OTHER_COIN_FX: Record<string, string> = {
   "gyen-gyen": "JPY",  // GYEN
   "audd-novatti": "AUD",  // AUDD
 };
-
-/** Commodity peg currencies that need spot price history */
-export const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
 export type FxTimeSeries = TimestampedRatePoint;
 export type { CommodityPeg } from "@shared/lib/commodity-median";
@@ -244,7 +242,7 @@ export async function buildCommodityMedianSeriesFromCg(
 ): Promise<Record<string, FxTimeSeries[]>> {
   const pegSet = new Set<string>(pegs);
   const allCommodityCoins = ACTIVE_STABLECOINS.filter(
-    (m) => pegSet.has(m.flags.pegCurrency) && COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
+    (m) => pegSet.has(m.flags.pegCurrency) && isCommodityPeg(m.flags.pegCurrency) && !m.flags.navToken
       && !COMMODITY_MEDIAN_EXCLUDES.has(m.id),
   );
   const sources: Array<{

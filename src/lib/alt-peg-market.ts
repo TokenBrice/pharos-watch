@@ -1,4 +1,5 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
@@ -6,7 +7,6 @@ import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 
-const COMMODITY_PEGS = new Set<PegCurrency>(["GOLD", "SILVER"]);
 const OTHER_PEGS = new Set<PegCurrency>(["VAR", "OTHER"]);
 
 type AltPegGroup = "Fiat" | "Commodity" | "Other";
@@ -87,7 +87,7 @@ const EMPTY_SNAPSHOT: AltPegSnapshot = {
 };
 
 function getAltPegGroup(peg: PegCurrency): AltPegGroup {
-  if (COMMODITY_PEGS.has(peg)) return "Commodity";
+  if (isCommodityPeg(peg)) return "Commodity";
   if (OTHER_PEGS.has(peg)) return "Other";
   return "Fiat";
 }
@@ -172,7 +172,7 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
     altPegIds.add(coin.id);
     altPegs.add(peg);
 
-    if (COMMODITY_PEGS.has(peg)) {
+    if (isCommodityPeg(peg)) {
       commodityMarketCap += marketCap;
     } else {
       fiatNonUsdMarketCap += marketCap;
