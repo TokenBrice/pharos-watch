@@ -18,6 +18,52 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
+type MockRow = Record<string, unknown>;
+
+const COMPOSITION_ROW: MockRow = {
+  stablecoin_id: "iusd-infinifi",
+  slices: JSON.stringify(LIVE_SLICES),
+  fetched_at: 1_000,
+  source: "infinifi",
+};
+
+const SYNC_STATE_ROW: MockRow = {
+  stablecoin_id: "iusd-infinifi",
+  adapter_key: "infinifi",
+  breaker_key: "live-reserves:infinifi",
+  last_attempted_at: 1_000,
+  last_success_at: 1_000,
+  last_status: "ok",
+  warning_count: 0,
+  warnings: null,
+  last_error: null,
+  metadata: "{}",
+};
+
+/**
+ * mockD1 wired for the reserve_composition + reserve_sync_state pair every store
+ * read issues. `null` models a missing row; an object is merged over the default
+ * row so each case shows only the columns it actually varies.
+ */
+function makeReservesDb(
+  overrides: { composition?: MockRow | null; syncState?: MockRow | null } = {},
+) {
+  const composition = overrides.composition === undefined ? {} : overrides.composition;
+  const syncState = overrides.syncState === undefined ? {} : overrides.syncState;
+  return mockD1([
+    {
+      match: "reserve_composition",
+      rows: [],
+      first: composition && { ...COMPOSITION_ROW, ...composition },
+    },
+    {
+      match: "reserve_sync_state",
+      rows: [],
+      first: syncState && { ...SYNC_STATE_ROW, ...syncState },
+    },
+  ]);
+}
+
 describe("live-reserves-store", () => {
   it("computes max sync age from the oldest required reserve attempt", async () => {
     const db = mockD1([
@@ -80,23 +126,9 @@ describe("live-reserves-store", () => {
   });
 
   it("falls back when reserve composition exists without a matching successful sync state", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 1_000,
-          source: "infinifi",
-        },
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: null,
-      },
-    ]);
+    const db = makeReservesDb({
+      syncState: null,
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
 
@@ -105,34 +137,7 @@ describe("live-reserves-store", () => {
   });
 
   it("returns live data only when composition and sync state agree on the last successful snapshot", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 1_000,
-          source: "infinifi",
-        },
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
+    const db = makeReservesDb();
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
 
@@ -158,37 +163,13 @@ describe("live-reserves-store", () => {
   });
 
   it("does not mark unverified snapshots without explicit scoring exceptions as scoring eligible", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 1_000,
-          source: "infinifi",
-          metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: 1_000 }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+    const db = makeReservesDb({
+      composition: {
+        metadata: JSON.stringify({ freshnessMode: "unverified", sourceTimestamp: 1_000 }),
+        adapter_source_model: "dynamic-mix",
+        adapter_evidence_class: "independent",
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
 
@@ -201,41 +182,17 @@ describe("live-reserves-store", () => {
   });
 
   it("keeps unverified snapshots non-score-grade even with legacy freshness exception flags", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 1_000,
-          source: "infinifi",
-          metadata: JSON.stringify({
-            freshnessMode: "unverified",
-            sourceTimestamp: 1_000,
-            scoringAllowsUnverifiedFreshness: true,
-          }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "independent",
-        },
+    const db = makeReservesDb({
+      composition: {
+        metadata: JSON.stringify({
+          freshnessMode: "unverified",
+          sourceTimestamp: 1_000,
+          scoringAllowsUnverifiedFreshness: true,
+        }),
+        adapter_source_model: "dynamic-mix",
+        adapter_evidence_class: "independent",
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
 
@@ -246,195 +203,83 @@ describe("live-reserves-store", () => {
     });
   });
 
-  it("maps curated-validated adapters to a curated-validated badge", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "frax-frax",
-          slices: JSON.stringify([{ name: "Reviewed baseline", pct: 100, risk: "low" }]),
-          fetched_at: 1_000,
-          source: "frax",
-          metadata: JSON.stringify({ freshnessMode: "unverified" }),
-          adapter_source_model: "validated-static",
-          adapter_evidence_class: "static-validated",
-        },
+  // Badge/provenance mapping is a pure function of the stored adapter columns, so
+  // these cases vary only values — the wiring is identical.
+  it.each([
+    {
+      label: "curated-validated adapters map to a curated-validated badge",
+      stablecoinId: "frax-frax",
+      adapterKey: "frax",
+      slices: [{ name: "Reviewed baseline", pct: 100, risk: "low" }],
+      freshnessMode: "unverified",
+      sourceTimestamp: undefined,
+      sourceModel: "validated-static",
+      evidenceClass: "static-validated",
+      badge: { kind: "curated-validated", label: "Curated-Validated" },
+    },
+    {
+      label: "live-fed adapters keep live badge semantics even when evidence class is static-validated",
+      stablecoinId: "usdd-tron-dao-reserve",
+      adapterKey: "usdd-data-platform",
+      slices: [{ name: "Tracked vaults", pct: 100, risk: "medium" }],
+      freshnessMode: "verified",
+      sourceTimestamp: 1_000,
+      sourceModel: "dynamic-mix",
+      evidenceClass: "static-validated",
+      badge: { kind: "live", label: "Live" },
+    },
+    {
+      label: "single-asset adapters map to a proof badge",
+      stablecoinId: "pyusd-paypal",
+      adapterKey: "single-asset",
+      slices: [{ name: "Issuer reserves", pct: 100, risk: "very-low" }],
+      freshnessMode: "not-applicable",
+      sourceTimestamp: undefined,
+      sourceModel: "single-bucket",
+      evidenceClass: "weak-live-probe",
+      badge: { kind: "proof", label: "Proof" },
+    },
+    {
+      label: "Liquity v1 system collateral adapters map to a live badge",
+      stablecoinId: "lusd-liquity",
+      adapterKey: "liquity-v1",
+      breakerKey: "live-reserves:lusd-liquity",
+      slices: [{ name: "ETH", pct: 100, risk: "very-low" }],
+      freshnessMode: "not-applicable",
+      sourceTimestamp: undefined,
+      sourceModel: "single-bucket",
+      evidenceClass: "independent",
+      badge: { kind: "live", label: "Live" },
+    },
+  ])("$label", async (testCase) => {
+    const db = makeReservesDb({
+      composition: {
+        stablecoin_id: testCase.stablecoinId,
+        slices: JSON.stringify(testCase.slices),
+        source: testCase.adapterKey,
+        metadata: JSON.stringify({
+          freshnessMode: testCase.freshnessMode,
+          ...(testCase.sourceTimestamp === undefined ? {} : { sourceTimestamp: testCase.sourceTimestamp }),
+        }),
+        adapter_source_model: testCase.sourceModel,
+        adapter_evidence_class: testCase.evidenceClass,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "frax-frax",
-          adapter_key: "frax",
-          breaker_key: "live-reserves:frax",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
-
-    const result = await resolveReserveResult(db, "frax-frax", 1_200);
-
-    expect(result).toMatchObject({
-      mode: "live",
-      displayBadge: {
-        kind: "curated-validated",
-        label: "Curated-Validated",
-      },
-      provenance: {
-        evidenceClass: "static-validated",
-        sourceModel: "validated-static",
-      },
-    });
-  });
-
-  it("keeps live badge semantics for live-fed adapters even when evidence class is static-validated", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "usdd-tron-dao-reserve",
-          slices: JSON.stringify([{ name: "Tracked vaults", pct: 100, risk: "medium" }]),
-          fetched_at: 1_000,
-          source: "usdd-data-platform",
-          metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 1_000 }),
-          adapter_source_model: "dynamic-mix",
-          adapter_evidence_class: "static-validated",
-        },
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "usdd-tron-dao-reserve",
-          adapter_key: "usdd-data-platform",
-          breaker_key: "live-reserves:usdd-data-platform",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
-
-    const result = await resolveReserveResult(db, "usdd-tron-dao-reserve", 1_200);
-
-    expect(result).toMatchObject({
-      mode: "live",
-      displayBadge: {
-        kind: "live",
-        label: "Live",
-      },
-      provenance: {
-        evidenceClass: "static-validated",
-        sourceModel: "dynamic-mix",
+      syncState: {
+        stablecoin_id: testCase.stablecoinId,
+        adapter_key: testCase.adapterKey,
+        breaker_key: testCase.breakerKey ?? `live-reserves:${testCase.adapterKey}`,
       },
     });
-  });
 
-  it("maps single-asset adapters to a proof badge", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "pyusd-paypal",
-          slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
-          fetched_at: 1_000,
-          source: "single-asset",
-          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-          adapter_source_model: "single-bucket",
-          adapter_evidence_class: "weak-live-probe",
-        },
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "pyusd-paypal",
-          adapter_key: "single-asset",
-          breaker_key: "live-reserves:single-asset",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
-
-    const result = await resolveReserveResult(db, "pyusd-paypal", 1_200);
+    const result = await resolveReserveResult(db, testCase.stablecoinId, 1_200);
 
     expect(result).toMatchObject({
       mode: "live",
-      displayBadge: {
-        kind: "proof",
-        label: "Proof",
-      },
+      displayBadge: testCase.badge,
       provenance: {
-        evidenceClass: "weak-live-probe",
-        sourceModel: "single-bucket",
-      },
-    });
-  });
-
-  it("maps Liquity v1 system collateral adapters to a live badge", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "lusd-liquity",
-          slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
-          fetched_at: 1_000,
-          source: "liquity-v1",
-          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
-          adapter_source_model: "single-bucket",
-          adapter_evidence_class: "independent",
-        },
-      },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "lusd-liquity",
-          adapter_key: "liquity-v1",
-          breaker_key: "live-reserves:lusd-liquity",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
-      },
-    ]);
-
-    const result = await resolveReserveResult(db, "lusd-liquity", 1_200);
-
-    expect(result).toMatchObject({
-      mode: "live",
-      displayBadge: {
-        kind: "live",
-        label: "Live",
-      },
-      provenance: {
-        evidenceClass: "independent",
-        sourceModel: "single-bucket",
-        freshnessMode: "not-applicable",
+        evidenceClass: testCase.evidenceClass,
+        sourceModel: testCase.sourceModel,
+        freshnessMode: testCase.freshnessMode,
       },
     });
   });
@@ -1023,38 +868,16 @@ describe("live-reserves-store", () => {
   });
 
   it("rejects attempt-stamped snapshots when sync state points to a different successful attempt", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: 1_000,
-          source: "infinifi",
-          attempt_id: "attempt-a",
-        },
+    const db = makeReservesDb({
+      composition: {
+        attempt_id: "attempt-a",
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: 1_000,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-          last_attempt_id: "attempt-b",
-          pending_attempt_id: null,
-          last_success_attempt_id: "attempt-b",
-        },
+      syncState: {
+        last_attempt_id: "attempt-b",
+        pending_attempt_id: null,
+        last_success_attempt_id: "attempt-b",
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
     expect(result?.mode).toBe("curated-fallback");
@@ -1071,34 +894,16 @@ describe("live-reserves-store", () => {
       { name: "Valid Too", pct: 10, risk: "high" },
     ];
 
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(corruptSlices),
-          fetched_at: now,
-          source: "infinifi",
-        },
+    const db = makeReservesDb({
+      composition: {
+        slices: JSON.stringify(corruptSlices),
+        fetched_at: now,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+      syncState: {
+        last_attempted_at: now,
+        last_success_at: now,
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
     expect(result?.mode).toBe("curated-fallback");
@@ -1108,40 +913,24 @@ describe("live-reserves-store", () => {
 
   it("treats an unknown stored adapter key as corrupt data instead of crashing", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: now,
-          source: "removed-adapter-key",
-          attempt_id: "attempt-1",
-          metadata: "{}",
-          warning_count: 0,
-        },
+    const db = makeReservesDb({
+      composition: {
+        fetched_at: now,
+        source: "removed-adapter-key",
+        attempt_id: "attempt-1",
+        metadata: "{}",
+        warning_count: 0,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "removed-adapter-key",
-          breaker_key: "live-reserves:removed-adapter-key",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-          last_attempt_id: "attempt-1",
-          pending_attempt_id: null,
-          last_success_attempt_id: "attempt-1",
-        },
+      syncState: {
+        adapter_key: "removed-adapter-key",
+        breaker_key: "live-reserves:removed-adapter-key",
+        last_attempted_at: now,
+        last_success_at: now,
+        last_attempt_id: "attempt-1",
+        pending_attempt_id: null,
+        last_success_attempt_id: "attempt-1",
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
     expect(result?.mode).toBe("curated-fallback");
@@ -1259,29 +1048,14 @@ describe("live-reserves-store", () => {
   });
 
   it("includes lastError in sync view when sync state has an error", async () => {
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: null,
+    const db = makeReservesDb({
+      composition: null,
+      syncState: {
+        last_success_at: null,
+        last_status: "error",
+        last_error: "HTTP 503 for https://api.example.com",
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: 1_000,
-          last_success_at: null,
-          last_status: "error",
-          warning_count: 0,
-          warnings: null,
-          last_error: "HTTP 503 for https://api.example.com",
-          metadata: "{}",
-        },
-      },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
     expect(result?.sync?.lastError).toBe("HTTP 503 for https://api.example.com");
@@ -1289,37 +1063,19 @@ describe("live-reserves-store", () => {
 
   it("rejects stored snapshots with invalid risk enum values during resolution", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify([
-            { name: "Good", pct: 60, risk: "low" },
-            { name: "Bad", pct: 40, risk: "bogus" },
-          ]),
-          fetched_at: now,
-          source: "infinifi",
-        },
+    const db = makeReservesDb({
+      composition: {
+        slices: JSON.stringify([
+          { name: "Good", pct: 60, risk: "low" },
+          { name: "Bad", pct: 40, risk: "bogus" },
+        ]),
+        fetched_at: now,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+      syncState: {
+        last_attempted_at: now,
+        last_success_at: now,
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
     expect(result?.mode).toBe("curated-fallback");
@@ -1329,38 +1085,20 @@ describe("live-reserves-store", () => {
 
   it("rejects stored snapshots with negative pct during resolution", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify([
-            { name: "Valid", pct: 80, risk: "medium" },
-            { name: "Negative", pct: -10, risk: "low" },
-            { name: "Zero", pct: 0, risk: "high" },
-          ]),
-          fetched_at: now,
-          source: "infinifi",
-        },
+    const db = makeReservesDb({
+      composition: {
+        slices: JSON.stringify([
+          { name: "Valid", pct: 80, risk: "medium" },
+          { name: "Negative", pct: -10, risk: "low" },
+          { name: "Zero", pct: 0, risk: "high" },
+        ]),
+        fetched_at: now,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 0,
-          warnings: null,
-          last_error: null,
-          metadata: "{}",
-        },
+      syncState: {
+        last_attempted_at: now,
+        last_success_at: now,
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 100);
     expect(result?.mode).toBe("curated-fallback");
@@ -1370,34 +1108,18 @@ describe("live-reserves-store", () => {
 
   it("ignores malformed warning and metadata JSON in sync state rows", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
-      {
-        match: "reserve_composition",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          slices: JSON.stringify(LIVE_SLICES),
-          fetched_at: now,
-          source: "infinifi",
-        },
+    const db = makeReservesDb({
+      composition: {
+        fetched_at: now,
       },
-      {
-        match: "reserve_sync_state",
-        rows: [],
-        first: {
-          stablecoin_id: "iusd-infinifi",
-          adapter_key: "infinifi",
-          breaker_key: "live-reserves:infinifi",
-          last_attempted_at: now,
-          last_success_at: now,
-          last_status: "ok",
-          warning_count: 1,
-          warnings: "{bad json",
-          last_error: null,
-          metadata: "{bad json",
-        },
+      syncState: {
+        last_attempted_at: now,
+        last_success_at: now,
+        warning_count: 1,
+        warnings: "{bad json",
+        metadata: "{bad json",
       },
-    ]);
+    });
 
     const result = await resolveReserveResult(db, "iusd-infinifi", now + 60);
 

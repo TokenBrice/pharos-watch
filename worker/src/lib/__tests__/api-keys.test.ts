@@ -184,7 +184,7 @@ describe("api key helpers", () => {
 
   it("rejects partial numeric rate limit strings", async () => {
     const created = await createApiKey(
-      mockD1([]),
+      mockD1([], { requireMatch: true }),
       "pepper",
       {
         name: "Bad rate",
@@ -850,7 +850,7 @@ describe("api key helpers", () => {
           }),
         ],
       },
-    ]);
+    ], { requireMatch: true });
 
     for (let i = 0; i < API_KEY_AUTH_CACHE_MAX_ENTRIES + 5; i++) {
       await lookupApiKeyByPrefix(db, i.toString(16).padStart(16, "0"));
@@ -874,7 +874,7 @@ describe("api key helpers", () => {
         rows: [],
         runMeta: { changes: 1 },
       },
-    ]);
+    ], { requireMatch: true });
 
     for (let i = 0; i < API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES + 5; i++) {
       await recordApiKeyUsage(

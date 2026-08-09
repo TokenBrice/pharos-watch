@@ -39,7 +39,7 @@ function makePublishedAsset(overrides: Record<string, unknown> = {}) {
 
 function makeDbWithStablecoinsValue(value: string | null): D1Database {
   if (value == null) {
-    return mockD1([{ match: "cache", rows: [], first: null }]);
+    return mockD1([{ match: "cache", rows: [], first: null }], { requireMatch: true });
   }
   return mockD1([
     {
@@ -50,7 +50,7 @@ function makeDbWithStablecoinsValue(value: string | null): D1Database {
         updated_at: 1_700_000_000,
       },
     },
-  ]);
+  ], { requireMatch: true });
 }
 
 describe("loadStablecoinsCache", () => {

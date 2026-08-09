@@ -2246,7 +2246,7 @@ describe("DDRv2 storage migrations and stores", () => {
         rows: [],
         throwError: new Error("D1_ERROR: incident read failed"),
       },
-    ]);
+    ], { requireMatch: true });
 
     await expect(loadCanonicalIncidents(db, { stablecoinIds: ["lusd-liquity"] })).rejects.toThrow(
       "D1_ERROR: incident read failed",
@@ -3003,7 +3003,7 @@ describe("DDRv2 storage migrations and stores", () => {
         rows: [],
         throwError: new Error("D1_ERROR: manifest batch failed"),
       },
-    ]);
+    ], { requireMatch: true });
 
     await expect(
       writePublicationManifest(db, {

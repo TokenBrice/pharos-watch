@@ -21,7 +21,7 @@ describe("handleReportCardsV9", () => {
       snapshot,
     });
 
-    const response = await handleReportCardsV9(mockD1());
+    const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
@@ -52,7 +52,7 @@ describe("handleReportCardsV9", () => {
       snapshot,
     });
 
-    const response = await handleReportCardsV9(mockD1());
+    const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
@@ -67,7 +67,7 @@ describe("handleReportCardsV9", () => {
       detail: "Canonical Safety Score V9 publication is unavailable",
     });
 
-    const response = await handleReportCardsV9(mockD1());
+    const response = await handleReportCardsV9(mockD1([], { requireMatch: true }));
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({

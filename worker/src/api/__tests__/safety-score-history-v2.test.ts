@@ -40,7 +40,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         rows: [v9BoundaryRow()],
       },
       { match: "cron_runs", rows: [] },
-    ]);
+    ], { requireMatch: true });
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -91,7 +91,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         }],
       },
       { match: "cron_runs", rows: [] },
-    ]);
+    ], { requireMatch: true });
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -126,7 +126,7 @@ describe("handleSafetyScoreHistoryV2", () => {
         match: "FROM safety_score_history_v2",
         rows: [{ ...v9BoundaryRow(), model: "v8" as const }],
       },
-    ]);
+    ], { requireMatch: true });
 
     // Fails closed: the router boundary maps this throw to the JSON 500 pinned by
     // `router-contract.test.ts`.
@@ -142,7 +142,7 @@ describe("handleSafetyScoreHistoryV2", () => {
     const db = mockD1([
       { match: "FROM safety_score_history_v2", rows: [] },
       { match: "cron_runs", rows: [] },
-    ]);
+    ], { requireMatch: true });
 
     const response = await handleSafetyScoreHistoryV2(
       db,
@@ -159,7 +159,7 @@ describe("handleSafetyScoreHistoryV2", () => {
   });
 
   it("requires a stablecoin selector", async () => {
-    const response = await handleSafetyScoreHistoryV2(mockD1([]), new URL("https://x/api/safety-score-history-v2"));
+    const response = await handleSafetyScoreHistoryV2(mockD1([], { requireMatch: true }), new URL("https://x/api/safety-score-history-v2"));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "Missing ?stablecoin= parameter" });

@@ -239,7 +239,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
           },
         }),
       },
-    }]);
+    }], { requireMatch: true });
 
     await expect(loadPreviousStablecoinActivePriceCoverage(db, 1_700_000_000)).resolves.toMatchObject({
       missingActiveIds: ["missing"],
