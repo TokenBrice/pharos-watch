@@ -983,7 +983,7 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `sync-yield-supplemental`         | 14,400s (4h)     | `25 */4 * * *`                                              |
 | `snapshot-supply`                 | 86,400s (24h)    | `*/15 * * * *` (once per UTC date) / `0 8 * * *` (fallback) |
 | `snapshot-chain-supply`           | 86,400s (24h)    | `*/15 * * * *` (once per UTC date)                          |
-| `sync-v9-supply-attribution`      | 900s (15min)     | `8,23,38,53 * * * *` (30min accepted / 15min rejected cooldown) |
+| `sync-v9-supply-attribution`      | 900s (15min)     | `5,20,35,50 * * * *` (12min accepted / 14min rejected cooldown; `:20`/`:50` land between the `16,46` prepare slot and the `22,52` publication) |
 | `prepare-safety-score-v9-input`   | 1800s (30min)    | after successful DEX publication in the logical `16,46` slot |
 | `compute-depeg-resolver`          | 900s (15min)     | `*/15 * * * *`                                              |
 | `compute-safety-score-v9`         | 1800s (30min)    | `22,52 * * * *` (fenced 60-second window)                   |
