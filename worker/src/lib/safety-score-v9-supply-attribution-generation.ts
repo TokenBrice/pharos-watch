@@ -31,8 +31,12 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
   128 * 1_024;
+// Both intervals stay under the 15-minute capture grid (5,20,35,50) so every
+// firing is eligible. That gives the :22/:52 publication a capture from :20/:50
+// with :05/:35 as an in-window fallback, instead of one skipped firing leaving
+// only a packet from the previous half hour.
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_PRODUCER_INTERVAL_SEC =
-  25 * 60;
+  12 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =
   14 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC =
