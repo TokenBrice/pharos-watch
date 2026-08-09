@@ -18,3 +18,21 @@ regexes = ['''^0x[a-fA-F0-9]{40}$''']
 description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
 regexes = ['''^ibc/[A-F0-9]{64}$''']
+
+# Issuers publish attestation and audit PDFs through GitBook, whose public
+# download links carry an `?alt=media&token=<uuid>` CDN parameter. Curated
+# `sources` arrays cite those links verbatim, so the token rides along in coin
+# JSON and mechanism overlays. It grants read access to an already-public
+# document and is not a credential.
+#
+# Matched on the whole source LINE rather than on the bare UUID: a naked UUID
+# allowlist would exempt any secret that happens to be UUID-shaped. Scoped to
+# the GitBook media host so only these download links qualify.
+#
+# Line-pinned `.gitleaksignore` entries were the previous remedy and they rot —
+# inserting a field above the URL renumbers the line and the finding returns,
+# which is exactly how it resurfaced during the v9.14 migration.
+[[allowlists]]
+description = "GitBook public file-download tokens in cited source URLs are not credentials"
+regexTarget = "line"
+regexes = ['''gitbook(-x-prod)?\.(io|appspot\.com)/[^"'\s]*[?&]alt=media&token=''']
