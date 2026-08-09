@@ -7,6 +7,14 @@ import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { toErrorMessage } from "../lib/error-utils";
 
+import { FLOW_CACHE_PREFIX } from "../lib/mint-burn-flow-cache-keys";
+
+export {
+  aggregateFlowCacheKey,
+  FLOW_CACHE_PREFIX,
+  perCoinFlowCacheKey,
+} from "../lib/mint-burn-flow-cache-keys";
+
 export interface HourlyRow {
   stablecoin_id: string;
   chain_id: string;
@@ -49,7 +57,6 @@ export interface EventRow {
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 export const BASELINE_WINDOW_DAYS = 30;
-export const FLOW_CACHE_PREFIX = "mint-burn-flows:v3";
 export const ETHEREUM_CHAIN_ID = "ethereum";
 export const FLOW_DEFAULT_WINDOW_HOURS = 24;
 export const MINT_BURN_AGGREGATE_PUBLISH_WINDOWS = [FLOW_DEFAULT_WINDOW_HOURS, 168] as const;
@@ -89,14 +96,6 @@ export interface FlowAggregate {
 
 export function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SECONDS) * DAY_SECONDS;
-}
-
-export function aggregateFlowCacheKey(hours: number): string {
-  return `${FLOW_CACHE_PREFIX}:aggregate:${hours}`;
-}
-
-export function perCoinFlowCacheKey(stablecoinId: string, hours: number): string {
-  return `${FLOW_CACHE_PREFIX}:coin:${stablecoinId}:${hours}`;
 }
 
 function emptyFlowAggregate(): FlowAggregate {
@@ -628,7 +627,8 @@ export async function readCachedFlow(db: D1Database, key: string): Promise<{ val
  * scan on SQLite in some configurations.
  */
 export async function invalidateMintBurnFlowCaches(db: D1Database): Promise<void> {
-  // Prefix matches every key FLOW_CACHE_PREFIX writes (see line 51); `\uffff`
+  // Prefix matches every key FLOW_CACHE_PREFIX writes
+  // (`lib/mint-burn-flow-cache-keys.ts`); `\uffff`
   // is the largest UTF-16 code unit and safely bounds any future suffix.
   await db
     .prepare("DELETE FROM cache WHERE key >= ? AND key < ?")

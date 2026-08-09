@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.19",
+    title: "Bank Run Gauge: one producer, one universe",
+    date: "2026-08-10",
+    effectiveAt: 1786665600,
+    summary:
+      "The Bank Run Gauge is now computed once, by the /api/mint-burn-flows publication, and the daily digest re-bins that publication instead of recomputing a second composite from mint_burn_hourly over a narrower coin set with global peg-bucket supply weights.",
+    impact: [
+      "Previously the same trading day could carry two different gauge scores and bands: the API scored every active tracked mint/burn pair weighted by tracked-chain circulating supply, while the digest restricted to the core-aggregate set on canonical chains weighted by global supply",
+      "Twenty tracked coins the digest silently excluded now contribute, and 92 coins deployed beyond their tracked mint/burn chains are weighted by observed tracked-chain supply rather than their global total; baseline derivation also unifies on observed-day averaging",
+      "The publication carries a per-chain 24-hour net-flow breakdown over the same universe, so the digest's top-chains ranking is no longer derived independently",
+      "Digest gauge values before this change are not comparable to values after it; the 7-day gauge trajectory and weekly recap range show a one-time discontinuity while the pre-cutover archive ages out",
+      "Fail-closed: a gauge publication older than 24 hours (or unparseable) is dropped and the digest run marks degraded instead of republishing a wrong gauge; older than 2 hours is used but flagged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.18",
     title: "Retention-safe quiet coverage maturity",
     date: "2026-07-28",

@@ -5,12 +5,13 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { buildInClause } from "../../lib/db";
 import {
-  computeFlowIntensity,
-  computeGaugeScore,
   getGaugeBand,
   detectFlightToQuality,
 } from "../../lib/mint-burn-scoring";
-import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
+import {
+  readPublishedMintBurnGauge,
+  type PublishedGaugeCoin,
+} from "../../lib/mint-burn-published-gauge";
 import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 import {
@@ -20,16 +21,6 @@ import {
   type CollectorContext,
   type CollectorResult,
 } from "./collectors-shared";
-
-type FlowIntensityRow = {
-  id: string;
-  symbol: string;
-  intensity: number | null;
-  net24h: number;
-  mcap: number;
-};
-
-type FlowIntensityRowWithIntensity = FlowIntensityRow & { intensity: number };
 
 function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: number; bps: number }): string | undefined {
   if (isCriticalDepegRisk(params)) {
@@ -347,146 +338,66 @@ export async function collectMintBurnFlows(
   degradedReasons?: string[],
 ): Promise<DigestInputData["mintBurnFlows"]> {
   try {
-    const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
-    const cutoff30d = ctx.nowSec - 30 * SECONDS.ONE_DAY;
-
-    const flow24hRows = await ctx.db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                SUM(mint_volume_usd) as mint_24h,
-                SUM(burn_volume_usd) as burn_24h,
-                SUM(net_flow_usd) as net_24h
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(cutoff24h)
-      .all<{ stablecoin_id: string; chain_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
-
-    const flow30dRows = await ctx.db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                SUM(net_flow_usd) / 30.0 as avg_daily_net,
-                SUM(mint_volume_usd + burn_volume_usd) / 30.0 as avg_daily_abs,
-                COUNT(DISTINCT CAST(hour_ts / 86400 AS INTEGER)) as data_days
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(cutoff30d)
-      .all<{
-        stablecoin_id: string;
-        chain_id: string;
-        avg_daily_net: number;
-        avg_daily_abs: number;
-        data_days: number;
-      }>();
-
-    const flow24h = new Map<string, { net_24h: number; mint_24h: number; burn_24h: number }>();
-    for (const row of flow24hRows.results ?? []) {
-      if (
-        !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
-        !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
-      )
-        continue;
-      const aggregate = flow24h.get(row.stablecoin_id) ?? { net_24h: 0, mint_24h: 0, burn_24h: 0 };
-      aggregate.net_24h += row.net_24h;
-      aggregate.mint_24h += row.mint_24h;
-      aggregate.burn_24h += row.burn_24h;
-      flow24h.set(row.stablecoin_id, aggregate);
-    }
-    const flow30d = new Map<string, { avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
-    for (const row of flow30dRows.results ?? []) {
-      if (
-        !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
-        !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
-      )
-        continue;
-      const aggregate = flow30d.get(row.stablecoin_id) ?? { avg_daily_net: 0, avg_daily_abs: 0, data_days: 0 };
-      aggregate.avg_daily_net += row.avg_daily_net;
-      aggregate.avg_daily_abs += row.avg_daily_abs;
-      aggregate.data_days = Math.max(aggregate.data_days, row.data_days);
-      flow30d.set(row.stablecoin_id, aggregate);
-    }
-
-    const coinIntensities: FlowIntensityRow[] = [];
-    let mintBurnExcluded = 0;
-    for (const [id, flow24] of flow24h) {
-      const flow30 = flow30d.get(id);
-      if (!flow30) {
-        mintBurnExcluded++;
-        continue;
+    // The Bank Run Gauge has one producer: the mint/burn flows API publishes it
+    // over the tracked-pair universe with tracked-chain mcap weighting. The
+    // digest re-bins that publication instead of recomputing a second composite
+    // from `mint_burn_hourly` over a different universe and mcap basis.
+    const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
+    if (published.kind !== "ok") {
+      // A never-published gauge is the old "no flow rows yet" case and stays
+      // silent; a malformed or expired publication means the producer broke.
+      if (published.reason !== "missing") {
+        markCollectorDegraded(degradedReasons, `mint-burn-gauge-${published.reason}`);
       }
-      const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === id);
-      if (!coin) continue;
-      const intensity = computeFlowIntensity({
-        currentDailyNet: flow24.net_24h,
-        baselineDailyNet: flow30.avg_daily_net,
-        baselineDailyAbs: flow30.avg_daily_abs,
-        dataAgeDays: flow30.data_days,
-        currentDailyAbs: flow24.mint_24h + flow24.burn_24h,
-      });
-      coinIntensities.push({
-        id,
-        symbol: coin.symbol,
-        intensity,
-        net24h: flow24.net_24h,
-        mcap: getCirculatingRaw(coin),
-      });
+      return undefined;
     }
-    if (mintBurnExcluded > 0) {
-      console.log(`[daily-digest] mint-burn: excluded ${mintBurnExcluded} coins without 30d baseline`);
+    const { gauge } = published;
+    if (gauge.stale) {
+      markCollectorDegraded(degradedReasons, "mint-burn-gauge-stale");
     }
+    const gaugeScore = gauge.score;
+    if (gaugeScore === null) return undefined;
 
-    const gaugeScore = computeGaugeScore(
-      coinIntensities.map((coin) => ({ intensity: coin.intensity, mcap: coin.mcap })),
+    const ftqFlows = await computeDigestMintBurnFtqFlows(
+      ctx.db,
+      gauge.coins.map((coin) => ({ id: coin.id, net24h: coin.net24hUsd })),
     );
-    if (gaugeScore !== null) {
-      const ftqFlows = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
-      const { safeNet24h, riskyNet24h } = ftqFlows;
-      const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
-      if (ftqFlows.kind === "unavailable") {
-        markCollectorDegraded(degradedReasons, `mint-burn-ftq:${ftqFlows.reason}`);
-      }
-      const topPressure = coinIntensities
-        .filter(
-          (coin): coin is FlowIntensityRowWithIntensity => coin.intensity !== null && Math.abs(coin.intensity) > 20,
-        )
-        .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
-        .slice(0, 3)
-        .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24h }));
-
-      const chainTotals = new Map<string, number>();
-      for (const row of flow24hRows.results ?? []) {
-        if (
-          !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
-          !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
-        )
-          continue;
-        chainTotals.set(row.chain_id, (chainTotals.get(row.chain_id) ?? 0) + row.net_24h);
-      }
-      const topChains = [...chainTotals.entries()]
-        .map(([chainId, netUsd]) => ({ chainId, netUsd }))
-        .sort((a, b) => Math.abs(b.netUsd) - Math.abs(a.netUsd))
-        .slice(0, 3);
-
-      return {
-        gaugeScore,
-        gaugeBand: getGaugeBand(gaugeScore),
-        classificationSource:
-          ftqFlows.kind === "ok"
-            ? "safety-score-v9-publication"
-            : "unavailable",
-        classificationReason: ftqFlows.kind === "ok" ? null : ftqFlows.reason,
-        safetyScoreIdentity: ftqFlows.safetyScoreIdentity,
-        flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
-        topPressure,
-        topChains,
-      };
+    const { safeNet24h, riskyNet24h } = ftqFlows;
+    const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+    if (ftqFlows.kind === "unavailable") {
+      markCollectorDegraded(degradedReasons, `mint-burn-ftq:${ftqFlows.reason}`);
     }
+
+    const topPressure = gauge.coins
+      .filter(
+        (coin): coin is PublishedGaugeCoin & { intensity: number } =>
+          coin.intensity !== null && Math.abs(coin.intensity) > 20,
+      )
+      .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
+      .slice(0, 3)
+      .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24hUsd }));
+
+    // Published chains arrive sorted by absolute 24h net flow.
+    const topChains = gauge.chains
+      .slice(0, 3)
+      .map((chain) => ({ chainId: chain.chainId, netUsd: chain.net24hUsd }));
+
+    return {
+      gaugeScore,
+      gaugeBand: getGaugeBand(gaugeScore),
+      classificationSource:
+        ftqFlows.kind === "ok"
+          ? "safety-score-v9-publication"
+          : "unavailable",
+      classificationReason: ftqFlows.kind === "ok" ? null : ftqFlows.reason,
+      safetyScoreIdentity: ftqFlows.safetyScoreIdentity,
+      flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
+      topPressure,
+      topChains,
+    };
   } catch (error) {
     console.error("[daily-digest] Failed to collect mint-burn flows:", error);
-    markCollectorDegraded(degradedReasons, "mint-burn-flows-query");
+    markCollectorDegraded(degradedReasons, "mint-burn-gauge-read");
   }
   return undefined;
 }

@@ -49,7 +49,7 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
 | Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
-| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows from the canonical V9 publication), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
+| Mint-burn flows | published `GET /api/mint-burn-flows` aggregate payload (cache key `mint-burn-flows:v3:aggregate:24`) | Bank Run Gauge (mcap-weighted composite, **re-binned from the publication, never recomputed**), Flight-to-Quality (safe-haven vs risky net flows from the canonical V9 publication), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), all band changes (any rank-changing band move), elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
@@ -82,6 +82,8 @@ The digest intelligence pass runs after editorial candidates are built and befor
 Digest safety reads resolve through `worker/src/lib/safety-score-active-source.ts` (bound into digest copy by `worker/src/lib/digest-safety-context.ts`). The loader accepts only the complete current canonical V9 publication. Held, invalid, stale, or unavailable V9 is explicit and never triggers V8 computation or fallback.
 
 The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
+
+**Bank Run Gauge — one producer, one universe.** The gauge is computed exactly once, by `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`), over the active tracked-pair universe with tracked-chain mcap weighting. The digest reads that publication through `worker/src/lib/mint-burn-published-gauge.ts` and re-bins it (gauge score, band, per-coin pressure, per-chain net flow, and the net flows the FTQ split runs on); it no longer queries `mint_burn_hourly`. Fail-closed behavior: a publication that is unparseable or older than 24 h is dropped and marks the run degraded (`mint-burn-gauge-malformed` / `mint-burn-gauge-expired`); a publication older than 2 h (≈6 missed producer runs) is still used but marks `mint-burn-gauge-stale`; a gauge that has never been published is silently omitted, matching the pre-existing "no flow rows yet" behavior.
 
 ### LLM call
 

@@ -373,6 +373,8 @@ gauge_score = Σ(intensity_i * mcap_i) / Σ(mcap_i)
 - Skips coins with `null` intensity (insufficient data or NR no-activity window).
 - Returns `null` only when ALL tracked coins lack valid intensity.
 
+**One producer.** The gauge is computed in exactly one place: `refreshAggregateMintBurnFlowCache()` (`worker/src/api/mint-burn-flows.ts`), over the active tracked-pair universe (`ACTIVE_MINT_BURN_CONFIGS`) with the tracked-chain mcap weighting described below, and published under `mint-burn-flows:v3:aggregate:24`. Every other surface consumes that publication through `worker/src/lib/mint-burn-published-gauge.ts` rather than recomputing a composite of its own — including the daily digest, which until the unification recomputed the gauge from `mint_burn_hourly` over the core-aggregate id set with canonical-chain-only rows and global peg-bucket mcap weights, and therefore published a different number from the same day's API. The publication also carries a `chains[]` per-chain 24h net-flow breakdown over the same universe, so consumers never re-derive a chain ranking either.
+
 **Mcap weighting — tracked-chain scope.** Each coin's weight is now its **canonical tracked-chain circulating supply**, not its global peg-bucket total. A coin is only scored against chains where we actually ingest mint/burn events, so omnichain tokens don't over-contribute via supply we don't observe.
 
 Implementation (`worker/src/lib/mint-burn-mcap-weighting.ts`):

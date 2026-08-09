@@ -151,6 +151,12 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
   const hourly = buildHourlyFlowSeries(data.hourlyRows);
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
+  // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
+  // consumers of the published payload (daily digest) never re-derive a chain
+  // breakdown from a different universe.
+  const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
+    .map(([chainId, aggregate]) => ({ chainId, netFlow24hUsd: aggregate.netFlow }))
+    .sort((a, b) => Math.abs(b.netFlow24hUsd) - Math.abs(a.netFlow24hUsd));
 
   const body = {
     gauge: {
@@ -165,6 +171,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       trackedMcapUsd,
     },
     coins,
+    chains,
     hourly,
     updatedAt,
     windowHours: hours,
