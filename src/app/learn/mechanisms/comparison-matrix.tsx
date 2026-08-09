@@ -89,12 +89,12 @@ const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
     jurisdictionDep: "Low",
   },
   "synthetic-delta-neutral": {
-    collateralLocation: "On-chain crypto",
-    redemptionRight: "Hedge unwind",
-    yieldSource: "Funding rate",
-    primaryFailureMode: "Funding inversion",
+    collateralLocation: "On-chain or custodied",
+    redemptionRight: "Strategy unwind",
+    yieldSource: "Hedge carry",
+    primaryFailureMode: "Carry / unwind stress",
     governanceDep: "Medium",
-    oracleDep: "Low",
+    oracleDep: "Varies",
     jurisdictionDep: "Medium",
   },
   algorithmic: {

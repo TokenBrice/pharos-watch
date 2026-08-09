@@ -8,6 +8,8 @@ import type { MechanismArchetype, VariantKind } from "@shared/types";
  * missing entries fall back to the archetype's default copy.
  */
 export interface CoinOverride {
+  /** Synthetic delta-neutral implementation used by the dedicated diagram. */
+  syntheticStrategy?: "perp-short" | "borrow-stake";
   /**
    * Optional per-step replacement of label/subtitle. Length should match the
    * archetype's step count (always 3 today). Entries may be sparse — only the

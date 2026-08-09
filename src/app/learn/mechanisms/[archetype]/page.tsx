@@ -32,7 +32,7 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   cdp:
     "CDP stablecoins are minted as debt against onchain collateral, then kept on peg through liquidations and rate fees. Read how the design works and where it breaks.",
   "synthetic-delta-neutral":
-    "Delta-neutral stablecoins hold spot crypto and short perp futures so funding-rate yield holds the peg. Read how the structure works and the risks it carries.",
+    "Delta-neutral stablecoins offset economic exposures through perp-short or on-chain borrow-and-stake strategies. Read how each variant works and where its risks differ.",
   algorithmic:
     "Algorithmic stablecoins use supply controls or reflexive incentives instead of full reserves. Read why the design keeps failing and what's still being attempted.",
   "rwa-credit-fund":

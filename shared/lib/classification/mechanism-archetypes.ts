@@ -41,7 +41,7 @@ export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> 
     "Regulated funds hold short-duration Treasuries; the token is a fund share that accretes NAV instead of trading exactly at $1.",
   cdp: "Overcollateralized vaults issue stablecoin debt; positions liquidate when collateral falls below a safety ratio.",
   "synthetic-delta-neutral":
-    "Spot crypto plus an equal short perpetual position adds up to a roughly dollar-stable claim; yield comes from funding rates.",
+    "Offsetting economic exposures target a stable net value; implementations range from spot-plus-perp hedges to on-chain lending with matched borrow-and-stake legs.",
   algorithmic:
     "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
   "rwa-credit-fund":
