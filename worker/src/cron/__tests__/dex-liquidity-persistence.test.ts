@@ -10,7 +10,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 });
 
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {

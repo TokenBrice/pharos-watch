@@ -20,7 +20,7 @@ import type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
 } from "@shared/lib/redemption-backstop-configs/shared";
-import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/redemption-backstop-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/redemption-backstop";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   type RedemptionBackstopConfigManifestEntry,

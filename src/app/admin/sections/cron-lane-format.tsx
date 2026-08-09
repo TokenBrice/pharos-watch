@@ -1,7 +1,6 @@
 import type React from "react";
 import { CRON_STATUS_COLORS } from "@shared/lib/classification";
-import { readRecord } from "@shared/lib/record-access";
-import { numberValue as readNumber } from "@shared/lib/type-guards";
+import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type {
   CronWorkbenchRow,

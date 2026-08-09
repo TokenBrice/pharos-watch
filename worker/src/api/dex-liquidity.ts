@@ -3,7 +3,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
+import { getLiquidityMethodologyVersionAt } from "@shared/lib/methodology-versions/liquidity-score";
 import {
   buildDexLiquidityWarning,
   getDexLiquidityTrendTolerances,

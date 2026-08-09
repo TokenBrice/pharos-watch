@@ -8,7 +8,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 - **Current methodology version:** `v4.31`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
-- **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
+- **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 
 Latest `v4.31` update: the minimum-redeem penalty ladder matches its thresholds at-or-above, unified with the queue-backlog ladder. It previously matched strictly above, so a route whose reviewed minimum landed exactly on a boundary took the gentler band; a minimum of exactly $1,000,000 now applies the 0.75 capacity multiplier instead of 0.9, and exactly $10,000 applies 0.9 instead of no penalty. The comparison mode is no longer a parameter of the shared band resolver in `shared/lib/exit-route-scoring.ts`, so the two ladders cannot diverge again. Band thresholds and multipliers, component subscores, and capacity semantics are unchanged; only routes sitting exactly on a threshold can move.
 

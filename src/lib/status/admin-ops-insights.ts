@@ -1,7 +1,6 @@
 import type { HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { readRecord } from "@shared/lib/record-access";
-import { numberValue as readNumber } from "@shared/lib/type-guards";
+import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 
 type CronStatus = StatusResponse["crons"][string];

@@ -3,7 +3,7 @@
 ## Methodology Versioning
 
 - **Current methodology version:** `v5.99`
-- **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
+- **Runtime/version source:** `shared/lib/methodology-versions/liquidity-score.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
 
@@ -459,7 +459,7 @@ Since v5.96, both Solana native profiles and Tron SunSwap are shadow evidence; o
 
 Current rows expose `exitRouteObservations` and `exitRouteObservationCoverage`; daily history stores the bounded summary prospectively in `dex_liquidity_history.exit_route_summary_json`. Existing history is not backfilled or claimed to reconstruct old route capacity. The first isolated complete generation, `dex-liquidity-1783905029`, published 360 asset rows: 7 populated, 173 unsupported, and 180 unknown, with 21 exact observations. That generation predates the per-pool completeness counter, so current calibration preserves the observations but treats its DEX coverage as incomplete and activation-ineligible. The one-off all-active calibration table produced during that analysis was never read by any runtime or build path and has been deleted; git history is its archive.
 
-Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/liquidity-score-version.ts`. Historical rows also persist `coverage_class`, `coverage_confidence`, and `source_mix_json`. Legacy pre-0061 rows are backfilled as `coverage_class = 'legacy'` and `coverage_confidence = 0.5`.
+Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/methodology-versions/liquidity-score.ts`. Historical rows also persist `coverage_class`, `coverage_confidence`, and `source_mix_json`. Legacy pre-0061 rows are backfilled as `coverage_class = 'legacy'` and `coverage_confidence = 0.5`.
 
 Detail-page consumers should treat `unobserved` history as explicit absence-of-direct-market evidence, not as a measured zero-liquidity market chart. The stablecoin detail page now renders a dedicated unobserved-history state for those rows instead of plotting a zero-value TVL area chart.
 

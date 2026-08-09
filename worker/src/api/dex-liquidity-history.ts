@@ -1,6 +1,6 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
+import { getLiquidityMethodologyVersionAt } from "@shared/lib/methodology-versions/liquidity-score";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { safeJsonParse } from "../lib/api-utils";
 import {

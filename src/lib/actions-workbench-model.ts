@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { readRecord } from "@shared/lib/record-access";
+import { readRecord } from "@shared/lib/type-guards";
 import type { StatusPageAction, StatusPageActionRisk } from "@shared/lib/api-endpoints";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 

@@ -1,5 +1,5 @@
 import type { ApiKeyAuditEntry } from "@shared/types";
-import { readRecord } from "@shared/lib/record-access";
+import { readRecord } from "@shared/lib/type-guards";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 
 export type OperationalActivitySource = "admin-action" | "credential-audit";
