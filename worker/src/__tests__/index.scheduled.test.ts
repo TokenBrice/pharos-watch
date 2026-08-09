@@ -499,8 +499,8 @@ describe("worker.scheduled", () => {
 
     await worker.scheduled(
       {
-        cron: "8,23,38,53 * * * *",
-        scheduledTime: Date.parse("2026-07-26T12:08:00Z"),
+        cron: "5,20,35,50 * * * *",
+        scheduledTime: Date.parse("2026-07-26T12:20:00Z"),
       } as ScheduledEvent,
       env as never,
       supply.ctx,

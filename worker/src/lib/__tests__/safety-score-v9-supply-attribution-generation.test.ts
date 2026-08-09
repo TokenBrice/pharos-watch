@@ -601,12 +601,46 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     });
   });
 
+  // A release that edits any registry input rotates the global fingerprint,
+  // including for assets the edit never touched. Gating the whole generation on
+  // that equality dropped every attribution packet for one publication cycle
+  // after each deploy, which published xaut-tether at the 55 control-unverified
+  // ceiling instead of its ~78. Per-asset admission already re-derives each
+  // stored observation against the live route inventory and identity pins, so
+  // a stale global fingerprint is not by itself evidence that a packet is wrong.
+  it("applies a generation captured under an earlier registry fingerprint", () => {
+    const generation = fixtures.acceptedGeneration;
+    // A release rotates the fingerprint and the base input together, so drop
+    // the derived identity and let normalizeFixedInput re-derive it.
+    const {
+      baseInputGenerationId: _rotatedBaseInputGenerationId,
+      ...withoutBaseIdentity
+    } = fixtures.target;
+    const rotatedRegistry = normalizeFixedInput({
+      ...withoutBaseIdentity,
+      registryFingerprint: "f".repeat(64),
+    });
+
+    expect(
+      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
+        rotatedRegistry,
+        generation,
+      ),
+    ).toBeNull();
+    expect(
+      applySafetyScoreV9SupplyAttributionGeneration(
+        rotatedRegistry,
+        generation,
+      ),
+    ).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["xaut-tether"],
+      invalidAssetIds: [],
+    });
+  });
+
   it("reports exact compatibility reasons before applying a generation", () => {
     const generation = fixtures.acceptedGeneration;
-    const registryMismatch = {
-      ...fixtures.target,
-      registryFingerprint: "f".repeat(64),
-    };
     const expectedAssetMismatch = {
       ...fixtures.target,
       activeAssetIds: fixtures.target.activeAssetIds.filter(
@@ -618,12 +652,6 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       clockSec: generation.sourceClockSec - 1,
     };
 
-    expect(
-      diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
-        registryMismatch,
-        generation,
-      ),
-    ).toBe("registry-fingerprint-mismatch");
     expect(
       diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
         expectedAssetMismatch,
@@ -645,7 +673,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     ).toBe("capture-clock-after-consumer");
     expect(
       isSafetyScoreV9SupplyAttributionGenerationCompatible(
-        registryMismatch,
+        expectedAssetMismatch,
         generation,
       ),
     ).toBe(false);
@@ -699,11 +727,21 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     ).toBe(false);
   });
 
-  it("uses the shorter retry cadence for complete rejected generations", () => {
+  // The capture fires on a 15-minute grid (5,20,35,50) positioned so :20 and :50
+  // land between the prepare slot and the :22/:52 publication. A cadence at or
+  // above one grid step makes every other firing skip on cooldown, which leaves a
+  // skipped :20 falling back to a packet from the previous half hour instead of
+  // from :05. Both cadences must stay under one grid step.
+  it("keeps both capture cadences under one 15-minute grid step", () => {
+    const CAPTURE_GRID_STEP_SEC = 15 * 60;
     const accepted = fixtures.acceptedGeneration;
     expect(
       nextSafetyScoreV9SupplyAttributionDueAtSec(accepted),
-    ).toBe(accepted.capturedAtSec + 25 * 60);
+    ).toBe(accepted.capturedAtSec + 12 * 60);
+    expect(
+      nextSafetyScoreV9SupplyAttributionDueAtSec(accepted) -
+        accepted.capturedAtSec,
+    ).toBeLessThan(CAPTURE_GRID_STEP_SEC);
     const {
       generationId: _generationId,
       ...acceptedPayload
@@ -733,6 +771,10 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     expect(
       nextSafetyScoreV9SupplyAttributionDueAtSec(rejected),
     ).toBe(rejected.capturedAtSec + 14 * 60);
+    expect(
+      nextSafetyScoreV9SupplyAttributionDueAtSec(rejected) -
+        rejected.capturedAtSec,
+    ).toBeLessThan(CAPTURE_GRID_STEP_SEC);
   });
 
   it("rejects malformed journal references even when the generation hash is recomputed", () => {

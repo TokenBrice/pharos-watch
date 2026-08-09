@@ -31,8 +31,12 @@ export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
   128 * 1_024;
+// Both intervals stay under the 15-minute capture grid (5,20,35,50) so every
+// firing is eligible. That gives the :22/:52 publication a capture from :20/:50
+// with :05/:35 as an in-window fallback, instead of one skipped firing leaving
+// only a packet from the previous half hour.
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_PRODUCER_INTERVAL_SEC =
-  25 * 60;
+  12 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =
   14 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_CONSUMER_ACCEPTANCE_WINDOW_SEC =
@@ -504,7 +508,6 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
     };
 
 type SupplyAttributionGenerationCompatibilityReason =
-  | "registry-fingerprint-mismatch"
   | "expected-asset-ids-mismatch"
   | "source-clock-after-fixed-input"
   | "capture-clock-after-consumer"
@@ -528,9 +531,14 @@ export function diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(
   const expectedAssetIds = uniqueSorted(
     safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput),
   );
-  if (generation.registryFingerprint !== fixedInput.registryFingerprint) {
-    return "registry-fingerprint-mismatch";
-  }
+  // The generation's own registryFingerprint stays on the record as capture
+  // provenance, but it is deliberately not an admission gate. It is global, so
+  // any registry edit rotates it for every asset, including the ones the edit
+  // never touched; gating here discarded the whole generation for one
+  // publication cycle after each release. Admission is per asset instead:
+  // `applySafetyScoreV9SupplyAttributionGeneration` re-derives every stored
+  // observation against the live route inventory, identity pins, observation
+  // window, and aggregate supply, and drops only the assets that fail.
   if (!exactStrings(generation.expectedAssetIds, expectedAssetIds)) {
     return "expected-asset-ids-mismatch";
   }

@@ -21,6 +21,8 @@ import { AccessPosturePanel } from "@/components/stablecoin-detail/access-postur
 import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
 import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
+import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
@@ -29,6 +31,7 @@ import type { MechanismCollateralizationView } from "@/lib/mechanism-collaterali
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { buildFailureDomainsView } from "@/lib/failure-domains";
+import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
@@ -173,6 +176,7 @@ function DetailSummaryRail({
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
   const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
+  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -192,6 +196,7 @@ function DetailSummaryRail({
           liveAtSec={viewModel.reserves?.liveAt ?? null}
         />
         <BackingMechanicsCard view={mechanismBacking} />
+        <CustodyCard summary={viewModel.coin.custodyProfileSummary} />
         <TapeForCoinTeaser coinId={viewModel.id} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
@@ -208,6 +213,7 @@ function DetailSummaryRail({
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
         <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
+        <RegulatoryStandingCard view={regulatoryStanding} />
       </div>
     </aside>
   );

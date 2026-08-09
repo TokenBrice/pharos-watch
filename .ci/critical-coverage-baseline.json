@@ -140,7 +140,7 @@
     "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts": 84.5,
     "worker/src/lib/safety-score-v9-supply-observation-primitives.ts": 69.7,
     "worker/src/lib/safety-score-v9-supply-attribution-contract.ts": 92.4,
-    "worker/src/lib/safety-score-v9-supply-attribution-generation.ts": 86.7,
+    "worker/src/lib/safety-score-v9-supply-attribution-generation.ts": 86.5,
     "worker/src/lib/safety-score-v9-supply-attribution-journal-store.ts": 60,
     "worker/src/lib/safety-score-v9-supply-attribution.ts": 92.6,
     "worker/src/lib/safety-score-v9-wm-supply-observer.ts": 88.6,

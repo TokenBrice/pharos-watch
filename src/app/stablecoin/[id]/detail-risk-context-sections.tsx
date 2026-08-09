@@ -7,9 +7,12 @@ import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mec
 import { BridgingCard } from "@/components/stablecoin-detail/bridging-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
+import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
+import { OracleLiquidationSection } from "@/components/stablecoin-detail/oracle-liquidation-section";
+import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -19,6 +22,7 @@ import { buildFailureDomainsView } from "@/lib/failure-domains";
 import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
+import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 import type { TransferReviewView } from "@/lib/transfer-review";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
@@ -72,6 +76,7 @@ export function DetailRiskContextSections({
     ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
     : null;
   const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
+  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
   const showPegChart =
     viewModel.coin.flags.pegCurrency === "USD"
     && !viewModel.isNavToken
@@ -142,6 +147,11 @@ export function DetailRiskContextSections({
             <FailureDomainsCard view={failureDomainsView} />
           </div>
         ) : null}
+        {viewModel.coin.custodyProfileSummary ? (
+          <div className="xl:hidden">
+            <CustodyCard summary={viewModel.coin.custodyProfileSummary} />
+          </div>
+        ) : null}
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
@@ -176,7 +186,15 @@ export function DetailRiskContextSections({
             <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
           </div>
         ) : null}
+        {regulatoryStanding ? (
+          <div className="xl:hidden">
+            <RegulatoryStandingCard view={regulatoryStanding} />
+          </div>
+        ) : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
+        {viewModel.coin.oracleRiskSummary ? (
+          <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />
+        ) : null}
         {showPegChart ? (
           <MarketDataSection
             stablecoinId={viewModel.id}
