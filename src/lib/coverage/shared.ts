@@ -42,6 +42,17 @@ export function createStatus(
   };
 }
 
+/**
+ * Every status kind a preset table can produce, in declaration order. Feature
+ * modules derive `statusKinds` from this instead of hand-maintaining a parallel
+ * array that silently drifts from the resolver.
+ */
+export function statusKindsFromPresets(
+  ...tables: ReadonlyArray<Readonly<Record<string, CoverageStatusPreset>>>
+): readonly string[] {
+  return tables.flatMap((table) => Object.values(table).map((preset) => preset.kind));
+}
+
 export function createPresetStatus(preset: CoverageStatusPreset): CoverageStatus {
   return createStatus(
     preset.kind,

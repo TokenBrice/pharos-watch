@@ -63,3 +63,14 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   usdsStatus: CACHE_FRESHNESS_LANES.usdsStatus.endpointMaxAgeSec,
   nonUsdShare: DAY_SECONDS,
 } as const;
+
+/**
+ * Does a `Warning` response header signal degraded/stale freshness?
+ *
+ * Matches RFC 7234 warn-code 110 (revalidation failed) at the start of any
+ * comma-separated element, plus the Pharos-authored "Response is degraded/stale"
+ * texts. Shared so the API client and the endpoint prober cannot drift.
+ */
+export function isFreshnessWarningHeader(warningHeader: string): boolean {
+  return /(?:^|,\s*)110\b/.test(warningHeader) || /Response is (?:degraded|stale)/i.test(warningHeader);
+}

@@ -26,16 +26,14 @@ export interface ChainJsonLdMeta {
   explorerUrl?: string;
 }
 
-function absoluteUrl(siteUrl: string, href: string): string {
-  return `${siteUrl}${href}`;
+function absoluteUrl(href: string): string {
+  return `${SITE_URL}${href}`;
 }
 
 export function buildChainDirectoryJsonLd(
   entries: readonly ChainJsonLdDirectoryEntry[],
-  options: { siteUrl?: string } = {},
 ) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const directoryUrl = `${siteUrl}/chains/`;
+  const directoryUrl = `${SITE_URL}/chains/`;
   const itemListId = `${directoryUrl}#itemlist`;
 
   return [
@@ -47,7 +45,7 @@ export function buildChainDirectoryJsonLd(
       description: `${entries.length} crawlable chain profiles covering stablecoin deployments, supply, composition, and Chain Health data.`,
       url: directoryUrl,
       inLanguage: "en",
-      isPartOf: { "@id": `${siteUrl}#website` },
+      isPartOf: { "@id": `${SITE_URL}#website` },
       mainEntity: { "@id": itemListId },
     },
     {
@@ -57,7 +55,7 @@ export function buildChainDirectoryJsonLd(
       name: "Crawlable stablecoin chain profile routes",
       numberOfItems: entries.length,
       itemListElement: entries.map((entry, index) => {
-        const url = absoluteUrl(siteUrl, entry.href);
+        const url = absoluteUrl(entry.href);
 
         return {
           "@type": "ListItem",
@@ -84,14 +82,12 @@ export function buildChainProfileJsonLd({
   chainId,
   meta,
   deployments,
-  siteUrl = SITE_URL,
 }: {
   chainId: string;
   meta: ChainJsonLdMeta;
   deployments: readonly ChainJsonLdDeployment[];
-  siteUrl?: string;
 }) {
-  const pageUrl = `${siteUrl}/chains/${chainId}/`;
+  const pageUrl = `${SITE_URL}/chains/${chainId}/`;
   const itemListId = `${pageUrl}#deployments`;
   const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
 
@@ -104,7 +100,7 @@ export function buildChainProfileJsonLd({
       description: `Stablecoin supply, composition, Chain Health, and ${trackedDeploymentCount} tracked deployment${trackedDeploymentCount === 1 ? "" : "s"} on ${meta.name}.`,
       url: pageUrl,
       inLanguage: "en",
-      isPartOf: { "@id": `${siteUrl}#website` },
+      isPartOf: { "@id": `${SITE_URL}#website` },
       mainEntity: { "@id": itemListId },
       about: {
         "@type": "Thing",
@@ -124,7 +120,7 @@ export function buildChainProfileJsonLd({
       name: `${meta.name} tracked stablecoin deployments`,
       numberOfItems: deployments.length,
       itemListElement: deployments.map((deployment, index) => {
-        const url = absoluteUrl(siteUrl, deployment.href);
+        const url = absoluteUrl(deployment.href);
 
         return {
           "@type": "ListItem",

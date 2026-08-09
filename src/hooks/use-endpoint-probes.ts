@@ -11,6 +11,7 @@ import {
   type EndpointProbeGroup,
 } from "@shared/lib/api-endpoints";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
+import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
@@ -85,7 +86,7 @@ function extractFreshnessWarningSemantics(response: Response): Partial<EndpointP
       return null;
     }
   }
-  const isFreshnessWarning = /(?:^|,\s*)110\b/.test(warning) || /Response is (?:degraded|stale)/i.test(warning);
+  const isFreshnessWarning = isFreshnessWarningHeader(warning);
   if (!isFreshnessWarning) return null;
 
   const explicitStatus = /Response is stale/i.test(warning)

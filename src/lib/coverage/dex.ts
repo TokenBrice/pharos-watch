@@ -11,6 +11,7 @@ import {
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -91,16 +92,6 @@ function formatDex(
   ];
 }
 
-const DEX_KINDS: readonly string[] = [
-  "primary",
-  "mixed",
-  "fallback",
-  "legacy",
-  "unobserved",
-  "unknown",
-  DATA_UNAVAILABLE_KIND,
-] as const;
-
 const DEX_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Primary / Mixed / Fallback",
@@ -116,7 +107,7 @@ const DEX_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: DEX_KINDS,
+  statusKinds: [...statusKindsFromPresets(DEX_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: DEX_LEGEND,
   resolve: resolveDex,
   formatBreakdown: formatDex,

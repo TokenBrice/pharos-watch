@@ -1,3 +1,4 @@
+import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import type { OracleRiskConfidence, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
 
 /**
@@ -86,10 +87,7 @@ const CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
 export function formatOracleDurationSec(seconds: number | null | undefined): string | null {
   if (seconds == null || seconds < 0) return null;
   if (seconds === 0) return "None";
-  if (seconds % 86400 === 0) return `${seconds / 86400}d`;
-  if (seconds % 3600 === 0) return `${seconds / 3600}h`;
-  if (seconds % 60 === 0) return `${seconds / 60}m`;
-  return `${seconds}s`;
+  return formatWholeUnitDurationSeconds(seconds);
 }
 
 /** Rounds to at most 2 decimals and trims trailing zeros, e.g. 66.6667 -> "66.67%", 110 -> "110%". */

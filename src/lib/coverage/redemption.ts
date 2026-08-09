@@ -7,9 +7,9 @@ import {
   createDataUnavailableStatus,
   createBreakdownCounter,
   createPresetStatus,
-  createStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -44,21 +44,65 @@ const REDEMPTION_ROUTE_STATUS_PRESETS = {
   },
 } satisfies Record<RedemptionRouteFamily | "modeled", CoverageStatusPreset>;
 
+/** Route-independent resolution states. Kept apart so the route table above keeps proving family exhaustiveness. */
+const REDEMPTION_STATE_STATUS_PRESETS = {
+  impaired: {
+    kind: "impaired",
+    label: "Impaired",
+    tone: "amber",
+    available: false,
+    sortRank: 1,
+    detail:
+      "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
+    spokenLabel: "Impaired route",
+  },
+  "configured-unrated": {
+    kind: "configured-unrated",
+    label: "Config.",
+    tone: "amber",
+    available: false,
+    sortRank: 1,
+    detail: "A redemption route is configured, but the current snapshot could not resolve a usable score.",
+    spokenLabel: "Configured, unrated",
+  },
+  "modeled-heuristic": {
+    kind: "modeled-heuristic",
+    label: "Heur.",
+    tone: "amber",
+    available: false,
+    sortRank: 1,
+    detail:
+      "A redemption route is modeled, but the current snapshot is still heuristic / low-confidence and does not count as strong redemption coverage.",
+    spokenLabel: "Heuristic route",
+  },
+  "resolved-unscored": {
+    kind: "resolved-unscored",
+    label: "Resolved",
+    tone: "violet",
+    available: false,
+    sortRank: 1,
+    detail:
+      "A redemption route is resolved for context, but it is eventual-only or otherwise lacks current scored redemption coverage.",
+    spokenLabel: "Resolved, unscored",
+  },
+  none: {
+    kind: "none",
+    label: "Not Covered",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "No modeled redemption-backstop route is currently configured.",
+    spokenLabel: "Not covered",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
+
 function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, dataAvailable = true): CoverageStatus {
   if (!dataAvailable) {
     return createDataUnavailableStatus("Redemption backstop");
   }
 
   if (!entry) {
-    return createStatus(
-      "none",
-      "Not Covered",
-      "slate",
-      false,
-      0,
-      "No modeled redemption-backstop route is currently configured.",
-      "Not covered",
-    );
+    return createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS.none);
   }
 
   const routeStatus = entry.routeStatus ?? "unknown";
@@ -68,52 +112,20 @@ function resolveRedemption(entry: RedemptionBackstopEntry | null | undefined, da
     routeStatus === "paused" ||
     routeStatus === "cohort-limited"
   ) {
-    return createStatus(
-      "impaired",
-      "Impaired",
-      "amber",
-      false,
-      1,
-      entry.routeStatusReason ??
-        "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
-      "Impaired route",
-    );
+    const impaired = createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS.impaired);
+    return { ...impaired, detail: entry.routeStatusReason ?? impaired.detail };
   }
 
   if (entry.resolutionState !== "resolved") {
-    return createStatus(
-      "configured-unrated",
-      "Config.",
-      "amber",
-      false,
-      1,
-      "A redemption route is configured, but the current snapshot could not resolve a usable score.",
-      "Configured, unrated",
-    );
+    return createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS["configured-unrated"]);
   }
 
   if (entry.modelConfidence === "low") {
-    return createStatus(
-      "modeled-heuristic",
-      "Heur.",
-      "amber",
-      false,
-      1,
-      "A redemption route is modeled, but the current snapshot is still heuristic / low-confidence and does not count as strong redemption coverage.",
-      "Heuristic route",
-    );
+    return createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS["modeled-heuristic"]);
   }
 
   if (entry.capacitySemantics === "eventual-only" || entry.score == null) {
-    return createStatus(
-      "resolved-unscored",
-      "Resolved",
-      "violet",
-      false,
-      1,
-      "A redemption route is resolved for context, but it is eventual-only or otherwise lacks current scored redemption coverage.",
-      "Resolved, unscored",
-    );
+    return createPresetStatus(REDEMPTION_STATE_STATUS_PRESETS["resolved-unscored"]);
   }
 
   return createPresetStatus(
@@ -161,22 +173,6 @@ function formatRedemption(
   ];
 }
 
-const REDEMPTION_KINDS: readonly string[] = [
-  "offchain-issuer",
-  "psm-swap",
-  "queue-redeem",
-  "collateral-redeem",
-  "stablecoin-redeem",
-  "basket-redeem",
-  "modeled",
-  "modeled-heuristic",
-  "resolved-unscored",
-  "configured-unrated",
-  "impaired",
-  "none",
-  DATA_UNAVAILABLE_KIND,
-] as const;
-
 const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
@@ -217,7 +213,10 @@ const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: REDEMPTION_KINDS,
+  statusKinds: [
+    ...statusKindsFromPresets(REDEMPTION_ROUTE_STATUS_PRESETS, REDEMPTION_STATE_STATUS_PRESETS),
+    DATA_UNAVAILABLE_KIND,
+  ],
   legendItems: REDEMPTION_LEGEND,
   resolve: resolveRedemption,
   formatBreakdown: formatRedemption,

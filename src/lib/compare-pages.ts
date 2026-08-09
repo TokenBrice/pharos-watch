@@ -281,8 +281,8 @@ export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
   ];
 }
 
-function buildComparisonCoinThingJsonLd(coin: StablecoinMeta, siteUrl: string) {
-  const url = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+function buildComparisonCoinThingJsonLd(coin: StablecoinMeta) {
+  const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
 
   return {
     "@type": "Thing",
@@ -294,12 +294,11 @@ function buildComparisonCoinThingJsonLd(coin: StablecoinMeta, siteUrl: string) {
   };
 }
 
-export function buildStaticComparisonJsonLd(page: StaticComparisonPage, options: { siteUrl?: string } = {}) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const pageUrl = `${siteUrl}${page.href}`;
+export function buildStaticComparisonJsonLd(page: StaticComparisonPage) {
+  const pageUrl = `${SITE_URL}${page.href}`;
   const itemListId = `${pageUrl}#comparison-rows`;
-  const leftThing = buildComparisonCoinThingJsonLd(page.left, siteUrl);
-  const rightThing = buildComparisonCoinThingJsonLd(page.right, siteUrl);
+  const leftThing = buildComparisonCoinThingJsonLd(page.left);
+  const rightThing = buildComparisonCoinThingJsonLd(page.right);
   const rows = buildComparisonAtAGlanceRows(page);
 
   return [
@@ -311,7 +310,7 @@ export function buildStaticComparisonJsonLd(page: StaticComparisonPage, options:
       description: page.description,
       url: pageUrl,
       inLanguage: "en",
-      isPartOf: { "@id": `${siteUrl}#website` },
+      isPartOf: { "@id": `${SITE_URL}#website` },
       about: [leftThing, rightThing],
       mainEntity: { "@id": itemListId },
     },

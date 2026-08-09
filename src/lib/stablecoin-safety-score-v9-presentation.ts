@@ -7,6 +7,7 @@ import type {
   SafetyScoreV9PillarAdjustment,
   SafetyScoreV9PreBreakdownCard,
 } from "@shared/types";
+import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import {
   SAFETY_SCORE_V9_RESPONSIBILITY_LABELS,
   SAFETY_SCORE_V9_RESPONSIBILITY_ORDER,
@@ -325,12 +326,6 @@ function fullUsd(value: number): string {
   })}`;
 }
 
-function compactDuration(valueSec: number): string {
-  if (valueSec % 86_400 === 0) return `${valueSec / 86_400}d`;
-  if (valueSec % 3_600 === 0) return `${valueSec / 3_600}h`;
-  return `${Math.round(valueSec / 60)}m`;
-}
-
 function completionLabel(ratio: number): string {
   const percent = ratio * 100;
   if (percent > 0 && percent < 1) return "<1%";
@@ -362,7 +357,7 @@ function parseExitBreakdown(
     context.push({
       key: "stress-request",
       label: "Stress request",
-      value: `${compactUsd(breakdown.stressRequest.requestedNotionalUsd)} / ${breakdown.stressRequest.maxCostBps.toFixed(0)} bps / ${compactDuration(breakdown.stressRequest.comparisonWindowSec)}`,
+      value: `${compactUsd(breakdown.stressRequest.requestedNotionalUsd)} / ${breakdown.stressRequest.maxCostBps.toFixed(0)} bps / ${formatWholeUnitDurationSeconds(breakdown.stressRequest.comparisonWindowSec, { minUnit: "minute" })}`,
     });
   }
   if (primaryRoute?.capacity) {
@@ -377,7 +372,7 @@ function parseExitBreakdown(
       {
         key: "selected-route-bound",
         label: "Horizon / execution cost",
-        value: `${compactDuration(capacity.settlementDelaySec)} / ${capacity.executionCostBps.toFixed(0)} bps observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
+        value: `${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })} / ${capacity.executionCostBps.toFixed(0)} bps observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
       },
     );
     if (capacity.chain !== null || capacity.poolId !== null) {
@@ -418,7 +413,7 @@ function parseExitBreakdown(
           : `${completionLabel(primaryRoute.capacity.completionRatio)} of ${compactUsd(primaryRoute.capacity.requestedNotionalUsd)} executable ${
               primaryRoute.capacity.settlementDelaySec === 0
                 ? "immediately"
-                : `within ${compactDuration(primaryRoute.capacity.settlementDelaySec)}`
+                : `within ${formatWholeUnitDurationSeconds(primaryRoute.capacity.settlementDelaySec, { minUnit: "minute" })}`
             } · ${primaryRoute.capacity.executionCostBps.toFixed(0)} bps`,
       };
 
@@ -463,7 +458,7 @@ function parseExitBreakdown(
           ? "eventual redemption horizon"
           : alternative.settlementDelaySec === undefined
             ? "24h/eventual redemption horizon"
-            : `${compactDuration(alternative.settlementDelaySec)} redemption horizon`;
+            : `${formatWholeUnitDurationSeconds(alternative.settlementDelaySec, { minUnit: "minute" })} redemption horizon`;
       return {
         key: alternative.key,
         label: alternative.label,

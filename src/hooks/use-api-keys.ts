@@ -1,17 +1,10 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { ApiKeyListResponse } from "@shared/types";
-import { ApiKeyListResponseSchema } from "@shared/types/api-keys";
-import { CRON_1MIN } from "@/lib/cron-intervals";
-import { useAdminPollingQuery } from "./use-admin-polling-query";
+import { ADMIN_API_QUERY_DESCRIPTORS } from "@/lib/admin-api-query-descriptors";
+import { useRegisteredAdminQuery } from "./use-admin-polling-query";
 
 export function useApiKeys(): UseQueryResult<ApiKeyListResponse, Error> {
-  return useAdminPollingQuery<ApiKeyListResponse>(
-    ["api-keys"],
-    API_PATHS.apiKeys(),
-    CRON_1MIN,
-    { schema: ApiKeyListResponseSchema },
-  );
+  return useRegisteredAdminQuery(ADMIN_API_QUERY_DESCRIPTORS.apiKeys);
 }

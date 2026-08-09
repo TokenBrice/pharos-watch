@@ -3,7 +3,7 @@ import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
 
 describe("buildApiArtifactCatalogJsonLd", () => {
   it("describes public integration artifacts without site-data proxy URLs", () => {
-    const jsonLd = buildApiArtifactCatalogJsonLd({ siteUrl: "https://pharos.watch" });
+    const jsonLd = buildApiArtifactCatalogJsonLd();
     const serialized = JSON.stringify(jsonLd);
 
     expect(serialized).not.toContain("/_site-data/");

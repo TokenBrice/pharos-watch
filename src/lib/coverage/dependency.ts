@@ -8,8 +8,10 @@ import {
   breakdownItem,
   createBreakdownCounter,
   createDataUnavailableStatus,
+  createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -114,11 +116,7 @@ function resolveDependency(
 
   const fact = normalizeDependencyInput(dependencyCoverage);
   const preset = DEPENDENCY_PRESETS[fact.kind];
-  return {
-    ...preset,
-    spokenLabel: preset.spokenLabel ?? preset.label,
-    detail: formatDetail(fact, preset.detail),
-  };
+  return { ...createPresetStatus(preset), detail: formatDetail(fact, preset.detail) };
 }
 
 function formatDependency(
@@ -135,15 +133,6 @@ function formatDependency(
     breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", get(DATA_UNAVAILABLE_KIND)),
   ];
 }
-
-const DEPENDENCY_KINDS: readonly string[] = [
-  "both",
-  "dependent",
-  "upstream",
-  "resolved-none",
-  "unmapped-gap",
-  DATA_UNAVAILABLE_KIND,
-] as const;
 
 const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   {
@@ -174,7 +163,7 @@ const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: DEPENDENCY_KINDS,
+  statusKinds: [...statusKindsFromPresets(DEPENDENCY_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: DEPENDENCY_LEGEND,
   resolve: resolveDependency,
   formatBreakdown: formatDependency,

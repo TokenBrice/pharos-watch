@@ -113,6 +113,27 @@ export function formatApproxDurationSeconds(
 }
 
 /**
+ * Render a configured duration at its largest *whole* natural unit:
+ * `86_400 -> "1d"`, `3_600 -> "1h"`, `5_400 -> "90m"`, `45 -> "45s"`.
+ *
+ * Unlike `formatApproxDurationSeconds` this never rounds into a fractional unit,
+ * so a configured threshold reads back exactly as it was configured (a 90-minute
+ * bound stays `"90m"` instead of becoming `"1.5h"`). Pass `minUnit: "minute"`
+ * for surfaces where sub-minute precision is noise; sub-minute values then round
+ * up into minutes.
+ */
+export function formatWholeUnitDurationSeconds(
+  seconds: number,
+  options: { minUnit?: "second" | "minute" } = {},
+): string {
+  if (seconds % DAY_SECONDS === 0) return `${seconds / DAY_SECONDS}d`;
+  if (seconds % HOUR_SECONDS === 0) return `${seconds / HOUR_SECONDS}h`;
+  if (options.minUnit === "minute") return `${Math.round(seconds / SECONDS_PER_MINUTE)}m`;
+  if (seconds % SECONDS_PER_MINUTE === 0) return `${seconds / SECONDS_PER_MINUTE}m`;
+  return `${seconds}s`;
+}
+
+/**
  * Format a millisecond timestamp as a relative time string ("1s ago", "5m ago", "2h ago", "3d ago").
  * Accepts an optional `now` override (ms) for deterministic testing.
  * Pass `withSuffix: false` to get a short token ("1s", "5m", "2h", "3d") for column-style displays.

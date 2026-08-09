@@ -35,13 +35,17 @@ import {
 import { STABILITY_INDEX_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-light";
 import { STABILITY_INDEX_DETAIL_QUERY_DESCRIPTOR } from "@/lib/api-query-domains/stability-detail";
 import {
-  CRON_1H,
   CRON_15MIN,
   CRON_24H,
   CRON_30MIN,
   CRON_BLACKLIST,
+  CRON_BLUECHIP,
+  CRON_CHARTS,
+  CRON_DAILY_DIGEST,
   CRON_MINT_BURN,
   CRON_RESERVE_SYNC,
+  CRON_SAFETY_GRADE_HISTORY,
+  CRON_SUPPLY_SNAPSHOT,
   CRON_TELEGRAM_PULSE,
 } from "@/lib/cron-intervals";
 import { createLazySchema } from "@/lib/schema-like";
@@ -104,7 +108,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["bluechip-ratings"] as const,
       path: API_PATHS.bluechipRatings(),
-      producerIntervalMs: CRON_24H,
+      producerIntervalMs: CRON_BLUECHIP,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
     },
     "meta",
@@ -114,7 +118,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["daily-digest"] as const,
       path: API_PATHS.dailyDigest(),
-      producerIntervalMs: CRON_24H,
+      producerIntervalMs: CRON_DAILY_DIGEST,
     },
     "plain",
     createLazySchema<DailyDigestResponse>(async () => (await import("@shared/types/digest")).DailyDigestResponseSchema),
@@ -137,6 +141,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 90) => ({
       queryKey: ["dex-liquidity-history", stablecoinId, days] as const,
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
+      // Not derived: the producer (`sync-dex-liquidity`, 30 min) rewrites today's
+      // row every run, but the surface is a daily-granularity chart and has always
+      // polled daily. Left as a literal pending a deliberate cadence decision.
       producerIntervalMs: CRON_24H,
     }),
   ),
@@ -144,7 +151,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["digest-archive"] as const,
       path: API_PATHS.digestArchive(),
-      producerIntervalMs: CRON_24H,
+      producerIntervalMs: CRON_DAILY_DIGEST,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive,
     },
     "meta",
@@ -314,15 +321,15 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 3650) => ({
       queryKey: ["safety-score-history", stablecoinId, days] as const,
       path: API_PATHS.safetyScoreHistory(stablecoinId, days),
-      producerIntervalMs: CRON_24H,
-      metaMaxAgeSec: CRON_24H / 1000,
+      producerIntervalMs: CRON_SAFETY_GRADE_HISTORY,
+      metaMaxAgeSec: CRON_SAFETY_GRADE_HISTORY / 1000,
     }),
   ),
   stablecoinCharts: defineApiQuery(
     {
       queryKey: ["stablecoin-charts"] as const,
       path: API_PATHS.stablecoinCharts(),
-      producerIntervalMs: CRON_1H,
+      producerIntervalMs: CRON_CHARTS,
     },
     "plain",
     createLazySchema<StablecoinChartPoint[]>(
@@ -333,7 +340,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     {
       queryKey: ["non-usd-share"] as const,
       path: API_PATHS.nonUsdShare(),
-      producerIntervalMs: CRON_24H,
+      producerIntervalMs: CRON_SUPPLY_SNAPSHOT,
     },
     "plain",
     createLazySchema<NonUsdSharePoint[]>(
@@ -439,7 +446,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 1825) => ({
       queryKey: ["supply-history", stablecoinId, days] as const,
       path: API_PATHS.supplyHistory(stablecoinId, days),
-      producerIntervalMs: CRON_24H,
+      producerIntervalMs: CRON_SUPPLY_SNAPSHOT,
     }),
   ),
 } as const;

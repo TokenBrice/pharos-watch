@@ -80,9 +80,7 @@ describe("STATIC_COMPARISON_PAGES", () => {
 
     expect(page).toBeDefined();
 
-    const jsonLd = buildStaticComparisonJsonLd(page!, {
-      siteUrl: "https://pharos.watch",
-    });
+    const jsonLd = buildStaticComparisonJsonLd(page!);
 
     expect(jsonLd).toEqual(
       expect.arrayContaining([

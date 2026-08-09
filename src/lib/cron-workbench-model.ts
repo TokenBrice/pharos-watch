@@ -357,6 +357,11 @@ function formatExactSeconds(durationMs: number): string {
   return `${value}s (${durationMs}ms)`;
 }
 
+/**
+ * Deliberately not `formatElapsedSeconds`: cron timings need a sub-second lane
+ * ("750ms"), keep the seconds component inside composites ("43m 2s"), and carry
+ * an exact-value tooltip label. The shared ladders drop all three.
+ */
 export function formatCronDuration(durationMs: number): FormattedCronDuration {
   const safeDurationMs = Math.max(0, Math.round(durationMs));
   if (safeDurationMs < 1000) {

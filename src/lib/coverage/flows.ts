@@ -11,6 +11,7 @@ import {
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -102,17 +103,6 @@ function formatFlows(
   ];
 }
 
-const FLOWS_KINDS: readonly string[] = [
-  "full",
-  "partial-history",
-  "lagging",
-  "bootstrapping",
-  "unknown",
-  "disabled",
-  "none",
-  DATA_UNAVAILABLE_KIND,
-] as const;
-
 const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Full / Partial / Lagging / Bootstr.",
@@ -137,7 +127,7 @@ const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: FLOWS_KINDS,
+  statusKinds: [...statusKindsFromPresets(FLOW_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: FLOWS_LEGEND,
   resolve: resolveFlow,
   formatBreakdown: formatFlows,

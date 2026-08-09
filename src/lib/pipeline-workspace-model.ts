@@ -1,3 +1,5 @@
+import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
@@ -104,15 +106,9 @@ function formatPct(value: number, digits = 1): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-function formatHours(seconds: number): string {
-  return `${Math.max(1, Math.round(seconds / 3_600))}h`;
-}
-
-function formatAge(ageSeconds: number | null): string {
+function formatAge(ageSeconds: number | null, suffix = "since last sample"): string {
   if (ageSeconds == null) return "Last sample not reported";
-  if (ageSeconds < 60) return `${Math.round(ageSeconds)}s since last sample`;
-  if (ageSeconds < 3_600) return `${Math.round(ageSeconds / 60)}m since last sample`;
-  return `${Math.round(ageSeconds / 3_600)}h since last sample`;
+  return `${formatElapsedSeconds(ageSeconds)} ${suffix}`;
 }
 
 function thresholdState(value: number, warning: number, stale: number, inclusive = false): PipelineSeverity {
@@ -277,11 +273,11 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
         ? dq.blacklistGapStatus === "failed"
           ? "Blacklist coverage query failed; zero-valued fields are not treated as healthy."
           : "No eligible event denominator was reported, so the ratio is unknown."
-        : `Recent count covers the trailing ${formatHours(blacklistWindow)} window.`,
+        : `Recent count covers the trailing ${formatApproxDurationSeconds(blacklistWindow)} window.`,
       trend:
         blacklistUnknown || blacklistRecent == null || blacklistWindow == null
           ? "Trend unavailable"
-          : `${blacklistRecent} missing amounts in the trailing ${formatHours(blacklistWindow)}`,
+          : `${blacklistRecent} missing amounts in the trailing ${formatApproxDurationSeconds(blacklistWindow)}`,
     },
     {
       id: "onchain-divergences",
@@ -454,7 +450,7 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
           rawCode: "repair_debt",
           state: repairDebt.status === "ok" ? "healthy" : repairDebt.status === "present" ? "watch" : "unknown",
           currentValue: repairDebt.status === "unknown" ? "Unknown" : String(repairDebt.openCount),
-          detail: `Source ${repairDebt.source}; oldest ${repairDebt.oldestAgeSec == null ? "unknown" : formatAge(repairDebt.oldestAgeSec).replace(" since last sample", " old")}.`,
+          detail: `Source ${repairDebt.source}; oldest ${repairDebt.oldestAgeSec == null ? "unknown" : formatAge(repairDebt.oldestAgeSec, "old")}.`,
         }
       : {
           id: "repair-debt",

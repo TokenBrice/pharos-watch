@@ -7,10 +7,12 @@ import {
   type UseQueryOptions,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { mergeAbortSignals } from "@shared/lib/abort-signals";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
+const NO_CLEANUP = (): void => {};
 type ApiQueryFunction<T> = (context?: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 type PollingQueryFunction<T> = (context: Pick<QueryFunctionContext<readonly unknown[]>, "signal">) => Promise<T>;
 
@@ -41,50 +43,22 @@ export interface PollingWindow {
   refetchInterval: number;
 }
 
-function mergeAbortSignals(signals: readonly AbortSignal[]): AbortSignal {
-  if (signals.length === 1) return signals[0]!;
-  if (typeof AbortSignal.any === "function") {
-    return AbortSignal.any([...signals]);
-  }
-
-  const controller = new AbortController();
-  const listeners: Array<readonly [AbortSignal, () => void]> = [];
-  const cleanup = () => {
-    for (const [source, listener] of listeners) {
-      source.removeEventListener("abort", listener);
-    }
-    listeners.length = 0;
-  };
-  const abortFrom = (source: AbortSignal) => {
-    if (controller.signal.aborted) return;
-    controller.abort(source.reason);
-    cleanup();
-  };
-
-  for (const source of signals) {
-    if (source.aborted) {
-      abortFrom(source);
-      return controller.signal;
-    }
-  }
-
-  for (const source of signals) {
-    const listener = () => abortFrom(source);
-    listeners.push([source, listener]);
-    source.addEventListener("abort", listener, { once: true });
-  }
-
-  return controller.signal;
-}
-
+/**
+ * Fold TanStack's per-attempt signal into the caller's `fetchInit`. The merge is
+ * disposed once the request settles so a long-lived caller signal does not
+ * accumulate one listener per refetch.
+ */
 function mergeFetchInitSignal(
   fetchInit: RequestInit | undefined,
   signal: AbortSignal | undefined,
-): RequestInit | undefined {
-  if (!signal) return fetchInit;
-  if (!fetchInit) return { signal };
-  if (!fetchInit.signal || fetchInit.signal === signal) return { ...fetchInit, signal };
-  return { ...fetchInit, signal: mergeAbortSignals([fetchInit.signal, signal]) };
+): { requestInit: RequestInit | undefined; dispose: () => void } {
+  if (!signal) return { requestInit: fetchInit, dispose: NO_CLEANUP };
+  if (!fetchInit) return { requestInit: { signal }, dispose: NO_CLEANUP };
+  if (!fetchInit.signal || fetchInit.signal === signal) {
+    return { requestInit: { ...fetchInit, signal }, dispose: NO_CLEANUP };
+  }
+  const merged = mergeAbortSignals([fetchInit.signal, signal]);
+  return { requestInit: { ...fetchInit, signal: merged.signal }, dispose: merged.dispose };
 }
 
 export function createApiQueryFn<T>(
@@ -94,8 +68,12 @@ export function createApiQueryFn<T>(
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<T> {
   return async (context) => {
-    const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetch<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
+    const { requestInit, dispose } = mergeFetchInitSignal(fetchInit, context?.signal);
+    try {
+      return await apiFetch<T>(path, await resolveSchemaLike(schema), requestInit, contractMode);
+    } finally {
+      dispose();
+    }
   };
 }
 
@@ -107,8 +85,12 @@ function createApiQueryFnWithMeta<T>(
   contractMode?: ApiContractMode,
 ): ApiQueryFunction<{ data: T; meta: ApiMeta | null }> {
   return async (context) => {
-    const requestInit = mergeFetchInitSignal(fetchInit, context?.signal);
-    return apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, metaMaxAgeSec, contractMode);
+    const { requestInit, dispose } = mergeFetchInitSignal(fetchInit, context?.signal);
+    try {
+      return await apiFetchWithMeta<T>(path, await resolveSchemaLike(schema), requestInit, metaMaxAgeSec, contractMode);
+    } finally {
+      dispose();
+    }
   };
 }
 

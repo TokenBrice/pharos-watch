@@ -9,6 +9,7 @@
  * PegScore formatter ships in v1.
  */
 
+import { formatPercent } from "@shared/lib/format";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import {
   BACKING_DIVERSITY_WEIGHT,
@@ -45,18 +46,26 @@ export type SafetyScoreV9ShowWorkCard =
   | SafetyScoreV9CurrentCard
   | SafetyScoreV9PreBreakdownCard;
 
+/**
+ * Show-your-work tables use an em-dash for "not reported" (the shared formatters
+ * use "-" / "N/A") and must never group thousands — a raw `comparisonWindowSec`
+ * has to read back as the exact configured integer. Only `fmtPct` matches a
+ * shared formatter exactly; the rest stay local for those two reasons.
+ */
+const NOT_REPORTED = "—";
+
 function fmtNum(v: number | null | undefined, digits = 0): string {
-  if (v == null || !Number.isFinite(v)) return "—";
+  if (v == null || !Number.isFinite(v)) return NOT_REPORTED;
   return v.toFixed(digits);
 }
 
 function fmtPct(v: number | null | undefined, digits = 0): string {
-  if (v == null || !Number.isFinite(v)) return "—";
-  return `${v.toFixed(digits)}%`;
+  if (v == null || !Number.isFinite(v)) return NOT_REPORTED;
+  return formatPercent(v, digits);
 }
 
 function fmtFractionPct(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return "—";
+  if (v == null || !Number.isFinite(v)) return NOT_REPORTED;
   const percent = v * 100;
   return `${percent.toFixed(Number.isInteger(percent) ? 0 : 1)}%`;
 }
@@ -376,7 +385,7 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
     { label: "Model confidence", value: entry.modelConfidence },
     {
       label: "Immediate capacity (USD)",
-      value: entry.immediateCapacityUsd != null ? `$${entry.immediateCapacityUsd.toLocaleString()}` : "—",
+      value: entry.immediateCapacityUsd != null ? fmtUsd(entry.immediateCapacityUsd) : NOT_REPORTED,
     },
     {
       label: "Immediate capacity ratio",

@@ -10,10 +10,87 @@ import {
   breakdownItem,
   createDataUnavailableStatus,
   createBreakdownCounter,
-  createStatus,
+  createPresetStatus,
+  DATA_UNAVAILABLE_KIND,
   defineCoverageFeature,
+  statusKindsFromPresets,
   type CoverageLegendItem,
+  type CoverageStatusPreset,
 } from "./shared";
+
+const RESERVES_STATUS_PRESETS = {
+  live: {
+    kind: "live",
+    label: "Score-grade",
+    tone: "emerald",
+    available: true,
+    sortRank: 4,
+    detail: "The current report-card snapshot used a fresh independent live reserve snapshot for collateral scoring.",
+    spokenLabel: "Score-grade live reserve",
+  },
+  "live-configured": {
+    kind: "live-configured",
+    label: "Configured",
+    tone: "amber",
+    available: false,
+    sortRank: 1,
+    detail:
+      "A live reserve adapter is configured, but the current report-card snapshot did not use it for collateral scoring.",
+    spokenLabel: "Configured reserve view",
+  },
+  checking: {
+    kind: "checking",
+    label: "Checking",
+    tone: "amber",
+    available: false,
+    sortRank: 0,
+    detail: "Live reserve sync is configured, but current live reserve freshness has not loaded yet.",
+    spokenLabel: "Checking live reserve sync",
+  },
+  "curated-validated": {
+    kind: "curated-validated",
+    label: "Curated-Validated",
+    tone: "sky",
+    available: true,
+    sortRank: 3,
+    detail: "Detail-page reserve composition uses a reviewed reserve baseline kept current through live validation.",
+    spokenLabel: "Curated validated",
+  },
+  proof: {
+    kind: "proof",
+    label: "Proof",
+    tone: "violet",
+    available: true,
+    sortRank: 2,
+    detail:
+      "Detail-page reserve composition is backed by a proof, attestation, or liveness path rather than a full live reserve mix.",
+  },
+  curated: {
+    kind: "curated",
+    label: "Curated",
+    tone: "sky",
+    available: true,
+    sortRank: 2,
+    detail: "Reserve composition is manually curated in stablecoin metadata.",
+  },
+  estimated: {
+    kind: "estimated",
+    label: "Estimated",
+    tone: "amber",
+    available: true,
+    sortRank: 1,
+    detail: "Reserve composition falls back to a classification-based estimate.",
+  },
+  unavailable: {
+    kind: "unavailable",
+    label: "None",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "No reserve-composition view is currently available.",
+    spokenLabel: "No reserves view",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
 
 /**
  * Minimal coin shape for reserve coverage resolution. Server callers carry the
@@ -38,94 +115,33 @@ function resolveReserve(
     const badgeKind = getReserveDisplayBadgeKindForAdapter(liveReserveAdapter);
     if (badgeKind === "live") {
       if (liveReserveFresh === null) {
-        return createStatus(
-          "checking",
-          "Checking",
-          "amber",
-          false,
-          0,
-          "Live reserve sync is configured, but current live reserve freshness has not loaded yet.",
-          "Checking live reserve sync",
-        );
+        return createPresetStatus(RESERVES_STATUS_PRESETS.checking);
       }
 
       if (!liveReserveFresh) {
-        return createStatus(
-          "live-configured",
-          "Configured",
-          "amber",
-          false,
-          1,
-          "A live reserve adapter is configured, but the current report-card snapshot did not use it for collateral scoring.",
-          "Configured reserve view",
-        );
+        return createPresetStatus(RESERVES_STATUS_PRESETS["live-configured"]);
       }
 
-      return createStatus(
-        "live",
-        "Score-grade",
-        "emerald",
-        true,
-        4,
-        "The current report-card snapshot used a fresh independent live reserve snapshot for collateral scoring.",
-        "Score-grade live reserve",
-      );
+      return createPresetStatus(RESERVES_STATUS_PRESETS.live);
     }
 
     if (badgeKind === "curated-validated") {
-      return createStatus(
-        "curated-validated",
-        "Curated-Validated",
-        "sky",
-        true,
-        3,
-        "Detail-page reserve composition uses a reviewed reserve baseline kept current through live validation.",
-        "Curated validated",
-      );
+      return createPresetStatus(RESERVES_STATUS_PRESETS["curated-validated"]);
     }
 
-    return createStatus(
-      "proof",
-      "Proof",
-      "violet",
-      true,
-      2,
-      "Detail-page reserve composition is backed by a proof, attestation, or liveness path rather than a full live reserve mix.",
-    );
+    return createPresetStatus(RESERVES_STATUS_PRESETS.proof);
   }
 
   const reserves = getReserves(coin);
   if (!reserves) {
-    return createStatus(
-      "unavailable",
-      "None",
-      "slate",
-      false,
-      0,
-      "No reserve-composition view is currently available.",
-      "No reserves view",
-    );
+    return createPresetStatus(RESERVES_STATUS_PRESETS.unavailable);
   }
 
   if (reserves.estimated) {
-    return createStatus(
-      "estimated",
-      "Estimated",
-      "amber",
-      true,
-      1,
-      "Reserve composition falls back to a classification-based estimate.",
-    );
+    return createPresetStatus(RESERVES_STATUS_PRESETS.estimated);
   }
 
-  return createStatus(
-    "curated",
-    "Curated",
-    "sky",
-    true,
-    2,
-    "Reserve composition is manually curated in stablecoin metadata.",
-  );
+  return createPresetStatus(RESERVES_STATUS_PRESETS.curated);
 }
 
 function formatReserves(
@@ -143,18 +159,6 @@ function formatReserves(
     breakdownItem("estimated", "estimated", get("estimated")),
   ];
 }
-
-const RESERVES_KINDS: readonly string[] = [
-  "live",
-  "live-configured",
-  "checking",
-  "curated-validated",
-  "proof",
-  "curated",
-  "estimated",
-  "unavailable",
-  "data-unavailable",
-] as const;
 
 const RESERVES_LEGEND: readonly CoverageLegendItem[] = [
   {
@@ -193,7 +197,7 @@ const RESERVES_LEGEND: readonly CoverageLegendItem[] = [
 ] as const;
 
 export const coverageFeature = defineCoverageFeature({
-  statusKinds: RESERVES_KINDS,
+  statusKinds: [...statusKindsFromPresets(RESERVES_STATUS_PRESETS), DATA_UNAVAILABLE_KIND],
   legendItems: RESERVES_LEGEND,
   resolve: resolveReserve,
   formatBreakdown: formatReserves,

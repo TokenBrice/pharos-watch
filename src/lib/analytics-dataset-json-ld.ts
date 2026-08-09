@@ -103,12 +103,15 @@ const COVERAGE_VARIABLES = [
 const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
 export const PHAROS_PUBLIC_DATA_CATALOG_NAME = "Pharos Public API Data Catalog";
 
-export function buildPharosDataCatalogReference(siteUrl: string, catalogId = `${siteUrl}/about/api/#data-catalog`) {
+/** Canonical `@id` of the public data catalog every dataset node points at. */
+export const PHAROS_PUBLIC_DATA_CATALOG_ID = `${SITE_URL}/about/api/#data-catalog`;
+
+export function buildPharosDataCatalogReference() {
   return {
     "@type": "DataCatalog",
-    "@id": catalogId,
+    "@id": PHAROS_PUBLIC_DATA_CATALOG_ID,
     name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
-    url: `${siteUrl}/about/api/`,
+    url: `${SITE_URL}/about/api/`,
   };
 }
 
@@ -116,7 +119,7 @@ function datasetDate(dataset: PublicDatasetExport): string | undefined {
   return dataset._meta.asOfISO?.slice(0, 10);
 }
 
-function buildDatasetDistributions(siteUrl: string, descriptor: PublicDatasetDescriptor) {
+function buildDatasetDistributions(descriptor: PublicDatasetDescriptor) {
   const formats = [
     ["JSON", "application/json", "json"],
     ["CSV", "text/csv", "csv"],
@@ -126,33 +129,28 @@ function buildDatasetDistributions(siteUrl: string, descriptor: PublicDatasetDes
   return [
     ...formats.map(([label, encodingFormat, extension]) => ({
       "@type": "DataDownload",
-      "@id": `${siteUrl}/datasets/${descriptor.slug}/latest.${extension}#download`,
+      "@id": `${SITE_URL}/datasets/${descriptor.slug}/latest.${extension}#download`,
       name: `${descriptor.name} latest ${label} export`,
       encodingFormat,
-      contentUrl: `${siteUrl}/datasets/${descriptor.slug}/latest.${extension}`,
+      contentUrl: `${SITE_URL}/datasets/${descriptor.slug}/latest.${extension}`,
     })),
     {
       "@type": "DataDownload",
-      "@id": `${siteUrl}/sheets/${descriptor.slug}.csv#download`,
+      "@id": `${SITE_URL}/sheets/${descriptor.slug}.csv#download`,
       name: `${descriptor.name} Google Sheets CSV export`,
       encodingFormat: "text/csv",
-      contentUrl: `${siteUrl}/sheets/${descriptor.slug}.csv`,
+      contentUrl: `${SITE_URL}/sheets/${descriptor.slug}.csv`,
     },
   ];
 }
 
-export function buildPublicDatasetMirrorJsonLd(
-  topic: PublicDatasetTopic,
-  options: { siteUrl?: string; catalogId?: string } = {},
-) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const catalogId = options.catalogId ?? `${siteUrl}/about/api/#data-catalog`;
+export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
   const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === topic);
   if (!descriptor) {
     throw new Error(`Unknown public dataset topic for JSON-LD: ${topic}`);
   }
 
-  const organization = buildPharosOrganizationNode(siteUrl);
+  const organization = buildPharosOrganizationNode();
   const rowFields = Object.keys(descriptor.export.rows[0] ?? {});
   const date = datasetDate(descriptor.export);
   const additionalProperty = [
@@ -164,49 +162,48 @@ export function buildPublicDatasetMirrorJsonLd(
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
-    "@id": `${siteUrl}/datasets/${descriptor.slug}/#dataset`,
+    "@id": `${SITE_URL}/datasets/${descriptor.slug}/#dataset`,
     name: descriptor.name,
     description: descriptor.description,
-    url: `${siteUrl}/datasets/${descriptor.slug}/latest.json`,
+    url: `${SITE_URL}/datasets/${descriptor.slug}/latest.json`,
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
-    includedInDataCatalog: buildPharosDataCatalogReference(siteUrl, catalogId),
+    includedInDataCatalog: buildPharosDataCatalogReference(),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
-    sameAs: `${siteUrl}/datasets/${descriptor.slug}/latest.json`,
+    sameAs: `${SITE_URL}/datasets/${descriptor.slug}/latest.json`,
     ...(date ? { dateModified: date } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({
       "@type": "PropertyValue",
       name,
     })),
-    distribution: buildDatasetDistributions(siteUrl, descriptor),
+    distribution: buildDatasetDistributions(descriptor),
     additionalProperty,
   };
 }
 
-export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
-  const siteUrl = options.siteUrl ?? SITE_URL;
-  const organization = buildPharosOrganizationNode(siteUrl);
+export function buildCoverageDatasetJsonLd() {
+  const organization = buildPharosOrganizationNode();
 
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
-    "@id": `${siteUrl}/coverage/#dataset`,
+    "@id": `${SITE_URL}/coverage/#dataset`,
     name: "Pharos Stablecoin Feature Coverage Dataset",
     description:
       "Methodological dataset descriptor for the Pharos coverage matrix, which maps active stablecoins to user-facing feature availability across peg tracking, safety scores, DEX price coverage, reserve views, redemption backstops, yield intelligence, mint and burn flows, blacklist tracking, and dependency-map visibility.",
-    url: `${siteUrl}/coverage/`,
+    url: `${SITE_URL}/coverage/`,
     inLanguage: "en",
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
-    includedInDataCatalog: buildPharosDataCatalogReference(siteUrl),
+    includedInDataCatalog: buildPharosDataCatalogReference(),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", "coverage")],
-    sameAs: `${siteUrl}/coverage/`,
-    mainEntityOfPage: { "@id": `${siteUrl}/coverage/` },
+    sameAs: `${SITE_URL}/coverage/`,
+    mainEntityOfPage: { "@id": `${SITE_URL}/coverage/` },
     keywords: [
       "stablecoin coverage",
       "stablecoin feature matrix",
@@ -230,7 +227,7 @@ export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
       {
         "@type": "CreativeWork",
         name: "Pharos API Documentation",
-        url: `${siteUrl}/about/api/`,
+        url: `${SITE_URL}/about/api/`,
       },
     ],
   };
