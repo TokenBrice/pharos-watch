@@ -34,9 +34,9 @@ describe("cron job schedule metadata", () => {
     );
   });
 
-  it("keeps private V9 work on dedicated post-publication triggers", () => {
+  it("captures V9 supply attribution before its dedicated publication trigger", () => {
     expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe(
-      "8,23,38,53 * * * *",
+      "5,20,35,50 * * * *",
     );
     expect(CRON_SCHEDULES.v9PublicationOffset).toBe(
       "22,52 * * * *",

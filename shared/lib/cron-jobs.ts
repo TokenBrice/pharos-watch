@@ -16,7 +16,13 @@ export type CronGroupKey =
 
 const CRON_SCHEDULE_DEFINITIONS = {
   quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
-  v9SupplyAttributionOffset: { schedule: "8,23,38,53 * * * *", intervalSec: 900, offsetSec: 8 * 60 },
+  // The capture must land between prepare-safety-score-v9-input (halfHourlyChartsOffset,
+  // worst observed completion :18:10) and compute-safety-score-v9 (:22/:52), so the
+  // publication consumes a packet captured ~2 minutes earlier rather than ~29 minutes
+  // earlier in the previous cycle. quarterHourly's worst observed completion is :18:32,
+  // which runV9AfterCoreWithinWindow gates on. :19 leaves 28s of margin and :21 leaves no
+  // room to release the V9 memory lane, so :20 is the only safe minute in the gap.
+  v9SupplyAttributionOffset: { schedule: "5,20,35,50 * * * *", intervalSec: 900, offsetSec: 5 * 60 },
   v9PublicationOffset: { schedule: "22,52 * * * *", intervalSec: 1800, offsetSec: 22 * 60 },
   statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
