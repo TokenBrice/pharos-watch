@@ -612,7 +612,21 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(200);
     expect(body.rankings).toHaveLength(1);
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
-    expect(body.rankings[0]?.sourceRisk).toBeUndefined();
+    // The canonical safety ladder (yield v8.33) assesses every external
+    // opportunity, so a legacy payload that published no source risk gains an
+    // explicitly *unrated* opportunity contract naming its missing evidence —
+    // and nothing else. No score is invented from the absence.
+    expect(body.rankings[0]?.sourceRisk).toEqual({
+      underlyingSafetyScore: 40,
+      opportunityRisk: {
+        opportunityClass: "lending",
+        underlyingSafetyScore: 40,
+        opportunitySafetyScore: null,
+        opportunitySafetyPenalty: null,
+        venueReviewed: false,
+        missingCriticalEvidence: ["venue-review"],
+      },
+    });
     expect(body.publication).toBeUndefined();
     expect(body.methodology?.version).toBe(YIELD_METHODOLOGY_VERSION);
   });
@@ -683,7 +697,9 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]).toMatchObject({
       pharosYieldScore: null,
       pysNullReason: "source-stale",
-      warningSignals: ["data-stale"],
+      // `opportunity-evidence-missing` is added by the canonical ladder because
+      // this legacy row publishes no venue review; the stale PYS stays null.
+      warningSignals: ["data-stale", "opportunity-evidence-missing"],
     });
   });
 
@@ -969,7 +985,11 @@ describe("handleYieldRankings", () => {
     const row = body.rankings[0];
 
     expect(res.status).toBe(200);
-    expect(row?.sourceRisk).toBeUndefined();
+    // The row may only carry derived opportunity evidence — never the flattened
+    // row-level shorthand the schema stripped.
+    expect(row?.sourceRisk?.sourceRiskPenalty).toBeUndefined();
+    expect(Object.keys(row?.sourceRisk ?? {}).sort()).toEqual(["opportunityRisk", "underlyingSafetyScore"]);
+    expect(row?.sourceRisk?.opportunityRisk?.opportunitySafetyScore).toBeNull();
     expect((row as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
     expect(row?.pharosYieldScore).toBe(computePYS({
       apy30d: payload.rankings[0].apy30d,

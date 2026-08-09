@@ -1,6 +1,32 @@
+/**
+ * Royco Dawn tranche market-health engine.
+ *
+ * Senior/junior tranches of a Royco Dawn market carry structural risk no
+ * lending-market model captures (first-loss ordering, coverage against a
+ * minimum, market status, drawdown), so they keep a bespoke engine. The terms
+ * they share with the generic external-opportunity engine — access, withdrawal,
+ * utilization, TVL, venue — come from the shared kit in `yield-penalty-terms.ts`
+ * with tranche-side magnitude profiles; only the Royco-only terms below are
+ * hand-rolled here.
+ */
+
 import { clampScore } from "./math";
 import { numberValue } from "./type-guards";
-import type { YieldSourceRisk, YieldTrancheSide, YieldVenueRiskTier } from "../types/yield";
+import {
+  accessPenaltyTerm,
+  normalizeUtilization,
+  resolveVenueRisk,
+  tvlPenaltyTerm,
+  utilizationPenaltyTerm,
+  venuePenaltyTerm,
+  withdrawalPenaltyTerm,
+  type AccessPenaltyProfile,
+  type TvlPenaltyProfile,
+  type UtilizationPenaltyProfile,
+  type VenuePenaltyProfile,
+  type WithdrawalPenaltyProfile,
+} from "./yield-penalty-terms";
+import type { YieldSourceRisk, YieldTrancheSide } from "../types/yield";
 
 export interface RoycoDawnTrancheSafetyResult {
   score: number;
@@ -13,6 +39,36 @@ export function isRoycoDawnTrancheSourceRisk(
   const hasTrancheSide = sourceRisk?.trancheSide === "senior" || sourceRisk?.trancheSide === "junior";
   return hasTrancheSide && sourceRisk.venueProtocol === "royco-dawn";
 }
+
+interface TranchePenaltyProfile {
+  utilization: UtilizationPenaltyProfile;
+  tvl: TvlPenaltyProfile;
+  venue: VenuePenaltyProfile;
+  access: AccessPenaltyProfile;
+  withdrawal: WithdrawalPenaltyProfile;
+  /** Junior capital absorbs losses first; senior does not. */
+  firstLoss: number;
+}
+
+/** Tranche-side magnitude profiles for the shared penalty terms. */
+const TRANCHE_PENALTY_PROFILES: Record<YieldTrancheSide, TranchePenaltyProfile> = {
+  senior: {
+    utilization: { missing: 2, bands: [[1, 8], [0.85, 5], [0.65, 3]] },
+    tvl: { missing: 5, bands: [[100_000, 5], [250_000, 3], [1_000_000, 1]], nonPositiveAsMissing: true },
+    venue: { kind: "tiered", low: 0, medium: 3, high: 8, unknown: 2 },
+    access: { restricted: 2 },
+    withdrawal: { delay: 1, underlyingDependent: 1 },
+    firstLoss: 0,
+  },
+  junior: {
+    utilization: { missing: 6, bands: [[1, 24], [0.85, 18], [0.65, 12], [0.45, 8], [0.25, 5]], floor: 3 },
+    tvl: { missing: 7, bands: [[100_000, 7], [250_000, 5], [1_000_000, 3]], nonPositiveAsMissing: true },
+    venue: { kind: "tiered", low: 0, medium: 4, high: 10, unknown: 3 },
+    access: { restricted: 3 },
+    withdrawal: { delay: 3, underlyingDependent: 2 },
+    firstLoss: 18,
+  },
+};
 
 function statusPenalty(status: YieldSourceRisk["marketStatus"], side: YieldTrancheSide): number {
   switch (status) {
@@ -45,68 +101,6 @@ function coveragePenalty(params: {
   return 0;
 }
 
-function utilizationPenalty(params: {
-  utilization: number | null;
-  utilizationLimit: number | null;
-  side: YieldTrancheSide;
-}): number {
-  const { utilization, utilizationLimit, side } = params;
-  if (utilization == null) return side === "senior" ? 2 : 6;
-  const normalized = utilizationLimit != null && utilizationLimit > 0 ? utilization / utilizationLimit : utilization;
-  if (side === "senior") {
-    if (normalized >= 1) return 8;
-    if (normalized >= 0.85) return 5;
-    if (normalized >= 0.65) return 3;
-    return 0;
-  }
-  if (normalized >= 1) return 24;
-  if (normalized >= 0.85) return 18;
-  if (normalized >= 0.65) return 12;
-  if (normalized >= 0.45) return 8;
-  if (normalized >= 0.25) return 5;
-  return 3;
-}
-
-function tvlPenalty(tvlUsd: number | null, side: YieldTrancheSide): number {
-  if (tvlUsd == null || tvlUsd <= 0) return side === "senior" ? 5 : 7;
-  if (tvlUsd < 100_000) return side === "senior" ? 5 : 7;
-  if (tvlUsd < 250_000) return side === "senior" ? 3 : 5;
-  if (tvlUsd < 1_000_000) return side === "senior" ? 1 : 3;
-  return 0;
-}
-
-function venuePenalty(tier: YieldVenueRiskTier | null | undefined, side: YieldTrancheSide): number {
-  switch (tier) {
-    case "low":
-      return 0;
-    case "medium":
-      return side === "senior" ? 3 : 4;
-    case "high":
-      return side === "senior" ? 8 : 10;
-    case "unknown":
-    default:
-      return side === "senior" ? 2 : 3;
-  }
-}
-
-function accessPenalty(sourceRisk: YieldSourceRisk, side: YieldTrancheSide): number {
-  const kycRequired = sourceRisk.kycRequired === true || sourceRisk.investabilityFlags?.includes("kyc-required");
-  const accessRestricted =
-    sourceRisk.accessRestricted === true || sourceRisk.investabilityFlags?.includes("us-persons-restricted");
-  if (!kycRequired && !accessRestricted) return 0;
-  return side === "senior" ? 2 : 3;
-}
-
-function withdrawalPenalty(sourceRisk: YieldSourceRisk, side: YieldTrancheSide): number {
-  const delaySeconds = numberValue(sourceRisk.withdrawalDelaySeconds);
-  const hasUnderlyingConstraint = sourceRisk.investabilityFlags?.includes("withdrawals-underlying-dependent") === true;
-  let penalty = hasUnderlyingConstraint ? (side === "senior" ? 1 : 2) : 0;
-  if (delaySeconds != null && delaySeconds > 0) {
-    penalty += side === "senior" ? 1 : 3;
-  }
-  return penalty;
-}
-
 // Slope and cap constants for the drawdown penalty curve, asymmetric by tranche side.
 const DRAWDOWN_SENIOR_SLOPE = 0.6;
 const DRAWDOWN_JUNIOR_SLOPE = 1.2;
@@ -123,30 +117,40 @@ function computeDrawdownPenalty(drawdownRatio: number | null, side: YieldTranche
 export function computeRoycoDawnTrancheSafetyScore(params: {
   underlyingSafetyScore: number;
   sourceRisk: YieldSourceRisk;
+  /**
+   * Canonical weighted venue-risk score. Omit to resolve it from the source risk
+   * and the reviewed registry (the same derivation every yield surface uses).
+   */
+  venueRiskWeighted?: number | null;
 }): RoycoDawnTrancheSafetyResult | null {
   if (!isRoycoDawnTrancheSourceRisk(params.sourceRisk)) return null;
 
   const side = params.sourceRisk.trancheSide;
+  const profile = TRANCHE_PENALTY_PROFILES[side];
   const underlyingSafetyScore = clampScore(params.underlyingSafetyScore);
   const coverage = numberValue(params.sourceRisk.marketCoverageRatio);
   const minCoverage = numberValue(params.sourceRisk.marketMinCoverageRatio);
-  const utilization = numberValue(params.sourceRisk.marketUtilizationRatio);
-  const utilizationLimit = numberValue(params.sourceRisk.marketUtilizationLimitRatio);
+  const normalizedUtilization = normalizeUtilization(
+    params.sourceRisk.marketUtilizationRatio,
+    params.sourceRisk.marketUtilizationLimitRatio,
+  );
   const drawdownRatio = numberValue(params.sourceRisk.marketDrawdownRatio);
-  const trancheTvlUsd = numberValue(params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd);
+  const trancheTvlUsd = params.sourceRisk.trancheTvlUsd ?? params.sourceRisk.marketTvlUsd;
+  const venueRiskWeighted =
+    params.venueRiskWeighted !== undefined
+      ? params.venueRiskWeighted
+      : resolveVenueRisk({ sourceRisk: params.sourceRisk }).weighted;
 
-  const firstLossPenalty = side === "junior" ? 18 : 0;
-  const drawdownPenalty = computeDrawdownPenalty(drawdownRatio, side);
   const penalty =
-    firstLossPenalty +
+    profile.firstLoss +
     statusPenalty(params.sourceRisk.marketStatus, side) +
     coveragePenalty({ coverage, minCoverage, side }) +
-    utilizationPenalty({ utilization, utilizationLimit, side }) +
-    tvlPenalty(trancheTvlUsd, side) +
-    venuePenalty(params.sourceRisk.venueRiskTier, side) +
-    accessPenalty(params.sourceRisk, side) +
-    withdrawalPenalty(params.sourceRisk, side) +
-    drawdownPenalty;
+    utilizationPenaltyTerm(normalizedUtilization, profile.utilization) +
+    tvlPenaltyTerm(trancheTvlUsd, profile.tvl) +
+    venuePenaltyTerm(venueRiskWeighted, profile.venue) +
+    accessPenaltyTerm(params.sourceRisk, profile.access) +
+    withdrawalPenaltyTerm(params.sourceRisk, profile.withdrawal) +
+    computeDrawdownPenalty(drawdownRatio, side);
 
   const score = Math.round(clampScore(underlyingSafetyScore - penalty));
   return {

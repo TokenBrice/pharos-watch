@@ -1,18 +1,13 @@
-import { scoreToGrade } from "@shared/lib/report-card-core";
-import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
-import { assessYieldOpportunityRisk, deriveYieldOpportunityClass } from "@shared/lib/yield-opportunity-risk";
+import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import {
   computePysComponents,
   computePysRewardShare,
   derivePysSourceRiskPenalty,
-  deriveVenueRiskTier,
 } from "@shared/lib/yield-scoring";
 import type {
-  YieldOpportunityRisk,
   YieldSafetyProvenance,
   YieldSafetyReason,
-  YieldSourceRisk,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
@@ -37,7 +32,7 @@ import {
   resolveBenchmarkForStablecoin,
   type ParsedYieldBenchmarkRegistry,
 } from "./benchmarks";
-import { inferVenueProtocol, resolveDependencyConcentration, resolveReviewedYieldRiskConfig, venueRiskWeightedOf } from "./source-risk";
+import { inferVenueProtocol, resolveDependencyConcentration } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import {
   compareCandidates,
@@ -71,17 +66,6 @@ function getHistoryRowsForStats(
 ): YieldHistorySnapshotRow[] {
   if (dataSource !== "onchain") return rows;
   return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
-}
-
-function removeUnavailableSafetyDerivedSourceRisk(sourceRisk: YieldSourceRisk | null): YieldSourceRisk | null {
-  if (sourceRisk == null) return null;
-  const { opportunityRisk: _opportunityRisk, ...independentSourceRisk } = sourceRisk;
-  return {
-    ...independentSourceRisk,
-    underlyingSafetyScore: null,
-    trancheSafetyScore: null,
-    trancheSafetyPenalty: null,
-  };
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -301,45 +285,40 @@ function evaluateYieldSourceGroup(
 
     const safetySnapshotUnavailable = input.safetySnapshotAvailable === false;
     const safety = safetySnapshotUnavailable ? undefined : input.safetyScores.get(stablecoinId);
-    const usedDefaultSafety = safety == null;
-    if (usedDefaultSafety) accumulator.defaultSafetyIds.add(stablecoinId);
-    const underlyingSafetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
-    const underlyingSafetyGrade = safety?.grade ?? "NR";
-    let safetyScore = underlyingSafetyScore;
-    let safetyGrade = underlyingSafetyGrade;
-    let safetyProvenance: YieldSafetyProvenance = safetySnapshotUnavailable
-      ? "safety-snapshot-unavailable"
-      : usedDefaultSafety
-        ? "default-safety"
-        : "cached-publish";
-    let safetyReason: YieldSafetyReason | null = safetySnapshotUnavailable
-      ? "safety-snapshot-unavailable"
-      : usedDefaultSafety
-        ? "report-card-score-missing"
-        : underlyingSafetyGrade === "NR"
-          ? "report-card-grade-not-rated"
-          : null;
-    let sourceRisk = safetySnapshotUnavailable
-      ? removeUnavailableSafetyDerivedSourceRisk(y.sourceRisk ?? null)
-      : y.sourceRisk ?? null;
-    if (!safetySnapshotUnavailable && isRoycoDawnTrancheSourceRisk(sourceRisk)) {
-      const trancheSafety = computeRoycoDawnTrancheSafetyScore({
-        underlyingSafetyScore,
-        sourceRisk,
-      });
-      if (trancheSafety) {
-        safetyScore = trancheSafety.score;
-        safetyGrade = scoreToGrade(trancheSafety.score);
-        safetyProvenance = "opportunity-safety";
-        safetyReason = usedDefaultSafety ? "underlying-report-card-score-missing" : null;
-        sourceRisk = {
-          ...sourceRisk,
-          underlyingSafetyScore,
-          trancheSafetyScore: trancheSafety.score,
-          trancheSafetyPenalty: trancheSafety.penalty,
-        };
-      }
-    }
+    if (safety == null) accumulator.defaultSafetyIds.add(stablecoinId);
+    // Canonical safety-resolution ladder (yield v8.33): the same
+    // `resolveYieldRowSafety` the read path runs during live-safety hydration.
+    // Opportunity-level risk for external opportunities (yield v8.32): the
+    // underlying stablecoin's report card is one component, not the score.
+    // Royco Dawn tranches keep their bespoke market-health model and publish
+    // the same contract; missing critical market evidence produces NR.
+    const safetyResolution = resolveYieldRowSafety({
+      yieldType,
+      underlyingSafety: safety,
+      defaultSafetyScore: DEFAULT_SAFETY_SCORE,
+      safetySnapshotUnavailable,
+      // Resolve the reviewed venue config from the same identifier stored as
+      // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
+      // auto-discovered lending rows — not just native/curated families — pick up
+      // their 5-category venue-risk score.
+      venueProtocolHint: y.project ?? inferVenueProtocol(y),
+      sourceRisk: y.sourceRisk ?? null,
+      sourceTvlUsd: y.sourceTvlUsd,
+      ratedProvenance: "cached-publish",
+    });
+    const {
+      underlyingSafetyGrade,
+      usedDefaultSafety,
+      safetyEvidenceObserved,
+      opportunityEvidenceComplete,
+      venueRiskWeighted: resolvedVenueRiskWeighted,
+      venueRiskTier: resolvedVenueRiskTier,
+    } = safetyResolution;
+    const safetyScore = safetyResolution.safetyScore;
+    const safetyGrade = safetyResolution.safetyGrade;
+    const safetyProvenance: YieldSafetyProvenance = safetyResolution.safetyProvenance;
+    const safetyReason: YieldSafetyReason | null = safetyResolution.safetyReason;
+    let sourceRisk = safetyResolution.sourceRisk;
     const benchmarkSelection = resolveBenchmarkForStablecoin({
       stablecoinId,
       benchmarks: input.riskFreeRates,
@@ -377,59 +356,6 @@ function evaluateYieldSourceGroup(
     const benchmarkFreshness = classifyYieldBenchmarkFreshness(benchmarkMeta, {
       selectionMode: benchmarkSelection.selectionMode,
     });
-    // Resolve the reviewed venue config from the same identifier stored as
-    // venueProtocol (DeFiLlama project slug first, then sourceKey inference) so
-    // auto-discovered lending rows — not just native/curated families — pick up
-    // their 5-category venue-risk score.
-    const reviewedRiskConfig = resolveReviewedYieldRiskConfig(
-      sourceRisk?.venueProtocol ?? y.project ?? inferVenueProtocol(y),
-    );
-    const reviewedVenueRiskWeighted = reviewedRiskConfig
-      ? venueRiskWeightedOf(reviewedRiskConfig)
-      : null;
-    const resolvedVenueRiskWeighted = sourceRisk?.venueRiskWeighted ?? reviewedVenueRiskWeighted;
-    const resolvedVenueRiskTier =
-      sourceRisk?.venueRiskTier ??
-      (reviewedRiskConfig ? deriveVenueRiskTier(reviewedVenueRiskWeighted) : "unknown");
-    const safetyEvidenceObserved = !usedDefaultSafety && underlyingSafetyGrade !== "NR";
-    // Opportunity-level risk for external opportunities (yield v8.32): the
-    // underlying stablecoin's report card is one component, not the score.
-    // Royco Dawn tranches keep their bespoke market-health model and publish
-    // the same contract; missing critical market evidence produces NR below.
-    const opportunityClass = deriveYieldOpportunityClass(yieldType);
-    let opportunityRisk: YieldOpportunityRisk | null = null;
-    if (!safetySnapshotUnavailable && opportunityClass != null) {
-      if (safetyProvenance === "opportunity-safety") {
-        opportunityRisk = {
-          opportunityClass,
-          underlyingSafetyScore,
-          opportunitySafetyScore: safetyScore,
-          opportunitySafetyPenalty: sourceRisk?.trancheSafetyPenalty ?? null,
-          venueReviewed: resolvedVenueRiskTier !== "unknown",
-          missingCriticalEvidence: [],
-        };
-      } else {
-        opportunityRisk = assessYieldOpportunityRisk({
-          opportunityClass,
-          underlyingSafetyScore,
-          venueRiskWeighted: resolvedVenueRiskWeighted,
-          sourceTvlUsd: y.sourceTvlUsd,
-          sourceRisk,
-        });
-        if (safetyEvidenceObserved && opportunityRisk.opportunitySafetyScore != null) {
-          safetyScore = opportunityRisk.opportunitySafetyScore;
-          safetyGrade = scoreToGrade(safetyScore);
-          safetyProvenance = "opportunity-safety";
-        }
-      }
-      sourceRisk = {
-        ...(sourceRisk ?? {}),
-        opportunityRisk,
-        underlyingSafetyScore: sourceRisk?.underlyingSafetyScore ?? underlyingSafetyScore,
-      };
-    }
-    const opportunityEvidenceComplete =
-      opportunityRisk == null || opportunityRisk.missingCriticalEvidence.length === 0;
     const calculationMode = resolveCalculationMode(y);
     const evidenceClass = resolveEvidenceClass(y);
     const evidenceAssessment = assessYieldEvidence({
@@ -439,7 +365,10 @@ function evaluateYieldSourceGroup(
       benchmarkFreshness,
       hasSourceDepth: sourceDepthRatio != null,
       hasVenueRisk: resolvedVenueRiskTier !== "unknown",
-      hasHistory: !historySelection.usedLegacyHistory && historyRowsForStats.length > 0,
+      // Distinct observation days, not raw row count: the read path can only see
+      // the published `observationCount30d`, so both sides test the same fact
+      // (legacy-history rows publish null and stay unqualified).
+      hasHistory: (observationCount30d ?? 0) > 1,
       hasYieldDecomposition: y.apyBase != null || y.apyReward != null,
       opportunityEvidenceComplete,
     });

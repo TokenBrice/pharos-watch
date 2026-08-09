@@ -1209,7 +1209,10 @@ describe("opportunity-level risk (yield v8.32)", () => {
           sourceRisk: {
             trancheSide: "junior",
             venueProtocol: "royco-dawn",
+            // Venue review is the weighted score; the tier is derived from it
+            // (yield v8.33), so a reviewed venue must publish the weighted value.
             venueRiskTier: "medium",
+            venueRiskWeighted: 3,
             marketStatus: "normal",
             marketTvlUsd: 2_000_000,
           },

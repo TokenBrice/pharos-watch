@@ -10,15 +10,14 @@ import {
   type YieldRanking,
   type YieldRankingsResponse,
   type YieldSafetyReason,
+  type YieldVenueRiskTier,
 } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
-import { scoreToGrade } from "@shared/lib/report-card-core";
-import { computeRoycoDawnTrancheSafetyScore, isRoycoDawnTrancheSourceRisk } from "@shared/lib/royco-tranche-safety";
-import { assessYieldOpportunityRisk, deriveYieldOpportunityClass } from "@shared/lib/yield-opportunity-risk";
+import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
 import { classifyYieldSourceFreshness, derivePysNullReason } from "../cron/yield-helpers";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -235,26 +234,12 @@ function buildRankChangeAttribution(params: {
   };
 }
 
-function hydrateRoycoTrancheSourceRisk(params: {
-  sourceRisk: YieldRanking["sourceRisk"];
-  underlyingSafetyScore: number;
-}): YieldRanking["sourceRisk"] {
-  if (!isRoycoDawnTrancheSourceRisk(params.sourceRisk)) return params.sourceRisk;
-
-  const trancheSafety = computeRoycoDawnTrancheSafetyScore({
-    underlyingSafetyScore: params.underlyingSafetyScore,
-    sourceRisk: params.sourceRisk,
-  });
-  if (!trancheSafety) return params.sourceRisk;
-
-  return {
-    ...params.sourceRisk,
-    underlyingSafetyScore: params.underlyingSafetyScore,
-    trancheSafetyScore: trancheSafety.score,
-    trancheSafetyPenalty: trancheSafety.penalty,
-  };
-}
-
+/**
+ * Live-safety hydration re-runs the canonical yield safety-resolution ladder
+ * (`resolveYieldRowSafety`) against the freshly published report-card scores —
+ * the same engine the yield-sync write path runs, so the read path re-bins
+ * rather than re-deriving (ADR-19).
+ */
 function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: number; grade: string } | undefined }): {
   score: number;
   grade: YieldRanking["safetyGrade"];
@@ -262,101 +247,44 @@ function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: num
   provenance: NonNullable<YieldRanking["provenance"]>["safetyProvenance"];
   usedDefaultSafety: boolean;
   reason: YieldSafetyReason | null;
+  safetyEvidenceObserved: boolean;
+  opportunityEvidenceComplete: boolean;
+  venueRiskTier: YieldVenueRiskTier;
 } {
-  const underlyingSafetyScore = params.safety?.score ?? DEFAULT_SAFETY_SCORE;
-  const usedDefaultSafety = params.safety == null;
-
-  const hydratedSourceRisk = hydrateRoycoTrancheSourceRisk({
+  const resolution = resolveYieldRowSafety({
+    yieldType: params.row.yieldType,
+    underlyingSafety: params.safety,
+    defaultSafetyScore: DEFAULT_SAFETY_SCORE,
     sourceRisk: params.row.sourceRisk,
-    underlyingSafetyScore,
+    sourceTvlUsd: params.row.sourceTvlUsd,
+    ratedProvenance: "live-report-card",
   });
-
-  if (isRoycoDawnTrancheSourceRisk(hydratedSourceRisk)) {
-    const trancheSafetyScore = hydratedSourceRisk.trancheSafetyScore;
-    if (trancheSafetyScore != null) {
-      return {
-        score: trancheSafetyScore,
-        grade: scoreToGrade(trancheSafetyScore),
-        sourceRisk: hydratedSourceRisk,
-        provenance: "opportunity-safety",
-        usedDefaultSafety,
-        reason: usedDefaultSafety ? "underlying-report-card-score-missing" : null,
-      };
-    }
-  }
-
-  const opportunityClass = deriveYieldOpportunityClass(params.row.yieldType);
-  if (opportunityClass != null && hydratedSourceRisk?.opportunityRisk != null) {
-    const opportunityRisk = assessYieldOpportunityRisk({
-      opportunityClass,
-      underlyingSafetyScore,
-      venueRiskWeighted: finiteNumber(hydratedSourceRisk?.venueRiskWeighted),
-      sourceTvlUsd: finiteNumber(params.row.sourceTvlUsd),
-      sourceRisk: hydratedSourceRisk,
-    });
-    const opportunitySourceRisk = {
-      ...(hydratedSourceRisk ?? {}),
-      opportunityRisk,
-      underlyingSafetyScore,
-    };
-    if (!usedDefaultSafety && opportunityRisk.opportunitySafetyScore != null) {
-      return {
-        score: opportunityRisk.opportunitySafetyScore,
-        grade: scoreToGrade(opportunityRisk.opportunitySafetyScore),
-        sourceRisk: opportunitySourceRisk,
-        provenance: "opportunity-safety",
-        usedDefaultSafety,
-        reason: null,
-      };
-    }
-    return {
-      score: underlyingSafetyScore,
-      grade: (params.safety?.grade as YieldRanking["safetyGrade"] | undefined) ?? "NR",
-      sourceRisk: opportunitySourceRisk,
-      provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
-      usedDefaultSafety,
-      reason: usedDefaultSafety ? "report-card-score-missing" : null,
-    };
-  }
-
   return {
-    score: underlyingSafetyScore,
-    grade: (params.safety?.grade as YieldRanking["safetyGrade"] | undefined) ?? "NR",
-    sourceRisk: hydratedSourceRisk,
-    provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
-    usedDefaultSafety,
-    reason: usedDefaultSafety
-      ? "report-card-score-missing"
-      : params.safety?.grade === "NR"
-        ? "report-card-grade-not-rated"
-        : null,
+    score: resolution.safetyScore,
+    grade: resolution.safetyGrade as YieldRanking["safetyGrade"],
+    sourceRisk: resolution.sourceRisk,
+    provenance: resolution.safetyProvenance,
+    usedDefaultSafety: resolution.usedDefaultSafety,
+    reason: resolution.safetyReason,
+    safetyEvidenceObserved: resolution.safetyEvidenceObserved,
+    opportunityEvidenceComplete: resolution.opportunityEvidenceComplete,
+    venueRiskTier: resolution.venueRiskTier,
   };
 }
 
-function hydrateAltSourcesWithLiveSafety(row: YieldRanking, underlyingSafetyScore: number): YieldRanking["altSources"] {
+function hydrateAltSourcesWithLiveSafety(
+  row: YieldRanking,
+  safety: { score: number; grade: string } | undefined,
+): YieldRanking["altSources"] {
   return row.altSources.map((source) => {
-    let sourceRisk = hydrateRoycoTrancheSourceRisk({
+    const { sourceRisk } = resolveYieldRowSafety({
+      yieldType: source.yieldType,
+      underlyingSafety: safety,
+      defaultSafetyScore: DEFAULT_SAFETY_SCORE,
       sourceRisk: source.sourceRisk ?? null,
-      underlyingSafetyScore,
+      sourceTvlUsd: source.sourceTvlUsd,
+      ratedProvenance: "live-report-card",
     });
-    const opportunityClass = deriveYieldOpportunityClass(source.yieldType);
-    if (
-      opportunityClass != null &&
-      sourceRisk?.opportunityRisk != null &&
-      !isRoycoDawnTrancheSourceRisk(sourceRisk)
-    ) {
-      sourceRisk = {
-        ...(sourceRisk ?? {}),
-        opportunityRisk: assessYieldOpportunityRisk({
-          opportunityClass,
-          underlyingSafetyScore,
-          venueRiskWeighted: finiteNumber(sourceRisk?.venueRiskWeighted),
-          sourceTvlUsd: finiteNumber(source.sourceTvlUsd),
-          sourceRisk,
-        }),
-        underlyingSafetyScore,
-      };
-    }
     return sourceRisk === source.sourceRisk ? source : { ...source, sourceRisk };
   });
 }
@@ -380,22 +308,18 @@ function hydrateYieldRankingsWithLiveSafety(
       const safety = scores.get(row.id);
       const hydratedSafety = resolveHydratedSafety({ row, safety });
       const safetyInputScore = hydratedSafety.score;
-      const underlyingSafetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
       const sourceFreshness = resolveHydratedSourceFreshness(row);
       const benchmarkFreshness = resolveHydratedBenchmarkFreshness(row);
       const evidenceClass = resolveHydratedEvidenceClass(row);
-      const opportunityEvidenceComplete =
-        hydratedSafety.sourceRisk?.opportunityRisk == null ||
-        hydratedSafety.sourceRisk.opportunityRisk.missingCriticalEvidence.length === 0;
-      const safetyObserved = !hydratedSafety.usedDefaultSafety && hydratedSafety.grade !== "NR";
+      const opportunityEvidenceComplete = hydratedSafety.opportunityEvidenceComplete;
+      const safetyObserved = hydratedSafety.safetyEvidenceObserved;
       const evidenceAssessment = assessYieldEvidence({
         evidenceClass,
         safetyObserved,
         sourceFreshness,
         benchmarkFreshness,
         hasSourceDepth: finiteNumber(hydratedSafety.sourceRisk?.sourceDepthRatio) != null,
-        hasVenueRisk:
-          hydratedSafety.sourceRisk?.venueRiskTier != null && hydratedSafety.sourceRisk.venueRiskTier !== "unknown",
+        hasVenueRisk: hydratedSafety.venueRiskTier !== "unknown",
         hasHistory: (finiteNumber(hydratedSafety.sourceRisk?.observationCount30d) ?? 0) > 1,
         hasYieldDecomposition: row.apyBase != null || row.apyReward != null,
         opportunityEvidenceComplete,
@@ -446,7 +370,7 @@ function hydrateYieldRankingsWithLiveSafety(
           warningSignals,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           sourceRisk: hydratedSafety.sourceRisk,
-          altSources: hydrateAltSourcesWithLiveSafety(row, underlyingSafetyScore),
+          altSources: hydrateAltSourcesWithLiveSafety(row, safety),
           provenance: row.provenance
             ? {
                 ...row.provenance,

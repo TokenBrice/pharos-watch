@@ -6,7 +6,10 @@ const baseRisk: YieldSourceRisk = {
   deploymentPlace: "structured-tranche",
   venueProtocol: "royco-dawn",
   venueChain: "ethereum",
+  // Venue risk is priced from the canonical weighted score (yield v8.33); the
+  // coarse tier is derived from it, never read from storage.
   venueRiskTier: "medium",
+  venueRiskWeighted: 3,
   marketStatus: "normal",
   marketCoverageRatio: 0.36,
   marketMinCoverageRatio: 0.15,
@@ -79,6 +82,40 @@ describe("computeRoycoDawnTrancheSafetyScore", () => {
         },
       }),
     ).toBeNull();
+  });
+
+  describe("venue derivation (yield v8.33)", () => {
+    it("prices the venue from the weighted score, ignoring a stored tier that disagrees", () => {
+      const derived = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 82,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", venueRiskTier: "low", venueRiskWeighted: 3 },
+      });
+      const explicit = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 82,
+        sourceRisk: { ...baseRisk, trancheSide: "senior" },
+      });
+      expect(derived?.penalty).toBe(explicit?.penalty);
+    });
+
+    it("treats an unbacked tier as unknown when no weighted score resolves", () => {
+      // Royco Dawn is not in the reviewed venue registry, so production rows
+      // (which publish `venueRiskTier: "unknown"` and no weighted score) land on
+      // the unknown band — 1 point below the medium band for a senior tranche.
+      const unknownVenue = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 82,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", venueRiskTier: "medium", venueRiskWeighted: null },
+      });
+      expect(unknownVenue?.penalty).toBe(5);
+    });
+
+    it("accepts an explicitly resolved weighted score from the caller", () => {
+      const highVenue = computeRoycoDawnTrancheSafetyScore({
+        underlyingSafetyScore: 82,
+        sourceRisk: { ...baseRisk, trancheSide: "senior", venueRiskWeighted: null },
+        venueRiskWeighted: 4,
+      });
+      expect(highVenue?.penalty).toBe(11);
+    });
   });
 
   describe("drawdown penalty arithmetic", () => {
