@@ -39,7 +39,7 @@ export function getStateBadgeClass(state: CronWorkbenchState): string {
   if (state === "skipped") return "bg-muted text-muted-foreground";
   if (state === "running") return "bg-sky-500/15 text-sky-800 dark:text-sky-300";
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
-  return "bg-green-500/15 text-green-800 dark:text-green-300";
+  return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
 }
 
 export function getRowTone(state: CronWorkbenchState): string {
@@ -48,7 +48,7 @@ export function getRowTone(state: CronWorkbenchState): string {
   if (state === "skipped") return "border-l-muted-foreground/40";
   if (state === "running") return "border-l-sky-500/70";
   if (state === "unknown") return "border-l-slate-500/60";
-  return "border-l-green-500/60";
+  return "border-l-emerald-500/60";
 }
 
 export function formatLastRun(row: CronWorkbenchRow, nowSeconds: number): string {

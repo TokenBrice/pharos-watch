@@ -37,7 +37,7 @@ const RISK_LABEL: Record<StatusPageActionRisk, string> = {
 };
 
 const RISK_CLASS: Record<StatusPageActionRisk, string> = {
-  "read-only": "bg-green-500/10 text-green-700 dark:text-green-300",
+  "read-only": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   low: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   moderate: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
   high: "bg-red-500/10 text-red-700 dark:text-red-300",
@@ -48,7 +48,7 @@ const ACTIVITY_CLASS: Record<ActionActivity["status"], string> = {
   running: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   accepted: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   queued: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  succeeded: "bg-green-500/10 text-green-700 dark:text-green-300",
+  succeeded: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   failed: "bg-red-500/10 text-red-700 dark:text-red-300",
   error: "bg-red-500/10 text-red-700 dark:text-red-300",
   unknown: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
@@ -154,7 +154,7 @@ function ActionCatalogRow({
               className={
                 liveReadiness.blocked
                   ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                  : "bg-green-500/10 text-green-700 dark:text-green-300"
+                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
               }
             >
               {readinessLabel(action, readinessChecks)}
@@ -348,7 +348,7 @@ export function AdminActionsPanel({
                         className={
                           buildActionReadiness(recommendation.action, readinessChecks, "live").blocked
                             ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                            : "bg-green-500/10 text-green-700 dark:text-green-300"
+                            : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                         }
                       >
                         {readinessLabel(recommendation.action, readinessChecks)}

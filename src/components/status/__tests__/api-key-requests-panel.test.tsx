@@ -27,7 +27,6 @@ function makeRequest(overrides: Partial<ApiKeySelfServeRequestAdminSummary> = {}
     organization: overrides.organization ?? "Integration Lab",
     projectUrl: overrides.projectUrl ?? "https://example.com",
     useCase: overrides.useCase ?? "Read-only analytics workflow for monitored stablecoin data.",
-    intendedEndpoints: overrides.intendedEndpoints ?? ["/api/stablecoins"],
     expectedCadence: overrides.expectedCadence ?? "hourly",
     expectedVolume: overrides.expectedVolume ?? "100 requests/day",
     acceptedTerms: overrides.acceptedTerms ?? true,
@@ -150,16 +149,11 @@ describe("ApiKeyRequestsPanel", () => {
     );
   });
 
-  it("wraps hostile endpoint and project values within narrow request cards", () => {
-    const endpoint = `/api/${"unbroken-endpoint-segment".repeat(10)}`;
+  it("wraps hostile project values within narrow request cards", () => {
     const projectUrl = `https://example.invalid/${"unbroken-project-segment".repeat(10)}`;
-    renderPanel([makeRequest({ intendedEndpoints: [endpoint], projectUrl })]);
+    renderPanel([makeRequest({ projectUrl })]);
 
-    const endpointValue = screen.getByText(endpoint);
     const projectValue = screen.getByText(projectUrl);
-    expect(endpointValue.className).toContain("max-w-full");
-    expect(endpointValue.className).toContain("break-all");
-    expect(endpointValue.className).toContain("whitespace-normal");
     expect(projectValue.className).toContain("break-all");
     expect(projectValue.parentElement?.className).toContain("min-w-0");
   });

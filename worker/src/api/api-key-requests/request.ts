@@ -90,19 +90,6 @@ export function normalizeOptionalText(value: string | undefined): string | null 
   return trimmed ? trimmed : null;
 }
 
-/**
- * `intendedEndpoints` is a free-text operator note shown on the admin request
- * card. It grants nothing: an issued self-serve key can read every protected
- * public route regardless of what the requester listed. Normalize (trim, drop
- * blanks, de-duplicate) and store it as prose — the previous allowlist check
- * read as an access control while enforcing none.
- */
-export function normalizeIntendedEndpoints(endpoints: string[] | undefined): string[] {
-  if (!endpoints) return [];
-  const normalized = endpoints.map((raw) => raw.trim()).filter((endpoint) => endpoint.length > 0);
-  return Array.from(new Set(normalized));
-}
-
 // Exported for unit tests; not part of the public handler surface.
 export function resolveClientIp(request: Request): string {
   // CF-Connecting-IP is injected by the Cloudflare edge for every real inbound

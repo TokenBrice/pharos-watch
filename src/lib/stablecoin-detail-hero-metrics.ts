@@ -7,7 +7,7 @@ import type {
 } from "@shared/types";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
-import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatBand } from "@shared/lib/classification";
+import { THREAT_BAND_LABELS, THREAT_BAND_STYLES, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
 
@@ -118,7 +118,7 @@ export function buildDewsDisplay(stressSignal: StressSignalEntry | null): HeroDe
         value: THREAT_BAND_LABELS[stressSignal.band],
         band: stressSignal.band,
         sub: `${Math.round(stressSignal.score)}/100`,
-        color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
+        color: THREAT_BAND_STYLES[stressSignal.band].textCls,
       }
     : { value: "—", band: null, color: HERO_MUTED_CLASS };
 }

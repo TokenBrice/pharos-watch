@@ -68,7 +68,7 @@ export function SystemDiagnostics({
       <div className="min-w-0 border-y border-border/60 py-2">
         <div className="text-xs text-muted-foreground">Status Freshness</div>
         <div
-          className={`font-mono text-sm ${staleness.isStale ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}
+          className={`font-mono text-sm ${staleness.isStale ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}
         >
           {staleness.isStale ? "stale" : "fresh"}
         </div>
@@ -115,7 +115,7 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">Divergence</div>
         <div
           className={`font-mono text-sm ${
-            discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+            discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
           }`}
         >
           {discrepancy.hasDivergence ? "detected" : "none"}

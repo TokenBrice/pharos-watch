@@ -10,6 +10,7 @@ import type { StablecoinMeta } from "../../shared/types";
 import {
   STABLECOIN_SOURCE_DOMAIN_FIELDS,
   STABLECOIN_SOURCE_DOMAIN_SCHEMAS,
+  STABLECOIN_SOURCE_DOMAIN_VALUES,
   StablecoinMetaAssetSchema,
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
@@ -64,6 +65,31 @@ function formatSchemaError(relativePath: string, issues: Array<{ message: string
     .map((issue) => `${issue.path.length > 0 ? issue.path.join(".") : "<root>"}: ${issue.message}`)
     .join("; ");
   return new Error(`${relativePath} is invalid: ${summary}`);
+}
+
+/**
+ * Fields the coin already keeps in *other* domains' sidecars. The projection-equality check
+ * below parses against the full catalog schema, whose cross-field refinements span domains
+ * (a `liveReservesConfig` in the base file is validated against a `reserves` slice that may
+ * already live in the reserves sidecar). Without this overlay the check would compare two
+ * equally incomplete projections and fail closed on every coin that is already partly migrated.
+ */
+function readOtherDomainOverlay(
+  id: string,
+  domain: StablecoinSourceDomain,
+  rootDir: string,
+): Record<string, unknown> {
+  const overlay: Record<string, unknown> = {};
+  for (const otherDomain of STABLECOIN_SOURCE_DOMAIN_VALUES) {
+    if (otherDomain === domain) continue;
+    const path = `${STABLECOIN_DOMAIN_SOURCE_DIR}/${otherDomain}/${id}.json`;
+    if (!existsSync(resolve(rootDir, path))) continue;
+    const raw = readJsonObject(path, rootDir);
+    for (const field of STABLECOIN_SOURCE_DOMAIN_FIELDS[otherDomain]) {
+      if (hasOwnField(raw, field)) overlay[field] = raw[field];
+    }
+  }
+  return overlay;
 }
 
 export function migrateStablecoinSidecar(
@@ -143,14 +169,16 @@ export function migrateStablecoinSidecar(
     throw formatSchemaError(baseFile, parsedNextBase.error.issues);
   }
 
+  const overlay = readOtherDomainOverlay(options.id, options.domain, rootDir);
   const merged = StablecoinMetaAssetSchema.safeParse({
     ...nextBase,
+    ...overlay,
     ...Object.fromEntries(movedFields.map((field) => [field, sidecar[field]])),
   });
   if (!merged.success) {
     throw formatSchemaError(`${baseFile} + ${sidecarFile}`, merged.error.issues);
   }
-  const original = StablecoinMetaAssetSchema.safeParse(baseRaw);
+  const original = StablecoinMetaAssetSchema.safeParse({ ...baseRaw, ...overlay });
   if (!original.success) {
     throw formatSchemaError(baseFile, original.error.issues);
   }

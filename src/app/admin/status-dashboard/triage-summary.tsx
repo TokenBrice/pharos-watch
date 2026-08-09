@@ -142,7 +142,7 @@ export function TriageSummary({
     reserveForecast.state === "blocked"
       ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-200")
       : reserveForecast.state === "clear"
-        ? "border-green-500/30 bg-green-500/10 text-green-900 dark:text-green-200"
+        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
         : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-950 dark:text-amber-100");
 
   return (

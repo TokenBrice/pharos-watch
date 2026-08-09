@@ -40,7 +40,7 @@ function sourceLabel(sources: readonly OperationalActivitySource[]): string {
 function outcomeClassName(outcome: OperationalActivityEntry["outcome"]): string {
   if (outcome === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
   if (outcome === "unknown") return "bg-amber-500/15 text-amber-800 dark:text-amber-200";
-  if (outcome === "ok") return "bg-green-500/12 text-green-700 dark:text-green-300";
+  if (outcome === "ok") return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
   return "bg-muted text-muted-foreground";
 }
 

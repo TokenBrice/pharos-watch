@@ -35,7 +35,7 @@ export type PipelineSeverity = WorkspaceSeverity;
  * quality table rendered diff-identical copies of it (WS8.9).
  */
 export const PIPELINE_STATE_META: Record<PipelineSeverity, { label: string; className: string }> = {
-  healthy: { label: "Healthy", className: "bg-green-500/15 text-green-700 dark:text-green-300" },
+  healthy: { label: "Healthy", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
   watch: { label: "Watch", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300" },
   critical: { label: "Critical", className: "bg-red-500/15 text-red-700 dark:text-red-300" },
   unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },

@@ -1,3 +1,4 @@
+import { fnv1a32 } from "@shared/lib/fnv1a";
 import { resolveTicker } from "../lib/telegram-alerts";
 import { answerInlineQuery, type TelegramInlineQueryResultArticle } from "../lib/telegram";
 import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../lib/telegram-constants";
@@ -65,13 +66,10 @@ function inlineStatusResultId(coinId: string): string {
   }
 
   // Registry IDs are ASCII today, but preserve the Bot API's 64-byte bound if
-  // a future canonical ID grows beyond it. This id is display-independent.
-  let hash = 0x811c9dc5;
-  for (const char of coinId) {
-    hash ^= char.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `${INLINE_STATUS_RESULT_ID_PREFIX}${(hash >>> 0).toString(16)}`;
+  // a future canonical ID grows beyond it. This id is display-independent and
+  // ephemeral (Telegram only echoes it back inside the same inline session), so
+  // it can ride the shared FNV-1a definition rather than fork the mixing loop.
+  return `${INLINE_STATUS_RESULT_ID_PREFIX}${fnv1a32(coinId).toString(16)}`;
 }
 
 async function enforceInlineStatusReadLimit(

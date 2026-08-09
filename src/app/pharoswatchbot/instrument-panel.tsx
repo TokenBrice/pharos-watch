@@ -187,7 +187,7 @@ export function InstrumentPanel() {
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
                 data.quality?.status === "partial"
                   ? "bg-amber-500/10 text-amber-800 dark:text-amber-200"
-                  : "bg-green-500/10 text-green-800 dark:text-green-200",
+                  : "bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
               )}
             >
               {data.quality?.status === "partial" ? "Partial telemetry" : "Complete telemetry"}

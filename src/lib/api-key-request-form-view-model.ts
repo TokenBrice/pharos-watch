@@ -7,7 +7,6 @@ import {
   SELF_SERVE_API_KEY_EXPIRY_DAYS,
   buildPublicApiCurlCommand,
 } from "@shared/lib/public-api-contract";
-import { slugifyId } from "@shared/lib/format";
 import type {
   ApiKeySelfServeCadence,
   ApiKeySelfServeIssueResponse,
@@ -20,18 +19,6 @@ export const NAME_MAX_LENGTH = 80;
 export const ORGANIZATION_MAX_LENGTH = 120;
 export const PROJECT_URL_MAX_LENGTH = 300;
 export const EXPECTED_VOLUME_MAX_LENGTH = 300;
-
-export const API_KEY_REQUEST_ENDPOINT_OPTIONS = [
-  { path: "/api/stablecoins", label: "Stablecoin list" },
-  { path: "/api/stablecoin/:id", label: "Stablecoin detail" },
-  { path: "/api/peg-summary", label: "Peg summary" },
-  { path: "/api/depeg-events", label: "Depeg events" },
-  { path: "/api/dex-liquidity", label: "DEX liquidity" },
-  { path: "/api/yield-rankings", label: "Yield rankings" },
-  { path: "/api/report-cards/v9", label: "Safety Scores" },
-  { path: "/api/chains", label: "Chains" },
-  { path: "unknown", label: "Not sure yet" },
-] as const;
 
 export const API_KEY_REQUEST_CADENCE_OPTIONS: readonly { value: ApiKeySelfServeCadence; label: string }[] = [
   { value: "hourly", label: "Hourly" },
@@ -58,7 +45,6 @@ export interface ApiKeyRequestWorkflowState {
   useCase: string;
   expectedCadence: ApiKeySelfServeCadence;
   expectedVolume: string;
-  selectedEndpoints: string[];
   acceptedTerms: boolean;
   website: string;
   requestStatus: RequestStatus;
@@ -77,7 +63,6 @@ export type ApiKeyRequestWorkflowAction =
   | { type: "setField"; field: "email" | "requesterName" | "organization" | "projectUrl" | "useCase" | "expectedVolume" | "website"; value: string }
   | { type: "setExpectedCadence"; value: ApiKeySelfServeCadence }
   | { type: "setAcceptedTerms"; value: boolean }
-  | { type: "toggleEndpoint"; path: string }
   | { type: "submitStarted" }
   | { type: "submitSucceeded"; payload: ApiKeySelfServePendingResponse }
   | { type: "submitFailed"; error: string }
@@ -97,7 +82,6 @@ export const INITIAL_API_KEY_REQUEST_WORKFLOW_STATE: ApiKeyRequestWorkflowState 
   useCase: "",
   expectedCadence: "hourly",
   expectedVolume: "",
-  selectedEndpoints: ["/api/stablecoins"],
   acceptedTerms: false,
   website: "",
   requestStatus: "idle",
@@ -123,8 +107,6 @@ export function apiKeyRequestWorkflowReducer(
       return { ...state, expectedCadence: action.value };
     case "setAcceptedTerms":
       return { ...state, acceptedTerms: action.value };
-    case "toggleEndpoint":
-      return { ...state, selectedEndpoints: toggleEndpointSelection(state.selectedEndpoints, action.path) };
     case "submitStarted":
       return { ...state, requestStatus: "submitting", requestError: null, pendingRequest: null };
     case "submitSucceeded":
@@ -159,10 +141,6 @@ export function apiKeyRequestWorkflowReducer(
     case "tokenSaved":
       return { ...state, revealAcknowledged: true, copyError: null };
   }
-}
-
-export function endpointId(path: string): string {
-  return `endpoint-${slugifyId(path)}`;
 }
 
 export function formatSelfServeExpiry(epochSeconds: number | null): string {
@@ -208,20 +186,9 @@ export function buildApiKeySelfServeRequestPayload(state: ApiKeyRequestWorkflowS
     ...(state.organization.trim() ? { organization: state.organization.trim() } : {}),
     ...(state.projectUrl.trim() ? { projectUrl: state.projectUrl.trim() } : {}),
     useCase: state.useCase.trim(),
-    intendedEndpoints: state.selectedEndpoints,
     expectedCadence: state.expectedCadence,
     ...(state.expectedVolume.trim() ? { expectedVolume: state.expectedVolume.trim() } : {}),
     acceptedTerms: state.acceptedTerms,
     website: state.website,
   };
-}
-
-function toggleEndpointSelection(current: readonly string[], path: string): string[] {
-  if (current.includes(path)) {
-    return current.filter((item) => item !== path);
-  }
-  if (path === "unknown") {
-    return ["unknown"];
-  }
-  return [...current.filter((item) => item !== "unknown"), path];
 }

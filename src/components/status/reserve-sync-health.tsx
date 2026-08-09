@@ -77,7 +77,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           </div>
           <div>
             <div className="text-muted-foreground">Fresh</div>
-            <div className="font-mono text-lg text-green-600 dark:text-green-400">{health.freshCoins}</div>
+            <div className="font-mono text-lg text-emerald-600 dark:text-emerald-400">{health.freshCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Error</div>
@@ -129,7 +129,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>
-              <div className="font-mono text-base text-green-600 dark:text-green-400">
+              <div className="font-mono text-base text-emerald-600 dark:text-emerald-400">
                 {health.independentFreshEligible}
               </div>
             </div>

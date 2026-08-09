@@ -68,8 +68,8 @@ describe("OpsShell", () => {
     );
 
     const productionBadge = screen.getByText("Production").parentElement;
-    expect(productionBadge?.className).toContain("text-green-800");
-    expect(productionBadge?.className).toContain("dark:text-green-200");
+    expect(productionBadge?.className).toContain("text-emerald-800");
+    expect(productionBadge?.className).toContain("dark:text-emerald-200");
     expect(screen.getByRole("link", { name: "Reliability" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Triage" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByText("Reliability body")).toBeTruthy();

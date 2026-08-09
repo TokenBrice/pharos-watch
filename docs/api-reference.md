@@ -3292,7 +3292,6 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
   "organization": "Optional organization",
   "projectUrl": "https://example.com",
   "useCase": "Required, 10-1200 characters",
-  "intendedEndpoints": ["/api/stablecoins", "/api/stablecoin/:id"],
   "expectedCadence": "hourly",
   "expectedVolume": "Optional free-form estimate",
   "acceptedTerms": true,
@@ -3307,7 +3306,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 | `organization`      | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `projectUrl`        | `string`                                                            | No       | Must start with `https://` when provided                                                                                        |
 | `useCase`           | `string`                                                            | Yes      | 10-1200 characters                                                                                                              |
-| `intendedEndpoints` | `string[]`                                                          | No       | Free-text note describing the routes the requester expects to call. Trimmed and de-duplicated, then stored for operator review only — it grants and restricts nothing |
+| `intendedEndpoints` | `string[]`                                                          | No       | **Deprecated 2026-08-10 — accepted and ignored.** It was a free-text operator note that granted and restricted nothing; nothing reads or stores it now. Kept in the schema only so pre-removal bundles do not start failing validation |
 | `expectedCadence`   | `"hourly" \| "every_5_min" \| "every_1_min" \| "manual" \| "other"` | Yes      | Used for review context                                                                                                         |
 | `expectedVolume`    | `string`                                                            | No       | Private operator context only                                                                                                   |
 | `acceptedTerms`     | `true`                                                              | Yes      | Fair-use acknowledgement                                                                                                        |
